@@ -128,9 +128,14 @@ func writeMailPolicyAgentAnswer(w http.ResponseWriter, resp transport.MailPolicy
 		if detail := boundedAgentDiagnostic(resp.Reason); detail != "" {
 			vars = map[string]string{"detail": detail}
 		}
+		// mutation_applied is the proof that this request changed main.cf. A
+		// save that wrote nothing (the values were already there, and only
+		// the reload was asked for) does not carry it (10 Oct 2026).
+		// mutation_applied, bu isteğin main.cf'i değiştirdiğinin kanıtıdır;
+		// hiçbir şey yazmayan kayıt onu taşımaz.
 		body := mailPolicyWrittenBody{apiErrorBody: apiErrorBody{
 			Error: message, Code: code, Reason: stage,
-			PartialSuccess: true, MutationApplied: true, Vars: vars,
+			PartialSuccess: !resp.Unwritten, MutationApplied: !resp.Unwritten, Vars: vars,
 		}}
 		// A policy without a version is one the Agent could not read back.
 		// Sürümsüz politika, Agent'ın geri okuyamadığı politikadır.
@@ -207,12 +212,15 @@ func (p *Panel) handleMailPolicy(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if resp.Error != "" || resp.Code != "" {
-			switch resp.Code {
-			case transport.MailPolicyNotReloaded:
+			switch {
+			case resp.Unwritten:
+				// Nothing in main.cf changed, so the ledger records no change.
+				// main.cf'te hiçbir şey değişmedi; defter değişiklik yazmaz.
+			case resp.Code == transport.MailPolicyNotReloaded:
 				// main.cf was changed; the ledger says so.
 				// main.cf değişti; defter bunu söyler.
 				p.audit(r, "mail.policy.written-not-reloaded", "", 0)
-			case transport.MailPolicyReloadUnknown:
+			case resp.Code == transport.MailPolicyReloadUnknown:
 				p.audit(r, "mail.policy.written-reload-unknown", "", 0)
 			}
 			writeMailPolicyAgentAnswer(w, resp)
@@ -223,12 +231,15 @@ func (p *Panel) handleMailPolicy(w http.ResponseWriter, r *http.Request) {
 		}
 		p.audit(r, "mail.policy", "", 0)
 		// `applied` says what the save came to: reloaded, not_running (Postfix
-		// is stopped and was left stopped) or unchanged. Empty from an Agent
-		// that does not say.
+		// is stopped and was left stopped), unchanged (nothing to write and
+		// Postfix is stopped) or unchanged_reloaded (nothing to write; the
+		// running Postfix was reloaded and verified). Empty from an Agent that
+		// does not say.
 		// `applied`, kaydın neyle sonuçlandığını söyler.
 		answer := map[string]any{"success": true, "policy": resp.Policy}
 		switch resp.Applied {
-		case transport.MailPolicyAppliedReloaded, transport.MailPolicyAppliedNotRunning, transport.MailPolicyAppliedUnchanged:
+		case transport.MailPolicyAppliedReloaded, transport.MailPolicyAppliedNotRunning,
+			transport.MailPolicyAppliedUnchanged, transport.MailPolicyAppliedUnchangedReloaded:
 			answer["applied"] = resp.Applied
 		}
 		json.NewEncoder(w).Encode(answer)

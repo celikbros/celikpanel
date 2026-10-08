@@ -27,7 +27,13 @@ import (
 //     server, changes nothing;
 //   - a write touches only the values that differ from the server's, in one
 //     `postconf -e`, and never rebuilds the recipient restrictions (see
-//     mail_policy_restrictions.go).
+//     mail_policy_restrictions.go);
+//   - every accepted save ends with the verified reload, also one that writes
+//     nothing (10 Oct 2026). Postfix cannot be asked which values its running
+//     master holds, and the Agent keeps no record of an earlier "not
+//     reloaded", so a save cannot tell "already in effect" from "written
+//     before and never taken". An owner who corrected main.cf after "not
+//     reloaded" and presses Save gets the reload, or the reason again.
 //
 // Sunucu geneli posta politikası: mesaj boyutu sınırı, gelen posta için DNSBL
 // koruması ve giden hız sınırı. Bunlar sunucu sahibinin Postfix değerleridir:
@@ -234,7 +240,8 @@ func (a *Agent) SetMailPolicy(req *MailPolicy, resp *MailPolicyResponse) error {
 		}
 	}
 
-	if len(assignments) > 0 {
+	wrote := len(assignments) > 0
+	if wrote {
 		// One postconf edits main.cf once, so the save is whole or absent.
 		// Tek postconf main.cf'i bir kez düzenler; kayıt ya tamdır ya yoktur.
 		if out, err := mailPolicyPostconf(append([]string{"-e"}, assignments...)...); err != nil {
@@ -242,44 +249,70 @@ func (a *Agent) SetMailPolicy(req *MailPolicy, resp *MailPolicyResponse) error {
 			return refuseMailPolicy(resp, transport.MailPolicyWriteFailed, "",
 				"the Postfix mail policy could not be written")
 		}
-		applied, err := mailPolicyReload()
-		if err != nil {
-			// main.cf holds the new values and Postfix was not seen to take
-			// them. That is a failure after a change, not something to log
-			// and call saved (9 Oct 2026; D-024): the answer carries what is
-			// written now, so the screen shows it. A refusal by Postfix's own
-			// check, a reload that failed and a master that stopped are
-			// verified failures; a command that could not be run or did not
-			// answer leaves the outcome unknown, and is said as unknown.
-			// main.cf yeni değerleri tutuyor ve Postfix'in onları aldığı
-			// görülmedi. Bu, günlüğe yazıp "kaydedildi" denecek bir şey değil,
-			// bir değişiklik sonrası hatadır; sonucu bilinmeyen durum da
-			// bilinmeyen olarak söylenir.
-			log.Printf("mail policy: postfix reload after a policy write failed: %v", err)
-			answer := MailPolicyResponse{
-				Error: "the mail policy was written to main.cf, but Postfix could not be reloaded",
-				Code:  transport.MailPolicyNotReloaded,
-			}
-			var failure *mailServiceError
-			if errors.As(err, &failure) {
-				answer.Reason, answer.Stage = failure.detail, failure.stage
-				if failure.unknown {
-					answer.Code = transport.MailPolicyReloadUnknown
-					answer.Error = "the mail policy was written to main.cf, but whether Postfix took it could not be established"
-				}
-			} else {
-				answer.Code = transport.MailPolicyReloadUnknown
-				answer.Error = "the mail policy was written to main.cf, but whether Postfix took it could not be established"
-				answer.Reason = hostcmd.Bounded(strings.Join(strings.Fields(err.Error()), " "), 300)
-			}
-			if fresh, readErr := readMailPolicyNative(); readErr == nil {
-				answer.Policy = fresh.policy()
-			}
-			*resp = answer
-			return nil
+	}
+	// The verified reload follows every accepted save, also one that wrote
+	// nothing (10 Oct 2026). Until then an unchanged save answered
+	// "unchanged" without asking Postfix anything: after "not reloaded" the
+	// owner corrected main.cf, pressed Save, and Postfix went on running the
+	// settings from before. Whether a running master already holds the file
+	// cannot be read from Postfix, and nothing here remembers the earlier
+	// outcome, so the reload is asked for each time. It is Postfix's own check
+	// and reload command; a stopped Postfix is still left stopped.
+	// Doğrulanmış yeniden yükleme, hiçbir şey yazmayan kayıt dahil kabul edilen
+	// her kaydı izler. Çalışan ana sürecin dosyayı zaten tutup tutmadığı
+	// Postfix'ten okunamaz ve burada önceki sonuç hatırlanmaz; bu yüzden
+	// yeniden yükleme her seferinde istenir. Durmuş Postfix yine durmuş kalır.
+	applied, err := mailPolicyReload()
+	if err != nil {
+		// main.cf holds the values and Postfix was not seen to take them.
+		// After a write that is a failure after a change, not something to
+		// log and call saved (9 Oct 2026; D-024): the answer carries what is
+		// written now, so the screen shows it. A refusal by Postfix's own
+		// check, a reload that failed and a master that stopped are verified
+		// failures; a command that could not be run or did not answer leaves
+		// the outcome unknown, and is said as unknown. Unwritten says that
+		// this request itself changed nothing in main.cf.
+		// main.cf değerleri tutuyor ve Postfix'in onları aldığı görülmedi.
+		// Yazıdan sonra bu, günlüğe yazıp "kaydedildi" denecek bir şey değil,
+		// bir değişiklik sonrası hatadır; sonucu bilinmeyen durum da
+		// bilinmeyen olarak söylenir. Unwritten, bu isteğin main.cf'te
+		// hiçbir şeyi değiştirmediğini söyler.
+		subject := "the mail policy was written to main.cf"
+		if !wrote {
+			subject = "the mail policy in main.cf was already the requested one"
 		}
+		log.Printf("mail policy: %s; the postfix reload failed: %v", subject, err)
+		answer := MailPolicyResponse{
+			Error:     subject + ", but Postfix could not be reloaded",
+			Code:      transport.MailPolicyNotReloaded,
+			Unwritten: !wrote,
+		}
+		var failure *mailServiceError
+		if errors.As(err, &failure) {
+			answer.Reason, answer.Stage = failure.detail, failure.stage
+			if failure.unknown {
+				answer.Code = transport.MailPolicyReloadUnknown
+				answer.Error = subject + ", but whether Postfix took it could not be established"
+			}
+		} else {
+			answer.Code = transport.MailPolicyReloadUnknown
+			answer.Error = subject + ", but whether Postfix took it could not be established"
+			answer.Reason = hostcmd.Bounded(strings.Join(strings.Fields(err.Error()), " "), 300)
+		}
+		if fresh, readErr := readMailPolicyNative(); readErr == nil {
+			answer.Policy = fresh.policy()
+		}
+		*resp = answer
+		return nil
+	}
+	switch {
+	case wrote:
 		resp.Applied = applied
-	} else {
+	case applied == mailServiceReloaded:
+		resp.Applied = transport.MailPolicyAppliedUnchangedReloaded
+	default:
+		// Nothing to write, and a stopped Postfix has nothing to reload.
+		// Yazılacak bir şey yok; durmuş Postfix'in yeniden yükleyeceği de yok.
 		resp.Applied = transport.MailPolicyAppliedUnchanged
 	}
 

@@ -116,8 +116,26 @@ func TestMailPolicyReloadUnknownIsATypedUnknown(t *testing.T) {
 	}
 }
 
+// A save that wrote nothing and could not make Postfix reload (the owner's
+// line is still wrong) is the same refusal with the same sentence, but it
+// carries no proof of a change: this request changed nothing in main.cf.
+func TestMailPolicyUnchangedSaveThatDidNotReloadCarriesNoProofOfAChange(t *testing.T) {
+	for _, code := range []string{transport.MailPolicyNotReloaded, transport.MailPolicyReloadUnknown} {
+		recorder, body := putMailPolicyForTest(t, transport.MailPolicyResponse{
+			Code: code, Error: "x", Stage: transport.MailPolicyStageCheck, Reason: "postfix: fatal: bad line", Unwritten: true,
+			Policy: transport.MailPolicy{MessageSizeMB: 30, Version: "mp1-same"},
+		})
+		if recorder.Code != http.StatusBadGateway || body.MutationApplied || body.PartialSuccess {
+			t.Fatalf("%s: answer = %d %+v", code, recorder.Code, body)
+		}
+		if body.Policy == nil || body.Policy.Version != "mp1-same" || body.Vars["detail"] != "postfix: fatal: bad line" {
+			t.Fatalf("%s: body = %+v", code, body)
+		}
+	}
+}
+
 func TestMailPolicySuccessSaysWhatTheSaveCameTo(t *testing.T) {
-	for _, applied := range []string{transport.MailPolicyAppliedReloaded, transport.MailPolicyAppliedNotRunning, transport.MailPolicyAppliedUnchanged, ""} {
+	for _, applied := range []string{transport.MailPolicyAppliedReloaded, transport.MailPolicyAppliedNotRunning, transport.MailPolicyAppliedUnchanged, transport.MailPolicyAppliedUnchangedReloaded, ""} {
 		panel := newMailPolicyTestPanel(t, &mailPolicyTestAgent{set: transport.MailPolicyResponse{
 			Applied: applied, Policy: transport.MailPolicy{MessageSizeMB: 30, Version: "mp1-next"},
 		}})

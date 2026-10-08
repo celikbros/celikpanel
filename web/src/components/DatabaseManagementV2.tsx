@@ -302,7 +302,7 @@ export function DatabaseManagementV2() {
                                                 <td className="px-4 py-3">
                                                     <Chips items={d.users} />
                                                 </td>
-                                                <td className="px-4 py-3 text-right">
+                                                <td className="row-actions px-4 py-3 text-right">
                                                     <DeleteBtn
                                                         label={t('databases.deleteDatabase', { name: d.name })}
                                                         disabled={list.stale}
@@ -346,7 +346,7 @@ export function DatabaseManagementV2() {
                                                 <td className="px-4 py-3">
                                                     <Chips items={u.databases} />
                                                 </td>
-                                                <td className="px-4 py-3 text-right">
+                                                <td className="row-actions px-4 py-3 text-right">
                                                     <DeleteBtn
                                                         label={t('databases.deleteUser', { name: u.username })}
                                                         disabled={list.stale}
@@ -427,7 +427,7 @@ function Table({ columns, rows }: { columns: string[]; rows: React.ReactNode }) 
                 <thead>
                     <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
                         {columns.map((c, i) => (
-                            <th key={i} className={`px-4 py-2.5 ${i === columns.length - 1 ? 'text-right' : ''}`}>
+                            <th key={i} className={`px-4 py-2.5 ${i === columns.length - 1 ? 'text-right' : ''} ${c === '' ? 'row-actions' : ''}`}>
                                 {c}
                             </th>
                         ))}

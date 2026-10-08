@@ -95,8 +95,14 @@ const (
 	// Postfix is not running; it reads main.cf when it starts. It is not
 	// started by a policy save.
 	MailPolicyAppliedNotRunning = "not_running"
-	// Nothing differed from the server, so nothing was written or reloaded.
+	// Nothing differed from the server, so nothing was written, and Postfix is
+	// not running, so there was nothing to reload.
 	MailPolicyAppliedUnchanged = "unchanged"
+	// Nothing differed from the server, so nothing was written; the running
+	// Postfix was reloaded all the same and is still running. This is what a
+	// save comes to after the owner corrected main.cf following "not
+	// reloaded" (10 Oct 2026).
+	MailPolicyAppliedUnchangedReloaded = "unchanged_reloaded"
 )
 
 // Why the Panel will not rewrite smtpd_recipient_restrictions.
@@ -142,6 +148,12 @@ type MailPolicyResponse struct {
 	// sonucudur. Eklemelidir.
 	Stage   string `json:"stage,omitempty"`
 	Applied string `json:"applied,omitempty"`
+	// Unwritten is true on MailPolicyNotReloaded and MailPolicyReloadUnknown
+	// when this request wrote nothing: main.cf already held the values, and
+	// only the reload was asked of Postfix. Additive (10 Oct 2026).
+	// Unwritten, bu istek hiçbir şey yazmadığında doğrudur: main.cf değerleri
+	// zaten tutuyordu ve Postfix'ten yalnız yeniden yükleme istendi.
+	Unwritten bool `json:"unwritten,omitempty"`
 }
 
 type MailHealthResponse struct {

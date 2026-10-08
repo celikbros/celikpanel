@@ -217,6 +217,9 @@ async function api(req, res, path, query) {
     // --- batch 3 (9 Oct 2026): service pages, the dashboard's attention list, DNS ---
     if (await (await import('./mock-batch3.mjs')).batch3(req, res, path, query, { state, send, coded, readBody })) return;
     // --- end of batch 3 ---
+    // --- batch 4 (9 Oct 2026): the panels of one domain; answers only while `state.b4` is set ---
+    if (await (await import('./mock-batch4.mjs')).batch4(req, res, path, query, { state, send, coded, readBody })) return;
+    // --- end of batch 4 ---
     coded(res, 404, 'not_found', `mock has no route for ${key}`);
 }
 

@@ -55,7 +55,7 @@ const stub = dataModule(`
   export const HelpButton = () => null;
   export const AddDatabaseModalV2 = () => React.createElement('aside', null, 'add-database-dialog');
   export const AddUserModalV2 = () => React.createElement('aside', null, 'add-user-dialog');
-  export const useSearchParams = () => [new URLSearchParams('section=' + (globalThis.currentTest.section ?? 'account')), () => {}];
+  export const useSearchParams = () => [new URLSearchParams(globalThis.currentTest.search ?? 'section=' + (globalThis.currentTest.section ?? 'account')), () => {}];
   // The fail-closed decoder is ComponentOperation's; here it is the same test
   // on the one field these screens read. The operation tracker is not mounted.
   export const decodeManagedServicesSnapshot = (value) => (value && typeof value === 'object' && Array.isArray(value.services) ? value : null);
@@ -140,7 +140,10 @@ const healthy = {
   '/api/v1/domains/1/connection': json(connection()),
   '/api/v1/domains/1/dns/zone': json({ type: 'NATIVE', management: 'local' }),
   '/api/v1/domains/1/dns/records': json({ records: [{ id: 1, name: 'example.com', type: 'A', content: '192.0.2.4', ttl: 3600, disabled: false }] }),
-  '/api/v1/domains/1/dnssec': json({ enabled: false }),
+  // What the handler writes (cmd/panel/dnssec_handlers.go): `secured` and `ds`.
+  // This was `{ enabled: false }`, which the panel read as "not signed"; since
+  // the fourth batch an answer without `secured` is "could not check".
+  '/api/v1/domains/1/dnssec': json({ secured: false, ds: null }),
   '/api/v1/domains/1/php': json({ domain_id: 1, domain_name: 'example.com', php_version: '8.3', pool_name: 'example', pool_config: { pm: 'dynamic' } }),
   '/api/v1/domains/1/hosting': json({ project_type: 'static' }),
   '/api/v1/runtimes/node': json({ installed: [] }),
@@ -1136,6 +1139,117 @@ test('A domain page: neither a failed lookup nor an unknown name sends the perso
       await cleanup();
     }
   }
+});
+
+// The certificate line of the strip under a domain's name (10 Oct 2026). It
+// waited for the overview card or the SSL/TLS tab to report, so after a read
+// that failed, and on every tab that mounts neither, it said "checking status"
+// without end. It reads the certificate itself now, at their address.
+test('A domain page: the certificate line under the title is being checked, could not be checked (with the read again), or what the server said', async () => {
+  const fact = (state) => tree.root.findAll((node) => node.props['data-ssl-fact'] === state);
+  const noCertificate = json({ domain_id: 1, domain_name: 'example.com', has_certificate: false, settings: { force_https: false, hsts_enabled: false, hsts_max_age: 300 } });
+  // On the overview, where the card reads the same address, and on the DNS
+  // tab, where nothing else on the page reads it.
+  for (const search of [undefined, 'tab=dns']) {
+    const open = async (overrides) => {
+      serve(overrides);
+      if (search) globalThis.currentTest.search = search;
+      await mount(DomainDetailByName, { domainName: 'example.com', onBack() {} });
+    };
+    const where = search ?? 'overview';
+
+    await open({ '/api/v1/domains/1/ssl': failures['still on its way'] });
+    try {
+      assert.equal(fact('checking').length, 1, `${where}: the line does not say it is checking`);
+      assert.equal(fact('unknown').length, 0);
+      for (const key of ['domain.info.on', 'domain.info.off', 'domain.info.sslIssue', 'domain.info.sslUnknown']) assert.ok(!has(key), `${where}: ${key} before the answer`);
+    } finally { await cleanup(); }
+
+    for (const failure of ['dropped connection', 'refused by the server', 'an answer that is not the contract']) {
+      let fail = true;
+      await open({ '/api/v1/domains/1/ssl': (request) => (fail ? failures[failure]() : healthy['/api/v1/domains/1/ssl'](request)) });
+      try {
+        assert.equal(fact('checking').length, 0, `${where}, ${failure}: the line still says it is checking after the read failed`);
+        assert.equal(fact('unknown').length, 1, `${where}, ${failure}`);
+        assert.ok(has('domain.info.sslUnknown'));
+        for (const key of ['domain.info.on', 'domain.info.off', 'domain.info.sslIssue']) assert.ok(!has(key), `${where}, ${failure}: ${key} for a certificate that was not read`);
+        assert.equal(reads('/api/v1/domains/1/ssl'), 1, `${where}: the certificate was asked for more than once`);
+        // The read again is beside the words, and it only reads.
+        fail = false;
+        await press(fact('unknown')[0].findByType('button'));
+        assert.equal(reads('/api/v1/domains/1/ssl'), 2);
+        assert.equal(calls.filter((call) => call.method !== 'GET').length, 0, 'Retry changed something');
+        assert.equal(fact('unknown').length + fact('checking').length, 0);
+        assert.ok(has('domain.info.on'));
+      } finally { await cleanup(); }
+    }
+
+    await open({ '/api/v1/domains/1/ssl': noCertificate });
+    try {
+      assert.ok(has('domain.info.off') && !has('domain.info.sslUnknown'), `${where}: a domain the server says has no certificate is not "off"`);
+      assert.equal(fact('unknown').length + fact('checking').length, 0);
+    } finally { await cleanup(); }
+  }
+});
+
+// What the strip's read does to the SSL/TLS tab (10 Oct 2026, found in the
+// browser run). The strip is on screen on every tab, so the certificate's
+// answer is never dropped while the domain's page is open and the tab no
+// longer starts from nothing. Opened while the page's first read is on its
+// way, it shares that read. Opened later, it shows the answer the page has as
+// the earlier answer, says it is reading again, keeps its controls off, and
+// sends one more read.
+test('A domain page: the SSL/TLS tab shares the page’s first read, and over an answer the page already has it reads once more with its controls off', async () => {
+  const noCertificate = { domain_id: 1, domain_name: 'example.com', has_certificate: false, settings: { force_https: false, hsts_enabled: false, hsts_max_age: 300 } };
+  const openTab = async () => {
+    await press(buttons('domain.tab.hosting')[0]);
+    await press(buttons('domain.sub.ssl')[0]);
+  };
+  const issue = () => buttons('ssl.issue').filter((node) => !node.props.disabled);
+  const typeEmail = async () => {
+    const field = tree.root.findAll((node) => node.type === 'input' && node.props.type === 'email')[0];
+    assert.ok(field, 'the issue form has no address field');
+    await act(async () => { field.props.onChange({ target: { value: 'owner@example.com' } }); await settled(); });
+  };
+
+  // The tab is opened before the page's read of the certificate has answered.
+  let release = [];
+  serve({ '/api/v1/domains/1/ssl': () => new Promise((resolve) => { release.push(() => resolve(Response.json(noCertificate))); }) });
+  try {
+    await mount(DomainDetailByName, { domainName: 'example.com', onBack() {} });
+    await openTab();
+    assert.ok(has('ssl.checking') && !has('ssl.noCert') && !has('ssl.rereading'), 'the tab does not show its first-read line while the shared read is on its way');
+    assert.equal(reads('/api/v1/domains/1/ssl'), 1, 'the tab asked again for a read that is already on its way');
+    await act(async () => { release.forEach((answer) => answer()); await settled(); await settled(); });
+    assert.ok(has('ssl.noCert') && !has('ssl.checking'));
+    assert.equal(reads('/api/v1/domains/1/ssl'), 1);
+  } finally { await cleanup(); }
+
+  // The tab is opened after the page has the answer: the read behind it is held open.
+  release = [];
+  let asked = 0;
+  serve({ '/api/v1/domains/1/ssl': () => {
+    asked += 1;
+    if (asked === 1) return Response.json(noCertificate);
+    return new Promise((resolve) => { release.push(() => resolve(Response.json(noCertificate))); });
+  } });
+  try {
+    await mount(DomainDetailByName, { domainName: 'example.com', onBack() {} });
+    assert.equal(reads('/api/v1/domains/1/ssl'), 1);
+    await openTab();
+    assert.ok(has('ssl.noCert'), 'the answer the page already has is not shown');
+    assert.ok(has('ssl.rereading') && !has('ssl.checking'), 'the tab does not say that it is reading the earlier answer again');
+    assert.equal(reads('/api/v1/domains/1/ssl'), 2, 'the tab did not read again, or read more than once');
+    // With the address typed, the only thing that still holds the button is
+    // the read behind the screen.
+    await typeEmail();
+    assert.equal(issue().length, 0, 'a certificate can be requested while the earlier answer is being read again');
+    assert.equal(calls.filter((call) => call.method !== 'GET').length, 0);
+    await act(async () => { release.forEach((answer) => answer()); await settled(); await settled(); });
+    assert.ok(!has('ssl.rereading'), 'the re-read line stays after the answer');
+    assert.equal(issue().length, 1, 'the request stays off after the read has answered');
+    assert.equal(reads('/api/v1/domains/1/ssl'), 2);
+  } finally { await cleanup(); }
 });
 
 // --- A component's page (ServiceShell) ---------------------------------------------

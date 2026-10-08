@@ -95,6 +95,15 @@ export default function register(scenarios, tools) {
         return page;
     };
     const record = async (page, name, more = {}) => shot(page, name, { ...(await facts(page)), ...more });
+    // For the states added on 10 Oct 2026: a state that should show something
+    // and shows nothing fails the scenario, and its error is in the report.
+    const must = (condition, message) => { if (!condition) throw new Error(message); };
+    const toasts = (page) => page.evaluate(() => Array.from(document.querySelectorAll('.fixed.top-4.right-4 > *')).map((node) => node.innerText.trim()));
+    const measured = async (page, name, more = {}) => {
+        const seen = { ...(await facts(page)), toasts: await toasts(page), ...more };
+        await shot(page, name, seen);
+        return seen;
+    };
     // A component's page opened from the Components list with Manage. The page
     // then reads the component records twice: its header for its own record,
     // and one read shared by everything under the header. `shared` is what the
@@ -228,6 +237,32 @@ export default function register(scenarios, tools) {
         await toNotice(page);
         await record(page, '51i-postgresql-conf-reload-failed-restored');
         await closePage(page);
+
+        // The reload failed and the previous file is back, but the unit could
+        // not reload with it either (10 Oct 2026). The server was asked
+        // directly: either it runs its previous settings, or what it runs
+        // could not be established. Neither names a copy: the file was put
+        // back. What was typed is still in the field.
+        for (const [mode, name, phrases] of [
+            ['reloadUnit', '51i2-postgresql-conf-reload-failed-unit-reload-failed', ['settings it had before your change', 'değişikliğinizden önceki ayarlarla']],
+            ['reloadUnknown', '51i3-postgresql-conf-reload-failed-running-unknown', ['could not establish which settings', 'hangi ayarlarla çalıştığını belirleyemedi']],
+        ]) {
+            page = await edit(mode);
+            await save(page);
+            await toNotice(page);
+            const typed = await page.evaluate(() => Array.from(document.querySelectorAll('main input[type="text"], main input[type="number"]')).find((node) => (node.getAttribute('aria-label') || '').includes('max_connections'))?.value ?? null);
+            const seen = await measured(page, name, { typed });
+            must(seen.notices.length === 1, `${name}: ${seen.notices.length} notices after a reload that failed, expected one`);
+            const notice = seen.notices[0];
+            must(phrases.some((phrase) => notice.includes(phrase)), `${name}: the notice does not say what the server holds: ${notice.slice(0, 200)}`);
+            must(notice.includes('sudo systemctl reload postgresql@17-main'), `${name}: the notice does not name the unit to reload: ${notice.slice(0, 300)}`);
+            must(notice.includes('Job for postgresql@17-main.service failed'), `${name}: what the unit's reload said is not shown`);
+            must(!notice.includes('celikpanel-backup'), `${name}: a copy is named although the previous file was put back`);
+            must(!/could not put the previous file back|önceki dosyayı kesin olarak geri koyamadı/i.test(notice), `${name}: says the previous file could not be put back`);
+            must(typed === '300', `${name}: the change that was not kept is no longer in the form (${typed})`);
+            must(seen.toasts.length === 0, `${name}: a toast was raised: ${seen.toasts.join(' | ')}`);
+            await closePage(page);
+        }
 
         page = await edit('dropped');
         await save(page);
@@ -418,23 +453,107 @@ export default function register(scenarios, tools) {
         await record(page, '70c-mail-queue-could-not-read');
         await closePage(page);
 
+        // The cause the server verified itself, with Postfix's own line (10 Oct 2026).
+        const queueSaid = 'postqueue: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign';
+        await fresh({}, { override: { [QUEUE]: { status: 502, body: { error: 'x', code: 'MAIL_QUEUE_UNREADABLE', reason: 'postfix_config', vars: { detail: queueSaid } } } } });
+        page = await open('/services/postfix');
+        let seen = await measured(page, '70c2-mail-queue-could-not-read-postfix-config');
+        must(seen.notices.some((item) => item.includes('main.cf') && item.includes(queueSaid)), `70c2: the notice does not name the cause with Postfix's line: ${seen.notices.join(' | ').slice(0, 300)}`);
+        must(!seen.negativeText.length, `70c2: a negative sentence is on screen: ${seen.negativeText.join(' | ')}`);
+        must(!/check that Postfix is running|Postfix’in çalıştığını/i.test(seen.notices.join(' ')), '70c2: the notice names a cause the server did not verify');
+        await closePage(page);
+
         await fresh({ queue: [] });
         page = await open('/services/postfix');
         await record(page, '70d-mail-queue-known-empty');
         await closePage(page);
 
+        const sizeField = (at) => at.$('main input[type="number"]');
+        const savePolicy = async (at, value = null) => {
+            if (value !== null) {
+                const size = await sizeField(at);
+                await size.evaluate((node) => node.scrollIntoView({ block: 'center' }));
+                await size.evaluate((node) => { node.focus(); node.select(); });
+                await size.type(value);
+            }
+            await drainLog();
+            await clickByText(at, ['Save policy', 'Politikayı kaydet']);
+            await quiet(at); await pause(400);
+            return (await drainLog()).filter((line) => line.includes('/api/v1/mail/policy'));
+        };
+        const policyNotice = async (at) => {
+            await at.evaluate(() => Array.from(document.querySelectorAll('main [role="alert"]')).pop()?.scrollIntoView({ block: 'center' }));
+            await pause(200);
+        };
+
         await fresh({ policySave: 'notReloaded' });
         page = await open('/services/postfix');
-        const size = await page.$('main input[type="number"]');
-        await size.evaluate((node) => node.scrollIntoView({ block: 'center' }));
-        await size.evaluate((node) => { node.focus(); node.select(); });
-        await size.type('50');
-        await clickByText(page, ['Save policy', 'Politikayı kaydet']);
-        await quiet(page); await pause(400);
-        await page.evaluate(() => Array.from(document.querySelectorAll('main [role="alert"]')).pop()?.scrollIntoView({ block: 'center' }));
-        await pause(200);
+        await savePolicy(page, '50');
+        await policyNotice(page);
         await record(page, '70e-mail-policy-written-not-reloaded');
         await closePage(page);
+
+        // Saved, and Postfix was verified not to have taken it (or it could not
+        // be established): one sentence per stage, Postfix's own line under it,
+        // and the saved values in the form from this very answer, with no
+        // second read (10 Oct 2026).
+        const stages = [
+            ['check', '70f-mail-policy-not-reloaded-check', ['its own check refuses', 'kendi denetimi yapılandırmayı reddediyor'], 'default_process_limit'],
+            ['reload', '70g-mail-policy-not-reloaded-reload', ['but the reload failed', 'yeniden yükleme başarısız oldu'], 'the Postfix mail system is not running'],
+            ['verify', '70h-mail-policy-not-reloaded-verify', ['no longer running after', 'artık çalışmıyordu'], 'stopped while it was reloading'],
+            ['unknown', '70i-mail-policy-reload-unknown', ['could not establish whether', 'alıp almadığını belirleyemedi'], 'resource temporarily unavailable'],
+        ];
+        for (const [mode, name, phrases, said] of stages) {
+            await fresh({ policySave: mode });
+            page = await open('/services/postfix');
+            const sent = await savePolicy(page, '50');
+            await policyNotice(page);
+            const shown = await (await sizeField(page)).evaluate((node) => node.value);
+            // The surface the sentence stands on: a reload Postfix verifiably
+            // did not take is a failure; an outcome that could not be
+            // established is not one and must not be drawn as one. Found by
+            // looking on 10 Oct 2026: both were on the failure surface.
+            const surface = await page.evaluate(() => {
+                const box = document.querySelector('main [data-policy-outcome]');
+                const drawn = box && Array.from(box.querySelectorAll('div')).find((node) => getComputedStyle(node).borderTopWidth !== '0px');
+                return box ? { outcome: box.dataset.policyOutcome, background: drawn ? getComputedStyle(drawn).backgroundColor : null, border: drawn ? getComputedStyle(drawn).borderTopColor : null, text: drawn ? getComputedStyle(drawn.querySelector('p, span') || drawn).color : null } : null;
+            });
+            seen = await measured(page, name, { policyRequests: sent, sizeShown: shown, surface });
+            must(surface && surface.background && surface.border, `${name}: the notice's surface was not found, so its colour was not measured`);
+            const attention = /245, 179, 1/.test(`${surface.background} ${surface.border}`);
+            const failure = /179, 38, 30|245, 145, 136/.test(`${surface.background} ${surface.border}`);
+            if (mode === 'unknown') {
+                must(surface.outcome === 'unknown' && attention && !failure, `${name}: an outcome that could not be established is not on the attention surface, or is drawn as a failure: ${JSON.stringify(surface)}`);
+            } else {
+                must(surface.outcome === 'not-reloaded' && failure && !attention, `${name}: a verified failure is not drawn on the failure surface: ${JSON.stringify(surface)}`);
+            }
+            const notice = seen.notices.join(' ');
+            must(seen.notices.length === 1, `${name}: ${seen.notices.length} notices, expected the one above the saved values`);
+            must(phrases.some((phrase) => notice.includes(phrase)), `${name}: the notice does not say the verified stage: ${notice.slice(0, 240)}`);
+            must(notice.includes(said), `${name}: the line that goes with the sentence is not shown`);
+            must(shown === '50', `${name}: the form does not show the saved value (${shown})`);
+            must(sent.filter((line) => line.includes(' PUT ')).length === 1, `${name}: the save was sent ${sent.filter((line) => line.includes(' PUT ')).length} times`);
+            must(!sent.some((line) => line.includes(' GET ')), `${name}: the policy was read again although the answer carried it: ${sent.join(' ; ')}`);
+            must(seen.toasts.length === 0, `${name}: a toast was raised for a save Postfix did not take: ${seen.toasts.join(' | ')}`);
+            if (mode !== 'check') { await closePage(page); continue; }
+            // The owner corrects main.cf and presses Save without a change:
+            // the save reloads Postfix, the notice leaves and the page says so.
+            await ctl({ b2: withB2({ policy: { message_size_mb: 50, dnsbl_zones: ['zen.spamhaus.org'], outbound_rate_limit: 30 }, policySave: 'ok' }) });
+            const again = await savePolicy(page);
+            seen = await measured(page, '70j-mail-policy-unchanged-save-reloaded', { policyRequests: again });
+            must(again.filter((line) => line.includes(' PUT ')).length === 1, `70j: the unchanged save was sent ${again.filter((line) => line.includes(' PUT ')).length} times: ${again.join(' ; ')}`);
+            must(seen.notices.length === 0, `70j: the not-reloaded notice is still on screen after a save that reloaded: ${seen.notices.join(' | ').slice(0, 200)}`);
+            must(seen.toasts.some((item) => /Postfix was reloaded|Postfix bu değerlerle yeniden yüklendi/.test(item)), `70j: the page does not say Postfix was reloaded: ${seen.toasts.join(' | ')}`);
+            // The owner has not corrected it yet: the same reason again.
+            await ctl({ b2: withB2({ policy: { message_size_mb: 50, dnsbl_zones: ['zen.spamhaus.org'], outbound_rate_limit: 30 }, policySave: 'check' }) });
+            await pause(4500);
+            const still = await savePolicy(page);
+            await policyNotice(page);
+            seen = await measured(page, '70k-mail-policy-unchanged-save-still-refused', { policyRequests: still });
+            must(seen.notices.length === 1 && phrases.some((phrase) => seen.notices[0].includes(phrase)), `70k: an unchanged save that Postfix still refuses does not say so: ${seen.notices.join(' | ').slice(0, 200)}`);
+            must(seen.toasts.every((item) => !/applied|uygulandı|Nothing to save|Kaydedilecek/.test(item)), `70k: reported as saved: ${seen.toasts.join(' | ')}`);
+            await closePage(page);
+        }
     };
 
     // --- 80: a disabled scheduled task -----------------------------------------------------
@@ -459,5 +578,76 @@ export default function register(scenarios, tools) {
         const log = (await drainLog()).filter((line) => line.includes(CRON));
         await record(page, '80b-cron-disabled-task-enabled', { jobs: await jobs(page), requests: log });
         await closePage(page);
+
+        // Why the list could not be read (10 Oct 2026). A cause the server
+        // verified (the site user is not in /etc/cron.allow, or is in
+        // /etc/cron.deny) is the server owner's rule: said in its own words,
+        // without the attention colour and without an alert. Any other answer
+        // keeps the sentence that names no cause, followed by the line crontab
+        // printed when it printed one. Retry stays, and only reads.
+        const crontabSaid = 'You (site1) are not allowed to use this program (crontab)';
+        const spoolSaid = "crontab: can't open '/var/spool/cron/crontabs/site1': Permission denied";
+        const cases = [
+            ['80c-cron-unreadable-cron-allow', { detail: 'cron_allow', vars: { detail: crontabSaid } }, 'cron_allow', '/etc/cron.allow'],
+            ['80d-cron-unreadable-cron-deny', { detail: 'cron_deny', vars: { detail: crontabSaid } }, 'cron_deny', '/etc/cron.deny'],
+            ['80e-cron-unreadable-crontab-said', { vars: { detail: spoolSaid } }, '', spoolSaid],
+            ['80f-cron-unreadable-no-cause', {}, '', ''],
+        ];
+        for (const [name, extra, cause, mustSay] of cases) {
+            await fresh({}, { override: { [CRON]: { status: 502, body: { error: 'x', code: 'CURRENT_SETTINGS_UNREADABLE', reason: 'scheduled_tasks', ...extra } } } });
+            const at = await tasks();
+            await at.evaluate(() => (document.querySelector('main [data-cron-unreadable], main [role="alert"]'))?.scrollIntoView({ block: 'center' }));
+            await pause(200);
+            const drawn = await at.evaluate(() => {
+                const style = (node) => (node ? { background: getComputedStyle(node).backgroundColor, border: getComputedStyle(node).borderTopColor } : null);
+                const box = document.querySelector('main [data-cron-unreadable]');
+                const alert = document.querySelector('main [role="alert"]');
+                const said = document.querySelector('main [data-cron-said]');
+                const literal = said?.querySelector('span');
+                const inWidth = (node) => { if (!node) return null; const r = node.getBoundingClientRect(); return r.left >= 0 && r.right <= window.innerWidth + 0.5; };
+                return {
+                    cause: box ? box.dataset.cronUnreadable : null,
+                    causeText: box ? box.innerText.trim() : null,
+                    causeSurface: style(box),
+                    causeRole: box ? box.getAttribute('role') : null,
+                    alertSurface: style(alert),
+                    said: said ? { text: said.innerText.trim(), font: literal ? getComputedStyle(literal).fontFamily : '', inWidth: inWidth(said) } : null,
+                    inWidth: inWidth(box || alert),
+                    pageOverflowsSideways: document.documentElement.scrollWidth > window.innerWidth + 1,
+                };
+            });
+            const seen = await measured(at, name, { cron: drawn });
+            must(drawn.cause !== null || seen.notices.length > 0, `${name}: neither the cause nor a could-not-read notice is on screen, so nothing was measured`);
+            must(!seen.negativeText.length, `${name}: a negative sentence is on screen for a list that was not read: ${seen.negativeText.join(' | ')}`);
+            must(seen.enabledButtons.some((item) => RETRY.includes(item)), `${name}: Retry is not offered`);
+            must(!seen.enabledButtons.some((item) => ['Add task', 'Görev ekle'].includes(item)), `${name}: a task can be added to a crontab that was not read`);
+            must(seen.toasts.length === 0, `${name}: a failed read raised a toast: ${seen.toasts.join(' | ')}`);
+            must(drawn.inWidth && !drawn.pageOverflowsSideways, `${name}: the notice is wider than the screen`);
+            if (cause) {
+                must(drawn.cause === cause, `${name}: the cause on screen is ${drawn.cause}, expected ${cause}`);
+                must(drawn.causeText.includes(mustSay), `${name}: the sentence does not name ${mustSay}: ${drawn.causeText.slice(0, 200)}`);
+                must(seen.notices.length === 0 && drawn.causeRole === 'status', `${name}: a server policy is announced as an alert`);
+                must(!/245, 179, 1|179, 38, 30|245, 145, 136/.test(`${drawn.causeSurface.background} ${drawn.causeSurface.border}`), `${name}: a server policy is drawn in an attention or failure colour: ${JSON.stringify(drawn.causeSurface)}`);
+                must(!drawn.said && !drawn.causeText.includes(crontabSaid), `${name}: the program's line is repeated under a cause that already says it`);
+            } else {
+                must(drawn.cause === null && seen.notices.length === 1, `${name}: expected the one neutral notice, found cause ${drawn.cause} and ${seen.notices.length} notices`);
+                must(!/cron\.allow|cron\.deny/.test(seen.notices[0]), `${name}: a cause the server did not verify is named`);
+                if (mustSay) {
+                    must(drawn.said && drawn.said.text.includes(mustSay), `${name}: what crontab said is not on screen`);
+                    must(/mono/i.test(drawn.said.font), `${name}: the program's line is not in the mono face (${drawn.said.font})`);
+                    must(drawn.said.inWidth, `${name}: the program's line runs off the screen`);
+                } else {
+                    must(!drawn.said, `${name}: a "crontab said" line is shown although it said nothing`);
+                }
+            }
+            // Retry reads again, and only reads; the list comes back.
+            await ctl({ clear: [CRON] });
+            await drainLog();
+            await clickByText(at, RETRY);
+            await waitFor(at, () => /cron\.php/.test(document.querySelector('main')?.innerText || ''), 15000);
+            const after = (await drainLog()).filter((line) => line.includes(CRON));
+            must(after.length > 0 && after.every((line) => line.includes(' GET ')), `${name}: Retry sent something other than a read: ${after.join(' ; ')}`);
+            await closePage(at);
+        }
     };
 }

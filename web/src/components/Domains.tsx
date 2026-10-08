@@ -353,7 +353,7 @@ export function Domains() {
                                     <th className="px-4 py-2.5 text-right">{t('domains.col.disk')}</th>
                                     <th className="px-4 py-2.5 text-right">{t('domains.col.traffic')}</th>
                                     <th className="px-4 py-2.5">{t('domains.col.status')}</th>
-                                    <th className="px-4 py-2.5" />
+                                    <th className="row-actions px-4 py-2.5" />
                                 </tr>
                             </thead>
                             <tbody>
@@ -418,7 +418,7 @@ export function Domains() {
                                                 {d.status === 'active' ? t('domains.status.active') : d.status}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="row-actions px-4 py-3">
                                             <div className="flex items-center justify-end gap-0.5">
                                                 {canView(d, 'files') && <IconAction
                                                     href={`https://${d.domain_name}`}

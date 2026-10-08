@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, Activity, Trash2, RefreshCw, RotateCw } from 'lucide-react';
+import { Mail, Activity, Trash2, RefreshCw, RotateCw, AlertTriangle } from 'lucide-react';
 import { ServiceShell } from './ServiceShell';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
@@ -28,6 +28,14 @@ const decodeQueue = (raw: unknown) => decodeList<PostfixQueueItem>(raw);
 // Sunucunun kendisinin doğruladığı okunamayan-kuyruk nedenleri.
 const queueCauses: Record<string, TranslationKey> = {
     postfix_config: 'postfix.queue.unreadable.postfix_config',
+};
+
+// What a save that was answered 200 came to, by the server's `applied`.
+// 200 ile yanıtlanan kaydın sonucu, sunucunun `applied` değerine göre.
+const savedSentences: Record<string, TranslationKey> = {
+    not_running: 'mailpolicy.saved.notRunning',
+    unchanged: 'mailpolicy.saved.unchanged',
+    unchanged_reloaded: 'mailpolicy.saved.unchangedReloaded',
 };
 
 // The policy a failed save carries beside its error, or undefined. A body that
@@ -344,14 +352,13 @@ function MailPolicySection() {
             const saved = answer.policy;
             // "Applied" is said only when the server verified the reload. A
             // stopped Postfix was left stopped, and an unchanged policy wrote
-            // nothing: each says so.
+            // nothing: each says so. A save without a change still reloads a
+            // running Postfix (after "not reloaded" that is the save the owner
+            // presses once main.cf is corrected), and says that too.
             // "Uygulandı", yalnız sunucu yeniden yüklemeyi doğruladığında
-            // söylenir.
-            showToast('success', t(
-                answer.applied === 'not_running' ? 'mailpolicy.saved.notRunning'
-                    : answer.applied === 'unchanged' ? 'mailpolicy.saved.unchanged'
-                        : 'mailpolicy.saved',
-            ));
+            // söylenir. Değişiklik içermeyen kayıt da çalışan Postfix'i yeniden
+            // yükler ve bunu söyler.
+            showToast('success', t(savedSentences[answer.applied ?? ''] ?? 'mailpolicy.saved'));
             if (saved?.version) show(saved);
             else void load();
         } catch {
@@ -375,8 +382,26 @@ function MailPolicySection() {
             {policy && (
                 <>
                     {notReloaded && (
-                        <div role="alert" className="mb-4">
-                            <ErrorBanner error={notReloaded} />
+                        <div role="alert" className="mb-4" data-policy-outcome={notReloaded.code === 'MAIL_POLICY_RELOAD_UNKNOWN' ? 'unknown' : 'not-reloaded'}>
+                            {/* A reload Postfix was verified not to have taken
+                                is a failure after a change: the failure
+                                surface. An outcome that could not be
+                                established is not one, and its own sentence
+                                says so; it is drawn on the attention surface,
+                                like every other unknown result (10 Oct 2026:
+                                both were red).
+                                Postfix'in almadığı doğrulanan yeniden yükleme,
+                                değişiklik sonrası bir hatadır: hata yüzeyi.
+                                Belirlenemeyen sonuç hata değildir; kendi cümlesi
+                                de bunu söyler ve dikkat yüzeyinde çizilir. */}
+                            {notReloaded.code === 'MAIL_POLICY_RELOAD_UNKNOWN' ? (
+                                <div className="flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-sm leading-relaxed text-fg">
+                                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+                                    <p className="min-w-0 max-w-[75ch] break-words">{apiErrorText(notReloaded, t)}</p>
+                                </div>
+                            ) : (
+                                <ErrorBanner error={notReloaded} />
+                            )}
                             {notReloaded.vars?.detail && (
                                 <p className="mt-1.5 max-w-[75ch] break-words text-xs text-fg-muted">
                                     {t(notReloaded.reason === 'check' || notReloaded.reason === 'reload' ? 'mailpolicy.postfixSaid' : 'mailpolicy.observed')}{' '}

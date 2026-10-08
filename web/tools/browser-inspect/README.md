@@ -99,7 +99,7 @@ size when the answer arrived (`moved`).
 | `panelcert` | Settings, the certificate the Panel serves: its state slow, failing, known, and not readable by the Panel; a request that succeeds on the page that asked (what it says before it moves, "Stay here", and the one move when left alone), in another section and in another tab (neither is moved); a poll that gets no answer; a request reported as failed (51) |
 | `accounts` | Accounts: the list slow, failing, known empty and populated; the plans failing on both tabs; a list that could not be read again after a change (52) |
 | `files` | a domain's files: a folder slow, failing, populated; another folder opened while it is slow (53) |
-| `domainssl` | a domain's certificate: slow, failing, known none; a successful request whose re-read is slow, and one whose re-read fails (54) |
+| `domainssl` | a domain's certificate: the tab opened while the page's first read is slow, known none, the tab opened over the answer the page already has (shown as the earlier answer with its controls off while it is read again; since 2026-10-10 the strip under the domain's name reads this address on every tab), failing; a successful request whose re-read is slow, and one whose re-read fails. A request must arrive at the mock exactly once, or the scenario fails (54) |
 | `importer` | import: the subscriptions slow and failing; an apply that loses its connection, then the check that only reads, with the domain present and absent (55) |
 | `dashboard` | the dashboard: the four counts and the navigation badge slow, failing and known; the license notice for "could not be verified", for a known expired license and for a failed read (56) |
 | `monitoring` | monitoring: slow, known, a poll that fails a minute later, failing (57) |
@@ -134,10 +134,10 @@ beside `after` (apply to that many requests, then let the rest through), and
 
 | Name | States |
 | --- | --- |
-| `dbconfig` | the Components list as the scan of this batch draws it (50-0); the PostgreSQL page, opened from that list with Manage, while the one read shared by the file list and the sections under it is slow and failing (then the one Retry), and known without the file; `postgresql.conf` slow, failing, changed, saved, refused because the file changed (409), refused by PostgreSQL next to the field, reload failed and restored, answer lost; `pg_hba.conf` loaded, failing, a rule marked for removal, the lockout refusal, a new rule incomplete and refused next to the rule; a MariaDB option file failing, loaded, refused next to the field, saved and waiting for a restart; the raw file loaded and failing (50–54) |
+| `dbconfig` | the Components list as the scan of this batch draws it (50-0); the PostgreSQL page, opened from that list with Manage, while the one read shared by the file list and the sections under it is slow and failing (then the one Retry), and known without the file; `postgresql.conf` slow, failing, changed, saved, refused because the file changed (409), refused by PostgreSQL next to the field, reload failed and restored, reload failed with the previous file back and the unit still not reloading (the server runs its previous settings; what it runs is unknown), answer lost; `pg_hba.conf` loaded, failing, a rule marked for removal, the lockout refusal, a new rule incomplete and refused next to the rule; a MariaDB option file failing, loaded, refused next to the field, saved and waiting for a restart; the raw file loaded and failing (50–54) |
 | `mailscreens` | one domain's Mail tab: the mailbox list and the webmail card slow, failing (then one Retry), known empty and known unavailable, usage that could not be read; the catch-all address slow, failing, known none, known set, refused because it changed (60–62) |
-| `mailqueue` | the Postfix page: the queue slow, failing, known empty and populated; a mail policy that was written and not reloaded (70) |
-| `cron` | a domain's scheduled tasks with a disabled task, and that task enabled again (80) |
+| `mailqueue` | the Postfix page: the queue slow, failing (also with the cause the server verified and Postfix's line), known empty and populated; a mail policy that was written and not reloaded, for an Agent that names no stage and for each stage (`check`, `reload`, `verify`) and the unknown outcome, with the saved values in the form from that answer; then a save without a change that reloads Postfix, and one that Postfix still refuses (70) |
+| `cron` | a domain's scheduled tasks with a disabled task, and that task enabled again; a crontab that could not be read because the site user is not in `/etc/cron.allow`, is in `/etc/cron.deny`, with no verified cause and a line crontab printed, and with neither, each followed by Retry (80) |
 
 Each state's record adds which negative sentences were on screen, the checking
 lines and notices, how many fields existed and were enabled, the enabled and
@@ -175,3 +175,47 @@ the envelope the Panel sends, `{"operation": null}` when nothing is running.
 Until this batch it answered a bare `null`, which the tracker reads as "could
 not find out"; a lock held by another screen then drew the "connection
 interrupted" treatment, which a real Panel does not cause.
+
+## Scenarios of the fourth batch (2026-10-09)
+
+These live in `scenarios-batch4.mjs`, with their mock routes in
+`mock-batch4.mjs` (state under `state.b4`; the routes answer only while a
+scenario of this batch has set it, and each scenario clears it at its end).
+`run.mjs` and `mock.mjs` each load them in one marked block.
+
+A read is made slow or failing with the overrides of `mock.mjs`, which are per
+address. A change whose answer is lost is set in `state.b4` (`lose`, `loseAs`,
+`loseApplied`), so that it does not touch the read of the same address. The
+mock ends that connection with bytes that are not an answer. It does not merely
+reset it: when a connection had carried an earlier request, Chrome sends the
+request again by itself, change or not (one click, three arrivals, seen on
+2026-10-09), which is the browser's doing and not the page's.
+
+| Name | States |
+| --- | --- |
+| `domaindns` | a domain's DNS tab: the zone, the records and the signing state each slow, known, failing (then Retry); the place of the records table while the signing card checks; the row actions; a zone the server says is missing; a zone with no records; a record added whose answer is lost (90) |
+| `domainhosting` | Hosting type: the saved settings slow, known, failing (then Retry); a Node.js project's application slow and known; polls that fail and the poll that answers again; Apply with a gateway answering in the Panel's place (91) |
+| `domainphp` | PHP: slow, known, failing (then Retry); the pool form's values (92) |
+| `domaingeneral` | General: slow, known, failing (then Retry); the alias actions; an alias removed whose answer is lost (93) |
+| `domainapps` | Applications: slow, known, failing (then Retry), known empty; an install whose answer is lost (94) |
+| `domainmailauth` | Mail → Authentication: slow, known, failing (then Retry); a record published whose answer is lost (95) |
+| `domainlogs` | Advanced → Logs: slow, known, failing (then Retry), known empty; auto-refresh with refused polls, then one that answers (96) |
+| `domainbackups` | Advanced → Backups: the list slow, known, failing (then Retry), known empty; the row actions; a backup whose answer is lost and that was not made; the linked databases failing (97) |
+| `sslcard` | the certificate card of a domain's overview: checking, known none, could not check (then Retry), with the card's height in each (98) |
+| `lostforms` | what a form does once the state was read again after a lost answer (2026-10-10): a DNS record the server did not make (the form keeps what was typed) and one it finished late (found by "Check again", the form closes); an alias made and not made; Apply of the hosting type and the PHP pool not taken, with the entered value kept (100) |
+| `sslfact` | the certificate line of the strip under a domain's name, on the overview and on the DNS tab: checking, known, could not be checked with its own Retry, after Retry (101) |
+| `rowactions` | the Domains list, the Databases page and Fail2ban's banned addresses: whether each row action is within the width of the screen and on top, with the table scrolled to its start, and on how many lines its label is drawn (99) |
+
+A scenario of this batch **fails**, and its error is in the report, when a state
+that should show a checking line, a notice or a result-unknown notice shows
+none; when a negative sentence is on screen while its read is slow or failing
+(matched as whole words: "Durdu" is not the button "Durdur"); when the page
+sent a lost change more than once, or it arrived more than once; when "Retry"
+or "Check again" sent anything but reads; when a poll did not run; or when a
+row action is off the edge or covered at the width of the screen, or its label
+is on more than one line. Since 2026-10-10 a lost change names the state its
+notice must be in once the state was read again (`read`, `made` or
+`not-made`), and the scenario fails on any other. Each state is
+brought into the window before it is photographed (on a phone the tabs of a
+domain fill the first screen); where the result-unknown notice stood before
+that is recorded as `notice.inView`.

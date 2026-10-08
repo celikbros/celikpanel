@@ -45,17 +45,23 @@ const actual = scanTree(webDir);
 // After the first batch:         37 / 58 / 14 / 109 / 29 in 62 files.
 // After the second, first part:  27 / 43 / 12 /  83 / 25 in 53 files.
 // After the second batch:        20 / 36 / 10 /  71 / 23 in 47 files.
-// The ceilings below are the totals after the third batch (the Fail2ban, Nginx,
-// PHP, Dovecot and PowerDNS pages, the DNS settings; and in part the dashboard,
-// whose firewall and component reads are no longer turned into values).
+// After the third batch:         8 / 28 / 10 /  57 / 19 in 40 files (the
+// Fail2ban, Nginx, PHP, Dovecot and PowerDNS pages, the DNS settings; and in
+// part the dashboard, whose firewall and component reads are no longer turned
+// into values).
+// The ceilings below are the totals after the fourth batch: the panels of one
+// domain (DNS records and signing, hosting type and its application, PHP, the
+// general settings, the applications, the certificate card of the overview,
+// mail authentication, the backups, the scheduled tasks; and the logs, whose
+// one read stays in its file because a Go test pins it there).
 const ceilings = {
   valueFromFailure: 8,
-  swallowedFailure: 28,
-  ignoredFailure: 10,
-  rawRead: 57,
-  unprovenEmptyState: 19,
+  swallowedFailure: 25,
+  ignoredFailure: 6,
+  rawRead: 42,
+  unprovenEmptyState: 12,
 };
-const fileCeiling = 40;
+const fileCeiling = 31;
 
 const advice = 'Read through useRemote/readRemote (src/lib/remote.ts) and draw the three states; '
   + 'see docs/OPERATION-GUIDANCE.md, entry of 2026-10-09.';
@@ -182,7 +188,7 @@ test('the totals never exceed the pinned ceilings', () => {
   assert.deepEqual(totals(allowList.files), now, 'the allow-list and the tree disagree; run --tighten');
 });
 
-test('the screens of the first three batches are off the list for good', () => {
+test('the screens of the first four batches are off the list for good', () => {
   for (const name of [
     'AddDomainModal', 'Domains', 'DatabaseManagementV2', 'DomainDatabaseManager', 'DomainConnection', 'CurrentSettings',
     // The second batch.
@@ -194,6 +200,9 @@ test('the screens of the first three batches are off the list for good', () => {
     // The third batch.
     'Fail2banManagement', 'NginxManagement', 'PHPManagement', 'PHPExtendedConfig', 'DovecotManagement', 'PowerDNSManagement',
     'DNSServerSettings',
+    // The fourth batch.
+    'DomainDNSManager', 'HostingTypePanel', 'DomainPHPSettings', 'DomainGeneralSettings', 'DomainAppsPanel',
+    'DomainSSLOverviewCard', 'MailAuthPanel', 'DomainBackupManager', 'DomainCronManager',
   ]) {
     const path = `src/components/${name}.tsx`;
     assert.equal(actual[path], undefined, `${path} reads the old way again: ${JSON.stringify(actual[path])}. ${advice}`);

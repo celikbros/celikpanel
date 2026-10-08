@@ -1333,27 +1333,82 @@ const scenarios = {
     // 54: a domain's certificate: slow, failing, known none; a successful
     // request whose re-read is slow, and one whose re-read fails.
     async domainssl() {
-        const open = async () => {
+        // Since 10 Oct 2026 the strip under a domain's name reads the
+        // certificate too, at this address, and it is on screen on every tab.
+        // So the SSL/TLS tab never starts from nothing any more: it opens
+        // either while that one shared read is still on its way (54a), or over
+        // the answer the page already has, which it shows as the earlier
+        // answer, with its controls off, while it reads again (54b2). `wait`
+        // says which: without it the tab is opened before the page's first
+        // read has answered.
+        const open = async (wait = true) => {
             const page = await newPage();
             page.on('dialog', dialog => dialog.accept());
-            await page.goto(`${base}/domains/example.com`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector(PAGE_TITLE); await quiet(page);
+            await page.goto(`${base}/domains/example.com`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector(PAGE_TITLE);
+            if (wait) await quiet(page);
+            // The tabs are drawn once the domain is found in the list; that
+            // read is not the slow one.
+            await waitFor(page, () => Array.from(document.querySelectorAll('main button')).some(node => ['Hosting', 'Barındırma'].includes((node.innerText || '').trim())), 15000);
             await clickByText(page, ['Hosting', 'Barındırma'], 'main button'); await pause(300);
             await clickByText(page, ['SSL/TLS'], 'main button');
             return page;
         };
+        const must = (condition, message) => { if (!condition) throw new Error(message); };
+        const NONE = ['No certificate', 'Sertifika yok'];
+        const settled = page => waitFor(page, () => !document.querySelector('main [role="status"][aria-label]') && !!document.querySelector('main input[type="email"]'), 15000);
+        // Asks for a certificate as a person does: the button is pressed only
+        // once it can be, and the request must really have been sent, once. A
+        // state recorded after a press that did nothing is not a record.
+        const issue = async (page, name, type = true) => {
+            if (type) await page.type('main input[type="email"]', 'owner@example.com');
+            await waitFor(page, () => Array.from(document.querySelectorAll('main button')).some(node => ['Get certificate', 'Sertifika al'].includes((node.innerText || '').trim()) && !node.disabled), 8000);
+            await drainLog();
+            await clickByText(page, ['Get certificate', 'Sertifika al'], 'main button');
+            await pause(1500);
+            const sent = (await drainLog()).filter(line => line.includes(' POST ') && line.includes('/ssl/letsencrypt')).length;
+            must(sent === 1, `${name}: the certificate request arrived ${sent} times, so the state after it was not recorded`);
+        };
         await b2Reset({ override: { [SSL_URL]: { delay: 5000 } } });
-        let page = await open();
+        let page = await open(false);
         await pause(1200);
         const checking = await sizes(page);
-        await shot(page, '54a-certificate-checking', { ...(await negatives(page)), ...checking });
-        await waitFor(page, () => !!document.querySelector('main input[type="email"]'), 12000);
+        let seen = await negatives(page);
+        await shot(page, '54a-certificate-checking', { ...seen, ...checking });
+        must((seen.checkingLines || []).length > 0, '54a: the tab shows no checking line while the certificate is read for the first time');
+        must(!(seen.negativeText || []).some(item => NONE.includes(item)), `54a: "no certificate" is on screen before the server has answered: ${(seen.negativeText || []).join(' | ')}`);
+        await settled(page);
         await pause(300);
-        await shot(page, '54b-certificate-known-none', { ...(await negatives(page)), moved: moved(checking.rects, (await sizes(page)).rects) });
+        seen = await negatives(page);
+        await shot(page, '54b-certificate-known-none', { ...seen, moved: moved(checking.rects, (await sizes(page)).rects) });
+        must((seen.checkingLines || []).length === 0, '54b: the known state still shows a checking line');
+        await closePage(page);
+
+        // The tab opened over the answer the page already has: that answer is
+        // shown as the earlier one, with the controls off, until the read
+        // behind it answers.
+        await b2Reset();
+        page = await newPage();
+        page.on('dialog', dialog => dialog.accept());
+        await page.goto(`${base}/domains/example.com`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector(PAGE_TITLE); await quiet(page);
+        await ctl({ override: { [SSL_URL]: { delay: 5000, after: 0 } } });
+        await clickByText(page, ['Hosting', 'Barındırma'], 'main button'); await pause(300);
+        await clickByText(page, ['SSL/TLS'], 'main button');
+        await page.waitForSelector('main input[type="email"]', { timeout: 8000 });
+        // The address is typed first: with it empty the button is off anyway,
+        // and that would say nothing about the read behind the screen.
+        await page.type('main input[type="email"]', 'owner@example.com');
+        await pause(600);
+        seen = await negatives(page);
+        const held = await page.$$eval('main button:disabled', nodes => nodes.map(node => node.innerText.trim()).filter(Boolean));
+        const typed = await page.$eval('main input[type="email"]', node => node.value);
+        await shot(page, '54b2-tab-opened-over-the-earlier-answer', { ...seen, disabledWhileReadingAgain: held, emailTyped: typed });
+        must((seen.checkingLines || []).length > 0, '54b2: the tab does not say it is reading the certificate again, so the state was not recorded');
+        must(typed === 'owner@example.com', `54b2: the address was not typed (${typed}), so the button being off proves nothing`);
+        must(held.some(item => ['Get certificate', 'Sertifika al'].includes(item)), `54b2: a certificate can be requested while the earlier answer is being read again: ${held.join(' | ')}`);
+        await settled(page);
         // A request that succeeds; the server's next answer is slow.
         await ctl({ sslAfterIssue: CERTIFICATE, override: { [SSL_URL]: { delay: 5000, after: 0 } } });
-        await page.type('main input[type="email"]', 'owner@example.com');
-        await clickByText(page, ['Get certificate', 'Sertifika al'], 'main button');
-        await pause(1500);
+        await issue(page, '54c', false);
         await shot(page, '54c-reading-again-after-issue', { ...(await negatives(page)), enabledButtons: await page.$$eval('main .rounded-xl button:not(:disabled)', nodes => nodes.map(node => node.innerText.trim()).filter(Boolean)) });
         await waitFor(page, () => !document.querySelector('main input[type="email"]'), 12000);
         await pause(400);
@@ -1369,10 +1424,9 @@ const scenarios = {
         // A request that succeeds; the re-read fails.
         await b2Reset();
         page = await open();
-        await page.waitForSelector('main input[type="email"]');
+        await settled(page);
         await ctl({ sslAfterIssue: CERTIFICATE, override: { [SSL_URL]: { status: 502, body: { error: 'agent unavailable' }, after: 0 } } });
-        await page.type('main input[type="email"]', 'owner@example.com');
-        await clickByText(page, ['Get certificate', 'Sertifika al'], 'main button');
+        await issue(page, '54f');
         await waitFor(page, () => !!document.querySelector('main [role="alert"]'), 8000);
         await pause(400);
         await page.evaluate(() => document.querySelector('main [role="alert"]').scrollIntoView({ block: 'start' }));
@@ -1644,6 +1698,13 @@ const scenarios = {
 // live in their own file, like batch 2b.
 (await import('./scenarios-batch3.mjs')).default(scenarios, { base, vp, locale, theme, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
 // --- end of batch 3 ---
+
+// --- batch 4 (9 Oct 2026): the panels of one domain, row actions on a phone ---
+// `domaindns`, `domainhosting`, `domainphp`, `domaingeneral`, `domainapps`,
+// `domainmailauth`, `domainlogs`, `domainbackups`, `sslcard` and `rowactions`
+// live in their own file, like the two batches before.
+(await import('./scenarios-batch4.mjs')).default(scenarios, { base, vp, locale, theme, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
+// --- end of batch 4 ---
 
 for (const [name, run] of Object.entries(scenarios)) {
     if (wanted && !wanted.includes(name)) continue;

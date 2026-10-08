@@ -4,10 +4,11 @@ import {
     Play, Pause, Save, X, Info, AlertTriangle,
 } from 'lucide-react';
 import { showToast } from './Toast';
-import { apiErrorText, readApiError } from '../lib/apiError';
+import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
-import { Button, EmptyState, inputClass } from './ui';
+import { Button, CouldNotCheck, KnownEmpty, inputClass } from './ui';
+import type { Observed } from '../lib/remote';
 import { CurrentGate, StaleNotice, isStaleWrite, readCurrent } from './CurrentSettings';
 
 interface CronJob {
@@ -35,6 +36,17 @@ const schedulePresets: { labelKey: TranslationKey; value: string }[] = [
     { labelKey: 'cron.preset.weekly', value: '0 0 * * 0' },
     { labelKey: 'cron.preset.monthly', value: '0 0 1 * *' },
 ];
+
+// The causes of an unreadable crontab the server verifies itself (10 Oct 2026).
+// Each is a rule the server owner set, not something that broke: the notice is
+// drawn on the neutral surface, never as a warning. Any other answer gets the sentence
+// that names no cause.
+// Sunucunun kendisinin doğruladığı okunamayan-crontab nedenleri. Her biri
+// sunucu sahibinin koyduğu bir kuraldır, bozulan bir şey değil.
+const unreadableCauses: Record<string, TranslationKey> = {
+    cron_allow: 'cron.unknown.cron_allow',
+    cron_deny: 'cron.unknown.cron_deny',
+};
 
 // Real crontab management through the agent: add, edit, enable/disable and
 // delete the domain user's scheduled tasks, with human-readable presets.
@@ -68,6 +80,14 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
     // nothing can be added, and the screen says so with a way to try again.
     // Liste okunamadı. Bu "görev yok" değildir.
     const [unknown, setUnknown] = useState(false);
+    // What the server said when it could not read the list: the cause it
+    // verified, when it verified one, and the line crontab itself printed.
+    // Sunucunun listeyi okuyamadığında söylediği: doğruladığı neden ve
+    // crontab'ın kendi yazdığı satır.
+    const [unreadable, setUnreadable] = useState<ApiError | null>(null);
+    // The answer that listed the tasks, kept as the proof of an empty list.
+    // Görevleri listeleyen yanıt; boş listenin kanıtı olarak tutulur.
+    const [listed, setListed] = useState<Observed<CronJob[]> | null>(null);
     // The server refused a change because the crontab changed after this list
     // loaded. The form keeps what was typed; the notice says how to go on.
     // Sunucu, liste yüklendikten sonra crontab değiştiği için reddetti.
@@ -94,12 +114,18 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
 
     const loadJobs = async () => {
         setLoading(true);
-        const next = await readCurrent<{ jobs?: CronJob[]; version?: string }>(`/api/v1/domains/${domainId}/cron`);
+        const next = await readCurrent<{ jobs?: CronJob[] | null; version?: string }>(`/api/v1/domains/${domainId}/cron`);
         const missing = next.state === 'unknown' && next.error.code === 'CRON_NOT_INSTALLED';
-        setJobs(next.state === 'known' ? next.value.jobs || [] : []);
-        setVersion(next.state === 'known' ? next.value.version || '' : '');
+        // The list is proven empty only by an answer that carries it: `jobs` as a
+        // list, or the `null` the server writes for a list with no rows.
+        // Liste, ancak onu taşıyan yanıtla boş sayılır.
+        const list = next.state === 'known' && (next.value.jobs === null || Array.isArray(next.value.jobs)) ? next.value.jobs ?? [] : null;
+        setJobs(list ?? []);
+        setListed(list ? { value: list, observedAt: Date.now() } : null);
+        setVersion(next.state === 'known' && list ? next.value.version || '' : '');
         setBlocked(missing ? apiErrorText(next.error, t) : '');
-        setUnknown(next.state === 'unknown' && !missing);
+        setUnknown((next.state === 'unknown' && !missing) || (next.state === 'known' && list === null));
+        setUnreadable(next.state === 'unknown' && !missing ? next.error : null);
         setStale(false);
         setLoading(false);
     };
@@ -323,10 +349,12 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
                 {/* Reading and "could not read" come before any list: neither
                     is "no scheduled tasks".
                     Okunuyor ve "okunamadı", her listeden önce gelir. */}
-                {loading || unknown ? (
-                    <CurrentGate state={loading ? 'loading' : 'unknown'} unknownKey="cron.unknown" onRetry={loadJobs} />
-                ) : blocked && jobs.length === 0 ? null : jobs.length === 0 ? (
-                    <EmptyState icon={Clock} title={t('cron.empty')} hint={t('cron.emptyHint')} />
+                {loading ? (
+                    <CurrentGate state="loading" unknownKey="cron.unknown" onRetry={loadJobs} />
+                ) : unknown ? (
+                    <CronUnreadable error={unreadable} onRetry={loadJobs} />
+                ) : !listed ? null : blocked && jobs.length === 0 ? null : jobs.length === 0 ? (
+                    <KnownEmpty of={listed} icon={Clock} title={t('cron.empty')} hint={t('cron.emptyHint')} />
                 ) : (
                     <div className="space-y-2">
                         {jobs.map((job) => (
@@ -389,5 +417,66 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
                 {t('cron.formatNote')}
             </p>
         </div>
+    );
+}
+
+// Why the list could not be read, in the order D-024 asks for: the reason, who
+// acts, the action, how work resumes, and then the read again.
+//
+// A cause the server verified (the user is not in /etc/cron.allow, or is in
+// /etc/cron.deny) is the server owner's rule. It is said on the neutral
+// surface with the plain mark, not the attention one: nothing failed, and Retry
+// is how the list comes back once the owner has changed the rule. Every other answer is the ordinary
+// could-not-check notice, which names no cause, followed by the line the
+// server's crontab program printed when it printed one. That line is the
+// program's own, so it is in the mono face.
+//
+// Listenin neden okunamadığı, D-024 sırasıyla. Sunucunun doğruladığı neden
+// sunucu sahibinin kuralıdır: yansız yüzeyde söylenir, hiçbir şey başarısız
+// olmamıştır. Diğer her yanıt, neden adlandırmayan olağan bildirimdir; ardından
+// crontab programının yazdığı satır gelir.
+function CronUnreadable({ error, onRetry }: { error: ApiError | null; onRetry: () => void }) {
+    const { t } = useI18n();
+    const cause = error?.code === 'CURRENT_SETTINGS_UNREADABLE' ? unreadableCauses[error.detail ?? ''] : undefined;
+    if (cause) {
+        return (
+            <div
+                role="status"
+                data-cron-unreadable={error?.detail}
+                className="flex items-start gap-2 rounded-lg border border-border-strong bg-surface-2 p-3 text-sm leading-relaxed text-fg"
+            >
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" />
+                <div className="min-w-0">
+                    <p className="max-w-[75ch] break-words">{t(cause)}</p>
+                    <div className="mt-2">
+                        <Button type="button" onClick={onRetry}>
+                            {t('common.retry')}
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    const said = error?.code === 'CURRENT_SETTINGS_UNREADABLE' ? error.vars?.detail : undefined;
+    if (!said) return <CouldNotCheck text={t('cron.unknown')} onRetry={onRetry} />;
+    // The sentence around the program's line comes from the catalogue; the
+    // line itself is set apart in the mono face.
+    // Satırın çevresindeki cümle katalogdandır; satırın kendisi mono yazılır.
+    const mark = String.fromCharCode(1);
+    const [lead, tail = ''] = t('cron.unknown.said', { detail: mark }).split(mark);
+    return (
+        <CouldNotCheck
+            text={
+                <>
+                    {t('cron.unknown')}
+                    <span data-cron-said className="mt-1.5 block text-xs text-fg-muted">
+                        {lead}
+                        <span className="break-words font-mono text-fg">{said}</span>
+                        {tail}
+                    </span>
+                </>
+            }
+            onRetry={onRetry}
+        />
     );
 }

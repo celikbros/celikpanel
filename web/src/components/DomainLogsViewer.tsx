@@ -9,7 +9,10 @@ import {
     type DomainLogsResponse,
     type LogTimeRangeError,
 } from '../lib/domainLogs';
-import { EmptyState, Spinner, inputClass } from './ui';
+import { KnownEmpty, RemoteGate, ResultUnknown, inputClass } from './ui';
+import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
+import { LOADING, countText, lastKnown, mapRemote, type Remote } from '../lib/remote';
+import { useLostAnswer } from '../lib/lostAnswer';
 
 interface DomainLogsViewerProps {
     domainId: number;
@@ -30,10 +33,26 @@ const logTypes: { value: LogType; labelKey: TranslationKey; tone: string }[] = [
 //
 // Bir domain için canlı günlük kuyruğu (erişim/hata/php), sunucu tarafında
 // filtrelenir. İndirme istemci tarafındadır; temizleme yıkıcıdır ve onay ister.
+//
+// What is on screen is one of three things (lib/remote.ts): the log is being
+// read; it could not be read (said once, with Retry); or the lines the server
+// sent. "No log lines" is said only for an answer with no lines. With
+// auto-refresh on, a read that fails raises nothing: the lines already shown
+// stay under one notice that says when they were read, and the next tick asks
+// again. Clearing acts only on a log that is known and current.
+//
+// The read stays in this file rather than in useRemote because its answer is
+// taken through parseDomainLogsResponse here (pinned by
+// cmd/panel/domain_logs_frontend_test.go); it produces the same Remote.
+// Ekrandaki üç şeyden biridir: günlük okunuyor; okunamadı (bir kez söylenir,
+// Tekrar dene ile); ya da sunucunun gönderdiği satırlar. "Günlük satırı yok"
+// yalnız satırsız bir yanıt için söylenir. Otomatik yenileme açıkken
+// başarısız okuma hiçbir şey yükseltmez: gösterilen satırlar, ne zaman
+// okunduklarını söyleyen tek bildirimin altında kalır.
 export function DomainLogsViewer({ domainId, domainName, readOnly = false }: DomainLogsViewerProps) {
     const { t } = useI18n();
     const [logType, setLogType] = useState<LogType>('access');
-    const [logs, setLogs] = useState<string[]>([]);
+    const [remote, setRemote] = useState<Remote<DomainLogsResponse>>(LOADING);
     const [loading, setLoading] = useState(false);
     const [filter, setFilter] = useState('');
     const [lines, setLines] = useState(100);
@@ -42,16 +61,26 @@ export function DomainLogsViewer({ domainId, domainName, readOnly = false }: Dom
     const [startLocal, setStartLocal] = useState('');
     const [endLocal, setEndLocal] = useState('');
     const [timeError, setTimeError] = useState<LogTimeRangeError | null>(null);
-    const [result, setResult] = useState<DomainLogsResponse | null>(null);
     const requestSequence = useRef(0);
+    const reading = useRef(false);
+    const latest = useRef<Remote<DomainLogsResponse>>(LOADING);
+    latest.current = remote;
 
     useEffect(() => {
-        loadLogs();
+        // Another log: nothing of the earlier one is shown as this one's.
+        // Başka bir günlük: öncekinin hiçbir şeyi bununmuş gibi gösterilmez.
+        setRemote(LOADING);
+        latest.current = LOADING;
+        void loadLogs();
     }, [domainId, logType, lines]);
 
     useEffect(() => {
         if (!autoRefresh) return;
-        const interval = setInterval(() => loadLogs(), 5000);
+        // A tick only reads, and not while the last read is still on its way.
+        // Tik yalnız okur; son okuma yoldayken okumaz.
+        const interval = setInterval(() => {
+            if (!reading.current) void loadLogs();
+        }, 5000);
         return () => clearInterval(interval);
     }, [autoRefresh, domainId, logType, lines, filter, startLocal, endLocal]);
 
@@ -59,54 +88,73 @@ export function DomainLogsViewer({ domainId, domainName, readOnly = false }: Dom
         requestSequence.current += 1;
     }, []);
 
-    const loadLogs = async (requestedStartLocal = startLocal, requestedEndLocal = endLocal) => {
+    const loadLogs = async (requestedStartLocal = startLocal, requestedEndLocal = endLocal): Promise<Remote<DomainLogsResponse>> => {
         const timeRange = buildLogTimeRangeQuery(requestedStartLocal, requestedEndLocal);
         if (timeRange.error) {
             setTimeError(timeRange.error);
-            return;
+            return latest.current;
         }
         setTimeError(null);
         const requestID = ++requestSequence.current;
+        reading.current = true;
         setLoading(true);
+        const previous = lastKnown(latest.current);
+        const failed = (reason: ApiError, status?: number): Remote<DomainLogsResponse> => ({
+            state: 'unknown',
+            reason,
+            ...(status === undefined ? {} : { status }),
+            ...(previous ? { previous } : {}),
+        });
+        let next: Remote<DomainLogsResponse>;
         try {
             const params = new URLSearchParams({ lines: String(lines), ...(filter && { filter }) });
             if (timeRange.startTime) params.set('start_time', timeRange.startTime);
             if (timeRange.endTime) params.set('end_time', timeRange.endTime);
             const res = await fetch(`/api/v1/domains/${domainId}/logs/${logType}?${params}`);
-            if (!res.ok) throw new Error();
-            const data = parseDomainLogsResponse(await res.json());
-            if (!data) throw new Error();
-            if (requestID !== requestSequence.current) return;
-            setLogs(data.lines);
-            setResult(data);
+            if (!res.ok) {
+                next = failed(await readApiError(res), res.status);
+            } else {
+                const data = parseDomainLogsResponse(await res.json());
+                next = data ? { state: 'known', value: data, observedAt: Date.now() } : failed({ message: '' });
+            }
         } catch {
-            if (requestID === requestSequence.current) showToast('error', t('common.error'));
-        } finally {
-            if (requestID === requestSequence.current) setLoading(false);
+            next = failed({ message: '' });
         }
+        if (requestID !== requestSequence.current) return latest.current;
+        reading.current = false;
+        latest.current = next;
+        setRemote(next);
+        setLoading(false);
+        return next;
     };
+
+    const answer = useLostAnswer(() => loadLogs());
 
     const clearTimeRange = () => {
         setStartLocal('');
         setEndLocal('');
         setTimeError(null);
-        setResult(null);
         void loadLogs('', '');
     };
 
     const clearLogs = async () => {
-        if (readOnly) return;
+        if (readOnly || remote.state !== 'known' || answer.holding) return;
         const typeLabel = t(logTypes.find((l) => l.value === logType)!.labelKey);
         if (!confirm(t('logs.clearConfirm', { type: typeLabel, domain: domainName }))) return;
-        try {
-            const res = await fetch(`/api/v1/domains/${domainId}/logs/${logType}`, { method: 'DELETE' });
-            if (!res.ok) throw new Error();
-            showToast('success', t('logs.cleared'));
-            loadLogs();
-        } catch {
-            showToast('error', t('common.error'));
+        const res = await answer.send(`/api/v1/domains/${domainId}/logs/${logType}`, { method: 'DELETE' });
+        if (!res) return;
+        if (!res.ok) {
+            showToast('error', apiErrorText(await readApiError(res), t));
+            return;
         }
+        showToast('success', t('logs.cleared'));
+        answer.settle();
+        void loadLogs();
     };
+
+    const shown = lastKnown(remote);
+    const result = shown ? shown.value : null;
+    const logs = result ? result.lines : [];
 
     const downloadLogs = () => {
         const blob = new Blob([logs.join('\n')], { type: 'text/plain' });
@@ -198,9 +246,10 @@ export function DomainLogsViewer({ domainId, domainName, readOnly = false }: Dom
                     {!readOnly && (
                         <button
                             onClick={clearLogs}
+                            disabled={remote.state !== 'known' || loading || answer.holding}
                             title={t('logs.clear')}
                             aria-label={t('logs.clear')}
-                            className="rounded-lg border border-border-strong bg-surface p-2 text-fg-muted transition-colors hover:bg-danger/10 hover:text-danger"
+                            className="rounded-lg border border-border-strong bg-surface p-2 text-fg-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-surface disabled:hover:text-fg-muted"
                         >
                             <Trash2 className="h-4 w-4" />
                         </button>
@@ -301,6 +350,8 @@ export function DomainLogsViewer({ domainId, domainName, readOnly = false }: Dom
                 )}
             </div>
 
+            <ResultUnknown answer={answer} />
+
             {showResultNotice && result && (
                 <section
                     role={resultHasWarning ? 'alert' : 'status'}
@@ -358,31 +409,42 @@ export function DomainLogsViewer({ domainId, domainName, readOnly = false }: Dom
                 <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
                     <FileText className={`h-4 w-4 ${currentType.tone}`} />
                     <span className="text-sm font-semibold text-fg">{t(currentType.labelKey)}</span>
-                    <span className="text-xs text-fg-muted">{t('logs.linesN', { n: logs.length })}</span>
+                    <span className="text-xs text-fg-muted">
+                        {t('logs.linesN', { n: countText(mapRemote(remote, (value) => value.lines.length)) })}
+                    </span>
                 </div>
 
-                {loading ? (
-                    <div className="flex h-64 items-center justify-center">
-                        <Spinner />
-                    </div>
-                ) : logs.length === 0 ? (
-                    <div className="py-6">
-                        <EmptyState icon={FileText} title={t('logs.empty')} />
-                    </div>
-                ) : (
-                    <div className="max-h-[480px] overflow-auto bg-bg p-3">
-                        <pre className="font-mono text-xs text-fg-muted">
-                            {logs.map((line, index) => (
-                                <div key={index} className="flex rounded px-1 py-0.5 hover:bg-surface-2/60">
-                                    <span className="mr-3 select-none text-fg-subtle">
-                                        {String(index + 1).padStart(4, ' ')}
-                                    </span>
-                                    <span className="whitespace-pre-wrap break-all">{line}</span>
-                                </div>
-                            ))}
-                        </pre>
-                    </div>
-                )}
+                {/* The first read keeps the height the lines will take, so the
+                    page does not jump when they arrive. A refresh leaves the
+                    lines where they are.
+                    İlk okuma, satırların kaplayacağı yüksekliği tutar; yenileme
+                    satırları yerinde bırakır. */}
+                <div className="min-h-64 p-3">
+                    <RemoteGate
+                        remote={remote}
+                        checking={t('logs.checking')}
+                        failed={t('logs.unknown')}
+                        onRetry={() => void loadLogs()}
+                        busy={loading}
+                    >
+                        {(current) => current.value.lines.length === 0 ? (
+                            <KnownEmpty of={current} icon={FileText} title={t('logs.empty')} />
+                        ) : (
+                            <div className="max-h-[480px] overflow-auto rounded-lg bg-bg p-3">
+                                <pre className="font-mono text-xs text-fg-muted">
+                                    {current.value.lines.map((line, index) => (
+                                        <div key={index} className="flex rounded px-1 py-0.5 hover:bg-surface-2/60">
+                                            <span className="mr-3 select-none text-fg-subtle">
+                                                {String(index + 1).padStart(4, ' ')}
+                                            </span>
+                                            <span className="whitespace-pre-wrap break-all">{line}</span>
+                                        </div>
+                                    ))}
+                                </pre>
+                            </div>
+                        )}
+                    </RemoteGate>
+                </div>
             </div>
         </div>
     );

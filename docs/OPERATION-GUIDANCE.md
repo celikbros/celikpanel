@@ -2570,6 +2570,587 @@ earlier batches was run again on the same build): desktop 1440×900 and phone
   editor's save, are covered by the mounted test only. The "before" figures of
   this entry (118 px, 158 px on a phone) were not measured again.
 
+#### Fourth batch: the panels of one domain, a change whose answer did not arrive, row actions on a phone (2026-10-09)
+
+Source state with component tests and a browser inspection against a loopback
+mock; no native run and no installed server. The same rule, applied to the
+panels of one domain's page. It changes how reads and lost answers are shown in
+the interface; no API, stored record, access gate or lifecycle changes, and no
+acceptance item is closed. What needs the server is listed under "Needs the
+server" below.
+
+**What these panels showed before.**
+
+- *DNS records.* A zone whose state could not be read was an empty state titled
+  "DNS zone status could not be checked". A failed read of the records raised a
+  toast and a red line, and left "No records yet" and "0 items total" under it.
+  The DNSSEC card was absent until its read answered and then pushed the records
+  down; an answer without `secured` was read as "not signed", with "Sign the
+  zone" offered.
+- *Hosting type.* A failed read left a spinner without end. The Node.js
+  versions were an empty list when their read failed. The live application
+  panel was drawn for the type picked in the form, not the saved one, so a type
+  that was only picked polled an application that does not exist (409 every
+  five seconds). Its two reads were swallowed: "Stopped" and "No log lines yet"
+  for no answer, with Start offered.
+- *PHP.* "Could not load PHP settings" in red, with no way to read again. The
+  pool form filled every missing value with a default (`dynamic`, 5, 2, 1, 3,
+  `www-data`) and saved it.
+- *General settings.* "Could not load settings" in red, with no Retry.
+- *Applications.* "No applications available" for a failed read.
+- *Certificate card of the overview.* "Status unavailable … Open SSL/TLS for
+  details", with no Retry and no word that this is not "no certificate".
+- *Mail authentication.* A spinner without end after a failed read. A record
+  state the screen did not know was drawn as "Missing".
+- *Logs.* With auto-refresh on, every refused poll raised an error toast, every
+  five seconds, and every poll replaced the lines with a page-sized spinner.
+  "No log lines" for a failed first read.
+- *Backups.* "No backups yet" for a failed read, or for an answer with an empty
+  body. "No linked databases" and "Website files + 0 databases" when the
+  databases could not be read.
+- *Scheduled tasks.* An answer that did not carry the list was "No scheduled
+  tasks".
+- *Any change on these panels.* When the connection dropped, a generic error
+  toast, and the control was enabled again at once.
+
+**What they do now, beyond the three states.**
+
+- *A change whose answer did not arrive* (`web/src/lib/lostAnswer.ts`,
+  `ResultUnknown` in `web/src/components/ui.tsx`). The panel's changes on these
+  screens carry no identity the server keeps, so a second request is a second
+  change. When no answer arrives (the connection ends, a gateway answers 408,
+  502, 503 or 504 with a page that is not the Panel's JSON, or an accepted
+  answer cannot be read), the screen:
+  1. sends nothing a second time;
+  2. reads again what the change acts on, and only reads;
+  3. keeps every control that changes or removes **off until that read has
+     answered** (`holding`);
+  4. shows one notice where the change was asked for, scrolled into view, in the
+     attention colour (nothing is known to have failed). While the read is on
+     its way it says so; when the read has answered it says at what time the
+     state was read again, and it **stays until the person closes it** or a
+     later change is answered. "Check again" only reads. If the read fails too,
+     the notice says so and the controls stay off.
+  A refusal the Panel itself sent, with any status, is the server's reason and
+  is shown as before. This is not idempotency: whether the change was made is
+  decided by the person looking at the state that was read again. Where that
+  state cannot show the result (installing an application), the notice says
+  where to look.
+- *What a form does once the state was read again* (2026-10-10; `Question` in
+  `web/src/lib/lostAnswer.ts`). A form whose answer was lost asks the state
+  that was read again one question, and only looks: does it show the change?
+  - It does: the form that sent the change is closed or emptied, so the same
+    record is not one press from being saved twice. The notice says the change
+    was saved, on the plain surface with a check mark instead of the attention
+    one, offers only "Close", and stays until the person closes it.
+  - It does not: what was typed stays (where a newer answer builds the form
+    again, the sent values are put back over it), the changing controls come
+    back, and the notice says that the state does not show the change, that it
+    is therefore not known to have been saved, and that a server still working
+    when the connection dropped can finish later. "Check again" reads and asks
+    the question again; a later read that shows the change closes the form.
+  - It cannot tell (the list gained a row that is not clearly this record, or
+    the settings are neither the sent ones nor the earlier ones): the notice of
+    the four steps above, and the person looks.
+  - The state could not be read again: the controls stay off, as above.
+  The forms that ask: a DNS record being added (a row that is new in the list,
+  of the sent type and owner name, whose value is the sent one apart from what
+  the server rewrites: the full owner name, quotes, a trailing dot, case); an
+  alias being added (the alias in a list that did not have it); the redirect
+  switch of the general settings; Apply of the hosting type (the type and its
+  own fields as sent: saved; the same settings as before: not shown); the PHP
+  version; the PHP pool. The changes that do not ask, because they have no
+  typed form or because the state cannot show their result: deleting a record,
+  publishing a zone, signing, start, stop and restart, installing an
+  application, publishing a mail record, the DKIM key, clearing a log, and
+  creating, restoring or deleting a backup. For those the person looks at the
+  state that was read again, as before.
+- *The certificate line under a domain's name* (2026-10-10, `DomainDetail`). The
+  strip under the title reads the certificate itself, at the address and with
+  the decoder of the overview card and the SSL/TLS tab, so the three share one
+  request. It is being checked, could not be checked (with "Retry" beside the
+  words, which only reads), or what the server said. After a refresh that
+  failed the earlier answer stays. Before this it waited for the card or the
+  tab to report, and said "checking status" without end after a read that
+  failed and on every tab that mounts neither.
+  A consequence for the SSL/TLS tab, measured in the browser run of 2026-10-10:
+  the strip is on screen on every tab, so the answer is never dropped while the
+  domain's page is open, and the tab no longer starts from nothing. Opened
+  while the page's first read is on its way, it shows its checking line and
+  shares that read. Opened later, it shows the answer the page already has as
+  the earlier answer, says it is reading again, keeps its controls off, and
+  sends one more read; before this change it showed the checking line alone
+  and sent the only read. Nothing negative is shown that the server did not
+  say, and a certificate request still works after that read. Whether an
+  answer a few seconds old should be read again when the tab opens is not
+  decided here.
+- *A read that repeats* (`useRefreshEvery` in `web/src/lib/remote.ts`; the logs
+  keep their own timer). A tick only reads, and not while the last read is still
+  on its way. A read that fails raises nothing: the earlier answer stays under
+  one notice that says when it was read, the controls that change something are
+  off, and the next tick asks again; a good answer removes the notice.
+- *DNS.* The server's 404 for this domain's zone is the one answer that says
+  "no zone"; every other refusal is "could not check". The records are read only
+  for a zone the server said exists. The DNSSEC card is in its place while it
+  checks, with the room its usual answer takes, so the records below do not
+  move.
+- *Hosting type.* The form shows what the server sent; what is typed is kept
+  beside the answer it was typed over, and after Apply the form shows the saved
+  settings again. The live application panel follows the saved type.
+- *PHP.* The pool form holds the server's values and no defaults; a newer answer
+  builds it again.
+- *One decoder per address.* A domain's databases are decoded in
+  `web/src/lib/domainDatabases.ts` for the Databases and the Backups tab; the
+  certificate card uses the decoder of the SSL/TLS tab.
+- *Row actions on a phone.* A data table may be wider than a phone and scroll
+  sideways inside its frame; what a row can do must not be the part that is off
+  screen. The cell that holds a row's actions, and the header cell above it,
+  carry the class `row-actions` (`web/src/index.css`): below the `sm` width
+  (640 px) it stays at the table's trailing edge, opaque, with a hairline on its
+  leading side, while the other columns scroll under it. Wider screens are
+  unchanged. Applied to the DNS records, the Domains list, the Databases page
+  (both tables) and the banned addresses of Fail2ban. In the DNS records the
+  value column also has a least width: without it a phone squeezed a long value
+  to one character a line and one row was two screens tall. A named action in
+  that cell keeps its words on one line (2026-10-10; "Yasağı kaldır" broke into
+  two at 390 px).
+
+**The texts.** Keys are in `web/src/i18n` (`common.*` in the shell catalogue,
+the rest in `screens`).
+
+- *A change whose answer did not arrive, after the state was read again*
+  - `common.resultUnknownRead`
+    - EN: "The connection dropped before the answer arrived, so it is not known
+      whether the change was made. Nothing was sent a second time. What is shown
+      here was read again at {time}: check it before repeating the action."
+    - TR: "Yanıt gelmeden bağlantı koptu; bu yüzden değişikliğin yapılıp
+      yapılmadığı bilinmiyor. Hiçbir şey ikinci kez gönderilmedi. Burada
+      gösterilen, saat {time} itibarıyla yeniden okundu: işlemi yinelemeden
+      önce ona bakın."
+  - While that read is on its way: `common.resultUnknown` (second batch).
+- *The same, when the form asked and the state that was read again shows the
+  change* (2026-10-10)
+  - `common.resultUnknownMade`
+    - EN: "The connection dropped before the answer arrived, and nothing was
+      sent a second time. What was read again at {time} shows the change, so it
+      was saved. Nothing needs to be sent again."
+    - TR: "Yanıt gelmeden bağlantı koptu ve hiçbir şey ikinci kez gönderilmedi.
+      Saat {time} itibarıyla yeniden okunan durum değişikliği gösteriyor; yani
+      kaydedildi. Hiçbir şeyin yeniden gönderilmesi gerekmiyor."
+- *The same, when it does not show the change* (2026-10-10)
+  - `common.resultUnknownNotMade`
+    - EN: "The connection dropped before the answer arrived, and nothing was
+      sent a second time. What was read again at {time} does not show the
+      change, so it is not known to have been saved. What you entered is still
+      here. If the server was still working when the connection dropped, the
+      change can appear later: check again before sending it a second time."
+    - TR: "Yanıt gelmeden bağlantı koptu ve hiçbir şey ikinci kez gönderilmedi.
+      Saat {time} itibarıyla yeniden okunan durum değişikliği göstermiyor; bu
+      yüzden kaydedildiği bilinmiyor. Girdikleriniz hâlâ burada. Bağlantı
+      koptuğunda sunucu hâlâ çalışıyorduysa değişiklik sonradan görünebilir:
+      ikinci kez göndermeden önce tekrar kontrol edin."
+- *The same, when the state could not be read again either*
+  - `common.resultUnknownUnread`
+    - EN: "The connection dropped before the answer arrived, so it is not known
+      whether the change was made. Nothing was sent a second time. The current
+      state could not be read again either, so controls that change or remove
+      something stay off. Check again."
+    - TR: "Yanıt gelmeden bağlantı koptu; bu yüzden değişikliğin yapılıp
+      yapılmadığı bilinmiyor. Hiçbir şey ikinci kez gönderilmedi. Güncel durum
+      da yeniden okunamadı; bu yüzden bir şeyi değiştiren ya da kaldıran
+      denetimler kapalı kalıyor. Tekrar kontrol edin."
+  - `common.checkAgain`: EN "Check again" · TR "Tekrar kontrol et". Closing the
+    notice: `common.close`, EN "Close" · TR "Kapat".
+- *DNS: the zone could not be read*
+  - `dns.zoneUnknown`
+    - EN: "The DNS zone of {name} could not be read from the server, so its
+      records are not shown as current. This does not mean the zone is missing.
+      Nothing was changed. Try again."
+    - TR: "{name} alan adının DNS bölgesi sunucudan okunamadı; bu yüzden
+      kayıtları güncel diye gösterilmiyor. Bu, bölgenin olmadığı anlamına
+      gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *DNS: the records*
+  - `dns.records.checking`: EN "Reading this domain’s DNS records…" · TR "Bu alan
+    adının DNS kayıtları okunuyor…"
+  - `dns.records.unknown`
+    - EN: "The DNS records of this domain could not be read from the server, so
+      the list is not shown. This does not mean there are none. Nothing was
+      changed. Try again."
+    - TR: "Bu alan adının DNS kayıtları sunucudan okunamadı; bu yüzden liste
+      gösterilmiyor. Bu, kayıt olmadığı anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+- *DNS: whether the zone is signed*
+  - `dnssec.checking`: EN "Checking whether this zone is signed…" · TR "Bu
+    bölgenin imzalı olup olmadığı kontrol ediliyor…"
+  - `dnssec.unknown`
+    - EN: "CelikPanel could not check whether this zone is signed, so signing is
+      not offered. This does not mean it is unsigned. Nothing was changed. Try
+      again."
+    - TR: "CelikPanel bu bölgenin imzalı olup olmadığını kontrol edemedi; bu
+      yüzden imzalama sunulmuyor. Bu, imzasız olduğu anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+- *Hosting type*
+  - `hosting.checking`: EN "Reading this domain’s hosting settings…" · TR "Bu
+    alan adının barındırma ayarları okunuyor…"
+  - `hosting.unknown`
+    - EN: "The hosting settings of this domain could not be read from the
+      server, so they are not shown and cannot be changed here yet. Nothing was
+      changed. Try again."
+    - TR: "Bu alan adının barındırma ayarları sunucudan okunamadı; bu yüzden
+      gösterilmiyor ve şimdilik buradan değiştirilemiyor. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `hosting.nodeChecking`: EN "Checking which Node.js versions are installed…"
+    · TR "Kurulu Node.js sürümleri kontrol ediliyor…"
+  - `hosting.nodeUnknown`
+    - EN: "The installed Node.js versions could not be checked, so only the
+      saved version is listed. Nothing was changed. Try again."
+    - TR: "Kurulu Node.js sürümleri kontrol edilemedi; bu yüzden yalnız kayıtlı
+      sürüm listeleniyor. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *Hosting type: the live application*
+  - `hosting.app.checking`: EN "Reading the application’s state…" · TR
+    "Uygulamanın durumu okunuyor…"
+  - `hosting.app.logsChecking`: EN "Reading the application’s logs…" · TR
+    "Uygulamanın günlükleri okunuyor…"
+  - `hosting.app.unknown`
+    - EN: "The state and the logs of this application could not be read from
+      the server. This does not mean it has stopped. Nothing was changed; start,
+      stop and restart are off until the state can be read. CelikPanel keeps
+      trying."
+    - TR: "Bu uygulamanın durumu ve günlükleri sunucudan okunamadı. Bu,
+      uygulamanın durduğu anlamına gelmez. Hiçbir şey değiştirilmedi; başlat,
+      durdur ve yeniden başlat, durum okunana dek kapalıdır. CelikPanel denemeyi
+      sürdürüyor."
+  - `hosting.app.stale` (an earlier answer is still shown)
+    - EN: "The application could not be read again just now, so what is shown is
+      as it was at {time}. This does not mean it has stopped. Nothing was
+      changed; start, stop and restart are off until the state can be read.
+      CelikPanel keeps trying."
+    - TR: "Uygulama az önce yeniden okunamadı; gösterilen, saat {time}
+      itibarıyla olan hâlidir. Bu, uygulamanın durduğu anlamına gelmez. Hiçbir
+      şey değiştirilmedi; başlat, durdur ve yeniden başlat, durum okunana dek
+      kapalıdır. CelikPanel denemeyi sürdürüyor."
+- *PHP*
+  - `php.checking`: EN "Reading this domain’s PHP settings…" · TR "Bu alan
+    adının PHP ayarları okunuyor…"
+  - `php.unknown`
+    - EN: "The PHP settings of this domain could not be read from the server, so
+      they are not shown and cannot be changed here yet. Nothing was changed.
+      Try again."
+    - TR: "Bu alan adının PHP ayarları sunucudan okunamadı; bu yüzden
+      gösterilmiyor ve şimdilik buradan değiştirilemiyor. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+- *General settings*
+  - `general.checking`: EN "Reading this domain’s settings…" · TR "Bu alan
+    adının ayarları okunuyor…"
+  - `general.unknown`
+    - EN: "The settings of this domain could not be read from the server, so
+      they are not shown and cannot be changed here yet. This does not mean it
+      has no aliases. Nothing was changed. Try again."
+    - TR: "Bu alan adının ayarları sunucudan okunamadı; bu yüzden gösterilmiyor
+      ve şimdilik buradan değiştirilemiyor. Bu, takma adı olmadığı anlamına
+      gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *Applications*
+  - `apps.checking`: EN "Reading the applications that can be installed…" · TR
+    "Kurulabilecek uygulamalar okunuyor…"
+  - `apps.unknown`
+    - EN: "The list of applications could not be read from the server, so
+      nothing is offered. This does not mean no application is available.
+      Nothing was changed. Try again."
+    - TR: "Uygulama listesi sunucudan okunamadı; bu yüzden hiçbir şey
+      sunulmuyor. Bu, kullanılabilir uygulama olmadığı anlamına gelmez. Hiçbir
+      şey değiştirilmedi. Tekrar deneyin."
+  - `apps.resultUnknownWhere` (under the result-unknown notice)
+    - EN: "This page cannot show whether the application was installed. Look at
+      this domain’s Files and Databases before installing again."
+    - TR: "Bu sayfa uygulamanın kurulup kurulmadığını gösteremez. Yeniden
+      kurmadan önce bu alan adının Dosyalar ve Veritabanları bölümlerine bakın."
+- *Certificate card of the overview*
+  - `domain.overview.ssl.unavailableHint` (reworded; the card also has Retry now)
+    - EN: "The certificate state could not be read from the server. This does
+      not mean there is no certificate. Nothing was changed. Try again."
+    - TR: "Sertifika durumu sunucudan okunamadı. Bu, sertifika olmadığı anlamına
+      gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `domain.overview.ssl.stale`: EN "This could not be read again just now; it
+    is shown as it was at {time}." · TR "Bu, az önce yeniden okunamadı; saat
+    {time} itibarıyla olan hâliyle gösteriliyor."
+- *The certificate line under a domain's name* (2026-10-10)
+  - `domain.info.sslUnknown`: EN "Could not be checked" · TR "Kontrol edilemedi",
+    with `common.retry` beside it. While it is read:
+    `domain.overview.ssl.checking`, EN "Checking status" · TR "Durum kontrol
+    ediliyor".
+- *Mail authentication*
+  - `mailauth.checking`: EN "Checking this domain’s SPF, DKIM and DMARC records…"
+    · TR "Bu alan adının SPF, DKIM ve DMARC kayıtları kontrol ediliyor…"
+  - `mailauth.unknown`
+    - EN: "The SPF, DKIM and DMARC records of this domain could not be checked,
+      so their state is not shown and nothing can be published here yet. This
+      does not mean they are missing. Nothing was changed. Try again."
+    - TR: "Bu alan adının SPF, DKIM ve DMARC kayıtları kontrol edilemedi; bu
+      yüzden durumları gösterilmiyor ve şimdilik buradan hiçbir şey
+      yayımlanamıyor. Bu, kayıtların eksik olduğu anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+- *Logs*
+  - `logs.checking`: EN "Reading the log…" · TR "Günlük okunuyor…"
+  - `logs.unknown`
+    - EN: "This log could not be read from the server, so no lines are shown.
+      This does not mean the log is empty. Nothing was changed. Try again."
+    - TR: "Bu günlük sunucudan okunamadı; bu yüzden satır gösterilmiyor. Bu,
+      günlüğün boş olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin."
+  - A poll that fails with lines on screen: `common.staleNotice` (first batch).
+- *Backups*
+  - `backup.checking`: EN "Reading this domain’s backups…" · TR "Bu alan adının
+    yedekleri okunuyor…"
+  - `backup.unknown`
+    - EN: "The backups of this domain could not be read from the server, so the
+      list is not shown. This does not mean there are none. Nothing was changed.
+      Try again."
+    - TR: "Bu alan adının yedekleri sunucudan okunamadı; bu yüzden liste
+      gösterilmiyor. Bu, yedek olmadığı anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `backup.databasesUnknown`
+    - EN: "The databases linked to this domain could not be read, so a database
+      or full backup cannot be made here yet. This does not mean there are none.
+      Nothing was changed; a files backup is still available. Try again."
+    - TR: "Bu alan adına bağlı veritabanları okunamadı; bu yüzden şimdilik
+      buradan veritabanı yedeği ya da tam yedek alınamıyor. Bu, veritabanı
+      olmadığı anlamına gelmez. Hiçbir şey değiştirilmedi; dosya yedeği yine
+      alınabilir. Tekrar deneyin."
+  - `backup.databasesNotRead` (in the picker): EN "Databases not read" · TR
+    "Veritabanları okunamadı"
+- Removed, because nothing shows them any more: `dns.zoneStatusUnavailable`,
+  `dns.recordsLoadFailed`, `php.loadFailed`, `general.loadFailed`,
+  `backup.databaseLoadError`, `backup.retry`.
+
+**How it is kept from coming back.**
+
+- *The ratchet.* Before this batch 8 / 28 / 10 / 57 / 19 in 40 files; after it
+  8 / 25 / 6 / 42 / 12 in 31 files, pinned as the new ceilings (regenerated on
+  2026-10-10 on the tree that also holds the settings-writes corrections: the
+  same files and totals). Off the list:
+  `DomainDNSManager`, `HostingTypePanel`, `DomainPHPSettings`,
+  `DomainGeneralSettings`, `DomainAppsPanel`, `DomainSSLOverviewCard`,
+  `MailAuthPanel`, `DomainBackupManager`, `DomainCronManager`.
+  `DomainLogsViewer` stays with one raw read and nothing else:
+  `TestDomainLogsViewerExposesHonestTimeFilterControlsAndMetadata`
+  (`cmd/panel/domain_logs_frontend_test.go`) pins
+  `parseDomainLogsResponse(await res.json())` in that file, so its read builds
+  the same three states there.
+- *The mounted test* (`web/tests/remote-state-mounted-batch4.test.mjs`, 113
+  cases): fourteen reads, each withheld four ways; the known negatives; fifteen
+  changes, each with its answer lost two ways (the connection ends; a gateway
+  answers), requiring one request, a read-only re-read, the changing controls
+  off until it answers, and a notice that stays; a refusal by the Panel that is
+  not an unknown result; polls that fail (one notice, no toast, only reads); the
+  poll that does not ask while a read is on its way; the forms that hold the
+  server's values; the one place where something is kept in the page without
+  being drawn; the `row-actions` rule and the tables that carry it. Since
+  2026-10-10 the file has 129 cases: what the notice says after the re-read for
+  each of the fifteen changes; the six forms that ask, each with a state that
+  shows the change and one that does not, the later check that finds a record
+  the server finished late, a new row that decides nothing, the server's
+  rewriting of a record, and a list that could not be read again; six ways a
+  crontab can fail to be read (entry of 2026-10-10 below); and one line for a
+  named row action. The strip under a domain's name has its case in
+  `web/tests/remote-state-mounted.test.mjs`: checking, could not be checked on
+  the overview and on the DNS tab for each way a read fails, one request for
+  the certificate, a Retry that only reads, and the server's "no certificate".
+- *Pins moved with the code, not loosened*
+  (`web/tests/additional-user-domain-ui-contract.test.mjs`): a team member's PHP
+  versions are still the tenant-safe `available_versions` of this domain's own
+  answer and exist only while that answer is known (was: cleared state before
+  each load); the PHP panel sends and reads only through the shared layer; a
+  read-only or externally managed zone is offered the read of its records and
+  nothing that changes them, and each of the three DNS changes starts with that
+  check; the decoder of a domain's databases is pinned in
+  `lib/domainDatabases.ts`, and a second one in the component is refused. The
+  fixture of the first mounted test answered the DNSSEC read with
+  `{ enabled: false }`, which is not what the handler writes; it answers
+  `{ secured, ds }` now.
+
+**Needs the server (not done here; no Go was changed).**
+
+- None of these changes has a request identity. Until the server keeps one, a
+  lost answer leaves the result to the person, as above:
+  `POST /api/v1/domains/{id}/dns/records`,
+  `DELETE /api/v1/domains/{id}/dns/records?id=`,
+  `POST /api/v1/domains/{id}/dns/zone`, `POST /api/v1/domains/{id}/dnssec` (DNS
+  tab); `PUT /api/v1/domains/{id}/hosting`,
+  `POST /api/v1/domains/{id}/app/{start|stop|restart}` (Hosting type);
+  `POST /api/v1/domains/{id}/php`, `POST /api/v1/domains/{id}/php/pool` (PHP);
+  `POST /api/v1/domains/{id}/general`, `POST /api/v1/domains/{id}/aliases`,
+  `DELETE /api/v1/domains/{id}/aliases/{alias}` (General);
+  `POST /api/v1/domains/{id}/apps/install` (Applications; it also has no read
+  that shows whether an application is installed);
+  `POST /api/v1/domains/{id}/mail/auth/apply`,
+  `POST /api/v1/domains/{id}/mail/auth/dkim` (Mail authentication);
+  `DELETE /api/v1/domains/{id}/logs/{type}` (Logs);
+  `POST /api/v1/domains/{id}/backups`,
+  `POST /api/v1/domains/{id}/backups/restore`,
+  `DELETE /api/v1/domains/{id}/backups?name=` (Backups). From the second batch,
+  still with a toast and a re-read only: `POST`/`PUT`/`DELETE /api/v1/users…`,
+  `POST /api/v1/users/{id}/impersonate`, `/api/v1/plans…` (Accounts) and the
+  changes of a domain's Files. Not migrated yet, and not looked at here: the
+  add-ons, the VPN peers and the team members.
+- A browser can send a change again by itself. In the browser run, when the
+  mock only reset a connection that had carried an earlier request, Chrome
+  sent the `POST` again without the page asking: one click, three arrivals.
+  Nothing in the page can prevent that; only a request identity on the server
+  can make the second arrival harmless.
+- A change that never answers and never fails (the connection stays open)
+  leaves its control busy; the page has no time limit for it.
+
+**Not done.**
+
+- 31 files still read the old way. In scope of this batch and not migrated:
+  `ServiceList` (1 / 1 / 0 / 6 / 1), `ServiceShell` (0 / 2 / 2 / 2 / 2),
+  `Layout` (1 / 2 / 0 / 1 / 0), `Dashboard` (1 / 3 / 0 / 4 / 0), `AddonsPage`
+  (0 / 0 / 0 / 2 / 3), `StoreCatalogAdmin` (0 / 0 / 0 / 1 / 2), `AuditLogPage`
+  (0 / 1 / 0 / 1 / 1), `VPNPage` (0 / 0 / 0 / 0 / 1), `TeamMembersPage`
+  (0 / 0 / 0 / 0 / 1), `SystemSQLiteManager` (0 / 2 / 0 / 1 / 1),
+  `SecurityAuditCard` (0 / 0 / 0 / 1 / 0), `AddDatabaseModalV2`
+  (0 / 0 / 0 / 1 / 0), `DatabaseAccountStrip` (0 / 1 / 0 / 1 / 0). None of them
+  was opened in this batch. Two of them have their readers held as source text
+  by existing contract tests, which a migration has to move with the code:
+  `Layout` by `layout-server-identity-contract` (exactly one
+  `fetch('/api/v1/panel/version'` in the file and none in the build stamp), and
+  `ServiceShell` by `component-inventory-contract`,
+  `service-unobserved-state-contract` and
+  `service-shell-install-confirmation-contract`.
+- The accounts, plans and files changes of the second batch still answer a lost
+  connection with a toast that leaves by itself; they were not moved to the
+  notice that stays.
+- The scheduled tasks keep their own state for the list and the version; only
+  the proof of an empty list was added, and since 2026-10-10 the reason a
+  crontab could not be read (entry of that date below). Their writes were not
+  touched.
+- On a wide screen the DNS card with a signed zone is taller than the room kept
+  for it while it checks (the room is the unsigned card's), so the records move
+  once for a signed zone.
+- The row's hover tint does not reach under the fixed action cell on a phone.
+- A could-not-check notice still does not say why the read failed, except
+  where the server verified a cause: the scheduled tasks and the mail queue
+  (entry of 2026-10-10 below).
+- The changes that ask the re-read state no question (listed above) still leave
+  the result to the person. No change on these panels has a request identity.
+- Not verified on a real server; one Chrome against a mock.
+
+**Browser inspection of this batch (2026-10-09).** In a real, installed Chrome
+against the loopback mock (`web/tools/browser-inspect`, scenarios `domaindns`,
+`domainhosting`, `domainphp`, `domaingeneral`, `domainapps`, `domainmailauth`,
+`domainlogs`, `domainbackups`, `sslcard`, `rowactions`; every scenario of the
+earlier batches was run again on the same build): desktop 1440×900 and phone
+390×844, Turkish and English, light and dark. 357 states in each of the eight
+configurations, 81 of them of this batch; no scenario reported an error. A
+scenario of this batch fails when a state it should record shows no checking
+line, notice or result-unknown notice, when a place it should measure is not
+found, or when a poll it should count did not run.
+
+- *Measured in all eight configurations.* No negative sentence was on screen in
+  any checking or could-not-check state of these panels, and no failed read
+  raised a toast. Each of the six changes whose answer was lost (a DNS record
+  added, hosting applied with a gateway answering, an alias removed, an
+  application installed, a mail record published, a backup created) was sent by
+  the page once and arrived at the mock once; its notice was inside the window
+  when it appeared, the changing controls were off until the state had been
+  read again, "Check again" sent only reads, and the notice left only with
+  "Close". After the lost answers the re-read state showed what the mock had
+  done: the new record once, the alias gone, and, for the backup the mock did
+  not make, the same two rows. With the application's polls failing for twelve
+  seconds (four requests) and the log's auto-refresh refused (two), there was
+  one notice, no toast, the earlier state and lines stayed, start, stop,
+  restart and clear were off, and every request was a read. The records table
+  did not move when the signing state arrived (0 px). The certificate card did
+  not change height between checking and "no certificate" (0 px); with the
+  could-not-check sentence and Retry it is the same height on a wide screen and
+  taller by 38 px (English) or 80 px (Turkish) on a phone. Every row action was
+  inside the width of the screen and on top with the table scrolled to its
+  start: the six of the DNS records, the three of a Domains row, the two of the
+  Databases page and the two "Unban" of Fail2ban, on tables that do scroll
+  sideways at 390 px; and the actions of the alias and backup rows, which do
+  not. No page scrolled sideways.
+- *Found by looking, or by measuring, and corrected.*
+  - On a phone one DNS row with a long value was 1,982 px tall: the value column
+    had been squeezed to one character a line. It has a least width now.
+  - On a phone the DNSSEC card grew by 86 px when its answer arrived, with a
+    fixed height reserved; it keeps the room of its usual answer now (0 px).
+  - On a phone the certificate card grew by 19 px between checking and "no
+    certificate"; its second line keeps two lines of room there.
+  - The live application panel was photographed below the fold, and so were
+    most states on a phone, where the tabs of a domain fill the first screen;
+    the scenarios bring what a state is about into the window first.
+  - The scenarios called the Turkish stop button ("Durdur") the negative
+    "Durdu"; negatives are matched as whole words.
+  - With a connection that was only reset, the mock received one click three
+    times (above); it ends the connection with bytes that are not an answer.
+- *Seen on 2026-10-09 and corrected on 2026-10-10.* After a lost answer the
+  form that sent the change stayed open with what was typed, so the same record
+  could be saved again once the list had been read: the form now asks the state
+  that was read again (above). On a phone "Yasağı kaldır" broke into two lines
+  in its fixed cell: one line now, 107×34 px. This has a cost, seen by
+  comparing the screenshots of the two dates and not caught by the scenario: in
+  Turkish the fixed cell is about 41 px wider than it was, and at 390 px the
+  end of a full-length IPv6 address (about its last five characters) is now
+  under that cell, where the whole address fitted before; nothing marks it as
+  cut, and it is reached by scrolling the table sideways, like the jail column
+  beside it. English is unchanged ("Unban" never broke). Whether the address
+  should break onto two lines, or the action be shorter on a phone, is not
+  decided here. The strip under a domain's name
+  said "SSL: checking status" for as long as the certificate read had not
+  succeeded, also after it failed: three states now.
+- *Seen and not changed.* While mail authentication is read again after a lost
+  answer, the earlier "Missing" stays on screen under the notice. A disabled
+  card is faint in the dark theme. Between the Node.js version and the port
+  note there is one empty line, kept for the checking line. On a phone the
+  strip under a domain's name breaks into three rows and leaves a divider at
+  the end of a row. On a phone the mail queue's table breaks an address inside
+  a word (second batch). Three notes (`DomainDNSManager` for a team member,
+  `DomainDatabaseManager`, `DomainDetail`) use an `info` colour the theme does
+  not define, so they are drawn without a surface.
+- *Run again on 2026-10-10* on the tree that also holds the settings-writes
+  corrections, with the scenarios `lostforms` and `sslfact` added and `cron`,
+  `mailqueue`, `dbconfig`, `domaindns`, `domainhosting` and `rowactions`
+  extended: 396 states in each of the eight configurations, 39 of them new
+  (17 of `lostforms`, 8 of `sslfact`, 7 of `mailqueue`, 4 of `cron`, 2 of
+  `dbconfig`, 1 of `domainssl`), none of the 357 earlier ones missing. The full
+  run reported one error, the same in all eight: `domainssl` stopped waiting
+  after the certificate request. The cause was this change, not the mock: with
+  the strip reading the certificate, the SSL/TLS tab opens over an answer the
+  page already has (above), and the scenario pressed "Get certificate" while
+  the tab's controls were off, so nothing was sent and three of its states
+  were recorded under names that were no longer true. The scenario was
+  corrected (it now opens the tab in both ways, presses only an enabled
+  button, and fails unless the request arrives exactly once) and run again in
+  all eight: no error, and its six earlier states have the facts they had
+  before. `mailqueue` was run again in all eight after the correction of the
+  unknown reload outcome (entry of 2026-10-10 below): no error. A comparison of
+  the two builds chunk by chunk, ignoring content hashes, found the Postfix
+  page to be the only code that differs between the build of the full run and
+  the final one. Of the 357 earlier states, seven have other facts than on
+  2026-10-09: the loopback port printed in one address; the mail queue's
+  sentence and the label over the reload line, both from the settings-writes
+  corrections; and the four states changed on purpose here (the saved DNS
+  record with its form closed, twice; Apply shown as saved; the strip's Retry
+  beside the card's). Measured in all eight: after a lost answer the notice
+  was in the state the re-read called for (`made` with the form closed and the
+  record listed once, `not-made` with the typed value still in the form and the
+  save control back, `read` for the changes that ask nothing); every lost
+  change was sent by the page once and arrived once; "Check again" sent only
+  reads and found a record the mock added afterwards; a change shown as saved
+  offered only "Close" and was not on the attention surface. The strip said it
+  was checking, then what the server said; after a failed read it said "could
+  not be checked" with Retry inside the width of the screen, on the overview
+  and on the DNS tab, and Retry sent only reads. No row action's label was on
+  more than one line. A new scenario fails when the notice is in another state
+  than the one named, when the field it should read is not found, or when
+  nothing was measured.
+- *Not covered.* Any real server; Safari, Firefox, a screen reader, a touch
+  device; the imitation skins; roles other than the administrator (a team
+  member's view of these panels is covered by the mounted and contract tests
+  only). A signed zone, a zone managed elsewhere, the scheduled tasks' list
+  without `jobs`, a restore and the DKIM key were not in the browser run; they
+  are covered by the mounted test.
+
 ### Database and mail configuration screens: a file is read before it is an editor, and a save says what the service did with it (2026-10-09)
 
 Source state with component tests, the two validating programs run for real on a
@@ -3019,7 +3600,10 @@ whatever happened: the Postfix recovery command is `sudo postfix reload`, not
 policy, configuration file), or try again (mail queue, scheduled tasks). A
 policy that was written stays written and is what the form shows; a
 configuration change that was not kept is still in the form, and the file on
-the server is the previous one.
+the server is the previous one. For the mail policy the owner may also press
+Save without changing a value: every accepted save ends with the verified
+reload, so that save makes Postfix take the file, or says again why it did not
+(below).
 
 **Platform limitation.** On a server whose `/etc/cron.allow` does not list a
 site user, CelikPanel can neither read nor change that user's scheduled tasks
@@ -3115,6 +3699,15 @@ sentences are catalogue entries: `err.*` in `web/src/i18n`, `mailpolicy.*`,
   Hiçbir şey geri alınmadı. Sunucuda önce sudo postfix status, sonra sudo
   postfix reload komutunu çalıştırın. Aşağıda gösterilen değerler kaydedilen
   değerlerdir."
+- On the screen, the two kinds of answer do not look alike (2026-10-10). A
+  reload Postfix was verified not to have taken (`MAIL_POLICY_NOT_RELOADED`) is
+  a failure after a change and stands on the failure surface. An outcome that
+  could not be established (`MAIL_POLICY_RELOAD_UNKNOWN`) is not one, as its own
+  sentence says, and stands on the attention surface with ink text. In the
+  first form of this entry both were drawn through the same failure banner, so
+  "this is not a verified failure" was written in red; that was found by
+  looking at the browser record of 2026-10-10, not by a test, and the mounted
+  test and the `mailqueue` scenario now check the surface of each.
 - `mailpolicy.postfixSaid`
   EN: "Postfix said:"
   TR: "Postfix’in yanıtı:"
@@ -3130,6 +3723,30 @@ sentences are catalogue entries: `err.*` in `web/src/i18n`, `mailpolicy.*`,
 - `mailpolicy.saved.unchanged`
   EN: "Nothing to save: the server already holds exactly these values."
   TR: "Kaydedilecek bir şey yok: sunucu zaten tam bu değerleri tutuyor."
+- A save without a change (2026-10-10, after the first form of this entry).
+  Until then such a save answered `200` / `unchanged` and asked Postfix
+  nothing, so after "not reloaded" an owner who had corrected main.cf and
+  pressed Save was told "nothing to save" while Postfix went on running the
+  earlier values. Postfix cannot be asked which values a running master holds,
+  and the Agent keeps no record of the earlier outcome, so every accepted save
+  now ends with the same verified reload (Postfix's own check, `postfix
+  status`, `postfix reload`, `postfix status`), also one that writes nothing.
+  Nothing is written, no polling starts it, and a stopped Postfix is still left
+  stopped. The answers:
+  - `200`, `applied: unchanged_reloaded`: nothing was written; the running
+    Postfix was reloaded and is still running.
+  - `200`, `applied: unchanged`: nothing was written and Postfix is stopped, so
+    there was nothing to reload.
+  - `502 MAIL_POLICY_NOT_RELOADED` (reason `check`, `reload` or `verify`) or
+    `502 MAIL_POLICY_RELOAD_UNKNOWN`, with the sentences above and the policy in
+    the body: Postfix still did not take the file. This answer does not carry
+    `mutation_applied` or `partial_success`, because this request changed
+    nothing in main.cf, and no "written" line is added to the audit log.
+- `mailpolicy.saved.unchangedReloaded`
+  EN: "Nothing to save: the server already holds exactly these values. Postfix
+  was reloaded with them and is running."
+  TR: "Kaydedilecek bir şey yok: sunucu zaten tam bu değerleri tutuyor. Postfix
+  bu değerlerle yeniden yüklendi ve çalışıyor."
 - `mailpolicy.unreadable`
   EN: "The current mail policy could not be read from the server, so the
   settings are not shown and nothing can be saved here. Nothing was changed. Try
@@ -3246,6 +3863,19 @@ sentences are catalogue entries: `err.*` in `web/src/i18n`, `mailpolicy.*`,
 - `cron.unknown.said`
   EN: "The server’s crontab program said: {detail}"
   TR: "Sunucunun crontab programının yanıtı: {detail}"
+- On the screen (2026-10-10, `DomainCronManager`; the answer's `detail` token is
+  read by `web/src/lib/apiError.ts`). A cause the server verified
+  (`cron_allow`, `cron_deny`) is the server owner's rule, not a failure: its
+  sentence stands alone on the neutral surface with the plain information mark,
+  announced politely, without the attention colour, and the line crontab
+  printed is not repeated under it. Every other answer is the could-not-check
+  notice with the neutral sentence `cron.unknown`, followed by
+  `cron.unknown.said` when crontab printed a line; the line itself is in the
+  mono face. A token the screen has no words for, and a refusal that is not
+  this answer, get the neutral sentence. In every case the list is not shown,
+  no task can be added or changed, and "Retry" reads again and only reads: it
+  is how the list comes back after the owner changed `cron.allow` or
+  `cron.deny`.
 - `502 CURRENT_SETTINGS_UNREADABLE` for the other resources
   API: "CelikPanel could not read what is currently set on this server, so
   nothing is shown as a setting and nothing was changed. CelikPanel has not
@@ -3289,10 +3919,22 @@ sentences are catalogue entries: `err.*` in `web/src/i18n`, `mailpolicy.*`,
   EN: "Postfix said: {detail}"
   TR: "Postfix’in yanıtı: {detail}"
 
-**Not shown yet.** The scheduled tasks screen still shows its one neutral
-sentence (`cron.unknown`); the `cron.unknown.*` entries above are in the
-catalogue and the answer carries the cause and the line, but the screen does
-not use them yet. A successful mail policy save that reloaded Postfix keeps
-`mailpolicy.saved`. The entries `postfix.queue.unknown` and `mailpolicy.unknown`,
-which told the owner to check that Postfix is running, are no longer used by
-any screen.
+**Shown since 2026-10-10, and what is not.** The scheduled tasks screen shows
+the verified cause and crontab's line (above); in the first form of this entry
+the answer and the catalogue entries existed and the screen still showed its
+one neutral sentence. A successful mail policy save that wrote and reloaded
+Postfix keeps `mailpolicy.saved`. The entries `postfix.queue.unknown` and
+`mailpolicy.unknown`, which told the owner to check that Postfix is running,
+are no longer used by any screen. Not shown: a write to the scheduled tasks
+that is refused because the crontab could not be read still answers with the
+general sentence of `CURRENT_SETTINGS_UNREADABLE` in a toast. Neither change of
+2026-10-10 was measured on a real service; in the browser run of that date
+(fourth batch, above) the mail policy answers, the two configuration reload
+answers and the four crontab answers were photographed against the mock. Seen
+there and not changed: the configuration reload answer whose running settings
+are unknown (`restored_running_unknown`) is on the failure surface, because the
+unit's reload verifiably failed; the line under both configuration reload
+answers is introduced as what the service said although the systemd unit's
+reload printed it; and the sentence for a not-reloaded answer that names no
+stage (an older Agent) still names `sudo systemctl reload postfix`, against the
+rule at the top of this entry.

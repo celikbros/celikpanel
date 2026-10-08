@@ -10,6 +10,10 @@ const phpSource = readFileSync(new URL('../src/components/DomainPHPSettings.tsx'
 const dnsSource = readFileSync(new URL('../src/components/DomainDNSManager.tsx', import.meta.url), 'utf8');
 const capabilitiesSource = readFileSync(new URL('../src/lib/hostingCapabilities.ts', import.meta.url), 'utf8');
 const remoteSource = readFileSync(new URL('../src/lib/remote.ts', import.meta.url), 'utf8');
+// The decoder of a domain's databases moved to lib/domainDatabases.ts in the
+// fourth batch (9 Oct 2026), so the Databases and Backups tabs share one
+// decoder for one address. What was pinned in the component is pinned there.
+const domainDatabasesSource = readFileSync(new URL('../src/lib/domainDatabases.ts', import.meta.url), 'utf8');
 
 test('additional-user domain surfaces stay fail-closed without disabling the accessible view tree', () => {
   assert.doesNotMatch(detailSource, /<fieldset/);
@@ -47,10 +51,13 @@ test('team-member DB, PHP and DNS panels avoid server-global capability calls', 
   );
   assert.match(databasesSource, /!isAdditionalUser && <DBToolsCard capabilities=\{capabilities\.remote\} \/>/);
   assert.match(databasesSource, /useRemote\(`\/api\/v1\/domains\/\$\{domainId\}\/databases`, decodeDomainDatabases\)/);
-  assert.match(databasesSource, /function parseAvailableDatabaseTypes\(value: unknown\)/);
-  assert.match(databasesSource, /if \(!Array\.isArray\(value\)\) return \[\];/);
-  assert.match(databasesSource, /item !== 'mysql' && item !== 'postgresql'\) return \[\];/);
-  assert.match(databasesSource, /availableTypes: parseAvailableDatabaseTypes\(payload\.available_types\)/);
+  assert.match(databasesSource, /import \{ decodeDomainDatabases, [^}]*\} from '\.\.\/lib\/domainDatabases';/);
+  assert.doesNotMatch(databasesSource, /function (decodeDomainDatabases|parseAvailableDatabaseTypes)/, 'a second decoder of the same address');
+  assert.match(domainDatabasesSource, /export function parseAvailableDatabaseTypes\(value: unknown\)/);
+  assert.match(domainDatabasesSource, /if \(!Array\.isArray\(value\)\) return \[\];/);
+  assert.match(domainDatabasesSource, /item !== 'mysql' && item !== 'postgresql'\) return \[\];/);
+  assert.match(domainDatabasesSource, /availableTypes: parseAvailableDatabaseTypes\(payload\.available_types\)/);
+  assert.match(domainDatabasesSource, /databases: decodeList<DatabaseInfo>\(payload\.databases\)/);
   // Nothing is created on an engine the server did not name, and nothing of
   // another domain's answer is carried over: engines exist only for a known
   // answer of this domain's own address.
@@ -68,12 +75,21 @@ test('team-member DB, PHP and DNS panels avoid server-global capability calls', 
   );
   assert.match(phpSource, /function parseAvailablePHPVersions\(value: unknown\)/);
   assert.match(phpSource, /typeof item !== 'string' \|\| !phpVersionPattern\.test\(item\)\) return \[\];/);
-  assert.match(phpSource, /parseAvailablePHPVersions\(nextSettings\.available_versions\)/);
-  assert.match(phpSource, /const loadSettings[\s\S]*if \(isAdditionalUser\) \{[\s\S]*setVersions\(\[\]\);[\s\S]*setSettings\(null\);/);
+  // Since the fourth batch (9 Oct 2026) the PHP settings are read through
+  // lib/remote.ts. The same properties, pinned on the new shape: a team
+  // member's versions are the tenant-safe available_versions of the answer of
+  // this domain's own address, they exist only while that answer is known (so
+  // nothing of another domain's answer is carried over, which the cleared
+  // state used to guarantee), and no version outside them is sent.
+  assert.match(phpSource, /availableVersions: parseAvailablePHPVersions\(body\.available_versions\)/);
+  assert.match(phpSource, /const settings = useRemote\(`\/api\/v1\/domains\/\$\{domainId\}\/php`, decodePHPSettings\);/);
+  assert.match(phpSource, /const teamVersions = settings\.remote\.state === 'known' \? settings\.remote\.value\.availableVersions : \[\];/);
+  assert.doesNotMatch(phpSource, /useState<string\[\]>/, 'a version list kept beside the answer it came from');
   assert.match(phpSource, /if \(isAdditionalUser && !versions\.includes\(selectedVersion\)\) return;/);
   assert.doesNotMatch(phpSource, /readOnly \|\| isAdditionalUser \|\| selectedVersion/);
   assert.match(phpSource, /disabled=\{readOnly \|\| \(isAdditionalUser && versions\.length === 0\)\}/);
-  assert.match(phpSource, /fetch\(`\/api\/v1\/domains\/\$\{domainId\}\/php`/);
+  assert.match(phpSource, /answer\.send\(`\/api\/v1\/domains\/\$\{domainId\}\/php`, \{/);
+  assert.doesNotMatch(phpSource, /\bfetch\(/, 'the PHP panel reads or writes outside the shared layer');
 
   assert.match(dnsSource, /const capabilities = useHostingCapabilities\(\{ enabled: !isAdditionalUser \}\);/);
   assert.match(
@@ -82,7 +98,14 @@ test('team-member DB, PHP and DNS panels avoid server-global capability calls', 
   );
   assert.match(dnsSource, /isAdditionalUser \|\| \(dnsServer !== null/);
   assert.match(dnsSource, /DNSSECSection[^>]+readOnly=\{readOnly\}/s);
-  assert.match(dnsSource, /readOnly \|\| externalDNS \? \([\s\S]*loadRecords\(\)[\s\S]*\) : \(/);
+  // A read-only or externally managed zone gets the read of its records and
+  // nothing that changes them (the read is `records.retry()` since the fourth
+  // batch, 9 Oct 2026; it was `loadRecords()`).
+  assert.match(dnsSource, /readOnly \|\| externalDNS \? \(\s*<Button variant="secondary" icon=\{RefreshCw\} disabled=\{records\.reading\} onClick=\{\(\) => void records\.retry\(\)\}>[\s\S]*?\) : \(/);
+  assert.match(dnsSource, /const canChange = !readOnly && !externalDNS && zoneRemote\.state === 'known' && !answer\.holding;/);
+  for (const change of ['publishZone', 'addRecord', 'deleteRecord']) {
+    assert.match(dnsSource, new RegExp(`const ${change} = async \\([^)]*\\) => \\{\\s*if \\(!canChange`), `${change} is not held by canChange`);
+  }
   assert.match(dnsSource, /!readOnly && !externalDNS && showAddForm/);
 
   assert.match(detailSource, /const capabilities = useHostingCapabilities\(\{ enabled: !isTeamMember \}\);/);

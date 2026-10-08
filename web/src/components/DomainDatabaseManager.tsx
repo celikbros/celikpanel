@@ -4,7 +4,8 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { readApiError } from '../lib/apiError';
 import { Button, Checking, CouldNotCheck, RemoteGate } from './ui';
-import { decodeList, lastKnown, mapRemote, useRemote, type Remote } from '../lib/remote';
+import { lastKnown, mapRemote, useRemote, type Remote } from '../lib/remote';
+import { decodeDomainDatabases, type DatabaseEngine, type DatabaseInfo, type DatabaseType } from '../lib/domainDatabases';
 import { useHostingCapabilities, type CapabilitiesRemote } from '../lib/hostingCapabilities';
 
 interface DomainDatabaseManagerProps {
@@ -12,26 +13,6 @@ interface DomainDatabaseManagerProps {
     domainName: string;
     readOnly?: boolean;
     isAdditionalUser?: boolean;
-}
-
-type DatabaseType = 'mysql' | 'postgresql';
-type DatabaseEngine = { value: DatabaseType; label: string };
-
-function parseAvailableDatabaseTypes(value: unknown): DatabaseEngine[] {
-    if (!Array.isArray(value)) return [];
-
-    const parsed: DatabaseEngine[] = [];
-    const seen = new Set<DatabaseType>();
-    for (const item of value) {
-        if (item !== 'mysql' && item !== 'postgresql') return [];
-        if (seen.has(item)) continue;
-        seen.add(item);
-        parsed.push({
-            value: item,
-            label: item === 'mysql' ? 'MySQL / MariaDB' : 'PostgreSQL',
-        });
-    }
-    return parsed;
 }
 
 // The database web tools (phpMyAdmin / phpPgAdmin). Installed → a launch
@@ -90,31 +71,10 @@ function DBToolsCard({ capabilities }: { capabilities: CapabilitiesRemote }) {
     );
 }
 
-interface DatabaseInfo {
-    id: number;
-    name: string;
-    type: string;
-    user: string;
-    created_at: string;
-}
-
-// One answer carries this domain's databases and, for a team member, the
-// engines that member may create on. A body that is not this shape is unknown.
-// Tek yanıt bu alan adının veritabanlarını ve ekip üyesi için oluşturabileceği
-// motorları taşır. Bu biçimde olmayan gövde bilinmeyendir.
-interface DomainDatabases {
-    databases: DatabaseInfo[];
-    availableTypes: DatabaseEngine[];
-}
-
-function decodeDomainDatabases(raw: unknown): DomainDatabases {
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('shape');
-    const payload = raw as Record<string, unknown>;
-    return {
-        databases: decodeList<DatabaseInfo>(payload.databases),
-        availableTypes: parseAvailableDatabaseTypes(payload.available_types),
-    };
-}
+// The decoder of this domain's databases is lib/domainDatabases.ts: one
+// address, one decoder, shared with the Backups tab.
+// Bu alan adının veritabanlarının çözücüsü lib/domainDatabases.ts'tedir;
+// Yedekler sekmesiyle paylaşılır.
 
 const engineLabels: Record<string, DatabaseEngine> = {
     mariadb: { value: 'mysql', label: 'MySQL / MariaDB' },

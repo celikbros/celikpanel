@@ -131,7 +131,7 @@ export function Fail2banManagement({ onBack }: Fail2banManagementProps) {
                                     <tr key={`${b.ip}-${i}`} className="border-b border-border last:border-0 hover:bg-surface-2/60">
                                         <td className="px-4 py-2.5 font-mono font-medium text-fg">{b.ip}</td>
                                         <td className="px-4 py-2.5 text-fg-muted">{b.jail}</td>
-                                        <td className="px-4 py-2.5 text-right">
+                                        <td className="row-actions px-4 py-2.5 text-right">
                                             {/* Off while the list is the earlier answer or is
                                                 being read again: a ban is lifted only from a
                                                 row the server has just listed.
@@ -195,7 +195,7 @@ function TableWrap({ cols, children }: { cols: string[]; children: React.ReactNo
                 <thead>
                     <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
                         {cols.map((c, i) => (
-                            <th key={i} className={`px-4 py-2.5 ${i === cols.length - 1 ? 'text-right' : ''}`}>
+                            <th key={i} className={`px-4 py-2.5 ${i === cols.length - 1 ? 'text-right' : ''} ${c === '' ? 'row-actions' : ''}`}>
                                 {c}
                             </th>
                         ))}

@@ -1057,6 +1057,7 @@ export const trServerScreens: Record<ServerScreenKey, string> = {
     'mailpolicy.observed': "CelikPanel’in gözlediği:",
     'mailpolicy.saved.notRunning': "/etc/postfix/main.cf dosyasına kaydedildi. Postfix bu sunucuda çalışmıyor; bu yüzden yeniden yüklenecek bir şey yoktu. Bu değerleri başladığında okur.",
     'mailpolicy.saved.unchanged': "Kaydedilecek bir şey yok: sunucu zaten tam bu değerleri tutuyor.",
+    'mailpolicy.saved.unchangedReloaded': "Kaydedilecek bir şey yok: sunucu zaten tam bu değerleri tutuyor. Postfix bu değerlerle yeniden yüklendi ve çalışıyor.",
     'mailpolicy.unreadable': "Geçerli posta politikası sunucudan okunamadı; bu yüzden ayarlar gösterilmiyor ve buradan kayıt yapılamıyor. Hiçbir şey değiştirilmedi. Tekrar deneyin.",
     'postfix.queue.unreadable': "Mail kuyruğu okunamadı; bu yüzden gösterilmiyor. Bu, kuyruğun boş olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin; sorun sürerse nedeni görmek için sunucuda sudo postqueue -j komutunu çalıştırın.",
     'postfix.queue.unreadable.postfix_config': "Mail kuyruğu okunamadı, çünkü Postfix kendi yapılandırmasını reddediyor: /etc/postfix/main.cf ya da master.cf içindeki bir ayar hatalı ve Postfix’in programları onda duruyor. Bu, kuyruğun boş olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Sunucuda Postfix’in adını verdiği ayarı düzeltin, hata yazmayana kadar sudo postfix check komutunu çalıştırın, sonra tekrar deneyin.",

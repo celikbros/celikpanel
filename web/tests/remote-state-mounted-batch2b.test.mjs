@@ -808,6 +808,21 @@ test('mail policy: the not-reloaded answer carries the saved values, so they are
       await type(size(), '50');
       await press(buttons('mailpolicy.save')[0]);
       assert.ok(has('err.' + code) && has(label) && has('postfix: fatal: bad numerical configuration'), code + ' is not shown with its line');
+      // A verified failure is drawn as one; an outcome that could not be
+      // established is not (its sentence says "this is not a verified
+      // failure"): it stands on the attention surface, never the failure one.
+      const box = tree.root.findAll((node) => node.props['data-policy-outcome'] !== undefined);
+      assert.equal(box.length, 1);
+      const surfaces = box[0].findAll((node) => typeof node.type === 'string' && String(node.props.className ?? '').split(' ').includes('border')).map((node) => node.props.className);
+      assert.equal(surfaces.length, 1, 'the sentence stands on ' + surfaces.length + ' surfaces');
+      if (code === 'MAIL_POLICY_RELOAD_UNKNOWN') {
+        assert.equal(box[0].props['data-policy-outcome'], 'unknown');
+        assert.match(surfaces[0], /warning-mark/, 'an unknown outcome is not on the attention surface');
+        assert.doesNotMatch(surfaces[0], /danger/, 'an unknown outcome is drawn as a failure');
+      } else {
+        assert.equal(box[0].props['data-policy-outcome'], 'not-reloaded');
+        assert.match(surfaces[0], /danger/, 'a verified failure is not drawn as one');
+      }
       assert.equal(size().props.value, 50, 'the form does not show what main.cf holds now');
       assert.equal(reads('/api/v1/mail/policy'), before, 'the saved values were read a second time although the answer carried them');
       assert.deepEqual(globalThis.currentTest.toasts.filter(([kind]) => kind === 'success'), [], 'a save Postfix did not take is announced as applied');
@@ -818,7 +833,7 @@ test('mail policy: the not-reloaded answer carries the saved values, so they are
 });
 
 test('mail policy: "applied" is said only for a verified reload; a stopped Postfix and an unchanged policy say so', async () => {
-  for (const [applied, key] of [['reloaded', 'mailpolicy.saved'], ['not_running', 'mailpolicy.saved.notRunning'], ['unchanged', 'mailpolicy.saved.unchanged'], [undefined, 'mailpolicy.saved']]) {
+  for (const [applied, key] of [['reloaded', 'mailpolicy.saved'], ['not_running', 'mailpolicy.saved.notRunning'], ['unchanged', 'mailpolicy.saved.unchanged'], ['unchanged_reloaded', 'mailpolicy.saved.unchangedReloaded'], [undefined, 'mailpolicy.saved']]) {
     serve({ '/api/v1/mail/policy': () => Response.json({ message_size_mb: 9, dnsbl_zones: [], outbound_rate_limit: 0, version: 'mp1-a' }) },
       { 'PUT /api/v1/mail/policy': () => Response.json({ success: true, applied, policy: { message_size_mb: 50, dnsbl_zones: [], outbound_rate_limit: 0, version: 'mp1-b' } }) });
     try {

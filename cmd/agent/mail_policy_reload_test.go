@@ -67,12 +67,77 @@ func TestSetMailPolicyReportsAWrapperThatExitsZeroWhilePostfixDidNotReload(t *te
 		t.Fatal("a value the save did not name was rewritten")
 	}
 
-	// A save that changes nothing does not reload, so it cannot fail this way,
-	// and it says that nothing was applied.
-	fake.reloads = 0
-	unchanged := setMailPolicyForTest(t, resp.Policy)
-	if unchanged.Code != "" || fake.reloads != 0 || unchanged.Applied != transport.MailPolicyAppliedUnchanged {
-		t.Fatalf("an unchanged save: %+v reloads = %d", unchanged, fake.reloads)
+	// Saving again without a change, while the owner's line is still wrong,
+	// writes nothing and is not answered "unchanged": Postfix is asked again,
+	// refuses again, and the answer says so and that this request wrote
+	// nothing.
+	fake.reloads, fake.writes = 0, nil
+	again := setMailPolicyForTest(t, resp.Policy)
+	if again.Code != transport.MailPolicyNotReloaded || again.Stage != transport.MailPolicyStageCheck || !again.Unwritten || again.Applied != "" {
+		t.Fatalf("an unchanged save while the check still refuses: %+v", again)
+	}
+	if len(fake.writes) != 0 || fake.reloads != 1 || again.Policy.Version != resp.Policy.Version {
+		t.Fatalf("writes = %v reloads = %d policy = %+v", fake.writes, fake.reloads, again.Policy)
+	}
+}
+
+// The gap this closes (set1, 10 Oct 2026): after "not reloaded" the owner
+// corrects main.cf and presses Save without changing a value. That save
+// answered 200 "unchanged" and reloaded nothing, so Postfix went on running the
+// settings from before the first save. It now performs the verified reload:
+// nothing is written, Postfix's own check and reload run, and the answer says
+// the values were already there and Postfix was reloaded.
+func TestSetMailPolicyUnchangedSaveReloadsAfterTheOwnerCorrectedMainCf(t *testing.T) {
+	fake, host := policyWithRealReload(t)
+	host.checkOutput = "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n"
+
+	loaded := readMailPolicyForTest(t)
+	loaded.OutboundRateLimit = 46
+	first := setMailPolicyForTest(t, loaded)
+	if first.Code != transport.MailPolicyNotReloaded || first.Unwritten {
+		t.Fatalf("first save = %+v", first)
+	}
+
+	// The owner corrects the line; the policy values are the ones the first
+	// save wrote, so the page's version is still current.
+	host.checkOutput = ""
+	host.calls, fake.writes, fake.reloads = nil, nil, 0
+	second := setMailPolicyForTest(t, first.Policy)
+	if second.Code != "" || second.Error != "" || second.Unwritten || second.Applied != transport.MailPolicyAppliedUnchangedReloaded {
+		t.Fatalf("the unchanged save after the correction = %+v", second)
+	}
+	if len(fake.writes) != 0 {
+		t.Fatalf("an unchanged save wrote %v", fake.writes)
+	}
+	if got := strings.Join(host.calls, "; "); !strings.Contains(got, "postfix check; postfix status") || !strings.Contains(got, "postfix reload; postfix status") {
+		t.Fatalf("the unchanged save did not run the verified reload: %v", host.calls)
+	}
+	if second.Policy.OutboundRateLimit != 46 || second.Policy.Version != first.Policy.Version {
+		t.Fatalf("policy = %+v, want the values main.cf already held", second.Policy)
+	}
+}
+
+// An unchanged save leaves a stopped Postfix stopped and says only that
+// nothing was to be saved; an outcome that cannot be established is unknown
+// and carries no proof of a change.
+func TestSetMailPolicyUnchangedSaveWithAStoppedOrUnreachablePostfix(t *testing.T) {
+	fake, host := policyWithRealReload(t)
+	host.masterPID = 0
+	resp := setMailPolicyForTest(t, readMailPolicyForTest(t))
+	if resp.Code != "" || resp.Applied != transport.MailPolicyAppliedUnchanged || len(fake.writes) != 0 {
+		t.Fatalf("answer = %+v writes = %v", resp, fake.writes)
+	}
+	for _, call := range host.calls {
+		if strings.HasPrefix(call, "systemctl") || call == "postfix reload" {
+			t.Fatalf("a stopped Postfix was started or reloaded: %v", host.calls)
+		}
+	}
+
+	fake, host = policyWithRealReload(t)
+	host.statusCannotRun = true
+	resp = setMailPolicyForTest(t, readMailPolicyForTest(t))
+	if resp.Code != transport.MailPolicyReloadUnknown || !resp.Unwritten || resp.Applied != "" || len(fake.writes) != 0 {
+		t.Fatalf("answer = %+v writes = %v", resp, fake.writes)
 	}
 }
 

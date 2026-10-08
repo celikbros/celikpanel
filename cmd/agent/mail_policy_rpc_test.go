@@ -207,8 +207,9 @@ func TestSetMailPolicyRefusesWithoutACurrentVersion(t *testing.T) {
 	})
 }
 
-// Saving what was loaded writes nothing and reloads nothing; changing one
-// value writes that value only. A 10240000-byte limit shows as 9 MB and is not
+// Saving what was loaded writes nothing; Postfix is still asked to reload,
+// once (10 Oct 2026: a save after the owner's own correction of main.cf must
+// reach Postfix). Changing one value writes that value only. A 10240000-byte limit shows as 9 MB and is not
 // rounded down to 9 MiB by a save that did not change it.
 func TestSetMailPolicyWritesOnlyTheValuesThatChanged(t *testing.T) {
 	fake := installFakePostfix(t, stockPostfix())
@@ -216,12 +217,13 @@ func TestSetMailPolicyWritesOnlyTheValuesThatChanged(t *testing.T) {
 	fake.values["anvil_rate_time_unit"] = "1h"
 
 	loaded := readMailPolicyForTest(t)
-	if resp := setMailPolicyForTest(t, loaded); resp.Code != "" || resp.Error != "" {
-		t.Fatalf("an unchanged save was refused: %+v", resp)
+	if resp := setMailPolicyForTest(t, loaded); resp.Code != "" || resp.Error != "" || resp.Applied != transport.MailPolicyAppliedUnchangedReloaded {
+		t.Fatalf("an unchanged save was refused or misreported: %+v", resp)
 	}
-	if len(fake.writes) != 0 || fake.reloads != 0 {
+	if len(fake.writes) != 0 || fake.reloads != 1 {
 		t.Fatalf("an unchanged save wrote %v and reloaded %d times", fake.writes, fake.reloads)
 	}
+	fake.reloads = 0
 
 	loaded.MessageSizeMB = 50
 	resp := setMailPolicyForTest(t, loaded)

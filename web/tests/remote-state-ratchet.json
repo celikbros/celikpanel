@@ -41,39 +41,8 @@
       "swallowedFailure": 1,
       "rawRead": 1
     },
-    "src/components/DomainAppsPanel.tsx": {
-      "swallowedFailure": 1,
-      "rawRead": 1,
-      "unprovenEmptyState": 1
-    },
-    "src/components/DomainBackupManager.tsx": {
-      "rawRead": 3,
-      "unprovenEmptyState": 1
-    },
-    "src/components/DomainCronManager.tsx": {
-      "unprovenEmptyState": 1
-    },
-    "src/components/DomainDNSManager.tsx": {
-      "rawRead": 3,
-      "unprovenEmptyState": 3
-    },
-    "src/components/DomainGeneralSettings.tsx": {
-      "rawRead": 1
-    },
     "src/components/DomainLogsViewer.tsx": {
-      "rawRead": 1,
-      "unprovenEmptyState": 1
-    },
-    "src/components/DomainPHPSettings.tsx": {
       "rawRead": 1
-    },
-    "src/components/DomainSSLOverviewCard.tsx": {
-      "rawRead": 1
-    },
-    "src/components/HostingTypePanel.tsx": {
-      "swallowedFailure": 1,
-      "ignoredFailure": 4,
-      "rawRead": 4
     },
     "src/components/Layout.tsx": {
       "valueFromFailure": 1,
@@ -85,10 +54,6 @@
     },
     "src/components/Login.tsx": {
       "swallowedFailure": 1
-    },
-    "src/components/MailAuthPanel.tsx": {
-      "swallowedFailure": 1,
-      "rawRead": 1
     },
     "src/components/PanelAddressHint.tsx": {
       "swallowedFailure": 1,

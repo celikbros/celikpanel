@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { readApiError, type ApiError } from './apiError';
 
 // What a screen knows about something it reads from the server. The rule every
@@ -280,6 +280,28 @@ export function useRemote<T>(url: string | null, decode: Decode<T>, options: Rem
 export function refreshRemote(url: string): void {
     const entry = entries.get(url);
     if (entry) void read(url, entry, true);
+}
+
+// useRefreshEvery reads `handle` again every `ms` while the screen is mounted.
+// It only reads. It does not ask while a read is still on its way, so a slow
+// server is never asked faster than it answers and an answer is never thrown
+// away for a newer question. A read that fails keeps the earlier answer
+// (`unknown` with `previous`): the screen marks it once, calmly, and the next
+// tick asks again; a poll never raises an error by itself and never starts a
+// change.
+// useRefreshEvery, ekran bağlıyken `handle`ı her `ms`de yeniden okur. Yalnız
+// okur. Yoldaki okuma bitmeden sormaz. Başarısız okuma önceki yanıtı korur;
+// ekran bunu bir kez, sakince işaretler. Yoklama hiçbir değişiklik başlatmaz.
+export function useRefreshEvery(handle: RemoteHandle<unknown>, ms: number, enabled = true): void {
+    const latest = useRef(handle);
+    latest.current = handle;
+    useEffect(() => {
+        if (!enabled) return;
+        const timer = setInterval(() => {
+            if (!latest.current.reading) void latest.current.retry();
+        }, ms);
+        return () => clearInterval(timer);
+    }, [ms, enabled]);
 }
 
 function shown<T>(url: string | null): View<T> {

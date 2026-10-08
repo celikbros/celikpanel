@@ -117,7 +117,12 @@ export const b2Defaults = () => ({
     ],
     queueAction: 'ok',           // ok | fail
     policy: { message_size_mb: 25, dnsbl_zones: ['zen.spamhaus.org'], outbound_rate_limit: 30 },
-    policySave: 'ok',            // ok | notReloaded
+    // ok | notReloaded (an Agent that names no stage) | check | reload | verify
+    // (written, and Postfix was verified not to have taken it, by stage) |
+    // unknown (written, outcome not established). From `check` on the answer
+    // carries the written policy, as the Panel does since 10 Oct 2026.
+    policySave: 'ok',
+    policyRunning: true,         // false: Postfix is stopped (applied: not_running / unchanged)
     cron: "# m h  dom mon dow   command\n15 2 * * * /usr/local/bin/report --quiet\n# DISABLED: 0 6 * * 1 /usr/local/bin/weekly\n*/5 * * * * /usr/bin/php /var/www/example.com/cron.php\n",
 });
 
@@ -172,6 +177,11 @@ export async function batch2b(req, res, path, query, { state, send, coded, readB
         if (b2.save === 'syntax') return refuse(422, 'CONFIG_INVALID', 'syntax', { detail: 'end-of-line before authentication method', line: String(String(body.content).split('\n').length - 1) });
         if (b2.save === 'lockout') return refuse(422, 'CONFIG_INVALID', 'lockout', { name: 'denied' });
         if (b2.save === 'reload') return refuse(502, 'CONFIG_RELOAD_FAILED', 'restored', { detail: 'Error: /usr/lib/postgresql/17/bin/pg_ctl reload: could not send reload signal (PID: 1123): No such process' });
+        // The two answers of 10 Oct 2026: the previous file is back, the unit
+        // could not reload with it either, and the server was (or could not
+        // be) asked directly which settings it runs.
+        if (b2.save === 'reloadUnit') return refuse(502, 'CONFIG_RELOAD_FAILED', 'restored_unit_reload_failed', { detail: 'Job for postgresql@17-main.service failed because the control process exited with error code.', unit: 'postgresql@17-main' });
+        if (b2.save === 'reloadUnknown') return refuse(502, 'CONFIG_RELOAD_FAILED', 'restored_running_unknown', { detail: 'Job for postgresql@17-main.service failed because the control process exited with error code.', unit: 'postgresql@17-main' });
         if (b2.save === 'notRestored') return refuse(502, 'CONFIG_RELOAD_FAILED', 'not_restored', { detail: 'Job for postgresql@17-main.service failed.', name: `${file}.celikpanel-backup-20261009T120000Z` });
         const unchanged = b2.files[file] === body.content;
         b2.files[file] = body.content;
@@ -227,12 +237,34 @@ export async function batch2b(req, res, path, query, { state, send, coded, readB
         const body = await readBody(req);
         if (!body.version) return refuse(409, 'SETTINGS_VERSION_REQUIRED', 'mail_policy');
         if (body.version !== policyVersion(b2.policy)) return refuse(409, 'SETTINGS_CHANGED', 'mail_policy');
-        b2.policy = { message_size_mb: body.message_size_mb, dnsbl_zones: body.dnsbl_zones || [], outbound_rate_limit: body.outbound_rate_limit };
+        const next = { message_size_mb: body.message_size_mb, dnsbl_zones: body.dnsbl_zones || [], outbound_rate_limit: body.outbound_rate_limit };
+        // A save that changes nothing writes nothing; a running Postfix is
+        // reloaded all the same (10 Oct 2026), so it can fail the same ways.
+        const wrote = JSON.stringify(next) !== JSON.stringify(b2.policy);
+        b2.policy = next;
         if (b2.policySave === 'notReloaded') {
             send(res, 502, { error: 'written, not reloaded', code: 'MAIL_POLICY_NOT_RELOADED', partial_success: true, mutation_applied: true, vars: { detail: 'exit status 1: Job for postfix.service failed because the control process exited with error code.' } });
             return true;
         }
-        send(res, 200, { success: true, policy: { ...b2.policy, version: policyVersion(b2.policy) } });
+        const said = {
+            check: 'postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign',
+            reload: 'postfix/postfix-script: fatal: the Postfix mail system is not running',
+            verify: 'the Postfix master process stopped while it was reloading',
+            unknown: 'fork/exec /usr/sbin/postfix: resource temporarily unavailable',
+        }[b2.policySave];
+        if (said) {
+            send(res, 502, {
+                error: 'the server sentence (the screen shows its own)',
+                code: b2.policySave === 'unknown' ? 'MAIL_POLICY_RELOAD_UNKNOWN' : 'MAIL_POLICY_NOT_RELOADED',
+                ...(b2.policySave === 'unknown' ? {} : { reason: b2.policySave }),
+                ...(wrote ? { partial_success: true, mutation_applied: true } : {}),
+                vars: { detail: said },
+                policy: { ...b2.policy, version: policyVersion(b2.policy) },
+            });
+            return true;
+        }
+        const applied = b2.policyRunning === false ? (wrote ? 'not_running' : 'unchanged') : wrote ? 'reloaded' : 'unchanged_reloaded';
+        send(res, 200, { success: true, applied, policy: { ...b2.policy, version: policyVersion(b2.policy) } });
         return true;
     }
 

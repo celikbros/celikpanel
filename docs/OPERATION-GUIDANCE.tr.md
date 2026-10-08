@@ -2506,6 +2506,580 @@ ve telefon 390×844, Türkçe ve İngilizce, açık ve koyu.
   kaydı yalnız bağlanan testle kapsanır. Bu kaydın "önce" değerleri (118 px,
   telefonda 158 px) yeniden ölçülmedi.
 
+#### Dördüncü parti: bir alan adının panelleri, yanıtı gelmeyen değişiklik, telefonda satır eylemleri (2026-10-09)
+
+Bileşen testleri ve yerel bir sahte sunucuya karşı tarayıcı incelemesiyle kaynak
+durumu; gerçek sistem çalıştırması ve kurulu sunucu yok. Aynı kural, bir alan
+adının sayfasındaki panellere uygulandı. Okumaların ve yiten yanıtların
+arayüzde nasıl gösterildiğini değiştirir; API, saklanan kayıt, erişim kapısı ya
+da yaşam döngüsü değişmez ve hiçbir kabul işi kapanmaz. Sunucu gerektirenler
+aşağıda "Sunucu gerektirir" başlığındadır.
+
+**Bu paneller önce ne gösteriyordu.**
+
+- *DNS kayıtları.* Durumu okunamayan bölge, "DNS bölgesi durumu denetlenemedi"
+  başlıklı bir boş durumdu. Kayıtların başarısız okuması bir bildirim balonu ve
+  kırmızı bir satır çıkarıyor, altında "Henüz kayıt yok" ve "Toplam 0 öğe"
+  kalıyordu. DNSSEC kartı okuması yanıtlanana dek yoktu, sonra kayıtları aşağı
+  itiyordu; `secured` taşımayan yanıt "imzasız" diye okunuyor ve "Bölgeyi
+  imzala" sunuluyordu.
+- *Barındırma tipi.* Başarısız okuma, sonu gelmeyen bir dönen simge bırakıyordu.
+  Node.js sürümleri, okuması başarısız olunca boş listeydi. Canlı uygulama
+  paneli kayıtlı tip için değil formda seçilen tip için çiziliyordu; yalnız
+  seçilmiş bir tip, var olmayan bir uygulamayı yokluyordu (beş saniyede bir
+  409). İki okuması yutuluyordu: yanıt yokken "Durdu" ve "Henüz günlük satırı
+  yok", Başlat da sunuluyordu.
+- *PHP.* Kırmızıyla "PHP ayarları yüklenemedi"; yeniden okuma yolu yoktu. Havuz
+  formu eksik her değeri bir varsayılanla (`dynamic`, 5, 2, 1, 3, `www-data`)
+  dolduruyor ve kaydediyordu.
+- *Genel ayarlar.* Kırmızıyla "Ayarlar yüklenemedi"; Tekrar dene yoktu.
+- *Uygulamalar.* Başarısız okuma için "Kullanılabilir uygulama yok".
+- *Genel bakıştaki sertifika kartı.* "Durum alınamadı … Ayrıntılar için SSL/TLS
+  bölümünü açın"; Tekrar dene yoktu, bunun "sertifika yok" demek olmadığı da
+  söylenmiyordu.
+- *Posta kimlik doğrulaması.* Başarısız okumadan sonra sonu gelmeyen dönen
+  simge. Ekranın bilmediği bir kayıt durumu "Eksik" diye çiziliyordu.
+- *Loglar.* Otomatik yenileme açıkken reddedilen her yoklama, beş saniyede bir
+  hata balonu çıkarıyor; her yoklama satırların yerine sayfa boyu bir dönen
+  simge koyuyordu. Başarısız ilk okuma için "Günlük satırı yok".
+- *Yedekler.* Başarısız okuma ya da gövdesi boş yanıt için "Henüz yedek yok".
+  Veritabanları okunamadığında "Bağlı veritabanı yok" ve "Web sitesi dosyaları
+  + 0 veritabanı".
+- *Zamanlanmış görevler.* Listeyi taşımayan yanıt "Zamanlanmış görev yok"tu.
+- *Bu panellerdeki her değişiklik.* Bağlantı koptuğunda genel bir hata balonu;
+  denetim de hemen yeniden açılıyordu.
+
+**Üç durumun ötesinde şimdi ne yapıyorlar.**
+
+- *Yanıtı gelmeyen değişiklik* (`web/src/lib/lostAnswer.ts`,
+  `web/src/components/ui.tsx` içinde `ResultUnknown`). Panelin bu ekranlardaki
+  değişiklikleri, sunucunun sakladığı bir kimlik taşımaz; ikinci istek ikinci
+  değişikliktir. Yanıt gelmediğinde (bağlantı biter, bir geçit Panelin JSON'u
+  olmayan bir sayfayla 408, 502, 503 ya da 504 yanıtlar, ya da kabul edilmiş
+  yanıt okunamaz) ekran:
+  1. hiçbir şeyi ikinci kez göndermez;
+  2. değişikliğin etkilediği şeyi yeniden okur, yalnızca okur;
+  3. değiştiren ya da kaldıran her denetimi **o okuma yanıtlanana dek kapalı**
+     tutar (`holding`);
+  4. değişikliğin istendiği yerde, görünür alana kaydırılmış, dikkat renginde
+     tek bir bildirim gösterir (başarısız olduğu bilinen bir şey yoktur). Okuma
+     yoldayken bunu söyler; okuma yanıtlanınca durumun saat kaçta yeniden
+     okunduğunu söyler ve **kişi kapatana** ya da sonraki bir değişiklik
+     yanıtlanana **dek durur**. "Tekrar kontrol et" yalnız okur. Okuma da
+     başarısız olursa bildirim bunu söyler ve denetimler kapalı kalır.
+  Panelin kendi gönderdiği ret, durum kodu ne olursa olsun, sunucunun
+  gerekçesidir ve eskisi gibi gösterilir. Bu bir tekrar güvenliği değildir:
+  değişikliğin yapılıp yapılmadığına, yeniden okunan duruma bakan kişi karar
+  verir. O durum sonucu gösteremiyorsa (uygulama kurulumu), bildirim nereye
+  bakılacağını söyler.
+- *Durum yeniden okunduktan sonra formun yaptığı* (2026-10-10;
+  `web/src/lib/lostAnswer.ts` içinde `Question`). Yanıtı yiten form, yeniden
+  okunan duruma tek bir soru sorar ve yalnızca bakar: değişikliği gösteriyor mu?
+  - Gösteriyor: değişikliği gönderen form kapatılır ya da boşaltılır; böylece
+    aynı kayıt tek tıkla ikinci kez kaydedilemez. Bildirim değişikliğin
+    kaydedildiğini söyler; dikkat yüzeyinde değil, onay işaretli sade yüzeyde
+    durur, yalnız "Kapat" sunar ve kişi kapatana dek kalır.
+  - Göstermiyor: yazılan yerinde kalır (daha yeni yanıtın formu yeniden kurduğu
+    yerde gönderilen değerler onun üzerine geri konur), değiştiren denetimler
+    geri gelir ve bildirim, durumun değişikliği göstermediğini, bu yüzden
+    kaydedildiğinin bilinmediğini ve bağlantı koptuğunda hâlâ çalışan bir
+    sunucunun işi sonradan bitirebileceğini söyler. "Tekrar kontrol et" okur ve
+    soruyu yeniden sorar; değişikliği gösteren sonraki okuma formu kapatır.
+  - Söyleyemiyor (listeye bu kayıt olduğu açık olmayan bir satır eklenmiş ya da
+    ayarlar ne gönderilenler ne öncekiler): yukarıdaki dört adımın bildirimi
+    gösterilir ve kişi bakar.
+  - Durum yeniden okunamadı: yukarıdaki gibi denetimler kapalı kalır.
+  Soru soran formlar: eklenen DNS kaydı (listede yeni olan, türü ve sahip adı
+  gönderilenle aynı, değeri sunucunun yeniden yazdıkları dışında gönderilen
+  değer olan satır: tam sahip adı, tırnaklar, sondaki nokta, büyük-küçük harf);
+  eklenen takma ad (önceden olmadığı listede takma ad); genel ayarların
+  yönlendirme anahtarı; barındırma tipinin Uygula'sı (tip ve kendi alanları
+  gönderildiği gibi: kaydedildi; öncekiyle aynı ayarlar: görünmüyor); PHP
+  sürümü; PHP havuzu. Yazılan bir formu olmadığı ya da durum sonucunu
+  gösteremediği için soru sormayan değişiklikler: kayıt silme, bölge yayımlama,
+  imzalama, başlat, durdur ve yeniden başlat, uygulama kurma, posta kaydı
+  yayımlama, DKIM anahtarı, günlük temizleme ve yedek oluşturma, geri yükleme
+  ya da silme. Bunlarda kişi, eskisi gibi, yeniden okunan duruma bakar.
+- *Alan adının altındaki sertifika satırı* (2026-10-10, `DomainDetail`).
+  Başlığın altındaki şerit sertifikayı kendisi okur; genel bakış kartının ve
+  SSL/TLS sekmesinin adresinden ve çözücüsüyle, böylece üçü tek isteği paylaşır.
+  Kontrol ediliyor, kontrol edilemedi (sözün yanında yalnız okuyan "Tekrar dene"
+  ile) ya da sunucunun söylediği olur. Başarısız bir yenilemeden sonra önceki
+  yanıt kalır. Bundan önce kartın ya da sekmenin bildirmesini bekliyor,
+  başarısız okumadan sonra ve ikisini de takmayan her sekmede sonsuza dek
+  "durum kontrol ediliyor" diyordu.
+  SSL/TLS sekmesi için bir sonucu, 2026-10-10 tarayıcı çalıştırmasında ölçüldü:
+  şerit her sekmede ekrandadır; bu yüzden alan adının sayfası açıkken yanıt hiç
+  bırakılmaz ve sekme artık hiçten başlamaz. Sayfanın ilk okuması yoldayken
+  açılırsa kontrol satırını gösterir ve o okumayı paylaşır. Sonra açılırsa
+  sayfanın zaten tuttuğu yanıtı önceki yanıt olarak gösterir, yeniden okuduğunu
+  söyler, denetimlerini kapalı tutar ve bir okuma daha gönderir; bu değişiklikten
+  önce yalnız kontrol satırını gösteriyor ve tek okumayı o gönderiyordu.
+  Sunucunun söylemediği hiçbir olumsuz gösterilmez ve o okumadan sonra sertifika
+  isteği yine çalışır. Birkaç saniyelik bir yanıtın sekme açıldığında yeniden
+  okunup okunmayacağına burada karar verilmedi.
+- *Yinelenen okuma* (`web/src/lib/remote.ts` içinde `useRefreshEvery`; loglar
+  kendi zamanlayıcısını korur). Bir tik yalnız okur; son okuma yoldayken okumaz.
+  Başarısız okuma hiçbir şey yükseltmez: önceki yanıt, ne zaman okunduğunu
+  söyleyen tek bir bildirimin altında kalır, bir şeyi değiştiren denetimler
+  kapalıdır ve sonraki tik yeniden sorar; iyi bir yanıt bildirimi kaldırır.
+- *DNS.* "Bölge yok" diyen tek yanıt, sunucunun bu alan adının bölgesi için
+  verdiği 404'tür; diğer her ret "kontrol edilemedi"dir. Kayıtlar yalnız
+  sunucunun var dediği bölge için okunur. DNSSEC kartı kontrol ederken yerinde
+  ve olağan yanıtının kaplayacağı yerle durur; alttaki kayıtlar oynamaz.
+- *Barındırma tipi.* Form sunucunun gönderdiğini gösterir; yazılan, üzerine
+  yazıldığı yanıtın yanında tutulur ve Uygula'dan sonra form yine kayıtlı
+  ayarları gösterir. Canlı uygulama paneli kayıtlı tipi izler.
+- *PHP.* Havuz formu sunucunun değerlerini tutar, varsayılan tutmaz; daha yeni
+  yanıt formu yeniden kurar.
+- *Adres başına tek çözücü.* Bir alan adının veritabanları, Veritabanları ve
+  Yedekler sekmeleri için `web/src/lib/domainDatabases.ts` içinde çözülür;
+  sertifika kartı SSL/TLS sekmesinin çözücüsünü kullanır.
+- *Telefonda satır eylemleri.* Veri tablosu telefondan geniş olabilir ve
+  çerçevesinde yana kayar; satırın yapabildiği şey ekran dışında kalan kısım
+  olamaz. Satır eylemlerini tutan hücre ve üstündeki başlık hücresi
+  `row-actions` sınıfını taşır (`web/src/index.css`): `sm` genişliğinin (640 px)
+  altında, diğer sütunlar altından kayarken tablonun son kenarında, opak ve ön
+  kenarında ince bir çizgiyle durur. Geniş ekranlar değişmez. DNS kayıtlarına,
+  Alan Adları listesine, Veritabanları sayfasına (iki tablo) ve Fail2ban'ın
+  banlı adreslerine uygulandı. DNS kayıtlarında değer sütununun ayrıca bir en az
+  genişliği vardır: yokken telefon uzun bir değeri satır başına tek karaktere
+  sıkıştırıyor, tek satır iki ekran boyu oluyordu. O hücredeki adı olan eylem
+  sözlerini tek satırda tutar (2026-10-10; "Yasağı kaldır" 390 px'te ikiye
+  bölünüyordu).
+
+**Metinler.** Anahtarlar `web/src/i18n` altındadır (`common.*` kabuk
+kataloğunda, kalanı `screens` içinde).
+
+- *Yanıtı gelmeyen değişiklik, durum yeniden okunduktan sonra*
+  - `common.resultUnknownRead`
+    - EN: "The connection dropped before the answer arrived, so it is not known
+      whether the change was made. Nothing was sent a second time. What is shown
+      here was read again at {time}: check it before repeating the action."
+    - TR: "Yanıt gelmeden bağlantı koptu; bu yüzden değişikliğin yapılıp
+      yapılmadığı bilinmiyor. Hiçbir şey ikinci kez gönderilmedi. Burada
+      gösterilen, saat {time} itibarıyla yeniden okundu: işlemi yinelemeden
+      önce ona bakın."
+  - O okuma yoldayken: `common.resultUnknown` (ikinci parti).
+- *Aynısı, form sorduğunda ve yeniden okunan durum değişikliği gösterdiğinde*
+  (2026-10-10)
+  - `common.resultUnknownMade`
+    - EN: "The connection dropped before the answer arrived, and nothing was
+      sent a second time. What was read again at {time} shows the change, so it
+      was saved. Nothing needs to be sent again."
+    - TR: "Yanıt gelmeden bağlantı koptu ve hiçbir şey ikinci kez gönderilmedi.
+      Saat {time} itibarıyla yeniden okunan durum değişikliği gösteriyor; yani
+      kaydedildi. Hiçbir şeyin yeniden gönderilmesi gerekmiyor."
+- *Aynısı, değişikliği göstermediğinde* (2026-10-10)
+  - `common.resultUnknownNotMade`
+    - EN: "The connection dropped before the answer arrived, and nothing was
+      sent a second time. What was read again at {time} does not show the
+      change, so it is not known to have been saved. What you entered is still
+      here. If the server was still working when the connection dropped, the
+      change can appear later: check again before sending it a second time."
+    - TR: "Yanıt gelmeden bağlantı koptu ve hiçbir şey ikinci kez gönderilmedi.
+      Saat {time} itibarıyla yeniden okunan durum değişikliği göstermiyor; bu
+      yüzden kaydedildiği bilinmiyor. Girdikleriniz hâlâ burada. Bağlantı
+      koptuğunda sunucu hâlâ çalışıyorduysa değişiklik sonradan görünebilir:
+      ikinci kez göndermeden önce tekrar kontrol edin."
+- *Aynısı, durum da yeniden okunamadığında*
+  - `common.resultUnknownUnread`
+    - EN: "The connection dropped before the answer arrived, so it is not known
+      whether the change was made. Nothing was sent a second time. The current
+      state could not be read again either, so controls that change or remove
+      something stay off. Check again."
+    - TR: "Yanıt gelmeden bağlantı koptu; bu yüzden değişikliğin yapılıp
+      yapılmadığı bilinmiyor. Hiçbir şey ikinci kez gönderilmedi. Güncel durum
+      da yeniden okunamadı; bu yüzden bir şeyi değiştiren ya da kaldıran
+      denetimler kapalı kalıyor. Tekrar kontrol edin."
+  - `common.checkAgain`: EN "Check again" · TR "Tekrar kontrol et". Bildirimi
+    kapatmak: `common.close`, EN "Close" · TR "Kapat".
+- *DNS: bölge okunamadı*
+  - `dns.zoneUnknown`
+    - EN: "The DNS zone of {name} could not be read from the server, so its
+      records are not shown as current. This does not mean the zone is missing.
+      Nothing was changed. Try again."
+    - TR: "{name} alan adının DNS bölgesi sunucudan okunamadı; bu yüzden
+      kayıtları güncel diye gösterilmiyor. Bu, bölgenin olmadığı anlamına
+      gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *DNS: kayıtlar*
+  - `dns.records.checking`: EN "Reading this domain’s DNS records…" · TR "Bu alan
+    adının DNS kayıtları okunuyor…"
+  - `dns.records.unknown`
+    - EN: "The DNS records of this domain could not be read from the server, so
+      the list is not shown. This does not mean there are none. Nothing was
+      changed. Try again."
+    - TR: "Bu alan adının DNS kayıtları sunucudan okunamadı; bu yüzden liste
+      gösterilmiyor. Bu, kayıt olmadığı anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+- *DNS: bölgenin imzalı olup olmadığı*
+  - `dnssec.checking`: EN "Checking whether this zone is signed…" · TR "Bu
+    bölgenin imzalı olup olmadığı kontrol ediliyor…"
+  - `dnssec.unknown`
+    - EN: "CelikPanel could not check whether this zone is signed, so signing is
+      not offered. This does not mean it is unsigned. Nothing was changed. Try
+      again."
+    - TR: "CelikPanel bu bölgenin imzalı olup olmadığını kontrol edemedi; bu
+      yüzden imzalama sunulmuyor. Bu, imzasız olduğu anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+- *Barındırma tipi*
+  - `hosting.checking`: EN "Reading this domain’s hosting settings…" · TR "Bu
+    alan adının barındırma ayarları okunuyor…"
+  - `hosting.unknown`
+    - EN: "The hosting settings of this domain could not be read from the
+      server, so they are not shown and cannot be changed here yet. Nothing was
+      changed. Try again."
+    - TR: "Bu alan adının barındırma ayarları sunucudan okunamadı; bu yüzden
+      gösterilmiyor ve şimdilik buradan değiştirilemiyor. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `hosting.nodeChecking`: EN "Checking which Node.js versions are installed…"
+    · TR "Kurulu Node.js sürümleri kontrol ediliyor…"
+  - `hosting.nodeUnknown`
+    - EN: "The installed Node.js versions could not be checked, so only the
+      saved version is listed. Nothing was changed. Try again."
+    - TR: "Kurulu Node.js sürümleri kontrol edilemedi; bu yüzden yalnız kayıtlı
+      sürüm listeleniyor. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *Barındırma tipi: canlı uygulama*
+  - `hosting.app.checking`: EN "Reading the application’s state…" · TR
+    "Uygulamanın durumu okunuyor…"
+  - `hosting.app.logsChecking`: EN "Reading the application’s logs…" · TR
+    "Uygulamanın günlükleri okunuyor…"
+  - `hosting.app.unknown`
+    - EN: "The state and the logs of this application could not be read from
+      the server. This does not mean it has stopped. Nothing was changed; start,
+      stop and restart are off until the state can be read. CelikPanel keeps
+      trying."
+    - TR: "Bu uygulamanın durumu ve günlükleri sunucudan okunamadı. Bu,
+      uygulamanın durduğu anlamına gelmez. Hiçbir şey değiştirilmedi; başlat,
+      durdur ve yeniden başlat, durum okunana dek kapalıdır. CelikPanel denemeyi
+      sürdürüyor."
+  - `hosting.app.stale` (önceki yanıt hâlâ gösteriliyor)
+    - EN: "The application could not be read again just now, so what is shown is
+      as it was at {time}. This does not mean it has stopped. Nothing was
+      changed; start, stop and restart are off until the state can be read.
+      CelikPanel keeps trying."
+    - TR: "Uygulama az önce yeniden okunamadı; gösterilen, saat {time}
+      itibarıyla olan hâlidir. Bu, uygulamanın durduğu anlamına gelmez. Hiçbir
+      şey değiştirilmedi; başlat, durdur ve yeniden başlat, durum okunana dek
+      kapalıdır. CelikPanel denemeyi sürdürüyor."
+- *PHP*
+  - `php.checking`: EN "Reading this domain’s PHP settings…" · TR "Bu alan
+    adının PHP ayarları okunuyor…"
+  - `php.unknown`
+    - EN: "The PHP settings of this domain could not be read from the server, so
+      they are not shown and cannot be changed here yet. Nothing was changed.
+      Try again."
+    - TR: "Bu alan adının PHP ayarları sunucudan okunamadı; bu yüzden
+      gösterilmiyor ve şimdilik buradan değiştirilemiyor. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+- *Genel ayarlar*
+  - `general.checking`: EN "Reading this domain’s settings…" · TR "Bu alan
+    adının ayarları okunuyor…"
+  - `general.unknown`
+    - EN: "The settings of this domain could not be read from the server, so
+      they are not shown and cannot be changed here yet. This does not mean it
+      has no aliases. Nothing was changed. Try again."
+    - TR: "Bu alan adının ayarları sunucudan okunamadı; bu yüzden gösterilmiyor
+      ve şimdilik buradan değiştirilemiyor. Bu, takma adı olmadığı anlamına
+      gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *Uygulamalar*
+  - `apps.checking`: EN "Reading the applications that can be installed…" · TR
+    "Kurulabilecek uygulamalar okunuyor…"
+  - `apps.unknown`
+    - EN: "The list of applications could not be read from the server, so
+      nothing is offered. This does not mean no application is available.
+      Nothing was changed. Try again."
+    - TR: "Uygulama listesi sunucudan okunamadı; bu yüzden hiçbir şey
+      sunulmuyor. Bu, kullanılabilir uygulama olmadığı anlamına gelmez. Hiçbir
+      şey değiştirilmedi. Tekrar deneyin."
+  - `apps.resultUnknownWhere` (sonucu bilinmeyen bildiriminin altında)
+    - EN: "This page cannot show whether the application was installed. Look at
+      this domain’s Files and Databases before installing again."
+    - TR: "Bu sayfa uygulamanın kurulup kurulmadığını gösteremez. Yeniden
+      kurmadan önce bu alan adının Dosyalar ve Veritabanları bölümlerine bakın."
+- *Genel bakıştaki sertifika kartı*
+  - `domain.overview.ssl.unavailableHint` (yeniden yazıldı; kartta artık Tekrar
+    dene de var)
+    - EN: "The certificate state could not be read from the server. This does
+      not mean there is no certificate. Nothing was changed. Try again."
+    - TR: "Sertifika durumu sunucudan okunamadı. Bu, sertifika olmadığı anlamına
+      gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - `domain.overview.ssl.stale`: EN "This could not be read again just now; it
+    is shown as it was at {time}." · TR "Bu, az önce yeniden okunamadı; saat
+    {time} itibarıyla olan hâliyle gösteriliyor."
+- *Alan adının altındaki sertifika satırı* (2026-10-10)
+  - `domain.info.sslUnknown`: EN "Could not be checked" · TR "Kontrol edilemedi",
+    yanında `common.retry` ile. Okunurken: `domain.overview.ssl.checking`, EN
+    "Checking status" · TR "Durum kontrol ediliyor".
+- *Posta kimlik doğrulaması*
+  - `mailauth.checking`: EN "Checking this domain’s SPF, DKIM and DMARC records…"
+    · TR "Bu alan adının SPF, DKIM ve DMARC kayıtları kontrol ediliyor…"
+  - `mailauth.unknown`
+    - EN: "The SPF, DKIM and DMARC records of this domain could not be checked,
+      so their state is not shown and nothing can be published here yet. This
+      does not mean they are missing. Nothing was changed. Try again."
+    - TR: "Bu alan adının SPF, DKIM ve DMARC kayıtları kontrol edilemedi; bu
+      yüzden durumları gösterilmiyor ve şimdilik buradan hiçbir şey
+      yayımlanamıyor. Bu, kayıtların eksik olduğu anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+- *Loglar*
+  - `logs.checking`: EN "Reading the log…" · TR "Günlük okunuyor…"
+  - `logs.unknown`
+    - EN: "This log could not be read from the server, so no lines are shown.
+      This does not mean the log is empty. Nothing was changed. Try again."
+    - TR: "Bu günlük sunucudan okunamadı; bu yüzden satır gösterilmiyor. Bu,
+      günlüğün boş olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar
+      deneyin."
+  - Satırlar ekrandayken başarısız olan yoklama: `common.staleNotice` (birinci
+    parti).
+- *Yedekler*
+  - `backup.checking`: EN "Reading this domain’s backups…" · TR "Bu alan adının
+    yedekleri okunuyor…"
+  - `backup.unknown`
+    - EN: "The backups of this domain could not be read from the server, so the
+      list is not shown. This does not mean there are none. Nothing was changed.
+      Try again."
+    - TR: "Bu alan adının yedekleri sunucudan okunamadı; bu yüzden liste
+      gösterilmiyor. Bu, yedek olmadığı anlamına gelmez. Hiçbir şey
+      değiştirilmedi. Tekrar deneyin."
+  - `backup.databasesUnknown`
+    - EN: "The databases linked to this domain could not be read, so a database
+      or full backup cannot be made here yet. This does not mean there are none.
+      Nothing was changed; a files backup is still available. Try again."
+    - TR: "Bu alan adına bağlı veritabanları okunamadı; bu yüzden şimdilik
+      buradan veritabanı yedeği ya da tam yedek alınamıyor. Bu, veritabanı
+      olmadığı anlamına gelmez. Hiçbir şey değiştirilmedi; dosya yedeği yine
+      alınabilir. Tekrar deneyin."
+  - `backup.databasesNotRead` (seçicide): EN "Databases not read" · TR
+    "Veritabanları okunamadı"
+- Artık hiçbir şey göstermediği için kaldırıldı: `dns.zoneStatusUnavailable`,
+  `dns.recordsLoadFailed`, `php.loadFailed`, `general.loadFailed`,
+  `backup.databaseLoadError`, `backup.retry`.
+
+**Geri gelmesi nasıl önleniyor.**
+
+- *Mandal.* Bu partiden önce 40 dosyada 8 / 28 / 10 / 57 / 19; sonra 31 dosyada
+  8 / 25 / 6 / 42 / 12; yeni tavanlar olarak sabitlendi (2026-10-10'da, ayar
+  yazımı düzeltmelerini de taşıyan ağaçta yeniden üretildi: aynı dosyalar ve
+  toplamlar). Listeden çıkanlar:
+  `DomainDNSManager`, `HostingTypePanel`, `DomainPHPSettings`,
+  `DomainGeneralSettings`, `DomainAppsPanel`, `DomainSSLOverviewCard`,
+  `MailAuthPanel`, `DomainBackupManager`, `DomainCronManager`.
+  `DomainLogsViewer` tek bir ham okumayla, başka hiçbir şeyle listede kalır:
+  `TestDomainLogsViewerExposesHonestTimeFilterControlsAndMetadata`
+  (`cmd/panel/domain_logs_frontend_test.go`) o dosyada
+  `parseDomainLogsResponse(await res.json())` satırını sabitler; okuması aynı üç
+  durumu orada kurar.
+- *Bağlanan test* (`web/tests/remote-state-mounted-batch4.test.mjs`, 113 durum):
+  dört yolla esirgenen on dört okuma; bilinen olumsuzlar; yanıtı iki yolla
+  yitirilen (bağlantı biter; bir geçit yanıtlar) on beş değişiklik: tek istek,
+  yalnız okuyan yeniden okuma, o yanıtlanana dek kapalı denetimler ve yerinde
+  kalan bildirim; Panelin bilinmeyen sonuç olmayan reddi; başarısız yoklamalar
+  (tek bildirim, balon yok, yalnız okuma); okuma yoldayken sormayan yoklama;
+  sunucunun değerlerini tutan formlar; sayfada çizilmeden tutulan tek yer;
+  `row-actions` kuralı ve onu taşıyan tablolar. 2026-10-10'dan beri dosyada 129
+  durum var: on beş değişikliğin her biri için yeniden okumadan sonra bildirimin
+  söylediği; soru soran altı form, her biri değişikliği gösteren ve göstermeyen
+  bir durumla, sunucunun geç bitirdiği kaydı bulan sonraki kontrol, hiçbir şeye
+  karar vermeyen yeni satır, sunucunun bir kaydı yeniden yazması ve yeniden
+  okunamayan liste; bir crontab'ın okunamamasının altı yolu (aşağıdaki
+  2026-10-10 kaydı); ve adı olan satır eylemi için tek satır. Alan adının
+  altındaki şeridin durumu `web/tests/remote-state-mounted.test.mjs`
+  içindedir: kontrol ediliyor, okumanın başarısız olduğu her yol için genel
+  bakışta ve DNS sekmesinde kontrol edilemedi, sertifika için tek istek, yalnız
+  okuyan Tekrar dene ve sunucunun "sertifika yok" yanıtı.
+- *Sabitlemeler gevşetilmedi, kodla birlikte taşındı*
+  (`web/tests/additional-user-domain-ui-contract.test.mjs`): ekip üyesinin PHP
+  sürümleri hâlâ bu alan adının kendi yanıtındaki kiracı-güvenli
+  `available_versions`'tır ve yalnız o yanıt bilinirken vardır (önce: her
+  yüklemeden önce temizlenen durum); PHP paneli yalnız ortak katman üzerinden
+  gönderir ve okur; salt-okunur ya da dışarıda yönetilen bölgeye kayıtlarının
+  okuması sunulur, onları değiştiren hiçbir şey sunulmaz ve üç DNS değişikliği
+  de bu kontrolle başlar; bir alan adının veritabanlarının çözücüsü
+  `lib/domainDatabases.ts` içinde sabitlenir, bileşende ikincisi reddedilir.
+  İlk bağlanan testin sahte verisi DNSSEC okumasını `{ enabled: false }` ile
+  yanıtlıyordu; işleyicinin yazdığı bu değildir, artık `{ secured, ds }`
+  yanıtlar.
+
+**Sunucu gerektirir (burada yapılmadı; Go değişmedi).**
+
+- Bu değişikliklerin hiçbirinin istek kimliği yoktur. Sunucu bir kimlik
+  saklayana dek, yiten yanıt sonucu yukarıdaki gibi kişiye bırakır:
+  `POST /api/v1/domains/{id}/dns/records`,
+  `DELETE /api/v1/domains/{id}/dns/records?id=`,
+  `POST /api/v1/domains/{id}/dns/zone`, `POST /api/v1/domains/{id}/dnssec` (DNS
+  sekmesi); `PUT /api/v1/domains/{id}/hosting`,
+  `POST /api/v1/domains/{id}/app/{start|stop|restart}` (Barındırma tipi);
+  `POST /api/v1/domains/{id}/php`, `POST /api/v1/domains/{id}/php/pool` (PHP);
+  `POST /api/v1/domains/{id}/general`, `POST /api/v1/domains/{id}/aliases`,
+  `DELETE /api/v1/domains/{id}/aliases/{alias}` (Genel);
+  `POST /api/v1/domains/{id}/apps/install` (Uygulamalar; uygulamanın kurulu olup
+  olmadığını gösteren bir okuması da yoktur);
+  `POST /api/v1/domains/{id}/mail/auth/apply`,
+  `POST /api/v1/domains/{id}/mail/auth/dkim` (Posta kimlik doğrulaması);
+  `DELETE /api/v1/domains/{id}/logs/{type}` (Loglar);
+  `POST /api/v1/domains/{id}/backups`,
+  `POST /api/v1/domains/{id}/backups/restore`,
+  `DELETE /api/v1/domains/{id}/backups?name=` (Yedekler). İkinci partiden, hâlâ
+  yalnız balon ve yeniden okumayla: `POST`/`PUT`/`DELETE /api/v1/users…`,
+  `POST /api/v1/users/{id}/impersonate`, `/api/v1/plans…` (Hesaplar) ve bir alan
+  adının Dosyalar değişiklikleri. Henüz taşınmadı ve burada bakılmadı: eklentiler,
+  VPN eşleri ve ekip üyeleri.
+- Tarayıcı bir değişikliği kendiliğinden yeniden gönderebilir. Tarayıcı
+  çalıştırmasında, sahte sunucu daha önce bir istek taşımış bağlantıyı yalnızca
+  sıfırladığında Chrome `POST`'u sayfa istemeden yeniden gönderdi: tek tık, üç
+  varış. Sayfadaki hiçbir şey bunu önleyemez; ikinci varışı zararsız kılan
+  yalnız sunucudaki istek kimliğidir.
+- Hiç yanıtlanmayan ve hiç başarısız olmayan değişiklik (bağlantı açık kalır)
+  denetimini meşgul bırakır; sayfanın bunun için bir süre sınırı yoktur.
+
+**Yapılmadı.**
+
+- 31 dosya hâlâ eski yolla okuyor. Bu partinin kapsamında olup taşınmayanlar:
+  `ServiceList` (1 / 1 / 0 / 6 / 1), `ServiceShell` (0 / 2 / 2 / 2 / 2),
+  `Layout` (1 / 2 / 0 / 1 / 0), `Dashboard` (1 / 3 / 0 / 4 / 0), `AddonsPage`
+  (0 / 0 / 0 / 2 / 3), `StoreCatalogAdmin` (0 / 0 / 0 / 1 / 2), `AuditLogPage`
+  (0 / 1 / 0 / 1 / 1), `VPNPage` (0 / 0 / 0 / 0 / 1), `TeamMembersPage`
+  (0 / 0 / 0 / 0 / 1), `SystemSQLiteManager` (0 / 2 / 0 / 1 / 1),
+  `SecurityAuditCard` (0 / 0 / 0 / 1 / 0), `AddDatabaseModalV2`
+  (0 / 0 / 0 / 1 / 0), `DatabaseAccountStrip` (0 / 1 / 0 / 1 / 0). Hiçbiri bu
+  partide açılmadı. İkisinin okuyucuları mevcut sözleşme testlerince kaynak
+  metni olarak tutulur; taşıma bunları kodla birlikte taşımak zorundadır:
+  `Layout`, `layout-server-identity-contract` ile (dosyada tam bir
+  `fetch('/api/v1/panel/version'`, sürüm damgasında hiç); `ServiceShell`,
+  `component-inventory-contract`, `service-unobserved-state-contract` ve
+  `service-shell-install-confirmation-contract` ile.
+- İkinci partinin hesap, plan ve dosya değişiklikleri kopan bağlantıya hâlâ
+  kendiliğinden kaybolan bir balonla yanıt verir; yerinde kalan bildirime
+  taşınmadılar.
+- Zamanlanmış görevler liste ve sürüm için kendi durumunu korur; yalnız boş
+  listenin kanıtı ve 2026-10-10'dan beri bir crontab'ın neden okunamadığı
+  (aşağıdaki o tarihli kayıt) eklendi. Yazmalarına dokunulmadı.
+- Geniş ekranda imzalı bölgenin DNS kartı, kontrol ederken kendisine ayrılan
+  yerden uzundur (ayrılan yer imzasız kartınkidir); imzalı bölgede kayıtlar bir
+  kez yer değiştirir.
+- Telefonda satırın üzerine gelme tonu sabit eylem hücresinin altına uzanmaz.
+- Kontrol edilemedi bildirimi okumanın neden başarısız olduğunu hâlâ söylemez;
+  sunucunun bir nedeni doğruladığı yerler dışında: zamanlanmış görevler ve posta
+  kuyruğu (aşağıdaki 2026-10-10 kaydı).
+- Yeniden okunan duruma soru sormayan değişiklikler (yukarıda sayıldı) sonucu
+  hâlâ kişiye bırakır. Bu panellerdeki hiçbir değişikliğin istek kimliği yoktur.
+- Gerçek sunucuda doğrulanmadı; sahte sunucuya karşı tek bir Chrome.
+
+**Bu partinin tarayıcı incelemesi (2026-10-09).** Kurulu, gerçek bir Chrome'da,
+yerel sahte sunucuya karşı (`web/tools/browser-inspect`; `domaindns`,
+`domainhosting`, `domainphp`, `domaingeneral`, `domainapps`, `domainmailauth`,
+`domainlogs`, `domainbackups`, `sslcard`, `rowactions` senaryoları; önceki
+partilerin bütün senaryoları aynı derlemede yeniden çalıştırıldı): masaüstü
+1440×900 ve telefon 390×844, Türkçe ve İngilizce, açık ve koyu. Sekiz
+yapılandırmanın her birinde 357 durum, 81'i bu partinin; hiçbir senaryo hata
+bildirmedi. Bu partinin bir senaryosu, kaydetmesi gereken durumda kontrol
+satırı, bildirim ya da sonucu bilinmeyen bildirimi yoksa, ölçmesi gereken yer
+bulunamazsa ya da sayması gereken yoklama çalışmadıysa başarısız olur.
+
+- *Sekiz yapılandırmanın hepsinde ölçüldü.* Bu panellerin hiçbir kontrol ya da
+  kontrol edilemedi durumunda ekranda olumsuz cümle yoktu; başarısız hiçbir
+  okuma balon çıkarmadı. Yanıtı yitirilen altı değişikliğin her biri (eklenen
+  DNS kaydı, bir geçidin yanıtladığı barındırma uygulaması, kaldırılan takma
+  ad, kurulan uygulama, yayımlanan posta kaydı, oluşturulan yedek) sayfadan bir
+  kez gönderildi ve sahte sunucuya bir kez vardı; bildirimi belirdiğinde
+  pencerenin içindeydi, değiştiren denetimler durum yeniden okunana dek
+  kapalıydı, "Tekrar kontrol et" yalnız okuma gönderdi ve bildirim yalnız
+  "Kapat" ile gitti. Yiten yanıtlardan sonra yeniden okunan durum, sahte
+  sunucunun yaptığını gösterdi: yeni kayıt bir kez, takma ad yok, sahte
+  sunucunun almadığı yedek için de aynı iki satır. Uygulamanın yoklamaları on
+  iki saniye başarısız olurken (dört istek) ve günlüğün otomatik yenilemesi
+  reddedilirken (iki istek) tek bildirim vardı, balon yoktu, önceki durum ve
+  satırlar kaldı, başlat, durdur, yeniden başlat ve temizle kapalıydı, her
+  istek bir okumaydı. İmza durumu geldiğinde kayıt tablosu oynamadı (0 px).
+  Sertifika kartının yüksekliği kontrol ile "sertifika yok" arasında değişmedi
+  (0 px); kontrol edilemedi cümlesi ve Tekrar dene ile geniş ekranda aynı
+  yükseklikte, telefonda 38 px (İngilizce) ya da 80 px (Türkçe) daha uzundur.
+  Her satır eylemi, tablo başına kaydırılmışken ekran genişliğinin içinde ve en
+  üstteydi: DNS kayıtlarının altısı, bir Alan Adları satırının üçü,
+  Veritabanları sayfasının ikisi ve Fail2ban'ın iki "Yasağı kaldır"ı (390 px'te
+  yana kayan tablolarda); takma ad ve yedek satırlarının eylemleri de (bunlar
+  yana kaymaz). Hiçbir sayfa yana kaymadı.
+- *Bakarak ya da ölçerek bulundu ve düzeltildi.*
+  - Telefonda uzun değerli bir DNS satırı 1.982 px yüksekliğindeydi: değer
+    sütunu satır başına tek karaktere sıkışmıştı. Artık en az genişliği var.
+  - Telefonda DNSSEC kartı, sabit bir yükseklik ayrılmışken yanıtı gelince 86 px
+    büyüyordu; artık olağan yanıtının yerini tutuyor (0 px).
+  - Telefonda sertifika kartı kontrol ile "sertifika yok" arasında 19 px
+    büyüyordu; ikinci satırı orada iki satırlık yer tutuyor.
+  - Canlı uygulama paneli ekranın altında fotoğraflanıyordu; alan adı
+    sekmelerinin ilk ekranı doldurduğu telefonda çoğu durum da öyle. Senaryolar
+    artık durumun konusunu önce pencereye getiriyor.
+  - Senaryolar Türkçe durdurma düğmesini ("Durdur") olumsuz "Durdu" sayıyordu;
+    olumsuzlar tam sözcük olarak eşleştiriliyor.
+  - Yalnızca sıfırlanan bağlantıda sahte sunucu tek tıkı üç kez aldı
+    (yukarıda); bağlantıyı artık yanıt olmayan baytlarla bitiriyor.
+- *2026-10-09'da görüldü, 2026-10-10'da düzeltildi.* Yiten yanıttan sonra
+  değişikliği gönderen form yazılanla birlikte açık kalıyordu; liste okunduktan
+  sonra aynı kayıt yeniden kaydedilebiliyordu: form artık yeniden okunan duruma
+  soruyor (yukarıda). Telefonda "Yasağı kaldır" sabit hücresinde iki satıra
+  bölünüyordu: artık tek satır, 107×34 px. Bunun bir bedeli var; iki tarihin
+  ekran görüntüleri karşılaştırılarak görüldü, senaryo yakalamadı: Türkçede
+  sabit hücre öncekinden yaklaşık 41 px daha geniş ve 390 px'te tam uzunluktaki
+  bir IPv6 adresinin sonu (yaklaşık son beş karakteri) artık o hücrenin altında
+  kalıyor; oysa önce adresin tamamı sığıyordu. Kesildiğini gösteren bir işaret
+  yok; yanındaki hapishane sütunu gibi, tablo yana kaydırılarak görülür.
+  İngilizce değişmedi ("Unban" hiç bölünmüyordu). Adresin iki satıra mı
+  bölüneceğine, yoksa eylemin telefonda mı kısalacağına burada karar verilmedi.
+  Alan adının altındaki şerit,
+  sertifika okuması başarılı olmadığı sürece, başarısız olduktan sonra da "SSL:
+  durum kontrol ediliyor" diyordu: artık üç durum.
+- *Görüldü ve değiştirilmedi.* Posta kimlik doğrulaması yiten yanıttan sonra
+  yeniden okunurken önceki "Eksik" bildirimin altında ekranda kalır. Devre dışı
+  kart koyu temada soluktur. Node.js sürümü ile port notu arasında, kontrol
+  satırı için tutulan bir boş satır vardır. Telefonda alan adının altındaki
+  şerit üç satıra bölünür ve satır sonunda bir ayraç bırakır. Telefonda posta
+  kuyruğunun tablosu bir adresi sözcüğün içinde böler (ikinci parti). Üç not
+  (`DomainDNSManager` ekip üyesi için, `DomainDatabaseManager`, `DomainDetail`)
+  temanın tanımlamadığı bir `info` rengini kullanır; bu yüzden yüzeysiz çizilir.
+- *2026-10-10'da yeniden çalıştırıldı;* ayar yazımı düzeltmelerini de taşıyan
+  ağaçta, `lostforms` ve `sslfact` senaryoları eklenerek ve `cron`, `mailqueue`,
+  `dbconfig`, `domaindns`, `domainhosting` ve `rowactions` genişletilerek: sekiz
+  yapılandırmanın her birinde 396 durum, 39'u yeni (17'si `lostforms`, 8'i
+  `sslfact`, 7'si `mailqueue`, 4'ü `cron`, 2'si `dbconfig`, 1'i `domainssl`);
+  önceki 357 durumdan eksik yok. Tam çalıştırma, sekizinde de aynı olan tek bir
+  hata bildirdi: `domainssl`, sertifika isteğinden sonra beklemeyi bıraktı.
+  Neden sahte sunucu değil, bu değişiklikti: şerit sertifikayı okuduğu için
+  SSL/TLS sekmesi sayfanın zaten tuttuğu bir yanıtın üzerine açılır (yukarıda)
+  ve senaryo "Sertifika al" düğmesine sekmenin denetimleri kapalıyken bastı;
+  hiçbir şey gönderilmedi ve durumlarından üçü artık doğru olmayan adlarla
+  kaydedildi. Senaryo düzeltildi (artık sekmeyi iki yolla da açar, yalnız
+  etkin düğmeye basar ve istek tam bir kez varmazsa başarısız olur) ve
+  sekizinde de yeniden çalıştırıldı: hata yok; önceki altı durumu önceki
+  olgularını taşıyor. `mailqueue`, bilinmeyen yeniden yükleme sonucunun
+  düzeltilmesinden sonra (aşağıdaki 2026-10-10 kaydı) sekizinde de yeniden
+  çalıştırıldı: hata yok. İki derlemenin içerik özetleri yok sayılarak parça
+  parça karşılaştırılması, tam çalıştırmanın derlemesi ile son derleme arasında
+  değişen tek kodun Postfix sayfası olduğunu gösterdi. Önceki 357 durumdan
+  yedisi 2026-10-09'dakinden başka olgular taşıyor: bir adreste yazan yerel
+  port; posta kuyruğunun cümlesi ve yeniden yükleme satırının üstündeki etiket
+  (ikisi de ayar yazımı düzeltmelerinden); ve burada bilerek değiştirilen dört
+  durum (formu kapanmış kaydedilen DNS kaydı, iki kez; kaydedildiği gösterilen
+  Uygula; kartınkinin yanında şeridin Tekrar dene'si). Sekizinde de ölçüldü: yiten yanıttan sonra bildirim, yeniden okumanın
+  gerektirdiği durumdaydı (form kapalı ve kayıt bir kez listelenmişken `made`,
+  yazılan değer hâlâ formda ve kaydetme denetimi geri gelmişken `not-made`, soru
+  sormayan değişiklikler için `read`); yiten her değişiklik sayfadan bir kez
+  gönderildi ve bir kez vardı; "Tekrar kontrol et" yalnız okuma gönderdi ve
+  sahte sunucunun sonradan eklediği kaydı buldu; kaydedildiği gösterilen
+  değişiklik yalnız "Kapat" sundu ve dikkat yüzeyinde değildi. Şerit önce
+  kontrol ettiğini, sonra sunucunun söylediğini söyledi; başarısız okumadan
+  sonra genel bakışta ve DNS sekmesinde, Tekrar dene ekran genişliğinin içinde
+  olmak üzere "kontrol edilemedi" dedi ve Tekrar dene yalnız okuma gönderdi.
+  Hiçbir satır eyleminin etiketi birden fazla satırda değildi. Yeni bir senaryo,
+  bildirim adı verilenden başka bir durumdaysa, okuması gereken alan
+  bulunamazsa ya da hiçbir şey ölçülmediyse başarısız olur.
+- *Kapsanmadı.* Gerçek sunucu; Safari, Firefox, ekran okuyucu, dokunmatik cihaz;
+  taklit görünümler; yönetici dışındaki roller (ekip üyesinin bu panelleri
+  görüşü yalnız bağlanan testle ve sözleşme testleriyle kapsanır). İmzalı
+  bölge, dışarıda yönetilen bölge, zamanlanmış görevlerin `jobs` taşımayan
+  listesi, geri yükleme ve DKIM anahtarı tarayıcı çalıştırmasında yoktu;
+  bağlanan testle kapsanırlar.
+
 ### Veritabanı ve posta yapılandırma ekranları: dosya düzenleyici olmadan önce okunur, kayıt hizmetin onunla ne yaptığını söyler (2026-10-09)
 
 Bileşen testleri, bir geliştirme konuğunda gerçekten çalıştırılan iki doğrulama
@@ -2960,7 +3534,9 @@ sarmalayıcı birimi yeniden yükleyen `sudo systemctl reload postfix` değil.
 politikası, yapılandırma dosyası) ya da yeniden denenir (posta kuyruğu,
 zamanlanmış görevler). Yazılmış bir politika yazılı kalır ve formun gösterdiği
 odur; tutulmayan bir yapılandırma değişikliği formda durur ve sunucudaki dosya
-önceki dosyadır.
+önceki dosyadır. Posta politikasında sahip, hiçbir değeri değiştirmeden Kaydet'e
+de basabilir: kabul edilen her kayıt doğrulanmış yeniden yüklemeyle biter; o
+kayıt Postfix'e dosyayı aldırır ya da neden almadığını yeniden söyler (aşağıda).
 
 **Platform sınırı.** `/etc/cron.allow` dosyası bir site kullanıcısını içermeyen
 bir sunucuda CelikPanel o kullanıcının zamanlanmış görevlerini ne okuyabilir ne
@@ -3057,6 +3633,14 @@ Agent'ın adlandırdığı systemd birimi, `{detail}` sunucunun kendi satırıd�
   Hiçbir şey geri alınmadı. Sunucuda önce sudo postfix status, sonra sudo
   postfix reload komutunu çalıştırın. Aşağıda gösterilen değerler kaydedilen
   değerlerdir."
+- Ekranda iki tür yanıt birbirine benzemez (2026-10-10). Postfix'in almadığı
+  doğrulanan yeniden yükleme (`MAIL_POLICY_NOT_RELOADED`) değişiklik sonrası bir
+  hatadır ve hata yüzeyinde durur. Belirlenemeyen sonuç
+  (`MAIL_POLICY_RELOAD_UNKNOWN`) hata değildir; kendi cümlesi de bunu söyler ve
+  mürekkep rengi metinle dikkat yüzeyinde durur. Bu kaydın ilk biçiminde ikisi
+  de aynı hata bandıyla çiziliyordu; "bu doğrulanmış bir hata değildir" kırmızı
+  yazılıyordu. Bunu bir test değil, 2026-10-10 tarayıcı kaydına bakmak buldu;
+  bağlanan test ve `mailqueue` senaryosu artık her birinin yüzeyini denetler.
 - `mailpolicy.postfixSaid`
   EN: "Postfix said:"
   TR: "Postfix’in yanıtı:"
@@ -3072,6 +3656,31 @@ Agent'ın adlandırdığı systemd birimi, `{detail}` sunucunun kendi satırıd�
 - `mailpolicy.saved.unchanged`
   EN: "Nothing to save: the server already holds exactly these values."
   TR: "Kaydedilecek bir şey yok: sunucu zaten tam bu değerleri tutuyor."
+- Değişiklik içermeyen kayıt (2026-10-10, bu kaydın ilk biçiminden sonra). O
+  güne dek böyle bir kayıt `200` / `unchanged` yanıtlıyor ve Postfix'e hiçbir
+  şey sormuyordu; bu yüzden "yeniden yüklenmedi" yanıtından sonra main.cf'i
+  düzeltip Kaydet'e basan sahibe, Postfix önceki değerlerle çalışmayı
+  sürdürürken "kaydedilecek bir şey yok" deniyordu. Postfix'e çalışan ana
+  sürecin hangi değerleri tuttuğu sorulamaz ve Agent önceki sonucun kaydını
+  tutmaz; bu yüzden kabul edilen her kayıt, hiçbir şey yazmayan dahil, artık
+  aynı doğrulanmış yeniden yüklemeyle biter (Postfix'in kendi denetimi,
+  `postfix status`, `postfix reload`, `postfix status`). Hiçbir şey yazılmaz,
+  onu hiçbir yoklama başlatmaz ve durmuş Postfix yine durmuş bırakılır.
+  Yanıtlar:
+  - `200`, `applied: unchanged_reloaded`: hiçbir şey yazılmadı; çalışan Postfix
+    yeniden yüklendi ve hâlâ çalışıyor.
+  - `200`, `applied: unchanged`: hiçbir şey yazılmadı ve Postfix durmuş; yeniden
+    yüklenecek bir şey yoktu.
+  - `502 MAIL_POLICY_NOT_RELOADED` (gerekçe `check`, `reload` ya da `verify`) ya
+    da `502 MAIL_POLICY_RELOAD_UNKNOWN`, yukarıdaki cümlelerle ve gövdede
+    politikayla: Postfix dosyayı yine almadı. Bu yanıt `mutation_applied` ya da
+    `partial_success` taşımaz, çünkü bu istek main.cf'te hiçbir şeyi
+    değiştirmedi; denetim günlüğüne de "yazıldı" satırı eklenmez.
+- `mailpolicy.saved.unchangedReloaded`
+  EN: "Nothing to save: the server already holds exactly these values. Postfix
+  was reloaded with them and is running."
+  TR: "Kaydedilecek bir şey yok: sunucu zaten tam bu değerleri tutuyor. Postfix
+  bu değerlerle yeniden yüklendi ve çalışıyor."
 - `mailpolicy.unreadable`
   EN: "The current mail policy could not be read from the server, so the
   settings are not shown and nothing can be saved here. Nothing was changed. Try
@@ -3188,6 +3797,18 @@ Agent'ın adlandırdığı systemd birimi, `{detail}` sunucunun kendi satırıd�
 - `cron.unknown.said`
   EN: "The server’s crontab program said: {detail}"
   TR: "Sunucunun crontab programının yanıtı: {detail}"
+- Ekranda (2026-10-10, `DomainCronManager`; yanıtın `detail` belirtecini
+  `web/src/lib/apiError.ts` okur). Sunucunun doğruladığı neden (`cron_allow`,
+  `cron_deny`) sunucu sahibinin kuralıdır, bir hata değildir: cümlesi yansız
+  yüzeyde, sade bilgi işaretiyle, tek başına durur; nazikçe duyurulur, dikkat
+  rengi taşımaz ve crontab'ın yazdığı satır altında yinelenmez. Diğer her yanıt,
+  yansız `cron.unknown` cümlesini taşıyan kontrol edilemedi bildirimidir;
+  crontab bir satır yazdıysa ardından `cron.unknown.said` gelir, satırın kendisi
+  mono yazılır. Ekranın sözü olmayan bir belirteç ve bu yanıt olmayan bir ret
+  yansız cümleyi alır. Her durumda liste gösterilmez, görev eklenemez ya da
+  değiştirilemez ve "Tekrar dene" yeniden okur, yalnızca okur: sahip
+  `cron.allow` ya da `cron.deny` dosyasını değiştirdikten sonra liste böyle
+  geri gelir.
 - `502 CURRENT_SETTINGS_UNREADABLE` for the other resources
   API: "CelikPanel could not read what is currently set on this server, so
   nothing is shown as a setting and nothing was changed. CelikPanel has not
@@ -3231,10 +3852,22 @@ Agent'ın adlandırdığı systemd birimi, `{detail}` sunucunun kendi satırıd�
   EN: "Postfix said: {detail}"
   TR: "Postfix’in yanıtı: {detail}"
 
-**Henüz gösterilmeyen.** Zamanlanmış görevler ekranı hâlâ tek yansız cümlesini
-gösterir (`cron.unknown`); yukarıdaki `cron.unknown.*` girdileri katalogdadır ve
-yanıt nedeni ve satırı taşır, ancak ekran onları henüz kullanmaz. Postfix'i
-yeniden yükleyen başarılı bir posta politikası kaydı `mailpolicy.saved` metnini
-korur. Sahibe Postfix'in çalıştığını denetlemesini söyleyen
-`postfix.queue.unknown` ve `mailpolicy.unknown` girdilerini artık hiçbir ekran
-kullanmıyor.
+**2026-10-10'dan beri gösterilen ve gösterilmeyen.** Zamanlanmış görevler
+ekranı doğrulanmış nedeni ve crontab'ın satırını gösterir (yukarıda); bu kaydın
+ilk biçiminde yanıt ve katalog girdileri vardı, ekran hâlâ tek yansız cümlesini
+gösteriyordu. Yazan ve Postfix'i yeniden yükleyen başarılı bir posta politikası
+kaydı `mailpolicy.saved` metnini korur. Sahibe Postfix'in çalıştığını
+denetlemesini söyleyen `postfix.queue.unknown` ve `mailpolicy.unknown`
+girdilerini artık hiçbir ekran kullanmıyor. Gösterilmeyen: crontab okunamadığı
+için reddedilen bir zamanlanmış görev yazımı hâlâ `CURRENT_SETTINGS_UNREADABLE`
+genel cümlesini bir balonla yanıtlar. 2026-10-10'un iki değişikliği de gerçek
+bir hizmette ölçülmedi; o tarihli tarayıcı çalıştırmasında (dördüncü parti,
+yukarıda) posta politikası yanıtları, iki yapılandırma yeniden yükleme yanıtı ve
+dört crontab yanıtı sahte sunucuya karşı fotoğraflandı. Orada görüldü ve
+değiştirilmedi: çalışan ayarları bilinmeyen yapılandırma yeniden yükleme yanıtı
+(`restored_running_unknown`) hata yüzeyindedir, çünkü birimin yeniden yüklemesi
+doğrulanmış biçimde başarısız oldu; iki yapılandırma yeniden yükleme yanıtının
+altındaki satır, onu systemd biriminin yeniden yüklemesi yazdığı halde hizmetin
+söylediği diye sunulur; ve aşama adı vermeyen (eski bir Agent'ın) yeniden
+yüklenmedi yanıtının cümlesi, bu kaydın başındaki kuralın tersine, hâlâ `sudo
+systemctl reload postfix` komutunu adlandırır.

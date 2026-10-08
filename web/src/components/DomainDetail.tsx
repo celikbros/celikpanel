@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { DomainPHPSettings } from './DomainPHPSettings';
 import { DomainGeneralSettings } from './DomainGeneralSettings';
-import { DomainSSLSettings, type SSLRuntimeSummary } from './DomainSSLSettings';
+import { DomainSSLSettings, decodeSSLData, type SSLRuntimeSummary } from './DomainSSLSettings';
 import { DomainSSLOverviewCard } from './DomainSSLOverviewCard';
 import { DomainConnection } from './DomainConnection';
 import { DomainDatabaseManager } from './DomainDatabaseManager';
@@ -193,15 +193,12 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     const [changed, setChanged] = useState<Partial<Domain>>({});
     const [activeTab, setActiveTab] = useState(requestedTab === 'dns' ? 'dns' : 'overview');
     const [activeSub, setActiveSub] = useState<Record<string, string>>({});
-    const [sslRuntime, setSSLRuntime] = useState<SSLRuntimeSummary | null>(null);
 
     const handleCertificateChange = useCallback((status: SSLRuntimeSummary) => {
-        setSSLRuntime(status);
         setChanged((current) => ({ ...current, ssl_enabled: status.activated }));
     }, []);
 
     useEffect(() => {
-        setSSLRuntime(null);
         if (requestedTab === 'dns') setActiveTab('dns');
     }, [domainId, requestedTab]);
 
@@ -219,6 +216,28 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
         || Boolean(domain?.access && hasDomainAccess(domain.access, 'statistics'));
     const usage = useRemote(domainLoaded && canViewStatistics ? `/api/v1/domains/${domainId}/usage` : null, decodeUsage);
     const measured = domainLoaded && canViewStatistics && usage.remote.state === 'known' ? usage.remote.value : null;
+
+    // The certificate line of the strip under the title reads the certificate
+    // itself, at the address and with the decoder the overview card and the
+    // SSL/TLS tab use, so the three share one request and cannot disagree
+    // (10 Oct 2026). It used to wait for one of those two to report: after a
+    // read that failed, and on every tab that mounts neither, it said
+    // "checking status" without end. Now it is one of three things: being
+    // checked, could not be checked (with the read again), or what the server
+    // said. After a refresh that failed the earlier answer stays; the card and
+    // the tab say that it is the earlier one.
+    // Başlığın altındaki şeridin sertifika satırı, sertifikayı kendisi okur;
+    // genel bakış kartının ve SSL/TLS sekmesinin kullandığı adresten ve
+    // çözücüyle, böylece üçü tek isteği paylaşır. Eskiden o ikisinden birinin
+    // bildirmesini beklerdi: başarısız okumadan sonra ve ikisini de takmayan
+    // her sekmede sonsuza dek "durum kontrol ediliyor" derdi. Artık üç şeyden
+    // biridir: kontrol ediliyor, kontrol edilemedi (yeniden okumayla) ya da
+    // sunucunun söylediği.
+    const showsCertificate = domain !== null
+        && (domain.project_type || 'php') !== 'dnsonly'
+        && (!isTeamMember || Boolean(domain.access && hasDomainAccess(domain.access, 'ssl')));
+    const ssl = useRemote(showsCertificate ? `/api/v1/domains/${domainId}/ssl` : null, decodeSSLData);
+    const certificate = showsCertificate ? lastKnown(ssl.remote) : undefined;
 
     // What the server can actually do — tabs for services that are not
     // installed would be settings pages for ghosts. One shared read
@@ -287,8 +306,8 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     // sekmeler girip çıkarak titremesin diye görünür kalırlar).
     const projectType = domain.project_type || 'php';
     const isDnsOnly = projectType === 'dnsonly';
-    const sslUsable = sslRuntime?.usable === true;
-    const sslConfigured = sslRuntime?.activated === true;
+    const sslUsable = certificate?.value.certificate?.usable === true;
+    const sslConfigured = certificate?.value.certificate?.activated === true;
     const canView = (capability: DomainCapability) => (
         !isTeamMember || Boolean(domain.access && hasDomainAccess(domain.access, capability))
     );
@@ -391,15 +410,34 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
             key: 'ssl',
             content: (
                 <Fact label={t('domain.info.ssl')}>
-                    <span className={sslUsable ? 'text-success' : sslConfigured ? 'text-warning' : 'text-fg-subtle'}>
-                        {sslRuntime === null
-                            ? t('domain.overview.ssl.checking')
-                            : sslUsable
-                              ? t('domain.info.on')
-                              : sslConfigured
-                                ? t('domain.info.sslIssue')
-                                : t('domain.info.off')}
-                    </span>
+                    {certificate ? (
+                        <span className={sslUsable ? 'text-success' : sslConfigured ? 'text-warning' : 'text-fg-subtle'}>
+                            {sslUsable
+                                ? t('domain.info.on')
+                                : sslConfigured
+                                  ? t('domain.info.sslIssue')
+                                  : t('domain.info.off')}
+                        </span>
+                    ) : ssl.remote.state === 'unknown' ? (
+                        // Not "off" and not "checking": the read failed. The
+                        // way to read again is beside the words, because on
+                        // most tabs nothing else on the page offers it.
+                        // "Kapalı" da değil "kontrol ediliyor" da: okuma
+                        // başarısız. Yeniden okuma sözün yanındadır.
+                        <span className="inline-flex flex-wrap items-baseline gap-x-2" data-ssl-fact="unknown">
+                            <span>{t('domain.info.sslUnknown')}</span>
+                            <button
+                                type="button"
+                                onClick={() => void ssl.retry()}
+                                disabled={ssl.reading}
+                                className="rounded font-medium text-primary underline underline-offset-2 hover:text-primary-hover disabled:cursor-progress disabled:opacity-60"
+                            >
+                                {t('common.retry')}
+                            </button>
+                        </span>
+                    ) : (
+                        <span className="text-fg-subtle" data-ssl-fact="checking">{t('domain.overview.ssl.checking')}</span>
+                    )}
                 </Fact>
             ),
         });

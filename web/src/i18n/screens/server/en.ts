@@ -1068,6 +1068,7 @@ export const enServerScreens = {
     'mailpolicy.observed': "What CelikPanel observed:",
     'mailpolicy.saved.notRunning': "Saved to /etc/postfix/main.cf. Postfix is not running on this server, so there was nothing to reload; it reads these values when it starts.",
     'mailpolicy.saved.unchanged': "Nothing to save: the server already holds exactly these values.",
+    'mailpolicy.saved.unchangedReloaded': "Nothing to save: the server already holds exactly these values. Postfix was reloaded with them and is running.",
     'mailpolicy.unreadable': "The current mail policy could not be read from the server, so the settings are not shown and nothing can be saved here. Nothing was changed. Try again.",
     'postfix.queue.unreadable': "The mail queue could not be read, so it is not shown. This does not mean the queue is empty. Nothing was changed. Try again; if it keeps failing, run sudo postqueue -j on the server to see the reason.",
     'postfix.queue.unreadable.postfix_config': "The mail queue could not be read because Postfix refuses its own configuration: a setting in /etc/postfix/main.cf or master.cf has an error, and Postfix’s programs stop on it. This does not mean the queue is empty. Nothing was changed. On the server, correct the setting Postfix names, run sudo postfix check until it prints no error, then try again.",

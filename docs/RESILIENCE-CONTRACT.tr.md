@@ -2236,8 +2236,8 @@ P2) ve beş gözlem (O1-O5) ölçtü; bu kayıt onları kaynakta düzeltir.
     MAIL_POLICY_RELOAD_UNKNOWN` yanıtıdır. Her cümledeki kurtarma komutu `sudo
     postfix reload` komutudur; Postfix'in neye itiraz ettiğini yazar ve her
     platformda aynıdır; Ubuntu'da `sudo systemctl reload postfix`
-    sarmalayıcıdır. `200`, `applied` taşır: `reloaded`, `not_running` ya da
-    `unchanged`.
+    sarmalayıcıdır. `200`, `applied` taşır: `reloaded`, `not_running`,
+    `unchanged` ya da, aşağıdaki ek düzeltmeden beri, `unchanged_reloaded`.
   - *P2: yanıt, doğrulanana göre sınıflandırılır* (`cmd/agent/db_config.go`).
     (a) önceki dosya yerinde ve birim onu yeniden yükledi: eskisi gibi
     `restored`. (b) önceki dosya yerinde ve birimin yeniden yüklemesi yine
@@ -2351,9 +2351,21 @@ P2) ve beş gözlem (O1-O5) ölçtü; bu kayıt onları kaynakta düzeltir.
     kapalıdır ve `postfix check` çalıştırmamalıdır. Hizmetler sayfasının genel
     hizmet eylemleri, sarmalayıcı birimler `postfix` (Ubuntu) ve `postgresql`
     (Debian, Ubuntu) için de hâlâ `systemctl` çıkış durumunu bildirir.
-  - Hiçbir şeyi değiştirmeyen bir kayıt yeniden yüklemez; bu yüzden "yeniden
-    yüklenmedi" yanıtından sonraki ikinci, değişmemiş kayıt, Postfix hâlâ önceki
-    değerlerle çalışırken `200` / `unchanged` yanıtlar.
+  - Ek düzeltme, aynı tarih, yalnız bileşen testleri
+    (`cmd/agent/mail_policy_rpc.go`, `mail_policy_reload_test.go`,
+    `cmd/panel/set1_corrections_test.go`): hiçbir şeyi değiştirmeyen bir kayıt
+    hiçbir şeyi yeniden yüklemiyordu; bu yüzden "yeniden yüklenmedi" yanıtından
+    sonraki ikinci, değişmemiş kayıt, Postfix hâlâ önceki değerlerle çalışırken
+    `200` / `unchanged` yanıtlıyordu. Kabul edilen her kayıt artık aynı
+    doğrulanmış yeniden yüklemeyle biter. Hiçbir şey yazılmaz, bunun için hiçbir
+    durum kaydedilmez (Postfix çalışan ana sürecin ne tuttuğunu bildiremez ve
+    Agent önceki sonucu hatırlamaz), durmuş Postfix durmuş bırakılır; şema,
+    kalıcı kayıt ya da sürüm değişmez. `200` o zaman `unchanged_reloaded`
+    (çalışıyor, yeniden yüklendi) ya da `unchanged` (durmuş) taşır; hâlâ
+    başarısız olan yeniden yükleme, `mutation_applied` taşımayan aynı `502`
+    yanıtıdır, çünkü o istek hiçbir şeyi değiştirmedi. Hâlâ açık: bu, gerçek bir
+    hizmette ölçülmedi ve yeniden yükleme, Postfix dosyayı zaten çalıştırıyorken
+    de, böyle her kayıtta istenir.
   - `postfix check` eksik kuyruk dizinlerini de oluşturur; Debian 13 biriminin
     her başlatmadan önce çalıştırdığı komuttur. Postfix'in, çalışan bir ana
     sürecin tuttuğu değerleri bildiren bir arayüzü yoktur; bu yüzden "ayarları
@@ -2366,8 +2378,11 @@ P2) ve beş gözlem (O1-O5) ölçtü; bu kayıt onları kaynakta düzeltir.
     bir saniye bekler.
   - MariaDB: yalnız yukarıdaki iki uyarı biçimi rettir; Oracle MySQL ele
     alınmaz.
-  - Zamanlanmış görevler ekranı nedeni ya da satırı henüz göstermez: yanıt ve
-    katalog girdileri (`cron.unknown.cron_allow`, `cron.unknown.cron_deny`,
-    `cron.unknown.said`) vardır, ekran hâlâ tek yansız cümlesini gösterir.
+  - Ek düzeltme, aynı tarih: zamanlanmış görevler ekranı doğrulanmış nedeni
+    (`cron.unknown.cron_allow`, `cron.unknown.cron_deny`) sunucu sahibinin
+    kuralı olarak, crontab'ın satırını da (`cron.unknown.said`) diğer her
+    yanıtta yansız cümlenin altında gösterir; bağlanan durumlar
+    `web/tests/remote-state-mounted-batch4.test.mjs` içindedir. Hâlâ açık:
+    reddedilen bir zamanlanmış görev yazımı genel cümleyi gösterir.
     `postfix.queue.unknown` ve `mailpolicy.unknown` katalog girdileri artık
     kullanılmıyor.

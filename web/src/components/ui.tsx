@@ -4,6 +4,7 @@ import { useNavigate } from '../router';
 import { useI18n } from '../i18n';
 import { apiErrorActionLabel, apiErrorText, type ApiError } from '../lib/apiError';
 import type { Observed, Remote } from '../lib/remote';
+import type { LostAnswerHandle } from '../lib/lostAnswer';
 // Shared UI primitives so every page speaks one visual language: a page
 // header with breadcrumb, raised cards with an icon+title, and a labelled
 // usage bar. Reused across the panel to keep density consistent.
@@ -667,6 +668,102 @@ export function KnownEmpty({
 }) {
     void of;
     return <EmptyState {...props} />;
+}
+
+// ResultUnknown: a change was sent and its answer did not arrive, so it is not
+// known whether it was made (lib/lostAnswer.ts). The notice stands where the
+// change was asked for and is scrolled into view. It is the attention surface,
+// not the failure one: nothing is known to have failed. "Check again" only
+// reads. Until that read has answered, the screen keeps its changing controls
+// off; after it, the notice says when the state was read again and stays until
+// the person closes it.
+//
+// Where the form that sent the change asked the re-read state a question
+// (10 Oct 2026), the notice says the answer. The state shows the change: it was
+// saved, the form is closed, and the notice is a plain confirmation with a
+// check mark, no longer the attention surface. The state does not show it: the
+// attention surface stays and the sentence says so, and that what was typed is
+// still there. In both cases it stays until the person closes it.
+// ResultUnknown: bir değişiklik gönderildi ve yanıtı gelmedi; yapılıp
+// yapılmadığı bilinmiyor. Bildirim değişikliğin istendiği yerde durur ve
+// görünür alana kaydırılır. "Tekrar kontrol et" yalnız okur. Değişikliği
+// gönderen form yeniden okunan duruma soru sorduysa bildirim yanıtı söyler:
+// durum değişikliği gösteriyorsa kaydedilmiştir (onay işaretli sade bildirim),
+// göstermiyorsa bunu ve yazılanın yerinde durduğunu söyler.
+export function ResultUnknown({
+    answer,
+    where,
+    className,
+}: {
+    answer: LostAnswerHandle;
+    /** Where to look, when what is read again here cannot show what the change did. */
+    where?: string;
+    className?: string;
+}) {
+    const { t, locale } = useI18n();
+    const box = useRef<HTMLDivElement>(null);
+    const raised = answer.lost?.at;
+    useEffect(() => {
+        if (raised !== undefined) box.current?.scrollIntoView?.({ block: 'nearest' });
+    }, [raised]);
+    const lost = answer.lost;
+    if (!lost) return null;
+    const made = lost.readAt !== null && lost.shows === true;
+    const readKey = lost.shows === true ? 'common.resultUnknownMade' : lost.shows === false ? 'common.resultUnknownNotMade' : 'common.resultUnknownRead';
+    const text = lost.readAt !== null
+        ? t(readKey, { time: new Date(lost.readAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) })
+        : t(answer.checking ? 'common.resultUnknown' : 'common.resultUnknownUnread');
+    return (
+        <div
+            ref={box}
+            role={made ? 'status' : 'alert'}
+            data-result-unknown={lost.readAt === null ? 'holding' : made ? 'made' : lost.shows === false ? 'not-made' : 'read'}
+            className={`flex items-start gap-2 rounded-lg border p-3 text-sm leading-relaxed text-fg ${made ? 'border-border-strong bg-surface-2' : 'border-warning-mark/50 bg-warning-mark/20'} ${className ?? ''}`}
+        >
+            {made ? <CheckMark /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />}
+            <div className="min-w-0">
+                <p className="max-w-[75ch] break-words">{text}</p>
+                {where && !made && <p className="mt-1 max-w-[75ch] break-words">{where}</p>}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {/* Once the state shows the change there is nothing left
+                        to check: only "Close".
+                        Durum değişikliği gösterdiğinde kontrol edilecek bir şey
+                        kalmaz: yalnız "Kapat". */}
+                    {!made && (
+                        <Button type="button" loading={answer.checking} onClick={() => void answer.check()}>
+                            {t('common.checkAgain')}
+                        </Button>
+                    )}
+                    {lost.readAt !== null && (
+                        <Button type="button" onClick={answer.dismiss}>
+                            {t('common.close')}
+                        </Button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// The mark of something the server confirmed. Drawn here, like SearchIcon, so
+// the shared layer needs no icon beyond the triangle.
+// Sunucunun doğruladığı şeyin işareti.
+function CheckMark() {
+    return (
+        <svg
+            className="mt-0.5 h-4 w-4 shrink-0 text-success"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+        >
+            <circle cx="12" cy="12" r="10" />
+            <path d="m9 12 2 2 4-4" />
+        </svg>
+    );
 }
 
 // ErrorBanner: the ONE renderer of the API error contract. Shows the

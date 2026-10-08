@@ -2971,7 +2971,8 @@ was observed on an installed server. That run measured two candidate defects
     MAIL_POLICY_RELOAD_UNKNOWN`. The recovery command in every sentence is `sudo
     postfix reload`, which prints what Postfix objects to and is the same on
     every platform; `sudo systemctl reload postfix` on Ubuntu is the wrapper.
-    `200` carries `applied`: `reloaded`, `not_running` or `unchanged`.
+    `200` carries `applied`: `reloaded`, `not_running`, `unchanged` or, since
+    the follow-up below, `unchanged_reloaded`.
   - *P2: the answer is classified by what is verified*
     (`cmd/agent/db_config.go`). (a) previous file back and the unit reloaded it:
     `restored`, as before. (b) previous file back and the unit's reload failed
@@ -3083,9 +3084,20 @@ was observed on an installed server. That run measured two candidate defects
     check`. The generic service actions of the Services page still report
     `systemctl`'s exit status, also for the wrapper units `postfix` (Ubuntu) and
     `postgresql` (Debian, Ubuntu).
-  - A save that changes nothing does not reload, so after a "not reloaded"
-    answer a second, unchanged save answers `200` / `unchanged` while Postfix
-    still runs the earlier values.
+  - Follow-up, same date, component tests only
+    (`cmd/agent/mail_policy_rpc.go`, `mail_policy_reload_test.go`,
+    `cmd/panel/set1_corrections_test.go`): a save that changes nothing used to
+    reload nothing, so after a "not reloaded" answer a second, unchanged save
+    answered `200` / `unchanged` while Postfix still ran the earlier values.
+    Every accepted save now ends with the same verified reload. Nothing is
+    written, no state is recorded for it (Postfix cannot report what a running
+    master holds, and the Agent does not remember the earlier outcome), a
+    stopped Postfix is left stopped, and no schema, stored record or version
+    changes. `200` then carries `unchanged_reloaded` (running, reloaded) or
+    `unchanged` (stopped); a reload that still fails is the same `502` without
+    `mutation_applied`, because that request changed nothing. Still open: this
+    is not measured on a real service, and the reload is asked for on every
+    such save, also when Postfix already runs the file.
   - `postfix check` also creates missing queue directories; it is what Debian
     13's unit runs before every start. Postfix has no interface that reports
     the values a running master holds, so "took the settings" is its own check,
@@ -3097,8 +3109,11 @@ was observed on an installed server. That run measured two candidate defects
     second.
   - MariaDB: only the two warning forms above are refusals; Oracle MySQL is not
     handled.
-  - The scheduled tasks screen does not show the cause or the line yet: the
-    answer and the catalogue entries (`cron.unknown.cron_allow`,
-    `cron.unknown.cron_deny`, `cron.unknown.said`) exist, the screen still
-    shows its one neutral sentence. The catalogue entries `postfix.queue.unknown`
-    and `mailpolicy.unknown` are no longer used.
+  - Follow-up, same date: the scheduled tasks screen shows the verified cause
+    (`cron.unknown.cron_allow`, `cron.unknown.cron_deny`) as the server owner's
+    rule, and crontab's line (`cron.unknown.said`) under the neutral sentence
+    for every other answer; mounted cases in
+    `web/tests/remote-state-mounted-batch4.test.mjs`. Still open: a refused
+    write to the scheduled tasks shows the general sentence. The catalogue
+    entries `postfix.queue.unknown` and `mailpolicy.unknown` are no longer
+    used.

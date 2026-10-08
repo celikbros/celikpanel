@@ -45,6 +45,22 @@ export const capabilitiesURL = compileSource('lib/hostingCapabilities.ts', (spec
   specifier.endsWith('/remote') ? remoteURL : unexpected('lib/hostingCapabilities.ts')(specifier)
 ));
 
+// Since the fourth batch (9 Oct 2026) the shared layer also has the answer
+// that did not arrive (lib/lostAnswer.ts), the one decoder of a domain's
+// databases (lib/domainDatabases.ts) and the file download (lib/download.ts).
+// They are the shipped modules for the same reason as the rest: a stand-in for
+// "the result is unknown" could agree with a screen that sends twice.
+// Dördüncü partiden beri paylaşılan katmanda, gelmeyen yanıt, bir alan adının
+// veritabanlarının tek çözücüsü ve dosya indirme de vardır; hepsi gönderilen
+// modüllerdir.
+export const lostAnswerURL = compileSource('lib/lostAnswer.ts', unexpected('lib/lostAnswer.ts'));
+export const domainDatabasesURL = compileSource('lib/domainDatabases.ts', (specifier) => (
+  specifier.endsWith('/remote') ? remoteURL : unexpected('lib/domainDatabases.ts')(specifier)
+));
+export const downloadURL = compileSource('lib/download.ts', (specifier) => (
+  specifier.endsWith('/apiError') ? apiErrorURL : unexpected('lib/download.ts')(specifier)
+));
+
 // sharedLayer returns the resolver a screen is compiled with: the real shared
 // modules by their import suffix, `extra` for a test's own real modules, and
 // the stub for the rest.
@@ -56,6 +72,9 @@ export function sharedLayer(stubURL, extra = {}) {
     '/lib/apiError': apiErrorURL,
     '/lib/remote': remoteURL,
     '/lib/hostingCapabilities': capabilitiesURL,
+    '/lib/lostAnswer': lostAnswerURL,
+    '/lib/domainDatabases': domainDatabasesURL,
+    '/lib/download': downloadURL,
     '/ui': uiURL,
     ...extra,
   };

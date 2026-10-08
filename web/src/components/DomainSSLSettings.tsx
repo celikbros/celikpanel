@@ -82,7 +82,7 @@ const INITIAL_HSTS_MAX_AGE = 300;
 // Let's Encrypt".
 // Bu ekranın okudukları. Her yanıt ya sözleşmedir ya da bilinmeyendir: eksik
 // `has_certificate` "sertifika yok" değildir.
-function decodeSSLData(raw: unknown): SSLData {
+export function decodeSSLData(raw: unknown): SSLData {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('shape');
     const body = raw as Record<string, unknown>;
     const settings = body.settings as Record<string, unknown> | null | undefined;

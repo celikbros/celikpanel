@@ -464,3 +464,30 @@ html {
 @media (max-height: 36rem) {
     .setup-actions { position: static; }
 }
+
+/* Row actions on a phone. A data table may be wider than a phone and scroll
+   sideways inside its frame; what a row can do (delete, unban, revoke) must
+   not be the part that is off screen. The cell that holds a row's actions, and
+   the header cell above it, carry `row-actions`: below the `sm` breakpoint it
+   stays at the table's trailing edge while the other columns scroll under it.
+   The ground it stands on is the table's: `--row-ground` on the frame when
+   that is not the card surface. Wider screens are unchanged.
+   Telefonda satır eylemleri. Veri tablosu telefondan geniş olabilir ve
+   çerçevesinde yana kayar; satırın eylemi ekran dışında kalan kısım olamaz.
+   Eylem hücresi ve üstündeki başlık hücresi `row-actions` taşır: `sm` altında
+   diğer sütunlar altından kayarken tablonun son kenarında durur. */
+@media (max-width: 639px) {
+    .row-actions {
+        position: sticky;
+        inset-inline-end: 0;
+        z-index: 1;
+        background-color: rgb(var(--row-ground, var(--surface)));
+        box-shadow: -1px 0 0 rgb(var(--border));
+        padding-inline: 0.5rem;
+        /* A named action keeps its words on one line ("Yasağı kaldır" broke
+           into two in this cell at 390 px): the cell takes the width of its
+           label and the other columns scroll under it.
+           Adı olan eylem tek satırda kalır; hücre etiketinin genişliğini alır. */
+        white-space: nowrap;
+    }
+}
