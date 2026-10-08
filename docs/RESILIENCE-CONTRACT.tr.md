@@ -2147,3 +2147,227 @@ listelenir; Panel kendi açıklamalarını sahibin yorumlarından ayırt edemez.
 aşımına uğrayan bir web posta yoklaması sunucu tarafından hâlâ "kullanılamıyor"
 diye yanıtlanır. Taşınmayan: uzak-durum izin listesinin diğer 47 dosyası (bu
 partinin ilk parçası aynı ağaçta durmadan önce 56).
+
+### Ayar yazılarının ilk gerçek sistem ölçümünden çıkan düzeltmeler (ilkeler 1-4 ve 6, 2026-10-10)
+
+D-025 ilkeleri 1 (sahibin yerel yapılandırması algılanır, değiştirilmez), 2
+(bilinmeyen; yok, boş ya da başarı değildir), 3 (güvensiz yazı kendi sınırında
+durdurulur), 4 (bir değişiklik ön görüntüsünü okur, doğrular, yerine geçtiğini
+saklar ve sınanmış bir geri alması vardır) ve 6 (ekran yetkili durumu gösterir);
+D-022, D-024. Hiçbir P0 işi kapanmadı ya da ilerlemedi. Kaynak: 2026-10-08
+tarihli `set1` koşusu; yukarıdaki iki kaydın ayar yazıları ilk kez paketlenmiş
+hizmetlerle karşılaştı (tek kullanımlık QEMU/KVM konukları: Debian 13, Ubuntu
+24.04, Arch; kanıt `deploy/e2e/release-recovery/evidence/set1-20261010/`).
+Buradaki hiçbir şey kurulu bir sunucuda gözlenmedi. O koşu iki aday hata (P1,
+P2) ve beş gözlem (O1-O5) ölçtü; bu kayıt onları kaynakta düzeltir.
+
+- **Ölçülen.**
+  - *P1, Ubuntu 24.04: Postfix yeniden yüklenmediği hâlde posta politikası
+    kaydı `200 success` yanıtladı.* Sahip `main.cf` içinde
+    `default_process_limit = 200 # raised for the campaign` satırını yeniden
+    yüklemeden bırakmıştı. Agent `systemctl reload-or-restart postfix`
+    çalıştırdı. Ubuntu'da `postfix.service` tek atımlık bir sarmalayıcıdır
+    (`ExecStart=/bin/true`, `ExecReload=/bin/true`) ve hizmetin kendisi
+    `postfix@-.service` birimine aittir; günlük `Reload failed for
+    postfix@-.service` dedi, `systemctl` 0 ile çıktı, `main.cf` 46 hızını
+    tutuyordu ve Postfix 45 ile çalışıyordu. `postfix.service` birimi gerçek
+    birim olan Debian 13 aynı sıra için `502 MAIL_POLICY_NOT_RELOADED`
+    yanıtladı.
+  - *P2, üç platformun üçü: iki kez başarısız olan yeniden yüklemeden sonra
+    yanıt, önceki `postgresql.conf` dosyasının geri konamadığını söyledi; oysa
+    konmuştu.* Kullanılan neden, `ExecReload` komutu PostgreSQL'e sinyal
+    gönderip sonra başarısız olan, sahibe ait bir birim ekiydi. İlk yeniden
+    yükleme başarısız oldu, önceki dosya geri kondu (bayt bayt aynı; sahip, grup
+    ve kip aynı), onunla yapılan yeniden yükleme de başarısız oldu ve yanıt
+    `CONFIG_RELOAD_FAILED` / `not_restored` oldu; aynı dosyanın bir kopyasını
+    "diğer sürüm" diye adlandırdı. Aynı koşu, "sunucu hâlâ eski ayarlarla
+    çalışıyor" demenin de varsayılamayacağını gösterdi: ilk, "başarısız"
+    yeniden yükleme sunucuya YENİ dosyayı çoktan okutmuştu.
+  - *O1.* `max_connections = plenty`, "MariaDB dosyayı denetledi ve kabul
+    ediyor" diye kaydedildi: `mariadbd --help --verbose` 0 ile çıkar ve
+    `[Warning] ... option 'max_connections': unsigned value 0 adjusted to 10`
+    yazar.
+  - *O2.* Her satırda bir kısıt olacak biçimde yazılmış bir
+    `smtpd_recipient_restrictions`, bir DNSBL kaydından sonra tek satır olarak
+    geri geldi (ögeler, sıra ve ayraçlar korundu).
+  - *O3.* Yönlendirme, neden olmayan bir nedeni adlandırdı. Okunamayan
+    zamanlanmış görevler: "bu sayfanın arkasındaki hizmetin çalıştığını
+    denetler" (nedenler, site kullanıcısını içermeyen `/etc/cron.allow` ve yeri
+    değiştirilmiş bir kuyruk diziniydi). Okunamayan posta kuyruğu: "Postfix'in
+    çalıştığını denetler" (neden yukarıdaki `main.cf` satırıydı; Postfix
+    durmuşken `postqueue -j` kuyruğu doğrudan okur ve başarılı olur).
+  - *O4.* `502 MAIL_POLICY_NOT_RELOADED` gövdesi, cümlesi "gösterilen değerler
+    kaydedilen değerlerdir" dediği hâlde politika taşımıyordu.
+  - *O5.* Bileşen taraması Debian ve Ubuntu'da `postgresql.conf` ve
+    `pg_hba.conf` dosyalarını ikişer kez listeledi.
+- **Değişen.**
+  - *P1: Postfix ya da Dovecot'un yeniden yüklenmesi, başlatılması ve yeniden
+    başlatılması doğrulanır; asla `systemctl` çıkış durumundan çıkarılmaz*
+    (`cmd/agent/mail_service_verify.go`). Postfix: önce `postfix check` (reddi,
+    kendi satırıyla doğrulanmış hatadır ve hiçbir şey yeniden yüklenmez); çalışan
+    ana süreç `postfix reload` ile yeniden yüklenir; bu, her paketlemenin birimin
+    yeniden yüklemesi olarak çalıştırdığı komuttur (Debian 13 ve Arch
+    `ExecReload=postfix reload`; Ubuntu'nun örneği `postmulti -i - -p reload`,
+    yani varsayılan örnek için `postfix reload`), dolayısıyla çıkış durumu
+    örneğindir; sonrasında `postfix status` hâlâ çalışan bir ana süreç
+    bildirmelidir. Başlatma ya da yeniden başlatma yine systemd üzerinden
+    yapılır; böylece hizmetin sahibi birim kalır ve sonuç `postfix status` ile
+    ana sürecin kimliğine (`<queue_directory>/pid/master.pid`) göre, en çok 15
+    saniye içinde değerlendirilir. Dovecot: önce `doveconf -n`; `systemctl
+    restart` sonrasında `dovecot.service` etkin ve çalışır olmalı, iki okumada
+    aynı ana süreci göstermeli ve yeniden başlatmadan sonra bu süreç yeni bir
+    süreç olmalıdır. Üç sonuç vardır: doğrulandı, doğrulanmış hata (adım
+    `check`, `reload`, `start` ya da `verify`) ve bilinmiyor (bir komut
+    çalıştırılamadı ya da yanıt vermedi). Kullanıldığı yerler: posta politikası
+    kaydı; posta yığını kurulumu; posta süzgeci bağlama ve DKIM (milter
+    zincirinden sonraki yeniden yükleme, sonucu atılan bir `reload-or-restart`
+    idi); posta gönderim kurulumu ve Dovecot kurtarması; posta TLS uzlaştırması
+    ve geri alması; ham dosya düzenleyicisinin `/etc/postfix` dosyasından
+    sonraki yeniden yüklemesi.
+  - *P1, onunla birlikte değişen davranış.* Durmuş bir Postfix artık posta
+    politikası kaydıyla, süzgeç bağlamayla ya da ham dosya kaydıyla
+    başlatılmaz: durmuş bırakılır ve yanıt bunu söyler (`applied:
+    not_running`). Onu yalnız kurulum (posta yığını, TLS) başlatır. Süzgeç
+    bağlama ve DKIM, Postfix'in zinciri almadığı doğrulandığında artık başarı
+    bildirmek yerine başarısız olur.
+  - *P1, yanıtlar.* `502 MAIL_POLICY_NOT_RELOADED`, her biri için bir cümleyle
+    `check`, `reload` ya da `verify` gerekçesini ve `vars.detail` içinde
+    Postfix'in kendi satırını taşır. Belirlenemeyen sonuç, yeni `502
+    MAIL_POLICY_RELOAD_UNKNOWN` yanıtıdır. Her cümledeki kurtarma komutu `sudo
+    postfix reload` komutudur; Postfix'in neye itiraz ettiğini yazar ve her
+    platformda aynıdır; Ubuntu'da `sudo systemctl reload postfix`
+    sarmalayıcıdır. `200`, `applied` taşır: `reloaded`, `not_running` ya da
+    `unchanged`.
+  - *P2: yanıt, doğrulanana göre sınıflandırılır* (`cmd/agent/db_config.go`).
+    (a) önceki dosya yerinde ve birim onu yeniden yükledi: eskisi gibi
+    `restored`. (b) önceki dosya yerinde ve birimin yeniden yüklemesi yine
+    başarısız: sunucuya doğrudan söylenir (`postgres` hesabıyla yerel soket
+    üzerinden `SELECT pg_reload_conf()`) ve ne yaptığı sorulur. Değişiklikten
+    önceki ayarlarla çalıştığı, yalnız şu üçü birlikte sağlandığında söylenir:
+    yanıt bu dosya hakkındadır (`config_file` / `hba_file`);
+    `pg_conf_load_time()`, sinyalin gönderildiği andan sonradır (PostgreSQL onu
+    yalnız yeniden okuma sözdizimi ya da değer hatası olmadan sona vardığında
+    ayarlar; böyle bir hatada hiçbir şey uygulamaz); ve `pg_file_settings` (ya
+    da `pg_hba_file_rules`) diskteki dosyalarda hata bildirmez. O zaman
+    `restored_unit_reload_failed`. Bundan azı `restored_running_unknown`
+    yanıtıdır. (c) önceki dosya geri konamadı (diskteki dosya artık bu yazının
+    kurduğu dosya değil ya da yazı başarısız oldu): `not_restored`; yalnız bu
+    yanıt bir kopya adlandırır ve o kopya önceki dosyadır. (a) ve (b)
+    durumlarında kopya kaldırılır, çünkü diskteki dosya o dosyadır; var olmayan
+    bir "diğer sürüm" adlandırılmaz. Aynı sınıflandırma, PostgreSQL başarılı bir
+    yeniden yüklemeden sonra hata bildirdiğinde ve geri konan dosyanın yeniden
+    yüklemesi başarısız olduğunda da uygulanır. Yanıt, yeniden yüklemesi
+    başarısız olan birimi taşır (`vars.unit`).
+  - *O1.* `mariadbd --help --verbose` çıktısında bir değerin yazıldığı gibi
+    kullanılmayacağını söyleyen bir `[Warning]` (`option '<ad>': ... adjusted
+    to ...`, `option '<ad>': boolean value ... wasn't recognized`), kaydı
+    MariaDB'nin satırı ve seçeneğin adıyla `CONFIG_INVALID` / `daemon` olarak
+    reddeder. Diğer uyarılar reddetmez (boş özel veri dizininde `mysql.plugin`
+    tablosu yoktur; stok bir Debian ya da Ubuntu dosyası ikili günlük olmadan
+    `expire_logs_days` ayarlar; kaldırılmış bir seçenek). Sunucudaki dosyanın
+    zaten ürettiği bir uyarı bu değişikliğin değildir: yalnız o durumda geçerli
+    dosya da aynı yolla okunur ve zaten söylediği dışarıda bırakılır.
+  - *O3.* Hiçbir cümle doğrulanmamış bir nedeni adlandırmaz. Agent'ın
+    "okunamadı" yanıtları sabit ilk satırını korur ve iki satır daha taşıyabilir:
+    Agent'ın kendisinin doğruladığı bir neden ve sunucunun kendi programının
+    yazdığı ilk satır (300 karakterle sınırlı, parola atamaları silinmiş).
+    `cron_allow`: `crontab` kullanıcıyı reddettiğini söyledi VE
+    `/etc/cron.allow` o kullanıcı olmadan var. `cron_deny`: aynı satır,
+    `cron.allow` yok ve `/etc/cron.deny` kullanıcıyı içeriyor.
+    `postfix_config`: `postqueue`, `fatal: bad ... configuration: ...` ya da
+    `main.cf` ya da `master.cf` ile bir satır adlandıran bir fatal yazdı. Geri
+    kalan her şey, satırıyla birlikte "okunamadı"dır. Ayar ekranlarının ortak
+    cümlesi artık hizmetin çalıştığını denetlemeyi söylemez.
+  - *O4.* Yazılmış bir politikadan sonraki `502` gövdesi, yeni sürümüyle
+    `policy` taşır; ekran onu ikinci bir okuma yapmadan gösterir.
+  - *O5.* Neden: bileşenin Debian ve Ubuntu'da iki birimi vardır
+    (`postgresql.service`, bir sarmalayıcı, ve `postgresql@<sürüm>-<küme>`) ve
+    her birimin taraması bileşenin dosyalarını döndürür. Panel'in birleştirmesi
+    her dosyayı, çözüldüğü yola göre karşılaştırarak bir kez listeler; tek bir
+    dosyanın iki adından dosyanın kendisi olan ad tutulur, çünkü Agent sembolik
+    bağ üzerinden yazmayı reddeder (Debian'da `/etc/mysql/my.cnf`,
+    `mariadb.cnf` dosyasına çözülür).
+- **Değişmeyen ve nedeni.**
+  - *O2.* Geliştirme konuğunda özel, geçici bir yapılandırma dizininde ölçüldü
+    (Postfix 3.10): satırlara yayılan bir değerle `postconf -e` 1 ile çıkar,
+    `postconf: fatal: -e, -X, or -# accepts no multi-line input`. Sahibin
+    düzenini korumak bu yüzden `main.cf` dosyasını yerinde düzenleyen ikinci bir
+    yazıcı gerektirir (son mantıksal atama, devam satırları, aralarındaki
+    yorumlar, sahibi ve kipi koruyan atomik bir yer değiştirme ve Postfix'in
+    aynı değeri okuduğunun denetimi). Bu, Postfix'in yaptığını değiştirmeyen bir
+    fark için, arkasında gerçek sistem ölçümü olmayan, sahibin dosyasına yeni
+    bir yazı yoludur. Olduğu gibi bırakıldı.
+- **Yönlendirmede belirtilen platform sınırı.** `/etc/cron.allow` dosyası bir
+  site kullanıcısını içermeyen bir sunucuda Panel o kullanıcının crontab'ını ne
+  okuyabilir ne yazabilir: Debian ve Ubuntu'nun `crontab -u <kullanıcı>` komutu
+  kullanıcıyı root için bile reddeder. Panel bunu söyler ve hiçbir şeyi
+  değiştirmez; `cron.allow` dosyasını düzenlemez.
+- **Şema ya da sürüm geçişi.** Veritabanı şeması ve kalıcı durum yok. Agent
+  RPC, eklemeli: `MailPolicyResponse.Stage` ve `.Applied`,
+  `mail_policy_reload_unknown` kodu; `ConfigRPCError.Unit`,
+  `restored_unit_reload_failed` ve `restored_running_unknown` gerekçeleri; iki
+  "okunamadı" yanıtını `cause=` ve `detail=` satırları izleyebilir. HTTP,
+  eklemeli: `MAIL_POLICY_RELOAD_UNKNOWN`; `MAIL_POLICY_NOT_RELOADED` üzerinde
+  `reason` ve `policy`; başarılı politika kaydında `applied`; iki
+  `CONFIG_RELOAD_FAILED` gerekçesi ve `vars.unit`; `CURRENT_SETTINGS_UNREADABLE`
+  / `scheduled_tasks` üzerinde `detail` (neden belirteci) ve `vars.detail`;
+  `MAIL_QUEUE_UNREADABLE` üzerinde `reason` ve `vars.detail`. Panel ve Agent tek
+  bir sürümle birlikte kurulur. Bu kayıttan eski bir Panel, daha yeni bir
+  Agent'ın kanıt satırlı "okunamadı" yanıtını tanımaz ve genel iç hatasını
+  yanıtlar, asla boş liste değil; eski bir Panel iki yeni gerekçe için, daha
+  önce olduğu gibi `not_restored` gösterir.
+- **Kurtarma davranışı.** Hiçbir şey kendiliğinden yeniden denenmez ve daha
+  önce geri alınmayan hiçbir şey geri alınmaz. Postfix'in almadığı yazılmış bir
+  politika yazılı kalır; sahip, Postfix'in adlandırdığı satırı düzeltir ve `sudo
+  postfix reload` çalıştırır. Tutulmayan bir yapılandırma değişikliği önceki
+  dosyayı yerinde bırakır; birimin yeniden yüklemesi onunla da başarısız
+  olduğunda sahibe hangi birim olduğu ve nedenin yalnız bu değişiklik olmadığı
+  söylenir.
+- **Kanıt.** Yalnız bileşen testleri; gerçek sistemde yeniden koşu bekliyor.
+  Agent: `mail_service_verify_test.go` (hizmet yeniden yüklenmediği hâlde 0 ile
+  çıkan sarmalayıcı, `postfix check` tarafından reddedilen yeniden yükleme,
+  başarı, duran ana süreç, bilinmeyen sonuç, durmuş Postfix, yeniden
+  başlatmadan sonra çıkan Dovecot); `mail_policy_reload_test.go`;
+  `db_config_set1_linux_test.go` (her P2 dalı, yetersiz kalan her okuma,
+  `pg_hba.conf` ve kanıt klasöründe kayıtlı MariaDB satırları fikstür olarak);
+  `unreadable_evidence_test.go`. Panel: `set1_corrections_test.go`. Ekranlar:
+  `web/tests/remote-state-mounted-batch2b.test.mjs` içinde dört bağlanmış
+  durum. Geliştirme konuğunda elle, salt okunur ya da özel geçici bir dizinde:
+  yukarıdaki `postconf -e` reddi ve `postfix` komutunun `fatal:` satırını uçbirim
+  olmayan standart hataya yazması.
+- **Açık.**
+  - Buradaki hiçbir düzeltme gerçek hizmetlerde ölçülmedi. Gerçek sistemdeki
+    yeniden koşu, platform başına şunu göstermelidir: P1 Ubuntu sırasının
+    gövdesinde `policy` ile `502 MAIL_POLICY_NOT_RELOADED` / `check`
+    yanıtlaması ve sağlıklı bir kaydın `postfix/master ... reload` günlük
+    satırı ve aynı ana süreçle `200` / `reloaded` yanıtlaması; P2 birim eki
+    sırasının hiçbir kopya adlandırmadan ve bırakmadan
+    `restored_unit_reload_failed` yanıtlaması, `SHOW work_mem` önceki değerde;
+    O1 `plenty` değerinin MariaDB'nin satırıyla reddi ve stok dosyaların hâlâ
+    kabulü; O3 ölçülen üç neden; O5 dosya başına tek girdi.
+  - Değişmedi: sertifika yenileme yolu (`mail_host_certificate_reload.go`) hâlâ
+    `systemctl reload postfix.service` çalıştırır ve `systemctl is-active` ile
+    değerlendirir; Ubuntu'da bunlar sarmalayıcınındır; o yolun komut kapsamı
+    kapalıdır ve `postfix check` çalıştırmamalıdır. Hizmetler sayfasının genel
+    hizmet eylemleri, sarmalayıcı birimler `postfix` (Ubuntu) ve `postgresql`
+    (Debian, Ubuntu) için de hâlâ `systemctl` çıkış durumunu bildirir.
+  - Hiçbir şeyi değiştirmeyen bir kayıt yeniden yüklemez; bu yüzden "yeniden
+    yüklenmedi" yanıtından sonraki ikinci, değişmemiş kayıt, Postfix hâlâ önceki
+    değerlerle çalışırken `200` / `unchanged` yanıtlar.
+  - `postfix check` eksik kuyruk dizinlerini de oluşturur; Debian 13 biriminin
+    her başlatmadan önce çalıştırdığı komuttur. Postfix'in, çalışan bir ana
+    sürecin tuttuğu değerleri bildiren bir arayüzü yoktur; bu yüzden "ayarları
+    aldı", kendi denetimi, kendi yeniden yükleme komutu ve hâlâ çalışan bir ana
+    süreçtir.
+  - PostgreSQL okuması, `psql` komutunun varsayılan olarak ulaştığı kümeye
+    ulaşır; başka bir küme için yanıt `restored_running_unknown` olur.
+    `pg_conf_load_time()` değerinin yalnız hatasız bir yeniden okumada
+    ilerlediği PostgreSQL'in kaynak davranışındandır, burada ölçülmedi. Okuma
+    bir saniye bekler.
+  - MariaDB: yalnız yukarıdaki iki uyarı biçimi rettir; Oracle MySQL ele
+    alınmaz.
+  - Zamanlanmış görevler ekranı nedeni ya da satırı henüz göstermez: yanıt ve
+    katalog girdileri (`cron.unknown.cron_allow`, `cron.unknown.cron_deny`,
+    `cron.unknown.said`) vardır, ekran hâlâ tek yansız cümlesini gösterir.
+    `postfix.queue.unknown` ve `mailpolicy.unknown` katalog girdileri artık
+    kullanılmıyor.

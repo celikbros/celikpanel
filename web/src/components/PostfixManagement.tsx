@@ -23,6 +23,26 @@ interface PostfixQueueItem {
 
 const decodeQueue = (raw: unknown) => decodeList<PostfixQueueItem>(raw);
 
+// The causes of an unreadable queue the server verifies itself. Any other
+// answer gets the sentence that names no cause.
+// Sunucunun kendisinin doğruladığı okunamayan-kuyruk nedenleri.
+const queueCauses: Record<string, TranslationKey> = {
+    postfix_config: 'postfix.queue.unreadable.postfix_config',
+};
+
+// The policy a failed save carries beside its error, or undefined. A body that
+// is not JSON carries none; the caller then reads the policy again.
+// Başarısız bir kaydın hatasının yanında taşıdığı politika; yoksa undefined.
+function writtenPolicy(raw: string): MailPolicy | undefined {
+    try {
+        const body: unknown = JSON.parse(raw);
+        const policy = body && typeof body === 'object' ? (body as { policy?: MailPolicy }).policy : undefined;
+        return policy && typeof policy.version === 'string' && policy.version ? policy : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 // The mail queue of this server.
 //
 // The queue is read from Postfix and is one of three things (9 Oct 2026): being
@@ -67,6 +87,20 @@ export function PostfixManagement({ onBack }: PostfixManagementProps) {
 
     const count = (status: string) => (known ?? []).filter((item) => item.status === status).length;
 
+    // Why the queue could not be read (10 Oct 2026): the sentence for a cause
+    // the server verified, else one that names no cause, and the line Postfix
+    // itself printed. It used to say "check that Postfix is running", which a
+    // stopped Postfix does not cause and was not the cause when measured.
+    // Kuyruğun neden okunamadığı: sunucunun doğruladığı nedenin cümlesi, yoksa
+    // neden adlandırmayan cümle ve Postfix'in kendi yazdığı satır.
+    const queueUnreadable = () => {
+        const error = queue.remote.state === 'unknown' ? queue.remote.reason : null;
+        if (error?.code !== 'MAIL_QUEUE_UNREADABLE') return t('postfix.queue.unreadable');
+        const sentence = t(queueCauses[error.reason ?? ''] ?? 'postfix.queue.unreadable');
+        const detail = error.vars?.detail;
+        return detail ? `${sentence} ${t('postfix.queue.said', { detail })}` : sentence;
+    };
+
     return (
         <ServiceShell serviceId="postfix" name="Postfix" icon={Mail} onBack={onBack}>
             <div className="mb-4 flex items-center gap-1 border-b border-border">
@@ -108,7 +142,7 @@ export function PostfixManagement({ onBack }: PostfixManagementProps) {
                     <RemoteGate
                         remote={queue.remote}
                         checking={t('postfix.queue.checking')}
-                        failed={t('postfix.queue.unknown')}
+                        failed={queueUnreadable()}
                         onRetry={() => void queue.retry()}
                         busy={queue.reading}
                         className="min-h-[2.75rem]"
@@ -228,11 +262,14 @@ function MailPolicySection() {
     const [rate, setRate] = useState(30);
     const [busy, setBusy] = useState(false);
     const [stale, setStale] = useState(false);
-    // The policy was written to main.cf and Postfix could not be reloaded: a
-    // verified failure after a change (9 Oct 2026). It stays on screen above
-    // the saved values until a save succeeds or the policy is read again.
-    // Politika main.cf'e yazıldı ve Postfix yeniden yüklenemedi: bir değişiklik
-    // sonrası doğrulanmış hata. Ekranda, kaydedilen değerlerin üstünde kalır.
+    // The policy was written to main.cf and Postfix was not seen to take it: a
+    // verified failure after a change (9 Oct 2026), or, when the server could
+    // not establish what Postfix did, an unknown outcome (10 Oct 2026). It
+    // stays on screen above the saved values until a save succeeds or the
+    // policy is read again.
+    // Politika main.cf'e yazıldı ve Postfix'in onu aldığı görülmedi: bir
+    // değişiklik sonrası doğrulanmış hata ya da bilinmeyen sonuç. Ekranda,
+    // kaydedilen değerlerin üstünde kalır.
     const [notReloaded, setNotReloaded] = useState<ApiError | null>(null);
 
     const show = (policy: MailPolicy) => {
@@ -281,22 +318,40 @@ function MailPolicySection() {
                 // A stale save keeps what was typed on screen and says how to
                 // go on; nothing was written.
                 // Eskimiş kayıt, yazılanı ekranda tutar ve nasıl sürüleceğini söyler.
-                const error = await readApiError(r);
+                // The body is read once more beside the error: after a write
+                // that Postfix did not take, it also carries the policy that
+                // is in main.cf now.
+                // Gövde hatanın yanında bir kez daha okunur: Postfix'in
+                // almadığı bir yazıdan sonra main.cf'teki politikayı da taşır.
+                const raw = await r.text();
+                const written = writtenPolicy(raw);
+                const error = await readApiError(new Response(raw, { status: r.status }));
                 if (isStaleWrite(error)) setStale(true);
-                else if (error.code === 'MAIL_POLICY_NOT_RELOADED') {
-                    // main.cf holds the new values: read them, so the form
-                    // shows what is written and the next save carries its
-                    // version, and say Postfix does not run with them yet.
-                    // main.cf yeni değerleri tutuyor: oku ve Postfix'in henüz
-                    // onlarla çalışmadığını söyle.
-                    await load();
+                else if (error.code === 'MAIL_POLICY_NOT_RELOADED' || error.code === 'MAIL_POLICY_RELOAD_UNKNOWN') {
+                    // main.cf holds the new values: show them, with the version
+                    // the next save carries, and say what is known about
+                    // Postfix. Only an answer without them is read again.
+                    // main.cf yeni değerleri tutuyor: göster ve Postfix
+                    // hakkında bilineni söyle.
+                    if (written) show(written);
+                    else await load();
                     setNotReloaded(error);
                 } else showToast('error', apiErrorText(error, t));
                 return;
             }
             setNotReloaded(null);
-            const saved = (await r.json()).policy as MailPolicy | undefined;
-            showToast('success', t('mailpolicy.saved'));
+            const answer = (await r.json()) as { policy?: MailPolicy; applied?: string };
+            const saved = answer.policy;
+            // "Applied" is said only when the server verified the reload. A
+            // stopped Postfix was left stopped, and an unchanged policy wrote
+            // nothing: each says so.
+            // "Uygulandı", yalnız sunucu yeniden yüklemeyi doğruladığında
+            // söylenir.
+            showToast('success', t(
+                answer.applied === 'not_running' ? 'mailpolicy.saved.notRunning'
+                    : answer.applied === 'unchanged' ? 'mailpolicy.saved.unchanged'
+                        : 'mailpolicy.saved',
+            ));
             if (saved?.version) show(saved);
             else void load();
         } catch {
@@ -316,7 +371,7 @@ function MailPolicySection() {
         <section className="mt-5 rounded-xl border border-border bg-surface p-5" aria-busy={current.state === 'loading' || busy}>
             <h3 className="mb-1 text-sm font-semibold text-fg">{t('mailpolicy.title')}</h3>
             <p className="mb-4 text-sm text-fg-muted">{t('mailpolicy.desc')}</p>
-            <CurrentGate state={current.state} unknownKey="mailpolicy.unknown" onRetry={load} />
+            <CurrentGate state={current.state} unknownKey="mailpolicy.unreadable" onRetry={load} />
             {policy && (
                 <>
                     {notReloaded && (
@@ -324,7 +379,8 @@ function MailPolicySection() {
                             <ErrorBanner error={notReloaded} />
                             {notReloaded.vars?.detail && (
                                 <p className="mt-1.5 max-w-[75ch] break-words text-xs text-fg-muted">
-                                    {t('mailpolicy.reloadSaid')} <span className="font-mono text-fg">{notReloaded.vars.detail}</span>
+                                    {t(notReloaded.reason === 'check' || notReloaded.reason === 'reload' ? 'mailpolicy.postfixSaid' : 'mailpolicy.observed')}{' '}
+                                    <span className="font-mono text-fg">{notReloaded.vars.detail}</span>
                                 </p>
                             )}
                         </div>

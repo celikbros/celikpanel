@@ -531,7 +531,6 @@ func isValidCronSchedule(schedule string) bool {
 var cronMu sync.Mutex
 
 var (
-	errCronStateUnreadable = errors.New(transport.CronStateUnreadable)
 	errCronVersionRequired = errors.New(transport.CronVersionRequired)
 	errCronStateChanged    = errors.New(transport.CronStateChanged)
 )
@@ -581,7 +580,66 @@ func readCrontab(username string) (string, error) {
 	}
 	log.Printf("cron: the crontab of %s could not be read (exit status %d): %s",
 		username, exitCode, hostcmd.Bounded(strings.Join(strings.Fields(said), " "), 300))
-	return "", errCronStateUnreadable
+	return "", cronUnreadable(username, said)
+}
+
+// The line crontab prints when the server's access files refuse a user: for
+// the user it was asked about ("The user <name> cannot use this program
+// (crontab)", Debian and Ubuntu cron, also when root asks) or for the caller
+// ("You (<name>) are not allowed to use this program (crontab)").
+var cronRefusesUser = regexp.MustCompile(`(?i)(cannot use this program|not allowed to use this program)`)
+
+// cronAccessFile reads one of cron's access files. Swapped by tests.
+// cronAccessFile, cron'un erişim dosyalarından birini okur.
+var cronAccessFile = os.ReadFile
+
+// cronUnreadable is the unknown-state answer with what is known about why
+// (10 Oct 2026). The first line crontab printed travels as the detail. A cause
+// is named only when the Agent verified it itself: crontab said it refuses the
+// user AND /etc/cron.allow exists without that user, or /etc/cron.deny lists
+// the user and there is no cron.allow. Until then the Panel told the owner to
+// check that the service was running, which was not the cause.
+// cronUnreadable, nedeni hakkında bilinenle birlikte bilinmeyen-durum
+// yanıtıdır. Neden, yalnız Agent kendisi doğruladığında adlandırılır.
+func cronUnreadable(username, said string) error {
+	detail := ""
+	for _, raw := range strings.Split(said, "\n") {
+		if line := strings.Join(strings.Fields(raw), " "); line != "" {
+			detail = hostcmd.Bounded(line, 300)
+			break
+		}
+	}
+	cause := ""
+	if cronRefusesUser.MatchString(said) {
+		cause = cronAccessCause(username)
+	}
+	return errors.New(transport.UnreadableWithEvidence(transport.CronStateUnreadable, cause, detail))
+}
+
+func cronAccessLists(file, username string) (exists, listed bool) {
+	data, err := cronAccessFile(file)
+	if err != nil {
+		return false, false
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.TrimSpace(line) == username {
+			return true, true
+		}
+	}
+	return true, false
+}
+
+func cronAccessCause(username string) string {
+	if exists, listed := cronAccessLists("/etc/cron.allow", username); exists {
+		if !listed {
+			return transport.UnreadableCronAllow
+		}
+		return ""
+	}
+	if exists, listed := cronAccessLists("/etc/cron.deny", username); exists && listed {
+		return transport.UnreadableCronDeny
+	}
+	return ""
 }
 
 // cronVersion identifies the exact crontab bytes a list was read from.

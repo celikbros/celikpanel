@@ -54,8 +54,12 @@ import (
 //     waits for the next restart, which is the owner's decision.
 //
 // If the reload fails, the previous file is put back (only if the file still is
-// the one this write installed), reloaded, and the answer is a verified failure
-// carrying the first line the service's side said.
+// the one this write installed) and the service is made to read it; the answer
+// carries the first line the service's side said and one of four reasons, each
+// for what is verified (10 Oct 2026): the unit reloaded the previous file; the
+// unit's reload failed again but the server, asked directly, re-read it; which
+// settings the server runs with could not be established; or the previous file
+// could not be put back, and only then is a kept copy named.
 //
 // Bir veritabanı sunucusunun kendi yapılandırma dosyasını root olarak yazmak.
 // Bunlar sunucu sahibinin dosyalarıdır; bozuk bir dosya veritabanını bir sonraki
@@ -264,13 +268,39 @@ func applyDatabaseConfigUpdate(target dbConfigTarget, pre dnsFileSnapshot, conte
 	putBack := func() error {
 		return secureWriteConfigReplacingSnapshot(path, pre.Data, os.FileMode(pre.Mode), &installed)
 	}
+	// notRestored is the one answer for a previous file that is NOT back on
+	// disk: the copy named holds it.
 	notRestored := func(detail string, cause error) error {
 		log.Printf("config write: %s could not be put back after a refused change: %v", path, cause)
 		return &configRefusal{
 			code: transport.ConfigErrorReloadFailed, reason: transport.ConfigReloadNotRestored,
 			message: "the service did not accept the new configuration file and the previous one could not be put back; it is kept as " + backup,
-			detail:  detail, name: backup,
+			detail:  detail, name: backup, unit: target.unit,
 		}
+	}
+	// previousFileBack classifies a change that was not kept once the previous
+	// file IS back on disk, by what is verified about the running service
+	// (10 Oct 2026). Measured on three platforms: the unit's reload failed
+	// twice, the previous file was in place byte for byte, and the answer said
+	// it could not be put back and named a copy of that same file as "the
+	// other version". The copy is removed here: the file on disk is that file.
+	// previousFileBack, önceki dosya diskte yerine konduktan sonra tutulmayan
+	// bir değişikliği, çalışan hizmet hakkında doğrulanana göre sınıflandırır.
+	previousFileBack := func(detail string) *configRefusal {
+		_ = secureRemoveConfig(backup)
+		refusal := &configRefusal{
+			code: transport.ConfigErrorReloadFailed, detail: detail, unit: target.unit,
+			reason: dbConfigLoadPreviousFile(target, path, reload),
+		}
+		switch refusal.reason {
+		case transport.ConfigReloadRestored:
+			refusal.message = "the service could not reload with the new configuration file; the previous file is back in place and loaded"
+		case transport.ConfigReloadRestoredUnitFailed:
+			refusal.message = "the unit's reload failed with the new configuration file and with the previous one; the previous file is back in place, and the server, asked directly, re-read it and runs with the settings it had before"
+		default:
+			refusal.message = "the unit's reload failed with the new configuration file and with the previous one; the previous file is back in place, and which settings the server runs with could not be established"
+		}
+		return refusal
 	}
 
 	result := transport.UpdateConfigResponse{Version: configVersion(content), Backup: backup}
@@ -304,22 +334,7 @@ func applyDatabaseConfigUpdate(target dbConfigTarget, pre dnsFileSnapshot, conte
 			if restoreErr := putBack(); restoreErr != nil {
 				return none, notRestored(detail, restoreErr)
 			}
-			if againErr := reload(target.unit); againErr != nil {
-				log.Printf("config write: reload of %s with the restored %s failed too: %v", target.unit, path, againErr)
-				return none, &configRefusal{
-					code: transport.ConfigErrorReloadFailed, reason: transport.ConfigReloadNotRestored,
-					message: "the reload failed, the previous configuration file is back in place, and the reload with it failed as well; the refused file is kept as " + backup,
-					detail:  detail, name: backup,
-				}
-			}
-			// The file on disk is the previous one again, so the copy of it is
-			// no longer needed.
-			_ = secureRemoveConfig(backup)
-			return none, &configRefusal{
-				code: transport.ConfigErrorReloadFailed, reason: transport.ConfigReloadRestored,
-				message: "the service could not reload with the new configuration file; the previous file is back in place and loaded",
-				detail:  detail,
-			}
+			return none, previousFileBack(detail)
 		}
 		result.Applied = transport.ConfigAppliedReloaded
 		if target.kind == dbConfigPostgreSQL && state == dbUnitActive {
@@ -328,10 +343,12 @@ func applyDatabaseConfigUpdate(target dbConfigTarget, pre dnsFileSnapshot, conte
 				if err := putBack(); err != nil {
 					return none, notRestored(detail, err)
 				}
-				if err := reload(target.unit); err != nil {
-					return none, notRestored(detail, err)
+				// The previous file is back. Whether the server runs with it
+				// is classified the same way as after a failed reload.
+				back := previousFileBack(detail)
+				if back.reason != transport.ConfigReloadRestored {
+					return none, back
 				}
-				_ = secureRemoveConfig(backup)
 				refusal := configInvalid(transport.ConfigInvalidDaemon,
 					"PostgreSQL reported an error in the new postgresql.conf after reloading it; the previous file is back in place and loaded")
 				refusal.detail, refusal.line, refusal.name = detail, line, name
@@ -428,6 +445,41 @@ func dbConfigValidateWithDaemon(target dbConfigTarget, pre dnsFileSnapshot, cont
 	stderr, err := dbConfigRun(ctx, private, program,
 		"--defaults-file="+candidate, "--datadir="+private, "--help", "--verbose")
 	if err == nil {
+		// Exit status 0 is not acceptance (10 Oct 2026). Measured on Debian 13
+		// and Arch: `max_connections = plenty` exits 0 with
+		// "[Warning] ... option 'max_connections': unsigned value 0 adjusted
+		// to 10", and the server would start with 10. A value MariaDB says it
+		// will not use as written is refused with MariaDB's own line. Only
+		// that kind of warning counts: the same run also prints warnings that
+		// say nothing about the file (the empty private data directory has no
+		// mysql.plugin table; a stock Debian file sets expire_logs_days
+		// without a binary log). And a warning the file on the server already
+		// produces is not this change's: the current file is read the same
+		// way and what it already says is left out.
+		// Çıkış durumu 0 kabul değildir: MariaDB'nin yazıldığı gibi
+		// kullanmayacağını söylediği değer, MariaDB'nin kendi satırıyla
+		// reddedilir. Sunucudaki dosyanın zaten ürettiği uyarı bu değişikliğin
+		// değildir.
+		adjusted := mariadbValueWarnings(stderr)
+		if len(adjusted) == 0 {
+			return nil
+		}
+		already := map[string]bool{}
+		if current, currentErr := dbConfigRun(ctx, private, program,
+			"--defaults-file="+path, "--datadir="+private, "--help", "--verbose"); currentErr == nil {
+			for _, warning := range mariadbValueWarnings(current) {
+				already[warning.detail] = true
+			}
+		}
+		for _, warning := range adjusted {
+			if already[warning.detail] {
+				continue
+			}
+			refusal := configInvalid(transport.ConfigInvalidDaemon,
+				"MariaDB would not use a value in the new option file as it is written; nothing was changed")
+			refusal.detail, refusal.name = dbConfigLine(warning.detail, candidate, path), warning.name
+			return refusal
+		}
 		return nil
 	}
 	var exited *exec.ExitError
@@ -508,6 +560,31 @@ var (
 	mariadbFor      = regexp.MustCompile(`(?:for variable|for option|to) '([A-Za-z0-9_.-]+)'`)
 	mariadbLine     = regexp.MustCompile(`at line:? (\d+)`)
 )
+
+type mariadbValueWarning struct{ detail, name string }
+
+// What my_getopt prints when it reads a value it will not use as written: a
+// number it moves into range ("unsigned value 0 adjusted to 10", also signed
+// and floating point) and a boolean it does not recognise ("boolean value
+// 'maybe' wasn't recognized. Set to OFF."). Nothing else is a refusal.
+var mariadbValueWarningText = regexp.MustCompile(`^option '([A-Za-z0-9_.-]+)': .*(?:\badjusted to\b|wasn't recognized)`)
+
+// mariadbValueWarnings returns the [Warning] lines of a `--help --verbose` run
+// that say MariaDB changes a value of the option file.
+func mariadbValueWarnings(stderr string) []mariadbValueWarning {
+	var found []mariadbValueWarning
+	for _, raw := range strings.Split(stderr, "\n") {
+		_, message, ok := strings.Cut(raw, "[Warning] ")
+		if !ok {
+			continue
+		}
+		message = strings.TrimPrefix(strings.TrimSpace(message), "Buffered warning: ")
+		if match := mariadbValueWarningText.FindStringSubmatch(message); match != nil {
+			found = append(found, mariadbValueWarning{detail: message, name: match[1]})
+		}
+	}
+	return found
+}
 
 // mariadbConfigError picks what mariadbd said about the option file: its first
 // [ERROR] line, or the option-file reader's own "error:" line.
@@ -617,6 +694,98 @@ func dbConfigAskPostgreSQLAboutSettings(path string) (verdict, detail string, li
 		return dbDaemonRefused, dbConfigLine(parts[2], path, path), line, parts[1], restart
 	}
 	return dbDaemonRefused, dbConfigLine(first, path, path), 0, "", restart
+}
+
+// dbConfigLoadPreviousFile makes the running service read the previous file,
+// which is back on disk, and answers with the ConfigReload* reason that is
+// verified.
+//
+// The unit's reload first. If that fails too, nothing is known from it about
+// what the server runs: a reload command that fails part-way may have signalled
+// the server before it failed. Measured on Debian 13, Ubuntu 24.04 and Arch
+// with an owner's drop-in whose ExecReload signals PostgreSQL and then fails:
+// the first reload made the server read the NEW file, and only the second, also
+// "failed", made it read the previous one again. So the server is then told
+// directly and asked what it did: pg_reload_conf() over the local socket sends
+// the same signal the unit would, and after it
+//
+//   - pg_conf_load_time() must be later than the moment the signal was sent.
+//     PostgreSQL sets it only when a re-read of its configuration files got to
+//     the end without a syntax or value error; with such an error it applies
+//     nothing and leaves the time as it was;
+//   - pg_file_settings (postgresql.conf) or pg_hba_file_rules (pg_hba.conf)
+//     must report no error in the files that are on disk now;
+//   - the answer must be about this file (config_file / hba_file), not
+//     another cluster's.
+//
+// All three together are "the server re-read the previous file and runs with
+// the settings it had before the change". pg_file_settings.applied is not used
+// for that claim: it says what a re-read WOULD apply from the file, not what
+// is loaded. Anything less is the unknown reason, never a guess.
+//
+// dbConfigLoadPreviousFile, diskte yerine konmuş önceki dosyayı çalışan hizmete
+// okutur ve doğrulanan ConfigReload* gerekçesini döndürür. Birimin yeniden
+// yüklemesi yine başarısız olursa sunucuya doğrudan sinyal gönderilir ve ne
+// yüklediği sorulur; üç koşul birlikte sağlanmazsa yanıt "bilinmiyor"dur.
+func dbConfigLoadPreviousFile(target dbConfigTarget, path string, reload func(string) error) string {
+	againErr := reload(target.unit)
+	if againErr == nil {
+		return transport.ConfigReloadRestored
+	}
+	log.Printf("config write: reload of %s with the restored %s failed too: %v", target.unit, path, againErr)
+	if target.kind != dbConfigPostgreSQL && target.kind != dbConfigHBA {
+		return transport.ConfigReloadRestoredUnknown
+	}
+	if dbConfigPostgreSQLRereadVerified(target.kind, path) {
+		return transport.ConfigReloadRestoredUnitFailed
+	}
+	return transport.ConfigReloadRestoredUnknown
+}
+
+// dbConfigPostgreSQLRereadVerified sends the running PostgreSQL the reload
+// signal over the local socket and reports whether it verifiably re-read the
+// files that are on disk now without error. See dbConfigLoadPreviousFile.
+func dbConfigPostgreSQLRereadVerified(kind dbConfigKind, path string) bool {
+	setting := "config_file"
+	firstError := "SELECT 'error=' || sourceline || ':' || coalesce(name, '') || ':' || error FROM pg_file_settings " +
+		"WHERE error IS NOT NULL " +
+		"AND coalesce(name, '') NOT IN (SELECT name FROM pg_settings WHERE pending_restart) ORDER BY seqno LIMIT 1;"
+	if kind == dbConfigHBA {
+		setting = "hba_file"
+		firstError = "SELECT 'error=' || line_number || ':' || error FROM pg_hba_file_rules WHERE error IS NOT NULL ORDER BY line_number LIMIT 1;"
+	}
+	out, err := dbConfigPostgreSQLQuery(
+		"SELECT 'file=' || current_setting('" + setting + "');\n" +
+			"SELECT 'before=' || extract(epoch from clock_timestamp());\n" +
+			"SELECT 'signal=' || pg_reload_conf();\n" +
+			// The session takes up the re-read between statements; one second
+			// is far more than the postmaster needs to pass the signal on.
+			"SELECT 'waited=' || count(*) FROM (SELECT pg_sleep(1)) AS waited;\n" +
+			"SELECT 'loaded=' || extract(epoch from pg_conf_load_time());\n" +
+			firstError)
+	if err != nil {
+		log.Printf("config write: PostgreSQL could not be asked to read %s again: %s", path, hostcmd.Bounded(strings.Join(strings.Fields(hostcmd.Stderr(err)), " "), 300))
+		return false
+	}
+	values := map[string]string{}
+	for _, raw := range strings.Split(out, "\n") {
+		if name, value, ok := strings.Cut(strings.TrimSpace(raw), "="); ok {
+			if _, seen := values[name]; !seen {
+				values[name] = value
+			}
+		}
+	}
+	before, beforeErr := strconv.ParseFloat(values["before"], 64)
+	loaded, loadedErr := strconv.ParseFloat(values["loaded"], 64)
+	signalled := values["signal"] == "true" || values["signal"] == "t"
+	reread := beforeErr == nil && loadedErr == nil && loaded >= before
+	_, refused := values["error"]
+	verified := values["file"] == path && signalled && reread && !refused
+	if !verified {
+		log.Printf("config write: PostgreSQL did not confirm that it read %s again (same file %t, signal sent %t, re-read after the signal %t, error reported %t)",
+			path, values["file"] == path, signalled, reread, refused)
+	}
+	return verified
 }
 
 func dbConfigAnswer(out string) (file, firstError string) {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -42,13 +43,29 @@ var configInvalidMessages = map[string]string{
 
 const configInvalidGenericMessage = "Nothing is changed: the new configuration was refused. Correct it and save again."
 
+// A reload failed after the file was written. Each sentence says only what the
+// Agent verified (10 Oct 2026). Measured on three platforms: the previous file
+// was back in place and the answer said it could not be put back. <unit> is
+// replaced by the unit the Agent names.
+// Dosya yazıldıktan sonra yeniden yükleme başarısız oldu. Her cümle yalnız
+// Agent'ın doğruladığını söyler.
 var configReloadFailedMessages = map[string]string{
 	transport.ConfigReloadRestored: "The change was not kept: the service could not reload with the new file, so CelikPanel put the previous file back and the service is running with it. " +
 		"What the service said is below. Correct the setting and save again.",
+	transport.ConfigReloadRestoredUnitFailed: "The change was not kept, and the previous file is back in place. The service's systemd unit could not reload, with the new file and again with the previous one, " +
+		"so CelikPanel asked the server directly: it read the previous file again and is running with the settings it had before your change. " +
+		"What the unit's reload said is below. It failed with the previous file too, so the cause is not only this change. " +
+		"The server owner runs sudo systemctl reload <unit> on the server, corrects what it reports, and then saves the change here again.",
+	transport.ConfigReloadRestoredUnknown: "The change was not kept, and the previous file is back in place. The service's systemd unit could not reload, with the new file and again with the previous one, " +
+		"and CelikPanel could not establish which settings the service is running with now: a reload that fails part-way may already have made it read the new file. " +
+		"What the unit's reload said is below. The server owner runs sudo systemctl reload <unit> on the server, corrects what it reports, and reloads this page.",
 	transport.ConfigReloadNotRestored: "The service could not reload with the new file, and CelikPanel could not put the previous file back with certainty. " +
-		"The server owner checks the file on the server; the copy named below holds the other version. " +
-		"Then reload the service (sudo systemctl reload <service>) and reload this page.",
+		"The server owner checks the file on the server; the copy named below holds the previous file. " +
+		"Then reload the service (sudo systemctl reload <unit>) and reload this page.",
 }
+
+// configUnitName is a unit name the Agent may put into a sentence.
+var configUnitName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9@_.:-]{0,127}$`)
 
 func writeConfigRPCError(w http.ResponseWriter, rpcErr *transport.ConfigRPCError) {
 	if rpcErr == nil {
@@ -82,6 +99,11 @@ func writeConfigRPCError(w http.ResponseWriter, rpcErr *transport.ConfigRPCError
 		if !known {
 			sentence, reason = configReloadFailedMessages[transport.ConfigReloadNotRestored], transport.ConfigReloadNotRestored
 		}
+		unit := "<service>"
+		if configUnitName.MatchString(rpcErr.Unit) {
+			unit = rpcErr.Unit
+		}
+		sentence = strings.ReplaceAll(sentence, "<unit>", unit)
 		writeConfigRefusal(w, http.StatusBadGateway, errCodeConfigReloadFailed, sentence, reason, rpcErr)
 	default:
 		// Unknown codes are protocol failures. Never downgrade them because
@@ -105,6 +127,9 @@ func writeConfigRefusal(w http.ResponseWriter, status int, code, message, reason
 	}
 	if name := strings.TrimSpace(rpcErr.Name); name != "" && len(name) <= 200 {
 		vars["name"] = name
+	}
+	if configUnitName.MatchString(rpcErr.Unit) {
+		vars["unit"] = rpcErr.Unit
 	}
 	if len(vars) == 0 {
 		vars = nil

@@ -38,10 +38,16 @@ func newMailSubmissionTestEnvironment(t *testing.T, withDovecot bool) *mailSubmi
 	}
 
 	commandLog := filepath.Join(root, "commands.log")
+	// The restarts are judged by the daemons, not by systemctl's exit status
+	// (mail_service_verify.go), so this host answers the questions that asks:
+	// a restart gives Dovecot a new main process and Postfix a new master.
 	writeMailSubmissionTestCommand(t, binDir, "postconf", `
 if [ "$1" = "-M" ] && [ -n "$BLOCK_POSTCONF_STARTED" ]; then
   : > "$BLOCK_POSTCONF_STARTED"
   while [ ! -e "$BLOCK_POSTCONF_RELEASE" ]; do :; done
+fi
+if [ "$1" = "-h" ] && [ "$2" = "queue_directory" ]; then
+  printf '%s\n' "$MAIL_SUBMISSION_STATE/spool"
 fi
 exit 0`)
 	writeMailSubmissionTestCommand(t, binDir, "systemctl", `
@@ -50,7 +56,37 @@ if [ "$1" = "restart" ] && [ "$2" = "dovecot" ] && [ -n "$FAIL_DOVECOT_RESTART_O
   printf '%s\n' 'synthetic dovecot restart failure' >&2
   exit 1
 fi
+if [ "$1" = "restart" ]; then
+  n=0
+  read n < "$MAIL_SUBMISSION_STATE/$2.restarts"
+  n=$((n + 1))
+  printf '%s\n' "$n" > "$MAIL_SUBMISSION_STATE/$2.restarts"
+  if [ "$2" = "postfix" ]; then
+    printf '%s\n' "$((4000 + n))" > "$MAIL_SUBMISSION_STATE/spool/pid/master.pid"
+  fi
+fi
+if [ "$1" = "show" ]; then
+  n=0
+  read n < "$MAIL_SUBMISSION_STATE/dovecot.restarts"
+  printf 'ActiveState=active\nSubState=running\nMainPID=%s\n' "$((7000 + n))"
+fi
 exit 0`)
+	writeMailSubmissionTestCommand(t, binDir, "postfix", "exit 0")
+	stateDir := filepath.Join(root, "state")
+	if err := os.MkdirAll(filepath.Join(stateDir, "spool", "pid"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for name, content := range map[string]string{
+		"dovecot.restarts": "0\n", "postfix.restarts": "0\n", filepath.Join("spool", "pid", "master.pid"): "4000\n",
+	} {
+		if err := os.WriteFile(filepath.Join(stateDir, name), []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("MAIL_SUBMISSION_STATE", stateDir)
+	previousSleep := mailServiceSleep
+	mailServiceSleep = func(time.Duration) {}
+	t.Cleanup(func() { mailServiceSleep = previousSleep })
 	if withDovecot {
 		writeMailSubmissionTestCommand(t, binDir, "doveconf", "exit 0")
 	}
@@ -188,16 +224,23 @@ func TestConfigureMailSubmissionSucceedsAndReusesSameBinding(t *testing.T) {
 		t.Fatalf("postfix login map=%q", loginMap)
 	}
 	log := readMailSubmissionCommandLog(t, environment.commandLog)
-	for _, command := range []string{
-		"doveconf -n",
-		"postconf -M submission/inet=",
-		"postconf -M smtps/inet=",
-		"systemctl restart dovecot",
-		"systemctl restart postfix",
+	// Two same-binding attempts. doveconf reads the configuration when it is
+	// written and again before the restart; each restart is preceded by the
+	// service's own check and followed by the reading that verifies it.
+	for command, want := range map[string]int{
+		"doveconf -n":                  4,
+		"postconf -M submission/inet=": 2,
+		"postconf -M smtps/inet=":      2,
+		"systemctl restart dovecot":    2,
+		"systemctl restart postfix":    2,
+		"postfix check":                2,
 	} {
-		if strings.Count(log, command) != 2 {
-			t.Fatalf("command %q was not executed once per same-binding attempt:\n%s", command, log)
+		if strings.Count(log, command) != want {
+			t.Fatalf("command %q ran %d time(s), want %d over two same-binding attempts:\n%s", command, strings.Count(log, command), want, log)
 		}
+	}
+	if !strings.Contains(log, "postfix status") || !strings.Contains(log, "systemctl show dovecot.service") {
+		t.Fatalf("the restarts were not verified against the daemons:\n%s", log)
 	}
 }
 

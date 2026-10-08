@@ -1622,4 +1622,10 @@ export const trScreens: Record<ScreenKey, string> = {
     'mail.healthChecking': "Teslim edilebilirlik kontrol ediliyor…",
     'mail.healthUnknown': "Bu alan adının teslim edilebilirlik denetimleri sunucudan okunamadı; bu yüzden sonuç gösterilmiyor. Bu, bir denetimin başarısız olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin.",
     // --- end of batch 2b ---
+    // --- set1 corrections (10 Oct 2026): a reload is verified, never inferred; no cause is
+    // named that was not verified; what the server holds after a failed reload ---
+    'cron.unknown.cron_allow': "CelikPanel bu domain’in zamanlanmış görevlerini okuyamıyor ve değiştiremiyor: bu sunucu crontab kullanımını /etc/cron.allow ile kısıtlıyor ve sitenin sistem kullanıcısı o dosyada yok. Hiçbir şey değiştirilmedi; sunucudaki görevlere dokunulmadı. Sunucu crontab’ı bu şekilde kısıtladığı sürece CelikPanel bu kullanıcının görevlerini yönetemez. Sunucu sahibi kullanıcının adını /etc/cron.allow dosyasına ayrı bir satır olarak ekler; sonra bu liste yeniden okunabilir.",
+    'cron.unknown.cron_deny': "CelikPanel bu domain’in zamanlanmış görevlerini okuyamıyor ve değiştiremiyor: bu sunucudaki /etc/cron.deny dosyası sitenin sistem kullanıcısını içeriyor; bu yüzden crontab onu reddediyor. Hiçbir şey değiştirilmedi; sunucudaki görevlere dokunulmadı. Sunucu sahibi kullanıcının satırını /etc/cron.deny dosyasından çıkarır; sonra bu liste yeniden okunabilir.",
+    'cron.unknown.said': "Sunucunun crontab programının yanıtı: {detail}",
+    // --- end of set1 corrections ---
 };

@@ -63,7 +63,7 @@ func installFakePostfix(t *testing.T, values map[string]string) *fakePostfix {
 	t.Cleanup(func() { mailPolicyLookPath, mailPolicyPostconf, mailPolicyReload = oldLook, oldPostconf, oldReload })
 	mailPolicyLookPath = func(string) (string, error) { return "/usr/sbin/postconf", nil }
 	mailPolicyPostconf = fake.postconf
-	mailPolicyReload = func() error { fake.reloads++; return nil }
+	mailPolicyReload = func() (string, error) { fake.reloads++; return mailServiceReloaded, nil }
 	return fake
 }
 

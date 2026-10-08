@@ -33,8 +33,12 @@ func (f *fakeCrontab) install(_ string, content string) error {
 
 func installFakeCrontab(t *testing.T, fake *fakeCrontab) *fakeCrontab {
 	t.Helper()
-	oldList, oldInstall, oldLook := cronListCrontab, cronInstallCrontab, cronLookPath
-	t.Cleanup(func() { cronListCrontab, cronInstallCrontab, cronLookPath = oldList, oldInstall, oldLook })
+	oldList, oldInstall, oldLook, oldAccess := cronListCrontab, cronInstallCrontab, cronLookPath, cronAccessFile
+	t.Cleanup(func() {
+		cronListCrontab, cronInstallCrontab, cronLookPath, cronAccessFile = oldList, oldInstall, oldLook, oldAccess
+	})
+	// The test host's own /etc/cron.allow and cron.deny are not part of a test.
+	cronAccessFile = func(string) ([]byte, error) { return nil, errors.New("no such file") }
 	cronListCrontab = fake.list
 	cronInstallCrontab = fake.install
 	cronLookPath = func(string) (string, error) { return "/usr/bin/crontab", nil }
@@ -80,7 +84,7 @@ func TestReadCrontabTellsNoCrontabFromAFailedRead(t *testing.T) {
 			installFakeCrontab(t, &fake)
 			content, err := readCrontab(cronTestUser)
 			if tc.unknown {
-				if err == nil || err.Error() != transport.CronStateUnreadable || content != "" {
+				if !cronUnreadableAnswer(err) || content != "" {
 					t.Fatalf("readCrontab = %q, %v; want the fixed unreadable error", content, err)
 				}
 				return
@@ -97,7 +101,7 @@ func TestListCronJobsReportsAFailedReadAsAnError(t *testing.T) {
 	installFakeCrontab(t, &fakeCrontab{stderr: "crontab: can't open your crontab file\n", exitCode: 1})
 	var resp ListCronJobsResponse
 	err := listCronJobsFor(cronTestUser, &resp)
-	if err == nil || err.Error() != transport.CronStateUnreadable {
+	if !cronUnreadableAnswer(err) {
 		t.Fatalf("err = %v, want %q", err, transport.CronStateUnreadable)
 	}
 	if resp.Jobs != nil || resp.Version != "" {
@@ -158,7 +162,7 @@ func TestCronChangesNeverInstallACrontabBuiltFromAFailedRead(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			fake := installFakeCrontab(t, &fakeCrontab{stderr: "crontab: can't open your crontab file\n", exitCode: 1})
 			err := change()
-			if err == nil || err.Error() != transport.CronStateUnreadable {
+			if !cronUnreadableAnswer(err) {
 				t.Fatalf("err = %v, want %q", err, transport.CronStateUnreadable)
 			}
 			if len(fake.installs) != 0 {

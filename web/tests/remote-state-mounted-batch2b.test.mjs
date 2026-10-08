@@ -336,7 +336,7 @@ const table = [
   {
     screen: 'mail queue', Component: PostfixManagement, props: { onBack() {} },
     read: '/api/v1/postfix/queue', negative: ['postfix.empty', 'postfix.active', 'postfix.deferred'],
-    checking: 'postfix.queue.checking', unknown: 'postfix.queue.unknown',
+    checking: 'postfix.queue.checking', unknown: 'postfix.queue.unreadable',
     known: [json([]), 'postfix.empty'], off: ['postfix.flush', 'postfix.deleteAll'],
   },
 ];
@@ -773,5 +773,80 @@ test('the screens of this batch are off the ratchet allow-list for good', () => 
   }
   for (const name of ['configFile', 'dbConfigText', 'managedServices', 'mailSetup']) {
     assert.equal(actual[`src/lib/${name}.ts`], undefined);
+  }
+});
+
+// --- Corrections from the first native measurement of settings writes (10 Oct 2026) ---
+
+test('mail queue: an unreadable queue shows what Postfix said and names no cause of its own', async () => {
+  serve({ '/api/v1/postfix/queue': () => Response.json({ error: 'x', code: 'MAIL_QUEUE_UNREADABLE', reason: 'postfix_config', vars: { detail: 'bad numerical configuration: default_process_limit = 200 # raised' } }, { status: 502 }) });
+  try {
+    await mount(PostfixManagement, { onBack() {} });
+    assert.ok(has('postfix.queue.unreadable.postfix_config'), 'the sentence for the cause the server verified is missing');
+    assert.ok(has('postfix.queue.said') && has('bad numerical configuration: default_process_limit'), 'the line Postfix printed is not shown');
+    assert.ok(!has('postfix.queue.unknown'), 'the sentence that tells the owner to check that Postfix is running is back');
+    assert.ok(!has('postfix.empty'));
+  } finally {
+    await cleanup();
+  }
+});
+
+test('mail policy: the not-reloaded answer carries the saved values, so they are shown without a second read', async () => {
+  for (const [code, reason, label] of [
+    ['MAIL_POLICY_NOT_RELOADED', 'check', 'mailpolicy.postfixSaid'],
+    ['MAIL_POLICY_RELOAD_UNKNOWN', undefined, 'mailpolicy.observed'],
+  ]) {
+    serve({ '/api/v1/mail/policy': () => Response.json({ message_size_mb: 9, dnsbl_zones: [], outbound_rate_limit: 0, version: 'mp1-a' }) },
+      { 'PUT /api/v1/mail/policy': () => Response.json({
+        error: 'x', code, reason, mutation_applied: true, partial_success: true, vars: { detail: 'postfix: fatal: bad numerical configuration' },
+        policy: { message_size_mb: 50, dnsbl_zones: [], outbound_rate_limit: 46, version: 'mp1-b' },
+      }, { status: 502 }) });
+    try {
+      await mount(PostfixManagement, { onBack() {} });
+      const size = () => tree.root.findAll((node) => node.type === 'input' && node.props.type === 'number')[0];
+      const before = reads('/api/v1/mail/policy');
+      await type(size(), '50');
+      await press(buttons('mailpolicy.save')[0]);
+      assert.ok(has('err.' + code) && has(label) && has('postfix: fatal: bad numerical configuration'), code + ' is not shown with its line');
+      assert.equal(size().props.value, 50, 'the form does not show what main.cf holds now');
+      assert.equal(reads('/api/v1/mail/policy'), before, 'the saved values were read a second time although the answer carried them');
+      assert.deepEqual(globalThis.currentTest.toasts.filter(([kind]) => kind === 'success'), [], 'a save Postfix did not take is announced as applied');
+    } finally {
+      await cleanup();
+    }
+  }
+});
+
+test('mail policy: "applied" is said only for a verified reload; a stopped Postfix and an unchanged policy say so', async () => {
+  for (const [applied, key] of [['reloaded', 'mailpolicy.saved'], ['not_running', 'mailpolicy.saved.notRunning'], ['unchanged', 'mailpolicy.saved.unchanged'], [undefined, 'mailpolicy.saved']]) {
+    serve({ '/api/v1/mail/policy': () => Response.json({ message_size_mb: 9, dnsbl_zones: [], outbound_rate_limit: 0, version: 'mp1-a' }) },
+      { 'PUT /api/v1/mail/policy': () => Response.json({ success: true, applied, policy: { message_size_mb: 50, dnsbl_zones: [], outbound_rate_limit: 0, version: 'mp1-b' } }) });
+    try {
+      await mount(PostfixManagement, { onBack() {} });
+      const size = () => tree.root.findAll((node) => node.type === 'input' && node.props.type === 'number')[0];
+      await type(size(), '50');
+      await press(buttons('mailpolicy.save')[0]);
+      assert.deepEqual(globalThis.currentTest.toasts, [['success', key]], 'applied=' + applied);
+    } finally {
+      await cleanup();
+    }
+  }
+});
+
+test('configuration editor: a failed reload says what the server verified, and names a copy only when the file is not back', async () => {
+  for (const [reason, shownName] of [['restored_unit_reload_failed', false], ['restored_running_unknown', false], ['not_restored', true]]) {
+    serve({}, { 'POST /api/v1/config': json({ error: 'x', code: 'CONFIG_RELOAD_FAILED', reason, vars: { detail: 'Failed to reload pooler.service', unit: 'postgresql@17-main', name: '/etc/postgresql/17/main/postgresql.conf.celikpanel-backup-1' } }, 502) });
+    try {
+      await mount(PostgreSQLSettings, pgPath);
+      await type(valueOf('max_connections'), '300');
+      await press(saveButton());
+      const key = reason === 'not_restored' ? 'dbconf.reloadFailed.notRestored' : 'dbconf.reloadFailed.' + reason;
+      assert.ok(has(key) && has('Failed to reload pooler.service') && has('postgresql@17-main'), reason + ' is not shown with its own sentence');
+      assert.equal(reason !== 'not_restored' && has('dbconf.reloadFailed.notRestored'), false, reason + ' is shown as a file that could not be put back');
+      assert.equal(text().split('celikpanel-backup-1').length > 2, shownName, reason + ': the line that names a kept copy');
+      if (reason !== 'not_restored') assert.equal(valueOf('max_connections').props.value, '300');
+    } finally {
+      await cleanup();
+    }
   }
 });

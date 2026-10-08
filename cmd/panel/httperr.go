@@ -160,6 +160,13 @@ const (
 	// Posta politikası main.cf'e yazıldı ancak Postfix yeniden yüklenemedi;
 	// önceki değerlerle çalışmayı sürdürüyor.
 	errCodeMailPolicyNotReloaded = "MAIL_POLICY_NOT_RELOADED"
+	// The mail policy was written to main.cf, but whether Postfix took it
+	// could not be established: a command that checks or reloads Postfix could
+	// not be run or did not answer. Unknown, not a verified failure and never
+	// a success; `mutation_applied` is true (10 Oct 2026).
+	// Posta politikası main.cf'e yazıldı, ancak Postfix'in onu alıp almadığı
+	// belirlenemedi. Bilinmeyen sonuç; doğrulanmış hata ya da başarı değildir.
+	errCodeMailPolicyReloadUnknown = "MAIL_POLICY_RELOAD_UNKNOWN"
 	// The mail queue could not be read, so what it holds is unknown. It is
 	// never answered as an empty queue (9 Oct 2026).
 	// Posta kuyruğu okunamadı; ne tuttuğu bilinmiyor. Asla boş kuyruk diye

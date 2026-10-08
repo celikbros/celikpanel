@@ -406,6 +406,13 @@ export const en = {
     'err.MAIL_POLICY_NOT_RELOADED': "The mail policy was saved to /etc/postfix/main.cf, but Postfix could not be reloaded, so Postfix is still running with the previous settings. Nothing was rolled back. On the server, run sudo postfix check to see what Postfix objects to, correct it, then run sudo systemctl reload postfix. The values shown below are the saved ones.",
     'err.CRON_JOB_AMBIGUOUS': "This task stands twice in the crontab, so CelikPanel cannot tell which line to change and changed nothing. Remove one of the two lines on the server (sudo crontab -u <site user> -e), then reload this list.",
     // --- end of batch 2b ---
+    // --- set1 corrections (10 Oct 2026): a reload is verified, never inferred; no cause is
+    // named that was not verified; what the server holds after a failed reload ---
+    'err.MAIL_POLICY_NOT_RELOADED.check': "Saved to /etc/postfix/main.cf, but Postfix was not reloaded: its own check refuses the configuration. A running Postfix keeps the settings it had before, so the saved values are not in effect. The line it names is below and may be one this page did not write. Nothing was rolled back. On the server, correct that line, run sudo postfix check until it prints no error, then run sudo postfix reload. The values shown below are the saved ones.",
+    'err.MAIL_POLICY_NOT_RELOADED.reload': "Saved to /etc/postfix/main.cf, and Postfix’s own check accepts the file, but the reload failed, so Postfix has not taken the saved values. Nothing was rolled back. On the server, run sudo postfix reload and read what it prints. The values shown below are the saved ones.",
+    'err.MAIL_POLICY_NOT_RELOADED.verify': "Saved to /etc/postfix/main.cf, but Postfix was no longer running after the reload, so it is not handling mail. Nothing was rolled back. On the server, run sudo postfix check, start Postfix (sudo systemctl start postfix) and confirm with sudo postfix status. The values shown below are the saved ones.",
+    'err.MAIL_POLICY_RELOAD_UNKNOWN': "Saved to /etc/postfix/main.cf, but CelikPanel could not establish whether Postfix took the saved values: a command that checks or reloads Postfix could not be run or did not answer in time. This is not a verified failure; Postfix may already be running with them. Nothing was rolled back. On the server, run sudo postfix status, then sudo postfix reload. The values shown below are the saved ones.",
+    // --- end of set1 corrections ---
 } as const;
 
 export type ShellKey = keyof typeof en;

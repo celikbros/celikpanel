@@ -89,16 +89,29 @@ export function FieldRefusal({ id, service, refusal }: { id: string; service: st
     );
 }
 
+const reloadFailedSentences: Record<string, TranslationKey> = {
+    restored: 'dbconf.reloadFailed.restored',
+    restored_unit_reload_failed: 'dbconf.reloadFailed.restored_unit_reload_failed',
+    restored_running_unknown: 'dbconf.reloadFailed.restored_running_unknown',
+};
+
 function refusalSentence(refusal: ApiError, service: string, t: ReturnType<typeof useI18n>['t']): { text: string; failure: boolean; unknown: boolean } {
-    const vars = { service, name: refusal.vars?.name ?? '' };
+    const vars = { service, name: refusal.vars?.name ?? '', unit: refusal.vars?.unit || '<unit>' };
     if (refusal.code === 'CONFIG_INVALID') {
         const key = `dbconf.refused.${refusal.reason ?? ''}` as TranslationKey;
         const text = t(key, vars);
         return { text: text === key ? t('dbconf.refused.other', vars) : text, failure: false, unknown: false };
     }
     if (refusal.code === 'CONFIG_RELOAD_FAILED') {
+        // One sentence per reason the server verified (10 Oct 2026): the
+        // previous file back and reloaded, back with the server confirmed on
+        // its previous settings, back with the running settings unknown. Only
+        // a file that could not be put back says so; that is also what a
+        // reason this screen does not know falls back to.
+        // Sunucunun doğruladığı her gerekçe için bir cümle; yalnız geri
+        // konamayan dosya "geri konamadı" der.
         return {
-            text: t(refusal.reason === 'restored' ? 'dbconf.reloadFailed.restored' : 'dbconf.reloadFailed.notRestored', vars),
+            text: t(reloadFailedSentences[refusal.reason ?? ''] ?? 'dbconf.reloadFailed.notRestored', vars),
             failure: true,
             unknown: false,
         };
@@ -157,7 +170,7 @@ export function ConfigSaveNotices({
                             <span className="font-mono text-fg">{detail}</span>
                         </p>
                     )}
-                    {refusal.code === 'CONFIG_RELOAD_FAILED' && refusal.reason !== 'restored' && refusal.vars?.name && (
+                    {refusal.code === 'CONFIG_RELOAD_FAILED' && !refusal.reason?.startsWith('restored') && refusal.vars?.name && (
                         <p className="mt-1.5 break-all font-mono text-xs text-fg">{refusal.vars.name}</p>
                     )}
                     {unknown && (

@@ -53,8 +53,22 @@ func (p *Panel) handlePostfixQueue(w http.ResponseWriter, r *http.Request) {
 // The queue could not be read: what happened, that nothing was changed, who
 // acts and the action (D-024). The Agent's own line stays in its log.
 // Kuyruk okunamadı: ne oldu, hiçbir şeyin değişmediği, kim işlem yapar ve eylem.
-const mailQueueUnreadableMessage = "The mail queue could not be read from Postfix, so it is not shown. This does not mean the queue is empty. Nothing was changed. " +
-	"Try again; if it keeps failing, the server owner checks that Postfix is running (sudo systemctl status postfix)."
+//
+// No cause is asserted that was not verified (10 Oct 2026). The sentence used
+// to end "the server owner checks that Postfix is running"; measured, a
+// stopped Postfix does not make the queue unreadable (postqueue then reads it
+// directly), and the one measured cause was a main.cf Postfix refuses.
+// Doğrulanmamış bir neden ileri sürülmez. Durmuş bir Postfix kuyruğu okunamaz
+// yapmaz; ölçülen tek neden Postfix'in reddettiği bir main.cf idi.
+const mailQueueUnreadableMessage = "The mail queue could not be read, so it is not shown. This does not mean the queue is empty. Nothing was changed. " +
+	"CelikPanel has not established why; what Postfix's queue program said is shown with this message when it said anything. " +
+	"Try again. If it keeps failing, the server owner runs sudo postqueue -j on the server, which prints the same reason."
+
+var mailQueueUnreadableCauses = map[string]string{
+	transport.UnreadablePostfixConfig: "The mail queue could not be read because Postfix refuses its own configuration: a setting in /etc/postfix/main.cf or master.cf has an error, and Postfix's programs stop on it. " +
+		"What Postfix said about it is shown with this message. Nothing was changed, and this does not mean the queue is empty. " +
+		"The server owner corrects that setting, runs sudo postfix check until it prints no error, then reloads this page.",
+}
 
 // writeMailQueueReadError answers a failed queue read. The Agent's known
 // "could not be read" becomes 502 MAIL_QUEUE_UNREADABLE; anything else keeps
@@ -62,12 +76,23 @@ const mailQueueUnreadableMessage = "The mail queue could not be read from Postfi
 // writeMailQueueReadError, başarısız bir kuyruk okumasını yanıtlar; hiçbiri boş
 // liste değildir.
 func writeMailQueueReadError(w http.ResponseWriter, err error) {
-	if !agentAnsweredExactly(err, transport.PostfixQueueUnreadable) {
+	known, cause, said := agentUnreadableEvidence(err, transport.PostfixQueueUnreadable)
+	if !known {
 		writeServerError(w, err)
 		return
 	}
-	log.Printf("[502][mail queue] could not be read")
-	writeCodedError(w, http.StatusBadGateway, errCodeMailQueueUnreadable, mailQueueUnreadableMessage, "")
+	message, verified := mailQueueUnreadableCauses[cause]
+	if !verified {
+		message, cause = mailQueueUnreadableMessage, ""
+	}
+	var vars map[string]string
+	if said = boundedAgentDiagnostic(said); said != "" {
+		vars = map[string]string{"detail": said}
+	}
+	log.Printf("[502][mail queue] could not be read %s", cause)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusBadGateway)
+	_ = json.NewEncoder(w).Encode(apiErrorBody{Error: message, Code: errCodeMailQueueUnreadable, Reason: cause, Vars: vars})
 }
 
 // handlePostfixSummary returns the real queue counts by status.

@@ -138,7 +138,19 @@ func (a *Agent) UpdateConfig(args *transport.UpdateConfigArgs, reply *transport.
 		if a.systemdMgr == nil {
 			reload = func(string) error { return errors.New("systemd manager unavailable") }
 		} else {
-			reload = a.systemdMgr.Reload
+			reload = func(unit string) error {
+				// Postfix is reloaded by its own command and the outcome is
+				// verified (mail_service_verify.go, 10 Oct 2026): on Ubuntu
+				// `systemctl reload postfix` reloads a wrapper unit and exits
+				// 0 whatever happened to the daemon. A stopped Postfix is left
+				// stopped and reads the file when it starts.
+				// Postfix kendi komutuyla yeniden yüklenir ve sonuç doğrulanır.
+				if unit == "postfix" {
+					_, err := applyPostfixVerified(runMailTLSCommand, mailServiceReload)
+					return err
+				}
+				return a.systemdMgr.Reload(unit)
+			}
 		}
 	}
 	outcome, err := updateManagedConfig(path, []byte(args.Content), args.Version, reload)

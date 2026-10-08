@@ -190,10 +190,15 @@ func TestMailQueueThatCouldNotBeReadIsNotAnEmptyQueue(t *testing.T) {
 			if recorder.Code != http.StatusBadGateway || body.Code != errCodeMailQueueUnreadable {
 				t.Fatalf("answer = %d %+v", recorder.Code, body)
 			}
-			for _, part := range []string{"could not be read", "does not mean the queue is empty", "Nothing was changed", "sudo systemctl status postfix"} {
+			for _, part := range []string{"could not be read", "does not mean the queue is empty", "Nothing was changed", "has not established why", "sudo postqueue -j"} {
 				if !strings.Contains(body.Error, part) {
 					t.Errorf("guidance lacks %q: %q", part, body.Error)
 				}
+			}
+			// No cause is asserted that was not verified: a stopped Postfix
+			// does not make the queue unreadable (set1, 2026-10-08).
+			if strings.Contains(body.Error, "is running") || strings.Contains(body.Error, "systemctl status") {
+				t.Errorf("guidance names a cause nobody verified: %q", body.Error)
 			}
 		})
 		t.Run(route.name+": another Agent failure is not an empty queue either", func(t *testing.T) {
@@ -221,7 +226,7 @@ func TestMailQueueThatCouldNotBeReadIsNotAnEmptyQueue(t *testing.T) {
 // and the save was answered as a success.
 func TestMailPolicyWrittenButNotReloadedIsAVerifiedFailureAfterAChange(t *testing.T) {
 	agent := &mailPolicyTestAgent{set: transport.MailPolicyResponse{
-		Code: transport.MailPolicyNotReloaded, Error: "x",
+		Code: transport.MailPolicyNotReloaded, Error: "x", Stage: transport.MailPolicyStageReload,
 		Reason: "Job for postfix.service failed because the control process exited with error code.",
 		Policy: transport.MailPolicy{MessageSizeMB: 50, Version: "mp1-next"},
 	}}
@@ -236,8 +241,8 @@ func TestMailPolicyWrittenButNotReloadedIsAVerifiedFailureAfterAChange(t *testin
 	if !body.MutationApplied || !body.PartialSuccess {
 		t.Fatalf("the answer does not say main.cf was changed: %+v", body)
 	}
-	for _, part := range []string{"saved to /etc/postfix/main.cf", "could not be reloaded", "still running with the previous settings",
-		"Nothing was rolled back", "server owner", "sudo postfix check", "sudo systemctl reload postfix", "Reload this page"} {
+	for _, part := range []string{"saved to /etc/postfix/main.cf", "the reload failed", "has not taken the saved values",
+		"Nothing was rolled back", "server owner", "sudo postfix reload", "Reload this page"} {
 		if !strings.Contains(body.Error, part) {
 			t.Errorf("guidance lacks %q: %q", part, body.Error)
 		}

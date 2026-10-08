@@ -60,12 +60,43 @@ const (
 	MailPolicyRestrictionsUnmanaged = "mail_policy_restrictions_unmanaged"
 	// postconf refused the write; this request left main.cf as it was.
 	MailPolicyWriteFailed = "mail_policy_write_failed"
-	// The values were written to main.cf, but Postfix could not be reloaded and
-	// still runs with the previous ones. Policy is what main.cf holds now, with
-	// its version; Reason is the first line the reload said, bounded.
-	// Değerler main.cf'e yazıldı ancak Postfix yeniden yüklenemedi ve önceki
-	// değerlerle çalışıyor. Policy, main.cf'in şimdi tuttuğudur.
+	// The values were written to main.cf, and Postfix verifiably did not take
+	// them: its own check refuses the configuration, its reload failed, or its
+	// master stopped. Policy is what main.cf holds now, with its version; Stage
+	// says which (a MailPolicyStage* value); Reason is the one line Postfix
+	// said, bounded.
+	// Değerler main.cf'e yazıldı ve Postfix'in onları almadığı doğrulandı.
+	// Policy, main.cf'in şimdi tuttuğudur; Stage hangi adım olduğunu söyler.
 	MailPolicyNotReloaded = "mail_policy_not_reloaded"
+	// The values were written to main.cf, but whether Postfix took them could
+	// not be established (a command could not be run or did not answer). Not
+	// a verified failure and never a success (10 Oct 2026).
+	// Değerler main.cf'e yazıldı, ancak Postfix'in onları alıp almadığı
+	// belirlenemedi. Doğrulanmış hata değildir, başarı hiç değildir.
+	MailPolicyReloadUnknown = "mail_policy_reload_unknown"
+)
+
+// Where a mail policy reload stopped (MailPolicyResponse.Stage).
+// Posta politikası yeniden yüklemesinin durduğu adım.
+const (
+	// `postfix check` refuses main.cf or master.cf as they are now.
+	MailPolicyStageCheck = "check"
+	// `postfix reload` failed.
+	MailPolicyStageReload = "reload"
+	// The master was not running after the reload.
+	MailPolicyStageVerify = "verify"
+)
+
+// What a successful mail policy write came to (MailPolicyResponse.Applied).
+// Başarılı bir posta politikası yazısının sonucu.
+const (
+	// The running Postfix reloaded and is still running.
+	MailPolicyAppliedReloaded = "reloaded"
+	// Postfix is not running; it reads main.cf when it starts. It is not
+	// started by a policy save.
+	MailPolicyAppliedNotRunning = "not_running"
+	// Nothing differed from the server, so nothing was written or reloaded.
+	MailPolicyAppliedUnchanged = "unchanged"
 )
 
 // Why the Panel will not rewrite smtpd_recipient_restrictions.
@@ -105,6 +136,12 @@ type MailPolicyResponse struct {
 	// Code ve Reason, Error'ı sınıflandırır. Eklemelidir.
 	Code   string `json:"code,omitempty"`
 	Reason string `json:"reason,omitempty"`
+	// Stage refines MailPolicyNotReloaded and MailPolicyReloadUnknown; Applied
+	// says what a successful write came to. Additive (10 Oct 2026).
+	// Stage, yeniden yükleme hatasını inceltir; Applied başarılı yazının
+	// sonucudur. Eklemelidir.
+	Stage   string `json:"stage,omitempty"`
+	Applied string `json:"applied,omitempty"`
 }
 
 type MailHealthResponse struct {

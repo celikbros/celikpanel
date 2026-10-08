@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 
@@ -43,6 +44,49 @@ var (
 // classify it; see transport.PostfixQueueUnreadable.
 var errPostfixQueueUnreadable = errors.New(transport.PostfixQueueUnreadable)
 
+// What Postfix's programs print when they stop on their own configuration: a
+// value they cannot use ("fatal: bad numerical configuration: name = value";
+// also boolean, time and string length), or a fatal that names main.cf or
+// master.cf and a line.
+var (
+	postfixBadConfiguration = regexp.MustCompile(`fatal: (bad [a-z ]+ configuration: .+)$`)
+	postfixConfigurationAt  = regexp.MustCompile(`fatal: (\S*/(?:main|master)\.cf, line \d+: .+)$`)
+)
+
+// postfixQueueUnreadable is the unknown-queue answer with what is known about
+// why (10 Oct 2026): the first line `postqueue` printed as the detail, and the
+// cause only where that line itself identifies it. Measured: with a main.cf
+// Postfix refuses, `postqueue -j` exits 69 with "fatal: bad numerical
+// configuration"; with Postfix stopped it reads the queue directly and
+// succeeds. So "check that Postfix is running" was never the action.
+// postfixQueueUnreadable, nedeni hakkında bilinenle birlikte bilinmeyen-kuyruk
+// yanıtıdır: `postqueue`nin yazdığı ilk satır ve yalnız o satırın kendisinin
+// belirlediği neden.
+func postfixQueueUnreadable(said string) error {
+	detail, cause := "", ""
+	for _, raw := range strings.Split(said, "\n") {
+		line := strings.Join(strings.Fields(raw), " ")
+		if line == "" {
+			continue
+		}
+		if detail == "" {
+			detail = line
+		}
+		if match := postfixBadConfiguration.FindStringSubmatch(line); match != nil {
+			detail, cause = match[1], transport.UnreadablePostfixConfig
+			break
+		}
+		if match := postfixConfigurationAt.FindStringSubmatch(line); match != nil {
+			detail, cause = match[1], transport.UnreadablePostfixConfig
+			break
+		}
+	}
+	if detail != "" {
+		detail = hostcmd.Bounded(dbConfigSecret.ReplaceAllString(detail, "${1}…"), 300)
+	}
+	return errors.New(transport.UnreadableWithEvidence(transport.PostfixQueueUnreadable, cause, detail))
+}
+
 // PostfixQueue returns the real mail queue via `postqueue -j` (JSON lines).
 //
 // Two answers are known: Postfix is not on this server (Installed false, no
@@ -64,7 +108,7 @@ func (a *Agent) PostfixQueue(args *transport.Empty, resp *core.PostfixQueueResul
 	out, err := postfixQueueList()
 	if err != nil {
 		log.Printf("mail queue: postqueue -j failed: %s", hostcmd.Diagnostic(out, err))
-		return errPostfixQueueUnreadable
+		return postfixQueueUnreadable(hostcmd.Stderr(err))
 	}
 	resp.Installed = true
 

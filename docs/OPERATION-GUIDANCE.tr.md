@@ -2933,3 +2933,308 @@ sunucuya karşı (`web/tools/browser-inspect`, `dbconfig`, `mailscreens`,
 - *Kapsanmayan.* Herhangi bir gerçek sunucu; Safari, Firefox, ekran okuyucu,
   dokunmatik aygıt; taklit görünümler; yönetici dışındaki roller; ham dosya
   düzenleyicisinin ret durumları (yalnız bağlanan test).
+
+### İlk gerçek sistem ölçümünden sonra ayar yazıları: yeniden yükleme doğrulanır, doğrulanmamış neden adlandırılmaz, başarısız yeniden yükleme sunucunun ne tuttuğunu söyler (2026-10-10)
+
+Bileşen testleriyle kaynak durumu; gerçek hizmetlerde yeniden koşu bekliyor ve
+kurulu bir sunucuda hiçbir şey gözlenmedi. Neyin ölçüldüğü ve neyin değiştiği
+için aynı tarihli dayanıklılık sözleşmesi kaydına bakın. Bu kayıt cümleleri
+tutar.
+
+**Metinlerin izlediği kural.** Bir cümle, bir nedeni yalnız sunucu onu
+doğruladığında söyler. Doğrulanmış hata, eksik önkoşul ve bilinmeyen sonuç üç
+ayrı yanıttır: "Postfix'in kendi denetimi yapılandırmasını reddediyor"
+(doğrulanmış), "bu sunucunun /etc/cron.allow dosyası kullanıcıyı içermiyor"
+(yalnız sahibin değiştirebileceği bir önkoşul), "CelikPanel, Postfix'in
+kaydedilen değerleri alıp almadığını belirleyemedi" (bilinmeyen). Sunucunun
+kendi programı bir satır yazdıysa o satır cümleyle birlikte, sınırlı ve parola
+atamaları silinmiş olarak gösterilir; kendisi asla bir cümle değildir.
+
+**Kim işlem yapar.** Ekrandaki kişi; bir metin "sunucuda" ya da "sunucu sahibi"
+diyorsa metindeki komutla sunucu sahibi. Hiçbir şey kendiliğinden yeniden
+denenmez. Hiçbir metin, ne olursa olsun başarı bildiren bir komut istemez:
+Postfix kurtarma komutu `sudo postfix reload` komutudur; Ubuntu'da bir
+sarmalayıcı birimi yeniden yükleyen `sudo systemctl reload postfix` değil.
+
+**İş nasıl sürer.** Sahibin düzeltmesinden sonra: sayfa yenilenir (posta
+politikası, yapılandırma dosyası) ya da yeniden denenir (posta kuyruğu,
+zamanlanmış görevler). Yazılmış bir politika yazılı kalır ve formun gösterdiği
+odur; tutulmayan bir yapılandırma değişikliği formda durur ve sunucudaki dosya
+önceki dosyadır.
+
+**Platform sınırı.** `/etc/cron.allow` dosyası bir site kullanıcısını içermeyen
+bir sunucuda CelikPanel o kullanıcının zamanlanmış görevlerini ne okuyabilir ne
+değiştirebilir (Debian ve Ubuntu'nun `crontab -u <kullanıcı>` komutu kullanıcıyı
+root için bile reddeder). CelikPanel bunu söyler, hiçbir şeyi değiştirmez ve
+`cron.allow` dosyasını düzenlemez: sıkılaştırılmış bir sunucuda bir site
+kullanıcısının cron kullanıp kullanamayacağı sahibin kararıdır.
+
+**Metinler.** API cümleleri `error` alanıdır, yalnız İngilizce. Ekran cümleleri
+katalog girdileridir: `err.*` `web/src/i18n` içinde; `mailpolicy.*`, `postfix.*`
+ve `dbconf.*` `web/src/i18n/screens/server` içinde; `cron.*`
+`web/src/i18n/screens` içinde. `{service}` hizmetin adı, `{unit}` ve `<unit>`
+Agent'ın adlandırdığı systemd birimi, `{detail}` sunucunun kendi satırıdır.
+
+**Mail policy save (`PUT /api/v1/mail/policy`).**
+
+- `502 MAIL_POLICY_NOT_RELOADED`, reason `check`
+  API: "The mail policy was saved to /etc/postfix/main.cf, but Postfix was not
+  reloaded: Postfix's own check refuses its configuration as it is now. A
+  running Postfix keeps the settings it had before, so the saved values are not
+  in effect. What Postfix said is shown with this message; it can be about a
+  line this page did not write. Nothing was rolled back. The server owner
+  corrects that line, runs sudo postfix check until it prints no error, then
+  runs sudo postfix reload. Reload this page afterwards; the saved values are
+  the ones shown."
+- `err.MAIL_POLICY_NOT_RELOADED.check`
+  EN: "Saved to /etc/postfix/main.cf, but Postfix was not reloaded: its own
+  check refuses the configuration. A running Postfix keeps the settings it had
+  before, so the saved values are not in effect. The line it names is below and
+  may be one this page did not write. Nothing was rolled back. On the server,
+  correct that line, run sudo postfix check until it prints no error, then run
+  sudo postfix reload. The values shown below are the saved ones."
+  TR: "/etc/postfix/main.cf dosyasına kaydedildi ancak Postfix yeniden
+  yüklenmedi: Postfix’in kendi denetimi yapılandırmayı reddediyor. Çalışan bir
+  Postfix önceki ayarlarını korur; bu yüzden kaydedilen değerler yürürlükte
+  değil. Adını verdiği satır aşağıda; bu sayfanın yazmadığı bir satır olabilir.
+  Hiçbir şey geri alınmadı. Sunucuda o satırı düzeltin, hata yazmayana kadar
+  sudo postfix check komutunu çalıştırın, sonra sudo postfix reload komutunu
+  çalıştırın. Aşağıda gösterilen değerler kaydedilen değerlerdir."
+- `502 MAIL_POLICY_NOT_RELOADED`, reason `reload`
+  API: "The mail policy was saved to /etc/postfix/main.cf and Postfix's own
+  check accepts the file, but the reload failed, so Postfix has not taken the
+  saved values. What the reload said is shown with this message. Nothing was
+  rolled back. The server owner runs sudo postfix reload on the server and reads
+  what it prints. Reload this page afterwards; the saved values are the ones
+  shown."
+- `err.MAIL_POLICY_NOT_RELOADED.reload`
+  EN: "Saved to /etc/postfix/main.cf, and Postfix’s own check accepts the file,
+  but the reload failed, so Postfix has not taken the saved values. Nothing was
+  rolled back. On the server, run sudo postfix reload and read what it prints.
+  The values shown below are the saved ones."
+  TR: "/etc/postfix/main.cf dosyasına kaydedildi ve Postfix’in kendi denetimi
+  dosyayı kabul ediyor, ancak yeniden yükleme başarısız oldu; bu yüzden Postfix
+  kaydedilen değerleri almadı. Hiçbir şey geri alınmadı. Sunucuda sudo postfix
+  reload komutunu çalıştırın ve yazdığını okuyun. Aşağıda gösterilen değerler
+  kaydedilen değerlerdir."
+- `502 MAIL_POLICY_NOT_RELOADED`, reason `verify`
+  API: "The mail policy was saved to /etc/postfix/main.cf, but Postfix was no
+  longer running after the reload, so it has not taken the saved values and is
+  not handling mail. Nothing was rolled back. The server owner runs sudo postfix
+  check, then starts Postfix (sudo systemctl start postfix) and confirms it with
+  sudo postfix status. Reload this page afterwards; the saved values are the
+  ones shown."
+- `err.MAIL_POLICY_NOT_RELOADED.verify`
+  EN: "Saved to /etc/postfix/main.cf, but Postfix was no longer running after
+  the reload, so it is not handling mail. Nothing was rolled back. On the
+  server, run sudo postfix check, start Postfix (sudo systemctl start postfix)
+  and confirm with sudo postfix status. The values shown below are the saved
+  ones."
+  TR: "/etc/postfix/main.cf dosyasına kaydedildi ancak yeniden yüklemeden sonra
+  Postfix artık çalışmıyordu; bu yüzden posta işlemiyor. Hiçbir şey geri
+  alınmadı. Sunucuda sudo postfix check komutunu çalıştırın, Postfix’i başlatın
+  (sudo systemctl start postfix) ve sudo postfix status ile doğrulayın. Aşağıda
+  gösterilen değerler kaydedilen değerlerdir."
+- `502 MAIL_POLICY_RELOAD_UNKNOWN`
+  API: "The mail policy was saved to /etc/postfix/main.cf, but CelikPanel could
+  not establish whether Postfix took the saved values: a command that checks or
+  reloads Postfix could not be run, or did not answer in time. This is not a
+  verified failure, and Postfix may already be running with them. Nothing was
+  rolled back. The server owner runs sudo postfix status and then sudo postfix
+  reload on the server. Reload this page afterwards; the saved values are the
+  ones shown."
+- `err.MAIL_POLICY_RELOAD_UNKNOWN`
+  EN: "Saved to /etc/postfix/main.cf, but CelikPanel could not establish whether
+  Postfix took the saved values: a command that checks or reloads Postfix could
+  not be run or did not answer in time. This is not a verified failure; Postfix
+  may already be running with them. Nothing was rolled back. On the server, run
+  sudo postfix status, then sudo postfix reload. The values shown below are the
+  saved ones."
+  TR: "/etc/postfix/main.cf dosyasına kaydedildi ancak CelikPanel, Postfix’in
+  kaydedilen değerleri alıp almadığını belirleyemedi: Postfix’i denetleyen ya da
+  yeniden yükleyen bir komut çalıştırılamadı ya da zamanında yanıt vermedi. Bu
+  doğrulanmış bir hata değildir; Postfix bu değerlerle çalışıyor olabilir.
+  Hiçbir şey geri alınmadı. Sunucuda önce sudo postfix status, sonra sudo
+  postfix reload komutunu çalıştırın. Aşağıda gösterilen değerler kaydedilen
+  değerlerdir."
+- `mailpolicy.postfixSaid`
+  EN: "Postfix said:"
+  TR: "Postfix’in yanıtı:"
+- `mailpolicy.observed`
+  EN: "What CelikPanel observed:"
+  TR: "CelikPanel’in gözlediği:"
+- `mailpolicy.saved.notRunning`
+  EN: "Saved to /etc/postfix/main.cf. Postfix is not running on this server, so
+  there was nothing to reload; it reads these values when it starts."
+  TR: "/etc/postfix/main.cf dosyasına kaydedildi. Postfix bu sunucuda
+  çalışmıyor; bu yüzden yeniden yüklenecek bir şey yoktu. Bu değerleri
+  başladığında okur."
+- `mailpolicy.saved.unchanged`
+  EN: "Nothing to save: the server already holds exactly these values."
+  TR: "Kaydedilecek bir şey yok: sunucu zaten tam bu değerleri tutuyor."
+- `mailpolicy.unreadable`
+  EN: "The current mail policy could not be read from the server, so the
+  settings are not shown and nothing can be saved here. Nothing was changed. Try
+  again."
+  TR: "Geçerli posta politikası sunucudan okunamadı; bu yüzden ayarlar
+  gösterilmiyor ve buradan kayıt yapılamıyor. Hiçbir şey değiştirilmedi. Tekrar
+  deneyin."
+
+**Configuration save (`POST /api/v1/config`), `502 CONFIG_RELOAD_FAILED`.**
+
+- reason `restored` (sentence unchanged)
+  API: "The change was not kept: the service could not reload with the new file,
+  so CelikPanel put the previous file back and the service is running with it.
+  What the service said is below. Correct the setting and save again."
+- reason `restored_unit_reload_failed`
+  API: "The change was not kept, and the previous file is back in place. The
+  service's systemd unit could not reload, with the new file and again with the
+  previous one, so CelikPanel asked the server directly: it read the previous
+  file again and is running with the settings it had before your change. What
+  the unit's reload said is below. It failed with the previous file too, so the
+  cause is not only this change. The server owner runs sudo systemctl reload
+  <unit> on the server, corrects what it reports, and then saves the change here
+  again."
+- `dbconf.reloadFailed.restored_unit_reload_failed`
+  EN: "The change was not kept, and the previous file is back in place. The
+  systemd unit of {service} could not reload, with the new file and again with
+  the previous one, so CelikPanel asked {service} directly: it read the previous
+  file again and is running with the settings it had before your change. The
+  reload failed with the previous file too, so the cause is not only this
+  change. On the server, run sudo systemctl reload {unit} to see why, correct
+  it, then save the change here again."
+  TR: "Değişiklik tutulmadı ve önceki dosya yerine kondu. {service} hizmetinin
+  systemd birimi yeni dosyayla da önceki dosyayla da yeniden yüklenemedi; bu
+  yüzden CelikPanel doğrudan {service} hizmetine sordu: önceki dosyayı yeniden
+  okudu ve değişikliğinizden önceki ayarlarla çalışıyor. Yeniden yükleme önceki
+  dosyayla da başarısız olduğu için neden yalnız bu değişiklik değildir.
+  Nedenini görmek için sunucuda sudo systemctl reload {unit} komutunu
+  çalıştırın, düzeltin, sonra değişikliği buradan yeniden kaydedin."
+- reason `restored_running_unknown`
+  API: "The change was not kept, and the previous file is back in place. The
+  service's systemd unit could not reload, with the new file and again with the
+  previous one, and CelikPanel could not establish which settings the service is
+  running with now: a reload that fails part-way may already have made it read
+  the new file. What the unit's reload said is below. The server owner runs sudo
+  systemctl reload <unit> on the server, corrects what it reports, and reloads
+  this page."
+- `dbconf.reloadFailed.restored_running_unknown`
+  EN: "The change was not kept, and the previous file is back in place. The
+  systemd unit of {service} could not reload, with the new file and again with
+  the previous one, and CelikPanel could not establish which settings {service}
+  is running with now: a reload that fails part-way may already have made it
+  read the new file. On the server, run sudo systemctl reload {unit}, correct
+  what it reports, then reload this page."
+  TR: "Değişiklik tutulmadı ve önceki dosya yerine kondu. {service} hizmetinin
+  systemd birimi yeni dosyayla da önceki dosyayla da yeniden yüklenemedi ve
+  CelikPanel, {service} hizmetinin şu an hangi ayarlarla çalıştığını
+  belirleyemedi: yarıda başarısız olan bir yeniden yükleme ona yeni dosyayı
+  okutmuş olabilir. Sunucuda sudo systemctl reload {unit} komutunu çalıştırın,
+  bildirdiğini düzeltin, sonra bu sayfayı yenileyin."
+- reason `not_restored`
+  API: "The service could not reload with the new file, and CelikPanel could not
+  put the previous file back with certainty. The server owner checks the file on
+  the server; the copy named below holds the previous file. Then reload the
+  service (sudo systemctl reload <unit>) and reload this page."
+
+**Scheduled tasks, `502 CURRENT_SETTINGS_UNREADABLE` / `scheduled_tasks`.**
+
+- no `detail` token (no verified cause)
+  API: "CelikPanel could not read this site user's scheduled tasks from the
+  server, so the list is not shown and nothing was changed. This does not mean
+  the user has no tasks. CelikPanel has not established why; what the server's
+  crontab program said is shown with this message when it said anything. Reload
+  the page to read the tasks again. If it keeps failing, the server owner runs
+  sudo crontab -u <site user> -l on the server, which prints the same reason."
+- `detail: cron_allow`
+  API: "CelikPanel cannot read or change this site user's scheduled tasks: this
+  server restricts crontab with /etc/cron.allow, and the user is not listed in
+  it. Nothing was changed, and the tasks already on the server are untouched.
+  While the server restricts crontab this way, CelikPanel cannot manage this
+  user's tasks. The server owner adds the site user's name on its own line in
+  /etc/cron.allow, then reloads this page."
+- `cron.unknown.cron_allow`
+  EN: "CelikPanel cannot read or change this domain’s scheduled tasks: this
+  server restricts crontab with /etc/cron.allow, and the site’s system user is
+  not listed in it. Nothing was changed; the tasks already on the server are
+  untouched. While the server restricts crontab this way, CelikPanel cannot
+  manage this user’s tasks. The server owner adds the user’s name on its own
+  line in /etc/cron.allow, then this list can be read again."
+  TR: "CelikPanel bu domain’in zamanlanmış görevlerini okuyamıyor ve
+  değiştiremiyor: bu sunucu crontab kullanımını /etc/cron.allow ile kısıtlıyor
+  ve sitenin sistem kullanıcısı o dosyada yok. Hiçbir şey değiştirilmedi;
+  sunucudaki görevlere dokunulmadı. Sunucu crontab’ı bu şekilde kısıtladığı
+  sürece CelikPanel bu kullanıcının görevlerini yönetemez. Sunucu sahibi
+  kullanıcının adını /etc/cron.allow dosyasına ayrı bir satır olarak ekler;
+  sonra bu liste yeniden okunabilir."
+- `detail: cron_deny`
+  API: "CelikPanel cannot read or change this site user's scheduled tasks:
+  /etc/cron.deny on this server lists the user, so crontab refuses it. Nothing
+  was changed, and the tasks already on the server are untouched. While the user
+  is listed there, CelikPanel cannot manage this user's tasks. The server owner
+  removes the site user's line from /etc/cron.deny, then reloads this page."
+- `cron.unknown.cron_deny`
+  EN: "CelikPanel cannot read or change this domain’s scheduled tasks:
+  /etc/cron.deny on this server lists the site’s system user, so crontab refuses
+  it. Nothing was changed; the tasks already on the server are untouched. The
+  server owner removes the user’s line from /etc/cron.deny, then this list can
+  be read again."
+  TR: "CelikPanel bu domain’in zamanlanmış görevlerini okuyamıyor ve
+  değiştiremiyor: bu sunucudaki /etc/cron.deny dosyası sitenin sistem
+  kullanıcısını içeriyor; bu yüzden crontab onu reddediyor. Hiçbir şey
+  değiştirilmedi; sunucudaki görevlere dokunulmadı. Sunucu sahibi kullanıcının
+  satırını /etc/cron.deny dosyasından çıkarır; sonra bu liste yeniden
+  okunabilir."
+- `cron.unknown.said`
+  EN: "The server’s crontab program said: {detail}"
+  TR: "Sunucunun crontab programının yanıtı: {detail}"
+- `502 CURRENT_SETTINGS_UNREADABLE` for the other resources
+  API: "CelikPanel could not read what is currently set on this server, so
+  nothing is shown as a setting and nothing was changed. CelikPanel has not
+  established why the read failed; when the server's own program printed a
+  reason, it is shown with this message. Reload the page to read it again."
+
+**Mail queue, `502 MAIL_QUEUE_UNREADABLE`.**
+
+- no `reason` (no verified cause)
+  API: "The mail queue could not be read, so it is not shown. This does not mean
+  the queue is empty. Nothing was changed. CelikPanel has not established why;
+  what Postfix's queue program said is shown with this message when it said
+  anything. Try again. If it keeps failing, the server owner runs sudo postqueue
+  -j on the server, which prints the same reason."
+- `postfix.queue.unreadable`
+  EN: "The mail queue could not be read, so it is not shown. This does not mean
+  the queue is empty. Nothing was changed. Try again; if it keeps failing, run
+  sudo postqueue -j on the server to see the reason."
+  TR: "Mail kuyruğu okunamadı; bu yüzden gösterilmiyor. Bu, kuyruğun boş olduğu
+  anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin; sorun sürerse
+  nedeni görmek için sunucuda sudo postqueue -j komutunu çalıştırın."
+- reason `postfix_config`
+  API: "The mail queue could not be read because Postfix refuses its own
+  configuration: a setting in /etc/postfix/main.cf or master.cf has an error,
+  and Postfix's programs stop on it. What Postfix said about it is shown with
+  this message. Nothing was changed, and this does not mean the queue is empty.
+  The server owner corrects that setting, runs sudo postfix check until it
+  prints no error, then reloads this page."
+- `postfix.queue.unreadable.postfix_config`
+  EN: "The mail queue could not be read because Postfix refuses its own
+  configuration: a setting in /etc/postfix/main.cf or master.cf has an error,
+  and Postfix’s programs stop on it. This does not mean the queue is empty.
+  Nothing was changed. On the server, correct the setting Postfix names, run
+  sudo postfix check until it prints no error, then try again."
+  TR: "Mail kuyruğu okunamadı, çünkü Postfix kendi yapılandırmasını reddediyor:
+  /etc/postfix/main.cf ya da master.cf içindeki bir ayar hatalı ve Postfix’in
+  programları onda duruyor. Bu, kuyruğun boş olduğu anlamına gelmez. Hiçbir şey
+  değiştirilmedi. Sunucuda Postfix’in adını verdiği ayarı düzeltin, hata
+  yazmayana kadar sudo postfix check komutunu çalıştırın, sonra tekrar deneyin."
+- `postfix.queue.said`
+  EN: "Postfix said: {detail}"
+  TR: "Postfix’in yanıtı: {detail}"
+
+**Henüz gösterilmeyen.** Zamanlanmış görevler ekranı hâlâ tek yansız cümlesini
+gösterir (`cron.unknown`); yukarıdaki `cron.unknown.*` girdileri katalogdadır ve
+yanıt nedeni ve satırı taşır, ancak ekran onları henüz kullanmaz. Postfix'i
+yeniden yükleyen başarılı bir posta politikası kaydı `mailpolicy.saved` metnini
+korur. Sahibe Postfix'in çalıştığını denetlemesini söyleyen
+`postfix.queue.unknown` ve `mailpolicy.unknown` girdilerini artık hiçbir ekran
+kullanmıyor.

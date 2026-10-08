@@ -204,10 +204,26 @@ const (
 
 // Reasons that refine ConfigErrorReloadFailed.
 const (
-	// The previous file is back in place and the service runs with it.
+	// The previous file is back in place and the service's unit reloaded it.
 	ConfigReloadRestored = "restored"
-	// The previous file could not be put back, or the service did not accept it
-	// again. The backup named in Detail holds it.
+	// The previous file is back in place. The unit's reload command failed with
+	// it as well, so the server itself was sent the reload signal and asked
+	// what it loaded: it re-read its files after the previous one was back and
+	// reports no error in them, so it runs with the settings it had before the
+	// change (10 Oct 2026). Unit names the unit whose reload fails.
+	// Önceki dosya yerinde. Birimin yeniden yükleme komutu onunla da başarısız
+	// oldu; sunucunun kendisine soruldu ve değişiklikten önceki ayarlarla
+	// çalıştığı doğrulandı.
+	ConfigReloadRestoredUnitFailed = "restored_unit_reload_failed"
+	// The previous file is back in place, the unit's reload failed with it as
+	// well, and the server could not be asked what it loaded. Which settings it
+	// runs with is unknown: a reload command that fails part-way may already
+	// have made it read the new file.
+	// Önceki dosya yerinde; sunucunun hangi ayarlarla çalıştığı bilinmiyor.
+	ConfigReloadRestoredUnknown = "restored_running_unknown"
+	// The previous file could not be put back (the file on disk is no longer
+	// the one this write installed, or the write failed). Name is the kept
+	// copy of the previous file.
 	ConfigReloadNotRestored = "not_restored"
 )
 
@@ -241,6 +257,9 @@ type ConfigRPCError struct {
 	Detail string `json:"detail,omitempty"`
 	Line   int    `json:"line,omitempty"`
 	Name   string `json:"name,omitempty"`
+	// Unit is the systemd unit a failed reload is about. Additive.
+	// Unit, başarısız yeniden yüklemenin ilgili olduğu systemd birimidir.
+	Unit string `json:"unit,omitempty"`
 }
 
 type ConfigResponse struct {

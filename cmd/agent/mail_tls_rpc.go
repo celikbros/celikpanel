@@ -790,10 +790,24 @@ func validateDovecotTLSConfig(run mailTLSCommandRunner) error {
 	return nil
 }
 
+// reloadMailTLSService makes the running service take the TLS configuration
+// and returns only a verified outcome (10 Oct 2026; mail_service_verify.go):
+// `systemctl reload-or-restart postfix` exits 0 on Ubuntu whatever happened to
+// the daemon, because that unit is a wrapper.
+// reloadMailTLSService, çalışan hizmetin TLS yapılandırmasını almasını sağlar
+// ve yalnız doğrulanmış bir sonuç döndürür.
 func reloadMailTLSService(service string, run mailTLSCommandRunner) error {
-	out, err := run("systemctl", "reload-or-restart", service)
+	var err error
+	switch service {
+	case "postfix":
+		_, err = applyPostfixVerified(mailServiceRunner(run), mailServiceReloadOrStart)
+	case "dovecot":
+		_, err = applyDovecotVerified(mailServiceRunner(run), mailServiceReloadOrStart)
+	default:
+		err = fmt.Errorf("no verified reload exists for %s", service)
+	}
 	if err != nil {
-		return mailTLSCommandError("systemctl reload-or-restart "+service, out, err)
+		return fmt.Errorf("reload %s: %w", service, err)
 	}
 	return nil
 }

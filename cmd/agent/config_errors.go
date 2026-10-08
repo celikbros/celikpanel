@@ -32,6 +32,8 @@ type configRefusal struct {
 	detail  string
 	line    int
 	name    string
+	// unit is the systemd unit whose reload the answer is about.
+	unit string
 }
 
 func (r *configRefusal) Error() string {
@@ -55,6 +57,7 @@ func configRPCError(err error) *transport.ConfigRPCError {
 			Detail:  refusal.detail,
 			Line:    refusal.line,
 			Name:    refusal.name,
+			Unit:    refusal.unit,
 		}
 	case errors.Is(err, errConfigPathRefused):
 		return &transport.ConfigRPCError{

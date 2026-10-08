@@ -1634,6 +1634,12 @@ export const enScreens = {
     'mail.healthChecking': "Checking deliverability…",
     'mail.healthUnknown': "The deliverability checks of this domain could not be read from the server, so no result is shown. This does not mean a check failed. Nothing was changed. Try again.",
     // --- end of batch 2b ---
+    // --- set1 corrections (10 Oct 2026): a reload is verified, never inferred; no cause is
+    // named that was not verified; what the server holds after a failed reload ---
+    'cron.unknown.cron_allow': "CelikPanel cannot read or change this domain’s scheduled tasks: this server restricts crontab with /etc/cron.allow, and the site’s system user is not listed in it. Nothing was changed; the tasks already on the server are untouched. While the server restricts crontab this way, CelikPanel cannot manage this user’s tasks. The server owner adds the user’s name on its own line in /etc/cron.allow, then this list can be read again.",
+    'cron.unknown.cron_deny': "CelikPanel cannot read or change this domain’s scheduled tasks: /etc/cron.deny on this server lists the site’s system user, so crontab refuses it. Nothing was changed; the tasks already on the server are untouched. The server owner removes the user’s line from /etc/cron.deny, then this list can be read again.",
+    'cron.unknown.said': "The server’s crontab program said: {detail}",
+    // --- end of set1 corrections ---
 } as const;
 
 export type ScreenKey = keyof typeof enScreens;

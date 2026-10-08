@@ -132,18 +132,23 @@ func (a *Agent) ConfigureMailStack(req *ServiceMutationRequest, resp *ConfigureM
 		// Kurulu olan filtreleri Postfix'in İÇİNE bağla. Bu olmadan spam
 		// filtresi posta sunucusunun yanında koşar, içinde değil — kurulu,
 		// "Çalışıyor", hiçbir şey süzmüyor (operatör, 24 Tem).
-		if err := applyMilterChain(ctx); err != nil {
+		if err := writeMilterChain(ctx); err != nil {
 			resp.Error = fmt.Sprintf("milter wiring: %v", err)
 			return nil
 		}
-		if out, err := serviceMutationCommand(ctx, "systemctl", "reload-or-restart", "postfix").CombinedOutput(); err != nil {
-			resp.Error = fmt.Sprintf("postfix reload: %s", strings.TrimSpace(string(out)))
+		// "Configured" is said only for a Postfix that verifiably runs with
+		// what was written: systemctl's exit status alone is the wrapper
+		// unit's on Ubuntu (mail_service_verify.go, 10 Oct 2026).
+		// "Yapılandırıldı", yalnız yazılanla çalıştığı doğrulanan bir Postfix
+		// için söylenir.
+		if _, err := applyPostfixVerified(mailServiceLeaseRunner(ctx), mailServiceReloadOrStart); err != nil {
+			resp.Error = fmt.Sprintf("postfix reload: %v", err)
 			return nil
 		}
 	}
 	if hasDovecot {
-		if out, err := serviceMutationCommand(ctx, "systemctl", "restart", "dovecot").CombinedOutput(); err != nil {
-			resp.Error = fmt.Sprintf("dovecot restart: %s", strings.TrimSpace(string(out)))
+		if _, err := applyDovecotVerified(mailServiceLeaseRunner(ctx), mailServiceRestart); err != nil {
+			resp.Error = fmt.Sprintf("dovecot restart: %v", err)
 			return nil
 		}
 	}
@@ -400,6 +405,28 @@ func applyMilterChain(ctx context.Context) error {
 	if _, err := exec.LookPath("postconf"); err != nil {
 		return nil // no postfix here, nothing to wire
 	}
+	if err := writeMilterChain(ctx); err != nil {
+		return err
+	}
+	// A running Postfix must verifiably take the chain; a stopped one is left
+	// stopped and reads main.cf when it starts. Until 10 Oct 2026 this was
+	// `systemctl reload-or-restart postfix` with its result thrown away, so a
+	// filter could be reported as wired into a Postfix that never reloaded.
+	// Çalışan Postfix zinciri doğrulanmış biçimde almalıdır; durmuş olan
+	// durmuş bırakılır ve main.cf'i başlarken okur.
+	if _, err := applyPostfixVerified(mailServiceLeaseRunner(ctx), mailServiceReload); err != nil {
+		return fmt.Errorf("the milter chain is written to main.cf, but %w", err)
+	}
+	return nil
+}
+
+// writeMilterChain writes the composed chain to main.cf and reloads nothing.
+// writeMilterChain, bestelenen zinciri main.cf'e yazar; hiçbir şeyi yeniden
+// yüklemez.
+func writeMilterChain(ctx context.Context) error {
+	if _, err := exec.LookPath("postconf"); err != nil {
+		return nil // no postfix here, nothing to wire
+	}
 
 	spam := ""
 	switch {
@@ -423,7 +450,6 @@ func applyMilterChain(ctx context.Context) error {
 			return fmt.Errorf("postconf %s: %s", kv[0], strings.TrimSpace(string(out)))
 		}
 	}
-	_ = serviceMutationCommand(ctx, "systemctl", "reload-or-restart", "postfix").Run()
 	return nil
 }
 

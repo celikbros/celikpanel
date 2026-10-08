@@ -1062,6 +1062,19 @@ export const enServerScreens = {
     'postfix.deleteMessage': "Delete message {id}",
     'mailpolicy.reloadSaid': "The reload said:",
     // --- end of batch 2b ---
+    // --- set1 corrections (10 Oct 2026): a reload is verified, never inferred; no cause is
+    // named that was not verified; what the server holds after a failed reload ---
+    'mailpolicy.postfixSaid': "Postfix said:",
+    'mailpolicy.observed': "What CelikPanel observed:",
+    'mailpolicy.saved.notRunning': "Saved to /etc/postfix/main.cf. Postfix is not running on this server, so there was nothing to reload; it reads these values when it starts.",
+    'mailpolicy.saved.unchanged': "Nothing to save: the server already holds exactly these values.",
+    'mailpolicy.unreadable': "The current mail policy could not be read from the server, so the settings are not shown and nothing can be saved here. Nothing was changed. Try again.",
+    'postfix.queue.unreadable': "The mail queue could not be read, so it is not shown. This does not mean the queue is empty. Nothing was changed. Try again; if it keeps failing, run sudo postqueue -j on the server to see the reason.",
+    'postfix.queue.unreadable.postfix_config': "The mail queue could not be read because Postfix refuses its own configuration: a setting in /etc/postfix/main.cf or master.cf has an error, and Postfix’s programs stop on it. This does not mean the queue is empty. Nothing was changed. On the server, correct the setting Postfix names, run sudo postfix check until it prints no error, then try again.",
+    'postfix.queue.said': "Postfix said: {detail}",
+    'dbconf.reloadFailed.restored_unit_reload_failed': "The change was not kept, and the previous file is back in place. The systemd unit of {service} could not reload, with the new file and again with the previous one, so CelikPanel asked {service} directly: it read the previous file again and is running with the settings it had before your change. The reload failed with the previous file too, so the cause is not only this change. On the server, run sudo systemctl reload {unit} to see why, correct it, then save the change here again.",
+    'dbconf.reloadFailed.restored_running_unknown': "The change was not kept, and the previous file is back in place. The systemd unit of {service} could not reload, with the new file and again with the previous one, and CelikPanel could not establish which settings {service} is running with now: a reload that fails part-way may already have made it read the new file. On the server, run sudo systemctl reload {unit}, correct what it reports, then reload this page.",
+    // --- end of set1 corrections ---
 } as const;
 
 export type ServerScreenKey = keyof typeof enServerScreens;

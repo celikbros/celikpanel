@@ -57,23 +57,21 @@ var mailPolicyParameters = []string{
 	"anvil_rate_time_unit",
 }
 
-// Swapped by tests. Production reads and writes through postconf and reloads
-// Postfix through systemd.
-// Testlerde değiştirilir.
+// Swapped by tests. Production reads and writes through postconf and makes the
+// running Postfix take the change through mail_service_verify.go: its own
+// check, its own reload command, and a master that is still running afterwards.
+// A stopped Postfix is left stopped. `systemctl reload-or-restart postfix` was
+// the reload until 10 Oct 2026; on Ubuntu that unit is a wrapper whose job
+// succeeds whatever happened to the daemon.
+// Testlerde değiştirilir. Üretimde çalışan Postfix değişikliği kendi denetimi,
+// kendi yeniden yükleme komutu ve sonrasında hâlâ çalışan ana süreçle alır.
 var (
 	mailPolicyLookPath = exec.LookPath
 	mailPolicyPostconf = func(args ...string) ([]byte, error) {
 		return exec.Command("postconf", args...).Output()
 	}
-	mailPolicyReload = func() error {
-		out, err := exec.Command("systemctl", "reload-or-restart", "postfix").CombinedOutput()
-		if err != nil {
-			// What systemctl said is the only line there is about why; it is
-			// bounded before it leaves the Agent.
-			// systemctl'in söylediği, nedene dair eldeki tek satırdır.
-			return errors.New(hostcmd.Diagnostic(out, err))
-		}
-		return nil
+	mailPolicyReload = func() (string, error) {
+		return applyPostfixVerified(runMailTLSCommand, mailServiceReload)
 	}
 )
 
@@ -244,20 +242,35 @@ func (a *Agent) SetMailPolicy(req *MailPolicy, resp *MailPolicyResponse) error {
 			return refuseMailPolicy(resp, transport.MailPolicyWriteFailed, "",
 				"the Postfix mail policy could not be written")
 		}
-		if err := mailPolicyReload(); err != nil {
-			// main.cf holds the new values and Postfix does not run with them.
-			// That is a verified failure after a change, not something to log
+		applied, err := mailPolicyReload()
+		if err != nil {
+			// main.cf holds the new values and Postfix was not seen to take
+			// them. That is a failure after a change, not something to log
 			// and call saved (9 Oct 2026; D-024): the answer carries what is
-			// written now, so the screen shows it, and says it is not loaded.
-			// main.cf yeni değerleri tutuyor, Postfix onlarla çalışmıyor. Bu,
-			// günlüğe yazıp "kaydedildi" denecek bir şey değil, bir değişiklik
-			// sonrası doğrulanmış hatadır.
+			// written now, so the screen shows it. A refusal by Postfix's own
+			// check, a reload that failed and a master that stopped are
+			// verified failures; a command that could not be run or did not
+			// answer leaves the outcome unknown, and is said as unknown.
+			// main.cf yeni değerleri tutuyor ve Postfix'in onları aldığı
+			// görülmedi. Bu, günlüğe yazıp "kaydedildi" denecek bir şey değil,
+			// bir değişiklik sonrası hatadır; sonucu bilinmeyen durum da
+			// bilinmeyen olarak söylenir.
 			log.Printf("mail policy: postfix reload after a policy write failed: %v", err)
-			said := hostcmd.Bounded(strings.Join(strings.Fields(err.Error()), " "), 300)
 			answer := MailPolicyResponse{
-				Error:  "the mail policy was written to main.cf, but Postfix could not be reloaded",
-				Code:   transport.MailPolicyNotReloaded,
-				Reason: said,
+				Error: "the mail policy was written to main.cf, but Postfix could not be reloaded",
+				Code:  transport.MailPolicyNotReloaded,
+			}
+			var failure *mailServiceError
+			if errors.As(err, &failure) {
+				answer.Reason, answer.Stage = failure.detail, failure.stage
+				if failure.unknown {
+					answer.Code = transport.MailPolicyReloadUnknown
+					answer.Error = "the mail policy was written to main.cf, but whether Postfix took it could not be established"
+				}
+			} else {
+				answer.Code = transport.MailPolicyReloadUnknown
+				answer.Error = "the mail policy was written to main.cf, but whether Postfix took it could not be established"
+				answer.Reason = hostcmd.Bounded(strings.Join(strings.Fields(err.Error()), " "), 300)
 			}
 			if fresh, readErr := readMailPolicyNative(); readErr == nil {
 				answer.Policy = fresh.policy()
@@ -265,6 +278,9 @@ func (a *Agent) SetMailPolicy(req *MailPolicy, resp *MailPolicyResponse) error {
 			*resp = answer
 			return nil
 		}
+		resp.Applied = applied
+	} else {
+		resp.Applied = transport.MailPolicyAppliedUnchanged
 	}
 
 	// The answer is what the server holds now, with the version the next save

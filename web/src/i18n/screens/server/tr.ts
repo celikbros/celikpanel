@@ -1051,4 +1051,17 @@ export const trServerScreens: Record<ServerScreenKey, string> = {
     'postfix.deleteMessage': "{id} iletisini sil",
     'mailpolicy.reloadSaid': "Yeniden yükleme yanıtı:",
     // --- end of batch 2b ---
+    // --- set1 corrections (10 Oct 2026): a reload is verified, never inferred; no cause is
+    // named that was not verified; what the server holds after a failed reload ---
+    'mailpolicy.postfixSaid': "Postfix’in yanıtı:",
+    'mailpolicy.observed': "CelikPanel’in gözlediği:",
+    'mailpolicy.saved.notRunning': "/etc/postfix/main.cf dosyasına kaydedildi. Postfix bu sunucuda çalışmıyor; bu yüzden yeniden yüklenecek bir şey yoktu. Bu değerleri başladığında okur.",
+    'mailpolicy.saved.unchanged': "Kaydedilecek bir şey yok: sunucu zaten tam bu değerleri tutuyor.",
+    'mailpolicy.unreadable': "Geçerli posta politikası sunucudan okunamadı; bu yüzden ayarlar gösterilmiyor ve buradan kayıt yapılamıyor. Hiçbir şey değiştirilmedi. Tekrar deneyin.",
+    'postfix.queue.unreadable': "Mail kuyruğu okunamadı; bu yüzden gösterilmiyor. Bu, kuyruğun boş olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin; sorun sürerse nedeni görmek için sunucuda sudo postqueue -j komutunu çalıştırın.",
+    'postfix.queue.unreadable.postfix_config': "Mail kuyruğu okunamadı, çünkü Postfix kendi yapılandırmasını reddediyor: /etc/postfix/main.cf ya da master.cf içindeki bir ayar hatalı ve Postfix’in programları onda duruyor. Bu, kuyruğun boş olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Sunucuda Postfix’in adını verdiği ayarı düzeltin, hata yazmayana kadar sudo postfix check komutunu çalıştırın, sonra tekrar deneyin.",
+    'postfix.queue.said': "Postfix’in yanıtı: {detail}",
+    'dbconf.reloadFailed.restored_unit_reload_failed': "Değişiklik tutulmadı ve önceki dosya yerine kondu. {service} hizmetinin systemd birimi yeni dosyayla da önceki dosyayla da yeniden yüklenemedi; bu yüzden CelikPanel doğrudan {service} hizmetine sordu: önceki dosyayı yeniden okudu ve değişikliğinizden önceki ayarlarla çalışıyor. Yeniden yükleme önceki dosyayla da başarısız olduğu için neden yalnız bu değişiklik değildir. Nedenini görmek için sunucuda sudo systemctl reload {unit} komutunu çalıştırın, düzeltin, sonra değişikliği buradan yeniden kaydedin.",
+    'dbconf.reloadFailed.restored_running_unknown': "Değişiklik tutulmadı ve önceki dosya yerine kondu. {service} hizmetinin systemd birimi yeni dosyayla da önceki dosyayla da yeniden yüklenemedi ve CelikPanel, {service} hizmetinin şu an hangi ayarlarla çalıştığını belirleyemedi: yarıda başarısız olan bir yeniden yükleme ona yeni dosyayı okutmuş olabilir. Sunucuda sudo systemctl reload {unit} komutunu çalıştırın, bildirdiğini düzeltin, sonra bu sayfayı yenileyin.",
+    // --- end of set1 corrections ---
 };

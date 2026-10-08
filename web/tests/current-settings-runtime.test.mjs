@@ -114,9 +114,9 @@ for (const [name, answer] of [
     assert.doesNotMatch(text(), /mailpolicy\.(dnsbl|rate|maxSize)"/);
     if (answer === 'pending') {
       assert.match(text(), /current\.checking/);
-      assert.doesNotMatch(text(), /mailpolicy\.unknown/);
+      assert.doesNotMatch(text(), /mailpolicy\.unreadable/);
     } else {
-      assert.match(text(), /mailpolicy\.unknown/);
+      assert.match(text(), /mailpolicy\.unreadable/);
       assert.equal(buttons('common.retry').length, 1);
     }
     assert.equal(writes().length, 0);
@@ -131,7 +131,7 @@ test('mail policy: Retry reads again and only then shows the server values', asy
   try {
     await mount(PostfixManagement, { onBack() {} });
     await click('common.retry');
-    assert.doesNotMatch(text(), /mailpolicy\.unknown/);
+    assert.doesNotMatch(text(), /mailpolicy\.unreadable/);
     const values = policyInputs().map((node) => node.props.value ?? node.props.checked);
     assert.deepEqual(values, [40, 'zen.spamhaus.org', true, true, 12]);
   } finally {

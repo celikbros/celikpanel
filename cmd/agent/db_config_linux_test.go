@@ -551,24 +551,14 @@ func TestFailedReloadPutsThePreviousFileBack(t *testing.T) {
 	}
 }
 
+// "Not restored" is said only for a previous file that is NOT back on disk. A
+// reload that fails twice with the file back in place is another answer; see
+// db_config_set1_linux_test.go.
 func TestFailedReloadThatCannotBeUndoneSaysSoAndKeepsTheOtherVersion(t *testing.T) {
-	fake := installDBConfigFakes(t)
-	path := writeOwnerFile(t, "postgresql.conf", ownerPostgreSQLConf, 0o640)
-	fake.reloadErrors = []error{errors.New("reload failed"), errors.New("reload failed again")}
-
-	_, err := applyDatabaseConfigUpdate(postgresTarget, dbConfigPreimage(t, path), []byte(ownerPostgreSQLConf+"\nwork_mem = 8MB\n"), fake.reload)
-	rpcErr := wantRefusal(t, err, transport.ConfigErrorReloadFailed, transport.ConfigReloadNotRestored)
-	if got := readFileForTest(t, path); got != ownerPostgreSQLConf {
-		t.Fatalf("the previous file is not back on disk: %q", got)
-	}
-	if rpcErr.Name == "" || readFileForTest(t, rpcErr.Name) != ownerPostgreSQLConf {
-		t.Fatalf("the answer does not name a kept copy: %+v", rpcErr)
-	}
-
 	// The owner edited the file after the Panel installed its version: the
 	// restore must not undo their edit.
-	fake = installDBConfigFakes(t)
-	path = writeOwnerFile(t, "postgresql.conf", ownerPostgreSQLConf, 0o640)
+	fake := installDBConfigFakes(t)
+	path := writeOwnerFile(t, "postgresql.conf", ownerPostgreSQLConf, 0o640)
 	ownerEdit := ownerPostgreSQLConf + "\n# edited on the server meanwhile\n"
 	reload := func(string) error {
 		if err := os.WriteFile(path, []byte(ownerEdit), 0o640); err != nil {
@@ -576,13 +566,20 @@ func TestFailedReloadThatCannotBeUndoneSaysSoAndKeepsTheOtherVersion(t *testing.
 		}
 		return errors.New("reload failed")
 	}
-	_, err = applyDatabaseConfigUpdate(postgresTarget, dbConfigPreimage(t, path), []byte(ownerPostgreSQLConf+"\nwork_mem = 8MB\n"), reload)
-	rpcErr = wantRefusal(t, err, transport.ConfigErrorReloadFailed, transport.ConfigReloadNotRestored)
+	_, err := applyDatabaseConfigUpdate(postgresTarget, dbConfigPreimage(t, path), []byte(ownerPostgreSQLConf+"\nwork_mem = 8MB\n"), reload)
+	rpcErr := wantRefusal(t, err, transport.ConfigErrorReloadFailed, transport.ConfigReloadNotRestored)
 	if got := readFileForTest(t, path); got != ownerEdit {
 		t.Fatalf("the owner's later edit was overwritten by the restore: %q", got)
 	}
-	if readFileForTest(t, rpcErr.Name) != ownerPostgreSQLConf {
-		t.Fatal("the previous version was not kept")
+	// The copy that is named holds the previous file, which is not the file on
+	// disk: here, and only here, there is another version to name.
+	if rpcErr.Name == "" || readFileForTest(t, rpcErr.Name) != ownerPostgreSQLConf || rpcErr.Name == path {
+		t.Fatalf("the previous version was not kept under another name: %+v", rpcErr)
+	}
+	// Nothing was reloaded a second time and the server was not asked: the
+	// file on disk is the owner's, not one this write may speak for.
+	if len(fake.queries) != 0 {
+		t.Fatalf("the server was asked about a file that is not this write's: %v", fake.queries)
 	}
 }
 

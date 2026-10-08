@@ -71,6 +71,19 @@ func agentAnsweredExactly(err error, text string) bool {
 	return strings.TrimSpace(string(serverErr)) == text
 }
 
+// agentUnreadableEvidence reports whether err is the Agent's own "could not be
+// read" answer for this sentence, alone or with the evidence lines the contract
+// defines (transport.UnreadableEvidence), and returns that evidence.
+// agentUnreadableEvidence, err'in Agent'ın bu cümleyle verdiği "okunamadı"
+// yanıtı olup olmadığını bildirir ve varsa kanıtı döndürür.
+func agentUnreadableEvidence(err error, sentence string) (known bool, cause, detail string) {
+	var serverErr rpc.ServerError
+	if !errors.As(err, &serverErr) {
+		return false, "", ""
+	}
+	return transport.UnreadableEvidence(string(serverErr), sentence)
+}
+
 // agentMutationBusy is the classified answer for an Agent lock held by another
 // CelikPanel change: 409 HOST_MUTATION_BUSY, "wait for it to finish, then try
 // again", in both languages already.
@@ -91,10 +104,11 @@ func writeCronAgentError(w http.ResponseWriter, err error, reason string) {
 	// crontab it was built from and that must still be the one on the server;
 	// the same task is not added twice.
 	// Sahibin crontab'ını koruyan Agent retleri.
-	switch {
-	case agentAnsweredExactly(err, transport.CronStateUnreadable):
-		writeCurrentSettingsUnreadable(w, settingsResourceScheduledTasks)
+	if known, cause, said := agentUnreadableEvidence(err, transport.CronStateUnreadable); known {
+		writeScheduledTasksUnreadable(w, cause, said)
 		return
+	}
+	switch {
 	case agentAnsweredExactly(err, transport.CronVersionRequired):
 		writeSettingsVersionRequired(w, settingsResourceScheduledTasks)
 		return

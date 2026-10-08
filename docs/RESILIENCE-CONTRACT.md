@@ -2890,3 +2890,215 @@ Panel cannot tell its own descriptions from the owner's comments. A webmail
 probe that times out is still answered as "not available" by the server. Not
 migrated: the other 47 files of the remote-state allow-list (56 before the
 first part of this batch stood in the same tree).
+
+### Corrections from the first native measurement of settings writes (invariants 1-4 and 6, 2026-10-10)
+
+D-025 invariants 1 (the owner's native configuration is detected, not replaced),
+2 (unknown is not absent, empty or success), 3 (the unsafe write is stopped at
+its own boundary), 4 (a mutation reads its pre-image, validates, keeps what it
+replaces and has a tested inverse) and 6 (the screen renders the authoritative
+state); D-022, D-024. No P0 item is closed or advanced. Source: the `set1` run of
+2026-10-08, the first time the settings writes of the two entries above met the
+packaged services (disposable QEMU/KVM guests: Debian 13, Ubuntu 24.04, Arch;
+evidence `deploy/e2e/release-recovery/evidence/set1-20261010/`). Nothing here
+was observed on an installed server. That run measured two candidate defects
+(P1, P2) and five observations (O1-O5); this entry corrects them in source.
+
+- **Measured.**
+  - *P1, Ubuntu 24.04: a mail policy save answered `200 success` although
+    Postfix did not reload.* The owner had left `default_process_limit = 200 #
+    raised for the campaign` in `main.cf` without reloading. The Agent ran
+    `systemctl reload-or-restart postfix`. On Ubuntu `postfix.service` is a
+    oneshot wrapper (`ExecStart=/bin/true`, `ExecReload=/bin/true`) and the
+    daemon belongs to `postfix@-.service`; the journal said `Reload failed for
+    postfix@-.service`, `systemctl` exited 0, `main.cf` held rate 46 and Postfix
+    ran with 45. Debian 13, whose `postfix.service` is the real unit, answered
+    `502 MAIL_POLICY_NOT_RELOADED` for the same sequence.
+  - *P2, all three platforms: after a reload that failed twice the answer said
+    the previous `postgresql.conf` could not be put back, although it was.* The
+    cause used was an owner's unit drop-in whose `ExecReload` signals PostgreSQL
+    and then fails. The first reload failed, the previous file was put back
+    (byte-identical, same owner, group and mode), the reload with it failed too,
+    and the answer was `CONFIG_RELOAD_FAILED` / `not_restored`, naming a copy of
+    that same file as "the other version". The same run showed why "the server
+    still runs the old settings" may not be assumed either: the first, "failed"
+    reload had already made the server read the NEW file.
+  - *O1.* `max_connections = plenty` was saved with "MariaDB checked the file
+    and accepts it": `mariadbd --help --verbose` exits 0 and prints `[Warning]
+    ... option 'max_connections': unsigned value 0 adjusted to 10`.
+  - *O2.* A `smtpd_recipient_restrictions` written one restriction per line came
+    back as one line after a DNSBL save (elements, order and separators kept).
+  - *O3.* Guidance named a cause that was not the cause. Unreadable scheduled
+    tasks: "checks that the service behind this page is running" (the causes
+    were `/etc/cron.allow` without the site user, and a relocated spool).
+    Unreadable mail queue: "checks that Postfix is running" (the cause was the
+    `main.cf` line above; with Postfix stopped `postqueue -j` reads the queue
+    directly and succeeds).
+  - *O4.* The `502 MAIL_POLICY_NOT_RELOADED` body carried no policy, although
+    its sentence says "the saved values are the ones shown".
+  - *O5.* The component scan listed `postgresql.conf` and `pg_hba.conf` twice on
+    Debian and Ubuntu.
+- **Changed.**
+  - *P1: a Postfix or Dovecot reload, start or restart is verified, never
+    inferred from `systemctl`'s exit status* (`cmd/agent/mail_service_verify.go`).
+    Postfix: `postfix check` first (its refusal is a verified failure with its
+    own line, and nothing is reloaded); a running master is reloaded with
+    `postfix reload`, the command every packaging runs as the unit's reload
+    (Debian 13 and Arch `ExecReload=postfix reload`; Ubuntu's instance
+    `postmulti -i - -p reload`, which is `postfix reload` for the default
+    instance), so the exit status is the instance's; afterwards `postfix status`
+    must still report a running master. A start or restart still goes through
+    systemd, so the unit keeps owning the daemon, and is judged by `postfix
+    status` and the master's process ID (`<queue_directory>/pid/master.pid`), up
+    to 15 seconds. Dovecot: `doveconf -n` first; after `systemctl restart`
+    `dovecot.service` must be active and running with one main process across
+    two readings, and after a restart that process must be a new one. Three
+    outcomes exist: verified, verified failure (stage `check`, `reload`, `start`
+    or `verify`), and unknown (a command could not be run or did not answer).
+    Used by: the mail policy save; mail stack setup; mail filter wiring and DKIM
+    (the reload after the milter chain was `reload-or-restart` with its result
+    thrown away); mail submission setup and its Dovecot recovery; the mail TLS
+    reconcile and its rollback; the raw-file editor's reload after a
+    `/etc/postfix` file.
+  - *P1, behaviour that changes with it.* A stopped Postfix is no longer started
+    by a mail policy save, by filter wiring or by a raw-file save: it is left
+    stopped and the answer says so (`applied: not_running`). Only setup (mail
+    stack, TLS) starts it. Filter wiring and DKIM now fail when Postfix
+    verifiably did not take the chain, instead of reporting success.
+  - *P1, the answers.* `502 MAIL_POLICY_NOT_RELOADED` carries `reason` `check`,
+    `reload` or `verify` with a sentence for each, and Postfix's own line in
+    `vars.detail`. An outcome that could not be established is the new `502
+    MAIL_POLICY_RELOAD_UNKNOWN`. The recovery command in every sentence is `sudo
+    postfix reload`, which prints what Postfix objects to and is the same on
+    every platform; `sudo systemctl reload postfix` on Ubuntu is the wrapper.
+    `200` carries `applied`: `reloaded`, `not_running` or `unchanged`.
+  - *P2: the answer is classified by what is verified*
+    (`cmd/agent/db_config.go`). (a) previous file back and the unit reloaded it:
+    `restored`, as before. (b) previous file back and the unit's reload failed
+    again: the server is told directly (`SELECT pg_reload_conf()` over the local
+    socket as the `postgres` account) and asked what it did. It runs with the
+    settings it had before the change only when all three hold: the answer is
+    about this file (`config_file` / `hba_file`); `pg_conf_load_time()` is later
+    than the moment the signal was sent (PostgreSQL sets it only when a re-read
+    reached the end without a syntax or value error, and with such an error
+    applies nothing); and `pg_file_settings` (or `pg_hba_file_rules`) reports no
+    error in the files on disk. Then `restored_unit_reload_failed`. Anything
+    less is `restored_running_unknown`. (c) the previous file could not be put
+    back (the file on disk is no longer the one this write installed, or the
+    write failed): `not_restored`, which alone names a copy, and that copy is
+    the previous file. In (a) and (b) the copy is removed, because the file on
+    disk is that file; no "other version" is named that does not exist. The
+    same classification applies when PostgreSQL reports an error after a
+    successful reload and the reload of the restored file then fails. The
+    answer carries the unit whose reload fails (`vars.unit`).
+  - *O1.* A `[Warning]` of `mariadbd --help --verbose` that says a value will
+    not be used as written (`option '<name>': ... adjusted to ...`, `option
+    '<name>': boolean value ... wasn't recognized`) refuses the save as
+    `CONFIG_INVALID` / `daemon` with MariaDB's line and the option's name. Other
+    warnings do not (the empty private data directory has no `mysql.plugin`
+    table; a stock Debian or Ubuntu file sets `expire_logs_days` without a
+    binary log; a removed option). A warning the file on the server already
+    produces is not this change's: only then the current file is read the same
+    way and what it already says is left out.
+  - *O3.* No sentence names a cause that was not verified. The Agent's "could
+    not be read" answers keep their fixed first line and may carry two more: a
+    cause the Agent verified itself, and the first line the server's own program
+    printed (bounded to 300 characters, password assignments blanked).
+    `cron_allow`: `crontab` said it refuses the user AND `/etc/cron.allow`
+    exists without that user. `cron_deny`: the same line, no `cron.allow`, and
+    `/etc/cron.deny` lists the user. `postfix_config`: `postqueue` printed
+    `fatal: bad ... configuration: ...` or a fatal naming `main.cf` or
+    `master.cf` and a line. Everything else is "could not be read", with the
+    line. The shared sentence of the settings screens no longer says to check
+    that the service is running.
+  - *O4.* The `502` body after a written policy carries `policy` with its new
+    version; the screen shows it without a second read.
+  - *O5.* The cause: the component has two units on Debian and Ubuntu
+    (`postgresql.service`, a wrapper, and `postgresql@<version>-<cluster>`), and
+    each unit's scan returns the component's files. The Panel's fold lists each
+    file once, compared by the path it resolves to; of two names for one file
+    the one that is the file itself is kept, because the Agent refuses to write
+    through a symbolic link (`/etc/mysql/my.cnf` on Debian resolves to
+    `mariadb.cnf`).
+- **Not changed, and why.**
+  - *O2.* Measured on the development guest with a private temporary
+    configuration directory (Postfix 3.10): `postconf -e` with a value that
+    spans lines exits 1, `postconf: fatal: -e, -X, or -# accepts no multi-line
+    input`. Keeping the owner's layout therefore needs a second writer that
+    edits `main.cf` in place (the last logical assignment, its continuation
+    lines, comments between them, an atomic replacement that keeps owner and
+    mode, and a check that Postfix reads the same value). That is a new write
+    path into the owner's file with no native measurement behind it, for a
+    difference that does not change what Postfix does. Left as it is.
+- **Platform limitation, stated in the guidance.** On a server whose
+  `/etc/cron.allow` does not list a site user, the Panel can neither read nor
+  write that user's crontab: Debian's and Ubuntu's `crontab -u <user>` refuses
+  the user even for root. The Panel says so and changes nothing; it does not
+  edit `cron.allow`.
+- **Schema or version transition.** No database schema and no persisted state.
+  Agent RPC, additive: `MailPolicyResponse.Stage` and `.Applied`, code
+  `mail_policy_reload_unknown`; `ConfigRPCError.Unit`, reasons
+  `restored_unit_reload_failed` and `restored_running_unknown`; the two "could
+  not be read" answers may be followed by `cause=` and `detail=` lines. HTTP,
+  additive: `MAIL_POLICY_RELOAD_UNKNOWN`; `reason` and `policy` on
+  `MAIL_POLICY_NOT_RELOADED`; `applied` on a successful policy save; the two
+  `CONFIG_RELOAD_FAILED` reasons and `vars.unit`; `detail` (the cause token) and
+  `vars.detail` on `CURRENT_SETTINGS_UNREADABLE` / `scheduled_tasks`; `reason`
+  and `vars.detail` on `MAIL_QUEUE_UNREADABLE`. Panel and Agent are installed
+  together by one release. A Panel older than this entry that meets a newer
+  Agent's "could not be read" answer with evidence lines does not recognise it
+  and answers its generic internal error, never an empty list; an older Panel
+  shows `not_restored` for the two new reasons, as it did before.
+- **Recovery behaviour.** Nothing retries by itself and nothing is rolled back
+  that was not before. A written policy that Postfix did not take stays
+  written; the owner corrects the line Postfix names and runs `sudo postfix
+  reload`. A configuration change that was not kept leaves the previous file in
+  place; when the unit's reload fails with it too, the owner is told which unit
+  and that the cause is not only the change.
+- **Evidence.** Component tests only; the native re-run is pending. Agent:
+  `mail_service_verify_test.go` (the wrapper that exits 0 while the daemon did
+  not reload, a reload refused by `postfix check`, success, a master that
+  stops, an unknown outcome, a stopped Postfix, Dovecot exiting after a
+  restart); `mail_policy_reload_test.go`; `db_config_set1_linux_test.go` (each
+  P2 branch, every reading that falls short, `pg_hba.conf`, and the MariaDB
+  lines recorded in the evidence folder as fixtures);
+  `unreadable_evidence_test.go`. Panel: `set1_corrections_test.go`. Screens:
+  four mounted cases in `web/tests/remote-state-mounted-batch2b.test.mjs`. By
+  hand on the development guest, read-only or in a private temporary directory:
+  the `postconf -e` refusal above, and `postfix` writing its `fatal:` line to a
+  standard error that is not a terminal.
+- **Open.**
+  - No fix here has been measured on real services. The native re-run must
+    show, per platform: P1 the Ubuntu sequence answering `502
+    MAIL_POLICY_NOT_RELOADED` / `check` with `policy` in the body, and a healthy
+    save answering `200` / `reloaded` with a `postfix/master ... reload` journal
+    line and the same master process; P2 the drop-in sequence answering
+    `restored_unit_reload_failed` with no copy named or left, `SHOW work_mem`
+    at the previous value; O1 `plenty` refused with MariaDB's line and the stock
+    files still accepted; O3 the three measured causes; O5 one entry per file.
+  - Not changed: the certificate renewal path
+    (`mail_host_certificate_reload.go`) still runs `systemctl reload
+    postfix.service` and judges by `systemctl is-active`, which on Ubuntu are
+    the wrapper's; its command scope is closed and it must not run `postfix
+    check`. The generic service actions of the Services page still report
+    `systemctl`'s exit status, also for the wrapper units `postfix` (Ubuntu) and
+    `postgresql` (Debian, Ubuntu).
+  - A save that changes nothing does not reload, so after a "not reloaded"
+    answer a second, unchanged save answers `200` / `unchanged` while Postfix
+    still runs the earlier values.
+  - `postfix check` also creates missing queue directories; it is what Debian
+    13's unit runs before every start. Postfix has no interface that reports
+    the values a running master holds, so "took the settings" is its own check,
+    its own reload command and a master that is still running.
+  - The PostgreSQL reading reaches the cluster `psql` reaches by default; for
+    another cluster the answer is `restored_running_unknown`. That
+    `pg_conf_load_time()` moves only on an error-free re-read is from
+    PostgreSQL's source behaviour, not measured here. The reading waits one
+    second.
+  - MariaDB: only the two warning forms above are refusals; Oracle MySQL is not
+    handled.
+  - The scheduled tasks screen does not show the cause or the line yet: the
+    answer and the catalogue entries (`cron.unknown.cron_allow`,
+    `cron.unknown.cron_deny`, `cron.unknown.said`) exist, the screen still
+    shows its one neutral sentence. The catalogue entries `postfix.queue.unknown`
+    and `mailpolicy.unknown` are no longer used.
