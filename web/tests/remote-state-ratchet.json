@@ -32,13 +32,10 @@
     "src/components/DNSEngineCard.tsx": {
       "rawRead": 1
     },
-    "src/components/DNSServerSettings.tsx": {
-      "rawRead": 2
-    },
     "src/components/Dashboard.tsx": {
-      "valueFromFailure": 4,
-      "swallowedFailure": 6,
-      "rawRead": 6
+      "valueFromFailure": 1,
+      "swallowedFailure": 3,
+      "rawRead": 4
     },
     "src/components/DatabaseAccountStrip.tsx": {
       "swallowedFailure": 1,
@@ -73,17 +70,6 @@
     "src/components/DomainSSLOverviewCard.tsx": {
       "rawRead": 1
     },
-    "src/components/DovecotManagement.tsx": {
-      "valueFromFailure": 1,
-      "swallowedFailure": 1,
-      "rawRead": 1
-    },
-    "src/components/Fail2banManagement.tsx": {
-      "valueFromFailure": 3,
-      "swallowedFailure": 1,
-      "rawRead": 3,
-      "unprovenEmptyState": 2
-    },
     "src/components/HostingTypePanel.tsx": {
       "swallowedFailure": 1,
       "ignoredFailure": 4,
@@ -104,21 +90,6 @@
       "swallowedFailure": 1,
       "rawRead": 1
     },
-    "src/components/NginxManagement.tsx": {
-      "valueFromFailure": 3,
-      "swallowedFailure": 1,
-      "rawRead": 3,
-      "unprovenEmptyState": 1
-    },
-    "src/components/PHPExtendedConfig.tsx": {
-      "rawRead": 1
-    },
-    "src/components/PHPManagement.tsx": {
-      "valueFromFailure": 1,
-      "swallowedFailure": 1,
-      "rawRead": 1,
-      "unprovenEmptyState": 1
-    },
     "src/components/PanelAddressHint.tsx": {
       "swallowedFailure": 1,
       "ignoredFailure": 1,
@@ -128,11 +99,6 @@
       "valueFromFailure": 1,
       "swallowedFailure": 1,
       "rawRead": 2
-    },
-    "src/components/PowerDNSManagement.tsx": {
-      "valueFromFailure": 1,
-      "swallowedFailure": 1,
-      "rawRead": 1
     },
     "src/components/RecoveryAccess.tsx": {
       "valueFromFailure": 1,

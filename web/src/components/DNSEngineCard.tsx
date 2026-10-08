@@ -71,7 +71,18 @@ interface OperationGuardState {
     mode: 'submitting' | 'verifying' | 'stalled' | 'deadline' | 'recovery_required';
     startedAt: number;
     attempts: number;
-    reconcileAttempts: number;
+    // The exact operation has recorded nothing new for two minutes, so the
+    // lock offers the person at the screen "Check now" (see the polling loop).
+    // It stays offered, on the card, after the loop has stopped at its safety
+    // limit: that is then the only way the request can still be sent.
+    // Tam islem iki dakikadir yeni bir sey kaydetmedi; kilit, ekrandaki kisiye
+    // "Simdi kontrol et"i sunar. Dongu guvenlik sinirinda durduktan sonra da
+    // kartta sunulmaya devam eder: istegin gonderilebilecegi tek yol odur.
+    reconcileOffered: boolean;
+    /** That request, sent by the person at the screen, is in flight. */
+    reconciling: boolean;
+    /** What the last "Check now" came back with; it replaces the offer's first sentence. */
+    reconcileNote?: string;
     operation: DNSEngineOperation | null;
     trackingMessage?: string;
     completionToast?: {
@@ -207,8 +218,6 @@ const dnsEngineGuardSlowPollDelayMs = 15_000;
 const dnsEngineGuardStalledAfterMs = 2 * 60_000;
 const dnsEngineGuardMaxElapsedMs = 31 * 60_000;
 const dnsEngineGuardMaxAttempts = 180;
-const dnsEngineGuardMaxReconcileAttempts = 3;
-const dnsEngineGuardReconcileDelayMs = 60_000;
 
 function createRequestID(): string | null {
     try {
@@ -311,7 +320,15 @@ export function DNSEngineCard({
     const [snapshot, setSnapshot] = useState<DNSEngineSnapshot | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState('');
-    const [trackingError, setTrackingError] = useState('');
+    const [trackingError, setTrackingErrorState] = useState('');
+    // What the last reconcile request came back with, readable right after the
+    // await that sent it ('' when the server accepted it).
+    // Son uzlastirma isteginin sonucu; istegi gonderen await'ten hemen sonra okunur.
+    const trackingErrorRef = useRef('');
+    const setTrackingError = (message: string) => {
+        trackingErrorRef.current = message;
+        setTrackingErrorState(message);
+    };
     const [trackingReadError, setTrackingReadError] = useState('');
     const [trackingDelayed, setTrackingDelayed] = useState(false);
     const [review, setReview] = useState<ReviewState | null>(null);
@@ -324,7 +341,8 @@ export function DNSEngineCard({
                 mode: 'verifying',
                 startedAt: initialMarker.createdAt,
                 attempts: 0,
-                reconcileAttempts: 0,
+                reconcileOffered: false,
+                reconciling: false,
                 operation: null,
             }
             : null
@@ -332,7 +350,13 @@ export function DNSEngineCard({
     const operationGuardRef = useRef<OperationGuardState | null>(operationGuard);
     const operationLeaseRef = useRef<InteractionBlockLease | null>(null);
     operationGuardRef.current = operationGuard;
+    const checkStalledOperationRef = useRef<() => Promise<void>>(async () => {});
     const identityReviewLocked = dnsEngineIdentityReviewLocked(identityPlanCurrent, snapshot);
+    // The loop has stopped at its safety limit for an exact operation: the
+    // card offers the owner's check (the lock is released in this state).
+    // Dongu, tam bir islem icin guvenlik sinirinda durdu: kart sahibin
+    // kontrolunu sunar (bu durumda kilit birakilmistir).
+    const deadlineCheckOffered = operationGuard?.mode === 'deadline' && operationGuard.reconcileOffered;
 
     const guardView = useCallback((guard: OperationGuardState) => {
         const operation = guard.operation;
@@ -365,6 +389,18 @@ export function DNSEngineCard({
                   ? 'warning' as const
                   : undefined,
             message: guard.trackingMessage,
+            // Offered only while the exact operation is stalled; the click is
+            // the one place the reconcile request can come from while a change
+            // is tracked.
+            // Yalniz tam islem takildiginda sunulur; degisiklik izlenirken
+            // uzlastirma istegi yalniz bu tiklamadan cikabilir.
+            action: guard.mode === 'stalled' && guard.reconcileOffered
+                ? {
+                    label: et('dnsEngine.guard.checkNow'),
+                    busy: guard.reconciling,
+                    onAct: () => { void checkStalledOperationRef.current(); },
+                }
+                : undefined,
             details: [
                 { label: et('dnsEngine.operation.phase'), value: phase },
                 { label: et('dnsEngine.operation.elapsed'), value: elapsedText(elapsedSeconds, et) },
@@ -466,7 +502,8 @@ export function DNSEngineCard({
                         mode: recoveryRequired ? 'recovery_required' : 'verifying',
                         startedAt: Date.parse(decoded.operation.started_at),
                         attempts: 0,
-                        reconcileAttempts: 0,
+                        reconcileOffered: false,
+                        reconciling: false,
                         operation: decoded.operation,
                         trackingMessage: recoveryRequired
                             ? decoded.operation.last_error
@@ -577,8 +614,6 @@ export function DNSEngineCard({
         const requestID = operationGuard.requestID;
         const target = operationGuard.target;
         let attempts = operationGuard.attempts;
-        let reconcileAttempts = operationGuard.reconcileAttempts;
-        let lastReconcileAt = 0;
         let cancelled = false;
         let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -591,17 +626,31 @@ export function DNSEngineCard({
         };
         const stopAtDeadline = (guard: OperationGuardState) => {
             setTrackingDelayed(true);
+            // The loop stops reading here. Before 9 Oct 2026 it had by then
+            // sent its own reconcile requests; now nothing has been sent
+            // unless the owner chose to, so the owner's check stays offered
+            // for an exact operation (on the card: the lock is released).
+            // Dongu burada okumayi birakir. Sahibin kontrolu, tam islem icin
+            // kartta sunulmaya devam eder (kilit birakilir).
             holdOperationGuard({
                 ...guard,
                 mode: 'deadline',
                 attempts,
-                reconcileAttempts,
+                reconcileOffered: guard.operation !== null,
+                reconcileNote: undefined,
                 trackingMessage: et('dnsEngine.guard.deadline'),
             });
         };
         const verify = async () => {
             let guard = currentGuard();
             if (!guard) return;
+            // The owner's "Check now" is reading for this operation right now;
+            // this tick leaves it to finish instead of reading beside it.
+            // Sahibin "Simdi kontrol et" istegi su anda bu islem icin okuyor.
+            if (guard.reconciling) {
+                schedule(dnsEngineGuardPollDelayMs);
+                return;
+            }
             const elapsedMs = Date.now() - guard.startedAt;
             // A persisted deadline marker must get one fresh authoritative
             // read after reload before the local guard returns to deadline.
@@ -613,11 +662,11 @@ export function DNSEngineCard({
                 return;
             }
             attempts += 1;
-            let decoded = await refresh(true);
+            const decoded = await refresh(true);
             if (cancelled) return;
             guard = currentGuard();
             if (!guard) return;
-            let exactOperation = decoded?.operation?.request_id === requestID
+            const exactOperation = decoded?.operation?.request_id === requestID
                 && decoded.operation.target_engine === target
                 ? decoded.operation
                 : null;
@@ -631,40 +680,43 @@ export function DNSEngineCard({
                 return;
             }
 
-            let durableStalled = exactOperation !== null
+            const durableStalled = exactOperation !== null
                 ? Date.now() - Date.parse(exactOperation.updated_at) >= dnsEngineGuardStalledAfterMs
                 : Date.now() - guard.startedAt >= dnsEngineGuardStalledAfterMs;
-            if (durableStalled
-                && exactOperation !== null
-                && reconcileAttempts < dnsEngineGuardMaxReconcileAttempts
-                && Date.now() - lastReconcileAt >= dnsEngineGuardReconcileDelayMs) {
-                reconcileAttempts += 1;
-                lastReconcileAt = Date.now();
-                decoded = await reconcileAndRefresh(true);
-                if (cancelled) return;
-                guard = currentGuard();
-                if (!guard) return;
-                exactOperation = decoded?.operation?.request_id === requestID
-                    && decoded.operation.target_engine === target
-                    ? decoded.operation
-                    : exactOperation;
-                if (decoded !== null && completeGuardedVerification(decoded, guard)) return;
-                durableStalled = exactOperation !== null
-                    ? Date.now() - Date.parse(exactOperation.updated_at) >= dnsEngineGuardStalledAfterMs
-                    : Date.now() - guard.startedAt >= dnsEngineGuardStalledAfterMs;
-            }
-
+            // POLLING ONLY READS (docs/OPERATION-GUIDANCE.md, "Truth and
+            // operation identity"; decision of 2026-10-09). Until that day this
+            // loop itself sent the reconcile request (a POST) when the exact
+            // operation had recorded nothing for two minutes (at most three
+            // times, a minute apart). That request is not a read: the server
+            // takes its change lock, may close the saved record of the change,
+            // and writes the result to the audit log under the signed-in
+            // administrator - from a timer, in a tab nobody may be looking at,
+            // while the screen said "read-only checks continue". The request
+            // is still needed (it is what closes an accepted change whose
+            // worker is gone), so it is not removed: when it is due the lock
+            // says so and offers it to the person at the screen.
+            // YOKLAMA YALNIZ OKUR. Bu dongu, tam islem iki dakikadir bir sey
+            // kaydetmediginde uzlastirma istegini (POST) gonderiyordu. O istek
+            // okuma degildir: sunucu degisiklik kilidini alir, degisikligin
+            // kayitli kaydini kapatabilir ve sonucu oturumdaki yonetici adina
+            // denetim gunlugune yazar. Istek hala gereklidir; zamani geldiginde
+            // kilit bunu soyler ve ekrandaki kisiye sunar.
+            const reconcileOffered = durableStalled && exactOperation !== null;
+            const stalledMinutes = exactOperation !== null
+                ? Math.max(2, Math.floor((Date.now() - Date.parse(exactOperation.updated_at)) / 60_000))
+                : 2;
             const trackingMessage = durableStalled
-                ? et(exactOperation
-                    ? 'dnsEngine.guard.stalled'
-                    : 'dnsEngine.guard.awaitingStalled')
+                ? exactOperation
+                    ? `${guard.reconcileNote ?? et('dnsEngine.guard.reconcileDue', { minutes: stalledMinutes })} ${et('dnsEngine.guard.reconcileOffer')}`
+                    : et('dnsEngine.guard.awaitingStalled')
                 : undefined;
             setTrackingDelayed(durableStalled);
             holdOperationGuard({
                 ...guard,
                 mode: durableStalled ? 'stalled' : 'verifying',
                 attempts,
-                reconcileAttempts,
+                reconcileOffered,
+                reconcileNote: reconcileOffered ? guard.reconcileNote : undefined,
                 operation: exactOperation ?? guard.operation,
                 trackingMessage,
             });
@@ -684,6 +736,55 @@ export function DNSEngineCard({
     useEffect(() => {
         if (actionsLocked) setReview(null);
     }, [actionsLocked]);
+
+    // "Check now", pressed by the person at the screen - in the lock while the
+    // operation is stalled, on the card once the loop has stopped at its
+    // safety limit: one reconcile request for that operation, then the read
+    // that says what is true. It cannot start the change again (no call site
+    // of the switch request is reachable from here) and no timer calls it.
+    // "Simdi kontrol et": islem takiliyken kilitte, dongu guvenlik sinirinda
+    // durduktan sonra kartta. O islem icin tek uzlastirma istegi, ardindan
+    // neyin dogru oldugunu soyleyen okuma. Degisikligi yeniden baslatamaz ve
+    // hicbir zamanlayici onu cagirmaz.
+    const checkStalledOperation = async () => {
+        const guard = operationGuardRef.current;
+        if (!guard || (guard.mode !== 'stalled' && guard.mode !== 'deadline') || !guard.reconcileOffered || guard.reconciling) return;
+        holdOperationGuard({ ...guard, reconciling: true });
+        const decoded = await reconcileAndRefresh(true);
+        const refused = trackingErrorRef.current;
+        const current = operationGuardRef.current;
+        if (!current || current.requestID !== guard.requestID || current.target !== guard.target) return;
+        const settled = { ...current, reconciling: false };
+        if (decoded !== null && completeGuardedVerification(decoded, settled)) return;
+        // The operation moved on while the request was out (the server
+        // recorded a new step, so it is no longer stalled): that state has
+        // its own message and offers nothing, so nothing here describes an offer.
+        // Istek disaridayken islem ilerledi (artik takili degil): o durumun
+        // kendi iletisi vardir ve bir sey sunmaz.
+        if (!settled.reconcileOffered || (settled.mode !== 'stalled' && settled.mode !== 'deadline')) {
+            holdOperationGuard(settled);
+            return;
+        }
+        const exactOperation = decoded?.operation?.request_id === settled.requestID
+            && decoded.operation.target_engine === settled.target
+            ? decoded.operation
+            : null;
+        const reconcileNote = refused
+            || et(decoded === null ? 'dnsEngine.guard.reconcileUnread' : 'dnsEngine.guard.reconcileChecked', {
+                time: new Date().toLocaleTimeString(locale === 'tr' ? 'tr-TR' : 'en-US', { hour: '2-digit', minute: '2-digit' }),
+            });
+        holdOperationGuard({
+            ...settled,
+            operation: exactOperation ?? settled.operation,
+            reconcileNote,
+            // Past the safety limit the lock is not drawn; the card's notice
+            // is built from the note (see `deadlineCheckOffered`).
+            trackingMessage: settled.mode === 'deadline'
+                ? settled.trackingMessage
+                : `${reconcileNote} ${et('dnsEngine.guard.reconcileOffer')}`,
+        });
+    };
+    checkStalledOperationRef.current = checkStalledOperation;
 
     const requestPreview = async (target: DNSEngineID) => {
         if (actionsLocked || loading || operationGuardRef.current !== null) return;
@@ -775,7 +876,8 @@ export function DNSEngineCard({
             mode: 'submitting',
             startedAt,
             attempts: 0,
-            reconcileAttempts: 0,
+            reconcileOffered: false,
+            reconciling: false,
             operation: null,
         });
         setReview({ ...current, committing: true, error: '' });
@@ -1003,8 +1105,36 @@ export function DNSEngineCard({
                             <DNSEngineOperationProgress
                                 operation={snapshot.operation}
                                 trackingError={trackingError || trackingReadError}
-                                trackingDelayed={trackingDelayed}
+                                trackingDelayed={trackingDelayed && !deadlineCheckOffered}
+                                tracked={operationGuard?.mode !== 'deadline'}
                             />
+                        )}
+                        {/* After the safety limit nothing reads by itself any
+                            more, so the sentence above ("tracking continues")
+                            is replaced by this one, with the one request the
+                            owner may send. No timer sends it.
+                            Guvenlik sinirindan sonra hicbir sey kendiliginden
+                            okumaz; yukaridaki cumlenin yerini bu alir ve
+                            sahibin gonderebilecegi tek istegi sunar. */}
+                        {deadlineCheckOffered && operationGuard && (
+                            <div
+                                className="mt-3 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-sm leading-relaxed text-fg"
+                                role="alert"
+                                data-testid="dns-engine-deadline-check"
+                            >
+                                <p className="max-w-[75ch] break-words">
+                                    {operationGuard.reconcileNote ?? et('dnsEngine.guard.deadlineDue')} {et('dnsEngine.guard.deadlineOffer')}
+                                </p>
+                                <div className="mt-2">
+                                    <Button
+                                        variant="secondary"
+                                        loading={operationGuard.reconciling}
+                                        onClick={() => { void checkStalledOperationRef.current(); }}
+                                    >
+                                        {et('dnsEngine.guard.checkNow')}
+                                    </Button>
+                                </div>
+                            </div>
                         )}
 
                         <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -1126,10 +1256,13 @@ function DNSEngineOperationProgress({
     operation,
     trackingError,
     trackingDelayed,
+    tracked,
 }: {
     operation: DNSEngineOperation;
     trackingError: string;
     trackingDelayed: boolean;
+    /** False once the card's loop has stopped at its safety limit: nothing is "updating automatically" then. */
+    tracked: boolean;
 }) {
     const { locale } = useI18n();
     const et = (key: DNSEngineCopyKey, vars?: Record<string, string | number>) =>
@@ -1165,7 +1298,7 @@ function DNSEngineOperationProgress({
                                 {et(`dnsEngine.operation.status.${operation.status}` as DNSEngineCopyKey)}
                             </p>
                         </div>
-                        {active && (
+                        {active && tracked && (
                             <span className="rounded-full border border-primary/25 bg-surface px-2.5 py-1 text-xs font-semibold text-primary">
                                 {et('dnsEngine.operation.autoTracking')}
                             </span>

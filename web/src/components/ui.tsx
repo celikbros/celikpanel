@@ -159,12 +159,27 @@ export function Button({
         secondary: 'bg-surface text-fg border-border-strong hover:bg-surface-2',
         danger: 'bg-surface text-danger border-border-strong hover:bg-danger/10 hover:border-danger/40',
     }[variant];
+    // 9 Oct 2026, seen in a browser: in the dark theme the recessed fill was
+    // a navy block with a light label, and it read as a filled call to action
+    // - more like a button to press than the enabled one beside it. A control
+    // that cannot be used now has no fill at all and a dashed outline in the
+    // colour of its own label, which says "not available" by shape as well as
+    // by colour, in both themes, in every skin and on every surface a button
+    // stands on. A button that is working keeps the recessed fill: it is busy,
+    // not unavailable, and its spinner says so.
+    // 9 Eki 2026, tarayicida goruldu: koyu temada cukur dolgu, acik etiketli
+    // lacivert bir bloktu ve yanindaki etkin dugmeden daha cok basilacak bir
+    // dugmeye benziyordu. Kullanilamayan denetimin artik dolgusu yoktur ve
+    // cercevesi kesik cizgilidir; calisan dugme ise cukur dolguyu korur.
+    const off = loading
+        ? 'disabled:border-transparent disabled:bg-surface-2'
+        : 'disabled:border-dashed disabled:border-current disabled:bg-transparent';
     return (
         <button
             {...props}
             disabled={props.disabled || loading}
             aria-busy={loading || undefined}
-            className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:pointer-events-none disabled:border-transparent disabled:bg-surface-2 disabled:text-fg-muted ${styles} ${props.className ?? ''}`}
+            className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:pointer-events-none disabled:text-fg-muted ${off} ${styles} ${props.className ?? ''}`}
         >
             {loading ? <Spinner size="xs" tone="current" /> : Icon && <Icon className="h-4 w-4" />}
             {children}

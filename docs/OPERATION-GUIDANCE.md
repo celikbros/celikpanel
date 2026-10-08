@@ -2160,6 +2160,416 @@ eight configurations.
   administrator. The forms that create an account or a plan were not submitted.
   The setup-guide sentence was changed in the catalogue and not seen on screen.
 
+#### Third batch: service pages, the dashboard's attention list, the DNS settings and the DNS engine's stalled change (2026-10-09)
+
+Source state with component tests and a browser inspection against a loopback
+mock; no native run and no installed server. The same rule, applied to a smaller
+set than planned: this batch was cut down so that what it changes could be
+verified, and the rest of the allow-list is untouched (see "Not done"). It
+changes how reads are shown in the interface and who sends one request of the
+DNS engine card; no API, stored record, access gate or lifecycle changes, and no
+acceptance item is closed.
+
+**What these screens showed before.**
+
+- *Fail2ban.* A read that failed or had not answered was an empty list: "No
+  jails active" and "No banned IPs" on a server that had both, with 0 beside the
+  two tabs, and no settings tab content at all.
+- *Nginx.* Every value was "—" and the rate limits were "No rate-limit zones
+  defined" while the three reads were on their way and after they failed.
+- *PHP.* "No extensions found" for the same two cases; a switch was changed on
+  screen before the server had answered and put back if it refused. The php.ini
+  editor reported a failed read with a browser alert and then drew nothing.
+- *Dovecot.* Both figures were "—" without a word.
+- *PowerDNS.* The page read the component records on its own; when that read
+  failed it showed no file list and said nothing.
+- *DNS settings.* A failed first read was a red banner with no way to read again.
+- *Dashboard.* Whatever `GET /api/v1/firewall` answered was stored as the
+  firewall's state. An answer without `enabled` — the Agent's own error sent with
+  a 200 — drew "Firewall is off — all ports are open" with "Turn on". The "Needs
+  attention" section appeared when the slowest read answered and pushed the page
+  down by 118 px (158 px on a phone).
+
+**The texts.** Keys are in `web/src/i18n/screens/server` unless noted.
+
+- *Fail2ban, the jails* — checking (`f2b.jails.checking`): EN "Reading Fail2ban’s
+  jails…" · TR "Fail2ban’in hapishaneleri okunuyor…". Could not read
+  (`f2b.jails.unknown`):
+  - EN: "Fail2ban’s jails could not be read from the server, so they are not
+    listed. This does not mean there are none. Nothing was changed. Try again."
+  - TR: "Fail2ban’in hapishaneleri sunucudan okunamadı; bu yüzden listelenmiyor. Bu,
+    hapishane olmadığı anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *Fail2ban, the banned addresses* — checking (`f2b.banned.checking`): EN
+  "Reading the addresses Fail2ban has banned…" · TR "Fail2ban’in yasakladığı
+  adresler okunuyor…". Could not read (`f2b.banned.unknown`):
+  - EN: "The addresses Fail2ban has banned could not be read from the server, so
+    they are not listed. This does not mean none is banned. Nothing was changed.
+    Try again."
+  - TR: "Fail2ban’in yasakladığı adresler sunucudan okunamadı; bu yüzden
+    listelenmiyor. Bu, yasaklı adres olmadığı anlamına gelmez. Hiçbir şey
+    değiştirilmedi. Tekrar deneyin."
+  - "Unban" exists only for a row the server listed. After it, both lists are
+    read again whatever the answer was; if that read fails the earlier list stays
+    under the shared notice (`common.staleNotice`) and "Unban" is off.
+- *Fail2ban, the settings* — checking (`f2b.config.checking`): EN "Reading
+  Fail2ban’s settings…" · TR "Fail2ban’in ayarları okunuyor…". Could not read
+  (`f2b.config.unknown`): EN "Fail2ban’s settings could not be read from the
+  server, so they are not shown. Nothing was changed. Try again." · TR
+  "Fail2ban’in ayarları sunucudan okunamadı; bu yüzden gösterilmiyor. Hiçbir şey
+  değiştirilmedi. Tekrar deneyin."
+- The count beside each Fail2ban tab is the number once the list is known, "…"
+  while it is read and "–" when it could not be read.
+- *Nginx* — checking (`nginx.global.checking`, `nginx.ssl.checking`,
+  `nginx.rate.checking`): EN "Reading Nginx’s global settings…", "Reading Nginx’s
+  TLS settings…", "Reading Nginx’s rate-limit zones…" · TR "Nginx’in genel
+  ayarları okunuyor…", "Nginx’in TLS ayarları okunuyor…", "Nginx’in hız sınırı
+  bölgeleri okunuyor…". Could not read (`nginx.global.unknown`,
+  `nginx.ssl.unknown`, `nginx.rate.unknown`):
+  - EN: "Nginx’s global settings could not be read from the server, so they are
+    not shown. This does not mean they are not set. Nothing was changed. Try
+    again." / "Nginx’s TLS settings could not be read from the server, so they
+    are not shown. This does not mean they are not set. Nothing was changed. Try
+    again." / "Nginx’s rate-limit zones could not be read from the server, so
+    they are not listed. This does not mean none is defined. Nothing was
+    changed. Try again."
+  - TR: "Nginx’in genel ayarları sunucudan okunamadı; bu yüzden gösterilmiyor.
+    Bu, ayarlanmadıkları anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar
+    deneyin." / "Nginx’in TLS ayarları sunucudan okunamadı; bu yüzden
+    gösterilmiyor. Bu, ayarlanmadıkları anlamına gelmez. Hiçbir şey
+    değiştirilmedi. Tekrar deneyin." / "Nginx’in hız sınırı bölgeleri sunucudan
+    okunamadı; bu yüzden listelenmiyor. Bu, tanımlı bölge olmadığı anlamına
+    gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - "—" is drawn only for a value a known answer leaves empty. The first column
+    of the rate-limit table had the untranslated heading "Name"; it is
+    `nginx.rl.name` (EN "Name" · TR "Ad").
+- *PHP, the extensions of one version* — checking (`php.extensions.checking`): EN
+  "Reading the extensions of PHP {version}…" · TR "PHP {version} eklentileri
+  okunuyor…". Could not read (`php.extensions.unknown`):
+  - EN: "The extensions of PHP {version} could not be read from the server, so
+    they are not listed and cannot be switched here yet. This does not mean there
+    are none. Nothing was changed. Try again."
+  - TR: "PHP {version} eklentileri sunucudan okunamadı; bu yüzden listelenmiyor
+    ve şimdilik buradan açılıp kapatılamıyor. Bu, eklenti olmadığı anlamına
+    gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - A switch exists only for an extension the server listed. Pressing one sends
+    the change once; the list is then read again and the switch shows what the
+    server says, accepted or refused. The switches are off while that happens
+    and while the list is an earlier answer.
+- *PHP, php.ini of one version* — checking (`php.ini.checking`): EN "Reading
+  php.ini of PHP {version}…" · TR "PHP {version} için php.ini okunuyor…". Could
+  not read (`php.ini.unknown`): EN "php.ini of PHP {version} could not be read
+  from the server, so its settings are not shown and cannot be changed here yet.
+  Nothing was changed. Try again." · TR "PHP {version} için php.ini sunucudan
+  okunamadı; bu yüzden ayarları gösterilmiyor ve şimdilik buradan
+  değiştirilemiyor. Hiçbir şey değiştirilmedi. Tekrar deneyin." The form is built
+  only from an answer; nothing read for another version stays in it.
+- *Dovecot, uptime and connections*: "…" while they are read, "–" when they
+  could not be read, and under the cards (`dovecot.statsUnknown`):
+  - EN: "Dovecot’s uptime and connection count could not be read from the server,
+    so they are not shown. This does not mean Dovecot is stopped or has no
+    connections. Nothing was changed. Try again."
+  - TR: "Dovecot’un çalışma süresi ve bağlantı sayısı sunucudan okunamadı; bu
+    yüzden gösterilmiyor. Bu, Dovecot’un durduğu ya da bağlantı olmadığı anlamına
+    gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *PowerDNS, its configuration files*: the same shared read and the same two
+  sentences as the PostgreSQL and MariaDB pages (`dbconf.files.checking`,
+  `dbconf.files.unknown`, with "PowerDNS").
+- *DNS settings (Settings → DNS)* — checking (`dnssrv.checking`): EN "Reading
+  this server’s DNS settings…" · TR "Bu sunucunun DNS ayarları okunuyor…". Could
+  not read (`dnssrv.unknown`), with Retry; a refusal the server explained is
+  shown under it:
+  - EN: "The DNS settings of this server could not be read, so they are not shown
+    and cannot be changed here yet. This does not mean DNS is not set up. Nothing
+    was changed. Try again."
+  - TR: "Bu sunucunun DNS ayarları okunamadı; bu yüzden gösterilmiyor ve şimdilik
+    buradan değiştirilemiyor. Bu, DNS’in kurulmadığı anlamına gelmez. Hiçbir şey
+    değiştirilmedi. Tekrar deneyin."
+- *Dashboard, "Needs attention"* (keys in `web/src/i18n/screens`). The section is
+  on the page from the first paint. An item is listed only from an answer the
+  server gave. The list is built from four reads (expiring certificates, the
+  domain list, the firewall, the component records):
+  - while one is on its way (`dashboard.attentionChecking`): EN "Checking what
+    needs attention on this server…" · TR "Bu sunucuda ilgi isteyen bir şey olup
+    olmadığı kontrol ediliyor…";
+  - when one could not be read (`dashboard.attentionUnread`), with Retry, which
+    reads only the ones that failed: EN "Part of this server’s state could not be
+    read, so this list may be incomplete. This does not mean something is wrong.
+    Nothing was changed. Try again." · TR "Bu sunucunun durumunun bir bölümü
+    okunamadı; bu yüzden bu liste eksik olabilir. Bu, bir şeyin yanlış olduğu
+    anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin.";
+  - when all four answered and nothing is listed (`dashboard.attentionNone`): EN
+    "Nothing CelikPanel read needs action: certificates, the firewall and the
+    installed components." · TR "CelikPanel’in okuduklarında işlem gerektiren bir
+    şey yok: sertifikalar, güvenlik duvarı ve kurulu bileşenler.";
+  - the same, when the component records are not current
+    (`dashboard.attentionNoneUnchecked`): EN "No certificate or firewall setting
+    needs action. The installed components were not checked recently." · TR
+    "İşlem gerektiren bir sertifika ya da güvenlik duvarı ayarı yok. Kurulu
+    bileşenlere yakın zamanda bakılmadı." What to do about it is in the "System
+    services" card above the list, which says in that case that the component
+    status is outdated and points to the Components page.
+  - This is not the "all good" line that was removed earlier: it names what was
+    read and does not speak for components nobody has checked lately.
+  - The checking line is drawn only while nothing is listed. When an item is
+    already listed and another read is still on its way, that is said beside
+    the count (a small spinner whose label is the checking sentence), so no row
+    appears in the list and then leaves it.
+  - "Firewall is off" and "Turn on" exist only for an answer with `enabled:
+    false`. An answer without a boolean `enabled`, or one that carries the
+    Agent's `error`, is "could not be read".
+
+**The DNS engine card: polling only reads (decision).** While a DNS engine change
+is tracked, the card reads `GET /api/v1/dns/engine` every 3 s (15 s once the
+change has recorded nothing new for two minutes). Until this entry the same
+timer also sent `POST /api/v1/dns/engine/reconcile` when the exact operation's
+`updated_at` was two minutes old, at most three times and a minute apart. That
+request is still needed — it is what closes the saved record of an accepted
+change whose worker is gone — but it is not a read: the server takes its change
+lock, may rewrite the saved record, and writes `reconciled_operation` to the
+audit log under the signed-in administrator. A timer sent it in a tab nobody may
+have been looking at, while the screen said "Read-only checks continue every 15
+seconds".
+
+Two ways were considered: keep one automatic attempt and record it here as an
+exception to "Polling and page refresh are reads" (above), or give the request to
+the person at the screen. The second was chosen, because the request is attributed
+to a person in the audit log and so should be that person's act, because an
+exception to the polling rule would have to be remembered by every later reader
+of this document, and because nothing is lost: the lock already told the owner to
+stay on the page, and the change itself is never started again either way.
+
+- The timer sends the request zero times. It can come from a button only:
+  `Refresh state` on the card (off while a change is tracked, as before) and
+  "Check now", which is in the lock while the change is stalled and on the card
+  once the polling has stopped at its safety limit.
+- "Check now" is offered in the lock only when the exact operation (same request
+  and target) has recorded nothing new for two minutes; one request at a time;
+  its answer is applied only to the same request and target, through the same
+  check for a finished change as the polling.
+- *Past the safety limit.* The polling stops after 31 minutes or 180 reads
+  without a final result, and the lock is released (both as before). Until this
+  entry the timer had by then sent its own requests; with none sent, and
+  `Refresh state` off while the change is unresolved, nothing in the interface
+  could have closed the saved record any more. So for an exact operation the
+  card keeps offering the same "Check now" in that state, in a notice under the
+  operation's progress. It replaces the sentence "Automatic tracking continues
+  every 15 seconds", which is not true there. Reloading the page reads the
+  state once and returns to this notice.
+- Texts (`web/src/i18n/dnsEngine.ts`). First sentence (`dnsEngine.guard.reconcileDue`):
+  EN "CelikPanel has not confirmed this change for {minutes} minutes: the server
+  has recorded no new step in that time." · TR "CelikPanel bu değişikliği
+  {minutes} dakikadır doğrulayamadı: sunucu bu sürede yeni bir adım kaydetmedi."
+  Then (`dnsEngine.guard.reconcileOffer`):
+  - EN: "CelikPanel keeps reading the state every 15 seconds and changes nothing
+    by itself. As this server’s administrator you can choose Check now:
+    CelikPanel then compares its saved record of this change with what the DNS
+    service did, and closes the record if the change has ended. That is logged
+    under your account and does not start the change again."
+  - TR: "CelikPanel durumu 15 saniyede bir okumayı sürdürüyor ve kendiliğinden
+    hiçbir şeyi değiştirmiyor. Bu sunucunun yöneticisi olarak Şimdi kontrol et’i
+    seçebilirsiniz: CelikPanel o zaman bu değişikliğin kayıtlı kaydını DNS
+    hizmetinin gerçekten yaptığıyla karşılaştırır ve değişiklik bittiyse kaydı
+    kapatır. Bu işlem hesabınız adına denetim günlüğüne yazılır ve değişikliği
+    yeniden başlatmaz."
+  - Button (`dnsEngine.guard.checkNow`): EN "Check now" · TR "Şimdi kontrol et".
+  - After a check that did not finish the change, the first sentence is replaced
+    by (`dnsEngine.guard.reconcileChecked`) EN "Checked at {time}: the change has
+    not finished yet." · TR "Saat {time} itibarıyla kontrol edildi: değişiklik
+    henüz bitmedi."; by the server's own refusal when it refused; or by
+    (`dnsEngine.guard.reconcileUnread`) EN "Checked at {time}, but the DNS state
+    could not be read afterwards." · TR "Saat {time} itibarıyla kontrol edildi,
+    ancak ardından DNS durumu okunamadı."
+  - Past the safety limit, on the card: first sentence
+    (`dnsEngine.guard.deadlineDue`) EN "CelikPanel has stopped checking this
+    change by itself: it reached its safety limit without a final result." · TR
+    "CelikPanel bu değişikliği kendiliğinden kontrol etmeyi bıraktı: kesin bir
+    sonuç olmadan güvenlik sınırına ulaştı." Then
+    (`dnsEngine.guard.deadlineOffer`), with the same button:
+    - EN: "Nothing is changed by itself. As this server’s administrator you can
+      choose Check now: CelikPanel then compares its saved record of this change
+      with what the DNS service did, and closes the record if the change has
+      ended. That is logged under your account and does not start the change
+      again."
+    - TR: "Kendiliğinden hiçbir şey değiştirilmez. Bu sunucunun yöneticisi olarak
+      Şimdi kontrol et’i seçebilirsiniz: CelikPanel o zaman bu değişikliğin
+      kayıtlı kaydını DNS hizmetinin gerçekten yaptığıyla karşılaştırır ve
+      değişiklik bittiyse kaydı kapatır. Bu işlem hesabınız adına denetim
+      günlüğüne yazılır ve değişikliği yeniden başlatmaz."
+    - After a check there, the first sentence is replaced as in the lock
+      (`reconcileChecked`, the server's refusal, or `reconcileUnread`).
+  - `dnsEngine.guard.stalled` ("No new durable server phase has been recorded for
+    two minutes…") is removed; the state without an exact operation
+    (`dnsEngine.guard.awaitingStalled`) is unchanged and offers nothing, in the
+    lock and past the safety limit.
+
+**Four corrections in shared parts.**
+
+- *A component operation that ends refreshes what is shown.* Screens that show
+  the stored component records through the shared read keep an answer for half a
+  minute, so a PostgreSQL or MariaDB page opened right after its install could
+  list the earlier scan for up to 30 s. The tracker now tells that read to read
+  again once per operation, at the point where it has verified the end with a
+  fresh scan (success or failure), never from a poll; with no such screen open
+  nothing is requested (`refreshRemote` in `web/src/lib/remote.ts`).
+- *The dashboard's attention list keeps its place* (above): with none or one
+  item nothing under it moves; each further item adds its own row. The box
+  reserves the height of the tallest thing one answer can put in it: one line
+  on a wide screen, three lines below the `lg` width, where the calm line wraps
+  to three lines and one item to two; what it holds is centred in it. The two
+  calm lines are of one length for that reason.
+- *A disabled button no longer looks like a call to action.* It had a recessed
+  fill, which in the dark theme was a navy block with a light label beside a
+  light enabled button. A control that cannot be used has no fill and a dashed
+  outline in the colour of its label, in both themes; a button that is working
+  keeps the recessed fill and its spinner.
+- *The card of a configuration editor keeps its height.* It was one line while
+  the file was read and then the whole editor, pushing the raw files, the
+  overview and the log down. The card takes the rest of the window in every
+  state, so what stands under it starts below the fold before and after; the
+  raw file editor reserves the height of its text area; on the MariaDB page the
+  file chooser's place is kept while the files are read.
+
+Also: the lock of a tracked operation can be taller than a phone's window (three
+details, a message and an action). It scrolled nowhere and was cut at the top
+and the bottom; it scrolls inside the window now.
+
+**How it is kept from coming back.** `web/tests/remote-state-mounted-batch3.test.mjs`
+mounts each of these screens with each read withheld four ways and requires that
+no negative text is drawn, no changing control is enabled, and Retry sends only
+reads; it also holds the single refresh of the shared read. The same file mounts
+the dashboard with each of the four reads of the attention list withheld the
+same four ways, and with the firewall answering the Agent's error with a 200:
+no "Firewall is off", no "Turn on", no calm line, no request other than a read,
+and a Retry that reads only what could not be read; it holds that a listed item
+with another read on its way draws no checking row, and that the firewall's
+decoder accepts "off" only as a boolean the Agent sent. It also mounts the real
+DNS engine card over a change that has recorded nothing for four minutes: the
+poll sends no request other than reads (the card as it was before this entry
+fails here with the reconcile request among them), "Check now" pressed twice
+sends one, a refusal is said in the lock, and past the safety limit the lock is
+released, the loop reads no more and the card's notice sends the one request.
+`component-operation-setup-scan-runtime` holds "once at a verified end, never at
+an unverified one". `external-operation-lock-contract` pinned the bounds of the
+automatic reconcile request; it now pins that the polling loop contains no such
+request and no `fetch`, that the request has exactly two call sites
+(`Refresh state` and the owner's check), that the owner's check is reachable
+from two buttons only (the lock, and the card past the safety limit), that it
+stays offered at the safety limit for an exact operation, and that it is
+single-flight, tied to the exact operation and unable to reach the switch
+request. `dashboard-truth-contract` holds the calm line's conditions and that no
+answer is stored as the firewall's state without being decoded.
+`button-disabled-contrast-contract` measures the disabled label on every surface
+a button stands on, in every palette (before: on one), and the enabled primary
+fill against the same surfaces: at least 3:1 in the product's light and dark
+themes (lowest measured 7.8:1) and no lower than today's 2.87:1 in the imitation
+skins, where the dashed outline carries the difference. The ratchet: 20 / 36 /
+10 / 71 / 23 in 47 files before this batch, 8 / 28 / 10 / 57 / 19 in 40 files
+after it.
+
+**Not done.**
+
+- 40 files still read the old way. Not reached in this batch, and
+  untouched: the components list and the operation tracker's own reads
+  (`ServiceList`, `ComponentOperation`), `ServiceShell`, the rest of the
+  dashboard (system figures, the audit trail, the component summary's own read,
+  the readiness poll), every domain panel on the list (`HostingTypePanel`,
+  `DomainDNSManager`, backups, apps, logs, PHP, general, certificate overview,
+  mail authentication), the two database dialogs, the server setup wizard, the
+  store and add-ons pages, VPN, the audit log, the team page, the security audit
+  card and the panel database page.
+- Left on purpose, with the contract that pins them: `Layout` (the one bounded
+  `fetch('/api/v1/panel/version'` and its admin-only reset in
+  `layout-server-identity-contract`; `api.getServices().then(publishComponentCensus)`
+  in `component-inventory-contract`), `SystemUpdateOperation` (the literal exact
+  status and recovery reads in `system-update-outcome` and
+  `panel-update-ui-contract`; fail-closed on purpose), `PanelUpdateCard`
+  (`panel-update-card-mounted`), `DNSEngineCard`'s own status read
+  (`dns-engine-ui-contract`), the dashboard's readiness read
+  (`dashboard-firewall-confirmation-contract`). The access gates
+  (`usePanelSession`, `LicenseOnboarding`, `RecoveryAccess`, `App`) already keep
+  unknown apart from negative; only their raw reads are counted, and they were
+  not moved.
+- The dashboard stays on the list (1 / 3 / 0 / 4): its audit trail, system
+  figures, readiness poll and its own read of the component records are not on
+  the shared layer. The firewall panel of the Components page (`ServiceList`)
+  still reads `GET /api/v1/firewall` on its own.
+- The DNS engine card's `dnsEngine.guard.deadline` sentence is set on the lock
+  at the safety limit, where the lock is released, so nobody sees it; that was
+  so before this entry and is unchanged. What the owner sees there now is the
+  card's notice with "Check now" (above), only for an exact operation.
+- The mounted test of the DNS engine card covers the card's first poll (half a
+  second after the state is read, where the old timer sent its request) and the
+  owner's check; the later, slower polls are held by the source contract and
+  were counted in the browser run.
+- The php.ini editor is still English only and still confirms and reports a save
+  with browser dialogs; only its read was changed.
+- The attention list still moves when a second item arrives (each further item
+  adds its own row), when a read fails (the notice is taller than one line),
+  and on a screen narrower than 390 px if a calm line needs a fourth line.
+- A could-not-check notice still does not say why the read failed.
+- Not verified on a real server; one Chrome against a mock.
+
+**Browser inspection of this batch (2026-10-09).** In a real, installed Chrome
+against the loopback mock (`web/tools/browser-inspect`, scenarios `servicepages`,
+`attention`, `dnssettings`, `dnsreconcile`, `editorheight`; every scenario of the
+earlier batches was run again on the same build): desktop 1440×900 and phone
+390×844, Turkish and English, light and dark.
+
+- *Measured in all eight configurations.* No negative sentence was on screen in
+  any checking or could-not-check state of these screens. Under the dashboard's
+  attention list nothing moved between the checking state and the settled page
+  (0 px): with nothing to list while the components are current, with nothing
+  to list while they are not, with one item, and with an item already listed
+  while another read was on its way. With the DNS change stalled, no reconcile
+  request arrived in 34 s with nobody touching the page (two slow polls); each
+  "Check now" sent exactly one. Past the safety limit the lock was not drawn,
+  no request of any kind arrived in 20 s, the card did not say that tracking
+  continues, and each "Check now" on the card sent exactly one. The raw files
+  under the configuration editor's card started below the fold while the file
+  was read and after it. Under the Dovecot figures nothing moved when the
+  answer arrived. On the Fail2ban, Nginx and PHP pages nothing stands under the
+  tab content, so there was nothing whose place could be measured.
+- *Found by looking, or by measuring, and corrected.*
+  - On a phone the attention list did push the page down when it arrived: by
+    24 px with nothing to list and by 12 px with one item, because one line was
+    reserved and the calm line takes three lines there and an item two. The
+    box now reserves three lines below the `lg` width, and the calm line for
+    components that are not current, which was about twice as long, was
+    shortened to the length of the other.
+  - On the dashboard, in the DNS settings and in the php.ini tab the
+    could-not-check notice stood inside the section's own box, a box in a box;
+    it stands by itself in all three.
+  - The lock of the DNS change drew the component tracker's "connection
+    interrupted" icon and "Reload page". That was the mock: it answered the
+    tracker's read of the active component operation with a bare `null`, where
+    the Panel always answers `{"operation": null}`
+    (`cmd/panel/service_operations.go`). The mock answers the envelope now, and
+    the lock shows the attention mark and no reload button.
+  - After a check the lock read "…the change has not finished yet. It keeps
+    reading the state…"; the second sentence names CelikPanel now.
+  - Past the safety limit the card showed "Updating automatically" beside the
+    notice that says it has stopped; the badge is not drawn there.
+  - The lock of the DNS change could be taller than the phone's window and was
+    cut at the top and the bottom; it scrolls inside the window.
+  - The new Turkish sentences said "hapis" where the page says "hapishane".
+  - Two figures of the scenarios were not measurements: "moved 0" on the
+    Fail2ban, Nginx and PHP pages was the place of the page itself, and the
+    Dovecot measurement found no element in English. The scenarios record a
+    figure only for an element that was found, and fail otherwise.
+- *Seen and not changed.* On a phone the Fail2ban tables scroll sideways, so
+  "Unban" is off screen until the table is scrolled, as on the Domains and
+  Databases tables. The lock's message is long and is set whole in the
+  attention colour, the overlay's existing style. "Recent activity" on the
+  dashboard shows "–" for an empty trail (not migrated). After a ban is lifted
+  and the list cannot be read again, the toast says "IP unbanned" while the
+  shared notice over the earlier list says "Nothing was changed": that sentence
+  speaks of the read, as it does on the Databases page after a delete.
+- *Not covered.* Any real server; Safari, Firefox, a screen reader, a touch
+  device; the imitation skins; roles other than the administrator. The PowerDNS
+  page's file list while it is read or could not be read, and the php.ini
+  editor's save, are covered by the mounted test only. The "before" figures of
+  this entry (118 px, 158 px on a phone) were not measured again.
+
 ### Database and mail configuration screens: a file is read before it is an editor, and a save says what the service did with it (2026-10-09)
 
 Source state with component tests, the two validating programs run for real on a

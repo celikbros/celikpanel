@@ -145,3 +145,33 @@ disabled buttons, the fields marked invalid with the message tied to them, and
 targets smaller than 24 px. The per-row column names of the access rules are
 hidden on a wide screen on purpose (the first row names them) and are recorded
 as "truncated"; that is the record, not a defect.
+
+## Scenarios of the third batch (2026-10-09)
+
+These live in `scenarios-batch3.mjs`, with their mock routes in
+`mock-batch3.mjs` (state under `state.b3`, sent whole through `/__ctl`; without
+it the defaults answer, so the scenarios of the earlier batches see a server
+whose firewall is on). `run.mjs` and `mock.mjs` each load them in one marked
+block. `dnsreconcile` waits 34 s and then 20 s on purpose: slow polls with
+nobody touching the page.
+
+| Name | States |
+| --- | --- |
+| `servicepages` | the Fail2ban page: the jails slow then known, the banned addresses failing (then Retry), a ban lifted whose re-read fails, both lists known empty; the Nginx page: global settings slow then known, TLS settings failing (then Retry), rate limits known empty; the PHP page: the extensions slow, known, failing (then Retry), a switch the server refuses, php.ini failing (then Retry); the Dovecot page: its two figures slow, known, failing (then Retry); the PowerDNS page with its file list (70–74) |
+| `attention` | the dashboard's attention list: checking and known with nothing to list (what stands under it must not move), one item that arrives late and the firewall confirmation, an item already listed while another read is on its way, a firewall answer without a state (the Agent's error sent with a 200), a refused read (then Retry), component records that could not be read, and component records that are not current, measured from the checking state (80–82). The section is below the fold on a phone and is scrolled into the window before each screenshot |
+| `dnssettings` | Settings → DNS: the saved settings slow, known, failing (then Retry) (83) |
+| `dnsreconcile` | a DNS engine change that has recorded nothing for four minutes: what the lock offers, how many reconcile requests arrive while nobody acts (none) and after each "Check now" (one), for a check that changes nothing, one the server refuses and one that finishes the change; then a change accepted forty minutes ago, past the card's safety limit: the lock is released, nothing reads or sends by itself, and the card's notice offers the same check (84) |
+| `editorheight` | the PostgreSQL page while `postgresql.conf` is read and after: where the raw files under the editor's card stand relative to the fold (85) |
+
+Each state's record adds which negative sentences were on screen, the checking
+lines and notices, the enabled and disabled buttons and switches, and, where a
+scenario measures it, where the element under the changing part stood before
+and after (`under`, `moved`). A place is recorded only for an element that was
+found; a scenario that should measure one and finds none fails. The Fail2ban,
+Nginx and PHP pages have nothing under their tabs and record no `moved`.
+
+`mock.mjs` answers the tracker's read of the active component operation with
+the envelope the Panel sends, `{"operation": null}` when nothing is running.
+Until this batch it answered a bare `null`, which the tracker reads as "could
+not find out"; a lock held by another screen then drew the "connection
+interrupted" treatment, which a real Panel does not cause.

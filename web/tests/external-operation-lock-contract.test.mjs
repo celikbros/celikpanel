@@ -187,8 +187,8 @@ test('the switch mutation POST is single-shot and ambiguous outcomes use exact r
     'an initial timeout retains the exact local guard without recreating a stale guard');
 
   const polling = section(dnsSource, 'const stopAtDeadline =', '\n    useEffect(() => {\n        if (actionsLocked)');
-  assert.match(polling, /let decoded = await refresh\(true\)/,
-    'recovery uses the read-only authoritative snapshot');
+  assert.match(polling, /const decoded = await refresh\(true\)/,
+    'recovery uses the read-only authoritative snapshot, and nothing in the loop can replace it with another answer');
   assert.match(polling,
     /decoded\?\.operation\?\.request_id === requestID[\s\S]*decoded\.operation\.target_engine === target/,
     'only the exact request and target are adopted');
@@ -200,20 +200,75 @@ test('DNS verification is bounded, stalls visibly, and releases only the appropr
   assert.match(dnsSource, /const dnsEngineGuardStalledAfterMs = 2 \* 60_000/);
   assert.match(dnsSource, /const dnsEngineGuardMaxElapsedMs = 31 \* 60_000/);
   assert.match(dnsSource, /const dnsEngineGuardMaxAttempts = 180/);
-  assert.match(dnsSource, /const dnsEngineGuardMaxReconcileAttempts = 3/);
-  assert.match(dnsSource, /const dnsEngineGuardReconcileDelayMs = 60_000/);
 
+  // Polling only reads (docs/OPERATION-GUIDANCE.md, decision of 2026-10-09).
+  // Until then this loop sent the reconcile POST by itself once an exact
+  // operation had recorded nothing for two minutes, at most three times and a
+  // minute apart, and this test pinned those bounds. The request changes the
+  // server's saved record and is audited under the signed-in administrator, so
+  // the bound is now the strictest one: a timer sends it zero times. What the
+  // loop still decides is WHEN the request may be offered to the person at the
+  // screen - the same condition as before, an exact operation that stalled.
   const polling = section(dnsSource, 'const stopAtDeadline =', '\n    useEffect(() => {\n        if (actionsLocked)');
+  assert.doesNotMatch(polling, /reconcileAndRefresh|\/dns\/engine\/reconcile|checkStalledOperation|\bfetch\(/,
+    'the verification loop reads through refresh(true) and sends nothing else');
+  assert.doesNotMatch(dnsSource, /dnsEngineGuardMaxReconcileAttempts|dnsEngineGuardReconcileDelayMs|reconcileAttempts|lastReconcileAt/,
+    'no automatic reconcile budget is left to spend');
   assert.match(polling,
-    /durableStalled[\s\S]*exactOperation !== null[\s\S]*reconcileAttempts < dnsEngineGuardMaxReconcileAttempts[\s\S]*Date\.now\(\) - lastReconcileAt >= dnsEngineGuardReconcileDelayMs[\s\S]*await reconcileAndRefresh\(true\)/,
-    'reconcile is bounded and only runs after an exact durable operation stalls');
+    /const reconcileOffered = durableStalled && exactOperation !== null;/,
+    'the reconcile request is offered only after an exact durable operation stalls');
+  assert.match(polling, /if \(guard\.reconciling\) \{\s*schedule\(dnsEngineGuardPollDelayMs\);\s*return;\s*\}/,
+    'a tick does not read beside the request the owner sent');
+
+  // The one way the request leaves the browser while a change is tracked: the
+  // owner's action - in the lock while the exact operation is stalled, and on
+  // the card once the loop has stopped at its safety limit (the lock is
+  // released there, and without it nothing could send the request any more).
+  // It is single-flight, tied to the exact operation, shares the exact
+  // terminal predicate, and cannot reach the switch request.
+  const owner = section(dnsSource, 'const checkStalledOperation = async', 'checkStalledOperationRef.current = checkStalledOperation;');
+  assert.match(owner,
+    /if \(!guard \|\| \(guard\.mode !== 'stalled' && guard\.mode !== 'deadline'\) \|\| !guard\.reconcileOffered \|\| guard\.reconciling\) return;[\s\S]*holdOperationGuard\(\{ \.\.\.guard, reconciling: true \}\);[\s\S]*await reconcileAndRefresh\(true\)/,
+    'one request at a time, and only for an exact operation that is stalled or past the safety limit');
+  assert.match(owner,
+    /if \(!settled\.reconcileOffered \|\| \(settled\.mode !== 'stalled' && settled\.mode !== 'deadline'\)\) \{\s*holdOperationGuard\(settled\);\s*return;\s*\}/,
+    'an operation that moved on while the request was out is not described as still offered');
+  assert.match(owner,
+    /current\.requestID !== guard\.requestID \|\| current\.target !== guard\.target\) return;[\s\S]*completeGuardedVerification\(decoded, settled\)/,
+    'the answer is applied only to the same request and target, through the exact terminal predicate');
+  assert.doesNotMatch(owner, /submitDNSEngineSwitch|\/dns\/engine\/switch|setTimeout|setInterval/,
+    'the owner action cannot issue the mutation POST and schedules nothing');
+  assert.equal((dnsSource.match(/reconcileAndRefresh\(/g) ?? []).length, 2,
+    'the reconcile request has two call sites: the Refresh button and the owner action in the lock');
+  assert.equal((dnsSource.match(/checkStalledOperationRef\.current\(/g) ?? []).length, 2,
+    'the owner action is reachable from two places, both a button: the lock, and the card past the safety limit');
+  assert.match(dnsSource,
+    /action: guard\.mode === 'stalled' && guard\.reconcileOffered\s*\? \{\s*label: et\('dnsEngine\.guard\.checkNow'\),\s*busy: guard\.reconciling,\s*onAct: \(\) => \{ void checkStalledOperationRef\.current\(\); \},\s*\}\s*: undefined,/,
+    'the first is the action of the lock view, present only while the exact operation is stalled');
+  // Past the safety limit the loop reads no more and the lock is released.
+  // Until 9 Oct 2026 the loop had by then sent its own requests; now the
+  // owner's check must stay reachable, or the saved record of an accepted
+  // change whose worker is gone could never be closed from the interface.
+  assert.match(polling,
+    /mode: 'deadline',\s*attempts,\s*reconcileOffered: guard\.operation !== null,\s*reconcileNote: undefined,/,
+    'at the safety limit the check stays offered for an exact operation, and only for one');
+  assert.match(dnsSource,
+    /const deadlineCheckOffered = operationGuard\?\.mode === 'deadline' && operationGuard\.reconcileOffered;/);
+  assert.match(dnsSource,
+    /\{deadlineCheckOffered && operationGuard && \([\s\S]{0,1500}loading=\{operationGuard\.reconciling\}\s*onClick=\{\(\) => \{ void checkStalledOperationRef\.current\(\); \}\}/,
+    'the second is a button on the card, drawn only past the safety limit');
+  assert.match(dnsSource, /trackingDelayed=\{trackingDelayed && !deadlineCheckOffered\}/,
+    'the card does not say "tracking continues" beside "stopped checking"');
+  assert.match(overlaySource,
+    /view\?\.action && \([\s\S]*<Button variant="secondary" loading=\{view\.action\.busy\} onClick=\{view\.action\.onAct\}>/,
+    'the lock draws the action as a button a person presses');
   assert.match(polling, /mode: durableStalled \? 'stalled' : 'verifying'/);
   assert.match(polling,
     /schedule\(durableStalled \? dnsEngineGuardSlowPollDelayMs : dnsEngineGuardPollDelayMs\)/);
   assert.match(polling, /attempts > 0 && \(/,
     'a reloaded deadline marker receives one fresh authoritative read first');
   assert.match(polling,
-    /let decoded = await refresh\(true\)[\s\S]*completeGuardedVerification[\s\S]*Date\.now\(\) - guard\.startedAt >= dnsEngineGuardMaxElapsedMs[\s\S]*stopAtDeadline/,
+    /const decoded = await refresh\(true\)[\s\S]*completeGuardedVerification[\s\S]*Date\.now\(\) - guard\.startedAt >= dnsEngineGuardMaxElapsedMs[\s\S]*stopAtDeadline/,
     'after that fresh authoritative read, an overdue non-terminal marker must immediately stop and release navigation');
 
   const guardView = section(dnsSource, 'const guardView =', 'const holdOperationGuard =');

@@ -81,7 +81,12 @@ export default function OperationOverlay(props: OperationOverlayProps | FailureO
             tabIndex={-1}
             className="fixed inset-0 z-[100] flex items-center justify-center bg-scrim/80 p-4 backdrop-blur-sm outline-none"
         >
-            <div className="w-full max-w-lg rounded-2xl border border-border-strong bg-surface p-6 text-center shadow-2xl">
+            {/* On a phone the lock can be taller than the window (details, a
+                message and an action): it scrolls inside the window instead of
+                being cut at the top and the bottom (seen 9 Oct 2026).
+                Telefonda kilit pencereden uzun olabilir: üstten ve alttan
+                kesilmek yerine pencerenin içinde kayar. */}
+            <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-2xl border border-border-strong bg-surface p-6 text-center shadow-2xl">
                 <span className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${
                     disconnected || !busy
                         ? severity === 'error'
@@ -127,6 +132,13 @@ export default function OperationOverlay(props: OperationOverlayProps | FailureO
                     >
                         {view.message}
                     </p>
+                )}
+                {view?.action && (
+                    <div className="mt-4 flex justify-center">
+                        <Button variant="secondary" loading={view.action.busy} onClick={view.action.onAct}>
+                            {view.action.label}
+                        </Button>
+                    </div>
                 )}
                 {hint && (
                     <p className="mt-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-xs leading-5 text-fg-subtle">

@@ -34,6 +34,22 @@ test('system service truth never promotes tools into running daemons', () => {
   assert.match(dashboard, /serviceScanFresh && hostsContent && !hasClamAV/);
   assert.match(dashboard, /attention\.length > 0 && \(/);
   assert.doesNotMatch(dashboard, /t\('dashboard\.allGood'\)/);
+  // 9 Oct 2026: the attention section keeps its place instead of appearing
+  // late and pushing the page down, so it has a line for "no items". That line
+  // is not "all good". It is drawn only when every read the list is built from
+  // has answered and none could not be read, it names what was read, and it
+  // does not speak for components whose check is not current.
+  assert.match(dashboard,
+    /\{!attentionChecking && !attentionUnread && attention\.length === 0 && \(\s*<p[^>]*>\s*\{t\(serviceScanFresh \? 'dashboard\.attentionNone' : 'dashboard\.attentionNoneUnchecked'\)\}/);
+  assert.match(dashboard, /const attentionChecking = attentionReads\.includes\('loading'\);/);
+  assert.match(dashboard, /const attentionUnread = attentionReads\.includes\('unknown'\);/);
+  assert.match(dashboard,
+    /const attentionReads = \[\s*extrasRead\.remote\.state,\s*domainList\.remote\.state,\s*firewall\.remote\.state,\s*scanRead === 'reading' \? 'loading' : scanRead === 'known' \? 'known' : 'unknown',\s*\];/,
+    'the calm line waits for the certificates, the domain list, the firewall and the component records');
+  // The firewall is "off" only for an answer that says so: an answer without a
+  // boolean `enabled`, or one carrying the Agent's own error, is unknown.
+  assert.match(dashboard, /const firewall = useFirewallStatus\(\);/);
+  assert.doesNotMatch(dashboard, /setFw\(|\.then\(setFw\)/, 'no answer is stored as the firewall state without being decoded');
   assert.match(census, /observed\.filter\(\(row\) => row\.is_installed === true\)\.length/);
 });
 

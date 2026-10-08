@@ -267,6 +267,21 @@ export function useRemote<T>(url: string | null, decode: Decode<T>, options: Rem
     return { remote: view.remote, reading: view.reading, retry };
 }
 
+// refreshRemote reads `url` again for whoever is showing it, called by code
+// that is not itself a reader of it: a tracker that has just seen a change
+// finish tells the screens that show what it changed, so none of them goes on
+// showing the answer from before the change until its own next read. It only
+// reads. The value on screen stays until the new answer arrives, and a failed
+// read keeps it as the earlier answer. With no reader on screen there is
+// nothing to refresh and nothing is requested.
+// refreshRemote, `url`i onu gösterenler için yeniden okur; onu kendisi okumayan
+// kod çağırır: bir değişikliğin bittiğini gören izleyici, değişeni gösteren
+// ekranlara haber verir. Yalnız okur. Ekranda okuyan yoksa istek gönderilmez.
+export function refreshRemote(url: string): void {
+    const entry = entries.get(url);
+    if (entry) void read(url, entry, true);
+}
+
 function shown<T>(url: string | null): View<T> {
     const entry = url === null ? undefined : (entries.get(url) as Entry<T> | undefined);
     return entry ? entry.view : IDLE;

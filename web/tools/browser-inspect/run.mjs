@@ -1639,6 +1639,12 @@ const scenarios = {
 (await import('./scenarios-batch2b.mjs')).default(scenarios, { base, vp, locale, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
 // --- end of batch 2b ---
 
+// --- batch 3 (9 Oct 2026): service pages, the dashboard's attention list, DNS ---
+// `servicepages`, `attention`, `dnssettings`, `dnsreconcile` and `editorheight`
+// live in their own file, like batch 2b.
+(await import('./scenarios-batch3.mjs')).default(scenarios, { base, vp, locale, theme, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
+// --- end of batch 3 ---
+
 for (const [name, run] of Object.entries(scenarios)) {
     if (wanted && !wanted.includes(name)) continue;
     const started = Date.now();

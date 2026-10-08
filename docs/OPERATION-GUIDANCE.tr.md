@@ -2092,6 +2092,420 @@ yapılandırmanın her birinde 69 durum.
   dışındaki roller. Hesap ya da plan oluşturan formlar gönderilmedi. Kurulum
   rehberi cümlesi katalogda değiştirildi, ekranda görülmedi.
 
+#### Üçüncü parti: hizmet sayfaları, panodaki ilgi listesi, DNS ayarları ve DNS motorunun takılan değişikliği (2026-10-09)
+
+Bileşen testleri ve yerel bir sahte sunucuya karşı tarayıcı incelemesiyle kaynak
+durumu; gerçek sistemde çalıştırılmadı, kurulu sunucuya dokunulmadı. Aynı kural,
+planlanandan küçük bir kümeye uygulandı: bu parti, değiştirdiği şey doğrulanabilsin
+diye daraltıldı ve izin listesinin kalanına dokunulmadı ("Yapılmayanlar"a bakın).
+Arayüzde okumaların nasıl gösterildiğini ve DNS motoru kartının bir isteğini kimin
+gönderdiğini değiştirir; API, kayıtlı kayıt, erişim kapısı ya da yaşam döngüsü
+değişmez ve hiçbir kabul işi kapanmaz.
+
+**Bu ekranlar önceden ne gösteriyordu.**
+
+- *Fail2ban.* Başarısız ya da henüz yanıtlanmamış okuma boş listeydi: ikisi de
+  olan bir sunucuda "Aktif hapishane yok" ve "Banlı IP yok", iki sekmenin yanında 0;
+  ayarlar sekmesinde ise hiçbir şey.
+- *Nginx.* Üç okuma sürerken ve başarısız olduktan sonra her değer "—", hız
+  sınırları "Tanımlı hız-limit bölgesi yok" idi.
+- *PHP.* Aynı iki durumda "Eklenti bulunamadı"; anahtar, sunucu yanıt vermeden
+  ekranda değişiyor, sunucu reddederse geri alınıyordu. php.ini düzenleyicisi
+  başarısız okumayı tarayıcı uyarısıyla bildiriyor, sonra hiçbir şey çizmiyordu.
+- *Dovecot.* İki değer de tek söz etmeden "—" idi.
+- *PowerDNS.* Sayfa bileşen kayıtlarını kendi başına okuyordu; okuma başarısız
+  olunca dosya listesini göstermiyor ve bir şey söylemiyordu.
+- *DNS ayarları.* Başarısız ilk okuma, yeniden okuma yolu olmayan kırmızı bir
+  banttı.
+- *Pano.* `GET /api/v1/firewall` ne yanıt verirse güvenlik duvarının durumu
+  olarak saklanıyordu. `enabled` taşımayan bir yanıt — Agent'ın 200 ile
+  gönderdiği kendi hatası — "Güvenlik duvarı kapalı — tüm portlar açık" satırını
+  "Aç" düğmesiyle çiziyordu. "İlgi istiyor" bölümü en yavaş okuma yanıt verince
+  beliriyor ve sayfayı 118 px (telefonda 158 px) aşağı itiyordu.
+
+**Metinler.** Aksi belirtilmedikçe anahtarlar `web/src/i18n/screens/server`
+içindedir.
+
+- *Fail2ban, hapishaneler* — kontrol ediliyor (`f2b.jails.checking`): EN "Reading
+  Fail2ban’s jails…" · TR "Fail2ban’in hapishaneleri okunuyor…". Okunamadı
+  (`f2b.jails.unknown`):
+  - EN: "Fail2ban’s jails could not be read from the server, so they are not
+    listed. This does not mean there are none. Nothing was changed. Try again."
+  - TR: "Fail2ban’in hapishaneleri sunucudan okunamadı; bu yüzden listelenmiyor. Bu,
+    hapishane olmadığı anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *Fail2ban, yasaklı adresler* — kontrol ediliyor (`f2b.banned.checking`): EN
+  "Reading the addresses Fail2ban has banned…" · TR "Fail2ban’in yasakladığı
+  adresler okunuyor…". Okunamadı (`f2b.banned.unknown`):
+  - EN: "The addresses Fail2ban has banned could not be read from the server, so
+    they are not listed. This does not mean none is banned. Nothing was changed.
+    Try again."
+  - TR: "Fail2ban’in yasakladığı adresler sunucudan okunamadı; bu yüzden
+    listelenmiyor. Bu, yasaklı adres olmadığı anlamına gelmez. Hiçbir şey
+    değiştirilmedi. Tekrar deneyin."
+  - "Yasağı kaldır" yalnız sunucunun listelediği satır için vardır. Ardından,
+    yanıt ne olursa olsun iki liste yeniden okunur; bu okuma başarısız olursa
+    önceki liste ortak bildirimin (`common.staleNotice`) altında kalır ve "Yasağı
+    kaldır" kapalıdır.
+- *Fail2ban, ayarlar* — kontrol ediliyor (`f2b.config.checking`): EN "Reading
+  Fail2ban’s settings…" · TR "Fail2ban’in ayarları okunuyor…". Okunamadı
+  (`f2b.config.unknown`): EN "Fail2ban’s settings could not be read from the
+  server, so they are not shown. Nothing was changed. Try again." · TR
+  "Fail2ban’in ayarları sunucudan okunamadı; bu yüzden gösterilmiyor. Hiçbir şey
+  değiştirilmedi. Tekrar deneyin."
+- Her Fail2ban sekmesinin yanındaki sayı, liste bilinince sayıdır; okunurken "…",
+  okunamayınca "–".
+- *Nginx* — kontrol ediliyor (`nginx.global.checking`, `nginx.ssl.checking`,
+  `nginx.rate.checking`): EN "Reading Nginx’s global settings…", "Reading Nginx’s
+  TLS settings…", "Reading Nginx’s rate-limit zones…" · TR "Nginx’in genel
+  ayarları okunuyor…", "Nginx’in TLS ayarları okunuyor…", "Nginx’in hız sınırı
+  bölgeleri okunuyor…". Okunamadı (`nginx.global.unknown`, `nginx.ssl.unknown`,
+  `nginx.rate.unknown`):
+  - EN: "Nginx’s global settings could not be read from the server, so they are
+    not shown. This does not mean they are not set. Nothing was changed. Try
+    again." / "Nginx’s TLS settings could not be read from the server, so they
+    are not shown. This does not mean they are not set. Nothing was changed. Try
+    again." / "Nginx’s rate-limit zones could not be read from the server, so
+    they are not listed. This does not mean none is defined. Nothing was
+    changed. Try again."
+  - TR: "Nginx’in genel ayarları sunucudan okunamadı; bu yüzden gösterilmiyor.
+    Bu, ayarlanmadıkları anlamına gelmez. Hiçbir şey değiştirilmedi. Tekrar
+    deneyin." / "Nginx’in TLS ayarları sunucudan okunamadı; bu yüzden
+    gösterilmiyor. Bu, ayarlanmadıkları anlamına gelmez. Hiçbir şey
+    değiştirilmedi. Tekrar deneyin." / "Nginx’in hız sınırı bölgeleri sunucudan
+    okunamadı; bu yüzden listelenmiyor. Bu, tanımlı bölge olmadığı anlamına
+    gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - "—" yalnız bilinen bir yanıtın boş bıraktığı değer için çizilir. Hız sınırı
+    tablosunun ilk sütununda çevrilmemiş "Name" başlığı vardı; artık
+    `nginx.rl.name` (EN "Name" · TR "Ad").
+- *PHP, bir sürümün eklentileri* — kontrol ediliyor (`php.extensions.checking`):
+  EN "Reading the extensions of PHP {version}…" · TR "PHP {version} eklentileri
+  okunuyor…". Okunamadı (`php.extensions.unknown`):
+  - EN: "The extensions of PHP {version} could not be read from the server, so
+    they are not listed and cannot be switched here yet. This does not mean there
+    are none. Nothing was changed. Try again."
+  - TR: "PHP {version} eklentileri sunucudan okunamadı; bu yüzden listelenmiyor
+    ve şimdilik buradan açılıp kapatılamıyor. Bu, eklenti olmadığı anlamına
+    gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+  - Anahtar yalnız sunucunun listelediği eklenti için vardır. Birine basmak
+    değişikliği bir kez gönderir; ardından liste yeniden okunur ve anahtar, kabul
+    edilse de reddedilse de sunucunun söylediğini gösterir. Bu sırada ve liste
+    önceki yanıtken anahtarlar kapalıdır.
+- *PHP, bir sürümün php.ini dosyası* — kontrol ediliyor (`php.ini.checking`): EN
+  "Reading php.ini of PHP {version}…" · TR "PHP {version} için php.ini
+  okunuyor…". Okunamadı (`php.ini.unknown`): EN "php.ini of PHP {version} could
+  not be read from the server, so its settings are not shown and cannot be
+  changed here yet. Nothing was changed. Try again." · TR "PHP {version} için
+  php.ini sunucudan okunamadı; bu yüzden ayarları gösterilmiyor ve şimdilik
+  buradan değiştirilemiyor. Hiçbir şey değiştirilmedi. Tekrar deneyin." Form
+  yalnız bir yanıttan kurulur; başka bir sürüm için okunan hiçbir şey formda
+  kalmaz.
+- *Dovecot, çalışma süresi ve bağlantılar*: okunurken "…", okunamayınca "–" ve
+  kartların altında (`dovecot.statsUnknown`):
+  - EN: "Dovecot’s uptime and connection count could not be read from the server,
+    so they are not shown. This does not mean Dovecot is stopped or has no
+    connections. Nothing was changed. Try again."
+  - TR: "Dovecot’un çalışma süresi ve bağlantı sayısı sunucudan okunamadı; bu
+    yüzden gösterilmiyor. Bu, Dovecot’un durduğu ya da bağlantı olmadığı anlamına
+    gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin."
+- *PowerDNS, yapılandırma dosyaları*: PostgreSQL ve MariaDB sayfalarıyla aynı
+  paylaşılan okuma ve aynı iki cümle (`dbconf.files.checking`,
+  `dbconf.files.unknown`, "PowerDNS" ile).
+- *DNS ayarları (Ayarlar → DNS)* — kontrol ediliyor (`dnssrv.checking`): EN
+  "Reading this server’s DNS settings…" · TR "Bu sunucunun DNS ayarları
+  okunuyor…". Okunamadı (`dnssrv.unknown`), Tekrar dene ile; sunucunun açıkladığı
+  ret altında gösterilir:
+  - EN: "The DNS settings of this server could not be read, so they are not shown
+    and cannot be changed here yet. This does not mean DNS is not set up. Nothing
+    was changed. Try again."
+  - TR: "Bu sunucunun DNS ayarları okunamadı; bu yüzden gösterilmiyor ve şimdilik
+    buradan değiştirilemiyor. Bu, DNS’in kurulmadığı anlamına gelmez. Hiçbir şey
+    değiştirilmedi. Tekrar deneyin."
+- *Pano, "İlgi istiyor"* (anahtarlar `web/src/i18n/screens` içinde). Bölüm ilk
+  çizimden beri sayfadadır. Kalem yalnız sunucunun verdiği yanıttan listelenir.
+  Liste dört okumadan kurulur (süresi dolan sertifikalar, alan adı listesi,
+  güvenlik duvarı, bileşen kayıtları):
+  - biri sürerken (`dashboard.attentionChecking`): EN "Checking what needs
+    attention on this server…" · TR "Bu sunucuda ilgi isteyen bir şey olup
+    olmadığı kontrol ediliyor…";
+  - biri okunamadığında (`dashboard.attentionUnread`), yalnız başarısız olanları
+    okuyan Tekrar dene ile: EN "Part of this server’s state could not be read, so
+    this list may be incomplete. This does not mean something is wrong. Nothing
+    was changed. Try again." · TR "Bu sunucunun durumunun bir bölümü okunamadı;
+    bu yüzden bu liste eksik olabilir. Bu, bir şeyin yanlış olduğu anlamına
+    gelmez. Hiçbir şey değiştirilmedi. Tekrar deneyin.";
+  - dördü de yanıt verdiğinde ve listede bir şey yokken
+    (`dashboard.attentionNone`): EN "Nothing CelikPanel read needs action:
+    certificates, the firewall and the installed components." · TR "CelikPanel’in
+    okuduklarında işlem gerektiren bir şey yok: sertifikalar, güvenlik duvarı ve
+    kurulu bileşenler.";
+  - aynı durumda, bileşen kayıtları güncel değilken
+    (`dashboard.attentionNoneUnchecked`): EN "No certificate or firewall setting
+    needs action. The installed components were not checked recently." · TR
+    "İşlem gerektiren bir sertifika ya da güvenlik duvarı ayarı yok. Kurulu
+    bileşenlere yakın zamanda bakılmadı." Ne yapılacağı, listenin üstündeki
+    "Sistem servisleri" kartındadır; kart o durumda bileşen durumunun eski
+    olduğunu söyler ve Bileşenler sayfasını gösterir.
+  - Bu, daha önce kaldırılan "her şey yolunda" satırı değildir: neyin okunduğunu
+    adlandırır ve yakın zamanda kimsenin bakmadığı bileşenler adına konuşmaz.
+  - "Kontrol ediliyor" satırı yalnız listede hiçbir şey yokken çizilir. Bir kalem
+    listelenmişken başka bir okuma hâlâ sürüyorsa bu, sayının yanında söylenir
+    (etiketi kontrol cümlesi olan küçük bir dönen işaret); böylece listede
+    belirip sonra kaybolan bir satır olmaz.
+  - "Güvenlik duvarı kapalı" ve "Aç" yalnız `enabled: false` taşıyan yanıt için
+    vardır. Boolean `enabled` taşımayan ya da Agent'ın `error` alanını taşıyan
+    yanıt "okunamadı"dır.
+
+**DNS motoru kartı: yoklama yalnız okur (karar).** Bir DNS motoru değişikliği
+izlenirken kart `GET /api/v1/dns/engine` adresini 3 saniyede bir okur (değişiklik
+iki dakikadır yeni bir şey kaydetmediyse 15 saniyede bir). Bu kayda kadar aynı
+zamanlayıcı, tam işlemin `updated_at` değeri iki dakikalık olduğunda, en çok üç
+kez ve bir dakika arayla `POST /api/v1/dns/engine/reconcile` de gönderiyordu. Bu
+istek hâlâ gereklidir — çalışanı kaybolmuş, kabul edilmiş bir değişikliğin kayıtlı
+kaydını kapatan odur — ama okuma değildir: sunucu değişiklik kilidini alır,
+kayıtlı kaydı yeniden yazabilir ve `reconciled_operation` kaydını oturumdaki
+yönetici adına denetim günlüğüne yazar. Zamanlayıcı onu, belki kimsenin bakmadığı
+bir sekmede, ekran "Salt okunur kontroller 15 saniyede bir sürer" derken
+gönderiyordu.
+
+İki yol değerlendirildi: tek bir otomatik denemeyi korumak ve onu burada
+"Yoklama ve sayfa yenileme okumadır" kuralının (yukarıda) istisnası olarak
+kaydetmek, ya da isteği ekrandaki kişiye vermek. İkincisi seçildi: istek denetim
+günlüğünde bir kişiye yazıldığı için o kişinin eylemi olmalıdır; yoklama kuralına
+bir istisnayı bu belgenin sonraki her okuyucusu hatırlamak zorunda kalırdı; ve
+hiçbir şey kaybedilmez: kilit zaten sahibine sayfada kalmasını söylüyordu,
+değişikliğin kendisi de iki yolda da yeniden başlatılmaz.
+
+- Zamanlayıcı isteği sıfır kez gönderir. İstek yalnız bir düğmeden çıkabilir:
+  karttaki `Durumu yenile` (önceki gibi, bir değişiklik izlenirken kapalıdır) ve
+  "Şimdi kontrol et"; bu, değişiklik takılıyken kilitte, yoklama güvenlik
+  sınırında durduktan sonra ise karttadır.
+- "Şimdi kontrol et" kilitte yalnız tam işlem (aynı istek ve hedef) iki dakikadır
+  yeni bir şey kaydetmediğinde sunulur; aynı anda tek istek; yanıtı yalnız aynı
+  istek ve hedefe, yoklamanın kullandığı aynı "değişiklik bitti" denetimiyle
+  uygulanır.
+- *Güvenlik sınırından sonra.* Yoklama, kesin bir sonuç olmadan 31 dakika ya da
+  180 okumadan sonra durur ve kilit bırakılır (ikisi de önceki gibi). Bu kayda
+  kadar zamanlayıcı o ana dek kendi isteklerini göndermiş olurdu; hiçbiri
+  gönderilmediğinde ve değişiklik çözülmemişken `Durumu yenile` kapalıyken,
+  arayüzde kayıtlı kaydı kapatabilecek hiçbir şey kalmazdı. Bu yüzden kart, tam
+  bir işlem için o durumda aynı "Şimdi kontrol et"i, işlemin ilerlemesinin
+  altındaki bir bildirimde sunmayı sürdürür. Bildirim, orada doğru olmayan
+  "Otomatik takip 15 saniyede bir devam ediyor" cümlesinin yerini alır. Sayfayı
+  yenilemek durumu bir kez okur ve bu bildirime döner.
+- Metinler (`web/src/i18n/dnsEngine.ts`). İlk cümle (`dnsEngine.guard.reconcileDue`):
+  EN "CelikPanel has not confirmed this change for {minutes} minutes: the server
+  has recorded no new step in that time." · TR "CelikPanel bu değişikliği
+  {minutes} dakikadır doğrulayamadı: sunucu bu sürede yeni bir adım kaydetmedi."
+  Ardından (`dnsEngine.guard.reconcileOffer`):
+  - EN: "CelikPanel keeps reading the state every 15 seconds and changes nothing
+    by itself. As this server’s administrator you can choose Check now:
+    CelikPanel then compares its saved record of this change with what the DNS
+    service did, and closes the record if the change has ended. That is logged
+    under your account and does not start the change again."
+  - TR: "CelikPanel durumu 15 saniyede bir okumayı sürdürüyor ve kendiliğinden
+    hiçbir şeyi değiştirmiyor. Bu sunucunun yöneticisi olarak Şimdi kontrol et’i
+    seçebilirsiniz: CelikPanel o zaman bu değişikliğin kayıtlı kaydını DNS
+    hizmetinin gerçekten yaptığıyla karşılaştırır ve değişiklik bittiyse kaydı
+    kapatır. Bu işlem hesabınız adına denetim günlüğüne yazılır ve değişikliği
+    yeniden başlatmaz."
+  - Düğme (`dnsEngine.guard.checkNow`): EN "Check now" · TR "Şimdi kontrol et".
+  - Değişikliği bitirmeyen bir kontrolden sonra ilk cümlenin yerini şunlardan biri
+    alır: (`dnsEngine.guard.reconcileChecked`) EN "Checked at {time}: the change
+    has not finished yet." · TR "Saat {time} itibarıyla kontrol edildi: değişiklik
+    henüz bitmedi."; sunucu reddettiyse sunucunun kendi reddi; ya da
+    (`dnsEngine.guard.reconcileUnread`) EN "Checked at {time}, but the DNS state
+    could not be read afterwards." · TR "Saat {time} itibarıyla kontrol edildi,
+    ancak ardından DNS durumu okunamadı."
+  - Güvenlik sınırından sonra, kartta: ilk cümle
+    (`dnsEngine.guard.deadlineDue`) EN "CelikPanel has stopped checking this
+    change by itself: it reached its safety limit without a final result." · TR
+    "CelikPanel bu değişikliği kendiliğinden kontrol etmeyi bıraktı: kesin bir
+    sonuç olmadan güvenlik sınırına ulaştı." Ardından
+    (`dnsEngine.guard.deadlineOffer`), aynı düğmeyle:
+    - EN: "Nothing is changed by itself. As this server’s administrator you can
+      choose Check now: CelikPanel then compares its saved record of this change
+      with what the DNS service did, and closes the record if the change has
+      ended. That is logged under your account and does not start the change
+      again."
+    - TR: "Kendiliğinden hiçbir şey değiştirilmez. Bu sunucunun yöneticisi olarak
+      Şimdi kontrol et’i seçebilirsiniz: CelikPanel o zaman bu değişikliğin
+      kayıtlı kaydını DNS hizmetinin gerçekten yaptığıyla karşılaştırır ve
+      değişiklik bittiyse kaydı kapatır. Bu işlem hesabınız adına denetim
+      günlüğüne yazılır ve değişikliği yeniden başlatmaz."
+    - Oradaki bir kontrolden sonra ilk cümlenin yerini kilitteki gibi şunlardan
+      biri alır: `reconcileChecked`, sunucunun reddi ya da `reconcileUnread`.
+  - `dnsEngine.guard.stalled` ("İki dakikadır yeni kalıcı sunucu aşaması
+    kaydedilmedi…") kaldırıldı; tam işlemin bilinmediği durum
+    (`dnsEngine.guard.awaitingStalled`) değişmedi ve kilitte de güvenlik
+    sınırından sonra da bir şey sunmaz.
+
+**Ortak parçalarda dört düzeltme.**
+
+- *Biten bir bileşen işlemi, gösterileni yeniler.* Kayıtlı bileşen kayıtlarını
+  paylaşılan okumayla gösteren ekranlar bir yanıtı yarım dakika tutar; bu yüzden
+  kurulumdan hemen sonra açılan PostgreSQL ya da MariaDB sayfası 30 saniyeye kadar
+  önceki taramayı listeleyebiliyordu. İzleyici artık o okumaya, işlem başına bir
+  kez, bitişi taze taramayla doğruladığı noktada (başarı ya da hata) yeniden
+  okumasını söyler; bunu hiçbir zaman bir yoklamadan yapmaz. Böyle bir ekran açık
+  değilse istek gönderilmez (`web/src/lib/remote.ts` içinde `refreshRemote`).
+- *Panodaki ilgi listesi yerini korur* (yukarıda): kalem yokken ya da bir kalem
+  varken altındaki hiçbir şey yer değiştirmez; sonraki her kalem kendi satırını
+  ekler. Kutu, tek bir yanıtın içine koyabileceği en uzun şeyin yüksekliğini
+  ayırır: geniş ekranda bir satır, `lg` genişliğinin altında üç satır; orada
+  sakin satır üç, tek kalem iki satıra sarar. İçindeki, kutuda ortalanır. İki
+  sakin satır bu yüzden aynı uzunluktadır.
+- *Kapalı düğme artık bir eylem çağrısına benzemez.* Çukur bir dolgusu vardı; koyu
+  temada bu, açık renkli etkin düğmenin yanında açık etiketli lacivert bir bloktu.
+  Kullanılamayan denetimin her iki temada da dolgusu yoktur ve çerçevesi kendi
+  etiketinin renginde kesik çizgilidir; çalışan düğme çukur dolguyu ve dönen
+  işaretini korur.
+- *Yapılandırma düzenleyicisinin kartı yüksekliğini korur.* Dosya okunurken tek
+  satır, sonra düzenleyicinin tamamıydı; ham dosyaları, genel bakışı ve günlüğü
+  aşağı itiyordu. Kart her durumda pencerenin kalanını alır; altındaki her şey
+  önce de sonra da görünür alanın altında başlar. Ham dosya düzenleyicisi metin
+  alanının yüksekliğini ayırır; MariaDB sayfasında dosya seçicinin yeri dosyalar
+  okunurken ayrılır.
+
+Ayrıca: izlenen bir işlemin kilidi telefonun penceresinden uzun olabilir (üç
+ayrıntı, bir ileti ve bir eylem). Hiçbir yere kaymıyor, üstten ve alttan
+kesiliyordu; artık pencerenin içinde kayar.
+
+**Geri gelmesi nasıl önleniyor.** `web/tests/remote-state-mounted-batch3.test.mjs`
+bu ekranların her birini, her okuması dört biçimde alıkonmuş hâlde bağlar ve
+olumsuz metin çizilmemesini, değiştiren hiçbir denetimin açık olmamasını ve Tekrar
+dene'nin yalnız okuma göndermesini şart koşar; paylaşılan okumanın tek yenilemesini
+de tutar. Aynı dosya panoyu, ilgi listesinin dört okumasının her biri aynı dört
+biçimde alıkonmuş hâlde ve güvenlik duvarı Agent'ın hatasını 200 ile yanıtlarken
+bağlar: "Güvenlik duvarı kapalı" yok, "Aç" yok, sakin satır yok, okuma dışında
+istek yok ve Tekrar dene yalnız okunamayanı okur; listelenmiş bir kalem varken
+süren başka bir okumanın "kontrol ediliyor" satırı çizmediğini ve güvenlik
+duvarı çözücüsünün "kapalı"yı yalnız Agent'ın gönderdiği bir boolean olarak kabul
+ettiğini tutar. Gerçek DNS motoru kartını da, dört dakikadır hiçbir şey
+kaydetmemiş bir değişikliğin üzerinde bağlar: yoklama okuma dışında istek
+göndermez (kartın bu kayıttan önceki hâli burada, aralarında uzlaştırma isteğiyle
+başarısız olur), iki kez basılan "Şimdi kontrol et" tek istek gönderir, ret
+kilitte söylenir ve güvenlik sınırından sonra kilit bırakılır, döngü artık okumaz
+ve karttaki bildirim o tek isteği gönderir. `component-operation-setup-scan-runtime`, "doğrulanmış bitişte bir
+kez, doğrulanmamış bitişte hiç" kuralını tutar. `external-operation-lock-contract`
+otomatik uzlaştırma isteğinin sınırlarını sabitliyordu; artık yoklama döngüsünde
+böyle bir istek ve `fetch` bulunmadığını, isteğin tam iki çağrı yeri olduğunu
+(`Durumu yenile` ve sahibin kontrolü), sahibin kontrolüne yalnız iki düğmeden
+ulaşıldığını (kilit ve güvenlik sınırından sonra kart), tam bir işlem için
+güvenlik sınırında sunulmaya devam ettiğini ve tek uçuşlu, tam işleme bağlı ve
+değişiklik isteğine ulaşamaz olduğunu sabitler. `dashboard-truth-contract`, sakin
+satırın koşullarını ve hiçbir yanıtın çözülmeden güvenlik duvarı durumu olarak
+saklanmadığını tutar. `button-disabled-contrast-contract`, kapalı etiketi bir
+düğmenin durduğu her yüzeyde, her palette ölçer (önceden: tek yüzeyde); etkin
+birincil dolguyu da aynı yüzeylere karşı ölçer: ürünün açık ve koyu temalarında
+en az 3:1 (ölçülen en düşük 7,8:1), taklit görünümlerde bugünkü 2,87:1'den düşük
+değil; orada farkı kesik çizgili çerçeve taşır. Mandal: bu partiden önce 47
+dosyada 20 / 36 / 10 / 71 / 23, sonra 40 dosyada 8 / 28 / 10 / 57 / 19.
+
+**Yapılmayanlar.**
+
+- 40 dosya hâlâ eski biçimde okuyor. Bu partide ulaşılmadı ve
+  dokunulmadı: bileşenler listesi ve işlem izleyicinin kendi okumaları
+  (`ServiceList`, `ComponentOperation`), `ServiceShell`, panonun kalanı (sistem
+  değerleri, denetim izi, bileşen özetinin kendi okuması, hazırlık yoklaması),
+  listedeki her alan adı bölümü (`HostingTypePanel`, `DomainDNSManager`, yedekler,
+  uygulamalar, günlükler, PHP, genel, sertifika özeti, posta kimlik doğrulaması),
+  iki veritabanı penceresi, sunucu kurulum sihirbazı, mağaza ve eklenti sayfaları,
+  VPN, denetim günlüğü, ekip sayfası, güvenlik denetimi kartı ve panel veritabanı
+  sayfası.
+- Bilerek bırakılanlar ve onları sabitleyen sözleşme: `Layout`
+  (`layout-server-identity-contract` içindeki tek sınırlı
+  `fetch('/api/v1/panel/version'` ve yalnız-yönetici sıfırlaması;
+  `component-inventory-contract` içindeki
+  `api.getServices().then(publishComponentCensus)`), `SystemUpdateOperation`
+  (`system-update-outcome` ve `panel-update-ui-contract` içindeki tam durum ve
+  kurtarma okumaları; bilerek güvenli tarafta kalır), `PanelUpdateCard`
+  (`panel-update-card-mounted`), `DNSEngineCard`'ın kendi durum okuması
+  (`dns-engine-ui-contract`), panonun hazırlık okuması
+  (`dashboard-firewall-confirmation-contract`). Erişim kapıları
+  (`usePanelSession`, `LicenseOnboarding`, `RecoveryAccess`, `App`) bilinmeyeni
+  olumsuzdan zaten ayırır; yalnız ham okumaları sayılır ve bunlar taşınmadı.
+- Pano listede kalır (1 / 3 / 0 / 4): denetim izi, sistem değerleri, hazırlık
+  yoklaması ve bileşen kayıtlarını kendi okuması paylaşılan katmanda değildir.
+  Bileşenler sayfasının güvenlik duvarı paneli (`ServiceList`) hâlâ
+  `GET /api/v1/firewall` adresini kendi okur.
+- DNS motoru kartının `dnsEngine.guard.deadline` cümlesi, güvenlik sınırında,
+  kilidin bırakıldığı anda kilide yazılır; bu yüzden onu kimse görmez. Bu kayıttan
+  önce de böyleydi ve değişmedi. Sahibin orada artık gördüğü, yalnız tam bir
+  işlem için, karttaki "Şimdi kontrol et" bildirimidir (yukarıda).
+- DNS motoru kartının bağlanan testi, kartın ilk yoklamasını (durum okunduktan
+  yarım saniye sonra; eski zamanlayıcı isteğini orada gönderiyordu) ve sahibin
+  kontrolünü kapsar; sonraki, daha yavaş yoklamalar kaynak sözleşmesiyle tutulur
+  ve tarayıcı çalıştırmasında sayıldı.
+- php.ini düzenleyicisi hâlâ yalnız İngilizcedir ve kaydı hâlâ tarayıcı
+  pencereleriyle onaylayıp bildirir; yalnız okuması değiştirildi.
+- İlgi listesi şu durumlarda hâlâ yer değiştirir: ikinci bir kalem geldiğinde
+  (sonraki her kalem kendi satırını ekler), bir okuma başarısız olduğunda
+  (bildirim bir satırdan uzundur) ve 390 px'ten dar bir ekranda sakin satır
+  dördüncü bir satıra ihtiyaç duyarsa.
+- Kontrol edilemedi bildirimi okumanın neden başarısız olduğunu hâlâ söylemez.
+- Gerçek sunucuda doğrulanmadı; sahte sunucuya karşı tek bir Chrome.
+
+**Bu grubun tarayıcı incelemesi (2026-10-09).** Kurulu, gerçek bir Chrome'da,
+yerel sahte sunucuya karşı (`web/tools/browser-inspect`, `servicepages`,
+`attention`, `dnssettings`, `dnsreconcile`, `editorheight` senaryoları; önceki
+grupların her senaryosu aynı derlemede yeniden çalıştırıldı): masaüstü 1440×900
+ve telefon 390×844, Türkçe ve İngilizce, açık ve koyu.
+
+- *Sekiz yapılandırmanın hepsinde ölçüldü.* Bu ekranların hiçbir "kontrol
+  ediliyor" ya da "kontrol edilemedi" durumunda ekranda olumsuz bir cümle yoktu.
+  Panodaki ilgi listesinin altında, "kontrol ediliyor" durumu ile yerleşmiş
+  sayfa arasında hiçbir şey yer değiştirmedi (0 px): bileşenler güncelken
+  listelenecek bir şey yokken, güncel değilken listelenecek bir şey yokken, bir
+  kalem varken ve bir kalem listelenmişken başka bir okuma sürerken. DNS
+  değişikliği takılıyken, sayfaya kimse dokunmadan geçen 34 saniyede (iki yavaş
+  yoklama) hiçbir uzlaştırma isteği gelmedi; her "Şimdi kontrol et" tam bir istek
+  gönderdi. Güvenlik sınırından sonra kilit çizilmedi, 20 saniyede hiçbir türden
+  istek gelmedi, kart takibin sürdüğünü söylemedi ve karttaki her "Şimdi kontrol
+  et" tam bir istek gönderdi. Yapılandırma düzenleyicisinin kartının altındaki
+  ham dosyalar, dosya okunurken de sonra da görünür alanın altında başladı.
+  Dovecot değerlerinin altındakiler, yanıt geldiğinde yer değiştirmedi. Fail2ban,
+  Nginx ve PHP sayfalarında sekme içeriğinin altında bir şey durmaz; bu yüzden
+  yeri ölçülebilecek bir şey yoktu.
+- *Bakarak ya da ölçerek bulundu ve düzeltildi.*
+  - Telefonda ilgi listesi geldiğinde sayfayı aşağı itiyordu: listelenecek bir
+    şey yokken 24 px, bir kalem varken 12 px; çünkü bir satır ayrılmıştı, oysa
+    sakin satır orada üç, bir kalem iki satır tutar. Kutu artık `lg`
+    genişliğinin altında üç satır ayırır; güncel olmayan bileşenler için olan ve
+    yaklaşık iki kat uzun olan sakin satır da ötekinin uzunluğuna kısaltıldı.
+  - Panoda, DNS ayarlarında ve php.ini sekmesinde "kontrol edilemedi" bildirimi
+    bölümün kendi kutusunun içindeydi, kutu içinde kutu; üçünde de tek başına
+    duruyor.
+  - DNS değişikliğinin kilidi, bileşen izleyicinin "bağlantı kesildi" simgesini
+    ve "Sayfayı yenile"yi çiziyordu. Bu, sahte sunucudandı: izleyicinin etkin
+    bileşen işlemi okumasını yalın bir `null` ile yanıtlıyordu; oysa Panel her
+    zaman `{"operation": null}` yanıtlar (`cmd/panel/service_operations.go`).
+    Sahte sunucu artık zarfı yanıtlıyor; kilit dikkat işaretini gösteriyor ve
+    yenileme düğmesi çizmiyor.
+  - Bir kontrolden sonra kilit "…değişiklik henüz bitmedi. Durumu 15 saniyede bir
+    okumayı sürdürüyor…" diyordu; ikinci cümle artık CelikPanel'i adlandırıyor.
+  - Güvenlik sınırından sonra kart, durduğunu söyleyen bildirimin yanında
+    "Otomatik güncelleniyor" gösteriyordu; rozet orada çizilmiyor.
+  - DNS değişikliğinin kilidi telefon penceresinden uzun olabiliyor ve üstten,
+    alttan kesiliyordu; artık pencerenin içinde kayıyor.
+  - Yeni Türkçe cümleler, sayfanın "hapishane" dediği yerde "hapis" diyordu.
+  - Senaryoların iki değeri ölçüm değildi: Fail2ban, Nginx ve PHP sayfalarındaki
+    "0 px" sayfanın kendi yeriydi, Dovecot ölçümü de İngilizcede hiçbir öğe
+    bulamıyordu. Senaryolar artık yalnız bulunan bir öğe için değer kaydeder,
+    bulunamazsa başarısız olur.
+- *Görüldü ve değiştirilmedi.* Telefonda Fail2ban tabloları yana kayar; "Yasağı
+  kaldır" tablo kaydırılana dek ekran dışındadır (Alan Adları ve Veritabanları
+  tablolarındaki gibi). Kilidin iletisi uzundur ve tamamı dikkat renginde
+  yazılır; bu, kaplamanın mevcut biçimidir. Panodaki "Son etkinlik", boş bir iz
+  için "–" gösterir (taşınmadı). Bir yasak kaldırıldıktan sonra liste yeniden
+  okunamazsa, bildirim balonu "IP yasağı kaldırıldı" derken önceki listenin
+  üstündeki ortak bildirim "Hiçbir şey değiştirilmedi" der: o cümle, Veritabanları
+  sayfasında bir silmeden sonra olduğu gibi, okumadan söz eder.
+- *Kapsanmadı.* Gerçek sunucu; Safari, Firefox, ekran okuyucu, dokunmatik cihaz;
+  taklit görünümler; yönetici dışındaki roller. PowerDNS sayfasının dosya
+  listesinin okunurken ya da okunamadığındaki hâli ve php.ini düzenleyicisinin
+  kaydı yalnız bağlanan testle kapsanır. Bu kaydın "önce" değerleri (118 px,
+  telefonda 158 px) yeniden ölçülmedi.
+
 ### Veritabanı ve posta yapılandırma ekranları: dosya düzenleyici olmadan önce okunur, kayıt hizmetin onunla ne yaptığını söyler (2026-10-09)
 
 Bileşen testleri, bir geliştirme konuğunda gerçekten çalıştırılan iki doğrulama

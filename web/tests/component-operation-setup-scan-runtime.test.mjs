@@ -39,6 +39,9 @@ const stub = dataModule(`import React from '${reactURL}';
  export const useNavigationBlocker = () => {};
  export const showToast = (kind, message) => { fixture().toasts.push([kind, message]); };
  export const createPortal = node => node;
+ // The tracker tells the shared read of the component records to read again
+ // when an operation has ended; the test records each call.
+ export const refreshRemote = url => { (fixture().refreshed ??= []).push(url); };
  export default function OperationOverlay(props) { return React.createElement('operation-overlay', props); }
 `);
 const providerURL = dataModule(`import React from '${reactURL}';\n` + compile(read('../src/components/ComponentOperation.tsx'))
@@ -131,6 +134,8 @@ function assertHeld(message) {
   assert.equal(seen.value.failure, null, message);
   assert.deepEqual(globalThis.operationTest.toasts, [], `${message}: a result was announced`);
   assert.deepEqual(pending(), [RETRY_DELAY_MS], `${message}: the retry is not scheduled`);
+  // An end that is not verified changes what no screen shows: nothing is told to read again.
+  assert.equal(globalThis.operationTest.refreshed, undefined, `${message}: the shared component records were re-read for an unverified end`);
 }
 function assertReleased(scannedAt, message) {
   assert.equal(overlay(), null, `${message}: the overlay is still shown`);
@@ -146,6 +151,10 @@ function assertReleased(scannedAt, message) {
   assert.equal(new Set(seen.snapshots.filter(Boolean).map(item => item.scanned_at)).size, 1, message);
   assert.deepEqual(globalThis.operationTest.toasts, [['success', 'services.installed {"name":"Nginx"}']], message);
   assert.deepEqual(pending(), [], `${message}: something is still scheduled`);
+  // The verified end tells every screen that shows the stored component records
+  // to read them again: once for the operation, not once per poll (open item of
+  // 2026-10-09: a page opened after an install listed the earlier scan for 30 s).
+  assert.deepEqual(globalThis.operationTest.refreshed, ['/api/v1/managed-services'], `${message}: the shared component records must be re-read exactly once`);
 }
 
 test('success and an accepted scan: released once, on the fresh snapshot', async () => {

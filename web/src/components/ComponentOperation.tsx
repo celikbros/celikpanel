@@ -13,6 +13,7 @@ import { createPortal } from 'react-dom';
 import { useI18n } from '../i18n';
 import { readApiError, type ApiError } from '../lib/apiError';
 import { scanRefusedBySetup } from '../lib/panelHandover';
+import { refreshRemote } from '../lib/remote';
 import { useNavigationBlocker } from '../router';
 import { showToast } from './Toast';
 
@@ -192,6 +193,15 @@ export interface InteractionBlockView {
     busy?: boolean;
     severity?: 'warning' | 'error';
     message?: string;
+    // One thing the person at the screen may choose while the lock is held.
+    // The lock never does it by itself: a timer or a poll only reads.
+    // Kilit tutulurken ekrandaki kisinin secebilecegi tek sey. Kilit bunu
+    // kendiliginden yapmaz: zamanlayici ya da yoklama yalniz okur.
+    action?: {
+        label: string;
+        busy?: boolean;
+        onAct: () => void;
+    };
     details?: Array<{
         label: string;
         value: string;
@@ -302,6 +312,23 @@ export function decodeManagedMailProfiles(
         profiles.push(profile as unknown as ManagedMailProfile);
     }
     return profileIDs.size === expectedIDs.size ? profiles : null;
+}
+
+// A component operation that has ended, either way, changed what the stored
+// component records say. Screens that show those records through the shared
+// read (lib/managedServices.ts) keep an answer for half a minute; without this
+// a PostgreSQL or MariaDB page opened right after its install went on listing
+// the files of "not installed" for up to 30 seconds (open item of 9 Oct 2026).
+// It is called once per operation, at the one point where the tracker has
+// verified the end with a fresh scan, never from a poll tick, and it only
+// reads: with no such screen open nothing is requested.
+// Biten bir bilesen islemi, kayitli bilesen kayitlarinin soyledigini degistirir.
+// O kayitlari paylasilan okumayla gosteren ekranlar yaniti yarim dakika tutar;
+// bu olmadan kurulumdan hemen sonra acilan sayfa 30 saniyeye kadar eski
+// taramayi gosteriyordu. Islem basina bir kez, izleyicinin bitisi taze taramayla
+// dogruladigi noktada cagrilir; yalniz okur.
+function refreshShownComponentRecords() {
+    refreshRemote('/api/v1/managed-services');
 }
 
 // A terminal operation may unlock the page only after every field consumed by
@@ -1600,6 +1627,7 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
 
             if (cancelled) return;
             setCatalogSnapshot(freshSnapshot);
+            refreshShownComponentRecords();
             finishFailure(terminalFailure);
         };
 
@@ -1763,6 +1791,7 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                     : null;
 
                 setCatalogSnapshot(freshSnapshot);
+                refreshShownComponentRecords();
                 clearStoredOperation();
                 recoveryMarkerRef.current = null;
                 adoptedOperationIDRef.current = '';

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from '../router';
 import { Network, Server, Check, AlertTriangle, Circle, Loader2 } from 'lucide-react';
+import { readRemote } from '../lib/remote';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { dnsEngineText } from '../i18n/dnsEngine';
-import { Button, ErrorBanner, Field, inputClass, StatusDot } from './ui';
+import { Button, Checking, CouldNotCheck, ErrorBanner, Field, inputClass, StatusDot } from './ui';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
 import type { DNSEngineSnapshot } from '../lib/dnsEngineContract';
 import {
@@ -16,6 +17,14 @@ import {
 import { HelpButton } from './HelpDrawer';
 import { DNSEngineCard } from './DNSEngineCard';
 import { ServerSetupDNSAccess, ServerSetupDNSManagement } from './ServerSetupDNSConnections';
+
+// The two saved records this section is built from. Each answer is a record
+// or it is unknown: the section is never built from a default.
+// Bu bölümün kurulduğu iki kayıt. Her yanıt ya bir kayıttır ya da bilinmeyendir.
+function decodeRecord<T>(raw: unknown): T {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('shape');
+    return raw as T;
+}
 
 type DNSRole = 'standalone' | 'paired';
 type DraftDNSRole = DNSRole | '';
@@ -324,25 +333,30 @@ function DNSInfrastructureSettings({
     const [busy, setBusy] = useState(false);
     const [needsClusterRetry, setNeedsClusterRetry] = useState(false);
     const [apiError, setApiError] = useState<ApiError | null>(null);
+    const [reading, setReading] = useState(false);
     const [activeStep, setActiveStep] = useState<WizardStep>(1);
     const [detectedPeerStaged, setDetectedPeerStaged] = useState(false);
 
     const load = useCallback(async (preserveCluster?: ClusterDraft): Promise<boolean> => {
+        setReading(true);
         try {
-            const [namesResponse, clusterResponse] = await Promise.all([
-                fetch('/api/v1/settings/nameservers'),
-                fetch('/api/v1/settings/dns-cluster'),
+            const [namesRead, clusterRead] = await Promise.all([
+                readRemote('/api/v1/settings/nameservers', decodeRecord<NameserverResponse>),
+                readRemote('/api/v1/settings/dns-cluster', decodeRecord<ClusterResponse>),
             ]);
-            if (!namesResponse.ok) {
-                setApiError(await readApiError(namesResponse));
+            const unread = namesRead.state === 'unknown' ? namesRead : clusterRead.state === 'unknown' ? clusterRead : null;
+            if (unread || namesRead.state !== 'known' || clusterRead.state !== 'known') {
+                // A refusal the server explained keeps its explanation. No
+                // answer at all is the generic line, as before.
+                // Sunucunun açıkladığı ret açıklamasını korur.
+                const explained = unread && (unread.reason.code || unread.reason.message);
+                const error = explained && unread ? unread.reason : { message: t('common.error') };
+                setApiError(error);
+                if (!explained) showToast('error', error.message);
                 return false;
             }
-            if (!clusterResponse.ok) {
-                setApiError(await readApiError(clusterResponse));
-                return false;
-            }
-            const names = await namesResponse.json() as NameserverResponse;
-            const cluster = await clusterResponse.json() as ClusterResponse;
+            const names = namesRead.value;
+            const cluster = clusterRead.value;
 
             const role = normalizeRole(cluster.role);
             const ns1 = cleanHostname(names.ns1 || cluster.ns1 || '');
@@ -416,6 +430,8 @@ function DNSInfrastructureSettings({
             setApiError(error);
             showToast('error', error.message);
             return false;
+        } finally {
+            setReading(false);
         }
     }, [activeEngine, t]);
 
@@ -507,13 +523,29 @@ function DNSInfrastructureSettings({
     }, [onIdentityPlanCurrentChange, stagedIdentityCurrent]);
 
     if (!saved || !draft) {
+        // Nothing of this section has been read yet. It is being read, or it
+        // could not be read; neither is "DNS is not set up", and no form is
+        // drawn from defaults (9 Oct 2026). Before, a failed read was a red
+        // banner with no way to read again.
+        // Bu bölümden henüz hiçbir şey okunmadı: okunuyor ya da okunamadı.
+        // İkisi de "DNS kurulmamış" değildir ve varsayılanlardan form çizilmez.
         return (
-            <section className="rounded-xl border border-border bg-surface p-4 sm:p-6">
-                <ErrorBanner error={apiError} />
-                {!apiError && (
-                    <div className="flex min-h-24 items-center justify-center text-fg-muted">
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                    </div>
+            // The notice is its own surface, so it stands by itself; only the
+            // checking line sits in the card the settings will fill.
+            // Bildirim kendi yüzeyidir ve tek başına durur; kartın içinde
+            // yalnız "okunuyor" satırı yer alır.
+            <section className={apiError ? 'min-h-24' : 'min-h-24 rounded-xl border border-border bg-surface p-4 sm:p-6'} aria-busy={reading}>
+                {apiError ? (
+                    <CouldNotCheck
+                        text={<>
+                            {t('dnssrv.unknown')}
+                            {apiError.code && <span className="mt-1 block">{apiErrorText(apiError, t)}</span>}
+                        </>}
+                        onRetry={() => { setApiError(null); void load(); }}
+                        busy={reading}
+                    />
+                ) : (
+                    <Checking label={t('dnssrv.checking')} className="min-h-[2.75rem] py-2" />
                 )}
             </section>
         );

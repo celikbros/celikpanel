@@ -178,7 +178,12 @@ async function api(req, res, path, query) {
         if (!op || op.request_id !== query.get('request_id')) { coded(res, 404, 'not_found', 'service operation not found'); return; }
         send(res, 200, { operation: { ...op, status: state.certificateStatus, ...(state.certificateStatus === 'failed' ? { error: state.certificateError || { code: 'certificate_issue_failed', message: 'The certificate authority could not reach panel.example.com on port 80.' } } : {}) } }); return;
     }
-    if (key === 'GET /api/v1/service/operation') { send(res, 200, state.componentOperation ? { operation: state.componentOperation } : null); return; }
+    // The Panel always answers an envelope: `{"operation": null}` when nothing
+    // is running (cmd/panel/service_operations.go). A bare `null` here made the
+    // tracker treat every page as "could not find out", and a lock held by
+    // another screen then drew the "connection interrupted" treatment
+    // (seen in the DNS engine lock, 9 Oct 2026).
+    if (key === 'GET /api/v1/service/operation') { send(res, 200, { operation: state.componentOperation ?? null }); return; }
     // --- The second batch (2026-10-09) ---
     if (key === 'GET /api/v1/auth/2fa/status') { send(res, 200, { enabled: state.twoFactor }); return; }
     if (key === 'GET /api/v1/panel/certificate') { send(res, 200, state.panelCertificate); return; }
@@ -209,6 +214,9 @@ async function api(req, res, path, query) {
     // can be merged without touching each other's lines.
     if (await (await import('./mock-batch2b.mjs')).batch2b(req, res, path, query, { state, send, coded, readBody })) return;
     // --- end of batch 2b ---
+    // --- batch 3 (9 Oct 2026): service pages, the dashboard's attention list, DNS ---
+    if (await (await import('./mock-batch3.mjs')).batch3(req, res, path, query, { state, send, coded, readBody })) return;
+    // --- end of batch 3 ---
     coded(res, 404, 'not_found', `mock has no route for ${key}`);
 }
 

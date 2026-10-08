@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Save, RefreshCw } from 'lucide-react';
-import { Spinner } from './ui';
+import { Checking, CouldNotCheck } from './ui';
+import { useI18n } from '../i18n';
+import { readRemote } from '../lib/remote';
 
 interface ExtendedPHPConfig {
     // Performance & Security
@@ -32,27 +34,40 @@ interface PHPExtendedConfigProps {
     version: string;
 }
 
+// The settings as php.ini holds them, or unknown. The form below is built
+// only from an answer the server gave, never from defaults.
+// php.ini'nin tuttuğu ayarlar ya da bilinmeyen. Aşağıdaki form yalnız sunucunun
+// verdiği yanıttan kurulur, varsayılanlardan değil.
+function decodeExtendedConfig(raw: unknown): ExtendedPHPConfig {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('shape');
+    if (typeof (raw as ExtendedPHPConfig).memory_limit !== 'string') throw new Error('field');
+    return raw as ExtendedPHPConfig;
+}
+
 export function PHPExtendedConfig({ version }: PHPExtendedConfigProps) {
+    const { t } = useI18n();
     const [config, setConfig] = useState<ExtendedPHPConfig | null>(null);
     const [loading, setLoading] = useState(true);
+    // The read failed: said in place, with the read again (9 Oct 2026). Before,
+    // a browser alert and then an empty card.
+    // Okuma başarısız: yerinde söylenir. Önceden tarayıcı uyarısı ve boş kart.
+    const [unread, setUnread] = useState(false);
     const [saving, setSaving] = useState(false);
     const [activeSection, setActiveSection] = useState<'performance' | 'common' | 'advanced'>('performance');
 
     const fetchConfig = async () => {
         setLoading(true);
-        try {
-            const res = await fetch(`/api/v1/php/extended-config?version=${version}`);
-            if (res.ok) {
-                setConfig(await res.json());
-            } else {
-                alert('Failed to load configuration');
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Failed to load configuration');
-        } finally {
-            setLoading(false);
+        setUnread(false);
+        const answer = await readRemote(`/api/v1/php/extended-config?version=${encodeURIComponent(version)}`, decodeExtendedConfig);
+        if (answer.state === 'known') {
+            setConfig(answer.value);
+        } else {
+            // Nothing that was read for another version stays in the form.
+            // Başka bir sürüm için okunan hiçbir şey formda kalmaz.
+            setConfig(null);
+            setUnread(true);
         }
+        setLoading(false);
     };
 
     useEffect(() => {
@@ -87,15 +102,29 @@ export function PHPExtendedConfig({ version }: PHPExtendedConfigProps) {
         }
     };
 
+    // The card the editor stands in. This component owns it (it was the
+    // parent's), so that the could-not-read notice is not a box in a box.
+    // Düzenleyicinin durduğu kart artık bu bileşenindir; böylece "okunamadı"
+    // bildirimi kutu içinde kutu olmaz.
+    const card = 'rounded-xl border border-border-strong bg-surface';
+
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <Spinner />
+            <div className={`min-h-64 p-6 ${card}`}>
+                <Checking label={t('php.ini.checking', { version })} className="min-h-[2.75rem]" />
             </div>
         );
     }
 
-    if (!config) return null;
+    if (!config) {
+        return (
+            // The notice is its own surface: it stands by itself, not in the card.
+            // Bildirim kendi yüzeyidir: kartın içinde değil, tek başına durur.
+            <div className="min-h-64">
+                {unread && <CouldNotCheck text={t('php.ini.unknown', { version })} onRetry={() => void fetchConfig()} />}
+            </div>
+        );
+    }
 
     const renderInput = (label: string, key: keyof ExtendedPHPConfig, placeholder?: string) => (
         <div>
@@ -126,7 +155,7 @@ export function PHPExtendedConfig({ version }: PHPExtendedConfigProps) {
     );
 
     return (
-        <div className="space-y-6">
+        <div className={`space-y-6 ${card}`}>
             {/* Section Tabs */}
             <div className="flex border-b border-border">
                 <button

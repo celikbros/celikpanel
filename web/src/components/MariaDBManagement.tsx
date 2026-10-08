@@ -6,6 +6,7 @@ import { MariaDBSettings } from './MariaDBSettings';
 import { useI18n } from '../i18n';
 import { useComponentConfigFiles } from '../lib/managedServices';
 import { Checking, CouldNotCheck, inputClass } from './ui';
+import { editorCardHeight } from './ConfigFileNotices';
 
 interface MariaDBManagementProps {
     onBack: () => void;
@@ -45,6 +46,19 @@ export function MariaDBManagement({ onBack }: MariaDBManagementProps) {
         <ServiceShell serviceId="mariadb" name="MariaDB" icon={Database} onBack={onBack}>
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
                 <div className="min-w-0 lg:col-span-2">
+                    {/* The chooser's place is kept while the files are read,
+                        so the card under it does not move down when they
+                        arrive. It is a placeholder of the same height, not a
+                        field: nothing can be chosen before the files are
+                        known. / Seçicinin yeri dosyalar okunurken ayrılır;
+                        böylece altındaki kart dosyalar gelince aşağı kaymaz.
+                        Aynı yükseklikte bir yer tutucudur, alan değildir. */}
+                    {files.state === 'loading' && (
+                        <div className="mb-4" aria-hidden="true">
+                            <span className="mb-1.5 block text-sm font-medium text-fg-muted">{t('db.selectConfigFile')}</span>
+                            <div className={`${inputClass} border-dashed bg-transparent font-mono`}>&nbsp;</div>
+                        </div>
+                    )}
                     {known && known.length > 0 && (
                         <div className="mb-4">
                             <label htmlFor="mariadb-config-file" className="mb-1.5 block text-sm font-medium text-fg-muted">{t('db.selectConfigFile')}</label>
@@ -63,7 +77,7 @@ export function MariaDBManagement({ onBack }: MariaDBManagementProps) {
                         </div>
                     )}
 
-                    <div className="rounded-xl border border-border bg-surface p-5">
+                    <div className={`rounded-xl border border-border bg-surface p-5 ${editorCardHeight}`}>
                         {files.state === 'loading' ? (
                             <Checking label={t('dbconf.files.checking', { service: 'MariaDB' })} className="min-h-[2.75rem] py-2" />
                         ) : !known ? (

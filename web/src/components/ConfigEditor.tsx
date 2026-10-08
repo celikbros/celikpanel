@@ -38,7 +38,11 @@ export function ConfigEditor({ path, onBack }: ConfigEditorProps) {
                 <FileCode className="h-5 w-5 shrink-0 text-fg-muted" aria-hidden="true" />
                 <h3 className="min-w-0 break-all font-mono text-sm text-fg">{path}</h3>
             </div>
-            <div className="p-5">
+            {/* The height the text area and its bar will take is reserved
+                while the file is read, so the card does not grow when it
+                arrives. / Metin alanının ve çubuğunun kaplayacağı yükseklik
+                dosya okunurken ayrılır; kart dosya gelince büyümez. */}
+            <div className="min-h-[calc(max(18rem,100dvh-24rem)+6rem)] p-5">
                 <ConfigFileGate handle={handle} file={file}>
                     {(value) => <RawText key={value.version} handle={handle} value={value} file={file} />}
                 </ConfigFileGate>

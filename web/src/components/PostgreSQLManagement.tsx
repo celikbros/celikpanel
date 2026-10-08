@@ -8,6 +8,7 @@ import { PostgreSQLAccessRules } from './PostgreSQLAccessRules';
 import { useI18n } from '../i18n';
 import { useComponentConfigFiles } from '../lib/managedServices';
 import { Checking, CouldNotCheck } from './ui';
+import { editorCardHeight } from './ConfigFileNotices';
 
 interface PostgreSQLManagementProps {
     onBack: () => void;
@@ -49,7 +50,7 @@ export function PostgreSQLManagement({ onBack }: PostgreSQLManagementProps) {
                 <Tab active={tab === 'access'} onClick={() => setTab('access')} icon={ShieldCheck} label={t('db.tab.access')} />
             </div>
 
-            <div className="rounded-xl border border-border bg-surface p-5">
+            <div className={`rounded-xl border border-border bg-surface p-5 ${editorCardHeight}`}>
                 {files.state === 'loading' ? (
                     <Checking label={t('dbconf.files.checking', { service: 'PostgreSQL' })} className="min-h-[2.75rem] py-2" />
                 ) : !known ? (

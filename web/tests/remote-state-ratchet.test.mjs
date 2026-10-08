@@ -44,14 +44,18 @@ const actual = scanTree(webDir);
 // Before the first batch:        46 / 68 / 16 / 126 / 32 in 68 files.
 // After the first batch:         37 / 58 / 14 / 109 / 29 in 62 files.
 // After the second, first part:  27 / 43 / 12 /  83 / 25 in 53 files.
+// After the second batch:        20 / 36 / 10 /  71 / 23 in 47 files.
+// The ceilings below are the totals after the third batch (the Fail2ban, Nginx,
+// PHP, Dovecot and PowerDNS pages, the DNS settings; and in part the dashboard,
+// whose firewall and component reads are no longer turned into values).
 const ceilings = {
-  valueFromFailure: 20,
-  swallowedFailure: 36,
+  valueFromFailure: 8,
+  swallowedFailure: 28,
   ignoredFailure: 10,
-  rawRead: 71,
-  unprovenEmptyState: 23,
+  rawRead: 57,
+  unprovenEmptyState: 19,
 };
-const fileCeiling = 47;
+const fileCeiling = 40;
 
 const advice = 'Read through useRemote/readRemote (src/lib/remote.ts) and draw the three states; '
   + 'see docs/OPERATION-GUIDANCE.md, entry of 2026-10-09.';
@@ -178,7 +182,7 @@ test('the totals never exceed the pinned ceilings', () => {
   assert.deepEqual(totals(allowList.files), now, 'the allow-list and the tree disagree; run --tighten');
 });
 
-test('the screens of the first two batches are off the list for good', () => {
+test('the screens of the first three batches are off the list for good', () => {
   for (const name of [
     'AddDomainModal', 'Domains', 'DatabaseManagementV2', 'DomainDatabaseManager', 'DomainConnection', 'CurrentSettings',
     // The second batch.
@@ -187,6 +191,9 @@ test('the screens of the first two batches are off the list for good', () => {
     // The second batch, database and mail configuration.
     'PostgreSQLManagement', 'MariaDBManagement', 'PostfixManagement', 'DomainMailManager', 'MailSettingsPanel', 'WebmailAccess',
     'PostgreSQLSettings', 'MariaDBSettings', 'PostgreSQLAccessRules', 'ConfigEditor', 'ConfigSettingsEditor', 'ConfigFileNotices',
+    // The third batch.
+    'Fail2banManagement', 'NginxManagement', 'PHPManagement', 'PHPExtendedConfig', 'DovecotManagement', 'PowerDNSManagement',
+    'DNSServerSettings',
   ]) {
     const path = `src/components/${name}.tsx`;
     assert.equal(actual[path], undefined, `${path} reads the old way again: ${JSON.stringify(actual[path])}. ${advice}`);

@@ -43,6 +43,22 @@ export function ConfigFileGate({
     return <>{children(remote.value)}</>;
 }
 
+// The card an editor of one configuration file stands in keeps one least
+// height in every state: being read, could not be read, no such file, and the
+// editor itself. Seen in a browser on 9 Oct 2026: the card was one line while
+// the file was read and then the whole editor, and everything under it (the
+// raw files, the overview, the log) was pushed down the page by several
+// hundred pixels. The editor's own height depends on the file, so the card
+// takes the rest of the window instead: what stands under it starts below the
+// fold in every state, and nothing on screen changes place when the file
+// arrives.
+// Bir yapılandırma dosyasının düzenleyicisinin durduğu kart, her durumda tek
+// bir en az yüksekliği korur: okunurken, okunamadığında, dosya yokken ve
+// düzenleyicinin kendisinde. Kart pencerenin kalanını alır; altındaki her şey
+// her durumda görünür alanın altında başlar ve dosya geldiğinde ekranda hiçbir
+// şey yer değiştirmez.
+export const editorCardHeight = 'min-h-[max(20rem,calc(100dvh-17rem))]';
+
 /** The line the service's own program said, bounded by the server. */
 export const refusalDetail = (refusal: ApiError | null) => refusal?.vars?.detail ?? '';
 
