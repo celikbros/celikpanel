@@ -46,8 +46,9 @@ export function LicenseLockScreen({ checking, failed, onCheck }: { checking: boo
             </section> : checking ? <div className="flex items-center gap-3"><Spinner /><p>{t('license.lockCheck')}</p></div>
                 : role === 'admin' ? <LicensePanel locked onContinue={onCheck} />
                     : <section className="space-y-5" aria-labelledby="license-lock-heading"><h1 id="license-lock-heading" className="text-2xl font-semibold">{t('license.tenantTitle')}</h1><p className="max-w-prose">{t('license.tenantHelp')}</p><p className="max-w-prose text-sm text-fg-muted">{t('license.restricted')}</p><Button onClick={onCheck}>{t('license.refresh')}</Button></section>}
-            {/* While the first access read is in flight nothing is known yet, so no saved update result is drawn beside it. */}
-            {role === 'admin' && !checking && <RecoveryStatus username={user.username} />}
+            {/* A license decision is not explained by an update: only an operation that is still running, failed or
+                waiting for the owner is drawn here, and nothing while the first access read is in flight. */}
+            {role === 'admin' && !checking && <RecoveryStatus username={user.username} unfinishedOnly />}
             {!checking && !failed && role === 'admin' && <details className="mt-8" onToggle={event => setShowUpdate(event.currentTarget.open)}>
                 <summary className="cursor-pointer rounded text-sm font-semibold text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary">{t('license.updatePanel')}</summary>
                 {showUpdate && <div className="mt-4"><PanelUpdateCard activation /></div>}

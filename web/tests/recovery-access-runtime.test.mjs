@@ -21,6 +21,7 @@ const stub = dataModule(`import React from '${reactURL}';
  export const useI18n=()=>({t:key=>key,locale:'en'});
  export const BrandMark=()=>null,LanguageSwitcher=()=>null,Spinner=()=>null;
  export const Button=props=>React.createElement('button',props);
+ export const AddressLink = props => React.createElement('a', { href: props.href }, props.address);
 `);
 function rewritten(path) { return dataModule(`import React from '${reactURL}';\n`+compile(path).replace(/from ['"]([^'"]+)['"]/g,(_,specifier)=>`from '${specifier==='react'?reactURL:specifier.endsWith('/recoveryObservation')?recoveryURL:specifier.endsWith('/panelHandover')?handoverURL:stub}'`)); }
 const {usePanelSession}=await import(rewritten('../src/auth/usePanelSession.ts'));
@@ -480,5 +481,6 @@ test('a first read in flight says checking; could not be checked needs a failed 
  // The interface still being fetched is a wait as well.
  assert.match(app,/<Suspense fallback=\{<StandaloneRecovery loading \/>\}>/);
  const lock=readFileSync(new URL('../src/components/LicenseLockScreen.tsx',import.meta.url),'utf8');
- assert.match(lock,/role === 'admin' && !checking && <RecoveryStatus username=\{user\.username\} \/>/);
+ // A license decision is not explained by an update: no "no update operation ID" text on the activation page.
+ assert.match(lock,/role === 'admin' && !checking && <RecoveryStatus username=\{user\.username\} unfinishedOnly \/>/);
 });

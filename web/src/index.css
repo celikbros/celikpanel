@@ -392,6 +392,20 @@ svg.lucide {
     color: rgb(var(--fg));
 }
 
+/* One scrim at most (browser inspection, 2026-10-08). The access hold and the
+   reload line cover whatever is open, including a dialogue or an operation
+   overlay that already dims the page. Two stacked scrims left the page under
+   them unreadable, although the hold says that what is on it is kept. While
+   one of these two layers is drawn it is the only scrim: every scrim under it
+   is cleared, so the page stays dim and legible. The layer still covers and
+   blocks everything beneath it. A browser without :has() draws both scrims.
+   En fazla tek karartma: erisim bekletmesi ya da yeniden yukleme katmani
+   cizilirken altindaki karartmalar kaldirilir; sayfa los ama okunur kalir. */
+body:has([data-top-layer]) [class*="bg-scrim"]:not([data-top-layer] *, [data-top-layer]),
+body:has([data-top-layer="reload"]) [data-top-layer="hold"] [class*="bg-scrim"] {
+    background-color: transparent;
+}
+
 /* The focus ring is a drawn part of this system, not a browser default.
    Odak halkasi bu sistemin cizdigi bir parcadir, tarayici varsayilani degil. */
 :focus-visible {

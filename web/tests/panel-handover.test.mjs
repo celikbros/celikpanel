@@ -173,7 +173,16 @@ test('the wizard states the restart in advance and names it when the connection 
   assert.match(wizard, /t\(handoverDrop \? 'setup\.handover\.dropTitle' : reconnecting \? 'setup\.reconnecting'/);
   assert.match(wizard, /\{handoverDrop \? <div role="status"[\s\S]*?t\('setup\.handover\.drop', \{ host: handoverDrop\.host \}\)[\s\S]*?: reconnecting && <p[^>]*>\{t\('setup\.uncertain'\)\}<\/p>\}/);
   // The address is a real link to the wizard on the secure origin.
-  assert.match(wizard, /<a href=\{`\$\{url\}\/setup`\}[^>]*>\{url\}<\/a>/);
+  assert.match(wizard, /<AddressLink href=\{`\$\{url\}\/setup`\} address=\{url\} \/>/);
+  assert.doesNotMatch(wizard.slice(wizard.indexOf('function SetupHandoverAddress(')), /break-all[^\n]*\{url\}/);
+  // Browser inspection, 2026-10-08: on the review the notice was after the step
+  // list and below the fold. It now leads the review and stays above the step
+  // list on the progress view, and the step row itself carries the short note.
+  const review = wizard.slice(wizard.indexOf('{step === \'review\' && plan && <section'));
+  assert.ok(review.indexOf('<SetupHandoverNotice ') > 0 && review.indexOf('<SetupHandoverNotice ') < review.indexOf('plan.steps.map('), 'the review notice is not above the step list');
+  const progress = wizard.slice(wizard.indexOf('<section aria-labelledby="setup-progress-title">'), wizard.indexOf('{step === \'review\' && plan && <section'));
+  assert.ok(progress.indexOf('<SetupHandoverNotice ') > 0 && progress.indexOf('<SetupHandoverNotice ') < progress.indexOf('execution?.steps.map('), 'the progress notice is not above the step list');
+  assert.equal(wizard.match(/\{handoverNotice && item\.kind === 'panel_certificate' && <p [^>]*>\{t\('setup\.handover\.stepNote'\)\}<\/p>\}/g)?.length, 2);
   // No alarm styling on either surface.
   for (const name of ['SetupHandoverAddress', 'SetupHandoverNotice']) {
     const body = wizard.slice(wizard.indexOf(`function ${name}(`), wizard.indexOf('\n}\n', wizard.indexOf(`function ${name}(`)));
@@ -205,7 +214,7 @@ test('the recovery page explains the restart and keeps the update result one ste
 });
 
 test('handover texts exist in both languages, in the half that can show them', () => {
-  const screenKeys = ['setup.handover.title', 'setup.handover.notice', 'setup.handover.address', 'setup.handover.addressHelp', 'setup.handover.dropTitle', 'setup.handover.drop', 'setup.handover.dropAddress'];
+  const screenKeys = ['setup.handover.title', 'setup.handover.notice', 'setup.handover.address', 'setup.handover.addressHelp', 'setup.handover.stepNote', 'setup.handover.dropTitle', 'setup.handover.drop', 'setup.handover.dropAddress'];
   for (const key of screenKeys) assert.ok(enScreens[key] && trScreens[key], key);
   // The recovery page boots without the screen catalogue.
   const shellKeys = ['recovery.handoverTitle', 'recovery.handoverHelp', 'recovery.handoverAddress'];
@@ -219,6 +228,16 @@ test('handover texts exist in both languages, in the half that can show them', (
   // D-024 order: what happens, that nobody needs to act, how it resumes.
   assert.match(enScreens['setup.handover.notice'], /restarts once.*loses its connection.*planned.*continues on the server.*reconnects by itself.*do not need to do anything/s);
   assert.match(trScreens['setup.handover.notice'], /bir kez yeniden başlar.*bağlantısı.*kesilir.*planlı.*sunucuda devam eder.*kendiliğinden yeniden bağlanır.*bir şey yapmanız gerekmez/s);
+  // "You do not need to do anything" is followed by information, never by an instruction:
+  // the secure address is where the Panel can also be opened, and its help tells no one to act.
+  assert.match(enScreens['setup.handover.address'], /^Once that step has finished, the Panel can also be opened at its secure address:$/);
+  assert.match(trScreens['setup.handover.address'], /^O adım bittikten sonra panel güvenli adresinden de açılabilir:$/);
+  for (const key of ['setup.handover.address', 'setup.handover.addressHelp', 'setup.handover.stepNote']) {
+    assert.doesNotMatch(enScreens[key], /\b(open the Panel|return to this page|wait|continue at|you must|you need to)\b/i, key);
+    assert.doesNotMatch(trScreens[key], /açın|dönün|dönüp|bekleyin|devam edin|gerekir/i, key);
+  }
+  assert.match(enScreens['setup.handover.addressHelp'], /certificate.*has not finished yet, and this page keeps following setup by itself/s);
+  assert.match(trScreens['setup.handover.addressHelp'], /sertifika uyarısı.*henüz bitmemiştir; bu sayfa kurulumu kendiliğinden izlemeyi sürdürür/s);
   assert.match(enScreens['setup.handover.drop'], /lost its connection.*expected.*restarts once.*continues on the server.*reconnects by itself.*Do not start setup again/s);
   assert.match(trScreens['setup.handover.drop'], /bağlantısı kesildi.*beklenen.*bir kez yeniden başlar.*sunucuda devam eder.*kendiliğinden yeniden bağlanır.*yeniden başlatmayın/s);
   // The planned state never borrows the unknown-result wording.

@@ -1591,7 +1591,9 @@ kusuru yok.
 ### Açık sayfayı yalnızca bilinen olumsuz erişim sonucu değiştirir (P0.2, 2026-10-08)
 
 D-025 ilkeleri 2, 3 ve 6; D-024. P0.2 kısmi kalır, hiçbir kabul işi kapanmaz.
-Kaynak durumu, yalnızca bileşen testleriyle: tarayıcı denemesi yok, gerçek
+Kaynak durumu, bileşen testleriyle; 8 Ekim 2026'da tek bir gerçek tarayıcıda,
+yerel bir taklit sunucuya karşı incelendi ve düzeltildi (aşağıdaki "Tarayıcı
+incelemesinden sonra düzeltilenler"); gerçek
 sistem koşusu yok, kurulu panele dokunulmadı, lisans hizmetine bağlanılmadı.
 
 **Bildirilen.** v0.1.0-alpha.81 çalışan kurulu bir sunucunun sahibi: bir sayfadan
@@ -1658,8 +1660,9 @@ açık sayfaları yerinde bırakır.
   şey çizmez ve okunmaz. Yüklenemeyen arayüzün sayfası tam okuyucuyu korur.
 - Açık sayfanın altında doğrulanan 401, giriş formunu nedeniyle gösterir. Adres
   korunur; giriş yapmak aynı sayfayı açar.
-- Güncellemeden sonra yüklenemeyen arayüz parçası: 4 sn boyunca tek satır
-  gösterilir, sonra sayfa yeniden yüklenir; eskisi gibi 30 sn'de bir kez. Hiçbir
+- Güncellemeden sonra yüklenemeyen arayüz parçası: neden gösterilir, sonra sayfa
+  yeniden yüklenir; eskisi gibi 30 sn'de bir kez (önce 4 sn boyunca tek satır;
+  tarayıcı incelemesinden beri 7 sn boyunca ortak pencere, aşağıya bakın). Hiçbir
   şey çizilmeden önce eskisi gibi hemen yeniden yüklenir.
 
 **Değişmeyen.** Sunucu tarafındaki karar, 60 sn'lik geçerliliği, sunucunun karar
@@ -1706,12 +1709,59 @@ yeniden yükleme satırı. 576 web testi geçer. Üretim derlemesi: kritik açı
 79,77 KiB (sınırlar 280 / 80); hiçbir sınır yükseltilmedi. Tasarım denetleyicisi
 değişen dosyalarda bulgu bildirmiyor.
 
+**Tarayıcı incelemesinden sonra düzeltilenler (8 Ekim 2026).** İlkeler 2, 3 ve 6;
+D-024. P0.2 kısmi kalır ve hiçbir kabul işi kapanmaz. `8a65d4ca` üzerinde,
+gerçek bir tarayıcıda ve yerel bir taklit sunucuya karşı yapılan ilk geçiş,
+bileşen testlerinin göstermediği kusurları gösterdi; bunlar aynı değişiklikte
+düzeltildi ve geçiş yinelendi. Neyin kapsandığı ve kapsanmadığı
+[işlem yönlendirmesinde](OPERATION-GUIDANCE.tr.md#erişim-ve-hazır-olma-kontrolleri-sayfayı-korur-açıklanan-bekletme-kontrol-durumu-sona-eren-oturum-2026-10-08)
+kayıtlıdır.
+
+- Katman, bileşen işlemi katmanının ve güncelleme kilidinin üstünde çizilir
+  (100 ve 110'un üstünde 120) ve klavye odağını ikisine karşı da tutar. Önce
+  güncelleme kilidi (110) katmanın (105) üstündeydi. Bekletme başladığında
+  güncelleme kilidi yine bırakılır; çünkü izleyici duraklar.
+- Katman ya da yeniden yükleme penceresi çizilirken sayfadaki tek karartma odur:
+  altındaki her karartma kaldırılır (`web/src/index.css`, `:has()`). Üst üste
+  iki karartma, katmanın korunduğunu söylediği sayfayı okunmaz kılıyordu.
+  `:has()` desteklemeyen tarayıcı eskisi gibi iki karartmayı da çizer.
+- Katmanın başlığı, odak halkası çizmeden programla odak alır; "kontrol
+  ediliyor" katmanında boş gövde yoktur; güvenli adres bir adres gibi bölünür.
+- Etkinleştirme sayfası kayıtlı güncelleme kaydını, diğer kapılar gibi yalnızca
+  bitmemiş bir işlem için çizer. Lisans kararının yanında "Bu tarayıcıda kayıtlı
+  güncelleme işlem kimliği yok…" gösteriyordu.
+- Yüklenemeyen parçadan sonraki yeniden yükleme, her şeyin üstündeki ortak
+  penceredir: neden, kaydedilmemiş girdinin kaybolacağı ve yeniden yüklemeyi öne
+  almak için "CelikPanel’i yeniden yükle". 7 sn sonra kendiliğinden yeniden
+  yüklenir. Altındaki sayfa örtülür.
+- Erişim yolunun kendi verdiği kodlu ret artık ret olayını başlatmaz; erişim
+  bilinmezken reddedilen bir istek en çok 5 sn'lik yeniden kontrol sıklığında
+  okuma başlatır. Erişim yolu 200 ve tipli bir gövdeyle yanıt veren bugünkü
+  sunucuyla ulaşılamaz; 28,7 sn'de 10.581 okuma üreten yapay bir 503 ile bulundu.
+- Bekletme metni artık bir aralık söylemez ("birkaç saniyede bir"); ilk yükleme
+  sayfaları kendiliğinden yeniden okuduklarını söyler.
+
+Şema veya sürüm geçişi: yok. Sunucu kodu, API alanı, saklanan kayıt ya da
+tarayıcı depolama biçimi değişmez; ekran kataloğuna bir metin eklenir ve beş
+metin değişir (EN ve TR). Kurtarma davranışı yukarıdaki gibidir; tek fark,
+yüklenemeyen parçadan sonraki yeniden yüklemenin artık öne alınabilmesidir.
+Kanıt: güncellenen `access-hold-runtime`, `recovery-access-runtime`,
+`dialog-shape-contract` ve `boot-copy-contract` testleri ile yeni `address-link`
+testi; 616 web testi geçer. Üretim derlemesi: kritik açılış
+303,73 KiB ham / 93,97 KiB gzip (sınırlar 361 / 110), Ayarlar sayfası
+272,99 / 79,76 KiB (sınırlar 280 / 80); hiçbir sınır yükseltilmedi. Tasarım
+denetleyicisi değişen dosyalarda bulgu bildirmiyor. Tarayıcı geçişi, taklit
+sunucuya karşı tek bir Chrome'dur: gerçek sistem koşusu değildir ve hiçbir şeyi
+kapatmaz.
+
 **Açık.**
 
-- Tarayıcıda doğrulanmadı: gizli sekmede zamanlayıcı geciktirmesi, görünürlük ve
-  odak olaylarının sırası, `display: contents` öğesinde `inert`, odak döndükten
-  sonra imleç, işlem katmanına ve güncelleme kilidine göre katman sırası, ekran
-  okuyucu duyurusu, masaüstü ve telefon genişliğinde EN ve TR.
+- Yalnızca tek bir Chrome'da, taklit sunucuya karşı görüldü (8 Ekim 2026): gizli
+  sekmede zamanlayıcı geciktirmesi, görünürlük ve odak olaylarının sırası,
+  `display: contents` öğesinde `inert`, odak döndükten sonra imleç, işlem
+  katmanına ve güncelleme kilidine göre katman sırası, masaüstü ve telefon
+  genişliğinde EN ve TR. Doğrulanmadı: ekran okuyucu duyurusu, başka herhangi
+  bir tarayıcı, gerçek sunucu.
 - Her sayfanın, katmanın altında kendi isteği reddedildiğinde ne yaptığı yalnızca
   sorgu yapan altı ekran için okundu; sayfa sayfa incelenmedi ve gözlenmedi.
   Günlük görüntüleyicisinin yinelenen hata bildirimi ve boşalan izleme grafiği

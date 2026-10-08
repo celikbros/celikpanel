@@ -589,7 +589,9 @@ yeniden dene" işlemini ya da bir sonraki Panel başlangıcını bekler.
 ### Kurulum sırasında planlı sertifika devri: bilinmeyen sonuç ekranları yerine yönlendirme (2026-10-08)
 
 Birim, sözleşme ve bağlanmış bileşen testleriyle kaynak durumu; gerçek sistem
-denemesi ve tarayıcı geçişi yapılmadı. v0.1.0-alpha.81 çalıştıran kurulu bir
+denemesi yapılmadı. Ekranlar 8 Ekim 2026'da gerçek bir tarayıcıda, yerel bir
+taklit sunucuya karşı incelendi ve düzeltildi (sonraki kaydın sonundaki
+"Tarayıcı incelemesi" bölümüne bakın). v0.1.0-alpha.81 çalıştıran kurulu bir
 Ubuntu sunucusunda, `https://<sunucu-IP>:2083` adresinden oturum açmış bir sahip
 tarafından bulundu. Etkilenen sözleşme maddeleri: dayanıklılık ilkeleri 2 ve 6
 (P0.2 kapsamı); hiçbir kabul maddesi kapanmadı.
@@ -623,8 +625,11 @@ yöneticiye gösterilir.
 **Ürünün artık söylediği.** Anahtarlar `web/src/i18n` altındadır; `{host}`
 incelenen panel alan adıdır.
 
-- *Adımdan önce ve adım sırasında, tarayıcı o alan adında değilken* (inceleme ve
-  ilerleme sayfası, sakin yönlendirme yüzeyi, uyarı biçimi yok):
+- *Adımdan önce ve adım sırasında, tarayıcı o alan adında değilken* (inceleme
+  sayfasında ve ilerleme sayfasında adım listesinin üstünde tek blok, sakin
+  yönlendirme yüzeyi, uyarı biçimi yok; tarayıcı incelemesine kadar inceleme
+  sayfasında adım listesinin altında, 1440×900 ekranda görünür alanın dışında
+  duruyordu):
   - `setup.handover.title` — TR "Bu kurulum sırasında panel bir kez yeniden
     başlar" · EN "The Panel restarts once during this setup"
   - `setup.handover.notice` — TR "“Panel erişimini güvenceye al: {host}” adımında
@@ -636,15 +641,25 @@ incelenen panel alan adıdır.
     using it. This page then loses its connection for a short time. That is
     planned: setup continues on the server and this page reconnects by itself.
     You do not need to do anything."
-  - `setup.handover.address` — TR "O adımdan sonra paneli güvenli adresinden
-    açın:" · EN "After that step, open the Panel at its secure address:";
-    ardından oradaki sihirbaza giden bağlantı olarak `https://{host}:<port>`.
-  - `setup.handover.addressHelp` — TR "Orada yeniden giriş yaparsınız; kurulum
+  - `setup.handover.address` — TR "O adım bittikten sonra panel güvenli
+    adresinden de açılabilir:" · EN "Once that step has finished, the Panel can
+    also be opened at its secure address:"; aynı cümlenin devamında, oradaki
+    sihirbaza giden bağlantı olarak `https://{host}:<port>`. Bu bir bilgidir,
+    yapılacak bir iş değildir: bildirim az önce kimsenin bir şey yapması
+    gerekmediğini söylemiştir (8 Ekim 2026 düzeltmesi; önceki metin "O adımdan
+    sonra paneli güvenli adresinden açın:" / "After that step, open the Panel at
+    its secure address:" idi).
+  - `setup.handover.addressHelp` — TR "Orada yeniden giriş yapılır ve kurulum
     aynı ilerlemeyi gösterir. Tarayıcı o adreste sertifika uyarısı verirse adım
-    henüz bitmemiştir; bu sayfaya dönüp bekleyin." · EN "You sign in again
-    there, and setup shows the same progress. If the browser warns about the
-    certificate at that address, the step has not finished yet; return to this
-    page and wait."
+    henüz bitmemiştir; bu sayfa kurulumu kendiliğinden izlemeyi sürdürür." · EN
+    "You sign in again there, and setup shows the same progress. If the browser
+    warns about the certificate at that address, the step has not finished yet,
+    and this page keeps following setup by itself." (8 Ekim 2026 düzeltmesi;
+    önceki metin "…; bu sayfaya dönüp bekleyin." / "…; return to this page and
+    wait." ile bitiyordu.)
+  - `setup.handover.stepNote`, bildirim gösterilirken inceleme listesinde ve
+    ilerleme listesinde o adımın satırında — TR "Panel burada bir kez yeniden
+    başlar." · EN "The Panel restarts once here."
 - *Bağlantı koptuğunda ve okunan son durum sertifika adımını en öne koyuyorsa*
   (çalışıyor; önceki bütün adımlar bitmiş ve sırada; ya da bitmiş ve sonraki
   hiçbir adım bitmemiş). "Kuruluma yeniden bağlanılıyor / Sonuç henüz
@@ -699,18 +714,61 @@ incelenen panel alan adıdır.
   da başarısız olan diğer her tarama yanıtı eskisi gibi ele alınır. Yeni katman
   metni yok.
 - *Sunucu meşgul olduğu için reddedilen kurulum adımı.* Başarısız adım artık
-  tipli nedeni (`error.reason`) taşır ve başlık ondan seçilir; eski kayıtlar için
+  tipli nedeni (`error.reason`) taşır ve metin ondan seçilir; eski kayıtlar için
   Panel cümlesi yedek olarak kalır. Agent artık "kirayı başka bir Agent işi
   tutuyor" durumunu adlandırır (`agent_mutation_active`) — panelin başlangıçtan
   sonraki kısa işleri, bir sertifika etkinleştirmesi ya da bir yenileme böyle
-  işler olarak çalışır — böylece sahip genel metin yerine mevcut
-  `setup.blocker.changeBusy` metnini okur ("Kurulum durdu, çünkü bu sunucuda
-  başka bir CelikPanel değişikliği hâlâ sürüyor. Tamamlanmasını bekleyin,
-  ardından Düzeltilmiş planı incele’yi seçip kurulumu yeniden başlatın.
-  Tamamlanan adımlar korunur." / "Setup stopped because another CelikPanel
-  change is still running on this server. Wait for it to finish, then choose
-  Review a revised plan and start setup again. Steps that already finished are
-  kept.").
+  işler olarak çalışır — böylece sahip genel metin yerine
+  `setup.blocker.changeBusy` metnini okur. 8 Ekim 2026 tarayıcı incelemesinden
+  beri neden, ilerleme görünümünün tek başlığıdır; gövdesi hemen altında, sakin
+  yönlendirme yüzeyinde durur (tutulan sunucuda: dikkat tonu); "Düzeltilmiş
+  planı incele" eylemi o bloğun içindedir ve "Teknik ayrıntılar" altında kapalı
+  durur. Genel başlık, iki genel paragraf ve hata rengi bu durumda gösterilmez.
+  Başlık · gövde, önce TR sonra EN:
+  - `setup.blocker.packageBusyTitle` "Kurulum durdu: bu sunucuda başka bir paket
+    işlemi sürüyor" · `setup.blocker.packageBusy` "Diğer işlem otomatik bir
+    güncelleme olabilir. Bu bir arıza değil. Bitmesini bekleyin, ardından
+    Düzeltilmiş planı incele’yi seçip kurulumu yeniden başlatın. Tamamlanan
+    adımlar korunur." — "Setup stopped: another package task is running on this
+    server" · "The other task may be an automatic update. Nothing is wrong. Wait
+    for it to finish, then choose Review a revised plan and start setup again.
+    Steps that already finished are kept."
+  - `setup.blocker.changeBusyTitle` "Kurulum durdu: bu sunucuda başka bir
+    CelikPanel değişikliği sürüyor" · `setup.blocker.changeBusy` "O değişikliğin
+    tamamlanmasını bekleyin, ardından Düzeltilmiş planı incele’yi seçip kurulumu
+    yeniden başlatın. Tamamlanan adımlar korunur." — "Setup stopped: another
+    CelikPanel change is still running on this server" · "Wait for that change
+    to finish, then choose Review a revised plan and start setup again. Steps
+    that already finished are kept."
+  - `setup.blocker.hostHeldTitle` "Kurulum durdu: tamamlanmamış bir değişiklik
+    bu sunucuyu hâlâ tutuyor" · `setup.blocker.hostHeld` "Bu durum beklemekle
+    geçmez. Sunucu yöneticisi sunucuyu yeniden başlatır, ardından Düzeltilmiş
+    planı incele’yi seçip kurulumu yeniden başlatır; tamamlanan adımlar korunur.
+    Yeniden başlatmadan sonra yine olursa incelenmesi gerekir." — "Setup
+    stopped: an unfinished change is still holding this server" · "Waiting will
+    not clear it. The server administrator restarts the server, then chooses
+    Review a revised plan and starts setup again; steps that already finished
+    are kept. If the hold returns after the restart, it needs investigating."
+  - Tipli neden yoksa: `setup.blocker.hostBusyTitle` "Kurulum durdu: bu sunucu
+    başka bir değişiklikle meşgul" · `setup.blocker.hostBusy` "Başka bir sunucu
+    değişikliği veya paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyin,
+    ardından Düzeltilmiş planı incele’yi seçip kurulumu yeniden başlatın.
+    Tamamlanan adımlar korunur." — "Setup stopped: this server is busy with
+    another change" · "Another server change or package task is still running.
+    Wait for it to finish, then choose Review a revised plan and start setup
+    again. Steps that already finished are kept."
+- *İlerleme görünümünde her durum için tek başlık* (8 Ekim 2026). Bölüm başlığı
+  ile yönlendirme bloğunun başlığı neredeyse aynı şeyi iki kez söylüyordu
+  ("Kurulum için işlem gerekiyor" altında "Devam etmek için işlem gerekiyor").
+  Duran, bekleyen ya da sonucu doğrulanan kurulum artık bir kez, yönlendirme
+  başlığıyla adlandırılır (`setup.guide.failedTitle`, `setup.guide.waitTitle`,
+  `setup.guide.confirmTitle`, `setup.licenseWaiting`,
+  `setup.guide.buildChangedTitle`); altındaki blok ilgili adımla başlar. Süren
+  kurulum "Sunucunuz hazırlanıyor" altında "Bu adımda ne yapılacak?" başlığını
+  korur. Duran kurulumda "Düzeltilmiş planı incele" eylemi, bildirilen hatanın
+  ardından ve adım listesinin altında değil üstünde durur. Hata rengi yalnızca
+  duran kurulumda kullanılır; karşılanmamış bir önkoşul ve henüz doğrulanan bir
+  sonuç olağan metin renkleriyle çizilir.
 
 **Kayıt biçimi.** `error.reason`, kurulum yürütme kaydında ve API'de isteğe bağlı
 bir alandır; eski kayıtlar ve yeni kaydı okuyan eski bir Panel etkilenmez. Alt
@@ -733,14 +791,17 @@ alanı eklenir. Geçiş (migration) yok.
   bildirim o durumda güvenli adres bağlantısına dayanır. Denenmedi.
 - Tam sayfada, aynı kurulumda sonraki bir adım bitmeden gerçekleşen ikinci bir
   panel yeniden başlatması da bu yeniden başlatma olarak açıklanır.
-- Gerçek sunucuda ya da tarayıcıda doğrulanmadı: metinlerin yerinde görünümü,
-  yeniden başlatmanın adım listesine göre zamanlaması ve tam sayfanın on
-  saniyelik yeniden denetimi.
+- Gerçek sunucuda doğrulanmadı: yeniden başlatmanın adım listesine göre
+  zamanlaması ve tam sayfanın on saniyelik yeniden denetimi. Metinlerin yerinde
+  görünümü tarayıcıda yalnızca taklit sunucuya karşı görüldü (aşağıdaki
+  "Tarayıcı incelemesi").
 
 ### Erişim ve hazır olma kontrolleri sayfayı korur: açıklanan bekletme, kontrol durumu, sona eren oturum (2026-10-08)
 
-Kaynak durumu, bileşen testleriyle; tarayıcı denemesi ve gerçek sistem koşusu
-yok. v0.1.0-alpha.81 çalışan kurulu bir sunucunun sahibi tarafından bulundu.
+Kaynak durumu, bileşen testleriyle; gerçek sistem koşusu yok. Ekranlar 8 Ekim
+2026'da gerçek bir tarayıcıda, yerel bir taklit sunucuya karşı incelendi ve
+düzeltildi (aşağıdaki "Tarayıcı incelemesi"). v0.1.0-alpha.81 çalışan kurulu
+bir sunucunun sahibi tarafından bulundu.
 Etkilenen sözleşme maddeleri: dayanıklılık ilkeleri 2, 3 ve 6 (P0.2 kapsamı);
 hiçbir kabul işi kapanmaz. Mekanizma ve değişikliğin tamamı
 [dayanıklılık sözleşmesinde](RESILIENCE-CONTRACT.tr.md#açık-sayfayı-yalnızca-bilinen-olumsuz-erişim-sonucu-değiştirir-p02-2026-10-08).
@@ -792,12 +853,14 @@ açık bir sayfanın üzerinde ya da ardından gösterilir.
     `recovery.handoverAddress` sihirbazın üzerinde kullanılır.
 - *Kim işlem yapar ve iş nasıl sürer* (nedenin altında, planlı yeniden başlatma
   dışında): `accessHold.resume`, TR "Şimdilik bir şey yapmanız gerekmiyor.
-  CelikPanel birkaç saniyede bir kendiliğinden yeniden kontrol eder. Erişim
-  doğrulandığında bu sayfa, yazdıklarınızla birlikte kaldığı yerden devam eder. O
-  zamana kadar bu sayfada değişiklik yapılamaz." · EN "You do not need to do
-  anything yet. CelikPanel checks again by itself every few seconds. When access
-  is confirmed, this page continues where it was, with what you typed. Until then
-  nothing on this page can be changed." Eylem: mevcut `recovery.retry`, TR "Panel
+  CelikPanel kendiliğinden yeniden kontrol eder. Erişim doğrulandığında bu sayfa,
+  yazdıklarınızla birlikte kaldığı yerden devam eder. O zamana kadar bu sayfada
+  değişiklik yapılamaz." · EN "You do not need to do anything yet. CelikPanel
+  checks again by itself. When access is confirmed, this page continues where it
+  was, with what you typed. Until then nothing on this page can be changed."
+  (8 Ekim 2026'dan beri aralık söylenmez: metin "birkaç saniyede bir" diyordu;
+  oysa lisans okuması 5 sn'de, oturum ve hazır olma okuması 10 sn'de bir
+  yinelenir.) Eylem: mevcut `recovery.retry`, TR "Panel
   erişimini kontrol et" · EN "Check panel access" (sahibin istediği okuma
   sürerken `recovery.checking`, "Kontrol ediliyor…" / "Checking…"). Yalnızca
   okur; hiçbir şey başlatmaz.
@@ -819,7 +882,29 @@ açık bir sayfanın üzerinde ya da ardından gösterilir.
   başlatmaz." · EN "Confirming your session and panel readiness. This check does
   not start a server operation."). `recovery.availabilityTitle` ("Panelin hazır
   olma durumu kontrol edilemedi" / "Panel readiness could not be checked") için
-  başarısız olmuş bir okuma gerekir.
+  başarısız olmuş bir okuma gerekir. Bu sayfalar kendiliğinden yeniden okur
+  (oturum ve hazır olma 10 sn'de, lisans sonucu 5 sn'de bir) ve artık sahibinden
+  yalnızca yeniden kontrol etmesini istemek yerine bunu söyler (8 Ekim 2026):
+  - `recovery.authHelp` — TR "CelikPanel şu anda oturumunuzu doğrulayamıyor. Bu
+    sayfa kendiliğinden yeniden kontrol eder; dilerseniz şimdi de kontrol
+    edebilirsiniz. Oturumunuz ve panel erişimi doğrulanana kadar yönetim kapalı
+    kalır." · EN "CelikPanel cannot confirm your session right now. This page
+    checks again by itself; you can also check now. Management stays closed
+    until your session and panel access are verified."
+  - `recovery.availabilityHelp` — TR "Oturumunuz doğrulandı ancak panelin hazır
+    olup olmadığı bilinmiyor. Bu sayfa kendiliğinden yeniden kontrol eder ve
+    sunucu hazır olduğunu ve erişimi doğruladığında açılır. Dilerseniz şimdi
+    kontrol edebilir veya sayfayı yenileyebilirsiniz." · EN "Your session was
+    verified, but panel readiness is unknown. This page checks again by itself
+    and opens once the server confirms readiness and access. You can also check
+    now or reload the page."
+  - `recovery.licenseHelp` — TR "Lisans sonucu alınamıyor. Bu, lisansınızın
+    eksik veya süresi dolmuş olduğunu göstermez. Bu sayfa kendiliğinden yeniden
+    kontrol eder; sunucu erişimi doğruladığında yönetim açılır. Dilerseniz şimdi
+    de kontrol edebilirsiniz." · EN "The license result is unavailable. This
+    does not establish that your license is missing or expired. This page checks
+    again by itself, and management opens once the server confirms access. You
+    can also check now."
 - *Kullanılan sayfanın altında oturum sona erdi* (doğrulanmış 401), giriş
   formunun üstünde: `accessHold.sessionEnded`, TR "Oturumunuz sona erdi.
   Bulunduğunuz sayfaya dönmek için giriş yapın. Orada yazıp kaydetmediğiniz
@@ -828,12 +913,19 @@ açık bir sayfanın üzerinde ya da ardından gösterilir.
   işlem yapar: sahip. Devam: girişten sonra aynı adres. Çıkış yapıldığında neden
   gösterilmez.
 - *Güncellemeden sonra arayüzün bir parçası yüklenemedi*, sayfa yeniden
-  yüklenmeden önce 4 sn boyunca: `accessHold.updateReload`, TR "CelikPanel’in bir
-  bölümü yüklenemedi; büyük olasılıkla bu sekme açıkken CelikPanel güncellendi.
-  Güncel sürümü yüklemek için bu sayfa birazdan yeniden yüklenir." · EN "A part
-  of CelikPanel could not be loaded, most likely because CelikPanel was updated
+  yüklenmeden önce 7 sn boyunca, her şeyin üstünde duran ortak pencere olarak
+  (8 Ekim 2026 düzeltmesi: 4 sn boyunca üstte tek satırdı; telefonda açık bir
+  pencerenin başlığını örtüyor ve kaydedilmemiş girdinin kaybolacağını
+  söylemiyordu): `accessHold.updateReloadTitle`, TR "Bu sayfa birazdan yeniden
+  yüklenecek" · EN "This page is about to reload"; `accessHold.updateReload`, TR
+  "CelikPanel’in bir bölümü yüklenemedi; büyük olasılıkla bu sekme açıkken
+  CelikPanel güncellendi. Güncel sürümü yüklemek için bu sayfa birazdan yeniden
+  yüklenir. Bu sayfada yazıp kaydetmediğiniz her şey kaybolur." · EN "A part of
+  CelikPanel could not be loaded, most likely because CelikPanel was updated
   while this tab was open. This page reloads in a moment to load the current
-  version." Neden, bilinen olarak değil olası olarak belirtilir.
+  version. Anything you typed on this page and did not save is lost." Eylem:
+  hemen yeniden yüklemek için mevcut `app.reload`. Altındaki sayfa artık
+  kullanılamaz. Neden, bilinen olarak değil olası olarak belirtilir.
 
 **Bilinen olumsuz sonuçlar değişmedi:** eksik, süresi dolmuş ya da geçersiz
 olduğu bildirilen lisans yine etkinleştirme sayfasını (yönetici) ya da yöneticiye
@@ -844,13 +936,63 @@ başvurma iletisini (diğer roller) gösterir.
 - Metin parçası gelmemişse katman yalnızca "Panel erişimi kontrol ediliyor"
   başlığını, kabuğun yardım satırını ve kontrolü gösterir; sona eren oturumun
   nedeni ve yeniden yükleme satırı o durumda gösterilmez.
-- Yüklenemeyen parçadan sonraki yeniden yükleme bir seçenek olarak sunulmaz;
-  duyurulur.
+- Yüklenemeyen parçadan sonraki yeniden yükleme reddedilemez: duyurulur ve
+  yalnızca öne alınabilir.
 - Katmanın altında kendi isteği reddedilen sayfa bunu kendisi ele alır; sayfa
   sayfa incelenmedi.
 - Gönderilmemiş girdi gerçek bir yeniden girişte korunmaz.
-- Tarayıcıda ya da gerçek sunucuda doğrulanmadı: metinlerin yerinde görünümü,
-  1,5 sn ve 30 sn adımları, odağın dönüşü ve gizli sekmenin zamanlayıcıları.
+- Gerçek sunucuda doğrulanmadı. Tek bir tarayıcıda, taklit sunucuya karşı
+  görüldü: metinlerin yerinde görünümü, 1,5 sn ve 30 sn adımları, odağın dönüşü
+  ve gizli sekmenin zamanlayıcıları (aşağıya bakın).
+- Katman ortalanır; bu yüzden kendi kutusu, altında açık duran bir pencerenin
+  ortasını hâlâ örter. Çevresi loş ve okunur kalır.
+
+**Tarayıcı incelemesi (8 Ekim 2026).** Bu tarihin iki değişikliği de gerçek,
+kurulu bir Chrome'da, Panel API'sinin yerel adresteki bir taklidine karşı
+incelendi (`web/tools/browser-inspect`): kurulu sunucu, lisans hizmeti, gerçek
+sertifika ve gerçek yeniden başlatma yok. `8a65d4ca` üzerindeki ilk geçiş, hiçbir
+bileşen testinin göstermediği sekiz kusur buldu; bunlar aynı değişiklikte
+düzeltildi ve geçiş düzeltilmiş kaynakta yinelendi.
+
+- *Bulunan ve düzeltilen.* Planlı yeniden başlatma bildirimi "Sizin bir şey
+  yapmanız gerekmez" deyip ardından sahibine başka bir adresi açmasını
+  söylüyordu; inceleme sayfasında görünür alanın altındaydı. Güvenli adres
+  sözcüğün içinden, telefonda `https://` içinden bölünüyordu; artık tek
+  parçadır ve noktadan ya da porttan önce bölünür. Sunucu meşgul olduğu için
+  reddedilen adım nedenini üçüncü sırada, neredeyse aynı iki başlığın ve iki
+  genel paragrafın altında, hata renginde gösteriyor, eylemi adım listesinin
+  altında kalıyordu. Bekletme katmanının başlığı bir denetim gibi odak halkası
+  çiziyordu. "Kontrol ediliyor" katmanında iki çizgi arasında boş bir şerit
+  vardı. Açık bir pencerenin üstündeki katman ikinci bir karartma ekliyor,
+  korunduğunu söylediği sayfa okunamıyordu; katman ya da yeniden yükleme
+  penceresi çizilirken artık tek karartma odur; bileşen işlemi katmanının ve
+  güncelleme kilidinin üstünde çizilir ve klavye odağını ikisine karşı da
+  tutar. Etkinleştirme sayfası, lisans kararının yanında "Güncelleme ve kurtarma
+  durumu — Bu tarayıcıda kayıtlı güncelleme işlem kimliği yok…" gösteriyordu;
+  diğer kapılar gibi artık o bölümü yalnızca bitmemiş bir işlem için çizer.
+- *Ayrıca düzeltilen, bugünkü sunucuyla ulaşılamayan.* Erişim yolunun kendi
+  verdiği kodlu ret artık kapıdan o yolu yeniden okumasını istemez; erişim
+  bilinmezken reddedilen bir istek, 5 sn'lik yeniden kontrolden daha sık okuma
+  başlatamaz. Erişim yolunda yapay bir 503 ile tarayıcı o yolu 28,7 sn'de
+  10.581 kez okumuştu; sunucu o yolu 200 ve tipli bir gövdeyle yanıtlar.
+- *Kapsanan.* Masaüstü 1440×900 ve telefon 390×844, Türkçe ve İngilizce, açık
+  ve koyu: bildirimle inceleme ve ilerleme, yeniden başlatma ve devamı; başka
+  bir adımda kopan bağlantı; her tipli neden için ve nedensiz meşgul sunucu;
+  başarısız kurulum, başarısız güvenlik duvarı adımı, karşılanmamış DNS
+  önkoşulu, lisans beklemesi, süren kurulum ve doğrulanan sonuç; yazılmış girdisi
+  olan bir pencerenin üstünde bekletme (sessiz dönüş, başarısız okuma, fare ve
+  klavye, 30 sn sonra yeniden yükleme önerisi, yavaş okuma, kopan bağlantı,
+  reddedilen istek), bileşen işlemi katmanının üstünde ve güncelleme kilidiyle
+  birlikte bekletme; yeniden yükleme penceresi; adresi gösteren dört yerin
+  hepsinde uzun bir alan adı; bilinen olumsuz kapı; yavaş ve başarısız
+  okumalarla ilk yükleme; sona eren oturum.
+- *Kapsanmayan.* Gerçek sunucu, sertifika ya da yeniden başlatma; Safari,
+  Firefox, ekran okuyucu, dokunmatik cihaz; taklit temalar; yönetici dışındaki
+  roller; katmanın altında Alan Adları dışındaki sayfalar. Bekletme başladığında
+  güncelleme kilidi bırakılır (izleyici eskisi gibi duraklar); bu yüzden katman
+  kilitle birlikte yalnızca kilit ayrılırken görüldü. Koyu temada tek
+  karartmanın altındaki sayfa loştur: başlıklar ve denetimler okunur, küçük
+  soluk metin ancak dikkatle.
 
 ### Okunamayan ya da sayfa yüklendikten sonra değişen geçerli ayarlar (2026-10-08)
 

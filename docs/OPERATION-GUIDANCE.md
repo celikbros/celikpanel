@@ -665,8 +665,10 @@ or the next Panel start.
 
 ### Planned certificate handover during setup: guidance instead of unknown-result screens (2026-10-08)
 
-Source state with unit, contract and mounted-component tests; no native run and
-no browser pass. Found by an owner on an installed Ubuntu server running
+Source state with unit, contract and mounted-component tests; no native run.
+The screens were inspected in a real browser against a loopback mock on
+2026-10-08 and corrected (see "Browser inspection" at the end of the next
+entry). Found by an owner on an installed Ubuntu server running
 v0.1.0-alpha.81, signed in at `https://<server-IP>:2083`. Affected contract
 items: resilience invariants 2 and 6 (P0.2 scope); no acceptance item is closed.
 
@@ -701,7 +703,9 @@ and is shown to every administrator.
 reviewed panel host name.
 
 - *Before and during the step, when the browser is not on that host name*
-  (review page and progress page, quiet guidance surface, no alarm styling):
+  (one block above the step list on the review page and on the progress page,
+  quiet guidance surface, no alarm styling; on the review page it was after the
+  step list, below the fold at 1440×900, until the browser inspection):
   - `setup.handover.title` — EN "The Panel restarts once during this setup" ·
     TR "Bu kurulum sırasında panel bir kez yeniden başlar"
   - `setup.handover.notice` — EN "At the step “Secure panel access: {host}”,
@@ -713,15 +717,24 @@ reviewed panel host name.
     Bu sayfanın bağlantısı o sırada kısa süreliğine kesilir. Bu planlı bir
     durumdur: kurulum sunucuda devam eder ve bu sayfa kendiliğinden yeniden
     bağlanır. Sizin bir şey yapmanız gerekmez."
-  - `setup.handover.address` — EN "After that step, open the Panel at its
-    secure address:" · TR "O adımdan sonra paneli güvenli adresinden açın:",
-    followed by `https://{host}:<port>` as a link to the wizard there.
+  - `setup.handover.address` — EN "Once that step has finished, the Panel can
+    also be opened at its secure address:" · TR "O adım bittikten sonra panel
+    güvenli adresinden de açılabilir:", followed in the same sentence by
+    `https://{host}:<port>` as a link to the wizard there. It is information,
+    not a step: the notice has just said that nobody needs to act (corrected
+    2026-10-08; it read "After that step, open the Panel at its secure
+    address:" / "O adımdan sonra paneli güvenli adresinden açın:").
   - `setup.handover.addressHelp` — EN "You sign in again there, and setup shows
     the same progress. If the browser warns about the certificate at that
-    address, the step has not finished yet; return to this page and wait." ·
-    TR "Orada yeniden giriş yaparsınız; kurulum aynı ilerlemeyi gösterir.
-    Tarayıcı o adreste sertifika uyarısı verirse adım henüz bitmemiştir; bu
-    sayfaya dönüp bekleyin."
+    address, the step has not finished yet, and this page keeps following setup
+    by itself." · TR "Orada yeniden giriş yapılır ve kurulum aynı ilerlemeyi
+    gösterir. Tarayıcı o adreste sertifika uyarısı verirse adım henüz
+    bitmemiştir; bu sayfa kurulumu kendiliğinden izlemeyi sürdürür." (corrected
+    2026-10-08; it ended "…; return to this page and wait." / "…; bu sayfaya
+    dönüp bekleyin.")
+  - `setup.handover.stepNote`, on the row of that step in the review list and
+    in the progress list while the notice is shown — EN "The Panel restarts
+    once here." · TR "Panel burada bir kez yeniden başlar."
 - *When the connection drops and the last state read puts the certificate step
   at the front* (running; next to run with every earlier step finished; or
   finished with no later step finished). Replaces "Reconnecting to setup / The
@@ -776,17 +789,61 @@ reviewed panel host name.
   with its existing wording and is retried until a scan is accepted. Every other
   refused or failed scan reply is handled as before. No new overlay text.
 - *A setup step refused because the server is busy.* The failed step now carries
-  the typed reason (`error.reason`), and the headline is selected from it; the
+  the typed reason (`error.reason`), and the text is selected from it; the
   Panel's sentence stays the fallback for older records. The Agent now names the
   case "another Agent job owns the lease" (`agent_mutation_active`) — the Panel's
   own short work after a start, a certificate activation or a renewal run as
-  such jobs — so the owner reads the existing `setup.blocker.changeBusy` text
-  ("Setup stopped because another CelikPanel change is still running on this
-  server. Wait for it to finish, then choose Review a revised plan and start
-  setup again. Steps that already finished are kept." / "Kurulum durdu, çünkü bu
-  sunucuda başka bir CelikPanel değişikliği hâlâ sürüyor. Tamamlanmasını
-  bekleyin, ardından Düzeltilmiş planı incele’yi seçip kurulumu yeniden
-  başlatın. Tamamlanan adımlar korunur.") instead of the generic one.
+  such jobs — so the owner reads the `setup.blocker.changeBusy` text instead of
+  the generic one. Since the browser inspection of 2026-10-08 the reason is the
+  one heading of the progress view and its body stands directly under it, on the
+  neutral guidance surface (a held server: the caution tone), with the action
+  "Review a revised plan" inside that block and "Technical details" closed under
+  it. The generic heading, the two generic paragraphs and the failure colour are
+  not shown for this case. Heading · body, EN then TR:
+  - `setup.blocker.packageBusyTitle` "Setup stopped: another package task is
+    running on this server" · `setup.blocker.packageBusy` "The other task may be
+    an automatic update. Nothing is wrong. Wait for it to finish, then choose
+    Review a revised plan and start setup again. Steps that already finished are
+    kept." — "Kurulum durdu: bu sunucuda başka bir paket işlemi sürüyor" ·
+    "Diğer işlem otomatik bir güncelleme olabilir. Bu bir arıza değil. Bitmesini
+    bekleyin, ardından Düzeltilmiş planı incele’yi seçip kurulumu yeniden
+    başlatın. Tamamlanan adımlar korunur."
+  - `setup.blocker.changeBusyTitle` "Setup stopped: another CelikPanel change is
+    still running on this server" · `setup.blocker.changeBusy` "Wait for that
+    change to finish, then choose Review a revised plan and start setup again.
+    Steps that already finished are kept." — "Kurulum durdu: bu sunucuda başka
+    bir CelikPanel değişikliği sürüyor" · "O değişikliğin tamamlanmasını
+    bekleyin, ardından Düzeltilmiş planı incele’yi seçip kurulumu yeniden
+    başlatın. Tamamlanan adımlar korunur."
+  - `setup.blocker.hostHeldTitle` "Setup stopped: an unfinished change is still
+    holding this server" · `setup.blocker.hostHeld` "Waiting will not clear it.
+    The server administrator restarts the server, then chooses Review a revised
+    plan and starts setup again; steps that already finished are kept. If the
+    hold returns after the restart, it needs investigating." — "Kurulum durdu:
+    tamamlanmamış bir değişiklik bu sunucuyu hâlâ tutuyor" · "Bu durum
+    beklemekle geçmez. Sunucu yöneticisi sunucuyu yeniden başlatır, ardından
+    Düzeltilmiş planı incele’yi seçip kurulumu yeniden başlatır; tamamlanan
+    adımlar korunur. Yeniden başlatmadan sonra yine olursa incelenmesi gerekir."
+  - No typed reason: `setup.blocker.hostBusyTitle` "Setup stopped: this server
+    is busy with another change" · `setup.blocker.hostBusy` "Another server
+    change or package task is still running. Wait for it to finish, then choose
+    Review a revised plan and start setup again. Steps that already finished are
+    kept." — "Kurulum durdu: bu sunucu başka bir değişiklikle meşgul" · "Başka
+    bir sunucu değişikliği veya paket işlemi hâlâ sürüyor. Tamamlanmasını
+    bekleyin, ardından Düzeltilmiş planı incele’yi seçip kurulumu yeniden
+    başlatın. Tamamlanan adımlar korunur."
+- *One heading per state on the progress view* (2026-10-08). The section heading
+  and the heading of the guidance block said nearly the same thing twice
+  ("Setup needs attention" over "Action needed before continuing"). A stopped,
+  waiting or confirming run is now named once, by the guidance title
+  (`setup.guide.failedTitle`, `setup.guide.waitTitle`, `setup.guide.confirmTitle`,
+  `setup.licenseWaiting`, `setup.guide.buildChangedTitle`); the block under it
+  opens with the step it concerns. A run in progress keeps "Preparing your
+  server" over "What happens at this step". For a stopped run the action
+  "Review a revised plan" follows the reported error, above the step list
+  instead of below it. The failure colour is used only for a stopped run; an
+  unmet prerequisite and a result still being confirmed are drawn in the
+  ordinary text colours.
 
 **Stored shape.** `error.reason` is an optional field in the setup execution
 record and API; older records and an older Panel reading a newer record are
@@ -809,13 +866,16 @@ gains an optional `handover` flag. No migration.
   notice then relies on its secure-address link. Not exercised.
 - On the full page, a second Panel restart in the same setup before a later step
   finishes is also explained as this restart.
-- Not verified on a real server or in a browser: the texts in place, the timing
-  of the restart against the step list, and the full page's ten-second recheck.
+- Not verified on a real server: the timing of the restart against the step
+  list and the full page's ten-second recheck. In a browser the texts were seen
+  in place against a mock only (see "Browser inspection" below).
 
 ### Access and readiness checks keep the page: explained hold, checking state, ended session (2026-10-08)
 
-Source state with component tests; no browser pass and no native run. Found by an
-owner on an installed server running v0.1.0-alpha.81. Affected contract items:
+Source state with component tests; no native run. The screens were inspected in
+a real browser against a loopback mock on 2026-10-08 and corrected (see "Browser
+inspection" below). Found by an owner on an installed server running
+v0.1.0-alpha.81. Affected contract items:
 resilience invariants 2, 3 and 6 (P0.2 scope); no acceptance item is closed. The
 mechanism and the full change are in the
 [resilience contract](RESILIENCE-CONTRACT.md#a-mounted-page-is-replaced-only-by-a-known-negative-access-result-p02-2026-10-08).
@@ -866,12 +926,14 @@ only over or after a mounted page.
     `recovery.handoverAddress` are used over the wizard.
 - *Who acts and how work resumes* (below the reason, except during the planned
   restart): `accessHold.resume`, EN "You do not need to do anything yet.
-  CelikPanel checks again by itself every few seconds. When access is confirmed,
-  this page continues where it was, with what you typed. Until then nothing on
-  this page can be changed." · TR "Şimdilik bir şey yapmanız gerekmiyor.
-  CelikPanel birkaç saniyede bir kendiliğinden yeniden kontrol eder. Erişim
-  doğrulandığında bu sayfa, yazdıklarınızla birlikte kaldığı yerden devam eder. O
-  zamana kadar bu sayfada değişiklik yapılamaz." Action: the existing
+  CelikPanel checks again by itself. When access is confirmed, this page
+  continues where it was, with what you typed. Until then nothing on this page
+  can be changed." · TR "Şimdilik bir şey yapmanız gerekmiyor. CelikPanel
+  kendiliğinden yeniden kontrol eder. Erişim doğrulandığında bu sayfa,
+  yazdıklarınızla birlikte kaldığı yerden devam eder. O zamana kadar bu sayfada
+  değişiklik yapılamaz." (No interval is stated since 2026-10-08: the text said
+  "every few seconds", while the license read repeats every 5 s and the session
+  and readiness read every 10 s.) Action: the existing
   `recovery.retry`, EN "Check panel access" · TR "Panel erişimini kontrol et"
   (`recovery.checking`, "Checking…" / "Kontrol ediliyor…", while a read the
   owner asked for is in flight). It reads; it starts nothing.
@@ -893,20 +955,49 @@ only over or after a mounted page.
   server operation." · TR "Oturumunuz ve panelin hazır olma durumu doğrulanıyor.
   Bu kontrol sunucuda bir işlem başlatmaz."). `recovery.availabilityTitle`
   ("Panel readiness could not be checked" / "Panelin hazır olma durumu kontrol
-  edilemedi") needs a read that failed.
+  edilemedi") needs a read that failed. These pages read again by themselves
+  (session and readiness every 10 s, the license result every 5 s) and now say
+  so instead of only asking the owner to check again (2026-10-08):
+  - `recovery.authHelp` — EN "CelikPanel cannot confirm your session right now.
+    This page checks again by itself; you can also check now. Management stays
+    closed until your session and panel access are verified." · TR "CelikPanel
+    şu anda oturumunuzu doğrulayamıyor. Bu sayfa kendiliğinden yeniden kontrol
+    eder; dilerseniz şimdi de kontrol edebilirsiniz. Oturumunuz ve panel erişimi
+    doğrulanana kadar yönetim kapalı kalır."
+  - `recovery.availabilityHelp` — EN "Your session was verified, but panel
+    readiness is unknown. This page checks again by itself and opens once the
+    server confirms readiness and access. You can also check now or reload the
+    page." · TR "Oturumunuz doğrulandı ancak panelin hazır olup olmadığı
+    bilinmiyor. Bu sayfa kendiliğinden yeniden kontrol eder ve sunucu hazır
+    olduğunu ve erişimi doğruladığında açılır. Dilerseniz şimdi kontrol edebilir
+    veya sayfayı yenileyebilirsiniz."
+  - `recovery.licenseHelp` — EN "The license result is unavailable. This does
+    not establish that your license is missing or expired. This page checks
+    again by itself, and management opens once the server confirms access. You
+    can also check now." · TR "Lisans sonucu alınamıyor. Bu, lisansınızın eksik
+    veya süresi dolmuş olduğunu göstermez. Bu sayfa kendiliğinden yeniden
+    kontrol eder; sunucu erişimi doğruladığında yönetim açılır. Dilerseniz şimdi
+    de kontrol edebilirsiniz."
 - *The session ended under a page in use* (confirmed 401), above the sign-in
   form: `accessHold.sessionEnded`, EN "Your session ended. Sign in to return to
   the page you were on. Anything you had typed there and not saved was not
   kept." · TR "Oturumunuz sona erdi. Bulunduğunuz sayfaya dönmek için giriş
   yapın. Orada yazıp kaydetmediğiniz bilgiler korunmadı." Who acts: the owner.
   Resume: the same address after sign-in. A sign-out shows no reason.
-- *A part of the interface failed to load after an update*, for 4 s before the
-  page reloads: `accessHold.updateReload`, EN "A part of CelikPanel could not be
-  loaded, most likely because CelikPanel was updated while this tab was open.
-  This page reloads in a moment to load the current version." · TR "CelikPanel’in
-  bir bölümü yüklenemedi; büyük olasılıkla bu sekme açıkken CelikPanel
-  güncellendi. Güncel sürümü yüklemek için bu sayfa birazdan yeniden yüklenir."
-  The cause is stated as likely, not as known.
+- *A part of the interface failed to load after an update*, for 7 s before the
+  page reloads, as the shared dialogue above everything else (corrected
+  2026-10-08: it was one line at the top for 4 s, which covered the header of an
+  open dialogue on a phone and did not say that unsaved input is lost):
+  `accessHold.updateReloadTitle`, EN "This page is about to reload" · TR "Bu
+  sayfa birazdan yeniden yüklenecek"; `accessHold.updateReload`, EN "A part of
+  CelikPanel could not be loaded, most likely because CelikPanel was updated
+  while this tab was open. This page reloads in a moment to load the current
+  version. Anything you typed on this page and did not save is lost." · TR
+  "CelikPanel’in bir bölümü yüklenemedi; büyük olasılıkla bu sekme açıkken
+  CelikPanel güncellendi. Güncel sürümü yüklemek için bu sayfa birazdan yeniden
+  yüklenir. Bu sayfada yazıp kaydetmediğiniz her şey kaybolur." Action: the
+  existing `app.reload`, to reload at once. The page under it can no longer be
+  used. The cause is stated as likely, not as known.
 
 **Known negative results are unchanged:** a license reported missing, expired or
 invalid still shows the activation page (administrator) or the message to contact
@@ -917,12 +1008,63 @@ the administrator (other roles).
 - If the wording part has not arrived, the layer says only "Checking panel
   access" with the shell's help line and the check; the ended-session reason and
   the reload line are then not shown.
-- The reload after a failed part is not offered as a choice; it is announced.
+- The reload after a failed part cannot be declined: it is announced, and can
+  only be brought forward.
 - A page whose own request is refused under the layer handles that itself; not
   audited page by page.
 - Unsent input is not kept across a real sign-in.
-- Not verified in a browser or on a real server: the texts in place, the 1.5 s
-  and 30 s steps, focus return, and a hidden tab's timers.
+- Not verified on a real server. In one browser, against a mock: the texts in
+  place, the 1.5 s and 30 s steps, focus return and a hidden tab's timers (see
+  below).
+- The layer is centred, so its own box still covers the middle of a dialogue
+  that is open under it; what is around it is dim and readable.
+
+**Browser inspection (2026-10-08).** Both changes of this date were looked at in
+a real, installed Chrome against a mock of the Panel API on the loopback address
+(`web/tools/browser-inspect`): no installed server, no license service, no real
+certificate and no real restart. The first pass, on commit `8a65d4ca`, found
+eight defects that no component test had shown; they are corrected in the same
+change, and the pass was repeated on the corrected source.
+
+- *Found and corrected.* The planned-restart notice said "You do not need to do
+  anything" and then told the owner to open another address; on the review page
+  it was below the fold. The secure address was broken inside a word and, on a
+  phone, inside `https://`; it is now one piece that wraps before a dot or the
+  port. A step refused because the server was busy showed its reason third,
+  under two near-identical headings and two generic paragraphs, in the failure
+  colour, with its action below the step list. The title of the hold layer drew
+  a focus ring like a control. The "checking" layer had an empty band between
+  two lines. The layer over an open dialogue added a second scrim, so the page
+  it says is kept could not be read; while the layer or the reload dialogue is
+  drawn it is now the only scrim, and it is drawn above the component-operation
+  overlay and the update lock and keeps keyboard focus against both. The
+  activation page showed "Update and recovery status — No update operation ID
+  is saved in this browser…" beside a license decision; like the other gates it
+  now draws that block only for an unfinished operation.
+- *Also corrected, not reachable with the current server.* A coded refusal
+  answered by the access route itself no longer asks the gate to read that route
+  again, and while access stays unknown a refused request cannot start a read
+  more often than the 5 s re-check. With a synthetic 503 on the access route the
+  browser had read it 10,581 times in 28.7 s; the server answers that route with
+  200 and a typed body.
+- *Covered.* Desktop 1440×900 and phone 390×844, Turkish and English, light and
+  dark: review and progress with the notice, the restart and the continuation;
+  a lost connection at another step; a busy server for each typed reason and for
+  none; a failed install, a failed firewall step, an unmet DNS prerequisite, a
+  license wait, a run in progress and a result being confirmed; the hold over a
+  dialogue with typed input (quiet return, failed read, pointer and keyboard,
+  the reload offer after 30 s, a slow read, a dropped connection, a refused
+  request), over the component-operation overlay and with the update lock; the
+  reload dialogue; a long host name in all four places that show the address;
+  the known-negative gate; first load with slow and failed reads; an ended
+  session.
+- *Not covered.* Any real server, certificate or restart; Safari, Firefox, a
+  screen reader, a touch device; the imitation skins; roles other than the
+  administrator; pages other than Domains under the layer. The update lock is
+  released when a hold begins (the tracker pauses, as before), so the layer was
+  seen with the lock only while the lock was leaving. In the dark theme the page
+  under the single scrim is dim: headings and controls can be read, small muted
+  text only with effort.
 
 ### Current settings that could not be read, or changed after the page loaded (2026-10-08)
 

@@ -5,6 +5,7 @@ import { useI18n } from '../i18n';
 import { handoverAddress } from '../lib/panelHandover';
 import { useAccessGuidance } from '../lib/accessGuidance';
 import { RecoveryStatus, usePanelHandover } from './RecoveryAccess';
+import { AddressLink } from './AddressLink';
 import { Button, Dialog } from './ui';
 
 /** A re-check that answers within this time is not shown at all. */
@@ -107,8 +108,11 @@ export function AccessHold({ active, silent = false, cause, checking, user, onRe
         focusBefore.current = focused instanceof HTMLElement && node.contains(focused) ? focused : null;
         focusBefore.current?.blur();
         const stop = (event: Event) => { event.stopPropagation(); event.preventDefault(); };
+        // Focus belongs to the layer while it is drawn: an overlay outside the held
+        // pages (a running component or update operation) cannot take it either.
         const keepOut = (event: FocusEvent) => {
-            if (!(event.target instanceof HTMLElement) || !node.contains(event.target)) return;
+            if (!(event.target instanceof HTMLElement)) return;
+            if (heading.current ? layer.current?.contains(event.target) : !node.contains(event.target)) return;
             if (heading.current) heading.current.focus(); else event.target.blur();
         };
         for (const type of guardedEvents) node.addEventListener(type, stop, { capture: true });
@@ -136,6 +140,8 @@ export function AccessHold({ active, silent = false, cause, checking, user, onRe
     const copy = guidance && screensReady ? guidance.accessHoldCopy(t, cause, waiting) : null;
     const title = handover ? t('recovery.handoverTitle') : copy?.title ?? t('recovery.checkingTitle');
     const help = handover ? t('recovery.handoverHelp', { host: handover.host }) : copy?.help ?? t('recovery.checkingHelp');
+    const resume = !handover && copy?.resume;
+    const later = prolonged && copy?.prolonged;
     const keepFocusInside = (event: ReactKeyboardEvent<HTMLDivElement>) => {
         if (event.key !== 'Tab') return;
         const stops = Array.from(layer.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], summary') ?? []);
@@ -150,25 +156,28 @@ export function AccessHold({ active, silent = false, cause, checking, user, onRe
 
     return <>
         <div ref={wrapper} className="contents" {...held}>{children}</div>
+        {/* Above every other overlay (component operation 100, update 110) and below the
+            reload dialogue (130). index.css keeps it the only scrim on the page. */}
         {shown && createPortal(
-            <div ref={layer} className="relative z-[105]" onKeyDown={keepFocusInside}>
+            <div ref={layer} className="relative z-[120]" data-top-layer="hold" onKeyDown={keepFocusInside}>
                 <Dialog
                     id="access-hold"
                     width="lg"
                     dismissible={false}
                     busy={busy}
-                    title={<span ref={heading} tabIndex={-1} className="outline-none">{title}</span>}
-                    description={help}
+                    title={<span ref={heading} tabIndex={-1} className="outline-none focus-visible:outline-none">{title}</span>}
+                    description={<span aria-live="polite">{help}</span>}
                     actions={<>
                         {prolonged && <Button onClick={() => window.location.reload()}>{t('app.reload')}</Button>}
                         <Button variant="primary" loading={busy} onClick={() => { setAsked(true); onRetry(); }}>{t(busy ? 'recovery.checking' : 'recovery.retry')}</Button>
                     </>}
                 >
-                    <div className="space-y-3 text-sm leading-relaxed text-fg" role="status" aria-live="polite">
-                        {!handover && copy?.resume && <p>{copy.resume}</p>}
-                        {address && <p className="text-fg-muted">{t('recovery.handoverAddress')} <a href={`${address}/setup`} className="break-all font-semibold text-primary underline underline-offset-4">{address}</a></p>}
-                        {prolonged && copy && <p className="text-fg-muted">{copy.prolonged}</p>}
-                    </div>
+                    {/* Nothing more to say yet: the dialogue then has no body and no second hairline. */}
+                    {(resume || address || later) && <div className="space-y-3 text-sm leading-relaxed text-fg" role="status" aria-live="polite">
+                        {resume && <p>{resume}</p>}
+                        {address && <p className="text-fg-muted">{t('recovery.handoverAddress')} <AddressLink href={`${address}/setup`} address={address} /></p>}
+                        {later && <p className="text-fg-muted">{later}</p>}
+                    </div>}
                     {/* Shown only for an operation that is still running or needs the owner; reads only. */}
                     {!waiting && user?.effective_role === 'admin' && <RecoveryStatus key={user.username} username={user.username}
                         onUnauthorized={onUnauthorized} unfinishedOnly heading="h4" />}

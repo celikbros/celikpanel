@@ -2348,8 +2348,10 @@ all five runs. No candidate product defect.
 ### A mounted page is replaced only by a known negative access result (P0.2, 2026-10-08)
 
 D-025 invariants 2, 3 and 6; D-024. P0.2 stays partial and no acceptance item is
-closed. Source state with component tests only: no browser pass, no native run,
-no installed panel touched, no license service contacted.
+closed. Source state with component tests; inspected in one real browser against
+a loopback mock on 2026-10-08 and corrected (see "Corrected after the browser
+inspection" below); no native run, no installed panel touched, no license
+service contacted.
 
 **Reported.** An owner on an installed server running v0.1.0-alpha.81: after
 leaving a page for a while the whole screen became "Lisans durumu kontrol
@@ -2414,9 +2416,10 @@ An unknown or merely not yet refreshed state keeps the mounted pages.
   reader.
 - A confirmed 401 under a mounted page shows the sign-in form with the reason.
   The address is kept, so signing in opens the same route.
-- A part of the interface that fails to load after an update: one line is shown
-  for 4 s, then the page reloads, once per 30 s as before. Before anything is
-  drawn it reloads at once, as before.
+- A part of the interface that fails to load after an update: the reason is
+  shown, then the page reloads, once per 30 s as before (first one line for 4 s;
+  since the browser inspection the shared dialogue for 7 s, see below). Before
+  anything is drawn it reloads at once, as before.
 
 **Not changed.** The server-side decision, its 60 s validity, what the server
 refuses without it, and what a known negative does on screen (activation page,
@@ -2462,13 +2465,56 @@ Production build: critical boot 302.29 KiB raw / 93.46 KiB gzip (limits 361 /
 110), Settings route 272.99 / 79.77 KiB (limits 280 / 80); no limit raised. The
 design detector reports no finding on the changed files.
 
+**Corrected after the browser inspection (2026-10-08).** Invariants 2, 3 and 6;
+D-024. P0.2 stays partial and no acceptance item is closed. A first pass in a
+real browser against a loopback mock, on commit `8a65d4ca`, showed defects that
+the component tests had not; they are corrected in the same change and the pass
+was repeated. What it covered and did not is recorded in the
+[operation guidance](OPERATION-GUIDANCE.md#access-and-readiness-checks-keep-the-page-explained-hold-checking-state-ended-session-2026-10-08).
+
+- The layer is drawn above the component-operation overlay and the update lock
+  (layer 120 over 100 and 110) and keeps keyboard focus against both. Before,
+  the update lock (110) was above the layer (105). The update lock is still
+  released when a hold begins, because the tracker pauses.
+- While the layer or the reload dialogue is drawn it is the only scrim on the
+  page: every scrim under it is cleared (`web/src/index.css`, `:has()`). Two
+  stacked scrims had made the page that the layer says is kept unreadable. A
+  browser without `:has()` draws both scrims, as before.
+- The title of the layer takes programmatic focus without a focus ring; the
+  "checking" layer has no empty body; the secure address wraps as an address.
+- The activation page draws the saved update record only for an unfinished
+  operation, like the other gates. It showed "No update operation ID is saved in
+  this browser…" beside a license decision.
+- The reload after a failed part is the shared dialogue above everything: the
+  reason, that unsaved input is lost, and "Reload CelikPanel" to bring the reload
+  forward. It reloads by itself after 7 s. The page under it is covered.
+- A coded refusal answered by the access route itself no longer raises the
+  refusal event, and while access stays unknown a refused request starts a read
+  at most as often as the 5 s re-check. Not reachable with the current server,
+  whose access route answers 200 with a typed body; found with a synthetic 503,
+  which had produced 10,581 reads in 28.7 s.
+- The hold text no longer states an interval ("every few seconds"); the first-load
+  pages say that they read again by themselves.
+
+Schema or version transition: none. No server code, API field, stored record or
+browser storage format changes; one string is added to the screen catalogue and
+five texts change (EN and TR). Recovery behaviour is as above, except that the
+reload after a failed part can now be brought forward. Evidence: the updated
+`access-hold-runtime`, `recovery-access-runtime`, `dialog-shape-contract` and
+`boot-copy-contract` tests and the new `address-link` test; 616 web tests pass.
+Production build: critical boot 303.73 KiB raw / 93.97 KiB gzip (limits 361 / 110),
+Settings route 272.99 / 79.76 KiB (limits 280 / 80); no limit raised. The design
+detector reports no finding on the changed files. The browser pass is one Chrome
+against a mock: it is not a native run and closes nothing.
+
 **Open.**
 
-- Not confirmed in a browser: timer throttling in a hidden tab, the order of
-  visibility and focus events, `inert` on a `display: contents` element, the
-  caret after focus returns, stacking against the operation overlay and the
-  update lock, the screen-reader announcement, EN and TR at desktop and phone
-  width.
+- Seen in one Chrome against a mock only (2026-10-08): timer throttling in a
+  hidden tab, the order of visibility and focus events, `inert` on a
+  `display: contents` element, the caret after focus returns, stacking against
+  the operation overlay and the update lock, EN and TR at desktop and phone
+  width. Not confirmed: the screen-reader announcement, any other browser, a
+  real server.
 - What each page does when its own request is refused under the layer is read
   for the six polling screens only, not audited page by page and not observed.
   The log viewer's repeated error toast and the emptied monitoring chart are

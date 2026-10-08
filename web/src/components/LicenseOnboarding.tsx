@@ -42,12 +42,14 @@ export function LicenseOnboarding({ children, onAccessChange, onRecoveryChange, 
     const mountedFor = useRef<string | null>(null);
     const latest = useRef(access);
     latest.current = access;
+    const lastRead = useRef(0);
     const check = useCallback(async () => {
         // Focus and periodic checks share the pending request.
         // Odak ve zamanlayıcı kontrolleri sürmekte olan isteği paylaşır.
         if (controller.current) return;
         const request = new AbortController();
         controller.current = request;
+        lastRead.current = Date.now();
         setPending(true);
         const timeout = window.setTimeout(() => request.abort(), 15000);
         try {
@@ -94,10 +96,16 @@ export function LicenseOnboarding({ children, onAccessChange, onRecoveryChange, 
             // decision. Pages that stay mounted report this with every poll; one
             // read answers all of them, so a read that began after access became
             // unknown is left to finish. Only typed status can require activation.
-            if (latest.current?.allowed !== null) { controller.current?.abort(); controller.current = null; }
+            const known = latest.current?.allowed !== null;
+            if (known) { controller.current?.abort(); controller.current = null; }
             // The read is in flight before access is marked unknown, so no render
-            // shows an unknown state that nothing is reading.
-            void check();
+            // shows an unknown state that nothing is reading. Only the report that
+            // makes access unknown reads at once. While it stays unknown the regular
+            // re-check reads, and further refusals cannot read more often than that:
+            // a refusal answered by another refusal would otherwise read without pause.
+            // Yalnizca erisimi bilinmez kilan bildirim hemen okur; bilinmezken gelen
+            // retler olagan yeniden kontrol araligindan sik okuma baslatamaz.
+            if (known || Date.now() - lastRead.current >= UNKNOWN_RECHECK_MS) void check();
             setFailed(true);
             setAccess({ owner: user.username, allowed: null, until: 0, state: 'status_unavailable' });
         };

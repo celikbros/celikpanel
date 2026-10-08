@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useI18n } from '../i18n';
+import { AddressLink } from './AddressLink';
 
 // Only server-provided managed certificate metadata supplies the link. Never
 // use query strings or stored browser values as a sign-in destination.
@@ -28,6 +29,6 @@ export function PanelAddressHint() {
     if (!address) return null;
     return <aside className="mb-5 rounded-lg border border-border bg-surface-2 p-4 text-sm text-fg">
         <p>{t('login.panelAddressHint')}</p>
-        <a href={address} className="mt-2 block break-all text-primary underline underline-offset-4">{address}</a>
+        <p className="mt-2"><AddressLink href={address} address={address} /></p>
     </aside>;
 }

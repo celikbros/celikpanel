@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useI18n } from '../i18n';
+import { Button, Dialog } from './ui';
 
 // Loaded ahead of need by lib/accessGuidance.ts; never imported statically, so
 // its wording stays in the screen half of the catalogue. Callers draw these only
@@ -30,8 +32,22 @@ export function SessionEndedNotice() {
     return <p role="status" className="mb-5 rounded-lg border border-border bg-surface-2 p-4 text-sm leading-relaxed text-fg">{t('accessHold.sessionEnded')}</p>;
 }
 
-/** One line, above everything, for the moment before the page reloads to load the current version. */
+// Shown for the moment before the page reloads to load the current version: the
+// shared dialogue, above everything, with no dismissal. It covers the page
+// instead of sitting on a part of it: on a phone a line at the top hid the
+// header of the dialogue underneath, and the page below can no longer be used
+// in any case, so nothing more is typed into a form that is about to be
+// replaced. It says what is lost and offers the reload at once. index.css keeps
+// it the only scrim on the page.
+// Sayfa guncel surumu yuklemek icin yenilenmeden hemen once gosterilir: ortak
+// pencere, her seyin ustunde, kapatilamaz. Alttaki sayfa zaten kullanilamaz;
+// neyin kayboldugunu soyler ve hemen yeniden yuklemeyi sunar.
 export function UpdateReloadLine() {
     const { t } = useI18n();
-    return <p role="status" className="fixed inset-x-4 top-4 z-[130] mx-auto max-w-2xl rounded-lg border border-border-strong bg-surface px-4 py-3 text-sm font-medium leading-relaxed text-fg shadow-2xl">{t('accessHold.updateReload')}</p>;
+    useEffect(() => { (document.activeElement as HTMLElement | null)?.blur?.(); }, []);
+    return <div data-top-layer="reload" className="relative z-[130]">
+        <Dialog id="update-reload" dismissible={false} title={t('accessHold.updateReloadTitle')}
+            description={<span role="status">{t('accessHold.updateReload')}</span>}
+            actions={<Button variant="primary" onClick={() => window.location.reload()}>{t('app.reload')}</Button>} />
+    </div>;
 }

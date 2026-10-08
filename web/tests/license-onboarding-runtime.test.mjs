@@ -34,6 +34,7 @@ const stub = dataModule(`
   export const createPortal = node => node;
   export const Dialog = props => React.createElement('dialog', { id: props.id }, props.title, props.description, props.children, props.actions);
   export const usePanelHandover = () => null, handoverAddress = () => '', useAccessGuidance = () => null;
+  export const AddressLink = props => React.createElement('a', { href: props.href }, props.address);
 `);
 const holdURL = dataModule(`import React from '${reactURL}';\n` + ts.transpileModule(readFileSync(new URL('../src/components/AccessHold.tsx', import.meta.url), 'utf8'), { compilerOptions: {
   jsx: ts.JsxEmit.React, module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2020,

@@ -50,6 +50,24 @@ export const setupHostBusyKey = (message = '', reason = ''): TranslationKey =>
     (Object.prototype.hasOwnProperty.call(hostBusyReasons, reason) ? hostBusyReasons[reason] : undefined)
     || hostBusyOpenings.find(([opening]) => message.startsWith(opening))?.[1] || 'setup.blocker.hostBusy';
 
+// A step refused with HOST_MUTATION_BUSY did not fail: the server was doing
+// something else. The screen leads with that reason as its one heading, then who
+// acts, the next action and how setup resumes, with the action beside the text
+// (D-024). It is a wait, or for a held server a caution; never a failure colour.
+// HOST_MUTATION_BUSY ile reddedilen adim basarisiz olmadi: sunucu baska bir isle
+// mesguldu. Ekran bu nedeni tek baslik olarak one alir; hata rengi kullanilmaz.
+export interface SetupHostBusyGuidance {
+    title: TranslationKey;
+    body: TranslationKey;
+    // Waiting does not clear it: the server has to be restarted.
+    caution: boolean;
+}
+export function setupHostBusyGuidance(error?: { code: string; message?: string; reason?: string } | null): SetupHostBusyGuidance | null {
+    if (error?.code !== 'HOST_MUTATION_BUSY') return null;
+    const body = setupHostBusyKey(error.message, error.reason);
+    return { title: `${body}Title` as TranslationKey, body, caution: body === 'setup.blocker.hostHeld' };
+}
+
 // A screen passes its localized names (mail profiles, cron) so the guidance
 // sentence names the component exactly as the step list above it does.
 // Ekran yerel adlari verir; yonlendirme bileseni adim listesiyle ayni adlandirir.

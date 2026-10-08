@@ -4,6 +4,7 @@ import { useI18n } from '../i18n';
 import { BrandMark } from './BrandMark';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { Button, Spinner } from './ui';
+import { AddressLink } from './AddressLink';
 import { parseRecoveryObservation, reconcileRecoveryObservation, recoveryFailureGuidanceKey, retryingCauseKey, savedRecoveryFinished, savedRecoveryRequestId, UPDATE_MARKER_KEY, type RecoveryObservation } from '../lib/recoveryObservation';
 import { handoverAddress, recoveryHandover, savedSetupHandoverHost, setupStartMarkerKey } from '../lib/panelHandover';
 
@@ -123,7 +124,7 @@ export function RecoveryAccess({ user, cause, checking = false, onRetry, onUnaut
             {user && <p className="mb-5 break-words text-sm text-fg-muted">{user.username}</p>}
             <h1 className="text-2xl font-semibold">{t(waiting ? 'recovery.checkingTitle' : handover ? 'recovery.handoverTitle' : `recovery.${cause}Title`)}</h1>
             <p className="mt-4 max-w-prose break-words text-sm leading-relaxed text-fg-muted" role="status">{waiting ? t('recovery.checkingHelp') : handover ? t('recovery.handoverHelp', { host: handover.host }) : t(`recovery.${cause}Help`)}</p>
-            {address && <p className="mt-4 max-w-prose text-sm leading-relaxed text-fg-muted">{t('recovery.handoverAddress')} <a href={`${address}/setup`} className="break-all font-semibold text-primary underline underline-offset-4">{address}</a></p>}
+            {address && <p className="mt-4 max-w-prose text-sm leading-relaxed text-fg-muted">{t('recovery.handoverAddress')} <AddressLink href={`${address}/setup`} address={address} /></p>}
             <div className="mt-6 flex flex-wrap items-center gap-3"><Button disabled={checking} onClick={onRetry}>{checking && <Spinner />}{t(checking ? 'recovery.checking' : 'recovery.retry')}</Button><Button variant="secondary" onClick={() => window.location.reload()}>{t('app.reload')}</Button></div>
             {/* A finished update is not the reason for an access check, so only an unfinished operation is drawn here.
                 During the planned handover even that stays one step away. A page that failed to load keeps the full reader. */}

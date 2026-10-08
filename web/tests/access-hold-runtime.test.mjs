@@ -47,6 +47,7 @@ const stub = dataModule(`import React from '${reactURL}';
  export const PanelAddressHint = () => null, BrandMark = () => null, ThemeSwitcher = () => null, SkinSwitcher = () => null, LanguageSwitcher = () => null;
  export const ShieldCheck = () => null, Users = () => null, User = () => null, Eye = () => null, EyeOff = () => null;
  export const useAccessGuidance = () => null;
+ export const AddressLink = props => React.createElement('a', { href: props.href }, props.address);
 `);
 const accessURL = dataModule(compile('../src/lib/accessObservation.ts'));
 const guidanceURL = link('../src/components/AccessGuidance.tsx', () => stub);
@@ -144,7 +145,7 @@ function assertPageAsLeft(message) {
 const access = (seconds = 60) => Response.json({ can_use_panel: true, valid_until: Math.floor(Date.now() / 1000) + seconds, state: 'active', observation: 'known' });
 
 test('the wording exists in both languages, in the screen half, and says reason, who acts and how the page resumes', () => {
-  const keys = ['licenseTitle', 'licenseHelp', 'availabilityTitle', 'availabilityHelp', 'authTitle', 'authHelp', 'waitingHelp', 'resume', 'prolonged', 'sessionEnded', 'updateReload'].map(name => `accessHold.${name}`);
+  const keys = ['licenseTitle', 'licenseHelp', 'availabilityTitle', 'availabilityHelp', 'authTitle', 'authHelp', 'waitingHelp', 'resume', 'prolonged', 'sessionEnded', 'updateReload', 'updateReloadTitle'].map(name => `accessHold.${name}`);
   const value = (file, key) => source(`../src/i18n/${file}.ts`).match(new RegExp(`'${key.replace('.', '\\.')}': "([^"]+)",`))?.[1];
   for (const key of keys) {
     assert.ok(value('screens/en', key) && value('screens/tr', key), `${key} is missing from the screen half`);
@@ -158,6 +159,8 @@ test('the wording exists in both languages, in the screen half, and says reason,
   // Who acts (nobody yet), what happens by itself, how work resumes, what is blocked meanwhile.
   assert.match(value('screens/en', 'accessHold.resume'), /do not need to do anything yet.*checks again by itself.*continues where it was, with what you typed.*nothing on this page can be changed/s);
   assert.match(value('screens/tr', 'accessHold.resume'), /bir şey yapmanız gerekmiyor.*kendiliğinden yeniden kontrol eder.*yazdıklarınızla birlikte kaldığı yerden devam eder.*değişiklik yapılamaz/s);
+  // The re-check runs every 5 s for a license read and every 10 s for the session, so no interval is stated.
+  for (const file of ['screens/en', 'screens/tr']) assert.doesNotMatch(value(file, 'accessHold.resume'), /\d|every few|saniye/, file);
   // Reload is offered with its cost.
   assert.match(value('screens/en', 'accessHold.prolonged'), /keep waiting.*reload CelikPanel.*discards anything you typed/s);
   assert.match(value('screens/tr', 'accessHold.prolonged'), /Beklemeyi sürdürebilirsiniz.*yeniden yükleyebilirsiniz.*yazıp kaydetmediğiniz her şeyi siler/s);
@@ -165,6 +168,9 @@ test('the wording exists in both languages, in the screen half, and says reason,
   assert.match(value('screens/tr', 'accessHold.sessionEnded'), /Oturumunuz sona erdi.*dönmek için giriş yapın.*korunmadı/s);
   assert.match(value('screens/en', 'accessHold.updateReload'), /most likely because CelikPanel was updated.*reloads in a moment/s);
   assert.match(value('screens/tr', 'accessHold.updateReload'), /büyük olasılıkla.*güncellendi.*birazdan yeniden yüklenir/s);
+  // The reload says what it costs.
+  assert.match(value('screens/en', 'accessHold.updateReload'), /Anything you typed on this page and did not save is lost\.$/);
+  assert.match(value('screens/tr', 'accessHold.updateReload'), /yazıp kaydetmediğiniz her şey kaybolur\.$/);
   // No state borrows a verdict it does not have.
   for (const key of keys.slice(0, 9)) for (const file of ['screens/en', 'screens/tr']) assert.doesNotMatch(value(file, key), /activate|renew|etkinleştir|yenileyin/i, key);
   // The copy function maps each cause to its own reason and keeps "starting" on the shell's reviewed text.
@@ -204,12 +210,15 @@ test('a held page stays mounted and unreachable; a prompt answer shows nothing, 
     assert.equal(layers().length, 1);
     assert.ok(text().includes('recovery.checkingTitle') && text().includes('accessHold.waitingHelp'), text());
     for (const absent of ['accessHold.licenseTitle', 'accessHold.licenseHelp', 'accessHold.resume', 'data-operation']) assert.ok(!text().includes(absent), absent);
+    // Nothing more to say yet: the dialogue has no body, so no empty band is drawn between two hairlines.
+    assert.equal(layers()[0].findAllByProps({ role: 'status' }).length, 0, 'an empty status region still makes a body');
     assert.equal(button('recovery.checking').props.loading, true);
 
     // The read answered without confirming access: reason, nobody acts yet, how the page resumes.
     await act(async () => tree.update(render({ active: true, checking: false })));
     for (const present of ['accessHold.licenseTitle', 'accessHold.licenseHelp', 'accessHold.resume']) assert.ok(text().includes(present), present);
     assert.ok(!text().includes('recovery.licenseTitle') && !text().includes('accessHold.prolonged'));
+    assert.equal(layers()[0].findAllByProps({ role: 'status' }).length, 1);
     assert.equal(button('app.reload'), undefined, 'reload is not suggested while waiting is the right thing');
     assert.equal(tree.root.findByProps({ 'data-operation': 'admin' }).props.unfinishedOnly, true, 'only an unfinished operation may be drawn');
     await act(async () => button('recovery.retry').props.onClick());
@@ -538,7 +547,11 @@ test('a part that fails to load after an update says so before the page reloads;
     await act(async () => { claimed = !window.dispatchEvent(new Event(UPDATE_RELOAD_EVENT, { cancelable: true })); });
     assert.equal(claimed, true, 'the mounted interface takes over the reload');
     assert.equal(tree.root.findByProps({ role: 'status' }).props.children, 'accessHold.updateReload');
-    assert.equal(reloads, 0, 'the line is shown first');
+    assert.ok(text().includes('accessHold.updateReloadTitle'));
+    assert.equal(reloads, 0, 'the reason is shown first');
+    // The owner may reload at once instead of waiting for it.
+    await act(async () => button('app.reload').props.onClick());
+    assert.equal(reloads, 1); reloads = 0;
     await act(async () => { window.dispatchEvent(new Event(UPDATE_RELOAD_EVENT, { cancelable: true })); });
     assert.equal(timers.filter(timer => timer.live && timer.ms === UPDATE_RELOAD_DELAY_MS).length, 1, 'one reload, however many parts fail');
     await fire(UPDATE_RELOAD_DELAY_MS);
@@ -572,7 +585,52 @@ test('the wording part is fetched ahead of need and never at the moment a hold b
   assert.match(hold, /const guidance = useAccessGuidance\(\);/);
   assert.match(hold, /const copy = guidance && screensReady \? guidance\.accessHoldCopy\(t, cause, waiting\) : null;/);
   // The layer is the shared dialogue, with no silent way out, above the page and outside its inert subtree.
-  assert.match(hold, /createPortal\(\s*<div ref=\{layer\} className="relative z-\[105\]"/);
+  assert.match(hold, /createPortal\(\s*<div ref=\{layer\} className="relative z-\[120\]" data-top-layer="hold"/);
   assert.match(hold, /dismissible=\{false\}/);
   assert.doesNotMatch(hold, /onDismiss/);
+});
+
+// Real-browser inspection of commit 8a65d4ca (2026-10-08). Each of these was seen
+// on screen; the tests here hold the cause, the browser run holds the look.
+test('browser findings on the hold layer: no control-like ring, no empty band, one scrim, on top of every overlay', () => {
+  const hold = source('../src/components/AccessHold.tsx');
+  // The title takes programmatic focus for a screen reader and draws no focus ring: it is not a control.
+  assert.match(hold, /<span ref=\{heading\} tabIndex=\{-1\} className="outline-none focus-visible:outline-none">\{title\}<\/span>/);
+  // The body exists only when it has something to say; the description is the standing live region.
+  assert.match(hold, /\{\(resume \|\| address \|\| later\) && <div [^>]*role="status"/);
+  assert.match(hold, /description=\{<span aria-live="polite">\{help\}<\/span>\}/);
+  // The address wraps as an address, never inside a word or the scheme.
+  assert.doesNotMatch(hold, /break-all/);
+  assert.doesNotMatch(source('../src/components/RecoveryAccess.tsx').slice(source('../src/components/RecoveryAccess.tsx').indexOf('export function RecoveryAccess(')), /break-all/);
+  // Above the component-operation and update overlays, below the reload dialogue.
+  const layerOf = file => [...source(`../src/components/${file}`).matchAll(/\bz-\[(\d+)\]/g)].map(match => Number(match[1]));
+  for (const file of ['OperationOverlay.tsx', 'ComponentOperation.tsx', 'SystemUpdateOperation.tsx', 'ui.tsx', 'Toast.tsx']) {
+    for (const z of layerOf(file)) assert.ok(z < 120, `${file} draws at ${z}, above the hold`);
+  }
+  assert.deepEqual(layerOf('AccessHold.tsx'), [120]);
+  assert.deepEqual(layerOf('AccessGuidance.tsx'), [130]);
+  // Focus stays in the layer while it is drawn, also against an overlay outside the held pages.
+  assert.match(hold, /if \(heading\.current \? layer\.current\?\.contains\(event\.target\) : !node\.contains\(event\.target\)\) return;/);
+  // One scrim at most: while one of the two top layers is drawn, every scrim under it is cleared.
+  const css = source('../src/index.css');
+  assert.match(css, /body:has\(\[data-top-layer\]\) \[class\*="bg-scrim"\]:not\(\[data-top-layer\] \*, \[data-top-layer\]\),\s*body:has\(\[data-top-layer="reload"\]\) \[data-top-layer="hold"\] \[class\*="bg-scrim"\] \{\s*background-color: transparent;/);
+  // Every scrim the rule has to find is spelled with the class it looks for.
+  for (const file of ['ui.tsx', 'OperationOverlay.tsx', 'ComponentOperation.tsx', 'SystemUpdateOperation.tsx', 'HelpDrawer.tsx', 'Layout.tsx']) {
+    const text = source(`../src/components/${file}`);
+    assert.equal((text.match(/fixed inset-0/g) ?? []).length <= (text.match(/bg-scrim\//g) ?? []).length, true, `${file} dims the page with something the rule cannot clear`);
+  }
+  // The reload notice is the shared dialogue on top, with its cost and an action.
+  const guidance = source('../src/components/AccessGuidance.tsx');
+  assert.match(guidance, /<div data-top-layer="reload" className="relative z-\[130\]">\s*<Dialog id="update-reload" dismissible=\{false\}/);
+  assert.match(guidance, /actions=\{<Button variant="primary" onClick=\{\(\) => window\.location\.reload\(\)\}>\{t\('app\.reload'\)\}<\/Button>\}/);
+});
+
+test('a refusal cannot make the access gate read without pause', () => {
+  // The access route's own coded refusal is the gate's answer; it does not ask for another read.
+  const gate = app.slice(app.indexOf('function AuthGate()'), app.indexOf('function StandaloneRecovery('));
+  assert.match(gate, /\.includes\(problem\.code\)\s*&& !url\.includes\('\/api\/v1\/license\/access'\)\) \{\s*window\.dispatchEvent\(new Event\('celikpanel:license-locked'\)\);/);
+  // While access stays unknown, refusals read no more often than the regular re-check.
+  const onboarding = source('../src/components/LicenseOnboarding.tsx');
+  assert.match(onboarding, /if \(known \|\| Date\.now\(\) - lastRead\.current >= UNKNOWN_RECHECK_MS\) void check\(\);/);
+  assert.match(onboarding, /controller\.current = request;\s*lastRead\.current = Date\.now\(\);/);
 });

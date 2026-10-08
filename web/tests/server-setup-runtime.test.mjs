@@ -41,6 +41,7 @@ export const Spinner=()=>React.createElement('span',null,'loading');
 export const ArrowRight=()=>null, Check=()=>null, Circle=()=>null, Loader2=()=>null;
 export const ServerSetupDNSConnection=props=>React.createElement('remote-connection',props);
 export const inputClass='';
+export const AddressLink=props=>React.createElement('a',{href:props.href},props.address);
 `);
 const stepsURL = dataURL(`import React from '${reactURL}';\n` + compile('../src/components/ServerSetupSteps.tsx').replace(/from ['"]([^'"]+)['"]/g, (_, path) => `from '${stub}'`));
 const choiceURL = dataURL(`import React from '${reactURL}';\n` + compile('../src/components/ServerSetupChoice.tsx').replace(/from ['"]([^'"]+)['"]/g, (_, path) => `from '${path === 'react' ? reactURL : path.endsWith('/serverSetup') ? setupURL : stub}'`));

@@ -525,7 +525,10 @@ function AuthGate() {
         && shouldApplyUnauthorizedResponse(requestGeneration, authGenerationRef.current)) {
         void res.clone().json().then(problem => {
           if (!shouldApplyUnauthorizedResponse(requestGeneration, authGenerationRef.current)) return;
-          if (['license_required', 'LICENSE_VERIFICATION_UNAVAILABLE', 'LICENSE_STATUS_UNAVAILABLE'].includes(problem.code)) {
+          // The access route is what that event makes the gate read. Its own
+          // refusal is the gate's answer already and must not ask for another read.
+          if (['license_required', 'LICENSE_VERIFICATION_UNAVAILABLE', 'LICENSE_STATUS_UNAVAILABLE'].includes(problem.code)
+            && !url.includes('/api/v1/license/access')) {
             window.dispatchEvent(new Event('celikpanel:license-locked'));
           }
           if (problem.code === 'AUTH_STATUS_UNAVAILABLE') markUnavailable(true);
