@@ -1,0 +1,27 @@
+{
+  "checks": {
+    "checks": 30,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-08T21:57:42Z",
+    "notes": [
+      "cron-allow does not keep root's `crontab -u <user> -l` failing on this platform (native answers: crontab, then crontab); the list answered HTTP 200"
+    ],
+    "started_at": "2026-10-08T21:57:34Z",
+    "substeps": {
+      "a": "passed",
+      "b": "passed",
+      "c": "passed",
+      "d": "passed",
+      "e": "passed",
+      "f": "passed"
+    },
+    "title": "scheduled tasks: the owner's crontab",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-08T21:57:42Z",
+  "name": "S1-cron",
+  "started_at": "2026-10-08T21:57:34Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,9 @@
+{
+  "checks": {
+    "reason": "mail is not supported on this platform"
+  },
+  "finished_at": "2026-10-08T21:57:42Z",
+  "name": "S2-mail-policy",
+  "started_at": "2026-10-08T21:57:42Z",
+  "verdict": "skipped"
+}

@@ -1,0 +1,45 @@
+{
+  "at": "2026-10-08T21:27:41Z",
+  "master_pid": 26752,
+  "mode": "read-queue",
+  "owner_action": false,
+  "postqueue": {
+    "argv": [
+      "postqueue",
+      "-j"
+    ],
+    "at": "2026-10-08T21:27:41Z",
+    "returncode": 0,
+    "seconds": 0.008,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "postfix.service": {
+      "ActiveEnterTimestamp": "Thu 2026-10-08 21:24:10 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "Thu 2026-10-08 21:24:10 UTC",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "LoadState": "loaded",
+      "MainPID": "26752",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "running"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestamp": "",
+      "ActiveState": "inactive",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "dead"
+    }
+  }
+}

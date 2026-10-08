@@ -1,0 +1,85 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S2d remove the DNSBL zone",
+  "request": {
+    "body": {
+      "dnsbl_zones": [],
+      "message_size_mb": 9,
+      "outbound_rate_limit": 30,
+      "version": "mp1-ee44ef262228d425a1a9935a2a9d1a5c321a54bd6c5e04a829c8ede0c3b61b0a"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "PUT",
+    "path": "/api/v1/mail/policy"
+  },
+  "response": {
+    "elapsed_seconds": 1.701,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 08 Oct 2026 22:08:27 GMT"
+      ],
+      [
+        "Content-Length",
+        "171"
+      ]
+    ],
+    "json": {
+      "policy": {
+        "dnsbl_zones": [],
+        "message_size_mb": 9,
+        "outbound_rate_limit": 30,
+        "version": "mp1-09f52b580c01a771bfffb13462050f31e5ce3644df94a71f6a93a2d07ef3f659"
+      },
+      "success": true
+    },
+    "status": 200,
+    "text": null
+  }
+}

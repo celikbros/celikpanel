@@ -1,0 +1,84 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S5c set max_connections to a value MariaDB refuses",
+  "request": {
+    "body": {
+      "content": "#\n# These groups are read by MariaDB server.\n# Use it for options that only the server (but not clients) should see\n\n# this is read by the standalone daemon and embedded servers\n[server]\n\n# this is only for the mariadbd daemon\n[mariadbd]\n\n#\n# * Basic [REDACTED]\n#\n\n#user                    = mysql\npid-file                = /run/mysqld/mysqld.pid\nbasedir                 = /usr\n#datadir                 = /var/lib/mysql\n#tmpdir                  = /tmp\n\n# Broken reverse DNS slows down connections considerably and name resolve is\n# safe to skip if there are no \"host by domain name\" access grants\n#skip-name-resolve\n\n# Instead of skip-networking the default is now to listen only on\n# localhost which is more compatible and is not less secure.\nbind-address            = 127.0.0.1\n\n#\n# * Fine Tuning\n#\n\n#key_buffer_size        = 128M\n#max_allowed_packet     = 1G\n#thread_stack           = 192K\n#thread_cache_size      = 8\n# This replaces the startup script and checks MyISAM tables if needed\n# the first time they are touched\n#myisam_recover_options = BACKUP\nmax_connections        = unlimited\n#table_cache            = 64\n\n#\n# * Logging and Replication\n#\n\n# Note: The configured log file or its directory need to be created\n# and be writable by the mysql user, e.g.:\n# $ sudo mkdir -m 2750 /var/log/mysql\n# $ sudo chown mysql /var/log/mysql\n\n# Both location gets rotated by the cronjob.\n# Be aware that this log type is a performance killer.\n# Recommend only changing this at runtime for short testing periods if needed!\n#general_log_file       = /var/log/mysql/mysql.log\n#general_log            = 1\n\n# When running under systemd, error logging goes via stdout/stderr to journald\n# and when running legacy init error logging goes to syslog due to\n# /etc/mysql/conf.d/mariadb.conf.d/50-mysqld_safe.cnf\n# Enable this if you want to have error logging into a separate file\n#log_error = /var/log/mysql/error.log\n# Enable the slow query log to see queries with especially long duration\n#log_slow_query_file    = /var/log/mysql/mariadb-slow.log\n#log_slow_query_time    = 10\n#log_slow_verbosity     = query_plan,explain\n#log-queries-not-using-indexes\n#log_slow_min_examined_row_limit = 1000\n\n# The following can be used as easy to replay backup logs or for replication.\n# note: if you are setting up a replica, see README.Debian about other\n#       settings you may need to change.\n#server-id              = 1\n#log_bin                = /var/log/mysql/mysql-bin.log\nexpire_logs_days        = 10\n#max_binlog_size        = 100M\n\n#\n# * SSL/TLS\n#\n\n# For documentation, please read\n# https://mariadb.com/kb/en/securing-connections-for-client-and-server/\n#ssl-ca = /etc/mysql/cacert.pem\n#ssl-cert = /etc/mysql/server-cert.pem\n#ssl-key = /etc/mysql/server-key.pem\n#require-secure-transport = on\n\n#\n# * Character sets\n#\n\n# MariaDB default is now utf8 4-byte character set.\n# No Debian specific default is required.\n\n#\n# * InnoDB\n#\n\n# InnoDB is enabled by default with a 10MB datafile in /var/lib/mysql/.\n# Read the manual for more InnoDB related options. There are many!\n# Most important is to give InnoDB 80 % of the system RAM for buffer use:\n# https://mariadb.com/kb/en/innodb-system-variables/#innodb_buffer_pool_size\n#innodb_buffer_pool_size = 8G\n\n# this is only for embedded server\n[embedded]\n\n# This group is only read by MariaDB servers, not by MySQL.\n# If you use the same .cnf file for MySQL and MariaDB,\n# you can put MariaDB-only options here\n[mariadbd]\n\n# This group is only read by MariaDB-11.8 servers.\n# If you use the same .cnf file for MariaDB of different versions,\n# use this group for options that older servers don't understand\n[mariadb-11.8]\n",
+      "path": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+      "version": "cf1-5fc1e0afde1a570ae52a87810e82b3faf91bb996f94581a83e9724bf388e4013"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/config"
+  },
+  "response": {
+    "elapsed_seconds": 0.532,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 08 Oct 2026 22:09:12 GMT"
+      ],
+      [
+        "Content-Length",
+        "345"
+      ]
+    ],
+    "json": {
+      "code": "CONFIG_INVALID",
+      "error": "Nothing is changed: the service's own program read the new file and refused it. Correct what it names below and save again.",
+      "reason": "daemon",
+      "vars": {
+        "detail": "Unknown suffix 'u' used for variable 'max_connections' (value 'unlimited'). Legal suffix characters are: K, M, G, T, P, E",
+        "name": "max_connections"
+      }
+    },
+    "status": 422,
+    "text": null
+  }
+}

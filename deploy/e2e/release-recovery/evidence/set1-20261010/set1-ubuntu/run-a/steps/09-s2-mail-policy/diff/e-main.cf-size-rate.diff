@@ -1,0 +1,8 @@
+--- before
++++ after
+@@ -63,3 +63,4 @@
+ set1_owner_checks = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination
+ smtpd_recipient_restrictions = ${set1_owner_checks}, reject_unknown_sender_domain
+-smtpd_client_message_rate_limit = 30
++smtpd_client_message_rate_limit = 45
++message_size_limit = 31457280

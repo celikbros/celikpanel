@@ -1,0 +1,1 @@
+harness=/var/tmp/cp-set1-run/harness-set1 (git archive c4cf7fd9, overlay overlay-set1 73fdb61e96686fe1)

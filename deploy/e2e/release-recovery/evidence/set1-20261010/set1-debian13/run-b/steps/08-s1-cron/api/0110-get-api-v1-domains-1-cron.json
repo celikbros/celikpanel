@@ -1,0 +1,81 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S1e list after edit",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/1/cron"
+  },
+  "response": {
+    "elapsed_seconds": 0.006,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 08 Oct 2026 22:08:15 GMT"
+      ],
+      [
+        "Content-Length",
+        "351"
+      ]
+    ],
+    "json": {
+      "jobs": [
+        {
+          "command": "/usr/bin/true set1-panel-job",
+          "enabled": false,
+          "id": "525938d5161ae428",
+          "schedule": "*/20 * * * *"
+        },
+        {
+          "command": "/usr/bin/true set1-owner-job",
+          "comment": "set1 owner note: keep this line",
+          "enabled": true,
+          "id": "5d4bab156b6ba6de",
+          "schedule": "17 3 * * *"
+        }
+      ],
+      "version": "ct1-b23fbdce600dd3842d39f4893b40acf31c92cde5200b1d47c10ebb09bc08d4ef"
+    },
+    "status": 200,
+    "text": null
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "action": "owner-crontab",
+  "at": "2026-10-08T21:57:36Z",
+  "install": {
+    "argv": [
+      "crontab",
+      "-u",
+      "set1_owner_test",
+      "-"
+    ],
+    "at": "2026-10-08T21:57:36Z",
+    "returncode": 0,
+    "seconds": 0.015,
+    "status": "ok",
+    "stderr": "Could not find environment variable XDG_CACHE_HOME or HOME to save the backup\n",
+    "stdout": ""
+  },
+  "mode": "owner-crontab",
+  "owner_action": true,
+  "schema": "celikpanel/set1-native/v1",
+  "user": "set1_owner_test"
+}

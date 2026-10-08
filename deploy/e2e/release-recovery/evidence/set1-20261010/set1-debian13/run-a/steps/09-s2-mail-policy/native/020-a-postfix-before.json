@@ -1,0 +1,146 @@
+{
+  "check": {
+    "argv": [
+      "postfix",
+      "check"
+    ],
+    "at": "2026-10-08T21:26:46Z",
+    "returncode": 0,
+    "seconds": 0.256,
+    "status": "ok",
+    "stderr": "postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf\n",
+    "stdout": ""
+  },
+  "mail_version": "3.10.13",
+  "main_cf": {
+    "exists": true,
+    "gid": 989,
+    "group": "celikpanel",
+    "inode": 269850,
+    "mode": "0644",
+    "mtime_ns": 1791494652125242972,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/postfix/main.cf",
+    "sha256": "cfc3ba4a968edf44b2c678b12ce23419225cf7a4cad1636dac3dd363c2dca5cd",
+    "size": 3775,
+    "text": "# See /usr/share/postfix/main.cf.dist for a commented, more complete version\n\n# See http://www.postfix.org/COMPATIBILITY_README.html\ncompatibility_level = 3.9\n\n# Which domain that locally-originated mail appears to come from.\n# Debian policy suggests to read this value from /etc/mailname.\n#XX needs a review in postinst&config\n#myorigin = /etc/mailname\n#myorigin = $mydomain\nmyorigin = $myhostname\n\n# Text that follows the 220 code in the SMTP server's greeting banner.\n# You MUST specify $myhostname at the start due to an RFC requirement.\nsmtpd_banner = $myhostname ESMTP $mail_name (Debian)\n\n# IP protocols to use: ipv4, ipv6, or all\n# (set this explicitly so `post-install upgrade-configuration' wont complain)\ninet_protocols = all\n\n# List of \"trusted\" SMTP clients (maptype:mapname allowed) that have more\n# privileges than \"strangers\".  If mynetworks is not specified (the default),\n# mynetworks_style is used to compute its value.\n#mynetworks_style = class\n#mynetworks_style = subnet\nmynetworks_style = host\n#\nmynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128\n\n# Uncomment the next line to generate \"delayed mail\" warnings\n#delay_warning_time = 4h\n\n# List of domains (maptype:mapname allowed) that this machine considers\n# itself the final destination for.\nmydestination = $myhostname, dns-debian13, localhost.localdomain, , localhost\n\n# Maximum size of a user mailbox\nmailbox_size_limit = 0\n\n# Optional external command to use instead of mailbox delivery.  If set,\n# you must set up an alias to forward root mail to a real user.\n#mailbox_command = /usr/bin/procmail\n#mailbox_command = /usr/bin/procmail -a \"$EXTENSION\"\nmailbox_command = \n\n# List of alias maps to use to lookup local addresses.\n# Per Debian Policy it should be /etc/aliases.\nalias_maps = hash:/etc/aliases\n\n# List of alias maps to make indexes on, when running newaliases.\nalias_database = hash:/etc/aliases\n\n# Notify (or not) local biff service when new mail arrives.\n# Rarely used these days.\nbiff = no\n\n# Separator between user name and address extension (user+foo@domain)\n#recipient_delimiter = +\nrecipient_delimiter = +\n\n# A host to send \"other\" mail to\n#relayhost = $mydomain\n#relayhost = [gateway.example.com]\n#relayhost = [ip.add.re.ss]:port\n#relayhost = uucphost\nrelayhost = \n\n# Where to look for Cyrus SASL configuration files.  Upstream default is unset\n# (use compiled-in SASL library default), Debian Policy says it should be\n# /etc/postfix/sasl.\ncyrus_sasl_config_path = /etc/postfix/sasl\n\n# SMTP server RSA key and certificate in PEM format\nsmtpd_tls_key_file = /etc/ssl/celikpanel/_mail/default-key.pem\nsmtpd_tls_cert_file = /etc/ssl/celikpanel/_mail/default-cert.pem\n# SMTP Server security level: none|may|encrypt\nsmtpd_tls_security_level = may\n\n# List of CAs for SMTP Client to trust\n# Prefer this over _CApath when smtp is running chrooted\nsmtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt\n# SMTP Client TLS security level: none|may|encrypt|...\nsmtp_tls_security_level = may\n# SMTP Client TLS session cache\nsmtp_tls_session_cache_database = btree:${data_directory}/smtp_scache\nsmtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination\nmyhostname = mail-debian13.upd1-infra.test\ninet_interfaces = all\nvirtual_mailbox_base = /var/mail/vhosts\nvirtual_mailbox_domains = hash:/etc/postfix/vmailbox_domains\nvirtual_mailbox_maps = hash:/etc/postfix/vmailbox\nvirtual_alias_maps = hash:/etc/postfix/virtual\nvirtual_transport = virtual\nvirtual_uid_maps = static:5000\nvirtual_gid_maps = static:5000\nvirtual_minimum_uid = 100\nsmtpd_milters = inet:localhost:11332\nnon_smtpd_milters = \nmilter_default_action = accept\nmilter_protocol = 6\nsmtpd_tls_protocols = >=TLSv1.2\nsmtp_tls_protocols = >=TLSv1.2\nsmtpd_tls_loglevel = 1\ntls_server_sni_maps = \n",
+    "type": "regular",
+    "uid": 0
+  },
+  "master_cf": {
+    "exists": true,
+    "gid": 989,
+    "group": "celikpanel",
+    "inode": 269851,
+    "mode": "0644",
+    "mtime_ns": 1791494649393202348,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/postfix/master.cf",
+    "sha256": "cfe125b8a778f45acdcaa044932b3b912dc59d955364d36a2f9b9830cc3e2671",
+    "size": 8351,
+    "type": "regular",
+    "uid": 0
+  },
+  "master_pid": 26752,
+  "mode": "read-postfix",
+  "owner_action": false,
+  "postconf_n": {
+    "argv": [
+      "postconf",
+      "-n"
+    ],
+    "at": "2026-10-08T21:26:45Z",
+    "returncode": 0,
+    "seconds": 0.006,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "alias_database = hash:/etc/aliases\nalias_maps = hash:/etc/aliases\nbiff = no\ncompatibility_level = 3.9\ncyrus_sasl_config_path = /etc/postfix/sasl\ninet_interfaces = all\ninet_protocols = all\nmailbox_command =\nmailbox_size_limit = 0\nmilter_default_action = accept\nmilter_protocol = 6\nmydestination = $myhostname, dns-debian13, localhost.localdomain, , localhost\nmyhostname = mail-debian13.upd1-infra.test\nmynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128\nmynetworks_style = host\nmyorigin = $myhostname\nnon_smtpd_milters =\nrecipient_delimiter = +\nrelayhost =\nsmtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt\nsmtp_tls_protocols = >=TLSv1.2\nsmtp_tls_security_level = may\nsmtp_tls_session_cache_database = btree:${data_directory}/smtp_scache\nsmtpd_banner = $myhostname ESMTP $mail_name (Debian)\nsmtpd_milters = inet:localhost:11332\nsmtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination\nsmtpd_tls_cert_file = /etc/ssl/celikpanel/_mail/default-cert.pem\nsmtpd_tls_key_file = /etc/ssl/celikpanel/_mail/default-key.pem\nsmtpd_tls_loglevel = 1\nsmtpd_tls_protocols = >=TLSv1.2\nsmtpd_tls_security_level = may\ntls_server_sni_maps =\nvirtual_alias_maps = hash:/etc/postfix/virtual\nvirtual_gid_maps = static:5000\nvirtual_mailbox_base = /var/mail/vhosts\nvirtual_mailbox_domains = hash:/etc/postfix/vmailbox_domains\nvirtual_mailbox_maps = hash:/etc/postfix/vmailbox\nvirtual_minimum_uid = 100\nvirtual_transport = virtual\nvirtual_uid_maps = static:5000\n"
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "unit_text": {
+    "postfix.service": "# /usr/lib/systemd/system/postfix.service\n[Unit]\nDescription=Postfix Mail Transport Agent (main/default instance)\nDocumentation=man:postfix(1)\nAfter=network.target nss-lookup.target\n# network-online.target is a semi-working work-around for specific\n# network_interfaces, https://bugs.debian.org/854475#126\n# Please add local override wanting network-online.target or\n# systemd-networkd-wait-online@INTERFACE:no-carrier.service\n#After=network-online.target\n#Wants=network-online.target\nConditionPathExists=/etc/postfix/main.cf\n# pre-3.9.1-7 multi-instance setup:\nConflicts=postfix@-.service\n\n[Service]\nType=forking\n# Force operations on single default instance, do not run postmulti wrapper\nEnvironment=MAIL_CONFIG=/etc/postfix\n# perform 2-stage startup\nExecStartPre=+postfix check\nExecStart=postfix debian-systemd-start\nExecStop=postfix stop\nExecReload=postfix reload\n\n# Postfix consists of multiple processes run by a master(8) orchestrator,\n# each of them having different requirements.  From the whole set, local(8)\n# (the Postfix local delivery agent) is the most demanding one, because it\n# runs things as user, and a user needs to be able to run suid/sgid programs\n# (if not only to be able to deliver mail to /var/spool/postfix/postdrop).\n# Individual Postfix daemons are started as root, optionally perform chroot\n# into the queue directory, and drop privileges voluntarily.\n\n# listen(2) on privileged ports (smtp)\nCapabilityBoundingSet=CAP_NET_BIND_SERVICE\n# chroot into queue dir\nCapabilityBoundingSet=CAP_SYS_CHROOT\n# drop root privs, run as user when delivering local mail\nCapabilityBoundingSet=CAP_SETGID CAP_SETUID\n# processes access protected files in non-root-owned dirs (acl root:rwx);\nCapabilityBoundingSet=CAP_DAC_OVERRIDE\n# https://bugs.debian.org/1099891 :\nCapabilityBoundingSet=CAP_DAC_READ_SEARCH\n# chown(2) is needed for procmail &Co to create /var/mail/$USER\nCapabilityBoundingSet=CAP_CHOWN\n\n# users might run suid/sgid programs from ~/.forward:\nRestrictSUIDSGID=no\n# for the same reason, NoNewPrivileges can not be set to yes\nNoNewPrivileges=no\n\n# if you don't use procmail for delivery to /var/mail/$USER,\n# CAP_CHOWN can be removed.\n# if you don't use local(8) at all, only doing local delivery over LMTP\n# or using virtual(8), you can also set\n#RestrictSUIDSGID=yes\n#NoNewPrivileges=yes\n# Also, CAP_DAC_OVERRIDE can be eliminated by adding root user to ACLs of\n# postfix-owned dirs in spool: public, private; and whatever maps in protected\n# subdirs you use, relying on cap_dac_override\n\nLockPersonality=yes\nMemoryDenyWriteExecute=yes\nProtectControlGroups=yes\nProtectClock=yes\nPrivateDevices=yes\nProtectHostname=yes\nProtectKernelLogs=yes\nProtectKernelModules=yes\nProtectKernelTunables=yes\n# ProtectProc is not usable with User=root:\n#ProtectProc=noaccess\nProcSubset=pid\n# ProtectSystem can be \"yes\" if rw maps are in /etc, or \"full\"\n# Alternative would be \"strict\" +ReadWritePaths=/var\nProtectSystem=full\n# Need to write to ~/Maildir/ etc:\nProtectHome=no\nRestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6\nRestrictNamespaces=yes\nRestrictRealtime=yes\n\nSystemCallFilter=@system-service @setuid chroot\n\n[Install]\nWantedBy=multi-user.target\n",
+    "postfix@-.service": "# /usr/lib/systemd/system/postfix@.service\n[Unit]\nDescription=Postfix Mail Transport Agent (instance %i, /etc/postfix-%I)\nDocumentation=man:postfix(1)\nAfter=network.target nss-lookup.target\n# network-online.target is a semi-working work-around for specific\n# network_interfaces, https://bugs.debian.org/854475#126\n# Please add local override wanting network-online.target or\n# systemd-networkd-wait-online@INTERFACE:no-carrier.service\n#After=network-online.target\n#Wants=network-online.target\nPartOf=postfix.service\nBefore=postfix.service\nReloadPropagatedFrom=postfix.service\nAssertPathExists=/etc/postfix-%I/main.cf\n\n[Service]\nType=forking\n# Force operations on single non-default instance\nEnvironment=MAIL_CONFIG=/etc/postfix-%I\n# perform 2-stage startup\nExecStartPre=+postfix check\nExecStart=postfix debian-systemd-start\nExecStop=postfix stop\nExecReload=postfix reload\n\n# Postfix consists of multiple processes run by a master(8) orchestrator,\n# each of them having different requirements.  From the whole set, local(8)\n# (the Postfix local delivery agent) is the most demanding one, because it\n# runs things as user, and a user needs to be able to run suid/sgid programs\n# (if not only to be able to deliver mail to /var/spool/postfix/postdrop).\n# Individual Postfix daemons are started as root, optionally perform chroot\n# into the queue directory, and drop privileges voluntarily.\n\n# listen(2) on privileged ports (smtp)\nCapabilityBoundingSet=CAP_NET_BIND_SERVICE\n# chroot into queue dir\nCapabilityBoundingSet=CAP_SYS_CHROOT\n# drop root privs, run as user when delivering local mail\nCapabilityBoundingSet=CAP_SETGID CAP_SETUID\n# processes access protected files in non-root-owned dirs (acl root:rwx);\nCapabilityBoundingSet=CAP_DAC_OVERRIDE\n# https://bugs.debian.org/1099891 :\nCapabilityBoundingSet=CAP_DAC_READ_SEARCH\n# chown(2) is needed for procmail &Co to create /var/mail/$USER\nCapabilityBoundingSet=CAP_CHOWN\n\n# users might run suid/sgid programs from ~/.forward:\nRestrictSUIDSGID=no\n# for the same reason, NoNewPrivileges can not be set to yes\nNoNewPrivileges=no\n\n# if you don't use procmail for delivery to /var/mail/$USER,\n# CAP_CHOWN can be removed.\n# if you don't use local(8) at all, only doing local delivery over LMTP\n# or using virtual(8), you can also set\n#RestrictSUIDSGID=yes\n#NoNewPrivileges=yes\n# Also, CAP_DAC_OVERRIDE can be eliminated by adding root user to ACLs of\n# postfix-owned dirs in spool: public, private; and whatever maps in protected\n# subdirs you use, relying on cap_dac_override\n\nLockPersonality=yes\nMemoryDenyWriteExecute=yes\nProtectControlGroups=yes\nProtectClock=yes\nPrivateDevices=yes\nProtectHostname=yes\nProtectKernelLogs=yes\nProtectKernelModules=yes\nProtectKernelTunables=yes\n# ProtectProc is not usable with User=root:\n#ProtectProc=noaccess\nProcSubset=pid\n# ProtectSystem can be \"yes\" if rw maps are in /etc, or \"full\"\n# Alternative would be \"strict\" +ReadWritePaths=/var\nProtectSystem=full\n# Need to write to ~/Maildir/ etc:\nProtectHome=no\nRestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6\nRestrictNamespaces=yes\nRestrictRealtime=yes\n\nSystemCallFilter=@system-service @setuid chroot\n\n[Install]\nWantedBy=multi-user.target\n"
+  },
+  "units": {
+    "postfix.service": {
+      "ActiveEnterTimestamp": "Thu 2026-10-08 21:24:10 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "Thu 2026-10-08 21:24:10 UTC",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "LoadState": "loaded",
+      "MainPID": "26752",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "running"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestamp": "",
+      "ActiveState": "inactive",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "dead"
+    }
+  },
+  "values": {
+    "anvil_rate_time_unit": {
+      "argv": [
+        "postconf",
+        "-h",
+        "anvil_rate_time_unit"
+      ],
+      "at": "2026-10-08T21:26:45Z",
+      "returncode": 0,
+      "seconds": 0.005,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "60s\n"
+    },
+    "message_size_limit": {
+      "argv": [
+        "postconf",
+        "-h",
+        "message_size_limit"
+      ],
+      "at": "2026-10-08T21:26:45Z",
+      "returncode": 0,
+      "seconds": 0.006,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "10240000\n"
+    },
+    "smtpd_client_message_rate_limit": {
+      "argv": [
+        "postconf",
+        "-h",
+        "smtpd_client_message_rate_limit"
+      ],
+      "at": "2026-10-08T21:26:45Z",
+      "returncode": 0,
+      "seconds": 0.005,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "0\n"
+    },
+    "smtpd_recipient_restrictions": {
+      "argv": [
+        "postconf",
+        "-h",
+        "smtpd_recipient_restrictions"
+      ],
+      "at": "2026-10-08T21:26:45Z",
+      "returncode": 0,
+      "seconds": 0.006,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "\n"
+    }
+  }
+}

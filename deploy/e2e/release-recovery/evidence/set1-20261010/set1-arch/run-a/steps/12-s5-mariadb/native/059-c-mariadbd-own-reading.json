@@ -1,0 +1,14 @@
+{
+  "at": "2026-10-08T21:58:12Z",
+  "mode": "read-mariadb-check",
+  "owner_action": false,
+  "path": "/etc/my.cnf",
+  "program": "/usr/sbin/mariadbd",
+  "resulting_variables": {
+    "max_connections": "10"
+  },
+  "returncode": 0,
+  "schema": "celikpanel/set1-native/v1",
+  "status": "ok",
+  "stderr": "2026-10-08 21:58:12 0 [Warning] Buffered warning: option 'max_connections': unsigned value 0 adjusted to 10\n"
+}

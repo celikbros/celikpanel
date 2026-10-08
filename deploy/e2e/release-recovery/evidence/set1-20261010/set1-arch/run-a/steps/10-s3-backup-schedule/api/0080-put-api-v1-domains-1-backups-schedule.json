@@ -1,0 +1,80 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S3 change retention to 14 with the current version",
+  "request": {
+    "body": {
+      "backup_type": "full",
+      "frequency": "weekly",
+      "retention": 14,
+      "version": "bs1-4f75b6db4a759e7a59f7dd36b346af84183b80ba887d440bf303357b5b217f89"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "PUT",
+    "path": "/api/v1/domains/1/backups/schedule"
+  },
+  "response": {
+    "elapsed_seconds": 0.04,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 08 Oct 2026 21:57:44 GMT"
+      ],
+      [
+        "Content-Length",
+        "98"
+      ]
+    ],
+    "json": {
+      "success": true,
+      "version": "bs1-db12901d6968df0617f8320a2c6507433bc7d4c4662b289d4d1b7ce616a48cce"
+    },
+    "status": 200,
+    "text": null
+  }
+}

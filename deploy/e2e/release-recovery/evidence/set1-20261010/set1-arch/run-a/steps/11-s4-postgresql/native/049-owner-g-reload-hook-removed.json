@@ -1,0 +1,25 @@
+{
+  "action": "owner-reload-hook",
+  "at": "2026-10-08T21:58:05Z",
+  "daemon_reload": {
+    "argv": [
+      "systemctl",
+      "daemon-reload"
+    ],
+    "at": "2026-10-08T21:58:05Z",
+    "returncode": 0,
+    "seconds": 0.254,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "exec_reload": "ExecReload={ path=/bin/kill ; argv[]=/bin/kill -HUP ${MAINPID} ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n",
+  "mode": "owner-reload-hook",
+  "owner_action": true,
+  "restored": {
+    "dropin": "/etc/systemd/system/postgresql.service.d/set1-owner-reload-hook.conf",
+    "made_directory": true,
+    "unit": "postgresql.service"
+  },
+  "schema": "celikpanel/set1-native/v1"
+}

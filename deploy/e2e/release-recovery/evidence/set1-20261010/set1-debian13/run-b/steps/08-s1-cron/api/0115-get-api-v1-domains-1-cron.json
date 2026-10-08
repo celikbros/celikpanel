@@ -1,0 +1,68 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S1f list under the owner's cron-allow",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/1/cron"
+  },
+  "response": {
+    "elapsed_seconds": 0.006,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 08 Oct 2026 22:08:16 GMT"
+      ],
+      [
+        "Content-Length",
+        "303"
+      ]
+    ],
+    "json": {
+      "code": "CURRENT_SETTINGS_UNREADABLE",
+      "error": "CelikPanel could not read what is currently set on this server, so nothing was changed. Reload the page to read it again. If it keeps failing, the server owner checks that the service behind this page is running, then reloads.",
+      "reason": "scheduled_tasks"
+    },
+    "status": 502,
+    "text": null
+  }
+}

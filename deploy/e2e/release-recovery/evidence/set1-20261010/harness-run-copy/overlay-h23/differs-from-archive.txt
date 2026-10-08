@@ -1,0 +1,2 @@
+differs:       1 < ./deploy/e2e/release-recovery/build-upd1-artifacts.sh
+differs:       1 > ./deploy/e2e/release-recovery/build-upd1-artifacts.sh

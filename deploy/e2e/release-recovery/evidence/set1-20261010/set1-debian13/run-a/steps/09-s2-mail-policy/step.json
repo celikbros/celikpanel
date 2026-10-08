@@ -1,0 +1,27 @@
+{
+  "checks": {
+    "checks": 25,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-08T21:27:16Z",
+    "notes": [
+      "the owner's one-restriction-per-line layout in main.cf was rewritten as a single line by the save (`postconf -e`); the elements and their order are the owner's"
+    ],
+    "started_at": "2026-10-08T21:26:45Z",
+    "substeps": {
+      "a": "passed",
+      "b": "passed",
+      "c": "passed",
+      "d": "passed",
+      "e": "passed",
+      "f": "passed"
+    },
+    "title": "server mail policy: the owner's main.cf",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-08T21:27:16Z",
+  "name": "S2-mail-policy",
+  "started_at": "2026-10-08T21:26:45Z",
+  "verdict": "passed"
+}

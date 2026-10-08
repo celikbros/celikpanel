@@ -1,0 +1,24 @@
+2026-10-08T22:09:57Z
+3.1G	/var/tmp/cp-set1-run
+922M	/var/tmp/cp-release-drill-set1-arch-a
+923M	/var/tmp/cp-release-drill-set1-d13-a
+923M	/var/tmp/cp-release-drill-set1-d13-b
+663M	/var/tmp/cp-release-drill-set1-ub-a
+726M	/var/tmp/cp-upd1-build/20261008t205628z
+873M	/var/tmp/cp-upd1-build/20261008t210046z
+841M	/var/tmp/cp-pair-accept/dist/2e5c2dafbef07e01b59bb30fab058569f9434ba9-acceptance-license
+841M	/var/tmp/cp-pair-accept/dist/645b3046f1dec21f5a610ebca287a3139c41434f-acceptance-license
+841M	/var/tmp/cp-pair-accept/dist/8c412247d3766ad2cd8bd086c0154dedf42eea87-acceptance-license
+841M	/var/tmp/cp-pair-accept/dist/b0f3260f3f44b6fb267e466da5300b600ec397c8-acceptance-license
+841M	/var/tmp/cp-pair-accept/dist/c3d4dd37696ca6145a8a624279f5c3b7f7f2a8a2-acceptance-license
+overlay disks still present in set1 labs:
+none
+no dry-run lab
+/tmp/set1-dry-set1-arch.err
+/tmp/set1-dry-set1-arch.json
+/tmp/set1-dry-set1-debian13.err
+/tmp/set1-dry-set1-debian13.json
+/tmp/set1-dry-set1-ubuntu.err
+/tmp/set1-dry-set1-ubuntu.json
+git local config key list fingerprint: b6f8491de6f4969250c85cd1d20d8607  -
+HEAD c4cf7fd9d49677b16a60bd05bbe90f08be73cde6

@@ -1,0 +1,311 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "645b3046f1dec21f5a610ebca287a3139c41434f",
+      "sha256": "6ea60ca5da594aa0507ee9d258a18b4af6ee82195e3017ff6534e724c518b043",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "cell": {
+    "components": [
+      "nginx",
+      "php-fpm",
+      "mariadb",
+      "postgresql"
+    ],
+    "mail": false,
+    "name": "set1-arch",
+    "node": "arch",
+    "purpose": "web"
+  },
+  "cell_kind": "settings-writes",
+  "findings": [
+    "arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-verify']"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__819c444c4512b12f",
+    "node": "arch",
+    "vm_uuid": "fb3592bb-ba57-5fb9-a702-5db58b1750d7"
+  },
+  "native_evidence": false,
+  "note": "set1 settings-writes: observations for the owner's review; no update is started and no P0 row is judged.",
+  "outcome": {
+    "classification": "settings-writes-measured",
+    "final_status": null
+  },
+  "overall": "failed",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "sections": {
+    "S1-cron": {
+      "checks": 30,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-08T21:57:42Z",
+      "notes": [
+        "cron-allow does not keep root's `crontab -u <user> -l` failing on this platform (native answers: crontab, then crontab); the list answered HTTP 200"
+      ],
+      "started_at": "2026-10-08T21:57:34Z",
+      "substeps": {
+        "a": "passed",
+        "b": "passed",
+        "c": "passed",
+        "d": "passed",
+        "e": "passed",
+        "f": "passed"
+      },
+      "title": "scheduled tasks: the owner's crontab",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "S2-mail-policy": {
+      "reason": "mail is not supported on this platform",
+      "title": "server mail policy: the owner's main.cf",
+      "verdict": "not-run"
+    },
+    "S3-backup-schedule": {
+      "checks": 10,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-08T21:57:44Z",
+      "notes": [
+        "only 0 scheduled copies exist, so no copy would be pruned; the prune itself was not exercised"
+      ],
+      "started_at": "2026-10-08T21:57:42Z",
+      "substeps": {
+        "section": "passed"
+      },
+      "title": "automatic backup schedule",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "S4-postgresql": {
+      "checks": 34,
+      "error": null,
+      "failed": [
+        "g: an answer that says the previous file could not be put back with certainty matches the server (it does not when the previous file is in place and the named copy is that same file)"
+      ],
+      "finished_at": "2026-10-08T21:58:06Z",
+      "notes": [],
+      "started_at": "2026-10-08T21:57:44Z",
+      "substeps": {
+        "a": "passed",
+        "b": "passed",
+        "c": "passed",
+        "d": "passed",
+        "e": "passed",
+        "f": "passed",
+        "g": "failed"
+      },
+      "title": "postgresql.conf and pg_hba.conf",
+      "unknown": [],
+      "verdict": "failed"
+    },
+    "S5-mariadb": {
+      "checks": 20,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-08T21:58:17Z",
+      "notes": [
+        "`max_connections = plenty` was accepted and written: the Panel answered what MariaDB's own program said about the file; MariaDB's reading of it is recorded"
+      ],
+      "started_at": "2026-10-08T21:58:06Z",
+      "substeps": {
+        "a": "passed",
+        "b": "passed",
+        "c": "passed",
+        "d": "passed",
+        "e": "passed",
+        "end": "passed"
+      },
+      "title": "the MariaDB option file",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "S6-catchall-queue": {
+      "reason": "mail is not supported on this platform",
+      "title": "catch-all and mail queue",
+      "verdict": "not-run"
+    },
+    "S7-file-metadata": {
+      "checks": 6,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-08T21:58:18Z",
+      "notes": [],
+      "started_at": "2026-10-08T21:58:17Z",
+      "substeps": {
+        "/etc/my.cnf": "passed",
+        "/var/lib/postgres/data/pg_hba.conf": "passed",
+        "/var/lib/postgres/data/postgresql.conf": "passed"
+      },
+      "title": "owner, group and mode of the files the Panel wrote",
+      "unknown": [],
+      "verdict": "passed"
+    }
+  },
+  "setup": {
+    "components": [
+      "mariadb",
+      "nginx",
+      "php-fpm",
+      "postgresql"
+    ],
+    "purpose": "web",
+    "waiting": {
+      "code": "server_setup_access_dns_required",
+      "mail_steps_reached": true,
+      "not_run": [
+        "10-panel_certificate",
+        "11-verify"
+      ],
+      "phase": "access_dns",
+      "polls": 25,
+      "stable_wait_seconds": 123.4,
+      "steps": {
+        "01-dns": "succeeded",
+        "02-service": "succeeded",
+        "03-service": "succeeded",
+        "04-service": "succeeded",
+        "05-service": "succeeded",
+        "06-service": "succeeded",
+        "07-service": "succeeded",
+        "08-firewall": "succeeded",
+        "09-access_dns": "running",
+        "10-panel_certificate": "pending",
+        "11-verify": "pending"
+      }
+    }
+  },
+  "site": {
+    "config_files": {
+      "listed": {
+        "mariadb": [
+          "/etc/my.cnf"
+        ],
+        "postgresql": [
+          "/var/lib/postgres/data/postgresql.conf",
+          "/var/lib/postgres/data/pg_hba.conf"
+        ]
+      },
+      "mariadb_conf": "/etc/my.cnf",
+      "pg_conf": "/var/lib/postgres/data/postgresql.conf",
+      "pg_hba": "/var/lib/postgres/data/pg_hba.conf"
+    },
+    "domain_id": 1,
+    "mailbox": null,
+    "site_user": "set1_owner_test"
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-08T21:50:51Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-08T21:50:46Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T21:51:01Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-08T21:50:51Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T21:54:00Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-08T21:51:01Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T21:54:01Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-08T21:54:00Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T21:54:01Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-08T21:54:01Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T21:57:30Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-08T21:54:01Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-08T21:57:34Z",
+      "name": "site",
+      "reason": null,
+      "started_at": "2026-10-08T21:57:30Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T21:57:42Z",
+      "name": "S1-cron",
+      "reason": null,
+      "started_at": "2026-10-08T21:57:34Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T21:57:42Z",
+      "name": "S2-mail-policy",
+      "reason": null,
+      "started_at": "2026-10-08T21:57:42Z",
+      "verdict": "skipped"
+    },
+    {
+      "finished_at": "2026-10-08T21:57:44Z",
+      "name": "S3-backup-schedule",
+      "reason": null,
+      "started_at": "2026-10-08T21:57:42Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T21:58:06Z",
+      "name": "S4-postgresql",
+      "reason": "g: an answer that says the previous file could not be put back with certainty matches the server (it does not when the previous file is in place and the named copy is that same file)",
+      "started_at": "2026-10-08T21:57:44Z",
+      "verdict": "failed"
+    },
+    {
+      "finished_at": "2026-10-08T21:58:17Z",
+      "name": "S5-mariadb",
+      "reason": null,
+      "started_at": "2026-10-08T21:58:06Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T21:58:17Z",
+      "name": "S6-catchall-queue",
+      "reason": null,
+      "started_at": "2026-10-08T21:58:17Z",
+      "verdict": "skipped"
+    },
+    {
+      "finished_at": "2026-10-08T21:58:18Z",
+      "name": "S7-file-metadata",
+      "reason": null,
+      "started_at": "2026-10-08T21:58:17Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T21:58:20Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-08T21:58:18Z",
+      "verdict": "passed"
+    }
+  ]
+}

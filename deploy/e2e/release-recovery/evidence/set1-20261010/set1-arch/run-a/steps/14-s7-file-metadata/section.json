@@ -1,0 +1,311 @@
+{
+  "calls": [],
+  "checks": [
+    {
+      "detail": {
+        "after": {
+          "gid": 967,
+          "group": "postgres",
+          "inode": 88881,
+          "mode": "0600",
+          "owner": "postgres",
+          "uid": 967
+        },
+        "backups": [
+          {
+            "group": "postgres",
+            "mode": "0600",
+            "owner": "postgres",
+            "path": "/var/lib/postgres/data/postgresql.conf.celikpanel-backup-20261008T215747Z"
+          },
+          {
+            "group": "postgres",
+            "mode": "0600",
+            "owner": "postgres",
+            "path": "/var/lib/postgres/data/postgresql.conf.celikpanel-backup-20261008T215803Z"
+          }
+        ],
+        "before": {
+          "gid": 967,
+          "group": "postgres",
+          "inode": 85975,
+          "mode": "0600",
+          "owner": "postgres",
+          "uid": 967
+        },
+        "content_or_inode_changed": true,
+        "equal": true
+      },
+      "name": "/var/lib/postgres/data/postgresql.conf: owner, group and mode are what they were before the sections",
+      "ok": true
+    },
+    {
+      "detail": [
+        {
+          "group": "postgres",
+          "mode": "0600",
+          "owner": "postgres",
+          "path": "/var/lib/postgres/data/postgresql.conf.celikpanel-backup-20261008T215747Z"
+        },
+        {
+          "group": "postgres",
+          "mode": "0600",
+          "owner": "postgres",
+          "path": "/var/lib/postgres/data/postgresql.conf.celikpanel-backup-20261008T215803Z"
+        }
+      ],
+      "name": "/var/lib/postgres/data/postgresql.conf: every kept backup has the file's owner, group and mode",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "gid": 967,
+          "group": "postgres",
+          "inode": 88864,
+          "mode": "0600",
+          "owner": "postgres",
+          "uid": 967
+        },
+        "backups": [
+          {
+            "group": "postgres",
+            "mode": "0600",
+            "owner": "postgres",
+            "path": "/var/lib/postgres/data/pg_hba.conf.celikpanel-backup-20261008T215754Z"
+          }
+        ],
+        "before": {
+          "gid": 967,
+          "group": "postgres",
+          "inode": 85979,
+          "mode": "0600",
+          "owner": "postgres",
+          "uid": 967
+        },
+        "content_or_inode_changed": true,
+        "equal": true
+      },
+      "name": "/var/lib/postgres/data/pg_hba.conf: owner, group and mode are what they were before the sections",
+      "ok": true
+    },
+    {
+      "detail": [
+        {
+          "group": "postgres",
+          "mode": "0600",
+          "owner": "postgres",
+          "path": "/var/lib/postgres/data/pg_hba.conf.celikpanel-backup-20261008T215754Z"
+        }
+      ],
+      "name": "/var/lib/postgres/data/pg_hba.conf: every kept backup has the file's owner, group and mode",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "gid": 0,
+          "group": "root",
+          "inode": 88907,
+          "mode": "0644",
+          "owner": "root",
+          "uid": 0
+        },
+        "backups": [
+          {
+            "group": "root",
+            "mode": "0644",
+            "owner": "root",
+            "path": "/etc/my.cnf.celikpanel-backup-20261008T215808Z"
+          },
+          {
+            "group": "root",
+            "mode": "0644",
+            "owner": "root",
+            "path": "/etc/my.cnf.celikpanel-backup-20261008T215812Z"
+          },
+          {
+            "group": "root",
+            "mode": "0644",
+            "owner": "root",
+            "path": "/etc/my.cnf.celikpanel-backup-20261008T215813Z"
+          }
+        ],
+        "before": {
+          "gid": 0,
+          "group": "root",
+          "inode": 80986,
+          "mode": "0644",
+          "owner": "root",
+          "uid": 0
+        },
+        "content_or_inode_changed": true,
+        "equal": true
+      },
+      "name": "/etc/my.cnf: owner, group and mode are what they were before the sections",
+      "ok": true
+    },
+    {
+      "detail": [
+        {
+          "group": "root",
+          "mode": "0644",
+          "owner": "root",
+          "path": "/etc/my.cnf.celikpanel-backup-20261008T215808Z"
+        },
+        {
+          "group": "root",
+          "mode": "0644",
+          "owner": "root",
+          "path": "/etc/my.cnf.celikpanel-backup-20261008T215812Z"
+        },
+        {
+          "group": "root",
+          "mode": "0644",
+          "owner": "root",
+          "path": "/etc/my.cnf.celikpanel-backup-20261008T215813Z"
+        }
+      ],
+      "name": "/etc/my.cnf: every kept backup has the file's owner, group and mode",
+      "ok": true
+    }
+  ],
+  "files": {
+    "/etc/my.cnf": {
+      "after": {
+        "gid": 0,
+        "group": "root",
+        "inode": 88907,
+        "mode": "0644",
+        "owner": "root",
+        "uid": 0
+      },
+      "backups": [
+        {
+          "group": "root",
+          "mode": "0644",
+          "owner": "root",
+          "path": "/etc/my.cnf.celikpanel-backup-20261008T215808Z"
+        },
+        {
+          "group": "root",
+          "mode": "0644",
+          "owner": "root",
+          "path": "/etc/my.cnf.celikpanel-backup-20261008T215812Z"
+        },
+        {
+          "group": "root",
+          "mode": "0644",
+          "owner": "root",
+          "path": "/etc/my.cnf.celikpanel-backup-20261008T215813Z"
+        }
+      ],
+      "before": {
+        "gid": 0,
+        "group": "root",
+        "inode": 80986,
+        "mode": "0644",
+        "owner": "root",
+        "uid": 0
+      },
+      "content_or_inode_changed": true,
+      "equal": true
+    },
+    "/var/lib/postgres/data/pg_hba.conf": {
+      "after": {
+        "gid": 967,
+        "group": "postgres",
+        "inode": 88864,
+        "mode": "0600",
+        "owner": "postgres",
+        "uid": 967
+      },
+      "backups": [
+        {
+          "group": "postgres",
+          "mode": "0600",
+          "owner": "postgres",
+          "path": "/var/lib/postgres/data/pg_hba.conf.celikpanel-backup-20261008T215754Z"
+        }
+      ],
+      "before": {
+        "gid": 967,
+        "group": "postgres",
+        "inode": 85979,
+        "mode": "0600",
+        "owner": "postgres",
+        "uid": 967
+      },
+      "content_or_inode_changed": true,
+      "equal": true
+    },
+    "/var/lib/postgres/data/postgresql.conf": {
+      "after": {
+        "gid": 967,
+        "group": "postgres",
+        "inode": 88881,
+        "mode": "0600",
+        "owner": "postgres",
+        "uid": 967
+      },
+      "backups": [
+        {
+          "group": "postgres",
+          "mode": "0600",
+          "owner": "postgres",
+          "path": "/var/lib/postgres/data/postgresql.conf.celikpanel-backup-20261008T215747Z"
+        },
+        {
+          "group": "postgres",
+          "mode": "0600",
+          "owner": "postgres",
+          "path": "/var/lib/postgres/data/postgresql.conf.celikpanel-backup-20261008T215803Z"
+        }
+      ],
+      "before": {
+        "gid": 967,
+        "group": "postgres",
+        "inode": 85975,
+        "mode": "0600",
+        "owner": "postgres",
+        "uid": 967
+      },
+      "content_or_inode_changed": true,
+      "equal": true
+    }
+  },
+  "finished_at": "2026-10-08T21:58:18Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/067-meta-after-var_lib_postgres_data_postgresql.conf.json",
+      "label": "meta-after-var_lib_postgres_data_postgresql.conf",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/068-meta-after-var_lib_postgres_data_pg_hba.conf.json",
+      "label": "meta-after-var_lib_postgres_data_pg_hba.conf",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/069-meta-after-etc_my.cnf.json",
+      "label": "meta-after-etc_my.cnf",
+      "mode": "read-file",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [],
+  "owner_actions": [],
+  "section": "S7-file-metadata",
+  "started_at": "2026-10-08T21:58:17Z",
+  "substeps": {
+    "/etc/my.cnf": "passed",
+    "/var/lib/postgres/data/pg_hba.conf": "passed",
+    "/var/lib/postgres/data/postgresql.conf": "passed"
+  },
+  "title": "owner, group and mode of the files the Panel wrote",
+  "verdict": "passed"
+}

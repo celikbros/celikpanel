@@ -1,0 +1,142 @@
+{
+  "check": {
+    "argv": [
+      "postfix",
+      "check"
+    ],
+    "at": "2026-10-08T22:08:36Z",
+    "returncode": 0,
+    "seconds": 0.3,
+    "status": "ok",
+    "stderr": "postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf\n",
+    "stdout": ""
+  },
+  "mail_version": "3.10.13",
+  "main_cf": {
+    "exists": true,
+    "gid": 989,
+    "group": "celikpanel",
+    "inode": 271033,
+    "mode": "0644",
+    "mtime_ns": 1791497314244763143,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/postfix/main.cf",
+    "sha256": "48bcddc31533692428f285953ebde5a5f693513a2e507d4da51b2b25f91e2837",
+    "size": 4042,
+    "text": "# See /usr/share/postfix/main.cf.dist for a commented, more complete version\n\n# See http://www.postfix.org/COMPATIBILITY_README.html\ncompatibility_level = 3.9\n\n# Which domain that locally-originated mail appears to come from.\n# Debian policy suggests to read this value from /etc/mailname.\n#XX needs a review in postinst&config\n#myorigin = /etc/mailname\n#myorigin = $mydomain\nmyorigin = $myhostname\n\n# Text that follows the 220 code in the SMTP server's greeting banner.\n# You MUST specify $myhostname at the start due to an RFC requirement.\nsmtpd_banner = $myhostname ESMTP $mail_name (Debian)\n\n# IP protocols to use: ipv4, ipv6, or all\n# (set this explicitly so `post-install upgrade-configuration' wont complain)\ninet_protocols = all\n\n# List of \"trusted\" SMTP clients (maptype:mapname allowed) that have more\n# privileges than \"strangers\".  If mynetworks is not specified (the default),\n# mynetworks_style is used to compute its value.\n#mynetworks_style = class\n#mynetworks_style = subnet\nmynetworks_style = host\n#\nmynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128\n\n# Uncomment the next line to generate \"delayed mail\" warnings\n#delay_warning_time = 4h\n\n# List of domains (maptype:mapname allowed) that this machine considers\n# itself the final destination for.\nmydestination = $myhostname, dns-debian13, localhost.localdomain, , localhost\n\n# Maximum size of a user mailbox\nmailbox_size_limit = 0\n\n# Optional external command to use instead of mailbox delivery.  If set,\n# you must set up an alias to forward root mail to a real user.\n#mailbox_command = /usr/bin/procmail\n#mailbox_command = /usr/bin/procmail -a \"$EXTENSION\"\nmailbox_command = \n\n# List of alias maps to use to lookup local addresses.\n# Per Debian Policy it should be /etc/aliases.\nalias_maps = hash:/etc/aliases\n\n# List of alias maps to make indexes on, when running newaliases.\nalias_database = hash:/etc/aliases\n\n# Notify (or not) local biff service when new mail arrives.\n# Rarely used these days.\nbiff = no\n\n# Separator between user name and address extension (user+foo@domain)\n#recipient_delimiter = +\nrecipient_delimiter = +\n\n# A host to send \"other\" mail to\n#relayhost = $mydomain\n#relayhost = [gateway.example.com]\n#relayhost = [ip.add.re.ss]:port\n#relayhost = uucphost\nrelayhost = \n\n# Where to look for Cyrus SASL configuration files.  Upstream default is unset\n# (use compiled-in SASL library default), Debian Policy says it should be\n# /etc/postfix/sasl.\ncyrus_sasl_config_path = /etc/postfix/sasl\n\n# SMTP server RSA key and certificate in PEM format\nsmtpd_tls_key_file = /etc/ssl/celikpanel/_mail/default-key.pem\nsmtpd_tls_cert_file = /etc/ssl/celikpanel/_mail/default-cert.pem\n# SMTP Server security level: none|may|encrypt\nsmtpd_tls_security_level = may\n\n# List of CAs for SMTP Client to trust\n# Prefer this over _CApath when smtp is running chrooted\nsmtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt\n# SMTP Client TLS security level: none|may|encrypt|...\nsmtp_tls_security_level = may\n# SMTP Client TLS session cache\nsmtp_tls_session_cache_database = btree:${data_directory}/smtp_scache\nsmtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination\nmyhostname = mail-debian13.upd1-infra.test\ninet_interfaces = all\nvirtual_mailbox_base = /var/mail/vhosts\nvirtual_mailbox_domains = hash:/etc/postfix/vmailbox_domains\nvirtual_mailbox_maps = hash:/etc/postfix/vmailbox\nvirtual_alias_maps = hash:/etc/postfix/virtual\nvirtual_transport = virtual\nvirtual_uid_maps = static:5000\nvirtual_gid_maps = static:5000\nvirtual_minimum_uid = 100\nsmtpd_milters = inet:localhost:11332\nnon_smtpd_milters = \nmilter_default_action = accept\nmilter_protocol = 6\nsmtpd_tls_protocols = >=TLSv1.2\nsmtp_tls_protocols = >=TLSv1.2\nsmtpd_tls_loglevel = 1\ntls_server_sni_maps = \nsmtpd_recipient_restrictions =\n    permit_mynetworks,\n    permit_sasl_authenticated,\n    reject_unauth_destination,\n    reject_unknown_sender_domain,\n    check_policy_service unix:private/policyd-spf\nsmtpd_client_message_rate_limit = 45\nmessage_size_limit = 31457280\n",
+    "type": "regular",
+    "uid": 0
+  },
+  "master_cf": {
+    "exists": true,
+    "gid": 989,
+    "group": "celikpanel",
+    "inode": 269824,
+    "mode": "0644",
+    "mtime_ns": 1791497132864801766,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/postfix/master.cf",
+    "sha256": "cfe125b8a778f45acdcaa044932b3b912dc59d955364d36a2f9b9830cc3e2671",
+    "size": 8351,
+    "type": "regular",
+    "uid": 0
+  },
+  "master_pid": 27022,
+  "mode": "read-postfix",
+  "owner_action": false,
+  "postconf_n": {
+    "argv": [
+      "postconf",
+      "-n"
+    ],
+    "at": "2026-10-08T22:08:36Z",
+    "returncode": 0,
+    "seconds": 0.006,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "alias_database = hash:/etc/aliases\nalias_maps = hash:/etc/aliases\nbiff = no\ncompatibility_level = 3.9\ncyrus_sasl_config_path = /etc/postfix/sasl\ninet_interfaces = all\ninet_protocols = all\nmailbox_command =\nmailbox_size_limit = 0\nmessage_size_limit = 31457280\nmilter_default_action = accept\nmilter_protocol = 6\nmydestination = $myhostname, dns-debian13, localhost.localdomain, , localhost\nmyhostname = mail-debian13.upd1-infra.test\nmynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128\nmynetworks_style = host\nmyorigin = $myhostname\nnon_smtpd_milters =\nrecipient_delimiter = +\nrelayhost =\nsmtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt\nsmtp_tls_protocols = >=TLSv1.2\nsmtp_tls_security_level = may\nsmtp_tls_session_cache_database = btree:${data_directory}/smtp_scache\nsmtpd_banner = $myhostname ESMTP $mail_name (Debian)\nsmtpd_client_message_rate_limit = 45\nsmtpd_milters = inet:localhost:11332\nsmtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf\nsmtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination\nsmtpd_tls_cert_file = /etc/ssl/celikpanel/_mail/default-cert.pem\nsmtpd_tls_key_file = /etc/ssl/celikpanel/_mail/default-key.pem\nsmtpd_tls_loglevel = 1\nsmtpd_tls_protocols = >=TLSv1.2\nsmtpd_tls_security_level = may\ntls_server_sni_maps =\nvirtual_alias_maps = hash:/etc/postfix/virtual\nvirtual_gid_maps = static:5000\nvirtual_mailbox_base = /var/mail/vhosts\nvirtual_mailbox_domains = hash:/etc/postfix/vmailbox_domains\nvirtual_mailbox_maps = hash:/etc/postfix/vmailbox\nvirtual_minimum_uid = 100\nvirtual_transport = virtual\nvirtual_uid_maps = static:5000\n"
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "postfix.service": {
+      "ActiveEnterTimestamp": "Thu 2026-10-08 22:05:33 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "Thu 2026-10-08 22:05:33 UTC",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "LoadState": "loaded",
+      "MainPID": "27022",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "running"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestamp": "",
+      "ActiveState": "inactive",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "dead"
+    }
+  },
+  "values": {
+    "anvil_rate_time_unit": {
+      "argv": [
+        "postconf",
+        "-h",
+        "anvil_rate_time_unit"
+      ],
+      "at": "2026-10-08T22:08:36Z",
+      "returncode": 0,
+      "seconds": 0.006,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "60s\n"
+    },
+    "message_size_limit": {
+      "argv": [
+        "postconf",
+        "-h",
+        "message_size_limit"
+      ],
+      "at": "2026-10-08T22:08:36Z",
+      "returncode": 0,
+      "seconds": 0.007,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "31457280\n"
+    },
+    "smtpd_client_message_rate_limit": {
+      "argv": [
+        "postconf",
+        "-h",
+        "smtpd_client_message_rate_limit"
+      ],
+      "at": "2026-10-08T22:08:36Z",
+      "returncode": 0,
+      "seconds": 0.006,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "45\n"
+    },
+    "smtpd_recipient_restrictions": {
+      "argv": [
+        "postconf",
+        "-h",
+        "smtpd_recipient_restrictions"
+      ],
+      "at": "2026-10-08T22:08:36Z",
+      "returncode": 0,
+      "seconds": 0.006,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf\n"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+differs:       1 < ./deploy/e2e/release-recovery/build-upd1-artifacts.sh
+differs:       1 > ./deploy/e2e/release-recovery/build-upd1-artifacts.sh
+differs:       1 > ./deploy/e2e/release-recovery/guest_settings_native.py
+differs:       1 > ./deploy/e2e/release-recovery/run-set1.sh
+differs:       1 > ./deploy/e2e/release-recovery/settings_writes_trial.py
+differs:       1 > ./deploy/e2e/release-recovery/test_settings_writes_trial.py

@@ -1,0 +1,142 @@
+{
+  "check": {
+    "argv": [
+      "postfix",
+      "check"
+    ],
+    "at": "2026-10-08T21:47:32Z",
+    "returncode": 0,
+    "seconds": 0.914,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "mail_version": "3.8.6",
+  "main_cf": {
+    "exists": true,
+    "gid": 988,
+    "group": "celikpanel",
+    "inode": 532336,
+    "mode": "0644",
+    "mtime_ns": 1791496048549975053,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/postfix/main.cf",
+    "sha256": "c780649194d5efa768b6ab496b868a1bb9b039f879a47b370c8fc77d2cbb743a",
+    "size": 2109,
+    "text": "# See /usr/share/postfix/main.cf.dist for a commented, more complete version\n\n\n# Debian specific:  Specifying a file name will cause the first\n# line of that file to be used as the name.  The Debian default\n# is /etc/mailname.\n#myorigin = /etc/mailname\n\nsmtpd_banner = $myhostname ESMTP $mail_name (Ubuntu)\nbiff = no\n\n# appending .domain is the MUA's job.\nappend_dot_mydomain = no\n\n# Uncomment the next line to generate \"delayed mail\" warnings\n#delay_warning_time = 4h\n\nreadme_directory = no\n\n# See http://www.postfix.org/COMPATIBILITY_README.html -- default to 3.6 on\n# fresh installs.\ncompatibility_level = 3.6\n\n\n\n# TLS parameters\nsmtpd_tls_cert_file = /etc/ssl/celikpanel/_mail/default-cert.pem\nsmtpd_tls_key_file = /etc/ssl/celikpanel/_mail/default-key.pem\nsmtpd_tls_security_level = may\n\nsmtp_tls_CApath=/etc/ssl/certs\nsmtp_tls_security_level = may\nsmtp_tls_session_cache_database = btree:${data_directory}/smtp_scache\n\n\nsmtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination\nmyhostname = mail-ubuntu.upd1-infra.test\nalias_maps = hash:/etc/aliases\nalias_database = hash:/etc/aliases\nmydestination = $myhostname, dns-ubuntu, localhost.localdomain, , localhost\nrelayhost = \nmynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128\nmailbox_size_limit = 0\nrecipient_delimiter = +\ninet_interfaces = all\ninet_protocols = all\nvirtual_mailbox_base = /var/mail/vhosts\nvirtual_mailbox_domains = hash:/etc/postfix/vmailbox_domains\nvirtual_mailbox_maps = hash:/etc/postfix/vmailbox\nvirtual_alias_maps = hash:/etc/postfix/virtual\nvirtual_transport = virtual\nvirtual_uid_maps = static:5000\nvirtual_gid_maps = static:5000\nvirtual_minimum_uid = 100\nsmtpd_milters = inet:localhost:11332\nnon_smtpd_milters = \nmilter_default_action = accept\nmilter_protocol = 6\nsmtpd_tls_protocols = >=TLSv1.2\nsmtp_tls_protocols = >=TLSv1.2\nsmtpd_tls_loglevel = 1\ntls_server_sni_maps = \nset1_owner_checks = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination\nsmtpd_recipient_restrictions = ${set1_owner_checks}, reject_unknown_sender_domain\nsmtpd_client_message_rate_limit = 30\n",
+    "type": "regular",
+    "uid": 0
+  },
+  "master_cf": {
+    "exists": true,
+    "gid": 988,
+    "group": "celikpanel",
+    "inode": 528002,
+    "mode": "0644",
+    "mtime_ns": 1791495699623411143,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/postfix/master.cf",
+    "sha256": "f5ad69a0abfd22c0fc6032c6292b5c8843dd14230edd126a9d7939f4578e35ad",
+    "size": 8064,
+    "type": "regular",
+    "uid": 0
+  },
+  "master_pid": 36110,
+  "mode": "read-postfix",
+  "owner_action": false,
+  "postconf_n": {
+    "argv": [
+      "postconf",
+      "-n"
+    ],
+    "at": "2026-10-08T21:47:31Z",
+    "returncode": 0,
+    "seconds": 0.025,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "alias_database = hash:/etc/aliases\nalias_maps = hash:/etc/aliases\nappend_dot_mydomain = no\nbiff = no\ncompatibility_level = 3.6\ninet_interfaces = all\ninet_protocols = all\nmailbox_size_limit = 0\nmilter_default_action = accept\nmilter_protocol = 6\nmydestination = $myhostname, dns-ubuntu, localhost.localdomain, , localhost\nmyhostname = mail-ubuntu.upd1-infra.test\nmynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128\nnon_smtpd_milters =\nreadme_directory = no\nrecipient_delimiter = +\nrelayhost =\nset1_owner_checks = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination\nsmtp_tls_CApath = /etc/ssl/certs\nsmtp_tls_protocols = >=TLSv1.2\nsmtp_tls_security_level = may\nsmtp_tls_session_cache_database = btree:${data_directory}/smtp_scache\nsmtpd_banner = $myhostname ESMTP $mail_name (Ubuntu)\nsmtpd_client_message_rate_limit = 30\nsmtpd_milters = inet:localhost:11332\nsmtpd_recipient_restrictions = ${set1_owner_checks}, reject_unknown_sender_domain\nsmtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination\nsmtpd_tls_cert_file = /etc/ssl/celikpanel/_mail/default-cert.pem\nsmtpd_tls_key_file = /etc/ssl/celikpanel/_mail/default-key.pem\nsmtpd_tls_loglevel = 1\nsmtpd_tls_protocols = >=TLSv1.2\nsmtpd_tls_security_level = may\ntls_server_sni_maps =\nvirtual_alias_maps = hash:/etc/postfix/virtual\nvirtual_gid_maps = static:5000\nvirtual_mailbox_base = /var/mail/vhosts\nvirtual_mailbox_domains = hash:/etc/postfix/vmailbox_domains\nvirtual_mailbox_maps = hash:/etc/postfix/vmailbox\nvirtual_minimum_uid = 100\nvirtual_transport = virtual\nvirtual_uid_maps = static:5000\n"
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "postfix.service": {
+      "ActiveEnterTimestamp": "Thu 2026-10-08 21:41:42 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "Thu 2026-10-08 21:41:41 UTC",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "exited"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestamp": "Thu 2026-10-08 21:41:41 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "running"
+    }
+  },
+  "values": {
+    "anvil_rate_time_unit": {
+      "argv": [
+        "postconf",
+        "-h",
+        "anvil_rate_time_unit"
+      ],
+      "at": "2026-10-08T21:47:31Z",
+      "returncode": 0,
+      "seconds": 0.014,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "60s\n"
+    },
+    "message_size_limit": {
+      "argv": [
+        "postconf",
+        "-h",
+        "message_size_limit"
+      ],
+      "at": "2026-10-08T21:47:31Z",
+      "returncode": 0,
+      "seconds": 0.023,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "10240000\n"
+    },
+    "smtpd_client_message_rate_limit": {
+      "argv": [
+        "postconf",
+        "-h",
+        "smtpd_client_message_rate_limit"
+      ],
+      "at": "2026-10-08T21:47:31Z",
+      "returncode": 0,
+      "seconds": 0.019,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "30\n"
+    },
+    "smtpd_recipient_restrictions": {
+      "argv": [
+        "postconf",
+        "-h",
+        "smtpd_recipient_restrictions"
+      ],
+      "at": "2026-10-08T21:47:31Z",
+      "returncode": 0,
+      "seconds": 0.027,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "${set1_owner_checks}, reject_unknown_sender_domain\n"
+    }
+  }
+}

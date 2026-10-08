@@ -1,0 +1,69 @@
+{
+  "backups": [
+    {
+      "exists": true,
+      "gid": 0,
+      "group": "root",
+      "inode": 88892,
+      "mode": "0644",
+      "mtime_ns": 1791496688476401267,
+      "nlink": 1,
+      "owner": "root",
+      "path": "/etc/my.cnf.celikpanel-backup-20261008T215808Z",
+      "sha256": "888e33ad5f5370d8f441bdd065965cf4d682d5b151ab11c04be6061cf48401e6",
+      "size": 193,
+      "type": "regular",
+      "uid": 0
+    },
+    {
+      "exists": true,
+      "gid": 0,
+      "group": "root",
+      "inode": 88901,
+      "mode": "0644",
+      "mtime_ns": 1791496692424426504,
+      "nlink": 1,
+      "owner": "root",
+      "path": "/etc/my.cnf.celikpanel-backup-20261008T215812Z",
+      "sha256": "f2d49ed64ffd8325025cddfd2393156697643723a0edb12a687c3f01efbdf3bd",
+      "size": 225,
+      "type": "regular",
+      "uid": 0
+    },
+    {
+      "exists": true,
+      "gid": 0,
+      "group": "root",
+      "inode": 88906,
+      "mode": "0644",
+      "mtime_ns": 1791496693943436097,
+      "nlink": 1,
+      "owner": "root",
+      "path": "/etc/my.cnf.celikpanel-backup-20261008T215813Z",
+      "sha256": "20fc550298a7a647ef53fcd7e7c1a7f236a4382fc6695a44d29797eb9986ac24",
+      "size": 228,
+      "type": "regular",
+      "uid": 0
+    }
+  ],
+  "candidates_left": [],
+  "file": {
+    "exists": true,
+    "gid": 0,
+    "group": "root",
+    "inode": 88907,
+    "mode": "0644",
+    "mtime_ns": 1791496693966436242,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/my.cnf",
+    "sha256": "f2d49ed64ffd8325025cddfd2393156697643723a0edb12a687c3f01efbdf3bd",
+    "size": 225,
+    "text": "#\n# This group is read both by the client and the server\n# use it for options that affect everything\n#\n[client-server]\n\n#\n# include *.cnf from the config directory\n#\n!includedir /etc/my.cnf.d\n\n\n[mysqld]\nmax_connections = 173\n",
+    "type": "regular",
+    "uid": 0
+  },
+  "mode": "read-file",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1"
+}

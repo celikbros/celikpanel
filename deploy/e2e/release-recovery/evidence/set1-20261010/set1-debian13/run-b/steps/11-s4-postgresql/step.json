@@ -1,0 +1,29 @@
+{
+  "checks": {
+    "checks": 34,
+    "error": null,
+    "failed": [
+      "g: an answer that says the previous file could not be put back with certainty matches the server (it does not when the previous file is in place and the named copy is that same file)"
+    ],
+    "finished_at": "2026-10-08T22:09:07Z",
+    "notes": [],
+    "started_at": "2026-10-08T22:08:50Z",
+    "substeps": {
+      "a": "passed",
+      "b": "passed",
+      "c": "passed",
+      "d": "passed",
+      "e": "passed",
+      "f": "passed",
+      "g": "failed"
+    },
+    "title": "postgresql.conf and pg_hba.conf",
+    "unknown": [],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-08T22:09:07Z",
+  "name": "S4-postgresql",
+  "reason": "g: an answer that says the previous file could not be put back with certainty matches the server (it does not when the previous file is in place and the named copy is that same file)",
+  "started_at": "2026-10-08T22:08:50Z",
+  "verdict": "failed"
+}

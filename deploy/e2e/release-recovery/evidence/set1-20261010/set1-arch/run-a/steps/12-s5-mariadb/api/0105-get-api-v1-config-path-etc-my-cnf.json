@@ -1,0 +1,68 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S5c read (adjusted value)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/config?path=/etc/my.cnf"
+  },
+  "response": {
+    "elapsed_seconds": 0.328,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 08 Oct 2026 21:58:12 GMT"
+      ],
+      [
+        "Content-Length",
+        "347"
+      ]
+    ],
+    "json": {
+      "Content": "#\n# This group is read both by the client and the server\n# use it for options that affect everything\n#\n[client-server]\n\n#\n# include *.cnf from the config directory\n#\n!includedir /etc/my.cnf.d\n\n\n[mysqld]\nmax_connections = 173\n",
+      "Parsed": "",
+      "Version": "cf1-f2d49ed64ffd8325025cddfd2393156697643723a0edb12a687c3f01efbdf3bd"
+    },
+    "status": 200,
+    "text": null
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "action": "owner-edit",
+  "after": {
+    "exists": true,
+    "gid": 0,
+    "group": "root",
+    "inode": 135500,
+    "mode": "0644",
+    "mtime_ns": 1791494858655588879,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+    "sha256": "7f1ed2774f54689fc6e8121b9bd9c5e102c33e4f437d5dab7c2dcd6734fa73cd",
+    "size": 3689,
+    "type": "regular",
+    "uid": 0
+  },
+  "at": "2026-10-08T21:27:38Z",
+  "before": {
+    "exists": true,
+    "gid": 0,
+    "group": "root",
+    "inode": 135500,
+    "mode": "0644",
+    "mtime_ns": 1791494856763565078,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+    "sha256": "57b9f52dd4e740572e054e22f9b5b0cfec323509a40d0d592efd42e359b842be",
+    "size": 3644,
+    "type": "regular",
+    "uid": 0
+  },
+  "mode": "owner-edit",
+  "owner_action": true,
+  "path": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+  "schema": "celikpanel/set1-native/v1"
+}

@@ -1,0 +1,5 @@
+build-upd1-artifacts.sh
+settings_writes_trial.py
+guest_settings_native.py
+run-set1.sh
+test_settings_writes_trial.py

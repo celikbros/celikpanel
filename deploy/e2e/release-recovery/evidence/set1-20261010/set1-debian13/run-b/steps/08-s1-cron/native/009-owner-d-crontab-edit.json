@@ -1,0 +1,22 @@
+{
+  "action": "owner-crontab",
+  "at": "2026-10-08T22:08:14Z",
+  "install": {
+    "argv": [
+      "crontab",
+      "-u",
+      "set1_owner_test",
+      "-"
+    ],
+    "at": "2026-10-08T22:08:14Z",
+    "returncode": 0,
+    "seconds": 0.01,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "mode": "owner-crontab",
+  "owner_action": true,
+  "schema": "celikpanel/set1-native/v1",
+  "user": "set1_owner_test"
+}

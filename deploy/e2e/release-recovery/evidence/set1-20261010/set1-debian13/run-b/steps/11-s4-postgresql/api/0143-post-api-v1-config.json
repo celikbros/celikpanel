@@ -1,0 +1,80 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S4d save empty content",
+  "request": {
+    "body": {
+      "content": "",
+      "path": "/etc/postgresql/17/main/postgresql.conf",
+      "version": "cf1-7262d96b83652c2d65beb164afef106a71249715eaf32c2b3f4fad793bd94959"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/config"
+  },
+  "response": {
+    "elapsed_seconds": 0.48,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 08 Oct 2026 22:08:57 GMT"
+      ],
+      [
+        "Content-Length",
+        "227"
+      ]
+    ],
+    "json": {
+      "code": "CONFIG_INVALID",
+      "error": "Nothing was saved: the new content is empty, and CelikPanel does not replace a configuration file with nothing. Reload the page to read the file again, then make the change.",
+      "reason": "empty"
+    },
+    "status": 422,
+    "text": null
+  }
+}

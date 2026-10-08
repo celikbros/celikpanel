@@ -1,0 +1,38 @@
+{
+  "action": "owner-edit",
+  "after": {
+    "exists": true,
+    "gid": 967,
+    "group": "postgres",
+    "inode": 88855,
+    "mode": "0600",
+    "mtime_ns": 1791496679218905186,
+    "nlink": 1,
+    "owner": "postgres",
+    "path": "/var/lib/postgres/data/postgresql.conf",
+    "sha256": "bc7fda234626dd9f57a1c44cb163446113c7cf5b8b54886e416ffc2d7f0e2901",
+    "size": 32725,
+    "type": "regular",
+    "uid": 967
+  },
+  "at": "2026-10-08T21:57:59Z",
+  "before": {
+    "exists": true,
+    "gid": 967,
+    "group": "postgres",
+    "inode": 88855,
+    "mode": "0600",
+    "mtime_ns": 1791496667575259019,
+    "nlink": 1,
+    "owner": "postgres",
+    "path": "/var/lib/postgres/data/postgresql.conf",
+    "sha256": "5bccbaf79e12267144565eae01fe0843b87438fd1d838bc8901383470add22d1",
+    "size": 32677,
+    "type": "regular",
+    "uid": 967
+  },
+  "mode": "owner-edit",
+  "owner_action": true,
+  "path": "/var/lib/postgres/data/postgresql.conf",
+  "schema": "celikpanel/set1-native/v1"
+}

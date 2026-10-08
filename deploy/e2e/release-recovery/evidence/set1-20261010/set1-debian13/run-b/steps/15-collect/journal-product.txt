@@ -1,0 +1,442 @@
+2026-10-08T22:01:09.264109+00:00 dns-debian13 systemd[1]: Starting celikpanel-agent.service - CelikPanel privileged agent...
+2026-10-08T22:01:09.303999+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-10-08T22:01:09.325246+00:00 dns-debian13 agent[5446]: 2026/10/08 22:01:09 Starting CelikPanel Agent...
+2026-10-08T22:01:09.328345+00:00 dns-debian13 agent[5446]: 2026/10/08 22:01:09 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-08T22:01:09.328345+00:00 dns-debian13 agent[5446]: 2026/10/08 22:01:09 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-10-08T22:01:11.238000+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-08T22:01:11.271244+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-08T22:01:11.473446+00:00 dns-debian13 panel[5579]: 2026/10/08 22:01:11 Starting CelikPanel Backend...
+2026-10-08T22:01:11.479956+00:00 dns-debian13 panel[5579]: 2026/10/08 22:01:11 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-08T22:01:11.481214+00:00 dns-debian13 panel[5579]: 2026/10/08 22:01:11 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-08T22:01:11.481813+00:00 dns-debian13 panel[5579]: 2026/10/08 22:01:11 Connected to Agent RPC; preparing normal management access
+2026-10-08T22:01:11.518617+00:00 dns-debian13 panel[5579]: 2026/10/08 22:01:11 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-08T22:01:11.520536+00:00 dns-debian13 panel[5579]: 2026/10/08 22:01:11 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-08T22:01:11.522530+00:00 dns-debian13 panel[5579]: 2026/10/08 22:01:11 Panel ready on :2083 (HTTPS)
+2026-10-08T22:01:12.291057+00:00 dns-debian13 systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-08T22:01:12.309120+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-08T22:01:12.309360+00:00 dns-debian13 systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-08T22:01:12.309573+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 391ms CPU time, 74.1M memory peak.
+2026-10-08T22:01:12.416936+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-08T22:01:12.459386+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-08T22:01:12.680655+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:12 Starting CelikPanel Backend...
+2026-10-08T22:01:12.686649+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:12 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-08T22:01:12.687119+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:12 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-08T22:01:12.687799+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:12 Connected to Agent RPC; preparing normal management access
+2026-10-08T22:01:12.699919+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:12 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-08T22:01:12.702552+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:12 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-08T22:01:12.704163+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:12 Panel ready on :2083 (HTTPS)
+2026-10-08T22:01:15.810890+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:15 http: TLS handshake error from 127.0.0.1:41192: EOF
+2026-10-08T22:01:16.045944+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:16 http: TLS handshake error from 127.0.0.1:41208: EOF
+2026-10-08T22:01:16.276244+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:16 http: TLS handshake error from 127.0.0.1:41222: EOF
+2026-10-08T22:01:16.293484+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:16 http: TLS handshake error from 127.0.0.1:41248: EOF
+2026-10-08T22:01:16.308375+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:16 http: TLS handshake error from 127.0.0.1:41264: EOF
+2026-10-08T22:01:16.321181+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:16 http: TLS handshake error from 127.0.0.1:41278: EOF
+2026-10-08T22:01:16.350685+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:16 http: TLS handshake error from 127.0.0.1:41296: EOF
+2026-10-08T22:01:16.363801+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:16 http: TLS handshake error from 127.0.0.1:41316: EOF
+2026-10-08T22:01:16.381953+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:16 http: TLS handshake error from 127.0.0.1:41330: EOF
+2026-10-08T22:01:16.397310+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:16 http: TLS handshake error from 127.0.0.1:41354: EOF
+2026-10-08T22:01:16.590432+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:16 http: TLS handshake error from 127.0.0.1:41372: EOF
+2026-10-08T22:01:16.626721+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:16 http: TLS handshake error from 127.0.0.1:41378: EOF
+2026-10-08T22:01:17.367230+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:17 http: TLS handshake error from 127.0.0.1:41398: EOF
+2026-10-08T22:01:17.997214+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:17 http: TLS handshake error from 127.0.0.1:41430: EOF
+2026-10-08T22:01:18.239735+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:18 http: TLS handshake error from 127.0.0.1:41434: EOF
+2026-10-08T22:01:23.257390+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:23 http: TLS handshake error from 127.0.0.1:35394: EOF
+2026-10-08T22:01:28.272818+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:28 http: TLS handshake error from 127.0.0.1:35412: EOF
+2026-10-08T22:01:33.288896+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:33 http: TLS handshake error from 127.0.0.1:54404: EOF
+2026-10-08T22:01:38.306793+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:38 http: TLS handshake error from 127.0.0.1:54422: EOF
+2026-10-08T22:01:43.329548+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:43 http: TLS handshake error from 127.0.0.1:47280: EOF
+2026-10-08T22:01:48.631507+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:48 http: TLS handshake error from 127.0.0.1:47298: EOF
+2026-10-08T22:01:53.649861+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:53 http: TLS handshake error from 127.0.0.1:58934: EOF
+2026-10-08T22:01:58.677694+00:00 dns-debian13 panel[5645]: 2026/10/08 22:01:58 http: TLS handshake error from 127.0.0.1:58958: EOF
+2026-10-08T22:02:03.353097+00:00 dns-debian13 addgroup[6659]: Selecting GID from range 100 to 999 ...
+2026-10-08T22:02:03.356340+00:00 dns-debian13 addgroup[6659]: Adding group `mysql' (GID 104) ...
+2026-10-08T22:02:03.393140+00:00 dns-debian13 groupadd[6662]: group added to /etc/group: name=mysql, GID=104
+2026-10-08T22:02:03.410316+00:00 dns-debian13 groupadd[6662]: group added to /etc/gshadow: name=mysql
+2026-10-08T22:02:03.411318+00:00 dns-debian13 groupadd[6662]: new group: name=mysql, GID=104
+2026-10-08T22:02:03.456447+00:00 dns-debian13 adduser[6667]: Selecting UID from range 100 to 999 ...
+2026-10-08T22:02:03.459733+00:00 dns-debian13 adduser[6667]: Adding system user `mysql' (UID 103) ...
+2026-10-08T22:02:03.462426+00:00 dns-debian13 adduser[6667]: Adding new user `mysql' (UID 103) with group `mysql' ...
+2026-10-08T22:02:03.495740+00:00 dns-debian13 useradd[6671]: new user: name=mysql, UID=103, GID=104, home=/nonexistent, shell=/bin/false, from=none
+2026-10-08T22:02:03.569459+00:00 dns-debian13 adduser[6667]: Not creating `/nonexistent'.
+2026-10-08T22:02:03.704561+00:00 dns-debian13 panel[5645]: 2026/10/08 22:02:03 http: TLS handshake error from 127.0.0.1:33438: EOF
+2026-10-08T22:02:08.727289+00:00 dns-debian13 panel[5645]: 2026/10/08 22:02:08 http: TLS handshake error from 127.0.0.1:33456: EOF
+2026-10-08T22:02:13.748992+00:00 dns-debian13 panel[5645]: 2026/10/08 22:02:13 http: TLS handshake error from 127.0.0.1:57288: EOF
+2026-10-08T22:02:19.040328+00:00 dns-debian13 panel[5645]: 2026/10/08 22:02:19 http: TLS handshake error from 127.0.0.1:50740: EOF
+2026-10-08T22:02:24.055623+00:00 dns-debian13 panel[5645]: 2026/10/08 22:02:24 http: TLS handshake error from 127.0.0.1:50758: EOF
+2026-10-08T22:02:29.072428+00:00 dns-debian13 panel[5645]: 2026/10/08 22:02:29 http: TLS handshake error from 127.0.0.1:44758: EOF
+2026-10-08T22:02:33.375938+00:00 dns-debian13 php8.4-common[8131]: php_invoke calendar: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:33.411732+00:00 dns-debian13 php8.4-common[8163]: php_invoke calendar: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:33.679719+00:00 dns-debian13 php8.4-common[8351]: php_invoke ctype: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:33.710477+00:00 dns-debian13 php8.4-common[8383]: php_invoke ctype: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:33.978404+00:00 dns-debian13 php8.4-common[8572]: php_invoke exif: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:34.015714+00:00 dns-debian13 php8.4-common[8604]: php_invoke exif: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:34.088882+00:00 dns-debian13 panel[5645]: 2026/10/08 22:02:34 http: TLS handshake error from 127.0.0.1:44774: EOF
+2026-10-08T22:02:34.304613+00:00 dns-debian13 php8.4-common[8794]: php_invoke fileinfo: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:34.346345+00:00 dns-debian13 php8.4-common[8826]: php_invoke fileinfo: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:34.770178+00:00 dns-debian13 php8.4-common[9048]: php_invoke ffi: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:35.038759+00:00 dns-debian13 php8.4-common[9238]: php_invoke ftp: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:35.345098+00:00 dns-debian13 php8.4-common[9460]: php_invoke gettext: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:35.378401+00:00 dns-debian13 php8.4-common[9492]: php_invoke gettext: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:35.654881+00:00 dns-debian13 php8.4-common[9682]: php_invoke iconv: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:35.693903+00:00 dns-debian13 php8.4-common[9714]: php_invoke iconv: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:35.981755+00:00 dns-debian13 php8.4-common[9904]: php_invoke pdo: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:36.017998+00:00 dns-debian13 php8.4-common[9936]: php_invoke pdo: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:36.353905+00:00 dns-debian13 php8.4-common[10158]: php_invoke phar: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:36.637713+00:00 dns-debian13 php8.4-common[10348]: php_invoke posix: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:36.680976+00:00 dns-debian13 php8.4-common[10380]: php_invoke posix: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:36.973949+00:00 dns-debian13 php8.4-common[10570]: php_invoke shmop: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:37.011075+00:00 dns-debian13 php8.4-common[10602]: php_invoke shmop: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:37.286065+00:00 dns-debian13 php8.4-common[10792]: php_invoke sockets: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:37.318473+00:00 dns-debian13 php8.4-common[10824]: php_invoke sockets: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:37.614969+00:00 dns-debian13 php8.4-common[11014]: php_invoke sysvmsg: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:37.648544+00:00 dns-debian13 php8.4-common[11046]: php_invoke sysvmsg: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:37.937530+00:00 dns-debian13 php8.4-common[11236]: php_invoke sysvsem: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:38.309493+00:00 dns-debian13 php8.4-common[11458]: php_invoke sysvshm: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:38.364734+00:00 dns-debian13 php8.4-common[11490]: php_invoke sysvshm: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:38.693946+00:00 dns-debian13 php8.4-common[11680]: php_invoke tokenizer: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:38.736087+00:00 dns-debian13 php8.4-common[11712]: php_invoke tokenizer: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:39.044030+00:00 dns-debian13 php8.4-opcache[11903]: php_invoke opcache: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:39.080118+00:00 dns-debian13 php8.4-opcache[11935]: php_invoke opcache: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:39.102604+00:00 dns-debian13 panel[5645]: 2026/10/08 22:02:39 http: TLS handshake error from 127.0.0.1:53942: EOF
+2026-10-08T22:02:39.425593+00:00 dns-debian13 php8.4-readline[12126]: php_invoke readline: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:39.458060+00:00 dns-debian13 php8.4-readline[12158]: php_invoke readline: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:39.805163+00:00 dns-debian13 php8.4-cli[12325]: php_invoke ffi: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:39.841590+00:00 dns-debian13 php8.4-cli[12358]: php_invoke fileinfo: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:39.872797+00:00 dns-debian13 php8.4-cli[12391]: php_invoke opcache: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:39.904364+00:00 dns-debian13 php8.4-cli[12424]: php_invoke tokenizer: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:39.935712+00:00 dns-debian13 php8.4-cli[12457]: php_invoke shmop: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:39.968094+00:00 dns-debian13 php8.4-cli[12490]: php_invoke readline: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:40.010740+00:00 dns-debian13 php8.4-cli[12524]: php_invoke posix: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:40.365423+00:00 dns-debian13 php8.4-cli[12886]: php_invoke sysvshm: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:40.407780+00:00 dns-debian13 php8.4-cli[12919]: php_invoke ctype: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:02:40.797735+00:00 dns-debian13 php8.4-fpm[13050]: php_invoke iconv: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:40.827957+00:00 dns-debian13 php8.4-fpm[13083]: php_invoke ffi: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:40.863836+00:00 dns-debian13 php8.4-fpm[13116]: php_invoke fileinfo: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:40.895174+00:00 dns-debian13 php8.4-fpm[13149]: php_invoke opcache: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:40.926301+00:00 dns-debian13 php8.4-fpm[13182]: php_invoke tokenizer: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:40.957631+00:00 dns-debian13 php8.4-fpm[13215]: php_invoke shmop: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:40.992895+00:00 dns-debian13 php8.4-fpm[13248]: php_invoke readline: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:41.056060+00:00 dns-debian13 php8.4-fpm[13314]: php_invoke ftp: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:41.089347+00:00 dns-debian13 php8.4-fpm[13347]: php_invoke calendar: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:41.120576+00:00 dns-debian13 php8.4-fpm[13380]: php_invoke sysvsem: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:41.151629+00:00 dns-debian13 php8.4-fpm[13413]: php_invoke exif: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:41.182894+00:00 dns-debian13 php8.4-fpm[13446]: php_invoke gettext: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:41.214049+00:00 dns-debian13 php8.4-fpm[13479]: php_invoke pdo: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:41.250123+00:00 dns-debian13 php8.4-fpm[13512]: php_invoke sockets: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:41.287686+00:00 dns-debian13 php8.4-fpm[13545]: php_invoke phar: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:41.323767+00:00 dns-debian13 php8.4-fpm[13578]: php_invoke sysvmsg: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:41.357748+00:00 dns-debian13 php8.4-fpm[13611]: php_invoke sysvshm: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:41.390539+00:00 dns-debian13 php8.4-fpm[13644]: php_invoke ctype: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:02:44.120490+00:00 dns-debian13 panel[5645]: 2026/10/08 22:02:44 http: TLS handshake error from 127.0.0.1:53964: EOF
+2026-10-08T22:02:49.440428+00:00 dns-debian13 panel[5645]: 2026/10/08 22:02:49 http: TLS handshake error from 127.0.0.1:50882: EOF
+2026-10-08T22:02:54.458583+00:00 dns-debian13 panel[5645]: 2026/10/08 22:02:54 http: TLS handshake error from 127.0.0.1:50904: EOF
+2026-10-08T22:02:59.474152+00:00 dns-debian13 panel[5645]: 2026/10/08 22:02:59 http: TLS handshake error from 127.0.0.1:47952: EOF
+2026-10-08T22:03:04.491234+00:00 dns-debian13 panel[5645]: 2026/10/08 22:03:04 http: TLS handshake error from 127.0.0.1:47964: EOF
+2026-10-08T22:03:09.510333+00:00 dns-debian13 panel[5645]: 2026/10/08 22:03:09 http: TLS handshake error from 127.0.0.1:39794: EOF
+2026-10-08T22:03:14.554813+00:00 dns-debian13 panel[5645]: 2026/10/08 22:03:14 http: TLS handshake error from 127.0.0.1:39818: EOF
+2026-10-08T22:03:17.349303+00:00 dns-debian13 addgroup[14277]: Selecting GID from range 100 to 999 ...
+2026-10-08T22:03:17.351824+00:00 dns-debian13 addgroup[14277]: Adding group `ssl-cert' (GID 105) ...
+2026-10-08T22:03:17.388654+00:00 dns-debian13 groupadd[14280]: group added to /etc/group: name=ssl-cert, GID=105
+2026-10-08T22:03:17.405507+00:00 dns-debian13 groupadd[14280]: group added to /etc/gshadow: name=ssl-cert
+2026-10-08T22:03:17.406606+00:00 dns-debian13 groupadd[14280]: new group: name=ssl-cert, GID=105
+2026-10-08T22:03:18.611019+00:00 dns-debian13 adduser[14974]: Selecting UID from range 100 to 999 ...
+2026-10-08T22:03:18.613802+00:00 dns-debian13 adduser[14974]: Selecting GID from range 100 to 999 ...
+2026-10-08T22:03:18.616711+00:00 dns-debian13 adduser[14974]: Adding system user `postgres' (UID 104) ...
+2026-10-08T22:03:18.618993+00:00 dns-debian13 adduser[14974]: Adding new group `postgres' (GID 106) ...
+2026-10-08T22:03:18.654801+00:00 dns-debian13 groupadd[14979]: group added to /etc/group: name=postgres, GID=106
+2026-10-08T22:03:18.674393+00:00 dns-debian13 groupadd[14979]: group added to /etc/gshadow: name=postgres
+2026-10-08T22:03:18.675519+00:00 dns-debian13 groupadd[14979]: new group: name=postgres, GID=106
+2026-10-08T22:03:18.678482+00:00 dns-debian13 adduser[14974]: Adding new user `postgres' (UID 104) with group `postgres' ...
+2026-10-08T22:03:18.715325+00:00 dns-debian13 useradd[14984]: new user: name=postgres, UID=104, GID=106, home=/var/lib/postgresql, shell=/bin/bash, from=none
+2026-10-08T22:03:18.793707+00:00 dns-debian13 adduser[14974]: Not creating home directory `/var/lib/postgresql' as requested.
+2026-10-08T22:03:18.812428+00:00 dns-debian13 su[15001]: (to postgres) root on none
+2026-10-08T22:03:18.812811+00:00 dns-debian13 su[15001]: pam_unix(su:session): session opened for user postgres(uid=104) by (uid=0)
+2026-10-08T22:03:18.979333+00:00 dns-debian13 su[15001]: pam_unix(su:session): session closed for user postgres
+2026-10-08T22:03:19.032189+00:00 dns-debian13 adduser[15026]: Adding user `postgres' to group `ssl-cert' ...
+2026-10-08T22:03:19.067952+00:00 dns-debian13 usermod[15028]: add 'postgres' to group 'ssl-cert'
+2026-10-08T22:03:19.068032+00:00 dns-debian13 usermod[15028]: add 'postgres' to shadow group 'ssl-cert'
+2026-10-08T22:03:20.135555+00:00 dns-debian13 panel[5645]: 2026/10/08 22:03:20 http: TLS handshake error from 127.0.0.1:42180: EOF
+2026-10-08T22:03:25.160509+00:00 dns-debian13 panel[5645]: 2026/10/08 22:03:25 http: TLS handshake error from 127.0.0.1:42206: EOF
+2026-10-08T22:03:30.180138+00:00 dns-debian13 panel[5645]: 2026/10/08 22:03:30 http: TLS handshake error from 127.0.0.1:42060: EOF
+2026-10-08T22:03:35.200381+00:00 dns-debian13 panel[5645]: 2026/10/08 22:03:35 http: TLS handshake error from 127.0.0.1:42072: EOF
+2026-10-08T22:03:35.799695+00:00 dns-debian13 adduser[16677]: Selecting UID from range 100 to 999 ...
+2026-10-08T22:03:35.802545+00:00 dns-debian13 adduser[16677]: Selecting GID from range 100 to 999 ...
+2026-10-08T22:03:35.805034+00:00 dns-debian13 adduser[16677]: Adding system user `postfix' (UID 105) ...
+2026-10-08T22:03:35.807404+00:00 dns-debian13 adduser[16677]: Adding new group `postfix' (GID 107) ...
+2026-10-08T22:03:35.849503+00:00 dns-debian13 groupadd[16682]: group added to /etc/group: name=postfix, GID=107
+2026-10-08T22:03:35.866619+00:00 dns-debian13 groupadd[16682]: group added to /etc/gshadow: name=postfix
+2026-10-08T22:03:35.867463+00:00 dns-debian13 groupadd[16682]: new group: name=postfix, GID=107
+2026-10-08T22:03:35.870444+00:00 dns-debian13 adduser[16677]: Adding new user `postfix' (UID 105) with group `postfix' ...
+2026-10-08T22:03:35.908336+00:00 dns-debian13 useradd[16687]: new user: name=postfix, UID=105, GID=107, home=/var/spool/postfix, shell=/usr/sbin/nologin, from=none
+2026-10-08T22:03:36.012304+00:00 dns-debian13 adduser[16677]: Not creating home directory `/var/spool/postfix' as requested.
+2026-10-08T22:03:36.058872+00:00 dns-debian13 addgroup[16699]: Selecting GID from range 100 to 999 ...
+2026-10-08T22:03:36.061729+00:00 dns-debian13 addgroup[16699]: Adding group `postdrop' (GID 108) ...
+2026-10-08T22:03:36.106208+00:00 dns-debian13 groupadd[16702]: group added to /etc/group: name=postdrop, GID=108
+2026-10-08T22:03:36.128871+00:00 dns-debian13 groupadd[16702]: group added to /etc/gshadow: name=postdrop
+2026-10-08T22:03:36.130322+00:00 dns-debian13 groupadd[16702]: new group: name=postdrop, GID=108
+2026-10-08T22:03:40.215801+00:00 dns-debian13 panel[5645]: 2026/10/08 22:03:40 http: TLS handshake error from 127.0.0.1:41360: EOF
+2026-10-08T22:03:45.245133+00:00 dns-debian13 panel[5645]: 2026/10/08 22:03:45 http: TLS handshake error from 127.0.0.1:41378: EOF
+2026-10-08T22:03:46.188893+00:00 dns-debian13 groupadd[17115]: group added to /etc/group: name=vmail, GID=5000
+2026-10-08T22:03:46.206529+00:00 dns-debian13 groupadd[17115]: group added to /etc/gshadow: name=vmail
+2026-10-08T22:03:46.207545+00:00 dns-debian13 groupadd[17115]: new group: name=vmail, GID=5000
+2026-10-08T22:03:46.280322+00:00 dns-debian13 useradd[17124]: new user: name=vmail, UID=5000, GID=5000, home=/var/mail/vhosts, shell=/usr/sbin/nologin, from=none
+2026-10-08T22:03:46.439717+00:00 dns-debian13 postfix/postmap[17134]: warning: unsupported dictionary type: lmdb. Is the postfix-lmdb package installed?
+2026-10-08T22:03:46.439762+00:00 dns-debian13 postfix/postmap[17134]: fatal: unsupported map type: lmdb
+2026-10-08T22:03:50.674586+00:00 dns-debian13 panel[5645]: 2026/10/08 22:03:50 http: TLS handshake error from 127.0.0.1:37650: EOF
+2026-10-08T22:03:55.693056+00:00 dns-debian13 panel[5645]: 2026/10/08 22:03:55 http: TLS handshake error from 127.0.0.1:37656: EOF
+2026-10-08T22:03:58.804114+00:00 dns-debian13 adduser[17600]: Selecting UID from range 100 to 999 ...
+2026-10-08T22:03:58.806988+00:00 dns-debian13 adduser[17600]: Selecting GID from range 100 to 999 ...
+2026-10-08T22:03:58.809329+00:00 dns-debian13 adduser[17600]: Adding system user `dovecot' (UID 106) ...
+2026-10-08T22:03:58.811605+00:00 dns-debian13 adduser[17600]: Adding new group `dovecot' (GID 109) ...
+2026-10-08T22:03:58.845756+00:00 dns-debian13 groupadd[17605]: group added to /etc/group: name=dovecot, GID=109
+2026-10-08T22:03:58.861191+00:00 dns-debian13 groupadd[17605]: group added to /etc/gshadow: name=dovecot
+2026-10-08T22:03:58.862161+00:00 dns-debian13 groupadd[17605]: new group: name=dovecot, GID=109
+2026-10-08T22:03:58.865059+00:00 dns-debian13 adduser[17600]: Adding new user `dovecot' (UID 106) with group `dovecot' ...
+2026-10-08T22:03:58.901838+00:00 dns-debian13 useradd[17610]: new user: name=dovecot, UID=106, GID=109, home=/usr/lib/dovecot, shell=/usr/sbin/nologin, from=none
+2026-10-08T22:03:58.974766+00:00 dns-debian13 adduser[17600]: Not creating home directory `/usr/lib/dovecot' as requested.
+2026-10-08T22:03:59.014012+00:00 dns-debian13 adduser[17621]: Selecting UID from range 100 to 999 ...
+2026-10-08T22:03:59.016722+00:00 dns-debian13 adduser[17621]: Selecting GID from range 100 to 999 ...
+2026-10-08T22:03:59.019103+00:00 dns-debian13 adduser[17621]: Adding system user `dovenull' (UID 107) ...
+2026-10-08T22:03:59.021587+00:00 dns-debian13 adduser[17621]: Adding new group `dovenull' (GID 110) ...
+2026-10-08T22:03:59.057001+00:00 dns-debian13 groupadd[17626]: group added to /etc/group: name=dovenull, GID=110
+2026-10-08T22:03:59.072542+00:00 dns-debian13 groupadd[17626]: group added to /etc/gshadow: name=dovenull
+2026-10-08T22:03:59.073364+00:00 dns-debian13 groupadd[17626]: new group: name=dovenull, GID=110
+2026-10-08T22:03:59.076133+00:00 dns-debian13 adduser[17621]: Adding new user `dovenull' (UID 107) with group `dovenull' ...
+2026-10-08T22:03:59.110341+00:00 dns-debian13 useradd[17631]: new user: name=dovenull, UID=107, GID=110, home=/nonexistent, shell=/usr/sbin/nologin, from=none
+2026-10-08T22:03:59.185094+00:00 dns-debian13 adduser[17621]: Not creating `/nonexistent'.
+2026-10-08T22:04:00.712514+00:00 dns-debian13 panel[5645]: 2026/10/08 22:04:00 http: TLS handshake error from 127.0.0.1:43646: EOF
+2026-10-08T22:04:05.725907+00:00 dns-debian13 panel[5645]: 2026/10/08 22:04:05 http: TLS handshake error from 127.0.0.1:43676: EOF
+2026-10-08T22:04:10.745335+00:00 dns-debian13 panel[5645]: 2026/10/08 22:04:10 http: TLS handshake error from 127.0.0.1:57272: EOF
+2026-10-08T22:04:15.760854+00:00 dns-debian13 panel[5645]: 2026/10/08 22:04:15 http: TLS handshake error from 127.0.0.1:57292: EOF
+2026-10-08T22:04:21.238891+00:00 dns-debian13 panel[5645]: 2026/10/08 22:04:21 http: TLS handshake error from 127.0.0.1:59360: EOF
+2026-10-08T22:04:26.264604+00:00 dns-debian13 panel[5645]: 2026/10/08 22:04:26 http: TLS handshake error from 127.0.0.1:59368: EOF
+2026-10-08T22:04:27.115004+00:00 dns-debian13 php8.4-sqlite3[21486]: php_invoke sqlite3: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:04:27.150169+00:00 dns-debian13 php8.4-sqlite3[21518]: php_invoke sqlite3: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:04:30.254130+00:00 dns-debian13 php8.4-sqlite3[21708]: php_invoke pdo_sqlite: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:04:30.630387+00:00 dns-debian13 php8.4-zip[21931]: php_invoke zip: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:04:30.665564+00:00 dns-debian13 php8.4-zip[21963]: php_invoke zip: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:04:30.987963+00:00 dns-debian13 php8.4-xml[22154]: php_invoke dom: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:04:31.022837+00:00 dns-debian13 php8.4-xml[22186]: php_invoke dom: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:04:31.295206+00:00 dns-debian13 panel[5645]: 2026/10/08 22:04:31 http: TLS handshake error from 127.0.0.1:37788: EOF
+2026-10-08T22:04:31.614032+00:00 dns-debian13 php8.4-xml[22598]: php_invoke xml: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:04:31.647387+00:00 dns-debian13 php8.4-xml[22630]: php_invoke xml: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:04:31.925573+00:00 dns-debian13 php8.4-xml[22820]: php_invoke xmlreader: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:04:31.961460+00:00 dns-debian13 php8.4-xml[22852]: php_invoke xmlreader: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:04:32.241824+00:00 dns-debian13 php8.4-xml[23042]: php_invoke xmlwriter: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:04:32.274955+00:00 dns-debian13 php8.4-xml[23074]: php_invoke xmlwriter: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:04:32.666990+00:00 dns-debian13 php8.4-xml[23264]: php_invoke xsl: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:04:32.704833+00:00 dns-debian13 php8.4-xml[23296]: php_invoke xsl: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:04:33.088711+00:00 dns-debian13 php8.4-intl[23487]: php_invoke intl: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:04:33.132580+00:00 dns-debian13 php8.4-intl[23519]: php_invoke intl: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:04:33.503787+00:00 dns-debian13 php8.4-mbstring[23710]: php_invoke mbstring: already enabled for PHP 8.4 cli sapi
+2026-10-08T22:04:33.544190+00:00 dns-debian13 php8.4-mbstring[23742]: php_invoke mbstring: already enabled for PHP 8.4 fpm sapi
+2026-10-08T22:04:36.316441+00:00 dns-debian13 panel[5645]: 2026/10/08 22:04:36 http: TLS handshake error from 127.0.0.1:37812: EOF
+2026-10-08T22:04:41.337439+00:00 dns-debian13 panel[5645]: 2026/10/08 22:04:41 http: TLS handshake error from 127.0.0.1:42912: EOF
+2026-10-08T22:04:46.357383+00:00 dns-debian13 panel[5645]: 2026/10/08 22:04:46 http: TLS handshake error from 127.0.0.1:42930: EOF
+2026-10-08T22:04:48.871854+00:00 dns-debian13 postfix/postfix-script[24643]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-08T22:04:49.733007+00:00 dns-debian13 postfix/postfix-script[24843]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-08T22:04:52.015891+00:00 dns-debian13 panel[5645]: 2026/10/08 22:04:52 http: TLS handshake error from 127.0.0.1:55808: EOF
+2026-10-08T22:04:57.050366+00:00 dns-debian13 panel[5645]: 2026/10/08 22:04:57 http: TLS handshake error from 127.0.0.1:55830: EOF
+2026-10-08T22:05:02.071585+00:00 dns-debian13 panel[5645]: 2026/10/08 22:05:02 http: TLS handshake error from 127.0.0.1:57890: EOF
+2026-10-08T22:05:07.092333+00:00 dns-debian13 panel[5645]: 2026/10/08 22:05:07 http: TLS handshake error from 127.0.0.1:57916: EOF
+2026-10-08T22:05:12.112260+00:00 dns-debian13 panel[5645]: 2026/10/08 22:05:12 http: TLS handshake error from 127.0.0.1:60454: EOF
+2026-10-08T22:05:17.126248+00:00 dns-debian13 panel[5645]: 2026/10/08 22:05:17 http: TLS handshake error from 127.0.0.1:60474: EOF
+2026-10-08T22:05:18.471435+00:00 dns-debian13 adduser[26119]: Selecting UID from range 100 to 999 ...
+2026-10-08T22:05:18.473997+00:00 dns-debian13 adduser[26119]: Selecting GID from range 100 to 999 ...
+2026-10-08T22:05:18.513320+00:00 dns-debian13 groupadd[26124]: group added to /etc/group: name=_rspamd, GID=111
+2026-10-08T22:05:18.528780+00:00 dns-debian13 groupadd[26124]: group added to /etc/gshadow: name=_rspamd
+2026-10-08T22:05:18.529692+00:00 dns-debian13 groupadd[26124]: new group: name=_rspamd, GID=111
+2026-10-08T22:05:18.568085+00:00 dns-debian13 useradd[26129]: new user: name=_rspamd, UID=108, GID=111, home=/var/lib/rspamd, shell=/usr/sbin/nologin, from=none
+2026-10-08T22:05:18.650063+00:00 dns-debian13 adduser[26119]: Not creating home directory `/var/lib/rspamd' as requested.
+2026-10-08T22:05:22.409247+00:00 dns-debian13 panel[5645]: 2026/10/08 22:05:22 http: TLS handshake error from 127.0.0.1:49176: EOF
+2026-10-08T22:05:27.428432+00:00 dns-debian13 panel[5645]: 2026/10/08 22:05:27 http: TLS handshake error from 127.0.0.1:49196: EOF
+2026-10-08T22:05:32.444038+00:00 dns-debian13 panel[5645]: 2026/10/08 22:05:32 http: TLS handshake error from 127.0.0.1:43406: EOF
+2026-10-08T22:05:37.479453+00:00 dns-debian13 panel[5645]: 2026/10/08 22:05:37 http: TLS handshake error from 127.0.0.1:43438: EOF
+2026-10-08T22:05:38.958972+00:00 dns-debian13 postfix/postfix-script[27342]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-08T22:05:39.859481+00:00 dns-debian13 postfix/postfix-script[27541]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-08T22:05:42.515576+00:00 dns-debian13 panel[5645]: 2026/10/08 22:05:42 http: TLS handshake error from 127.0.0.1:35220: EOF
+2026-10-08T22:05:47.750809+00:00 dns-debian13 panel[5645]: 2026/10/08 22:05:47 http: TLS handshake error from 127.0.0.1:35246: EOF
+2026-10-08T22:05:49.044460+00:00 dns-debian13 cron[28041]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 27887: Resource temporarily unavailable)
+2026-10-08T22:05:50.643008+00:00 dns-debian13 cron[28085]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 27887: Resource temporarily unavailable)
+2026-10-08T22:05:53.273114+00:00 dns-debian13 panel[5645]: 2026/10/08 22:05:53 http: TLS handshake error from 127.0.0.1:57640: EOF
+2026-10-08T22:05:58.297916+00:00 dns-debian13 panel[5645]: 2026/10/08 22:05:58 http: TLS handshake error from 127.0.0.1:57662: EOF
+2026-10-08T22:06:00.094140+00:00 dns-debian13 cron[28468]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 27887: Resource temporarily unavailable)
+2026-10-08T22:06:03.318569+00:00 dns-debian13 panel[5645]: 2026/10/08 22:06:03 http: TLS handshake error from 127.0.0.1:50416: EOF
+2026-10-08T22:06:08.340509+00:00 dns-debian13 panel[5645]: 2026/10/08 22:06:08 http: TLS handshake error from 127.0.0.1:50436: EOF
+2026-10-08T22:06:13.363163+00:00 dns-debian13 panel[5645]: 2026/10/08 22:06:13 http: TLS handshake error from 127.0.0.1:52384: EOF
+2026-10-08T22:06:18.379187+00:00 dns-debian13 panel[5645]: 2026/10/08 22:06:18 http: TLS handshake error from 127.0.0.1:52402: EOF
+2026-10-08T22:06:23.640458+00:00 dns-debian13 panel[5645]: 2026/10/08 22:06:23 http: TLS handshake error from 127.0.0.1:47224: EOF
+2026-10-08T22:06:28.657729+00:00 dns-debian13 panel[5645]: 2026/10/08 22:06:28 http: TLS handshake error from 127.0.0.1:47240: EOF
+2026-10-08T22:06:33.674917+00:00 dns-debian13 panel[5645]: 2026/10/08 22:06:33 http: TLS handshake error from 127.0.0.1:51658: EOF
+2026-10-08T22:06:38.692582+00:00 dns-debian13 panel[5645]: 2026/10/08 22:06:38 http: TLS handshake error from 127.0.0.1:51684: EOF
+2026-10-08T22:06:43.709545+00:00 dns-debian13 panel[5645]: 2026/10/08 22:06:43 http: TLS handshake error from 127.0.0.1:39928: EOF
+2026-10-08T22:06:48.736726+00:00 dns-debian13 panel[5645]: 2026/10/08 22:06:48 http: TLS handshake error from 127.0.0.1:39942: EOF
+2026-10-08T22:06:54.017885+00:00 dns-debian13 panel[5645]: 2026/10/08 22:06:54 http: TLS handshake error from 127.0.0.1:59530: EOF
+2026-10-08T22:06:59.034721+00:00 dns-debian13 panel[5645]: 2026/10/08 22:06:59 http: TLS handshake error from 127.0.0.1:47640: EOF
+2026-10-08T22:07:04.056590+00:00 dns-debian13 panel[5645]: 2026/10/08 22:07:04 http: TLS handshake error from 127.0.0.1:47652: EOF
+2026-10-08T22:07:09.078654+00:00 dns-debian13 panel[5645]: 2026/10/08 22:07:09 http: TLS handshake error from 127.0.0.1:48322: EOF
+2026-10-08T22:07:14.095721+00:00 dns-debian13 panel[5645]: 2026/10/08 22:07:14 http: TLS handshake error from 127.0.0.1:48334: EOF
+2026-10-08T22:07:19.113188+00:00 dns-debian13 panel[5645]: 2026/10/08 22:07:19 http: TLS handshake error from 127.0.0.1:54186: EOF
+2026-10-08T22:07:24.364659+00:00 dns-debian13 panel[5645]: 2026/10/08 22:07:24 http: TLS handshake error from 127.0.0.1:54206: EOF
+2026-10-08T22:07:29.380564+00:00 dns-debian13 panel[5645]: 2026/10/08 22:07:29 http: TLS handshake error from 127.0.0.1:38590: EOF
+2026-10-08T22:07:34.396371+00:00 dns-debian13 panel[5645]: 2026/10/08 22:07:34 http: TLS handshake error from 127.0.0.1:38606: EOF
+2026-10-08T22:07:39.411824+00:00 dns-debian13 panel[5645]: 2026/10/08 22:07:39 http: TLS handshake error from 127.0.0.1:43628: EOF
+2026-10-08T22:07:44.430154+00:00 dns-debian13 panel[5645]: 2026/10/08 22:07:44 http: TLS handshake error from 127.0.0.1:43656: EOF
+2026-10-08T22:07:49.445493+00:00 dns-debian13 panel[5645]: 2026/10/08 22:07:49 http: TLS handshake error from 127.0.0.1:41344: EOF
+2026-10-08T22:07:54.694646+00:00 dns-debian13 panel[5645]: 2026/10/08 22:07:54 http: TLS handshake error from 127.0.0.1:41374: EOF
+2026-10-08T22:07:59.709918+00:00 dns-debian13 panel[5645]: 2026/10/08 22:07:59 http: TLS handshake error from 127.0.0.1:55176: EOF
+2026-10-08T22:08:04.728513+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:04 http: TLS handshake error from 127.0.0.1:55180: EOF
+2026-10-08T22:08:09.744389+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:09 http: TLS handshake error from 127.0.0.1:45846: EOF
+2026-10-08T22:08:10.542790+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:10 http: TLS handshake error from 127.0.0.1:45862: EOF
+2026-10-08T22:08:11.533810+00:00 dns-debian13 agent[5446]: 2026/10/08 22:08:11 hosting root: created /var/www/celikpanel at 0755 0:0
+2026-10-08T22:08:11.601744+00:00 dns-debian13 useradd[28878]: new group: name=set1_owner_test, GID=5001
+2026-10-08T22:08:11.601883+00:00 dns-debian13 useradd[28878]: new user: name=set1_owner_test, UID=5001, GID=5001, home=/var/www/celikpanel/subscriptions/2/sites/1, shell=/bin/bash, from=none
+2026-10-08T22:08:11.733859+00:00 dns-debian13 chpasswd[28883]: pam_unix(chpasswd:chauthtok): password changed for set1_owner_test
+2026-10-08T22:08:12.094497+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:12 http: TLS handshake error from 127.0.0.1:45880: EOF
+2026-10-08T22:08:12.229975+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:12 http: TLS handshake error from 127.0.0.1:45902: EOF
+2026-10-08T22:08:12.243562+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:12 http: TLS handshake error from 127.0.0.1:45910: EOF
+2026-10-08T22:08:12.261955+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:12 http: TLS handshake error from 127.0.0.1:45924: EOF
+2026-10-08T22:08:13.405091+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:13 http: TLS handshake error from 127.0.0.1:45948: EOF
+2026-10-08T22:08:13.412746+00:00 dns-debian13 crontab[28997]: (root) LIST (set1_owner_test)
+2026-10-08T22:08:13.421691+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:13 http: TLS handshake error from 127.0.0.1:45952: EOF
+2026-10-08T22:08:13.685257+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:13 http: TLS handshake error from 127.0.0.1:45974: EOF
+2026-10-08T22:08:13.693738+00:00 dns-debian13 crontab[29017]: (root) LIST (set1_owner_test)
+2026-10-08T22:08:13.703247+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:13 http: TLS handshake error from 127.0.0.1:45990: EOF
+2026-10-08T22:08:13.711143+00:00 dns-debian13 crontab[29018]: (root) LIST (set1_owner_test)
+2026-10-08T22:08:13.711829+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:13 [409][cron] duplicate task refused
+2026-10-08T22:08:14.430843+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:14 http: TLS handshake error from 127.0.0.1:46006: EOF
+2026-10-08T22:08:14.438755+00:00 dns-debian13 crontab[29069]: (root) LIST (set1_owner_test)
+2026-10-08T22:08:14.439686+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:14 [409][settings] scheduled_tasks refused: SETTINGS_CHANGED
+2026-10-08T22:08:14.701911+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:14 http: TLS handshake error from 127.0.0.1:46024: EOF
+2026-10-08T22:08:14.717899+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:14 http: TLS handshake error from 127.0.0.1:46044: EOF
+2026-10-08T22:08:14.735567+00:00 dns-debian13 crontab[29089]: (root) REPLACE (set1_owner_test)
+2026-10-08T22:08:14.982304+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:14 http: TLS handshake error from 127.0.0.1:46068: EOF
+2026-10-08T22:08:14.990191+00:00 dns-debian13 crontab[29107]: (root) LIST (set1_owner_test)
+2026-10-08T22:08:14.998556+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:14 http: TLS handshake error from 127.0.0.1:46084: EOF
+2026-10-08T22:08:15.006154+00:00 dns-debian13 crontab[29108]: (root) LIST (set1_owner_test)
+2026-10-08T22:08:15.018440+00:00 dns-debian13 crontab[29109]: (root) REPLACE (set1_owner_test)
+2026-10-08T22:08:15.263579+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:15 http: TLS handshake error from 127.0.0.1:46112: EOF
+2026-10-08T22:08:15.271298+00:00 dns-debian13 crontab[29127]: (root) LIST (set1_owner_test)
+2026-10-08T22:08:15.279576+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:15 http: TLS handshake error from 127.0.0.1:46124: EOF
+2026-10-08T22:08:15.287546+00:00 dns-debian13 crontab[29128]: (root) LIST (set1_owner_test)
+2026-10-08T22:08:15.297399+00:00 dns-debian13 crontab[29129]: (root) REPLACE (set1_owner_test)
+2026-10-08T22:08:15.545357+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:15 http: TLS handshake error from 127.0.0.1:46136: EOF
+2026-10-08T22:08:15.553119+00:00 dns-debian13 crontab[29147]: (root) LIST (set1_owner_test)
+2026-10-08T22:08:15.561674+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:15 http: TLS handshake error from 127.0.0.1:46156: EOF
+2026-10-08T22:08:15.569299+00:00 dns-debian13 crontab[29148]: (root) LIST (set1_owner_test)
+2026-10-08T22:08:15.821020+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:15 http: TLS handshake error from 127.0.0.1:46178: EOF
+2026-10-08T22:08:15.829074+00:00 dns-debian13 crontab[29167]: (root) LIST (set1_owner_test)
+2026-10-08T22:08:16.277275+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:16 http: TLS handshake error from 127.0.0.1:46188: EOF
+2026-10-08T22:08:16.286206+00:00 dns-debian13 agent[5446]: 2026/10/08 22:08:16 cron: the crontab of set1_owner_test could not be read (exit status 1): The user set1_owner_test cannot use this program (crontab)
+2026-10-08T22:08:16.286529+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:16 [502][settings] scheduled_tasks refused: CURRENT_SETTINGS_UNREADABLE
+2026-10-08T22:08:16.294488+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:16 http: TLS handshake error from 127.0.0.1:46202: EOF
+2026-10-08T22:08:16.302426+00:00 dns-debian13 agent[5446]: 2026/10/08 22:08:16 cron: the crontab of set1_owner_test could not be read (exit status 1): The user set1_owner_test cannot use this program (crontab)
+2026-10-08T22:08:16.302767+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:16 [502][settings] scheduled_tasks refused: CURRENT_SETTINGS_UNREADABLE
+2026-10-08T22:08:16.989699+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:16 http: TLS handshake error from 127.0.0.1:46224: EOF
+2026-10-08T22:08:16.997504+00:00 dns-debian13 crontab[29251]: (root) LIST (set1_owner_test)
+2026-10-08T22:08:17.925388+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:17 http: TLS handshake error from 127.0.0.1:46244: EOF
+2026-10-08T22:08:21.201566+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:21 http: TLS handshake error from 127.0.0.1:60112: EOF
+2026-10-08T22:08:21.243124+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:21 http: TLS handshake error from 127.0.0.1:60142: EOF
+2026-10-08T22:08:21.275514+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:21 [409][settings] mail_policy refused: SETTINGS_CHANGED
+2026-10-08T22:08:22.073655+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:22 http: TLS handshake error from 127.0.0.1:60156: EOF
+2026-10-08T22:08:25.791094+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:25 http: TLS handshake error from 127.0.0.1:60162: EOF
+2026-10-08T22:08:25.834299+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:25 http: TLS handshake error from 127.0.0.1:60184: EOF
+2026-10-08T22:08:31.069829+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:31 http: TLS handshake error from 127.0.0.1:44520: EOF
+2026-10-08T22:08:31.110886+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:31 http: TLS handshake error from 127.0.0.1:44534: EOF
+2026-10-08T22:08:31.142361+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:31 [409][mail policy] refused: MAIL_POLICY_RESTRICTIONS_UNMANAGED variable
+2026-10-08T22:08:31.725396+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:31 http: TLS handshake error from 127.0.0.1:44556: EOF
+2026-10-08T22:08:40.591962+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:40 http: TLS handshake error from 127.0.0.1:44166: EOF
+2026-10-08T22:08:40.840829+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:40 http: TLS handshake error from 127.0.0.1:44182: EOF
+2026-10-08T22:08:43.475999+00:00 dns-debian13 agent[5446]: 2026/10/08 22:08:43 mail policy: postfix reload after a policy write failed: Job for postfix.service failed. See "systemctl status postfix.service" and "journalctl -xeu postfix.service" for details.; exit status 1
+2026-10-08T22:08:43.512777+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:43 [502][mail policy] written, not reloaded: Job for postfix.service failed. See "systemctl status postfix.service" and "journalctl -xeu postfix.service" for details.; exit status 1
+2026-10-08T22:08:45.010580+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:45 http: TLS handshake error from 127.0.0.1:44196: EOF
+2026-10-08T22:08:49.498513+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:49 http: TLS handshake error from 127.0.0.1:43840: EOF
+2026-10-08T22:08:49.513924+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:49 http: TLS handshake error from 127.0.0.1:43848: EOF
+2026-10-08T22:08:49.520412+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:49 [409][settings] backup_schedule refused: SETTINGS_VERSION_REQUIRED
+2026-10-08T22:08:49.747817+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:49 http: TLS handshake error from 127.0.0.1:43868: EOF
+2026-10-08T22:08:50.006076+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:50 http: TLS handshake error from 127.0.0.1:43898: EOF
+2026-10-08T22:08:50.012876+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:50 [409][settings] backup_schedule refused: SETTINGS_CHANGED
+2026-10-08T22:08:50.233768+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:50 http: TLS handshake error from 127.0.0.1:43920: EOF
+2026-10-08T22:08:50.482877+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:50 http: TLS handshake error from 127.0.0.1:43938: EOF
+2026-10-08T22:08:50.496799+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:50 http: TLS handshake error from 127.0.0.1:43960: EOF
+2026-10-08T22:08:51.512163+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:51 http: TLS handshake error from 127.0.0.1:43978: EOF
+2026-10-08T22:08:52.010727+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:52 http: TLS handshake error from 127.0.0.1:43984: EOF
+2026-10-08T22:08:52.703540+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:52 http: TLS handshake error from 127.0.0.1:43988: EOF
+2026-10-08T22:08:53.236810+00:00 dns-debian13 agent[5446]: 2026/10/08 22:08:53 config write: /etc/postgresql/17/main/postgresql.conf installed; the previous file is kept as /etc/postgresql/17/main/postgresql.conf.celikpanel-backup-20261008T220853Z
+2026-10-08T22:08:53.309229+00:00 dns-debian13 sudo[31453]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on --no-align --tuples-only --quiet
+2026-10-08T22:08:53.309515+00:00 dns-debian13 sudo[31453]: pam_unix(sudo:session): session opened for user postgres(uid=104) by (uid=0)
+2026-10-08T22:08:53.342045+00:00 dns-debian13 sudo[31453]: pam_unix(sudo:session): session closed for user postgres
+2026-10-08T22:08:54.321639+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:54 http: TLS handshake error from 127.0.0.1:43994: EOF
+2026-10-08T22:08:54.828185+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:54 http: TLS handshake error from 127.0.0.1:44020: EOF
+2026-10-08T22:08:55.324071+00:00 dns-debian13 agent[5446]: 2026/10/08 22:08:55 config write /etc/postgresql/17/main/postgresql.conf not applied: PostgreSQL does not accept the new postgresql.conf; nothing was changed: invalid value for parameter "work_mem": "eight-megabytes"
+2026-10-08T22:08:55.332538+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:55 [422][config] refused: CONFIG_INVALID daemon
+2026-10-08T22:08:56.079474+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:56 http: TLS handshake error from 127.0.0.1:44038: EOF
+2026-10-08T22:08:56.590276+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:56 http: TLS handshake error from 127.0.0.1:44054: EOF
+2026-10-08T22:08:57.064045+00:00 dns-debian13 agent[5446]: 2026/10/08 22:08:57 config write /etc/postgresql/17/main/postgresql.conf not applied: the new content is empty; a configuration file is not replaced with nothing
+2026-10-08T22:08:57.072268+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:57 [422][config] refused: CONFIG_INVALID empty
+2026-10-08T22:08:57.302748+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:57 http: TLS handshake error from 127.0.0.1:44066: EOF
+2026-10-08T22:08:57.811124+00:00 dns-debian13 agent[5446]: 2026/10/08 22:08:57 config write: /etc/postgresql/17/main/pg_hba.conf installed; the previous file is kept as /etc/postgresql/17/main/pg_hba.conf.celikpanel-backup-20261008T220857Z
+2026-10-08T22:08:57.819768+00:00 dns-debian13 sudo[31888]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on --no-align --tuples-only --quiet
+2026-10-08T22:08:57.820134+00:00 dns-debian13 sudo[31888]: pam_unix(sudo:session): session opened for user postgres(uid=104) by (uid=0)
+2026-10-08T22:08:57.851748+00:00 dns-debian13 sudo[31888]: pam_unix(sudo:session): session closed for user postgres
+2026-10-08T22:08:58.681006+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:58 http: TLS handshake error from 127.0.0.1:44084: EOF
+2026-10-08T22:08:59.189069+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:59 http: TLS handshake error from 127.0.0.1:38570: EOF
+2026-10-08T22:08:59.692187+00:00 dns-debian13 agent[5446]: 2026/10/08 22:08:59 config write /etc/postgresql/17/main/pg_hba.conf not applied: a changed line of pg_hba.conf is not one PostgreSQL accepts; nothing was changed: end-of-line before authentication method
+2026-10-08T22:08:59.701388+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:59 [422][config] refused: CONFIG_INVALID syntax
+2026-10-08T22:08:59.936170+00:00 dns-debian13 panel[5645]: 2026/10/08 22:08:59 http: TLS handshake error from 127.0.0.1:38584: EOF
+2026-10-08T22:09:00.469704+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:00 http: TLS handshake error from 127.0.0.1:38606: EOF
+2026-10-08T22:09:00.952855+00:00 dns-debian13 agent[5446]: 2026/10/08 22:09:00 config write /etc/postgresql/17/main/pg_hba.conf not applied: the change would take away the local administrator access to PostgreSQL; nothing was changed
+2026-10-08T22:09:00.961323+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:00 [422][config] refused: CONFIG_INVALID lockout
+2026-10-08T22:09:01.188505+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:01 http: TLS handshake error from 127.0.0.1:38630: EOF
+2026-10-08T22:09:02.153954+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:02 http: TLS handshake error from 127.0.0.1:38654: EOF
+2026-10-08T22:09:02.632013+00:00 dns-debian13 agent[5446]: 2026/10/08 22:09:02 config write /etc/postgresql/17/main/postgresql.conf not applied: the configuration file is not the one the write was built from; nothing was changed
+2026-10-08T22:09:02.640490+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:02 [409][settings] config_file refused: SETTINGS_CHANGED
+2026-10-08T22:09:02.876948+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:02 http: TLS handshake error from 127.0.0.1:38674: EOF
+2026-10-08T22:09:04.026536+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:04 http: TLS handshake error from 127.0.0.1:38702: EOF
+2026-10-08T22:09:04.586349+00:00 dns-debian13 agent[5446]: 2026/10/08 22:09:04 config write: /etc/postgresql/17/main/postgresql.conf installed; the previous file is kept as /etc/postgresql/17/main/postgresql.conf.celikpanel-backup-20261008T220904Z
+2026-10-08T22:09:04.697157+00:00 dns-debian13 agent[5446]: 2026/10/08 22:09:04 config write: reload of postgresql@17-main with the restored /etc/postgresql/17/main/postgresql.conf failed too: systemctl reload failed: exit status 1, output: Job for postgresql@17-main.service failed.
+2026-10-08T22:09:04.697157+00:00 dns-debian13 agent[5446]: See "systemctl status postgresql@17-main.service" and "journalctl -xeu postgresql@17-main.service" for details.
+2026-10-08T22:09:04.697157+00:00 dns-debian13 agent[5446]: 2026/10/08 22:09:04 config write /etc/postgresql/17/main/postgresql.conf not applied: the reload failed, the previous configuration file is back in place, and the reload with it failed as well; the refused file is kept as /etc/postgresql/17/main/postgresql.conf.celikpanel-backup-20261008T220904Z: Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.
+2026-10-08T22:09:04.705683+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:04 [502][config] refused: CONFIG_RELOAD_FAILED not_restored
+2026-10-08T22:09:07.661733+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:07 http: TLS handshake error from 127.0.0.1:38718: EOF
+2026-10-08T22:09:08.169766+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:08 http: TLS handshake error from 127.0.0.1:38744: EOF
+2026-10-08T22:09:08.759441+00:00 dns-debian13 agent[5446]: 2026/10/08 22:09:08 config write: /etc/mysql/mariadb.conf.d/50-server.cnf installed; the previous file is kept as /etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261008T220908Z
+2026-10-08T22:09:09.266424+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:09 http: TLS handshake error from 127.0.0.1:35568: EOF
+2026-10-08T22:09:09.766477+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:09 http: TLS handshake error from 127.0.0.1:35578: EOF
+2026-10-08T22:09:10.621330+00:00 dns-debian13 agent[5446]: 2026/10/08 22:09:10 config write /etc/mysql/mariadb.conf.d/50-server.cnf not applied: MariaDB does not accept the new option file; nothing was changed: unknown variable 'set1_unknown_option=1'
+2026-10-08T22:09:10.633143+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:10 [422][config] refused: CONFIG_INVALID daemon
+2026-10-08T22:09:11.025738+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:11 http: TLS handshake error from 127.0.0.1:35604: EOF
+2026-10-08T22:09:11.535915+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:11 http: TLS handshake error from 127.0.0.1:35622: EOF
+2026-10-08T22:09:12.059430+00:00 dns-debian13 agent[5446]: 2026/10/08 22:09:12 config write /etc/mysql/mariadb.conf.d/50-server.cnf not applied: MariaDB does not accept the new option file; nothing was changed: Unknown suffix 'u' used for variable 'max_connections' (value 'unlimited'). Legal suffix characters are: K, M, G, T, P, E
+2026-10-08T22:09:12.070922+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:12 [422][config] refused: CONFIG_INVALID daemon
+2026-10-08T22:09:12.305466+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:12 http: TLS handshake error from 127.0.0.1:35644: EOF
+2026-10-08T22:09:12.808404+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:12 http: TLS handshake error from 127.0.0.1:35668: EOF
+2026-10-08T22:09:13.398448+00:00 dns-debian13 agent[5446]: 2026/10/08 22:09:13 config write: /etc/mysql/mariadb.conf.d/50-server.cnf installed; the previous file is kept as /etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261008T220913Z
+2026-10-08T22:09:13.929849+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:13 http: TLS handshake error from 127.0.0.1:35686: EOF
+2026-10-08T22:09:14.417557+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:14 http: TLS handshake error from 127.0.0.1:35712: EOF
+2026-10-08T22:09:15.016275+00:00 dns-debian13 agent[5446]: 2026/10/08 22:09:15 config write: /etc/mysql/mariadb.conf.d/50-server.cnf installed; the previous file is kept as /etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261008T220914Z
+2026-10-08T22:09:15.243546+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:15 http: TLS handshake error from 127.0.0.1:35722: EOF
+2026-10-08T22:09:15.738733+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:15 http: TLS handshake error from 127.0.0.1:35742: EOF
+2026-10-08T22:09:16.218030+00:00 dns-debian13 agent[5446]: 2026/10/08 22:09:16 config write /etc/mysql/mariadb.conf.d/50-server.cnf not applied: the new content is empty; a configuration file is not replaced with nothing
+2026-10-08T22:09:16.229893+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:16 [422][config] refused: CONFIG_INVALID empty
+2026-10-08T22:09:16.469323+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:16 http: TLS handshake error from 127.0.0.1:35752: EOF
+2026-10-08T22:09:17.452489+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:17 http: TLS handshake error from 127.0.0.1:35774: EOF
+2026-10-08T22:09:17.937774+00:00 dns-debian13 agent[5446]: 2026/10/08 22:09:17 config write /etc/mysql/mariadb.conf.d/50-server.cnf not applied: the configuration file is not the one the write was built from; nothing was changed
+2026-10-08T22:09:17.947012+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:17 [409][settings] config_file refused: SETTINGS_CHANGED
+2026-10-08T22:09:18.933683+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:18 http: TLS handshake error from 127.0.0.1:38016: EOF
+2026-10-08T22:09:18.948601+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:18 http: TLS handshake error from 127.0.0.1:38020: EOF
+2026-10-08T22:09:18.955108+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:18 [409][settings] mail_catch_all refused: SETTINGS_VERSION_REQUIRED
+2026-10-08T22:09:18.962399+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:18 http: TLS handshake error from 127.0.0.1:38030: EOF
+2026-10-08T22:09:19.456792+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:19 http: TLS handshake error from 127.0.0.1:38050: EOF
+2026-10-08T22:09:19.463275+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:19 [409][settings] mail_catch_all refused: SETTINGS_CHANGED
+2026-10-08T22:09:19.471732+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:19 http: TLS handshake error from 127.0.0.1:38060: EOF
+2026-10-08T22:09:19.478068+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:19 [409][settings] mail_catch_all refused: SETTINGS_CHANGED
+2026-10-08T22:09:19.936812+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:19 http: TLS handshake error from 127.0.0.1:38072: EOF
+2026-10-08T22:09:20.662157+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:20 http: TLS handshake error from 127.0.0.1:38086: EOF
+2026-10-08T22:09:21.266598+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:21 http: TLS handshake error from 127.0.0.1:38106: EOF
+2026-10-08T22:09:21.277866+00:00 dns-debian13 postfix/postqueue[34078]: warning: Mail system is down -- accessing queue directly (Connect to the Postfix showq service: Connection refused)
+2026-10-08T22:09:24.437879+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:24 http: TLS handshake error from 127.0.0.1:38138: EOF
+2026-10-08T22:09:24.448191+00:00 dns-debian13 postfix/postqueue[34263]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-08T22:09:24.449006+00:00 dns-debian13 agent[5446]: 2026/10/08 22:09:24 mail queue: postqueue -j failed: postqueue: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign; exit status 69
+2026-10-08T22:09:24.449216+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:24 [502][mail queue] could not be read
+2026-10-08T22:09:26.427881+00:00 dns-debian13 panel[5645]: 2026/10/08 22:09:26 http: TLS handshake error from 127.0.0.1:38152: EOF

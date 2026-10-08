@@ -1,0 +1,67 @@
+{
+  "answers": {
+    "max_connections": {
+      "argv": [
+        "/usr/sbin/mariadb",
+        "-N",
+        "-B",
+        "-e",
+        "SELECT @@global.max_connections"
+      ],
+      "at": "2026-10-08T21:58:07Z",
+      "returncode": 0,
+      "seconds": 0.021,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "151\n"
+    },
+    "version": {
+      "argv": [
+        "/usr/sbin/mariadb",
+        "-N",
+        "-B",
+        "-e",
+        "SELECT VERSION(), @@pid_file"
+      ],
+      "at": "2026-10-08T21:58:07Z",
+      "returncode": 0,
+      "seconds": 0.023,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "13.0.2-MariaDB\t/var/lib/mysql/dns-arch.pid\n"
+    }
+  },
+  "at": "2026-10-08T21:58:07Z",
+  "client": "/usr/sbin/mariadb",
+  "mode": "read-mariadb",
+  "owner_action": false,
+  "pid_file": "/var/lib/mysql/dns-arch.pid",
+  "schema": "celikpanel/set1-native/v1",
+  "server_pid": 984,
+  "units": {
+    "mariadb.service": {
+      "ActiveEnterTimestamp": "Thu 2026-10-08 21:54:24 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "/usr/lib/systemd/system/mariadb.service.d/galera.conf",
+      "ExecMainStartTimestamp": "Thu 2026-10-08 21:54:23 UTC",
+      "FragmentPath": "/usr/lib/systemd/system/mariadb.service",
+      "LoadState": "loaded",
+      "MainPID": "984",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "running"
+    },
+    "mysql.service": {
+      "ActiveEnterTimestamp": "Thu 2026-10-08 21:54:24 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "/usr/lib/systemd/system/mariadb.service.d/galera.conf",
+      "ExecMainStartTimestamp": "Thu 2026-10-08 21:54:23 UTC",
+      "FragmentPath": "/usr/lib/systemd/system/mariadb.service",
+      "LoadState": "loaded",
+      "MainPID": "984",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "running"
+    }
+  }
+}

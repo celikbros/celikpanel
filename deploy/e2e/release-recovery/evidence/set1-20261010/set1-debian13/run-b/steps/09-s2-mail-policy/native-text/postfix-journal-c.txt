@@ -1,0 +1,3 @@
+2026-10-08T22:08:24.627366+00:00 dns-debian13 postfix/postfix-script[29780]: refreshing the Postfix mail system
+2026-10-08T22:08:24.633697+00:00 dns-debian13 postfix/master[27022]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:08:25.226180+00:00 dns-debian13 postfix/postfix-script[29898]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
