@@ -129,15 +129,36 @@ test('a scan refused because setup owns the host is not a lost connection', asyn
 });
 
 test('a finished setup step no longer holds an overlay that calls it installing', () => {
+  // The behaviour is run in component-operation-setup-scan-runtime.test.mjs;
+  // this holds the shape that keeps it fail-closed.
   const provider = read('../src/components/ComponentOperation.tsx');
-  const refused = provider.slice(provider.indexOf('if (await scanRefusedBySetup(scanResponse)) {'));
-  assert.ok(refused.length > 0, 'the provider does not read the setup refusal');
-  const release = refused.slice(0, refused.indexOf('setConnectionInterrupted(true);'));
-  // Released, not reported as interrupted and not retried every three seconds.
-  assert.match(release, /clearStoredOperation\(\);[\s\S]*setOperation\(null\);[\s\S]*setRefreshingCatalog\(false\);[\s\S]*setConnectionInterrupted\(false\);[\s\S]*return;/);
-  assert.doesNotMatch(release, /schedule\(poll/);
-  // The failure channel is not used and no success is announced without a scan.
-  assert.doesNotMatch(release, /setFailure\(\{|showToast|setCatalogSnapshot/);
+  const poll = provider.slice(provider.indexOf('poll = async () => {'), provider.indexOf('        poll();'));
+  assert.ok(poll.length > 0, 'the operation poll was not found');
+  // The setup refusal is read in one place. It does not release anything: it
+  // replaces the refused scan by a read of the scan the operation stored.
+  assert.equal(provider.match(/scanRefusedBySetup\(/g)?.length, 1);
+  assert.match(poll, /if \(await scanRefusedBySetup\(scanResponse\)\) \{\s*storedByOperation = true;\s*scanResponse = await fetch\('\/api\/v1\/managed-services', \{\s*cache: 'no-store',\s*\}\);\s*\}\s*\} catch \{\s*setConnectionInterrupted\(true\);\s*schedule\(poll, RETRY_DELAY_MS\);\s*return;/);
+  assert.equal(provider.match(/storedByOperation = true;/g)?.length, 1);
+  // One release, after the checks that judge the stored scan like a fresh one.
+  assert.equal(poll.match(/clearStoredOperation\(\);/g)?.length, 1);
+  assert.equal(poll.match(/setOperation\(null\);/g)?.length, 1);
+  const refused = poll.indexOf('scanRefusedBySetup(');
+  const checked = poll.indexOf('|| !snapshotConfirmsTerminalOperation(freshSnapshot, next, storedByOperation)');
+  const published = poll.indexOf('setCatalogSnapshot(freshSnapshot);');
+  const released = poll.indexOf('clearStoredOperation();');
+  assert.ok(refused > 0 && refused < checked && checked < published && published < released, 'the stored scan must pass the snapshot checks before anything is released');
+  // The stored scan is accepted only on the caller's word, and only when it is
+  // no older than the second the operation started.
+  const confirms = provider.slice(provider.indexOf('function snapshotConfirmsTerminalOperation('), provider.indexOf('interface VerifiedMailProfileResult'));
+  assert.match(confirms, /storedByOperation = false,\n\): boolean \{/);
+  assert.match(confirms, /if \(!Number\.isFinite\(scannedAt\) \|\| !Number\.isFinite\(finishedAt\)\) return false;\s*if \(scannedAt < finishedAt\) \{\s*const startedAt = Date\.parse\(operation\.started_at \|\| ''\);\s*if \(\s*!storedByOperation\s*\|\| !Number\.isFinite\(startedAt\)\s*\|\| scannedAt < Math\.floor\(startedAt \/ 1000\) \* 1000\s*\) \{\s*return false;\s*\}\s*\}/);
+  // The Panel stores that scan to the second and refuses a requested scan while setup runs.
+  assert.match(read('../../cmd/panel/managed_service_handlers.go'), /INSERT INTO service_scan_cache \(id, data, scanned_at\) VALUES \(1, \?, \?\)[\s\S]{0,200}time\.Now\(\)\.UTC\(\)\.Format\(time\.RFC3339\)\)/);
+  // A failed operation never takes the stored scan.
+  const failed = provider.slice(provider.indexOf('const refreshFailedSnapshot = async ('), provider.indexOf('let poll: () => Promise<void>;'));
+  assert.ok(failed.length > 0);
+  assert.doesNotMatch(failed, /scanRefusedBySetup|storedByOperation|fetch\('\/api\/v1\/managed-services',/);
+  assert.match(failed, /\|\| !snapshotConfirmsTerminalOperation\(freshSnapshot, terminalOperation\)\n/);
 });
 
 test('the wizard states the restart in advance and names it when the connection drops', () => {
@@ -170,6 +191,13 @@ test('the recovery page explains the restart and keeps the update result one ste
   // Only an unfinished operation is drawn, and during the handover it is closed under its own title.
   assert.match(page, /<RecoveryStatus [^>]*unfinishedOnly=\{cause !== 'bundle'\} disclosed=\{!!handover\} \/>/);
   assert.match(page, /return disclosed \? <details[^>]*><summary[^>]*>\{t\('recovery\.operationTitle'\)\}<\/summary>\{status\}<\/details> : status;/);
+  // The release-recovery harness renders this screen from the build's own source
+  // (deploy/e2e/release-recovery/web_source_eval.py, component_renderings). It
+  // reads two shapes at the top level of RecoveryStatus: one `return <...>;`, or
+  // a `const status = <...>;` shown plainly or as the one direct `{status}`
+  // child of a wrapper. Any other shape makes the recovery screen unknown there.
+  assert.match(page, /\n    const status = <section [\s\S]*?\n    <\/section>;\n    return disclosed \? <details/,
+    'RecoveryStatus changed shape: teach web_source_eval.component_renderings the new one and run deploy/e2e/release-recovery/test_owner_update_trial.py (WSL) in the same change');
   // Reads only: the public address metadata and this browser's own marker.
   const hook = page.slice(page.indexOf('function usePanelHandover('), page.indexOf('export function RecoveryStatus('));
   assert.match(hook, /fetch\('\/api\/v1\/panel\/access-address', \{ cache: 'no-store', signal: controller\.signal \}\)/);

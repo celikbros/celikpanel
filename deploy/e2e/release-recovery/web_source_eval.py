@@ -30,6 +30,9 @@ elements, fragments, string and expression attributes (attributes are kept,
 never evaluated), text children (JSX whitespace rules, HTML entities) and
 ``{expression}`` children, plus the TypeScript non-null ``x!``.
 ``component_return_jsx`` finds the one JSX tree a component returns,
+``component_renderings`` also the tree a component keeps in a constant and
+shows either plainly or inside one wrapper (``RecoveryStatus`` closed under
+``<details>`` during the planned handover: both renderings are read),
 ``find_elements`` the region the driver reads (``role="status"``) and
 ``render_region`` evaluates that region with the build's own functions and
 returns its visible lines in source order: one line per block element (``p``,
@@ -1137,8 +1140,12 @@ def jsx_lines(value: Any) -> list[str]:
     return [line.strip() for line in lines if line.strip()]
 
 
-def component_return_jsx(source: str, name: str) -> dict:
-    """The JSX tree returned by the top-level ``function NAME`` of a ``.tsx`` source (its one ``return <...>``)."""
+def _component_top_level(source: str, name: str) -> tuple[list[dict], list[list], dict[str, dict]]:
+    """The top level of the body of ``function NAME`` in a ``.tsx`` source.
+
+    Returns the JSX trees it returns directly (``return <...>``), the tokens of every other ``return`` (up to its
+    ``;``) and ``{X: tree}`` for every ``const X = <...>;``. Nested blocks, calls and callbacks are not read.
+    """
     tokens = tokenize(source, jsx=True)
     starts = [i for i in range(len(tokens) - 1) if tokens[i] == ("kw", "function") and tokens[i + 1] == ("name", name)]
     if len(starts) != 1:
@@ -1148,18 +1155,87 @@ def component_return_jsx(source: str, name: str) -> dict:
     while tokens[body][0] != "eof" and tokens[body] != ("punct", "{"):
         body += 1
     end = Module._close(tokens, body)
-    found, depth = [], 0
+    found, others, constants, depth = [], [], {}, 0
     for index in range(body + 1, end):
         kind, value = tokens[index]
         if kind == "punct" and value in ("{", "(", "["):
             depth += 1
         elif kind == "punct" and value in ("}", ")", "]"):
             depth -= 1
-        elif depth == 0 and (kind, value) == ("kw", "return") and tokens[index + 1][0] == "jsx":
-            found.append(tokens[index + 1][1])
+        elif depth == 0 and (kind, value) == ("kw", "return"):
+            if tokens[index + 1][0] == "jsx":
+                found.append(tokens[index + 1][1])
+                continue
+            stop, inner = index + 1, 0
+            while stop < end and not (inner == 0 and tokens[stop] == ("punct", ";")):
+                if tokens[stop][0] == "punct" and tokens[stop][1] in ("{", "(", "["):
+                    inner += 1
+                elif tokens[stop][0] == "punct" and tokens[stop][1] in ("}", ")", "]"):
+                    inner -= 1
+                stop += 1
+            others.append(tokens[index + 1:stop])
+        elif (depth == 0 and (kind, value) == ("kw", "const") and index + 4 < end and tokens[index + 1][0] == "name"
+              and tokens[index + 2] == ("punct", "=") and tokens[index + 3][0] == "jsx"
+              and tokens[index + 4] == ("punct", ";")):
+            constants[tokens[index + 1][1]] = tokens[index + 3][1]
+    return found, others, constants
+
+
+def component_return_jsx(source: str, name: str) -> dict:
+    """The JSX tree returned by the top-level ``function NAME`` of a ``.tsx`` source (its one ``return <...>``)."""
+    found, _, _ = _component_top_level(source, name)
     if len(found) != 1:
         raise Unsupported(f"component {name} returns JSX {len(found)} times at its top level")
     return found[0]
+
+
+def _wrapped_constant(run: list, constants: dict[str, dict]) -> tuple[dict, dict] | None:
+    """``CONDITION ? <wrapper>...{X}...</wrapper> : X`` (either order) for a constant tree X.
+
+    Returns ``(X, wrapper)`` where the wrapper's own ``{X}`` child (exactly one, a direct child) is replaced by
+    X's tree itself, so an element found in both is the same object. Anything else is ``None``.
+    """
+    marks = [i for i, token in enumerate(run) if token == ("punct", "?")]
+    if len(marks) != 1 or marks[0] == 0 or len(run) != marks[0] + 4 or run[marks[0] + 2] != ("punct", ":"):
+        return None
+    if any(kind == "jsx" for kind, _ in run[:marks[0]]):
+        return None
+    first, second = run[marks[0] + 1], run[marks[0] + 3]
+    for wrapper, constant in ((first, second), (second, first)):
+        if wrapper[0] != "jsx" or constant[0] != "name" or constant[1] not in constants:
+            continue
+        children = list(wrapper[1]["children"])
+        places = [i for i, child in enumerate(children) if child[0] == "expr" and child[1] == [constant]]
+        if len(places) != 1:
+            return None
+        children[places[0]] = ("element", constants[constant[1]])
+        return constants[constant[1]], dict(wrapper[1], children=children)
+    return None
+
+
+def component_renderings(source: str, name: str) -> list[dict]:
+    """Every JSX tree the top-level ``function NAME`` of a ``.tsx`` source renders, the plain one first.
+
+    ``return <...>;`` is the one rendering (as ``component_return_jsx``). The other shape read is a constant tree
+    shown either as it is or inside one wrapper element (``RecoveryStatus`` closed under ``<details>``)::
+
+        const X = <...>;
+        return CONDITION ? <wrapper>...{X}...</wrapper> : X;        (or ``? X : <wrapper>...``)
+
+    which gives ``[X, wrapper]``; the wrapper's ``{X}`` child is X's own tree, so a region found in both
+    renderings is one object. A ``return`` of anything else (``return null``) renders nothing and is skipped, as
+    in ``component_return_jsx``. Both shapes together, more than one of either, or neither is ``Unsupported``.
+    """
+    found, others, constants = _component_top_level(source, name)
+    wrapped = [pair for pair in (_wrapped_constant(run, constants) for run in others) if pair is not None]
+    if not wrapped:
+        if len(found) != 1:
+            raise Unsupported(f"component {name} returns JSX {len(found)} times at its top level")
+        return found
+    if found or len(wrapped) != 1:
+        raise Unsupported(f"component {name} returns JSX {len(found)} times and a wrapped constant "
+                          f"{len(wrapped)} times at its top level")
+    return list(wrapped[0])
 
 
 def find_elements(tree: dict, attribute: str, value: str) -> list[dict]:

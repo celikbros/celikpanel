@@ -685,9 +685,18 @@ incelenen panel alan adıdır.
   - Güncelleme ve kurtarma durumu sayfada kalır, kendi başlığı altında kapalı
     durur; neden buymuş gibi gösterilmez. O sunucu bildirimi yoksa sayfa mevcut
     metnini korur.
-- *Katman.* Biten bir kurulum adımı artık katmanı tutmaz: ardından gelen tarama
-  `server_setup_busy` ile reddedildiğinde katman, kurulumun geri kalanı boyunca
-  "certbot kuruluyor / Bağlantı kesildi" göstermek yerine bırakılır. Yeni katman
+- *Katman.* Biten bir kurulum adımı artık kurulumun geri kalanı boyunca katmanı
+  "certbot kuruluyor / Bağlantı kesildi" ile tutmaz. Ardından gelen tarama
+  `server_setup_busy` ile reddedildiğinde sayfa, işlemin son aşamasında kendisinin
+  sakladığı taramayı okur (`GET /api/v1/managed-services`; sunucu yeniden
+  yoklanmaz). Katman yalnızca bu kayıtlı tarama işlemin başladığı saniyeden eski
+  değilse ve bileşeni kurulu gösteriyorsa bırakılır; taşıdığı katalog açık
+  sayfalara yayımlanır ve olağan "kuruldu" iletisi gösterilir. Kayıtlı işlem tek
+  bir yerde, doğrulayan bir snapshot'tan sonra silinir (8 Ekim 2026 düzeltmesi:
+  ilk sürüm katmanı hiçbir snapshot olmadan, yalnızca redde dayanarak
+  bırakıyordu). Kayıtlı tarama okunamaz ya da adımı doğrulamazsa katman mevcut
+  metniyle kalır ve bir tarama kabul edilene dek yeniden denenir. Reddedilen ya
+  da başarısız olan diğer her tarama yanıtı eskisi gibi ele alınır. Yeni katman
   metni yok.
 - *Sunucu meşgul olduğu için reddedilen kurulum adımı.* Başarısız adım artık
   tipli nedeni (`error.reason`) taşır ve başlık ondan seçilir; eski kayıtlar için

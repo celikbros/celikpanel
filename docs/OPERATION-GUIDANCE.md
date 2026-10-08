@@ -762,10 +762,19 @@ reviewed panel host name.
   - The update and recovery status stays on the page, closed under its own
     title, instead of being shown as if it were the reason. Without that server
     report the page keeps its existing wording.
-- *The overlay.* A setup step that has finished no longer holds the overlay:
-  when its follow-up scan is refused with `server_setup_busy`, the overlay is
-  released instead of showing "Installing certbot / Connection interrupted" for
-  the rest of the setup. No new overlay text.
+- *The overlay.* A setup step that has finished no longer holds the overlay for
+  the rest of the setup with "Installing certbot / Connection interrupted". When
+  its follow-up scan is refused with `server_setup_busy`, the page reads the scan
+  the operation itself stored as its last phase (`GET /api/v1/managed-services`,
+  no new probe of the server). The overlay is released only when that stored
+  scan is no older than the second the operation started and shows the component
+  installed; the catalogue it carries is published to the open pages and the
+  usual "installed" message is shown. The stored operation is cleared in one
+  place only, after a confirming snapshot (corrected 2026-10-08: the first
+  version released the overlay on the refusal alone, without any snapshot). If
+  the stored scan cannot be read or does not confirm the step, the overlay stays
+  with its existing wording and is retried until a scan is accepted. Every other
+  refused or failed scan reply is handled as before. No new overlay text.
 - *A setup step refused because the server is busy.* The failed step now carries
   the typed reason (`error.reason`), and the headline is selected from it; the
   Panel's sentence stays the fallback for older records. The Agent now names the

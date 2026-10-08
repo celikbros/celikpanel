@@ -400,14 +400,34 @@ export function decodeManagedServicesSnapshot(value: unknown): ManagedServicesSn
     };
 }
 
+// A snapshot confirms a terminal operation when it was taken after the
+// operation finished and shows the state the operation claims. One other
+// snapshot is accepted, only where the caller says so (the scan refused by a
+// running server setup): the scan the operation itself ran as its last phase.
+// The Panel stores that scan to the second, before it records the result, and
+// refuses a requested scan while an operation runs, so the stored snapshot is
+// that scan when it is no older than the second the operation started.
+// Snapshot, işlem bittikten sonra alındıysa ve işlemin bildirdiği durumu
+// gösteriyorsa terminal işlemi doğrular. Yalnız çağıranın belirttiği durumda
+// (tarama kurulum yüzünden reddedildiğinde) işlemin kendi son aşamasında
+// yaptığı ve Panelin saniye duyarlığıyla sakladığı tarama da kabul edilir.
 function snapshotConfirmsTerminalOperation(
     snapshot: ManagedServicesSnapshot,
     operation: ComponentOperation,
+    storedByOperation = false,
 ): boolean {
     const scannedAt = Date.parse(snapshot.scanned_at || '');
     const finishedAt = Date.parse(operation.finished_at || '');
-    if (!Number.isFinite(scannedAt) || !Number.isFinite(finishedAt) || scannedAt < finishedAt) {
-        return false;
+    if (!Number.isFinite(scannedAt) || !Number.isFinite(finishedAt)) return false;
+    if (scannedAt < finishedAt) {
+        const startedAt = Date.parse(operation.started_at || '');
+        if (
+            !storedByOperation
+            || !Number.isFinite(startedAt)
+            || scannedAt < Math.floor(startedAt / 1000) * 1000
+        ) {
+            return false;
+        }
     }
     if (operation.status === 'failed') return true;
     if (operation.status !== 'succeeded') return false;
@@ -1673,11 +1693,32 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 // Bileşenler tüketicileri aynı snapshot'ı çizer.
                 setRefreshingCatalog(true);
                 let scanResponse: Response;
+                let storedByOperation = false;
                 try {
                     scanResponse = await fetch('/api/v1/managed-services/scan', {
                         method: 'POST',
                         cache: 'no-store',
                     });
+                    // 2026-10-08: one typed refusal has its own evidence. While a
+                    // server setup owns the host the Panel answers the scan with
+                    // 409 server_setup_busy until the whole setup ends; this
+                    // operation was one of its steps. Waiting for a new scan
+                    // would name a finished step as "installing" and call a
+                    // reachable Panel a lost connection for the rest of the
+                    // setup. The operation's own last phase already scanned the
+                    // host and stored the result, so that stored scan is read
+                    // (no new probe) and must pass the same checks below. Any
+                    // other refused, failed or unreadable reply keeps the lock.
+                    // Kurulum makineyi tutarken tarama reddedilir. İşlemin kendi
+                    // son aşaması makineyi zaten tarayıp sonucu sakladı; o kayıt
+                    // okunur ve aşağıdaki aynı denetimlerden geçmek zorundadır.
+                    // Diğer her ret, hata ya da okunamayan yanıt kilidi korur.
+                    if (await scanRefusedBySetup(scanResponse)) {
+                        storedByOperation = true;
+                        scanResponse = await fetch('/api/v1/managed-services', {
+                            cache: 'no-store',
+                        });
+                    }
                 } catch {
                     setConnectionInterrupted(true);
                     schedule(poll, RETRY_DELAY_MS);
@@ -1685,28 +1726,6 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 }
                 if (!scanResponse.ok) {
                     if (scanResponse.status === 401) {
-                        return;
-                    }
-                    // 2026-10-08: this operation was a step of a running server
-                    // setup, which owns the host until it ends and refuses the
-                    // scan. The step's own success was read above. Holding the
-                    // overlay would name a finished step as "installing" and
-                    // call a reachable Panel a lost connection for the rest of
-                    // the setup, so release it; the wizard shows the setup and
-                    // the Panel keeps refusing every other change meanwhile.
-                    // Bu işlem süren kurulumun bir adımıydı; kurulum makineyi
-                    // tutarken tarama reddedilir. Adım başarıyla bitti; katman
-                    // bırakılır, kurulumu sihirbaz gösterir.
-                    if (await scanRefusedBySetup(scanResponse)) {
-                        if (cancelled) return;
-                        clearStoredOperation();
-                        recoveryMarkerRef.current = null;
-                        adoptedOperationIDRef.current = '';
-                        lockedRef.current = false;
-                        setOperation(null);
-                        setRefreshingCatalog(false);
-                        setConnectionInterrupted(false);
-                        setFailure(null);
                         return;
                     }
                     setConnectionInterrupted(true);
@@ -1725,7 +1744,7 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 const freshSnapshot = decodeManagedServicesSnapshot(snapshot);
                 if (
                     freshSnapshot === null
-                    || !snapshotConfirmsTerminalOperation(freshSnapshot, next)
+                    || !snapshotConfirmsTerminalOperation(freshSnapshot, next, storedByOperation)
                 ) {
                     setConnectionInterrupted(true);
                     schedule(poll, RETRY_DELAY_MS);

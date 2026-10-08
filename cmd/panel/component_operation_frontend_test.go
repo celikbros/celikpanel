@@ -101,6 +101,33 @@ func TestComponentOperationUnverifiableResponsesStayFailClosed(t *testing.T) {
 	if decodeIndex < 0 || clearIndex < 0 || decodeIndex > clearIndex {
 		t.Fatal("operation state may only clear after a valid fresh managed-services snapshot")
 	}
+
+	// 2026-10-08: one typed reply has its own evidence. A scan refused because a
+	// running server setup owns the host (409 server_setup_busy) is replaced by a
+	// read of the scan the operation itself stored. That refusal is read in one
+	// place, releases nothing by itself, and its snapshot passes the same decode
+	// and confirmation before the single clear above. Every other refused, failed
+	// or unreadable scan reply stays on the retry branches.
+	if got := strings.Count(source, "scanRefusedBySetup("); got != 1 {
+		t.Fatalf("setup scan refusal is read %d times; want exactly one typed exception", got)
+	}
+	if got := strings.Count(source, "storedByOperation = true;"); got != 1 {
+		t.Fatalf("stored operation scan is selected %d times; want only the setup refusal", got)
+	}
+	refusedIndex := strings.Index(poll, "if (await scanRefusedBySetup(scanResponse)) {")
+	selectedIndex := strings.Index(poll, "storedByOperation = true;")
+	storedReadIndex := strings.Index(poll, "scanResponse = await fetch('/api/v1/managed-services', {")
+	confirmIndex := strings.Index(
+		poll,
+		"|| !snapshotConfirmsTerminalOperation(freshSnapshot, next, storedByOperation)",
+	)
+	if refusedIndex < 0 || selectedIndex < refusedIndex || storedReadIndex < selectedIndex ||
+		decodeIndex < storedReadIndex || confirmIndex < decodeIndex || clearIndex < confirmIndex {
+		t.Fatal("a scan refused by server setup may only lead to the stored scan, checked like a fresh one before the clear")
+	}
+	if got := strings.Count(poll, "setOperation(null);"); got != 1 {
+		t.Fatalf("operation poll releases the overlay %d times; want exactly one verified success path", got)
+	}
 }
 
 func TestComponentOperationTerminalFailureWaitsForFreshSnapshot(t *testing.T) {
@@ -115,6 +142,12 @@ func TestComponentOperationTerminalFailureWaitsForFreshSnapshot(t *testing.T) {
 	finishIndex := strings.Index(refreshFailure, "finishFailure(terminalFailure)")
 	if decodeIndex < 0 || finishIndex < 0 || decodeIndex > finishIndex {
 		t.Fatal("terminal failure must remain locked until a valid fresh managed-services snapshot")
+	}
+	// The stored-scan exception belongs to a verified success only.
+	if !strings.Contains(refreshFailure, "|| !snapshotConfirmsTerminalOperation(freshSnapshot, terminalOperation)\n") ||
+		strings.Contains(refreshFailure, "storedByOperation") ||
+		strings.Contains(refreshFailure, "scanRefusedBySetup") {
+		t.Fatal("terminal failure must be confirmed by a fresh scan, never by the stored one")
 	}
 }
 
@@ -176,6 +209,11 @@ func TestComponentOperationTerminalSnapshotProvesFreshExpectedState(t *testing.T
 	)
 	for _, required := range []string{
 		"scannedAt < finishedAt",
+		// The stored scan counts only on the caller's word and only when it is
+		// no older than the second the operation started (2026-10-08).
+		"storedByOperation = false,",
+		"!storedByOperation",
+		"scannedAt < Math.floor(startedAt / 1000) * 1000",
 		"operation.status === 'failed'",
 		"service.is_installed !== true",
 		"operation.kind !== 'runtime_install'",

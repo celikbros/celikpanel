@@ -1139,17 +1139,29 @@ def parse_screen_source(screen_tsx: str) -> dict:
     Nothing of the layout is copied here. A source whose component or region
     cannot be found exactly once, or that the evaluator cannot read, gives
     ``unavailable`` (the screen is then unknown, never a finding).
+
+    The component may show its tree plainly or closed under one wrapper (the
+    ``<details>`` of the planned handover, 2026-10-08). Every rendering the
+    source has is read (``renderings``: their root tags, the plain one first)
+    and each must hold exactly one status region, the same element in all of
+    them; that one region is what ``recovery_guidance`` evaluates, so its keys
+    and texts are the ones shown in the plain and in the disclosed case.
     """
     evaluator = web_eval()
     try:
-        tree = evaluator.component_return_jsx(screen_tsx, SCREEN_COMPONENT)
-        regions = evaluator.find_elements(tree, *SCREEN_REGION)
-        if len(regions) != 1:
-            raise evaluator.Unsupported(f"{len(regions)} elements with {SCREEN_REGION[0]}=\"{SCREEN_REGION[1]}\"")
+        renderings = evaluator.component_renderings(screen_tsx, SCREEN_COMPONENT)
+        regions = []
+        for tree in renderings:
+            found = evaluator.find_elements(tree, *SCREEN_REGION)
+            if len(found) != 1:
+                raise evaluator.Unsupported(f"{len(found)} elements with {SCREEN_REGION[0]}=\"{SCREEN_REGION[1]}\"")
+            regions.append(found[0])
+        if any(region is not regions[0] for region in regions):
+            raise evaluator.Unsupported("its renderings show different status regions")
     except (evaluator.Unsupported, IndexError, KeyError) as exc:
         return {"component": SCREEN_COMPONENT,
                 "unavailable": f"the build's RecoveryAccess.tsx {SCREEN_COMPONENT} cannot be read: {exc}"}
-    return {"component": SCREEN_COMPONENT, "region": regions[0]}
+    return {"component": SCREEN_COMPONENT, "region": regions[0], "renderings": [tree["tag"] for tree in renderings]}
 
 
 def parse_card_rules(sources: dict) -> dict:
