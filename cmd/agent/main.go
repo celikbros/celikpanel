@@ -389,13 +389,11 @@ func (a *Agent) serviceActionContext(ctx context.Context, serviceName, action st
 		reply.Error = "systemd client failed security validation"
 		return nil
 	}
-	out, err := runServiceMutationCombinedOutput(ctx, systemctl, action, name)
-	if err != nil {
-		log.Printf("ERROR service %s %s: %v: %s", action, name, err, strings.TrimSpace(string(out)))
-		reply.Error = firstLine(fmt.Sprintf("%v: %s", err, strings.TrimSpace(string(out))))
-		return nil
-	}
-	reply.Success = true
+	// The answer is what was observed, never systemctl's exit status alone:
+	// that status is the named unit's job result, and on some platforms the
+	// named unit is a wrapper (service_action_verify.go, 10 Oct 2026).
+	// Yanıt gözlenendir; yalnız systemctl çıkış durumu değildir.
+	*reply = verifiedServiceAction(serviceActionRunner(ctx, systemctl), service.ID, name, action)
 	return nil
 }
 

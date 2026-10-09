@@ -3938,3 +3938,180 @@ answers is introduced as what the service said although the systemd unit's
 reload printed it; and the sentence for a not-reloaded answer that names no
 stage (an older Agent) still names `sudo systemctl reload postfix`, against the
 rule at the top of this entry.
+
+**Not shown yet.** The scheduled tasks screen still shows its one neutral
+sentence (`cron.unknown`); the `cron.unknown.*` entries above are in the
+catalogue and the answer carries the cause and the line, but the screen does
+not use them yet. A successful mail policy save that reloaded Postfix keeps
+`mailpolicy.saved`. The entries `postfix.queue.unknown` and `mailpolicy.unknown`,
+which told the owner to check that Postfix is running, are no longer used by
+any screen.
+
+### Service actions and mail certificate renewal: the answer is what the service shows, and an unknown result is said as unknown (2026-10-10)
+
+Source state with component tests; the native measurement on real services is
+pending, and nothing was observed on an installed server. See the resilience
+contract entry of the same date for the paths and for what changed. This entry
+holds the sentences.
+
+**The rule the texts follow.** Start, Stop, Restart and Reload on the Services
+page are answered with what was observed, not with the service manager's exit
+status: on Ubuntu `postfix`, and on Debian and Ubuntu `postgresql`, that status
+belongs to a unit that only groups the unit that runs the service. Three
+answers exist. Done: the service was seen in the state that was asked for.
+Verified failure: it was seen not to be, and the stage says where
+(`check`: its own check refuses its configuration and nothing was sent;
+`reload`, `start`, `stop`; `verify`: sent, and afterwards not in that state;
+`command`: the service manager refused). Unknown: the action was sent and what
+came of it could not be established. Unknown is never shown as done and never
+as a failure.
+
+**Who acts.** The server owner, on the server, with the one command the answer
+carries (`vars.command`). For Postfix that is always one of Postfix's own
+(`sudo postfix check`, `sudo postfix reload`, `sudo postfix status`), which
+answer for the daemon on every platform; for another service it is `sudo
+systemctl status <unit>` of the unit that runs it.
+
+**How work resumes.** Nothing repeats by itself. After a verified failure the
+owner corrects what the service names and repeats the action on the page.
+After an unknown result the owner looks at the service's state first and
+repeats the action only if it is still needed. A refused configuration stops
+Start, Restart and Reload before anything is sent; Stop is always sent.
+
+**The texts, Services page (`POST /api/v1/service/action`).** API sentences are
+the `error` field, English only. The catalogue entries below are proposed
+wordings: they are not in `web/src/i18n` yet, so the screen shows the API
+sentence, without the service's line. `{unit}` is the unit that was acted on,
+`{command}` the command, `{detail}` the service's own line, `{owner_unit}` the
+unit that runs the service when it is another one. Every API sentence except
+the unknown one ends with: "The server owner runs the command shown to read the
+service's own answer, corrects what it names, and then repeats this action
+here; nothing repeats it automatically."
+
+- `502 SERVICE_ACTION_FAILED`, reason `check`
+  API: "Nothing was changed: the service's own check refuses its configuration,
+  so the action was not carried out."
+- `err.SERVICE_ACTION_FAILED.check` (proposed)
+  EN: "Nothing was changed: {unit} refuses its own configuration, so the action
+  was not carried out. On the server, run {command} to see what it objects to,
+  correct it, then repeat the action here."
+  TR: "Hiçbir şey değiştirilmedi: {unit} kendi yapılandırmasını reddediyor; bu
+  yüzden işlem yapılmadı. Sunucuda {command} komutunu çalıştırıp neye itiraz
+  ettiğini görün, düzeltin, sonra işlemi burada yineleyin."
+- `502 SERVICE_ACTION_FAILED`, reason `reload`
+  API: "The service was not reloaded and keeps running with the settings it
+  had."
+- `err.SERVICE_ACTION_FAILED.reload` (proposed)
+  EN: "{unit} was not reloaded and keeps running with the settings it had. On
+  the server, run {command} to see why, correct it, then repeat the action
+  here."
+  TR: "{unit} yeniden yüklenmedi ve önceki ayarlarıyla çalışmayı sürdürüyor.
+  Sunucuda {command} komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi
+  burada yineleyin."
+- `502 SERVICE_ACTION_FAILED`, reason `start`
+  API: "The service did not start, or did not stay running."
+- `err.SERVICE_ACTION_FAILED.start` (proposed)
+  EN: "{unit} did not start, or did not stay running. On the server, run
+  {command} to see why, correct it, then repeat the action here."
+  TR: "{unit} başlamadı ya da çalışır durumda kalmadı. Sunucuda {command}
+  komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin."
+- `502 SERVICE_ACTION_FAILED`, reason `stop`
+  API: "The service did not stop: its daemon is still running."
+- `err.SERVICE_ACTION_FAILED.stop` (proposed)
+  EN: "{unit} did not stop: it is still running. On the server, run {command}
+  to see its state, then repeat the action here."
+  TR: "{unit} durmadı: hâlâ çalışıyor. Sunucuda {command} komutuyla durumunu
+  görün, sonra işlemi burada yineleyin."
+- `502 SERVICE_ACTION_FAILED`, reason `verify`
+  API: "The action was sent, but afterwards the service's daemon is not in the
+  state that was asked for."
+- `err.SERVICE_ACTION_FAILED.verify` (proposed)
+  EN: "The action was sent, but {unit} is not in the state that was asked for.
+  On the server, run {command} to see its state, correct the cause, then repeat
+  the action here."
+  TR: "İşlem gönderildi ancak {unit} istenen durumda değil. Sunucuda {command}
+  komutuyla durumunu görün, nedeni düzeltin, sonra işlemi burada yineleyin."
+- `502 SERVICE_ACTION_FAILED`, reason `command`
+  API: "The server's service manager did not carry out the action."
+- `err.SERVICE_ACTION_FAILED.command` (proposed)
+  EN: "The server's service manager did not carry out the action on {unit}. On
+  the server, run {command} to see why, correct it, then repeat the action
+  here."
+  TR: "Sunucunun hizmet yöneticisi {unit} üzerindeki işlemi yapmadı. Sunucuda
+  {command} komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada
+  yineleyin."
+- `502 SERVICE_ACTION_FAILED`, no reason (a stage this Panel does not know)
+  API: "The action did not take effect."
+- `err.SERVICE_ACTION_FAILED` (proposed)
+  EN: "The action on {unit} did not take effect. On the server, run {command}
+  to see why, correct it, then repeat the action here."
+  TR: "{unit} üzerindeki işlem etkili olmadı. Sunucuda {command} komutunu
+  çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin."
+- `502 SERVICE_ACTION_UNKNOWN`
+  API: "The action was sent, but what came of it could not be verified, so it
+  is not reported as done. This is not a verified failure: the service may
+  already be in the state that was asked for. The server owner runs the command
+  shown to see the service's state, and repeats this action here only if it is
+  still needed; nothing repeats it automatically."
+- `err.SERVICE_ACTION_UNKNOWN` (proposed)
+  EN: "The action was sent, but what came of it could not be verified, so it is
+  not shown as done. This is not a verified failure: {unit} may already be in
+  the state you asked for. On the server, run {command} to see its state, and
+  repeat the action here only if it is still needed."
+  TR: "İşlem gönderildi ancak sonucu doğrulanamadı; bu yüzden yapıldı diye
+  gösterilmiyor. Bu doğrulanmış bir hata değildir: {unit} istediğiniz duruma
+  zaten gelmiş olabilir. Sunucuda {command} komutuyla durumunu görün; işlemi
+  yalnız hâlâ gerekiyorsa burada yineleyin."
+- `services.action.said` (proposed; shown under either answer when `vars.detail`
+  is present)
+  EN: "The service said: {detail}"
+  TR: "Hizmetin yanıtı: {detail}"
+- `services.action.ownerUnit` (proposed; when `vars.owner_unit` is present)
+  EN: "The service itself runs as {owner_unit}; {unit} only groups it."
+  TR: "Hizmetin kendisi {owner_unit} olarak çalışır; {unit} yalnız onu
+  gruplar."
+
+**The texts, mail certificate renewal.** No screen: the independent renewal
+helper prints the sentence to its journal (`journalctl -u
+celikpanel-mail-renewal.service`), the Agent writes it to its log. English
+only. `<service>` is Postfix or Dovecot. They replace, for these two causes
+only, the general "mail certificate activation paused" sentence.
+
+- The service's listeners still present another certificate after its reload
+  (verified):
+  "mail certificate activation is not complete: <service> was asked to reload,
+  but its listeners on this server still present another certificate than the
+  selected one; the server owner runs `postfix reload` as root, reads what it
+  prints and the service's log, and the renewal then retries the same
+  operation, by itself up to its recorded limit and after that with the
+  continuation command it prints; the renewed certificate stays selected, and
+  Postfix/Dovecot settings and certificate evidence are preserved"
+  (for Dovecot the command is `doveadm reload`).
+- No listener of the service answered with TLS (unknown):
+  "mail certificate activation is not confirmed: no TLS listener of <service>
+  answered on this server, so which certificate it presents is unknown and
+  nothing is reported as activated; the server owner checks that <service> is
+  running and listening (`postfix status`, which answers for the daemon where
+  `systemctl is-active postfix` may answer for a wrapper unit), starts it if it
+  is stopped, and the renewal then retries the same operation, by itself up to
+  its recorded limit and after that with the continuation command it prints;
+  the renewed certificate stays selected, and Postfix/Dovecot settings and
+  certificate evidence are preserved" (for Dovecot the check is `systemctl
+  status dovecot`).
+
+**A server already enrolled in independent renewal.** Its renewal helper is the
+one it was enrolled with and does not print these sentences; on Ubuntu it can
+record a renewal as activated although Postfix did not reload. Until the helper
+can be moved to a newer one (designed, not implemented; resilience contract),
+the owner compares after a renewal, on the server:
+
+    openssl s_client -connect localhost:465 </dev/null 2>/dev/null | openssl x509 -noout -fingerprint -sha256
+    openssl x509 -noout -fingerprint -sha256 -in /etc/ssl/celikpanel/_mail/host/current/fullchain.pem
+
+The first line is the certificate Postfix presents, the second the one that is
+installed. When they differ, `sudo postfix reload` makes Postfix take it and
+prints what Postfix objects to if it cannot. Both lines only read.
+
+**Not shown yet.** The proposed entries above; the Services page shows the API
+sentence. The mail certificate status on the Panel does not show an open
+renewal's cause; it is in the helper's journal and the Agent's log.

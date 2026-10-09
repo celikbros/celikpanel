@@ -3871,3 +3871,179 @@ altındaki satır, onu systemd biriminin yeniden yüklemesi yazdığı halde hiz
 söylediği diye sunulur; ve aşama adı vermeyen (eski bir Agent'ın) yeniden
 yüklenmedi yanıtının cümlesi, bu kaydın başındaki kuralın tersine, hâlâ `sudo
 systemctl reload postfix` komutunu adlandırır.
+
+**Henüz gösterilmeyen.** Zamanlanmış görevler ekranı hâlâ tek yansız cümlesini
+gösterir (`cron.unknown`); yukarıdaki `cron.unknown.*` girdileri katalogdadır ve
+yanıt nedeni ve satırı taşır, ancak ekran onları henüz kullanmaz. Postfix'i
+yeniden yükleyen başarılı bir posta politikası kaydı `mailpolicy.saved` metnini
+korur. Sahibe Postfix'in çalıştığını denetlemesini söyleyen
+`postfix.queue.unknown` ve `mailpolicy.unknown` girdilerini artık hiçbir ekran
+kullanmıyor.
+
+### Hizmet eylemleri ve posta sertifikası yenilemesi: yanıt hizmetin gösterdiğidir, bilinmeyen sonuç bilinmeyen diye söylenir (2026-10-10)
+
+Bileşen testleriyle kaynak durumu; gerçek hizmetlerde ölçüm bekliyor ve kurulu
+bir sunucuda hiçbir şey gözlenmedi. Yollar ve neyin değiştiği için aynı tarihli
+dayanıklılık sözleşmesi kaydına bakın. Bu kayıt cümleleri tutar.
+
+**Metinlerin izlediği kural.** Hizmetler sayfasındaki Başlat, Durdur, Yeniden
+başlat ve Yeniden yükle, hizmet yöneticisinin çıkış durumuyla değil, gözlenenle
+yanıtlanır: Ubuntu'da `postfix`, Debian ve Ubuntu'da `postgresql` için o durum,
+hizmeti çalıştıran birimi yalnız gruplayan bir birime aittir. Üç yanıt vardır.
+Yapıldı: hizmet istenen durumda görüldü. Doğrulanmış hata: istenen durumda
+olmadığı görüldü ve aşama nerede olduğunu söyler (`check`: kendi denetimi
+yapılandırmasını reddediyor ve hiçbir şey gönderilmedi; `reload`, `start`,
+`stop`; `verify`: gönderildi ve sonrasında o durumda değil; `command`: hizmet
+yöneticisi reddetti). Bilinmeyen: eylem gönderildi ve sonucu belirlenemedi.
+Bilinmeyen asla yapıldı diye de hata diye de gösterilmez.
+
+**Kim işlem yapar.** Sunucu sahibi, sunucuda, yanıtın taşıdığı tek komutla
+(`vars.command`). Postfix için bu her zaman Postfix'in kendi komutlarından
+biridir (`sudo postfix check`, `sudo postfix reload`, `sudo postfix status`);
+bunlar her platformda hizmetin kendisi adına yanıt verir. Başka bir hizmet için
+komut, onu çalıştıran birimin `sudo systemctl status <unit>` komutudur.
+
+**İş nasıl sürer.** Hiçbir şey kendiliğinden yinelenmez. Doğrulanmış bir
+hatadan sonra sahip, hizmetin adını verdiği şeyi düzeltir ve eylemi sayfada
+yineler. Bilinmeyen bir sonuçtan sonra sahip önce hizmetin durumuna bakar ve
+eylemi yalnız hâlâ gerekiyorsa yineler. Reddedilen bir yapılandırma Başlat,
+Yeniden başlat ve Yeniden yükle eylemlerini bir şey gönderilmeden durdurur;
+Durdur her zaman gönderilir.
+
+**Metinler, Hizmetler sayfası (`POST /api/v1/service/action`).** API cümleleri
+`error` alanıdır, yalnız İngilizce. Aşağıdaki katalog girdileri önerilen
+metinlerdir: henüz `web/src/i18n` içinde değiller; bu yüzden ekran API
+cümlesini, hizmetin satırı olmadan gösterir. `{unit}` eylemin uygulandığı
+birim, `{command}` komut, `{detail}` hizmetin kendi satırı, `{owner_unit}`
+hizmeti çalıştıran birim başka bir birimse o birimdir. Bilinmeyen dışındaki her
+API cümlesi şununla biter: "The server owner runs the command shown to read the
+service's own answer, corrects what it names, and then repeats this action
+here; nothing repeats it automatically."
+
+- `502 SERVICE_ACTION_FAILED`, reason `check`
+  API: "Nothing was changed: the service's own check refuses its configuration,
+  so the action was not carried out."
+- `err.SERVICE_ACTION_FAILED.check` (öneri)
+  EN: "Nothing was changed: {unit} refuses its own configuration, so the action
+  was not carried out. On the server, run {command} to see what it objects to,
+  correct it, then repeat the action here."
+  TR: "Hiçbir şey değiştirilmedi: {unit} kendi yapılandırmasını reddediyor; bu
+  yüzden işlem yapılmadı. Sunucuda {command} komutunu çalıştırıp neye itiraz
+  ettiğini görün, düzeltin, sonra işlemi burada yineleyin."
+- `502 SERVICE_ACTION_FAILED`, reason `reload`
+  API: "The service was not reloaded and keeps running with the settings it
+  had."
+- `err.SERVICE_ACTION_FAILED.reload` (öneri)
+  EN: "{unit} was not reloaded and keeps running with the settings it had. On
+  the server, run {command} to see why, correct it, then repeat the action
+  here."
+  TR: "{unit} yeniden yüklenmedi ve önceki ayarlarıyla çalışmayı sürdürüyor.
+  Sunucuda {command} komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi
+  burada yineleyin."
+- `502 SERVICE_ACTION_FAILED`, reason `start`
+  API: "The service did not start, or did not stay running."
+- `err.SERVICE_ACTION_FAILED.start` (öneri)
+  EN: "{unit} did not start, or did not stay running. On the server, run
+  {command} to see why, correct it, then repeat the action here."
+  TR: "{unit} başlamadı ya da çalışır durumda kalmadı. Sunucuda {command}
+  komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin."
+- `502 SERVICE_ACTION_FAILED`, reason `stop`
+  API: "The service did not stop: its daemon is still running."
+- `err.SERVICE_ACTION_FAILED.stop` (öneri)
+  EN: "{unit} did not stop: it is still running. On the server, run {command}
+  to see its state, then repeat the action here."
+  TR: "{unit} durmadı: hâlâ çalışıyor. Sunucuda {command} komutuyla durumunu
+  görün, sonra işlemi burada yineleyin."
+- `502 SERVICE_ACTION_FAILED`, reason `verify`
+  API: "The action was sent, but afterwards the service's daemon is not in the
+  state that was asked for."
+- `err.SERVICE_ACTION_FAILED.verify` (öneri)
+  EN: "The action was sent, but {unit} is not in the state that was asked for.
+  On the server, run {command} to see its state, correct the cause, then repeat
+  the action here."
+  TR: "İşlem gönderildi ancak {unit} istenen durumda değil. Sunucuda {command}
+  komutuyla durumunu görün, nedeni düzeltin, sonra işlemi burada yineleyin."
+- `502 SERVICE_ACTION_FAILED`, reason `command`
+  API: "The server's service manager did not carry out the action."
+- `err.SERVICE_ACTION_FAILED.command` (öneri)
+  EN: "The server's service manager did not carry out the action on {unit}. On
+  the server, run {command} to see why, correct it, then repeat the action
+  here."
+  TR: "Sunucunun hizmet yöneticisi {unit} üzerindeki işlemi yapmadı. Sunucuda
+  {command} komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada
+  yineleyin."
+- `502 SERVICE_ACTION_FAILED`, reason yok (bu Panelin bilmediği bir aşama)
+  API: "The action did not take effect."
+- `err.SERVICE_ACTION_FAILED` (öneri)
+  EN: "The action on {unit} did not take effect. On the server, run {command}
+  to see why, correct it, then repeat the action here."
+  TR: "{unit} üzerindeki işlem etkili olmadı. Sunucuda {command} komutunu
+  çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin."
+- `502 SERVICE_ACTION_UNKNOWN`
+  API: "The action was sent, but what came of it could not be verified, so it
+  is not reported as done. This is not a verified failure: the service may
+  already be in the state that was asked for. The server owner runs the command
+  shown to see the service's state, and repeats this action here only if it is
+  still needed; nothing repeats it automatically."
+- `err.SERVICE_ACTION_UNKNOWN` (öneri)
+  EN: "The action was sent, but what came of it could not be verified, so it is
+  not shown as done. This is not a verified failure: {unit} may already be in
+  the state you asked for. On the server, run {command} to see its state, and
+  repeat the action here only if it is still needed."
+  TR: "İşlem gönderildi ancak sonucu doğrulanamadı; bu yüzden yapıldı diye
+  gösterilmiyor. Bu doğrulanmış bir hata değildir: {unit} istediğiniz duruma
+  zaten gelmiş olabilir. Sunucuda {command} komutuyla durumunu görün; işlemi
+  yalnız hâlâ gerekiyorsa burada yineleyin."
+- `services.action.said` (öneri; `vars.detail` varsa iki yanıtın da altında
+  gösterilir)
+  EN: "The service said: {detail}"
+  TR: "Hizmetin yanıtı: {detail}"
+- `services.action.ownerUnit` (öneri; `vars.owner_unit` varsa)
+  EN: "The service itself runs as {owner_unit}; {unit} only groups it."
+  TR: "Hizmetin kendisi {owner_unit} olarak çalışır; {unit} yalnız onu
+  gruplar."
+
+**Metinler, posta sertifikası yenilemesi.** Ekran yok: bağımsız yenileme
+yardımcısı cümleyi kendi günlüğüne yazar (`journalctl -u
+celikpanel-mail-renewal.service`), Agent kendi kaydına yazar. Yalnız İngilizce.
+`<service>` Postfix ya da Dovecot'tur. Yalnız bu iki neden için, genel "mail
+certificate activation paused" cümlesinin yerini alırlar.
+
+- Hizmetin dinleyicileri yeniden yüklemesinden sonra hâlâ başka bir sertifika
+  sunuyor (doğrulanmış):
+  "mail certificate activation is not complete: <service> was asked to reload,
+  but its listeners on this server still present another certificate than the
+  selected one; the server owner runs `postfix reload` as root, reads what it
+  prints and the service's log, and the renewal then retries the same
+  operation, by itself up to its recorded limit and after that with the
+  continuation command it prints; the renewed certificate stays selected, and
+  Postfix/Dovecot settings and certificate evidence are preserved"
+  (Dovecot için komut `doveadm reload`).
+- Hizmetin hiçbir dinleyicisi TLS ile yanıt vermedi (bilinmeyen):
+  "mail certificate activation is not confirmed: no TLS listener of <service>
+  answered on this server, so which certificate it presents is unknown and
+  nothing is reported as activated; the server owner checks that <service> is
+  running and listening (`postfix status`, which answers for the daemon where
+  `systemctl is-active postfix` may answer for a wrapper unit), starts it if it
+  is stopped, and the renewal then retries the same operation, by itself up to
+  its recorded limit and after that with the continuation command it prints;
+  the renewed certificate stays selected, and Postfix/Dovecot settings and
+  certificate evidence are preserved" (Dovecot için denetim `systemctl status
+  dovecot`).
+
+**Bağımsız yenilemeye zaten kayıtlı bir sunucu.** Yenileme yardımcısı
+kaydolduğu yardımcıdır ve bu cümleleri yazmaz; Ubuntu'da, Postfix yeniden
+yüklenmediği hâlde bir yenilemeyi etkinleştirildi diye kaydedebilir. Yardımcı
+daha yenisine taşınabilene kadar (tasarlandı, uygulanmadı; dayanıklılık
+sözleşmesi) sahip bir yenilemeden sonra sunucuda şunu karşılaştırır:
+
+    openssl s_client -connect localhost:465 </dev/null 2>/dev/null | openssl x509 -noout -fingerprint -sha256
+    openssl x509 -noout -fingerprint -sha256 -in /etc/ssl/celikpanel/_mail/host/current/fullchain.pem
+
+İlk satır Postfix'in sunduğu sertifika, ikincisi kurulu olandır. Farklıysa
+`sudo postfix reload` Postfix'in onu almasını sağlar; alamıyorsa Postfix'in
+neye itiraz ettiğini yazar. İki satır da yalnız okur.
+
+**Henüz gösterilmeyen.** Yukarıdaki önerilen girdiler; Hizmetler sayfası API
+cümlesini gösterir. Paneldeki posta sertifikası durumu açık bir yenilemenin
+nedenini göstermez; neden yardımcının günlüğünde ve Agent'ın kaydındadır.

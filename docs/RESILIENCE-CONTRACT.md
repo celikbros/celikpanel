@@ -3117,3 +3117,269 @@ was observed on an installed server. That run measured two candidate defects
     write to the scheduled tasks shows the general sentence. The catalogue
     entries `postfix.queue.unknown` and `mailpolicy.unknown` are no longer
     used.
+
+  - The scheduled tasks screen does not show the cause or the line yet: the
+    answer and the catalogue entries (`cron.unknown.cron_allow`,
+    `cron.unknown.cron_deny`, `cron.unknown.said`) exist, the screen still
+    shows its one neutral sentence. The catalogue entries `postfix.queue.unknown`
+    and `mailpolicy.unknown` are no longer used.
+
+### Mail certificate renewal and the Services page: the outcome is what the daemon shows, not a wrapper unit's exit status (invariants 1, 2 and 4; P0.4/P0.5; 2026-10-10)
+
+D-025 invariants 1 (the owner keeps authority and working services), 2 (unknown
+is not success; evidence has a meaning) and 4 (a mutation carries its recovery
+contract); D-022 (renewal works without the Panel and the Agent), D-024. P0.4
+(the activation step of the mail TLS contract) and P0.5 (independent renewal).
+No P0 item is closed or advanced. Source: the two items the entry above left
+open after the `set1` measurement (P1). Nothing here was observed on an
+installed server, and nothing here has been measured on real services.
+
+- **Established: every reload or restart of Postfix or Dovecot after a
+  certificate changes.**
+  1. *First issue of the host certificate* (Agent RPC
+     `IssueMailHostCertificateV1`): `applyMailHostCertificateSelection`
+     (`cmd/agent/mail_host_certificate_rpc.go`) runs the mail TLS reconcile,
+     whose `reloadMailTLSService` (`cmd/agent/mail_tls_rpc.go`) has used the
+     verified helpers since the entry above (`postfix check`, `postfix status`,
+     `postfix reload`, `postfix status`; Dovecot `doveconf -n` and a main
+     process that stays). Correct on the wrapper unit. Customer certificates
+     for mail names (SNI) take the same path, and only when the Panel asks for
+     it (`resyncMailTLS`); there is no native hook for them.
+  2. *Renewal of the host certificate.* Certbot's deploy hook only queues: the
+     kit hook runs `<generation>/renew --queue`, the earlier Agent hook
+     `agent --deploy-mail-host-certificate`
+     (`internal/mailrenewalkit/deploy-hook`, `legacy-deploy-hook`). The queue is
+     consumed by the Agent's worker every minute
+     (`runMailHostCertificateRenewalWorker`) and, on an enrolled server, by
+     `celikpanel-mail-renewal.service` (`renew --process-pending`, timer every
+     five minutes), whichever takes the shared locks first. Both run the same
+     code: `publishMailHostCertificateSource` ->
+     `reloadMailHostCertificateSelection` -> `observeOrReloadMailHostTLS`
+     (`cmd/agent/mail_host_certificate_reload.go`): `systemctl reload
+     postfix.service`, then `systemctl reload dovecot.service`, each judged by
+     that command's exit status and by `systemctl is-active --quiet` of the same
+     two units, with the accepted configuration re-read before, between and
+     after.
+  3. *Recovery of an already selected certificate* (Agent start, the helper's
+     automatic retry, `--retry-selected`):
+     `reconcilePersistedMailHostCertificateHostAt`
+     (`cmd/agent/mail_host_certificate_files_linux.go`) calls the same
+     `reloadMailHostCertificateSelection`.
+  4. *Rollback.* The mail TLS reconcile's rollback uses the verified helpers
+     (path 1). A renewal has no service rollback: a certificate that was
+     selected stays selected and the operation stays open.
+  5. *The Panel certificate* reloads nginx only.
+- **On Ubuntu 24.04, paths 2 and 3.** `postfix.service` is `Type=oneshot`,
+  `RemainAfterExit=yes`, `ExecStart=/bin/true`, `ExecReload=/bin/true`; the
+  daemon is `postfix@-.service` with `ReloadPropagatedFrom=postfix.service`
+  (unit texts in `evidence/set1-20261010/set1-ubuntu/run-a/steps/09-s2-mail-policy/native-text/postfix-unit.txt`).
+  `systemctl reload postfix.service` exits 0 whatever the instance's reload did
+  (measured, P1), and `systemctl is-active postfix.service` answers "active"
+  for the wrapper while the master is stopped (from the unit text; not
+  measured). So a renewal was recorded as activated without evidence that
+  Postfix had reloaded or was running. Debian 13's `postfix.service` is the
+  real unit (`ExecReload=postfix reload`; same evidence folder), and so is
+  Arch's; there the two commands are the daemon's. Dovecot: no unit text is in
+  the evidence. From its upstream packaging `dovecot.service` is one real unit
+  on the three platforms, with `ExecReload=doveadm reload`; that command only
+  delivers a signal, so exit 0 does not say Dovecot read its configuration
+  again. Mail setup is refused on Arch, so the renewal path runs on Debian and
+  Ubuntu.
+- **Why the renewal path's command scope is "closed".** It is not a field of
+  the kit manifest and not a protocol version. It is a compiled list in the
+  helper, `validateIndependentMailCommand` (`cmd/agent/mail_renewal_entry.go`):
+  `dovecot --version`, `doveconf -n`, `postconf -h` for nine fixed settings,
+  `systemctl reload` and `systemctl is-active --quiet` for the two fixed units,
+  each as a canonical path in four system directories. The helper checks it
+  before every launch (`runMailHostCertificateCommand`) and again in the
+  re-executed supervisor (`service_mutation_supervisor_linux.go`). The guard
+  test `TestIndependentMailSupervisorCommandScope` pins it and names
+  `/usr/sbin/postfix check` among the refused. `MAIL-RENEWAL-EXECUTOR.md` and
+  `MAIL-RENEWAL-OBSERVATION.md` state it as the helper's contract, and the
+  native acceptance of the helper and its sandbox (BB, BD, BE) measured exactly
+  this list. `postfix check` is excluded for a reason of its own: it creates
+  missing queue directories, and a renewal may observe and reload but not
+  change what the owner has. The kit manifest
+  (`celikpanel-mail-renewal-runtime/v1`) binds the helper's bytes; a different
+  list is a different helper and therefore a different generation, which is
+  what every release build is. What would be a format change is the unit
+  template (`ProtectSystem=full`, `NoNewPrivileges`, `PrivateTmp`): the reader
+  recognises only the exact v1 template.
+- **Changed, renewal (paths 2 and 3).** `systemctl reload` stays the only thing
+  sent to a service: it is the unit's own reload with whatever its owner added
+  to it, and the command list is unchanged. Its exit status and `is-active` are
+  no longer the outcome. After each service's reload and re-observation, the
+  helper performs a TLS handshake with that service's own listeners on this
+  host and compares the certificate presented with the selected one
+  (`cmd/agent/mail_served_certificate.go`): Postfix 465, then 587 and 25 with
+  STARTTLS; Dovecot 993, 995, then 143 and 110 with STARTTLS/STLS; on
+  `127.0.0.1` and `::1`, and on this host's other addresses only when nothing
+  on loopback answers. No server name is sent, so the daemon presents its
+  default certificate, which is the host certificate. No name is resolved and
+  no other host is contacted. Bounded: one second to connect, three for an
+  exchange, nine per service. Three answers: a listener presents the selected
+  certificate (verified); listeners answer and none presents it within the
+  wait (verified: not activated); no listener answers with TLS (unknown).
+  Unknown and "not activated" both leave the operation open exactly as a
+  failed reload did before; neither is recorded as activated. This needs no
+  command, so it works in the helper's existing sandbox (the v1 unit does not
+  restrict the network).
+- **Changed, the Services page (`POST /api/v1/service/action`).** The Agent no
+  longer answers with `systemctl`'s exit status alone
+  (`cmd/agent/service_action_verify.go`).
+  - *Postfix and Dovecot* use the verified helpers. Postfix: `postfix check`
+    first for start, restart and reload, and a refusal is the answer; reload is
+    `postfix reload` and a running master afterwards; start and restart go
+    through systemd and are judged by `postfix status` and the master's process
+    ID; stop is judged by `postfix status` saying the master is not running.
+    Dovecot: `doveconf -n` first; `systemctl reload` (no longer able to start a
+    stopped one), start, restart, each followed by a main process that stays
+    across two readings; stop by the unit having no main process. "Start" on a
+    running service changes nothing and says so; "Reload" on a stopped one
+    fails and does not start it.
+  - *Any other unit* is first asked what it is (`systemctl show`: `Type`,
+    `ExecStart`, `Wants`, `ConsistsOf`, `PropagatesReloadTo`). A oneshot whose
+    one start command is `/bin/true` is a wrapper: Debian's and Ubuntu's
+    `postgresql.service`, with `postgresql@<version>-<cluster>.service` behind
+    it. Its action is judged by the instance units systemd names: start, the
+    units it wants are active; restart, those and the ones that were running
+    are active with a new main process; stop, none is active; reload, each
+    running one shows a reload command that ran since (`ExecReload`) with
+    `ReloadResult=success` and is still active. A wrapper with nothing behind
+    it for the action, or state that cannot be read, is unknown; when the state
+    cannot be read before the action, nothing is sent.
+  - *A unit that runs its own daemon* keeps its job result and its words (nginx,
+    Arch's `postgresql.service`, an instance unit named directly, `wg-quick@`).
+  - *In the catalogue only two units are wrappers:* `postfix` (Ubuntu 24.04;
+    Debian before 13) and `postgresql` (Debian, Ubuntu). The other unit names
+    are real units or aliases of them on the three platforms.
+  - *The answers.* `502 SERVICE_ACTION_FAILED` with `reason` `check`, `reload`,
+    `start`, `stop`, `verify` or `command`, and `502 SERVICE_ACTION_UNKNOWN`;
+    both carry `vars.unit`, `vars.action`, `vars.command` (what the owner runs
+    to read the service's own answer), `vars.detail` (one bounded line) and
+    `vars.owner_unit` when another unit owns the daemon. A failed action used
+    to answer `500` "internal server error". The audit entry says `unknown`
+    for an unknown outcome instead of `failed`.
+- **Not changed, and why.**
+  - *The helper's command scope.* `postfix reload`, `postfix status`, `doveadm
+    reload` and `systemctl show` stay outside it. Running Postfix's own
+    commands from the helper's sandbox has never been measured, and it would
+    bypass the unit's reload. The handshake answers the question the renewal
+    asks.
+  - *The check before publication* still uses `is-active`. A handshake that
+    could refuse a publication would keep a renewed certificate from a server
+    whose listeners it cannot reach; a certificate published while Postfix is
+    stopped harms nothing, because Postfix reads it when it starts.
+  - *The enrolled helper of an existing server.* See the transition below.
+- **Schema or version transition.**
+  - None in persisted state: ledger v1, accepted plan v1, receipt v1, the kit
+    manifest schema and the three native templates are byte-identical, and no
+    database schema changes.
+  - The helper's bytes change, as with every release, so the kit generation of
+    a release that contains this entry differs. An enrolled server keeps the
+    generation it was enrolled with: its hook and unit name that generation's
+    `renew`, a Panel update only publishes the new generation beside it
+    (`prepare-mail-renewal-runtime`), and "existing independent schedules are
+    preserved, including their current kit" (`MAIL-ENROLLMENT-RESERVATION.md`).
+    Therefore: a server with the earlier Agent hook gets the check when its
+    owner updates the Panel; a server enrolled from such a release on has it in
+    its helper; an already enrolled server has it only when the updated Agent's
+    worker takes the queue before the helper's timer does, and not at all when
+    the Agent is absent. Moving an enrolled server to a newer generation is
+    designed below and not implemented.
+  - Agent RPC, additive: `ServiceActionResult.Outcome`, `.Stage`, `.Applied`,
+    `.Detail`, `.Unit`. An older Panel ignores them and still sees `Error` for
+    every answer that is not success. HTTP, additive: the two codes above; a
+    successful answer gains `outcome`, `applied` and `unit`. Panel and Agent
+    are installed together by one release.
+- **Recovery behaviour.**
+  - *Renewal.* The selected certificate stays selected; settings, ledger, queue
+    and certificate evidence are untouched. The operation stays open and is
+    retried by the same request within the existing budget (three executions,
+    then the owner's explicit `--retry-selected` or `--retry-failed`), exactly
+    as after a failed reload. The helper's journal line and the Agent's log
+    line now say which service, whether it is "not complete" or "not
+    confirmed", the command (`postfix reload`, `doveadm reload`, `postfix
+    status`) and that the same operation resumes. While an operation is open, a
+    later renewal is not admitted; that was already so.
+  - *Services page.* Nothing retries and nothing is rolled back. A refused
+    configuration stops start, restart and reload before anything is sent; a
+    stop is always sent. The cached service scan is refreshed after a failed or
+    unknown answer too.
+- **Evidence.** Component tests only; native measurement pending.
+  `cmd/agent/mail_served_certificate_test.go` (a wrapper that exits 0 while
+  Postfix presents the previous certificate; Dovecot keeping it after its
+  reload; a stale then a fresh process; no listener; a listener without TLS; a
+  service bound to one host address; each STARTTLS; a cancelled operation; the
+  sentences; the command scope not widened);
+  `mail_host_certificate_reload_test.go` (the order reload, observe, ask; a
+  reload without the check is refused); `service_action_verify_test.go`
+  (Postfix and Dovecot actions on a wrapper that exits 0 while the daemon did
+  not follow; a wrapper judged by the units behind it for each action, with the
+  `ExecReload` text of the evidence folder as fixture; unknown; real units
+  keeping their job result); `cmd/panel/service_action_outcome_test.go`. No
+  test needs a mail server; the listeners are in-memory. No privileged-command
+  guard entry was added: every command goes through the existing launchers,
+  and the handshake is a connection, not a process.
+- **Open.**
+  - *Not measured on real services.* A native cell must show, on Ubuntu 24.04
+    and Debian 13, with the Panel and Agent stopped and the enrolled helper
+    doing the work: (a) a healthy renewal: the fingerprint presented on 465,
+    587, 993 before and after equals the previous and then the selected
+    certificate, the operation completes, the journal shows Postfix's and
+    Dovecot's reload; (b) Ubuntu with the instance's reload failing (a line
+    Postfix refuses in `main.cf`, as in P1): `systemctl reload postfix.service`
+    exits 0 and the operation stays open or completes, with what the listeners
+    present recorded each way; (c) Ubuntu with `postfix@-` stopped and the
+    wrapper active: "not confirmed", nothing recorded as activated, completion
+    after the owner starts Postfix; (d) Dovecot with a `local.conf` line it
+    refuses: `doveadm reload` exits 0, the previous certificate stays, "not
+    complete"; (e) the handshakes succeed inside the helper's sandbox; (f) what
+    `systemctl is-active postfix.service` says on Ubuntu with the instance
+    stopped. For the Services page: Reload and Restart of `postfix` on Ubuntu
+    with a refused `main.cf`; `postgresql` on Debian and Ubuntu, each action,
+    with a cluster that fails to start and with the owner's failing reload hook;
+    the real `ConsistsOf`, `Wants`, `PropagatesReloadTo`, `ReloadResult` and
+    `ExecReload` values; Dovecot's unit text on the three platforms.
+  - *What "verified" proves for Postfix.* A Postfix server process started after
+    the publication reads the selected certificate even when the master was not
+    reloaded, and a process that was idle leaves within `max_idle`. The check
+    proves that a listener presents the selected certificate; it does not prove
+    that every process that was already running has been replaced.
+  - *A server whose mail listeners cannot be reached on this host* (no TLS on
+    25, 465, 587, or on 110, 143, 993, 995, on any of its own addresses), or
+    whose owner gave every listener another certificate in `master.cf`: the
+    renewal publishes the certificate, reloads, and then stays open as "not
+    confirmed" or "not complete" until the owner continues it, and a later
+    renewal waits behind it. Before this entry such a server was recorded as
+    activated without evidence. The stack CelikPanel sets up opens these ports.
+  - *Designed, not implemented: moving an enrolled server to a newer helper
+    generation.* The file, loaded-unit and inverse primitives exist and have
+    native evidence (`celikpanel-mail-renewal-transition/v1` with the complete
+    previous kit, before-image v1, files v1, loaded v1; `MAIL-RENEWAL-KIT.md`).
+    Missing are: a durable reservation and dispatcher for an "upgrade"
+    operation beside enrollment's, admitted only by the owner's reviewed step;
+    waiting for a running renewal instead of replacing its unit; the
+    application rollback rule (an inverse back to the previous generation
+    whenever the Agent declaration it was admitted with is restored); and the
+    owner's view. The manifest schema stays v1 as long as the three templates
+    do; a `v2` is needed only if a template or a manifest field changes, and
+    then the reader must recognise both. The owner sees, on the mail
+    certificate status, which release the renewal helper is from (the helper
+    already answers `--inspect-build-identity`) and, when it predates this
+    entry, that it reloads the services without confirming the certificate they
+    present, with one reviewed action to move it and the same action as a
+    root command of the new immutable helper for a server without the Panel.
+    Until then the owner of an enrolled Ubuntu server checks after a renewal:
+    `openssl s_client -connect localhost:465 </dev/null 2>/dev/null | openssl
+    x509 -noout -fingerprint -sha256` against `openssl x509 -noout -fingerprint
+    -sha256 -in /etc/ssl/celikpanel/_mail/host/current/fullchain.pem`, and runs
+    `sudo postfix reload` when they differ.
+  - *No screen text yet.* The catalogue has no `err.SERVICE_ACTION_FAILED.*`
+    or `err.SERVICE_ACTION_UNKNOWN` entries; the screen shows the API sentence
+    in English, without the service's line. The wordings are in the operation
+    guidance entry of this date.
+  - *A wrapper is recognised only on positive evidence.* When `systemctl show`
+    cannot be read before the action, the unit keeps its own job result.
+  - The `StartServiceMutation` RPC (Postfix and Dovecot, used when a mail
+    service has been installed) now starts through the same verified path.

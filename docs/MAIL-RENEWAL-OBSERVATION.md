@@ -196,3 +196,21 @@ publication and generic startup recovery. Same-leaf unknown work and the ledger
 remain byte-identical; only exact recovered completion clears the queue. Full
 Agent race and vet passed. Independent renewal and power-loss acceptance remain
 open.
+
+## The listeners are asked which certificate they present (2026-10-10)
+
+P0.4/P0.5, invariants 1, 2 and 4. Reload-only activation above judged each
+reload by `systemctl`'s exit status and `systemctl is-active`. On Ubuntu 24.04
+`postfix.service` is a wrapper unit and both answer for it, not for Postfix
+(measured for the reload; see the [resilience contract](RESILIENCE-CONTRACT.md),
+entries of 2026-10-10). The command list is unchanged and `postfix check` stays
+excluded. What is added needs no command: after each service's reload and
+re-observation, a TLS handshake with that service's own listeners on this host,
+compared with the selected certificate (`cmd/agent/mail_served_certificate.go`).
+The selected certificate seen is the outcome; another certificate is a verified
+"not complete"; no listener answering is "not confirmed". Neither of the last
+two is recorded as activated, and both keep the same operation, selection and
+evidence, as a failed reload did. The check before publication is unchanged. No
+v1 record, kit manifest or unit template changes. Component tests only; the
+helper an already enrolled server has is not changed by this, and no native
+measurement has been made.

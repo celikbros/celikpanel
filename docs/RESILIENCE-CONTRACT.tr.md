@@ -2386,3 +2386,278 @@ P2) ve beş gözlem (O1-O5) ölçtü; bu kayıt onları kaynakta düzeltir.
     reddedilen bir zamanlanmış görev yazımı genel cümleyi gösterir.
     `postfix.queue.unknown` ve `mailpolicy.unknown` katalog girdileri artık
     kullanılmıyor.
+
+### Posta sertifikası yenilemesi ve Hizmetler sayfası: sonuç, sarmalayıcı birimin çıkış durumu değil, hizmetin gösterdiğidir (ilkeler 1, 2 ve 4; P0.4/P0.5; 2026-10-10)
+
+D-025 ilkeleri 1 (sahip yetkisini ve çalışan hizmetlerini korur), 2 (bilinmeyen
+başarı değildir; kanıtın bir anlamı vardır) ve 4 (bir değişiklik kurtarma
+sözleşmesini taşır); D-022 (yenileme Panel ve Agent olmadan çalışır), D-024.
+P0.4 (posta TLS sözleşmesinin etkinleştirme adımı) ve P0.5 (bağımsız yenileme).
+Hiçbir P0 işi kapanmadı ya da ilerlemedi. Kaynak: yukarıdaki kaydın `set1`
+ölçümünden (P1) sonra açık bıraktığı iki iş. Buradaki hiçbir şey kurulu bir
+sunucuda gözlenmedi ve hiçbiri gerçek hizmetlerde ölçülmedi.
+
+- **Saptanan: bir sertifika değiştikten sonra Postfix ya da Dovecot'u yeniden
+  yükleyen ya da yeniden başlatan her yol.**
+  1. *Sunucu sertifikasının ilk alınması* (Agent RPC
+     `IssueMailHostCertificateV1`): `applyMailHostCertificateSelection`
+     (`cmd/agent/mail_host_certificate_rpc.go`) posta TLS uzlaştırmasını
+     çalıştırır; onun `reloadMailTLSService` işlevi
+     (`cmd/agent/mail_tls_rpc.go`) yukarıdaki kayıttan beri doğrulanmış
+     yardımcıları kullanır (`postfix check`, `postfix status`, `postfix
+     reload`, `postfix status`; Dovecot için `doveconf -n` ve yerinde kalan bir
+     ana süreç). Sarmalayıcı birimde doğrudur. Posta adları için müşteri
+     sertifikaları (SNI) aynı yolu izler ve yalnız Panel istediğinde
+     (`resyncMailTLS`); onlar için yerel bir kanca yoktur.
+  2. *Sunucu sertifikasının yenilenmesi.* Certbot'un dağıtım kancası yalnız
+     kuyruğa yazar: kit kancası `<nesil>/renew --queue`, önceki Agent kancası
+     `agent --deploy-mail-host-certificate` çalıştırır
+     (`internal/mailrenewalkit/deploy-hook`, `legacy-deploy-hook`). Kuyruğu
+     her dakika Agent'ın işçisi (`runMailHostCertificateRenewalWorker`) ve
+     kayıtlı bir sunucuda `celikpanel-mail-renewal.service` (`renew
+     --process-pending`, beş dakikada bir zamanlayıcı) tüketir; ortak
+     kilitleri önce alan işi yapar. İkisi de aynı kodu çalıştırır:
+     `publishMailHostCertificateSource` -> `reloadMailHostCertificateSelection`
+     -> `observeOrReloadMailHostTLS`
+     (`cmd/agent/mail_host_certificate_reload.go`): `systemctl reload
+     postfix.service`, sonra `systemctl reload dovecot.service`; her biri o
+     komutun çıkış durumuyla ve aynı iki birimin `systemctl is-active --quiet`
+     yanıtıyla değerlendirilir; kabul edilmiş yapılandırma öncesinde, arasında
+     ve sonrasında yeniden okunur.
+  3. *Zaten seçilmiş bir sertifikanın kurtarılması* (Agent başlangıcı,
+     yardımcının otomatik yeniden denemesi, `--retry-selected`):
+     `reconcilePersistedMailHostCertificateHostAt`
+     (`cmd/agent/mail_host_certificate_files_linux.go`) aynı
+     `reloadMailHostCertificateSelection` işlevini çağırır.
+  4. *Geri alma.* Posta TLS uzlaştırmasının geri alması doğrulanmış
+     yardımcıları kullanır (yol 1). Yenilemenin hizmet geri alması yoktur:
+     seçilen sertifika seçili kalır ve işlem açık kalır.
+  5. *Panel sertifikası* yalnız nginx'i yeniden yükler.
+- **Ubuntu 24.04'te yol 2 ve 3.** `postfix.service`; `Type=oneshot`,
+  `RemainAfterExit=yes`, `ExecStart=/bin/true`, `ExecReload=/bin/true`
+  değerleriyle gelir; hizmetin kendisi `ReloadPropagatedFrom=postfix.service`
+  taşıyan `postfix@-.service` birimidir (birim metinleri:
+  `evidence/set1-20261010/set1-ubuntu/run-a/steps/09-s2-mail-policy/native-text/postfix-unit.txt`).
+  `systemctl reload postfix.service`, örneğin yeniden yüklemesi ne yaparsa
+  yapsın 0 ile çıkar (ölçüldü, P1); `systemctl is-active postfix.service`, ana
+  süreç durmuşken sarmalayıcı adına "active" der (birim metninden; ölçülmedi).
+  Böylece bir yenileme, Postfix'in yeniden yüklendiğine ya da çalıştığına dair
+  kanıt olmadan etkinleştirildi diye kaydediliyordu. Debian 13'ün
+  `postfix.service` birimi gerçek birimdir (`ExecReload=postfix reload`; aynı
+  kanıt klasörü), Arch'ınki de öyle; orada iki komut hizmetin kendisine aittir.
+  Dovecot: kanıtta birim metni yok. Yukarı akış paketlemesine göre
+  `dovecot.service` üç platformda tek gerçek birimdir ve `ExecReload=doveadm
+  reload` taşır; o komut yalnız bir sinyal iletir, bu yüzden 0 çıkışı Dovecot'un
+  yapılandırmasını yeniden okuduğunu söylemez. Posta kurulumu Arch'ta
+  reddedilir; yenileme yolu Debian ve Ubuntu'da çalışır.
+- **Yenileme yolunun komut kapsamı neden "kapalı".** Kit bildiriminin bir alanı
+  ya da bir protokol sürümü değildir. Yardımcının içine derlenmiş bir listedir:
+  `validateIndependentMailCommand` (`cmd/agent/mail_renewal_entry.go`):
+  `dovecot --version`, `doveconf -n`, dokuz sabit ayar için `postconf -h`, iki
+  sabit birim için `systemctl reload` ve `systemctl is-active --quiet`; her biri
+  dört sistem dizininden birindeki kurallı yoluyla. Yardımcı bunu her
+  başlatmadan önce (`runMailHostCertificateCommand`) ve yeniden çalıştırılan
+  gözetmende (`service_mutation_supervisor_linux.go`) bir kez daha denetler.
+  `TestIndependentMailSupervisorCommandScope` koruma testi listeyi sabitler ve
+  reddedilenler arasında `/usr/sbin/postfix check` komutunu adıyla sayar.
+  `MAIL-RENEWAL-EXECUTOR.md` ve `MAIL-RENEWAL-OBSERVATION.md` bunu yardımcının
+  sözleşmesi olarak belirtir; yardımcının ve korumalı alanının gerçek sistem
+  kabulü (BB, BD, BE) tam olarak bu listeyi ölçmüştür. `postfix check`
+  komutunun dışarıda tutulmasının kendi nedeni vardır: eksik kuyruk dizinlerini
+  oluşturur; yenileme ise sahibin elindekini gözleyebilir ve yeniden
+  yükleyebilir ama değiştiremez. Kit bildirimi
+  (`celikpanel-mail-renewal-runtime/v1`) yardımcının baytlarını bağlar; farklı
+  bir liste farklı bir yardımcıdır, dolayısıyla farklı bir nesildir; her sürüm
+  derlemesi de zaten budur. Biçim değişikliği sayılacak olan birim şablonudur
+  (`ProtectSystem=full`, `NoNewPrivileges`, `PrivateTmp`): okuyucu yalnız tam
+  v1 şablonunu tanır.
+- **Değişen, yenileme (yol 2 ve 3).** Bir hizmete gönderilen tek şey
+  `systemctl reload` olarak kalır: birimin kendi yeniden yüklemesidir, sahibinin
+  ona eklediği her şeyle birlikte; komut listesi de değişmedi. Çıkış durumu ve
+  `is-active` artık sonuç değildir. Her hizmetin yeniden yüklenmesinden ve
+  yeniden gözlenmesinden sonra yardımcı, o hizmetin bu sunucudaki kendi
+  dinleyicileriyle TLS el sıkışması yapar ve sunulan sertifikayı seçili olanla
+  karşılaştırır (`cmd/agent/mail_served_certificate.go`): Postfix için 465,
+  sonra STARTTLS ile 587 ve 25; Dovecot için 993, 995, sonra STARTTLS/STLS ile
+  143 ve 110; `127.0.0.1` ve `::1` üzerinde, yalnız geri döngüde hiçbir şey
+  yanıt vermezse bu sunucunun öteki adreslerinde. Sunucu adı gönderilmez; bu
+  yüzden hizmet varsayılan sertifikasını, yani sunucu sertifikasını sunar. Ad
+  çözülmez ve başka bir sunucuya bağlanılmaz. Sınırlıdır: bağlanmak için bir
+  saniye, bir alışveriş için üç, hizmet başına dokuz. Üç yanıt vardır: bir
+  dinleyici seçili sertifikayı sunar (doğrulandı); dinleyiciler yanıt verir ve
+  bekleme süresinde hiçbiri onu sunmaz (doğrulandı: etkin değil); hiçbir
+  dinleyici TLS ile yanıt vermez (bilinmiyor). Bilinmeyen ve "etkin değil"
+  yanıtlarının ikisi de işlemi, daha önce başarısız bir yeniden yüklemenin
+  yaptığı gibi açık bırakır; hiçbiri etkinleştirildi diye kaydedilmez. Bunun
+  için komut gerekmez; bu yüzden yardımcının mevcut korumalı alanında çalışır
+  (v1 birimi ağı kısıtlamaz).
+- **Değişen, Hizmetler sayfası (`POST /api/v1/service/action`).** Agent artık
+  yalnız `systemctl` çıkış durumuyla yanıt vermez
+  (`cmd/agent/service_action_verify.go`).
+  - *Postfix ve Dovecot* doğrulanmış yardımcıları kullanır. Postfix: başlatma,
+    yeniden başlatma ve yeniden yükleme için önce `postfix check`; reddi
+    yanıtın kendisidir. Yeniden yükleme `postfix reload` ve sonrasında çalışan
+    bir ana süreçtir; başlatma ve yeniden başlatma systemd üzerinden gider ve
+    `postfix status` ile ana sürecin süreç kimliğine göre değerlendirilir;
+    durdurma, `postfix status` ana sürecin çalışmadığını söylediğinde
+    doğrulanır. Dovecot: önce `doveconf -n`; `systemctl reload` (artık durmuş
+    bir Dovecot'u başlatamaz), başlatma, yeniden başlatma; her birinin ardından
+    iki okuma boyunca yerinde kalan bir ana süreç aranır; durdurma, birimin ana
+    sürecinin kalmamasıyla doğrulanır. Çalışan bir hizmette "Başlat" hiçbir
+    şeyi değiştirmez ve bunu söyler; durmuş bir hizmette "Yeniden yükle"
+    başarısız olur ve onu başlatmaz.
+  - *Başka her birime* önce ne olduğu sorulur (`systemctl show`: `Type`,
+    `ExecStart`, `Wants`, `ConsistsOf`, `PropagatesReloadTo`). Tek başlatma
+    komutu `/bin/true` olan bir oneshot birim sarmalayıcıdır: Debian ve
+    Ubuntu'nun `postgresql.service` birimi; arkasında
+    `postgresql@<sürüm>-<küme>.service` vardır. Eylemi, systemd'nin adını
+    verdiği örnek birimlerle değerlendirilir: başlatmada istediği birimler
+    etkindir; yeniden başlatmada onlar ve çalışmakta olanlar yeni bir ana
+    süreçle etkindir; durdurmada hiçbiri etkin değildir; yeniden yüklemede
+    çalışan her biri, o andan sonra çalışmış bir yeniden yükleme komutu
+    (`ExecReload`) ile `ReloadResult=success` gösterir ve hâlâ etkindir. Eylem
+    için arkasında hiçbir şey olmayan bir sarmalayıcı ya da okunamayan durum
+    bilinmeyendir; durum eylemden önce okunamıyorsa hiçbir şey gönderilmez.
+  - *Kendi hizmetini çalıştıran bir birim* iş sonucunu ve sözlerini korur
+    (nginx, Arch'ın `postgresql.service` birimi, doğrudan adı verilen bir örnek
+    birim, `wg-quick@`).
+  - *Katalogda yalnız iki birim sarmalayıcıdır:* `postfix` (Ubuntu 24.04; 13
+    öncesi Debian) ve `postgresql` (Debian, Ubuntu). Öteki birim adları üç
+    platformda gerçek birimler ya da onların takma adlarıdır.
+  - *Yanıtlar.* `reason` değeri `check`, `reload`, `start`, `stop`, `verify`
+    ya da `command` olan `502 SERVICE_ACTION_FAILED` ve `502
+    SERVICE_ACTION_UNKNOWN`; ikisi de `vars.unit`, `vars.action`,
+    `vars.command` (sahibin hizmetin kendi yanıtını okumak için çalıştırdığı
+    komut), `vars.detail` (sınırlı tek satır) ve hizmetin sahibi başka bir
+    birimse `vars.owner_unit` taşır. Başarısız bir eylem eskiden `500`
+    "internal server error" yanıtlıyordu. Denetim kaydı, bilinmeyen bir sonuç
+    için `failed` yerine `unknown` der.
+- **Değişmeyen ve nedeni.**
+  - *Yardımcının komut kapsamı.* `postfix reload`, `postfix status`, `doveadm
+    reload` ve `systemctl show` kapsamın dışında kalır. Postfix'in kendi
+    komutlarını yardımcının korumalı alanından çalıştırmak hiç ölçülmedi ve
+    birimin yeniden yüklemesini atlamak olurdu. El sıkışması, yenilemenin
+    sorduğu soruyu yanıtlar.
+  - *Yayımdan önceki denetim* hâlâ `is-active` kullanır. Yayımı reddedebilen bir
+    el sıkışması, dinleyicilerine ulaşamadığı bir sunucudan yenilenmiş
+    sertifikayı esirgerdi; Postfix durmuşken yayımlanan bir sertifika hiçbir
+    şeye zarar vermez, çünkü Postfix başladığında onu okur.
+  - *Mevcut bir sunucunun kayıtlı yardımcısı.* Aşağıdaki geçişe bakın.
+- **Şema ya da sürüm geçişi.**
+  - Kalıcı durumda yok: defter v1, kabul edilmiş plan v1, makbuz v1, kit
+    bildirimi şeması ve üç yerel şablon bayt bayt aynıdır; veritabanı şeması
+    değişmez.
+  - Yardımcının baytları her sürümde olduğu gibi değişir; bu yüzden bu kaydı
+    içeren bir sürümün kit nesli farklıdır. Kayıtlı bir sunucu, kaydolduğu
+    nesli korur: kancası ve birimi o neslin `renew` dosyasını adlandırır, bir
+    Panel güncellemesi yeni nesli yalnız onun yanına yayımlar
+    (`prepare-mail-renewal-runtime`) ve "mevcut bağımsız zamanlamalar,
+    geçerli kitleriyle birlikte korunur" (`MAIL-ENROLLMENT-RESERVATION.md`).
+    Dolayısıyla: önceki Agent kancasını taşıyan bir sunucu denetimi, sahibi
+    Paneli güncellediğinde alır; böyle bir sürümden itibaren kaydolan bir
+    sunucu onu yardımcısında taşır; zaten kayıtlı bir sunucu onu yalnız
+    güncellenmiş Agent'ın işçisi kuyruğu yardımcının zamanlayıcısından önce
+    aldığında görür, Agent yokken hiç görmez. Kayıtlı bir sunucuyu daha yeni
+    bir nesle taşımak aşağıda tasarlandı, uygulanmadı.
+  - Agent RPC, eklemeli: `ServiceActionResult.Outcome`, `.Stage`, `.Applied`,
+    `.Detail`, `.Unit`. Daha eski bir Panel bunları yok sayar ve başarı olmayan
+    her yanıtta yine `Error` görür. HTTP, eklemeli: yukarıdaki iki kod;
+    başarılı bir yanıt `outcome`, `applied` ve `unit` kazanır. Panel ve Agent
+    tek sürümle birlikte kurulur.
+- **Kurtarma davranışı.**
+  - *Yenileme.* Seçili sertifika seçili kalır; ayarlara, deftere, kuyruğa ve
+    sertifika kanıtına dokunulmaz. İşlem açık kalır ve aynı istek tarafından
+    mevcut sınır içinde yeniden denenir (üç yürütme, sonra sahibin açık
+    `--retry-selected` ya da `--retry-failed` komutu); başarısız bir yeniden
+    yüklemeden sonra olduğu gibi. Yardımcının günlük satırı ve Agent'ın kayıt
+    satırı artık hangi hizmet olduğunu, "tamamlanmadı" mı "doğrulanamadı" mı
+    olduğunu, komutu (`postfix reload`, `doveadm reload`, `postfix status`) ve
+    aynı işlemin süreceğini söyler. Bir işlem açıkken sonraki bir yenileme
+    kabul edilmez; bu zaten böyleydi.
+  - *Hizmetler sayfası.* Hiçbir şey yeniden denenmez ve hiçbir şey geri
+    alınmaz. Reddedilen bir yapılandırma başlatmayı, yeniden başlatmayı ve
+    yeniden yüklemeyi, bir şey gönderilmeden önce durdurur; durdurma her zaman
+    gönderilir. Önbellekteki hizmet taraması, başarısız ya da bilinmeyen bir
+    yanıttan sonra da tazelenir.
+- **Kanıt.** Yalnız bileşen testleri; gerçek sistem ölçümü bekliyor.
+  `cmd/agent/mail_served_certificate_test.go` (Postfix önceki sertifikayı
+  sunarken 0 ile çıkan bir sarmalayıcı; yeniden yüklemesinden sonra onu koruyan
+  Dovecot; önce eski, sonra yeni bir süreç; dinleyici yok; TLS sunmayan bir
+  dinleyici; tek bir sunucu adresine bağlanmış bir hizmet; her STARTTLS; iptal
+  edilmiş bir işlem; cümleler; komut kapsamının genişlememesi);
+  `mail_host_certificate_reload_test.go` (yeniden yükle, gözle, sor sırası;
+  denetimsiz bir yeniden yükleme reddedilir); `service_action_verify_test.go`
+  (hizmet izlemezken 0 ile çıkan bir sarmalayıcıda Postfix ve Dovecot
+  eylemleri; her eylem için arkasındaki birimlerle değerlendirilen bir
+  sarmalayıcı, kanıt klasöründeki `ExecReload` metni örnek veri olarak;
+  bilinmeyen; iş sonucunu koruyan gerçek birimler);
+  `cmd/panel/service_action_outcome_test.go`. Hiçbir test posta sunucusu
+  gerektirmez; dinleyiciler bellektedir. Ayrıcalıklı komut korumasına girdi
+  eklenmedi: her komut mevcut başlatıcılardan geçer ve el sıkışması bir süreç
+  değil, bir bağlantıdır.
+- **Açık.**
+  - *Gerçek hizmetlerde ölçülmedi.* Bir gerçek sistem hücresi, Ubuntu 24.04 ve
+    Debian 13'te, Panel ve Agent durmuşken ve işi kayıtlı yardımcı yaparken
+    şunları göstermelidir: (a) sağlıklı bir yenileme: 465, 587, 993 üzerinde
+    sunulan parmak izi öncesinde önceki, sonrasında seçili sertifikaya eşittir,
+    işlem tamamlanır, günlük Postfix ve Dovecot'un yeniden yüklemesini
+    gösterir; (b) örneğin yeniden yüklemesi başarısızken Ubuntu (P1'deki gibi
+    `main.cf` içinde Postfix'in reddettiği bir satır): `systemctl reload
+    postfix.service` 0 ile çıkar ve işlem açık kalır ya da tamamlanır;
+    dinleyicilerin ne sunduğu her iki durumda da kaydedilir; (c) `postfix@-`
+    durmuş ve sarmalayıcı etkinken Ubuntu: "doğrulanamadı", hiçbir şey
+    etkinleştirildi diye kaydedilmez, sahip Postfix'i başlattıktan sonra
+    tamamlanır; (d) `local.conf` içinde reddettiği bir satırla Dovecot:
+    `doveadm reload` 0 ile çıkar, önceki sertifika kalır, "tamamlanmadı"; (e)
+    el sıkışmaları yardımcının korumalı alanında başarılı olur; (f) örnek
+    durmuşken Ubuntu'da `systemctl is-active postfix.service` ne der.
+    Hizmetler sayfası için: reddedilen bir `main.cf` ile Ubuntu'da `postfix`
+    için Yeniden yükle ve Yeniden başlat; Debian ve Ubuntu'da `postgresql`,
+    her eylem, başlamayan bir kümeyle ve sahibin başarısız yeniden yükleme
+    kancasıyla; gerçek `ConsistsOf`, `Wants`, `PropagatesReloadTo`,
+    `ReloadResult` ve `ExecReload` değerleri; üç platformda Dovecot'un birim
+    metni.
+  - *Postfix için "doğrulandı" neyi kanıtlar.* Yayımdan sonra başlayan bir
+    Postfix sunucu süreci, ana süreç yeniden yüklenmemiş olsa bile seçili
+    sertifikayı okur; boşta bekleyen bir süreç `max_idle` içinde çıkar. Denetim
+    bir dinleyicinin seçili sertifikayı sunduğunu kanıtlar; zaten çalışmakta
+    olan her sürecin değiştirildiğini kanıtlamaz.
+  - *Posta dinleyicilerine bu sunucudan ulaşılamayan bir sunucu* (kendi
+    adreslerinin hiçbirinde 25, 465, 587 ya da 110, 143, 993, 995 üzerinde TLS
+    yok) ya da sahibi `master.cf` içinde her dinleyiciye başka bir sertifika
+    vermiş bir sunucu: yenileme sertifikayı yayımlar, yeniden yükler, sonra
+    sahip sürdürene kadar "doğrulanamadı" ya da "tamamlanmadı" olarak açık
+    kalır ve sonraki bir yenileme onun arkasında bekler. Bu kayıttan önce böyle
+    bir sunucu kanıt olmadan etkinleştirildi diye kaydediliyordu. CelikPanel'in
+    kurduğu yığın bu kapıları açar.
+  - *Tasarlandı, uygulanmadı: kayıtlı bir sunucuyu daha yeni bir yardımcı
+    nesline taşımak.* Dosya, yüklü birim ve ters işlem yapı taşları vardır ve
+    gerçek sistem kanıtları bulunur (tam önceki kitle
+    `celikpanel-mail-renewal-transition/v1`, ön görüntü v1, dosyalar v1, yüklü
+    v1; `MAIL-RENEWAL-KIT.md`). Eksik olanlar: kaydınkinin yanında bir
+    "yükseltme" işlemi için, yalnız sahibin gözden geçirdiği adımla kabul
+    edilen kalıcı bir ayırma ve dağıtıcı; çalışan bir yenilemenin birimini
+    değiştirmek yerine onu beklemek; uygulama geri alma kuralı (kabul edildiği
+    Agent bildirimi geri yüklendiğinde önceki nesle ters işlem); ve sahibin
+    göreceği ekran. Üç şablon değişmedikçe bildirim şeması v1 kalır; `v2`
+    yalnız bir şablon ya da bildirim alanı değişirse gerekir ve o zaman okuyucu
+    ikisini de tanımalıdır. Sahip, posta sertifikası durumunda yenileme
+    yardımcısının hangi sürümden olduğunu görür (yardımcı zaten
+    `--inspect-build-identity` yanıtlar); bu kayıttan önceyse, hizmetleri
+    sundukları sertifikayı doğrulamadan yeniden yüklediğini, onu taşıyan tek
+    bir gözden geçirilmiş eylemle ve Panel olmayan bir sunucu için aynı eylemin
+    yeni değişmez yardımcının root komutu olarak verilmiş biçimiyle birlikte
+    görür. O zamana kadar kayıtlı bir Ubuntu sunucusunun sahibi bir yenilemeden
+    sonra şunu karşılaştırır: `openssl s_client -connect localhost:465
+    </dev/null 2>/dev/null | openssl x509 -noout -fingerprint -sha256` ile
+    `openssl x509 -noout -fingerprint -sha256 -in
+    /etc/ssl/celikpanel/_mail/host/current/fullchain.pem`; farklıysa `sudo
+    postfix reload` çalıştırır.
+  - *Henüz ekran metni yok.* Katalogda `err.SERVICE_ACTION_FAILED.*` ya da
+    `err.SERVICE_ACTION_UNKNOWN` girdisi yok; ekran API cümlesini İngilizce
+    olarak, hizmetin satırı olmadan gösterir. Metinler bu tarihli işlem
+    yönlendirmesi kaydındadır.
+  - *Sarmalayıcı yalnız olumlu kanıtla tanınır.* `systemctl show` eylemden önce
+    okunamıyorsa birim kendi iş sonucunu korur.
+  - `StartServiceMutation` RPC'si (Postfix ve Dovecot; bir posta hizmeti
+    kurulduğunda kullanılır) artık aynı doğrulanmış yoldan başlatır.

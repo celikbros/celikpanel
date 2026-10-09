@@ -1630,7 +1630,25 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 		// Başlat/durdur/yeniden başlat, sunucunun gerçek durumunu değiştirdi
 		// (ya da değiştiremedi) ve defterde HİÇ iz bırakmıyordu — operatör ne
 		// yaptığını gösteremiyordu, ben de yeniden kuramıyordum (25 Tem).
-		p.audit(r, "service."+req.Action+".failed:"+serviceName+" — "+auditReason(err.Error()), "service", 0)
+		// An outcome the Agent could not establish is recorded as that, not as
+		// a failure (10 Oct 2026; service_action_outcome.go).
+		// Agent'ın belirleyemediği sonuç hata diye değil, bilinmiyor diye yazılır.
+		outcome := "failed"
+		if reply.Outcome == transport.ServiceActionUnknown {
+			outcome = "unknown"
+		}
+		p.audit(r, "service."+req.Action+"."+outcome+":"+serviceName+" — "+auditReason(err.Error()), "service", 0)
+		if reply.Outcome != "" {
+			// The action may have changed real state; the cached scan is
+			// refreshed so the page does not keep showing the earlier one. The
+			// answer is the outcome either way.
+			if _, scanErr := p.scanManagedServices(r.Context()); scanErr != nil {
+				log.Printf("service scan after %s %s (%s): %v", req.Action, serviceName, outcome, scanErr)
+			}
+			if writeServiceActionOutcome(w, serviceName, req.Action, &reply) {
+				return
+			}
+		}
 		writeServerError(w, err)
 		return
 	}

@@ -26,6 +26,9 @@ type fakeMailHost struct {
 	systemctlStarts bool   // `systemctl start|restart postfix` reaches the daemon
 	statusCannotRun bool   // `postfix status` cannot be executed at all
 	nextPID         int
+	// `systemctl stop postfix` exits 0 and the master keeps running (the
+	// wrapper unit's job succeeds whatever the daemon does).
+	stopLeavesMaster bool
 
 	// Dovecot
 	doveconfOutput  string
@@ -33,6 +36,8 @@ type fakeMailHost struct {
 	dovecotExitsAt  int // the restarted dovecot exits after this many readings (0: stays)
 	dovecotReadings int
 	dovecotSame     bool // `systemctl restart dovecot` leaves the same process
+	// `systemctl stop dovecot` exits 0 and the main process keeps running.
+	dovecotStopLeaves bool
 }
 
 func (h *fakeMailHost) run(name string, args ...string) ([]byte, error) {
@@ -86,6 +91,28 @@ func (h *fakeMailHost) run(name string, args ...string) ([]byte, error) {
 	case "systemctl restart dovecot", "systemctl reload-or-restart dovecot":
 		if !h.dovecotSame && call == "systemctl restart dovecot" {
 			h.dovecotPID += 1000
+		}
+		h.dovecotReadings = 0
+		return nil, nil
+	case "systemctl stop postfix":
+		if !h.stopLeavesMaster {
+			h.masterPID = 0
+		}
+		return nil, nil
+	case "systemctl stop dovecot":
+		if !h.dovecotStopLeaves {
+			h.dovecotPID = 0
+		}
+		return nil, nil
+	case "systemctl start dovecot":
+		if h.dovecotPID == 0 {
+			h.dovecotPID = 9000
+		}
+		h.dovecotReadings = 0
+		return nil, nil
+	case "systemctl reload dovecot":
+		if h.dovecotPID == 0 {
+			return []byte("dovecot.service is not active, cannot reload.\n"), fakeExit{"exit status 1"}
 		}
 		h.dovecotReadings = 0
 		return nil, nil

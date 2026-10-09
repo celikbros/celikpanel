@@ -149,6 +149,14 @@ func runIndependentMailRenewal(args []string, euid int, environment []string) in
 			fmt.Fprintln(os.Stderr, failedBudget.Error())
 			return 1
 		}
+		// What a mail service's own listeners presented after its reload has
+		// its own sentence: the reason, who acts, the command and how the same
+		// operation resumes. It is developer-authored and carries no output.
+		var served *mailServedCertificateError
+		if errors.As(err, &served) {
+			fmt.Fprintln(os.Stderr, served.Error())
+			return 1
+		}
 		// Native output/configuration never becomes a command-line error response.
 		fmt.Fprintln(os.Stderr, "mail renewal remains pending; the server owner must review the retained operation and native mail service status before retrying; no general recovery was started")
 		return 1

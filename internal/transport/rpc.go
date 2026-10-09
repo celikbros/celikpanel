@@ -310,10 +310,50 @@ type ServiceActionArgs struct {
 	Action      string
 }
 
+// ServiceActionResult answers one start, stop, restart or reload of a managed
+// unit. Success and Error are what they always were. The other fields are
+// additive (10 Oct 2026): an Agent older than them leaves them empty.
+//
+// Outcome says how the answer was established, because `systemctl`'s exit
+// status is the acted unit's job result, and for a wrapper unit (Ubuntu's
+// `postfix.service`, Debian's and Ubuntu's `postgresql.service`) that says
+// nothing about the daemon:
+//
+//   - ServiceActionVerified: the daemon was observed in the requested state;
+//   - ServiceActionFailed: a verified failure, Success false, Stage and Detail
+//     say where and carry the service's own line;
+//   - ServiceActionUnknown: the action was sent but what came of it could not
+//     be established. Success is false: unknown is never reported as success;
+//   - empty: the unit's own job result, as systemd reported it.
+//
+// ServiceActionResult, yönetilen bir unit'in başlat, durdur, yeniden başlat ya
+// da yeniden yükle işlemini yanıtlar. Outcome, yanıtın nasıl kurulduğunu
+// söyler: doğrulandı, doğrulanmış hata ya da bilinmiyor. Bilinmeyen sonuç asla
+// başarı diye bildirilmez.
 type ServiceActionResult struct {
 	Success bool   `json:"success"`
 	Error   string `json:"error,omitempty"`
+	Outcome string `json:"outcome,omitempty"`
+	// Stage: "check", "reload", "start", "stop", "verify", or "command" when
+	// systemd itself refused or failed the action.
+	Stage string `json:"stage,omitempty"`
+	// Applied: what a verified action came to ("reloaded", "started",
+	// "restarted", "stopped", "running" when it was already running).
+	Applied string `json:"applied,omitempty"`
+	// Detail is one bounded line: what the service's own program said, or what
+	// the check observed.
+	Detail string `json:"detail,omitempty"`
+	// Unit names the unit that owns the daemon when it is not the one acted on.
+	Unit string `json:"unit,omitempty"`
 }
+
+const (
+	ServiceActionVerified = "verified"
+	ServiceActionFailed   = "failed"
+	ServiceActionUnknown  = "unknown"
+	// ServiceActionStageCommand: systemd refused or failed the action itself.
+	ServiceActionStageCommand = "command"
+)
 
 // ApplyVhostRequest is the complete, explicit nginx vhost input shared by the
 // panel and the privileged agent.

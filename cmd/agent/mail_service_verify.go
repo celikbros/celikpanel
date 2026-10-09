@@ -73,6 +73,9 @@ const (
 	mailServiceReloadOrStart
 	// Restart, or start when stopped (a change only a new process takes up).
 	mailServiceRestart
+	// Start a stopped daemon; a running one is left as it is (the owner's
+	// "Start" on the Services page).
+	mailServiceStart
 )
 
 // What a verified apply came to.
@@ -81,6 +84,9 @@ const (
 	mailServiceStarted    = "started"
 	mailServiceRestarted  = "restarted"
 	mailServiceNotRunning = "not_running"
+	// The daemon was already running and nothing was done to it.
+	mailServiceRunning = "running"
+	mailServiceStopped = "stopped"
 )
 
 // The stage a mail service apply stopped at.
@@ -88,6 +94,7 @@ const (
 	mailServiceStageCheck  = "check"
 	mailServiceStageReload = "reload"
 	mailServiceStageStart  = "start"
+	mailServiceStageStop   = "stop"
 	mailServiceStageVerify = "verify"
 )
 
@@ -109,6 +116,7 @@ func (e *mailServiceError) Error() string {
 		mailServiceStageCheck:  "refuses its configuration",
 		mailServiceStageReload: "could not be reloaded",
 		mailServiceStageStart:  "could not be started",
+		mailServiceStageStop:   "could not be stopped",
 		mailServiceStageVerify: "is not running with the new configuration",
 	}[e.stage]
 	if e.unknown {
@@ -226,7 +234,10 @@ func applyPostfixVerified(run mailServiceRunner, mode mailServiceMode) (string, 
 		return "", unknown
 	}
 
-	if mode == mailServiceRestart || (!before.running && mode == mailServiceReloadOrStart) {
+	if mode == mailServiceStart && before.running {
+		return mailServiceRunning, nil
+	}
+	if mode == mailServiceRestart || (!before.running && (mode == mailServiceReloadOrStart || mode == mailServiceStart)) {
 		action, state := "restart", mailServiceRestarted
 		if !before.running {
 			state = mailServiceStarted
@@ -316,7 +327,21 @@ func applyDovecotVerified(run mailServiceRunner, mode mailServiceMode) (string, 
 		return "", unknown
 	}
 	action, stage, state := "restart", mailServiceStageStart, mailServiceRestarted
-	if mode != mailServiceRestart {
+	switch mode {
+	case mailServiceRestart:
+	case mailServiceStart:
+		// The owner's "Start": a running Dovecot is left as it is.
+		if before.active {
+			return mailServiceRunning, nil
+		}
+		action = "start"
+	case mailServiceReload:
+		// The owner's "Reload": a stopped Dovecot is left stopped.
+		if !before.active {
+			return mailServiceNotRunning, nil
+		}
+		action, stage, state = "reload", mailServiceStageReload, mailServiceReloaded
+	default:
 		action, stage, state = "reload-or-restart", mailServiceStageReload, mailServiceReloaded
 	}
 	if !before.active {
@@ -345,6 +370,68 @@ func applyDovecotVerified(run mailServiceRunner, mode mailServiceMode) (string, 
 	}
 	return "", &mailServiceError{service: service, stage: mailServiceStageVerify,
 		detail: "systemctl " + action + " dovecot reported success, but dovecot.service is not running afterwards"}
+}
+
+// stopPostfixVerified stops Postfix through its unit and returns only once
+// Postfix itself says its master is not running. `postfix status` can be
+// believed only when Postfix accepts its configuration (a refused main.cf makes
+// it exit non-zero too), so that is established first; a stop is never held
+// back by it. With a refused configuration the stop is still sent and the
+// outcome is unknown.
+//
+// stopPostfixVerified, Postfix'i unit'i üzerinden durdurur ve ancak Postfix
+// ana sürecinin çalışmadığını kendisi söylediğinde döner.
+func stopPostfixVerified(run mailServiceRunner) (string, error) {
+	const service = "Postfix"
+	checkOutput, checkErr := run("postfix", "check")
+	if out, err := run("systemctl", "stop", "postfix"); err != nil {
+		return "", mailServiceFailure(service, mailServiceStageStop, out, err)
+	}
+	if checkErr != nil {
+		unknown := mailServiceFailure(service, mailServiceStageVerify, checkOutput, checkErr)
+		unknown.unknown = true
+		unknown.detail = strings.TrimSuffix("systemctl stop postfix reported success, but `postfix check` did not pass, so `postfix status` cannot say whether the master stopped: "+unknown.detail, ": ")
+		return "", unknown
+	}
+	var after postfixMasterState
+	for attempt := 0; attempt < mailServiceStartPolls; attempt++ {
+		if attempt > 0 {
+			mailServiceSleep(mailServicePollInterval)
+		}
+		var unknown *mailServiceError
+		if after, unknown = postfixMaster(run); unknown != nil {
+			return "", unknown
+		}
+		if !after.running {
+			return mailServiceStopped, nil
+		}
+	}
+	return "", &mailServiceError{service: service, stage: mailServiceStageStop,
+		detail: fmt.Sprintf("systemctl stop postfix reported success, but the Postfix master process (%d) is still running", after.pid)}
+}
+
+// stopDovecotVerified stops Dovecot and returns once its unit has no main
+// process left.
+func stopDovecotVerified(run mailServiceRunner) (string, error) {
+	const service = "Dovecot"
+	if out, err := run("systemctl", "stop", "dovecot"); err != nil {
+		return "", mailServiceFailure(service, mailServiceStageStop, out, err)
+	}
+	var now dovecotUnitState
+	for attempt := 0; attempt < mailServiceStartPolls; attempt++ {
+		if attempt > 0 {
+			mailServiceSleep(mailServicePollInterval)
+		}
+		var unknown *mailServiceError
+		if now, unknown = dovecotUnit(run); unknown != nil {
+			return "", unknown
+		}
+		if !now.active && now.pid == 0 {
+			return mailServiceStopped, nil
+		}
+	}
+	return "", &mailServiceError{service: service, stage: mailServiceStageStop,
+		detail: fmt.Sprintf("systemctl stop dovecot reported success, but its main process (%d) is still running", now.pid)}
 }
 
 // mailServiceLeaseRunner runs each command under a durable mutation lease.
