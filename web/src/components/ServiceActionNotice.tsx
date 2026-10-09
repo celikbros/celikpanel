@@ -44,6 +44,10 @@ export function isServiceActionOutcome(error: ApiError): boolean {
 const noteSentences: Record<string, TranslationKey> = {
     unit_marked_failed: 'services.action.note.unit_marked_failed',
     unit_marked_failed_config: 'services.action.note.unit_marked_failed_config',
+    // 9 Oct 2026: the unit's own stop was not read (systemd was still
+    // stopping it when the wait ended, or it could not be read at all).
+    unit_not_settled: 'services.action.note.unit_not_settled',
+    unit_state_not_read: 'services.action.note.unit_state_not_read',
 };
 
 export function ServiceActionNotice({

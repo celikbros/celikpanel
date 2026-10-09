@@ -227,7 +227,7 @@ func TestImportAnswerNamesWhatWasImportedAndWhatWasNot(t *testing.T) {
 		{Step: "mail", OK: true, Detail: "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)"},
 		{Step: "mail:suspended@imported.example", OK: false, Detail: importMailboxWithoutPassword},
 		{Step: "forwarders", OK: true, Detail: "1 forwarders"},
-		{Step: "dns", OK: true, Detail: "external DNS ownership preserved; verify provider records before publishing the site"},
+		{Step: "dns", OK: true, State: importStateLeftToOwner, Detail: "external DNS ownership preserved; verify provider records before publishing the site"},
 		{Step: "database:olduser_shop", OK: true, Detail: "created exclusively and dump imported (db USERS are not migrated; repoint app configs)"},
 	}
 	answer := importApplyAnswerFor("imported.example", 7, 3, steps)
@@ -237,13 +237,18 @@ func TestImportAnswerNamesWhatWasImportedAndWhatWasNot(t *testing.T) {
 	if got := strings.Join(answer.NotImported, ","); got != "files,mail:suspended@imported.example" {
 		t.Fatalf("not imported = %s", got)
 	}
-	if got := strings.Join(answer.Imported, ","); got != "domain,mail,forwarders,dns,database:olduser_shop" {
+	// DNS was left to the owner's external provider: it is not said to be
+	// imported (set4, 2026-10-09), and it is not a part that is missing.
+	if got := strings.Join(answer.Imported, ","); got != "domain,mail,forwarders,database:olduser_shop" {
 		t.Fatalf("imported = %s", got)
+	}
+	if got := strings.Join(answer.LeftOut, ","); got != "dns" {
+		t.Fatalf("left out = %s", got)
 	}
 	// D-024: what happened, what is in place, who acts, the concrete next
 	// actions, and that nothing resumes by itself.
 	for _, fragment := range []string{
-		"does not continue by itself", "Imported: domain, mail, forwarders, dns, database:olduser_shop.",
+		"does not continue by itself", "Imported: domain, mail, forwarders, database:olduser_shop.",
 		"Not imported: files, mail:suspended@imported.example.", "imported.example was created and is kept",
 		"server owner", "by hand", "removes imported.example on the Domains page", "imports the archive again", "nothing is imported twice",
 	} {
@@ -269,7 +274,7 @@ func TestImportAnswerNamesWhatWasImportedAndWhatWasNot(t *testing.T) {
 		t.Fatalf("complete answer = %+v", complete)
 	}
 	encoded, _ = json.Marshal(complete)
-	if !strings.Contains(string(encoded), `"not_imported":[]`) {
+	if !strings.Contains(string(encoded), `"not_imported":[]`) || !strings.Contains(string(encoded), `"left_out":[]`) {
 		t.Fatalf("an empty list is not encoded as a list: %s", encoded)
 	}
 

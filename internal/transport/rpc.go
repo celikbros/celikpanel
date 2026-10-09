@@ -367,10 +367,13 @@ type ServiceActionResult struct {
 	// Unit names the unit that owns the daemon when it is not the one acted on.
 	Unit string `json:"unit,omitempty"`
 	// Notice is a fact about native state that a successful action left and
-	// that its success does not say (12 Oct 2026). One value:
-	// ServiceActionNoticeUnitFailed. NoticeUnit is the unit, NoticeResult
-	// systemd's `Result` for it, NoticeDetail one bounded line of the
-	// service's own words when it has any. Additive; never set on a failure.
+	// that its success does not say (12 Oct 2026):
+	// ServiceActionNoticeUnitFailed, or (9 Oct 2026)
+	// ServiceActionNoticeUnitNotSettled. NoticeUnit is the unit, NoticeResult
+	// systemd's `Result` for a failed unit or the last `ActiveState` read of
+	// one that had not settled (empty when it could not be read), NoticeDetail
+	// one bounded line of the service's own words when it has any. Additive;
+	// never set on a failure.
 	// Notice, başarılı bir işlemin geride bıraktığı ve başarının söylemediği
 	// yerel durum bilgisidir. Eklemelidir; hata yanıtında hiç doldurulmaz.
 	Notice       string `json:"notice,omitempty"`
@@ -389,6 +392,23 @@ type ServiceActionResult struct {
 // systemd birimini, durdurmadan önce öyle olmadığı halde, `failed` gösteriyor.
 // İşaret systemd'nin kendi kaydıdır ve olduğu gibi bırakılır.
 const ServiceActionNoticeUnitFailed = "unit_marked_failed"
+
+// ServiceActionNoticeUnitNotSettled: the service was stopped as asked and is
+// not running, and how its unit's stop ended was not read: within the bound
+// the Agent waits, systemd still showed the unit between two states
+// (`deactivating`), or the unit could not be read after the stop although it
+// was read before it. The unit may still end marked as failed; nothing is
+// claimed about it either way (9 Oct 2026).
+//
+// Measured on Ubuntu 24.04: `systemctl stop postfix` returns when the wrapper
+// unit's job ends, 1 to 4 ms after `postfix@-.service` left `active`; that
+// unit then stays `deactivating` for about one second (its stop command
+// `postmulti -p stop` refuses main.cf and exits 1 after Postfix's own
+// one-second pause) and is marked `failed` 2 to 7 ms after the master ends.
+// ServiceActionNoticeUnitNotSettled: hizmet istendiği gibi durduruldu ve
+// çalışmıyor; biriminin durdurulmasının nasıl bittiği ise okunamadı. Birim
+// yine de `failed` olarak işaretlenebilir; bu konuda hiçbir şey ileri sürülmez.
+const ServiceActionNoticeUnitNotSettled = "unit_not_settled"
 
 const (
 	ServiceActionVerified = "verified"

@@ -10,10 +10,16 @@
 //                     domain is in service when nothing else is missing.
 //   stopnote          a Stop that succeeded and left the unit marked as failed
 //                     says so on the attention surface, never as a failure.
+//                     Since 9 Oct 2026 also a Stop whose unit was not read as
+//                     settled: it says that, and claims no mark.
 //   updaterolledback  the update card says, above Start, that the offered
 //                     version was already tried here and rolled back, with the
 //                     recorded cause or that none was recorded; Start stays
-//                     enabled.
+//                     enabled. Since 9 Oct 2026 the sentence says its time as
+//                     the end of that attempt.
+//   importleftout     (9 Oct 2026) an import whose DNS was left to the owner's
+//                     provider is complete, and the step is neither marked as
+//                     imported nor as failed.
 //
 // Like the batches before: the mock on 127.0.0.1 answers everything, nothing
 // else is contacted. The answers of this batch are given through the mock's
@@ -55,8 +61,9 @@ const LONG_ENTRY = '/var/lib/another-application/releases/2026-10-09/shared/stor
 const ENTRIES = {
     domain_id: 9, site_id: 4, domain: 'old.example', status: 'partial', domain_status: 'active', code: 'IMPORT_PARTIAL',
     message: 'The import ended and every part that was chosen was imported; old.example is in service.',
-    imported: ['domain', 'files', 'mail', 'forwarders', 'dns', 'database:olduser_shop'],
+    imported: ['domain', 'files', 'mail', 'database:olduser_shop'],
     not_imported: ['member:/etc/set3-escape-absolute.txt', `member:${LONG_ENTRY}`, 'members:44'],
+    left_out: ['forwarders', 'dns'],
     steps: [
         { step: 'domain', ok: true, detail: 'old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html' },
         { step: 'files', ok: true, detail: '412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported' },
@@ -64,8 +71,25 @@ const ENTRIES = {
         { step: `member:${LONG_ENTRY}`, ok: false, detail: ABSOLUTE },
         { step: 'members:44', ok: false, detail: 'not imported: 44 more entries of the archive were refused by their names in the same way; 46 in all' },
         { step: 'mail', ok: true, detail: '1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)' },
-        { step: 'forwarders', ok: true, detail: '0 forwarders' },
-        { step: 'dns', ok: true, detail: 'panel DNS template created; archive DNS import was not selected' },
+        { step: 'forwarders', ok: true, state: 'none_in_archive', detail: '0 forwarders' },
+        { step: 'dns', ok: true, state: 'not_chosen', detail: 'panel DNS template created; archive DNS import was not selected' },
+        { step: 'database:olduser_shop', ok: true, detail: 'created exclusively and dump imported (db USERS are not migrated; repoint app configs)' },
+    ],
+};
+// 9 Oct 2026: an import that ended complete on a server whose DNS is the
+// owner's external provider. The `dns` step ended without an error and
+// imported nothing (`state: left_to_owner`); so did `forwarders`, of which the
+// archive holds none.
+const EXTERNAL_DNS_DETAIL = 'external DNS ownership preserved; verify provider records before publishing the site';
+const LEFT_OUT = {
+    domain_id: 9, site_id: 4, domain: 'old.example', status: 'active', domain_status: 'active',
+    imported: ['domain', 'files', 'mail', 'database:olduser_shop'], not_imported: [], left_out: ['forwarders', 'dns'],
+    steps: [
+        { step: 'domain', ok: true, detail: 'old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html' },
+        { step: 'files', ok: true, detail: '412 files, 48234496 bytes' },
+        { step: 'mail', ok: true, detail: '1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)' },
+        { step: 'forwarders', ok: true, state: 'none_in_archive', detail: '0 forwarders' },
+        { step: 'dns', ok: true, state: 'left_to_owner', detail: EXTERNAL_DNS_DETAIL },
         { step: 'database:olduser_shop', ok: true, detail: 'created exclusively and dump imported (db USERS are not migrated; repoint app configs)' },
     ],
 };
@@ -77,11 +101,18 @@ const stopped = (reason, unit, failedUnit, result, detail) => ({
         vars: { unit, failed_unit: failedUnit, result, command: `sudo systemctl reset-failed ${failedUnit}`, ...(detail ? { detail } : {}) },
     },
 });
+const pending = (reason, unit, pendingUnit, state) => ({
+    success: true, outcome: 'verified', applied: 'stopped',
+    note: {
+        error: 'The service was stopped and is not running. How its unit ended was not read.', code: 'SERVICE_ACTION_NOTE', reason,
+        vars: { unit, pending_unit: pendingUnit, command: `systemctl status ${pendingUnit}`, ...(state ? { state } : {}) },
+    },
+});
 const TARGET = { version: 'v0.1.0-alpha.82', commit: 'b'.repeat(40), sequence: '82', os: 'linux', arch: 'amd64', archive_sha256: 'c'.repeat(64), archive_size: '65870672' };
 const check = (attempt) => ({ supported: true, available: true, current_version: 'v0.1.0-alpha.81', current_commit: 'a'.repeat(40), target: TARGET, ...(attempt ? { previous_attempt: attempt } : {}) });
 
 export default function register(scenarios, tools) {
-    const { base, ctl, reset, drainLog, newPage, closePage, shot, clickByText, waitFor, pause, quiet } = tools;
+    const { base, ctl, reset, drainLog, newPage, closePage, shot, clickByText, waitFor, pause, quiet, locale } = tools;
     const must = (condition, message) => { if (!condition) throw new Error(message); };
     const fresh = async (plan = {}, override = {}) => {
         await reset();
@@ -185,6 +216,37 @@ export default function register(scenarios, tools) {
         return page;
     };
     const START = ['Start import', 'İçe aktarmayı başlat'];
+    // Each row of the result's step list: its label, the words a screen reader
+    // gets after it, its own line, and which of the three marks is drawn.
+    const stepRows = (page) => page.evaluate(() => Array.from(document.querySelectorAll('[data-import-result] ul.space-y-2 > li')).map((row) => {
+        const icon = row.querySelector('svg');
+        const tone = icon ? ['text-success', 'text-danger', 'text-fg-muted'].find((name) => icon.classList.contains(name)) || null : null;
+        const said = row.querySelector('.sr-only');
+        const label = said ? said.parentElement.cloneNode(true) : null;
+        if (label) label.querySelector('.sr-only')?.remove();
+        return {
+            label: label ? label.textContent.trim() : null, said: said ? said.textContent.replace(/^:\s*/, '').trim() : null,
+            detail: row.querySelector('.text-xs')?.textContent.trim() || null, tone, iconColor: icon ? getComputedStyle(icon).color : null,
+            iconVisible: Boolean(icon && icon.getClientRects().length > 0),
+        };
+    }));
+    const NOTHING = ['Nothing imported, nothing failed', 'İçe aktarılan yok, hata da yok'];
+    const DNS = ['DNS records', 'DNS kayıtları'];
+    const FORWARDERS = ['Forwarders', 'Yönlendirmeler'];
+    const leftOutRows = (name, rows) => {
+        for (const labels of [DNS, FORWARDERS]) {
+            const row = rows.find((item) => labels.includes(item.label));
+            must(row, `${name}: the step ${labels[0]} is not in the list: ${JSON.stringify(rows.map((item) => item.label))}`);
+            must(row.tone === 'text-fg-muted' && row.iconVisible, `${name}: ${labels[0]} is drawn with the mark "${row.tone}", not the neutral one`);
+            must(NOTHING.includes(row.said), `${name}: ${labels[0]} is read out as "${row.said}"`);
+        }
+        const imported = rows.filter((item) => item.tone === 'text-success');
+        must(imported.length > 0 && imported.every((item) => ['Imported', 'İçe aktarıldı'].includes(item.said)), `${name}: an imported step is not read out as imported`);
+        must(rows.filter((item) => item.tone === 'text-danger').every((item) => ['Not imported', 'İçe aktarılmadı'].includes(item.said)), `${name}: a step that was not imported is not read out as that`);
+        const tones = new Set(rows.map((item) => item.tone));
+        const colours = new Set(rows.map((item) => item.iconColor));
+        must(!tones.has(null) && colours.size === tones.size, `${name}: two marks share a colour: ${JSON.stringify(rows.map((item) => [item.tone, item.iconColor]))}`);
+    };
     const DIALOG = '[aria-labelledby="add-domain-title"]';
     const refusedBanner = (name, banner, domain, removed) => {
         must(banner, `${name}: the refusal is not on the page`);
@@ -277,7 +339,42 @@ export default function register(scenarios, tools) {
             must(/1530 other entries of the archive are outside the site folder/.test(result.text), '141a: the files line does not say what was outside the site folder');
             must(seen.toasts.length === 0, `141a: the result is also a toast: ${JSON.stringify(seen.toasts)}`);
             must(seen.enabledButtons.some((label) => /Open old\.example|old\.example alan adını aç/.test(label)), '141a: the domain cannot be opened from the result');
-            await record(page, '141b-import-refused-archive-entries-steps', '[data-import-result] ul.space-y-2');
+            // 9 Oct 2026: a part that imported nothing without failing (DNS that
+            // was not chosen, forwarders the archive does not hold) is in
+            // neither list of the summary.
+            const lists = await page.evaluate(() => (document.querySelector('[data-import-result] [role="alert"] dl')?.innerText || '').replace(/\s+/g, ' ').trim());
+            must(/Website files|Site dosyaları/.test(lists) && /Archive entry|Arşiv girdisi/.test(lists), `141a: the two lists were not read: ${lists.slice(0, 200)}`);
+            must(!DNS.some((label) => lists.includes(label)) && !FORWARDERS.some((label) => lists.includes(label)), `141a: a part that imported nothing is in a list of the summary: ${lists.slice(0, 400)}`);
+            const entryRows = await stepRows(page);
+            await record(page, '141b-import-refused-archive-entries-steps', '[data-import-result] ul.space-y-2', { stepRows: entryRows });
+            leftOutRows('141b', entryRows);
+            await closePage(page);
+        } finally {
+            await done();
+        }
+    };
+
+    // 9 Oct 2026 (set4): an import that asked for no DNS on a server whose DNS
+    // is the owner's external provider listed `dns` as imported.
+    scenarios.importleftout = async () => {
+        try {
+            await fresh({ [GUARDED.importApply]: { fail: { status: 200, body: LEFT_OUT } } });
+            const page = await inspect();
+            await clickExact(page, START);
+            await waitFor(page, () => Boolean(document.querySelector('[data-import-result]')), 20000);
+            await quiet(page);
+            const seen = await record(page, '144a-import-complete-dns-left-to-the-owner', '[data-import-result]');
+            const result = seen.importResult;
+            must(result && result.kind === 'complete' && !result.alert, `144a: the result is drawn as "${result?.kind}"${result?.alert ? ' with an alert' : ''}`);
+            must(/Every part you chose was imported, and old\.example is in service|Seçtiğiniz her parça içe aktarıldı ve old\.example hizmette/.test(result.text), `144a: a complete import does not say so: ${result.text.slice(0, 200)}`);
+            must(result.text.includes(EXTERNAL_DNS_DETAIL), '144a: the DNS step does not say that the records stay with the provider');
+            const rows = await stepRows(page);
+            must(rows.length === LEFT_OUT.steps.length, `144a: ${rows.length} step rows for ${LEFT_OUT.steps.length} steps`);
+            leftOutRows('144a', rows);
+            must(rows.filter((item) => item.tone === 'text-danger').length === 0, '144a: a step is drawn as failed');
+            must(rows.find((item) => DNS.includes(item.label)).detail === EXTERNAL_DNS_DETAIL, '144a: the DNS row does not carry its own line');
+            must(seen.toasts.length === 0, `144a: the result is also a toast: ${JSON.stringify(seen.toasts)}`);
+            await record(page, '144b-import-complete-dns-left-to-the-owner-steps', '[data-import-result] ul.space-y-2', { stepRows: rows });
             await closePage(page);
         } finally {
             await done();
@@ -309,6 +406,39 @@ export default function register(scenarios, tools) {
         await pause(250);
         must(!(await facts(page)).serviceAction, `${name}: the note stayed after Close`);
     };
+    // 9 Oct 2026: a Stop that succeeded while the unit's own stop was not read
+    // (systemd was still stopping the unit when the wait ended, or the unit
+    // could not be read). It is said, on the attention surface, and it claims
+    // the unit neither failed nor clean.
+    const pendingCase = async (page, name, answer, press) => {
+        await ctl({ override: { '/api/v1/service/action': { method: 'POST', status: 200, body: answer } } });
+        await press(page);
+        await waitFor(page, () => Boolean(document.querySelector('[data-service-action]')), 15000);
+        await quiet(page);
+        await pause(5600);
+        const seen = await record(page, name, '[data-service-action]');
+        const notice = seen.serviceAction;
+        const vars = answer.note.vars;
+        must(notice, `${name}: the note is not on the page`);
+        must(notice.tone === 'note' && notice.role === 'status', `${name}: drawn as "${notice.tone}" with role "${notice.role}"`);
+        must(!notice.surface.redder, `${name}: a successful Stop stands on the failure surface (${notice.surface.background})`);
+        must(/was stopped and is not running|durduruldu ve çalışmıyor/.test(notice.text), `${name}: it is not said that the service stopped: ${notice.text.slice(0, 200)}`);
+        must(notice.text.includes(vars.pending_unit), `${name}: the unit is not named`);
+        must(vars.state
+            ? notice.text.includes(vars.state) && /had not finished stopping|durdurmayı bitirmemişti/.test(notice.text) && /may end marked as failed|failed olarak işaretlenmiş olabilir/.test(notice.text)
+            : /could not be read from systemd|systemd’den okunamadı/.test(notice.text) && /it is not known whether|bilinmiyor/.test(notice.text),
+        `${name}: it is not said what was not read: ${notice.text.slice(0, 300)}`);
+        must(notice.code === vars.command && /^systemctl status /.test(notice.code), `${name}: the command is not set apart, or it is not one that only shows the unit: ${notice.code}`);
+        must(/nothing looks again by itself|hiçbir şey kendiliğinden yeniden bakmaz/.test(notice.text), `${name}: it is not said that nothing looks again`);
+        must(!/now shows .* as failed|olarak gösteriyor|reset-failed|leaves it as it is|olduğu gibi bırakır/.test(notice.text), `${name}: the note claims a mark that was not read: ${notice.text.slice(0, 300)}`);
+        must(!notice.text.includes(answer.note.error), `${name}: the server's English sentence is shown in place of the catalogue's`);
+        must(!/\{\w+\}|SERVICE_ACTION|unit_not_settled|unit_state_not_read|did not stop|durmadı/.test(notice.text), `${name}: a placeholder, an internal name or a failure is on screen`);
+        must(notice.inView, `${name}: the note is outside the window`);
+        must(seen.toasts.length === 0, `${name}: the note is also a toast: ${JSON.stringify(seen.toasts)}`);
+        await clickExact(page, ['Close', 'Kapat']);
+        await pause(250);
+        must(!(await facts(page)).serviceAction, `${name}: the note stayed after Close`);
+    };
     scenarios.stopnote = async () => {
         try {
             await fresh();
@@ -319,6 +449,12 @@ export default function register(scenarios, tools) {
             await closePage(page);
             page = await open('/services/redis', ready);
             await noteCase(page, '142b-stop-left-the-unit-marked-failed-without-a-line', stopped('unit_marked_failed', 'redis-server', 'redis-server.service', 'timeout', ''), stop);
+            await closePage(page);
+            page = await open('/services/postfix', ready);
+            await pendingCase(page, '142c-postfix-stop-the-unit-had-not-settled', pending('unit_not_settled', 'postfix', 'postfix@-.service', 'deactivating'), stop);
+            await closePage(page);
+            page = await open('/services/postfix', ready);
+            await pendingCase(page, '142d-postfix-stop-the-unit-could-not-be-read', pending('unit_state_not_read', 'postfix', 'postfix@-.service', ''), stop);
             await closePage(page);
         } finally {
             await done();
@@ -352,6 +488,11 @@ export default function register(scenarios, tools) {
                 must(/already tried on this server and rolled back|daha önce denendi ve geri alındı/.test(previous.heading || ''), `${name}: the heading does not say it was rolled back: ${previous.heading}`);
                 must(previous.lines[1].includes('v0.1.0-alpha.82') && previous.lines[1].includes('v0.1.0-alpha.81'), `${name}: the two versions are not named: ${previous.lines[1]}`);
                 must(/which it runs now|şu an onu çalıştırıyor/.test(previous.lines[1]), `${name}: it is not said what the server runs now`);
+                // 9 Oct 2026 (set4): the one time the server gives is when the
+                // attempt ended. It is said as that and never beside "started".
+                const ended = await page.evaluate((at, language) => new Date(at).toLocaleString(language === 'tr' ? 'tr-TR' : 'en-US'), attempt.finished_at, locale);
+                must(previous.lines[1].includes(`that attempt ended on ${ended}.`) || previous.lines[1].includes(`o deneme ${ended} tarihinde sona erdi.`), `${name}: the time is not said as the end of the attempt (${ended}): ${previous.lines[1]}`);
+                must(!/started (here |on this server )?on \d|tarihinde başlatıldı/.test(previous.lines[1]), `${name}: the end time stands beside "started": ${previous.lines[1]}`);
                 must(expected === 'cause'
                     ? /Recorded cause:|Kaydedilen neden:/.test(previous.lines[2]) && !/no more specific cause|daha belirli bir neden kaydetmedi/.test(previous.text)
                     : /recorded no more specific cause|daha belirli bir neden kaydetmedi/.test(previous.lines[2]),

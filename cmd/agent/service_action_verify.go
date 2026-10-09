@@ -126,7 +126,9 @@ func verifiedServiceAction(run mailServiceRunner, serviceID, unit, action string
 // and, for Postfix, the line its own check prints now.
 //
 // Only a unit that was read as not failed before the stop and is failed after
-// it is reported: a mark that was already there is not this action's.
+// it is reported: a mark that was already there is not this action's. When
+// the unit is read, and what is said when it has not settled, is with
+// noteStopLeftUnitFailed below.
 //
 // Başarılı olan ve birimi `failed` işaretli bırakan durdurma. İşaret
 // systemd'nin, birimin kendi durdurma komutunun ne yaptığına dair kaydıdır;
@@ -162,24 +164,73 @@ func readUnitFailure(run mailServiceRunner, name string) (state memberUnitState,
 	return memberUnitState{active: first("ActiveState"), result: first("Result")}, true
 }
 
+// The unit is read once it has settled, and a unit that does not settle is
+// said as that (9 Oct 2026).
+//
+// Measured on Ubuntu 24.04 (set4b; kernel trace and strace on the Agent, five
+// Stops out of five): the answer carried no note although `postfix@-.service`
+// ended `failed`. `systemctl stop postfix` returns when the wrapper's job ends,
+// 1 to 4 ms after the instance unit left `active`; the instance then stays
+// `deactivating` for about a second, because its stop command
+// (`postmulti -p stop`) refuses main.cf and exits 1 only after Postfix's own
+// one-second pause, and systemd marks it `failed` 2 to 7 ms after it has ended
+// the master. The Agent read the unit once, 82 to 225 ms after it had left
+// `active`, and systemd's answer was `ActiveState=deactivating`: not failed,
+// so nothing was said. (That it looked so early was the master lookup's own error:
+// postfixQueueDirectory.) On Debian 13 the unit that is stopped is the one
+// that runs the daemon, `systemctl stop` returns after its whole stop, and the
+// single reading saw `failed`.
+//
+// So a unit that systemd shows between two states is read again, at the
+// interval and within the bound every other verification of this file uses
+// (mailServiceStartPolls readings, mailServicePollInterval apart, for all the
+// units of one stop together). Only `systemctl show` is sent while waiting;
+// nothing is sent to the unit. When the bound ends and the unit is still
+// between two states, or when it cannot be read any more, the answer does not
+// stay silent, which would read as "the unit was looked at and is clean": it
+// carries transport.ServiceActionNoticeUnitNotSettled with the unit and the
+// last state read. A unit that ended `failed` is reported in preference to
+// one that did not settle.
+//
+// Birim, durulduğunda okunur; durulmayan birim de öyle söylenir. Ubuntu
+// 24.04'te ölçüldü: `systemctl stop postfix`, sarmalayıcının işi bitince döner;
+// örnek birim ise yaklaşık bir saniye `deactivating` kalır ve ancak sonra
+// `failed` olarak işaretlenir. Agent birimi bir kez, çok erken okuyordu.
+// Beklerken yalnızca `systemctl show` gönderilir; birime hiçbir şey gönderilmez.
+// Süre dolduğunda birim hâlâ iki durum arasındaysa yanıt susmaz: birimin
+// durulmadığını ve okunan son durumu taşır.
 func noteStopLeftUnitFailed(run mailServiceRunner, serviceID string, watched []string, notFailedBefore map[string]bool, result *transport.ServiceActionResult) {
+	readings := 0
+	unsettled, unsettledState := "", ""
 	for _, name := range watched {
 		if !notFailedBefore[name] {
 			continue
 		}
+		readings++
 		state, known := readUnitFailure(run, name)
-		if !known || state.active != "failed" {
-			continue
+		for known && state.settling() && readings < mailServiceStartPolls {
+			mailServiceSleep(mailServicePollInterval)
+			readings++
+			state, known = readUnitFailure(run, name)
 		}
-		result.Notice, result.NoticeUnit, result.NoticeResult = transport.ServiceActionNoticeUnitFailed, name, state.result
-		if serviceID == "postfix" {
-			// What Postfix's own check prints now; the unit's stop command
-			// reads the same main.cf. Empty when the check passes.
-			if out, err := run("postfix", "check"); err != nil && mailServiceExited(err) {
-				result.NoticeDetail = mailServiceLine(out)
+		if known && state.active == "failed" {
+			result.Notice, result.NoticeUnit, result.NoticeResult = transport.ServiceActionNoticeUnitFailed, name, state.result
+			if serviceID == "postfix" {
+				// What Postfix's own check prints now; the unit's stop command
+				// reads the same main.cf. Empty when the check passes.
+				if out, err := run("postfix", "check"); err != nil && mailServiceExited(err) {
+					result.NoticeDetail = mailServiceLine(out)
+				}
 			}
+			return
 		}
-		return
+		if unsettled == "" && (!known || state.settling()) {
+			// Read before the stop and not read as settled after it.
+			unsettled, unsettledState = name, state.active
+		}
+	}
+	if unsettled != "" {
+		result.Notice, result.NoticeUnit, result.NoticeResult = transport.ServiceActionNoticeUnitNotSettled, unsettled, unsettledState
 	}
 }
 

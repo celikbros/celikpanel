@@ -142,9 +142,13 @@ func itoa(n int) string {
 func installFakeMailHost(t *testing.T) *fakeMailHost {
 	t.Helper()
 	host := &fakeMailHost{masterPID: 36110, systemctlStarts: true, dovecotPID: 7000}
-	oldSleep, oldRead, oldExited := mailServiceSleep, mailServiceReadFile, mailServiceExited
-	t.Cleanup(func() { mailServiceSleep, mailServiceReadFile, mailServiceExited = oldSleep, oldRead, oldExited })
+	oldSleep, oldRead, oldExited, oldIsDirectory := mailServiceSleep, mailServiceReadFile, mailServiceExited, mailServiceIsDirectory
+	t.Cleanup(func() {
+		mailServiceSleep, mailServiceReadFile, mailServiceExited, mailServiceIsDirectory = oldSleep, oldRead, oldExited, oldIsDirectory
+	})
 	mailServiceSleep = func(time.Duration) {}
+	// The one directory of this host that holds a master.pid.
+	mailServiceIsDirectory = func(path string) bool { return path == "/var/spool/postfix/pid" }
 	host.pidFile = host.masterPID
 	mailServiceReadFile = func(path string) ([]byte, error) {
 		if host.masterPID != 0 {

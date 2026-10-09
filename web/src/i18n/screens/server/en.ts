@@ -263,7 +263,9 @@ export const enServerScreens = {
     // what happened and what runs now, the recorded cause or that none was
     // recorded, and what starting it again does. Start is never blocked.
     'panelUpdate.previousAttempt.rolledBackTitle': 'This version was already tried on this server and rolled back',
-    'panelUpdate.previousAttempt.recovered': '{version} was started here on {time}. The update did not complete, and the server was returned to {current}, which it runs now.',
+    // {time} is the moment the attempt ended (the API's finished_at); the
+    // server records no start time for it, so the sentence names none.
+    'panelUpdate.previousAttempt.recovered': '{version} was started here, and that attempt ended on {time}. The update did not complete, and the server was returned to {current}, which it runs now.',
     'panelUpdate.previousAttempt.noCause': 'The server recorded no more specific cause for that attempt.',
     'panelUpdate.previousAttempt.again': 'Starting it again runs the same update. If the cause was on this server and has been corrected, the result can differ; otherwise expect the same one. A corrected version, when it is published, is offered here as a newer version. The button below still starts {version}.',
     'panelUpdate.previousAttempt.failed': '{version} was tried on this server on {time} and did not complete; this server runs {current} now. Starting it again repeats the same update unless the cause has been fixed.',
@@ -317,6 +319,11 @@ export const enServerScreens = {
     // said, not cleared. The mark is systemd's own record.
     'services.action.note.unit_marked_failed': "{unit} was stopped and is not running. systemd now shows {failed_unit} as failed (result: {result}), which it was not before the stop. That mark is systemd’s own record of how the unit’s stop went (with the result exit-code, a command of the unit exited with an error), and CelikPanel leaves it as it is. Start can be used from this state. To clear the mark without starting, run {command} on the server.",
     'services.action.note.unit_marked_failed_config': "{unit} was stopped and is not running. systemd now shows {failed_unit} as failed (result: {result}), which it was not before the stop. That mark is systemd’s own record of how the unit’s stop went, and CelikPanel leaves it as it is. {unit} refuses its own configuration at present (its line is below), and the unit’s stop command reads the same file; it will not start until that is corrected. To clear the mark without starting, run {command} on the server.",
+    // A Stop after which the unit's own stop was not read (9 Oct 2026): systemd
+    // was still stopping the unit when the wait ended, or the unit could not
+    // be read. Said, so that silence is not taken for "the unit is clean".
+    'services.action.note.unit_not_settled': "{unit} was stopped and is not running. systemd had not finished stopping {pending_unit} when CelikPanel stopped waiting for it (its state was still {state}), so how that stop ended was not read; the unit may end marked as failed. To see it as systemd shows it now, run {command} on the server. Nothing more is sent to the unit, and nothing looks again by itself.",
+    'services.action.note.unit_state_not_read': "{unit} was stopped and is not running. The state of {pending_unit} could not be read from systemd after the stop, so it is not known whether the unit ended marked as failed. To see it as systemd shows it now, run {command} on the server. Nothing more is sent to the unit, and nothing looks again by itself.",
     'services.scanNow': 'Scan services',
     'services.rescan': 'Rescan',
     'services.scanning': 'Scanning\u2026',

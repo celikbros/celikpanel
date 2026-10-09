@@ -1300,6 +1300,10 @@ export const trScreens: Record<ScreenKey, string> = {
     'import.stepsTitle': "Adım adım",
     'import.step.done': "İçe aktarıldı",
     'import.step.notDone': "İçe aktarılmadı",
+    // Hatasız biten ve hiçbir şey içe aktarmayan adım: parça seçilmedi, DNS
+    // sağlayıcısına bırakıldı ya da arşivde ona ait bir şey yok. Hangisi
+    // olduğunu adımın kendi satırı söyler.
+    'import.step.nothing': "İçe aktarılan yok, hata da yok",
     'import.part.domain': "Alan adı ve site",
     'import.part.files': "Site dosyaları",
     'import.part.mail': "Posta hesapları",

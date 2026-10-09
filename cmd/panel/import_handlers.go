@@ -136,6 +136,54 @@ type importStep struct {
 	OK     bool   `json:"ok"`
 	Detail string `json:"detail"`
 	Code   string `json:"code,omitempty"`
+	// State is set on a step that ended without an error and imported nothing
+	// (one of the importState* values). Such a step is neither imported nor
+	// failed: it is listed under `left_out`, never under `imported`.
+	// State, hatasız biten ve hiçbir şey içe aktarmayan adımda doludur. Böyle
+	// bir adım ne içe aktarılmıştır ne de başarısızdır.
+	State string `json:"state,omitempty"`
+}
+
+// A step that ended without an error and imported nothing (2026-10-09).
+//
+// Measured in set4 on Arch, Debian 13 and Ubuntu 24.04: an import that asked
+// for no DNS (`do_dns: false`) on a server whose DNS is the owner's external
+// provider answered `imported: [domain, files, dns, ...]`. The `dns` step had
+// ended `ok` with "external DNS ownership preserved", and every `ok` step was
+// listed as imported. The same held for a part that was chosen while the
+// archive holds nothing of it ("0 forwarders").
+//
+// Such a step keeps `ok: true`, because nothing failed and it must not make
+// the import partial, and says in `state` why nothing was imported:
+//
+//   - left_to_owner: the part belongs to the owner's external provider and is
+//     left there on purpose (DNS of a server in external DNS mode);
+//   - not_chosen: the part was not chosen for this import (the archive's DNS
+//     records; the panel's own records for the domain were still created);
+//   - none_in_archive: the part was chosen and the archive holds nothing of it
+//     for this domain;
+//   - none_imported: the part was chosen, the archive holds some of it and
+//     none was imported; each one is listed on its own step.
+//
+// Hatasız biten ve hiçbir şey içe aktarmayan adım. set4'te ölçüldü: DNS
+// istenmeyen (`do_dns: false`), DNS'i sahibinin dış sağlayıcısında olan bir
+// sunucuda içe aktarım `dns` parçasını içe aktarılmış diye listeliyordu. Böyle
+// bir adım `ok: true` kalır (hiçbir şey başarısız olmadı; içe aktarımı kısmi
+// yapmaz) ve neden hiçbir şey aktarılmadığını `state` alanında söyler.
+const (
+	importStateLeftToOwner   = "left_to_owner"
+	importStateNotChosen     = "not_chosen"
+	importStateNoneInArchive = "none_in_archive"
+	importStateNoneImported  = "none_imported"
+)
+
+// importNothingState is the state of a chosen part of which nothing was
+// imported: the archive holds none of it, or it holds some and none came in.
+func importNothingState(inArchive int) string {
+	if inArchive > 0 {
+		return importStateNoneImported
+	}
+	return importStateNoneInArchive
 }
 
 func safeImportDNSFailure(err error) (code, detail string) {
@@ -202,6 +250,11 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 	}
 	ok := func(step, detail string) {
 		steps = append(steps, importStep{Step: step, OK: true, Detail: detail})
+	}
+	// A step that ended without an error and imported nothing; state says why.
+	// Hatasız biten ve hiçbir şey içe aktarmayan adım; nedenini state söyler.
+	nothing := func(step, state, detail string) {
+		steps = append(steps, importStep{Step: step, OK: true, Detail: detail, State: state})
 	}
 
 	// 1. Domain + site under the chosen subscription (quota enforced).
@@ -362,7 +415,12 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 		case !ext.Complete:
 			fail("files", fmt.Errorf("agent did not confirm complete atomic extraction"))
 		default:
-			ok("files", fmt.Sprintf("%d files, %d bytes", ext.Files, ext.Bytes)+importOutsideSiteFolder(&ext))
+			filesDetail := fmt.Sprintf("%d files, %d bytes", ext.Files, ext.Bytes) + importOutsideSiteFolder(&ext)
+			if ext.Files > 0 {
+				ok("files", filesDetail)
+			} else {
+				nothing("files", importNothingState(ext.RefusedCount), filesDetail)
+			}
 			// A member the files step refused by its name was left out while
 			// the rest was imported. It is a part of the archive that was not
 			// imported, and is listed as one (12 Oct 2026; it used to be left
@@ -380,11 +438,12 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 	// 3. Mail accounts (passwords preserved via {CRYPT}) + forwarders.
 	// 3. Posta hesapları (parolalar {CRYPT} ile korunur) + yönlendirmeler.
 	if req.DoMail {
-		imported := 0
+		imported, mailboxesInArchive := 0, 0
 		for _, acc := range preview.MailAccounts {
 			if !strings.EqualFold(acc.Domain, req.Domain) {
 				continue
 			}
+			mailboxesInArchive++
 			email, err := transport.CanonicalMailboxForDomain(acc.User, req.Domain)
 			if err != nil {
 				fail("mail:"+acc.User, err)
@@ -453,7 +512,12 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 			p.mailMutationMu.Unlock()
 			imported++
 		}
-		ok("mail", fmt.Sprintf("%d accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)", imported))
+		mailDetail := fmt.Sprintf("%d accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)", imported)
+		if imported > 0 {
+			ok("mail", mailDetail)
+		} else {
+			nothing("mail", importNothingState(mailboxesInArchive), mailDetail)
+		}
 
 		forwardings := make([]transport.MailForwarding, 0, len(preview.Forwarders))
 		for _, f := range preview.Forwarders {
@@ -472,7 +536,7 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 		if len(forwardings) == 0 {
-			ok("forwarders", "0 forwarders")
+			nothing("forwarders", importNothingState(len(preview.Forwarders)), "0 forwarders")
 		} else {
 			p.mailMutationMu.Lock()
 			err := p.mutateForwardings(ctx, domainID, func(tx *sql.Tx) error {
@@ -500,8 +564,20 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 
 	// 4. DNS records into our zone (NS/SOA excluded — ours are generated).
 	// 4. DNS kayıtları zone'umuza (NS/SOA hariç — bizimkiler üretilir).
+	// The archive's DNS records count as imported only when they were chosen,
+	// the archive holds a zone for this domain and that zone was written.
+	// Otherwise the step says what was done instead (nothing, or the panel's
+	// own records for the domain) and why nothing of the archive came in.
+	// Arşivin DNS kayıtları yalnızca seçildiyse, arşivde bu alan adının bölgesi
+	// varsa ve o bölge yazıldıysa içe aktarılmış sayılır.
+	dnsNotImported := importStateNotChosen
+	if req.DoDNS {
+		dnsNotImported = importStateNoneInArchive
+	}
 	if caps.DNSManagementMode == setupDNSModeExternal {
-		ok("dns", "external DNS ownership preserved; verify provider records before publishing the site")
+		// DNS import is refused above for this mode, so nothing was chosen:
+		// the records stay with the owner's provider.
+		nothing("dns", importStateLeftToOwner, "external DNS ownership preserved; verify provider records before publishing the site")
 	} else if caps.DNSManagementMode == setupDNSModeExisting {
 		source, hasImportedZone := cpmoveDNSRecordsForDomain(preview, req.Domain)
 		publishCtx, cancelPublish := context.WithTimeout(context.WithoutCancel(ctx), domainDNSPublicationTimeout)
@@ -524,8 +600,10 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 		if publishErr != nil {
 			log.Printf("remote import DNS publication pending for %s: %v", req.Domain, publishErr)
 			failCoded("dns", errCodeDNSPublicationPending, "The domain was imported; remote DNS publication remains pending. Retry publication from the domain DNS page.")
-		} else {
+		} else if req.DoDNS && hasImportedZone {
 			ok("dns", "DNS records published through the domain's connected authority")
+		} else {
+			nothing("dns", dnsNotImported, "DNS records published through the domain's connected authority")
 		}
 	} else {
 		records, hasImportedZone := cpmoveDNSRecordsForDomain(preview, req.Domain)
@@ -557,8 +635,10 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 			)
 			code, detail := safeImportDNSFailure(dnsErr)
 			failCoded("dns", code, detail)
-		} else {
+		} else if req.DoDNS && hasImportedZone {
 			ok("dns", dnsDetail)
+		} else {
+			nothing("dns", dnsNotImported, dnsDetail)
 		}
 
 	}
@@ -724,7 +804,10 @@ const (
 //     and what the owner can do, `domain_status` is the state the domain was
 //     left in ("pending": created and kept, not marked as finished).
 //
-// `steps` is unchanged: one entry per step with its own line.
+// `steps` is unchanged: one entry per step with its own line. A step that
+// ended without an error and imported nothing carries a `state` and is listed
+// under `left_out`, in either result; it never makes an import partial
+// (2026-10-09). A part is in exactly one of the three lists.
 //
 // Her adımı bitmiş bir içe aktarımın yanıtı. Bir parçasını bitiremeyen içe
 // aktarım eskiden `202` ve `status: pending` ile, yani süren bir işin
@@ -742,6 +825,7 @@ type importApplyAnswer struct {
 	Message      string       `json:"message,omitempty"`
 	Imported     []string     `json:"imported"`
 	NotImported  []string     `json:"not_imported"`
+	LeftOut      []string     `json:"left_out"`
 	Steps        []importStep `json:"steps"`
 }
 
@@ -755,7 +839,7 @@ func importApplyAnswerFor(domain string, domainID, siteID int, steps []importSte
 	answer := importApplyAnswer{
 		DomainID: domainID, SiteID: siteID, Domain: domain,
 		Status: importStatusComplete, DomainStatus: "active",
-		Imported: []string{}, NotImported: []string{}, Steps: steps,
+		Imported: []string{}, NotImported: []string{}, LeftOut: []string{}, Steps: steps,
 	}
 	for _, step := range steps {
 		if step.Step == "finalize" {
@@ -763,10 +847,16 @@ func importApplyAnswerFor(domain string, domainID, siteID int, steps []importSte
 			// finished. It is said in the message, not listed as a part.
 			continue
 		}
-		if step.OK {
-			answer.Imported = append(answer.Imported, step.Step)
-		} else {
+		switch {
+		case !step.OK:
 			answer.NotImported = append(answer.NotImported, step.Step)
+		case step.State != "":
+			// Nothing failed and nothing was imported: not chosen, left to
+			// the owner's provider, or nothing of it to import. It does not
+			// make the import partial and is not said to be imported.
+			answer.LeftOut = append(answer.LeftOut, step.Step)
+		default:
+			answer.Imported = append(answer.Imported, step.Step)
 		}
 	}
 	complete := true

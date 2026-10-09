@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, DownloadCloud, FolderInput, Eye, Mail, ArrowRight, Network, Database, FileText, CheckCircle2, XCircle, Info } from 'lucide-react';
+import { AlertTriangle, DownloadCloud, FolderInput, Eye, Mail, ArrowRight, Network, Database, FileText, CheckCircle2, XCircle, MinusCircle, Info } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { readApiError, type ApiError } from '../lib/apiError';
@@ -72,6 +72,12 @@ interface StepResult {
     step: string;
     ok: boolean;
     detail: string;
+    // Set on a step that ended without an error and imported nothing (not
+    // chosen, left to the owner's DNS provider, or nothing of it in the
+    // archive; 9 Oct 2026). Such a part is neither imported nor missing.
+    // Hatasız biten ve hiçbir şey içe aktarmayan adımda doludur. Böyle bir
+    // parça ne içe aktarılmıştır ne de eksiktir.
+    state: string;
 }
 
 // The result of an import whose every step has ended (11 Oct 2026). It is
@@ -97,6 +103,7 @@ function readImportResult(raw: unknown, domain: string): ImportResult | null {
         step: String((s as StepResult)?.step ?? ''),
         ok: (s as StepResult)?.ok === true,
         detail: String((s as StepResult)?.detail ?? ''),
+        state: typeof (s as StepResult)?.state === 'string' ? (s as StepResult).state : '',
     }));
     // The lists are the steps', so a part is listed exactly as its own step
     // ended. Marking the domain as finished is not a part of the archive.
@@ -105,7 +112,7 @@ function readImportResult(raw: unknown, domain: string): ImportResult | null {
     return {
         domain: typeof data.domain === 'string' && data.domain ? data.domain : domain,
         partial: data.status === 'partial' || steps.some((s) => !s.ok),
-        imported: parts.filter((s) => s.ok).map((s) => s.step),
+        imported: parts.filter((s) => s.ok && !s.state).map((s) => s.step),
         notImported: parts.filter((s) => !s.ok).map((s) => s.step),
         steps,
     };
@@ -592,15 +599,17 @@ export function ImportPage() {
                     <ul className="space-y-2">
                         {result.steps.map((s, i) => (
                             <li key={i} className="flex items-start gap-2.5 rounded-lg border border-border bg-surface-2/40 px-3 py-2">
-                                {s.ok ? (
-                                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
-                                ) : (
+                                {!s.ok ? (
                                     <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden="true" />
+                                ) : s.state ? (
+                                    <MinusCircle className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" />
+                                ) : (
+                                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
                                 )}
                                 <div className="min-w-0">
                                     <div className="break-words text-sm font-medium text-fg">
                                         {partLabel(s.step, t)}
-                                        <span className="sr-only">: {t(s.ok ? 'import.step.done' : 'import.step.notDone')}</span>
+                                        <span className="sr-only">: {t(!s.ok ? 'import.step.notDone' : s.state ? 'import.step.nothing' : 'import.step.done')}</span>
                                     </div>
                                     <div className="break-words text-xs text-fg-muted">{detailKeys[s.detail] ? t(detailKeys[s.detail]) : s.detail}</div>
                                 </div>

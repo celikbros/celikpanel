@@ -1720,7 +1720,8 @@ const scenarios = {
 // --- end of batch 6 ---
 
 // --- batch 7 (12 Oct 2026): corrections from the final native round ---
-// `siterefused`, `importentries`, `stopnote` and `updaterolledback` live in
+// `siterefused`, `importentries`, `importleftout` (9 Oct 2026), `stopnote` and
+// `updaterolledback` live in
 // their own file, like the batches before.
 (await import('./scenarios-batch7.mjs')).default(scenarios, { base, vp, locale, theme, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
 // --- end of batch 7 ---

@@ -5144,3 +5144,146 @@ of hosting type or a certificate change still answers its earlier error. The
 files step's line about entries outside the site folder is the server's
 English. Inspected in a real Chrome against the loopback mock; not on a real
 Panel.
+
+### After the set4 native measurement: a Stop is answered when the service has stopped and says what was read of its unit, the update card names the time it shows, an import does not list what it did not import (2026-10-09)
+
+Source state with component tests, a real Chrome against the loopback mock, and
+a native measurement of the first item on disposable guests (Ubuntu 24.04 and
+Debian 13; evidence `deploy/e2e/release-recovery/evidence/set4b-20261009/`).
+Nothing was observed on an installed server. 2026-10-09 is the calendar date of
+this entry; the dates 2026-10-10 to 2026-10-12 in the headings above it are
+labels of rounds. What was measured and what changed is in the resilience
+contract entry of the same date. This entry keeps the sentences.
+
+**The rule the texts follow.** A Stop is answered as stopped when the service's
+own process is seen to be gone, not before. What the answer says about the unit
+is what systemd showed once the unit had settled; when that was not read, the
+answer says that it was not read, and claims neither a mark nor that there is
+none. A time on the screen is named as what it is. A part of an import that was
+not imported is not listed as imported, whether it failed, was not chosen, was
+left to the owner's provider, or the archive holds nothing of it.
+
+**Replaced.** The sentence of `panelUpdate.previousAttempt.recovered` recorded
+in the entry of 2026-10-12 ("{version} was started here on {time}. ...") is no
+longer shown: `{time}` is when the attempt ended, and the sentence below says
+so. An import's `imported` list no longer names a part whose step imported
+nothing. A Stop of Postfix on Ubuntu 24.04 with a main.cf that Postfix refuses
+used to answer without the `note` of 2026-10-12; it now carries it.
+
+**A Stop whose unit's own stop was not read (`POST /api/v1/service/action`).**
+
+The notes of 2026-10-12 (`unit_marked_failed`, `unit_marked_failed_config`) are
+unchanged in their words. They are now given from a reading taken after the
+unit has settled: while systemd shows the unit between two states
+(`deactivating`), the Agent reads it again, at most 30 readings 500 ms apart
+for all the units of one stop together (about 15 seconds), and sends nothing
+but `systemctl show` meanwhile. When that wait ends with the unit still between
+two states, or when the unit cannot be read after the stop although it was read
+before it, the success carries a note of its own: `code` `SERVICE_ACTION_NOTE`,
+`reason` `unit_not_settled` or `unit_state_not_read`, `vars`: `unit`,
+`pending_unit`, `command` (`systemctl status <pending_unit>`, which only shows
+the unit; CelikPanel does not run it) and, for `unit_not_settled`, `state` (the
+last state read, for example `deactivating`). Neither note says that the unit
+is marked as failed, and neither says that it is not.
+
+- `200`, `note.code` `SERVICE_ACTION_NOTE`, `note.reason` `unit_not_settled`
+  API: "The service was stopped and is not running. systemd had not finished
+  stopping its unit when CelikPanel stopped waiting for it: the unit was still
+  between two states, so how its stop ended was not read, and it may end marked
+  as failed. The server owner runs the command shown to see the unit as systemd
+  shows it now. CelikPanel sends nothing more to the unit and does not look
+  again by itself."
+- `services.action.note.unit_not_settled`
+  EN: "{unit} was stopped and is not running. systemd had not finished stopping
+  {pending_unit} when CelikPanel stopped waiting for it (its state was still
+  {state}), so how that stop ended was not read; the unit may end marked as
+  failed. To see it as systemd shows it now, run {command} on the server.
+  Nothing more is sent to the unit, and nothing looks again by itself."
+  TR: "{unit} durduruldu ve çalışmıyor. CelikPanel beklemeyi bıraktığında
+  systemd {pending_unit} birimini durdurmayı bitirmemişti (durumu hâlâ {state}
+  idi); bu yüzden durdurmanın nasıl bittiği okunmadı ve birim failed olarak
+  işaretlenmiş olabilir. systemd’nin şu an ne gösterdiğini görmek için sunucuda
+  {command} komutunu çalıştırın. Birime başka bir şey gönderilmez ve hiçbir şey
+  kendiliğinden yeniden bakmaz."
+- `200`, `note.code` `SERVICE_ACTION_NOTE`, `note.reason` `unit_state_not_read`
+  API: "The service was stopped and is not running. The state of its unit could
+  not be read from systemd after the stop, so whether the unit ended marked as
+  failed is not known. The server owner runs the command shown to see the unit
+  as systemd shows it now. CelikPanel sends nothing more to the unit and does
+  not look again by itself."
+- `services.action.note.unit_state_not_read`
+  EN: "{unit} was stopped and is not running. The state of {pending_unit} could
+  not be read from systemd after the stop, so it is not known whether the unit
+  ended marked as failed. To see it as systemd shows it now, run {command} on
+  the server. Nothing more is sent to the unit, and nothing looks again by
+  itself."
+  TR: "{unit} durduruldu ve çalışmıyor. Durdurmadan sonra {pending_unit}
+  biriminin durumu systemd’den okunamadı; bu yüzden birimin failed olarak
+  işaretlenip işaretlenmediği bilinmiyor. systemd’nin şu an ne gösterdiğini
+  görmek için sunucuda {command} komutunu çalıştırın. Birime başka bir şey
+  gönderilmez ve hiçbir şey kendiliğinden yeniden bakmaz."
+
+**The update card's sentence for an attempt that was returned (`GET
+/api/v1/panel/update/check`, `previous_attempt`).**
+
+`{time}` is `previous_attempt.finished_at`, the one time the answer carries:
+the moment the end of the attempt was recorded. The server records no start
+time for an attempt, so the sentence names none. The heading, the cause line
+and the sentence about starting again are those of 2026-10-12.
+
+- `panelUpdate.previousAttempt.recovered`
+  EN: "{version} was started here, and that attempt ended on {time}. The update
+  did not complete, and the server was returned to {current}, which it runs
+  now."
+  TR: "{version} burada başlatıldı ve o deneme {time} tarihinde sona erdi.
+  Güncelleme tamamlanmadı ve sunucu {current} sürümüne döndürüldü; şu an onu
+  çalıştırıyor."
+
+**A cPanel import: a part that was not imported and did not fail (`POST
+/api/v1/import/cpanel/apply`).**
+
+A step that ended without an error and imported nothing keeps `ok: true` and
+carries `state`: `left_to_owner` (the DNS of a server whose DNS is the owner's
+external provider: the records stay there), `not_chosen` (the archive's DNS
+records were not chosen; the panel's own records for the domain were still
+created or published), `none_in_archive` (the part was chosen and the archive
+holds nothing of it for this domain: no forwarder, no mailbox, no zone, no file
+in the site folder), `none_imported` (the part was chosen, the archive holds
+some of it and none came in; each one is on its own step). The answer has a
+third list, `left_out`, beside `imported` and `not_imported`, and a part is in
+exactly one of the three. Such a step never makes an import `partial`. The
+`detail` of each step is unchanged and is the server's English ("external DNS
+ownership preserved; verify provider records before publishing the site", "0
+forwarders", "panel DNS template created; archive DNS import was not
+selected"). An import that asked for no DNS on a server in external DNS mode
+used to answer `imported: [domain, files, dns, ...]`; it answers `imported:
+[domain, files, ...]`, `left_out: [dns]` (with `forwarders` in `left_out` when
+mail was chosen and the archive holds no forwarder).
+
+On the page the step keeps its place in the list of steps with its own line,
+under a neutral mark that is neither the mark of an imported step nor that of a
+failed one; a screen reader is given the words below after the step's name. The
+part is in neither list of a partial result's summary.
+
+- `import.step.nothing`
+  EN: "Nothing imported, nothing failed"
+  TR: "İçe aktarılan yok, hata da yok"
+
+**Where each is drawn.** The two notes: the notice of a component's page and of
+the components list (`ServiceActionNotice`), on the attention surface with
+`role="status"`, never on the failure surface, the command set apart. The
+update card: `PanelUpdateCard`. The import: the result's lists and its steps
+(`ImportPage`).
+
+**Limits.** No measurement made a unit stay between two states for the whole
+wait, and none made a unit unreadable: the two new notes are covered by
+component tests and by a real Chrome against the loopback mock, not by a real
+server. The page has no list of the parts that were left out; they are among
+the steps. A step's line is the server's English. The sentences of an attempt
+that failed without a return or that stopped before changing anything
+(`panelUpdate.previousAttempt.failed`, `.stopped`) carry the same time as
+"tried on {time}" and are unchanged. Measured on a guest with the corrected
+source: the note of a Stop of Postfix on Ubuntu 24.04 and on Debian 13, four
+Stops out of four on each, and one import's lists on each (`left_out: [dns]`);
+the states `not_chosen`, `none_in_archive` and `none_imported`, the two new
+notes and every screen were not.

@@ -178,6 +178,9 @@ test('the update card says before Start that the offered version was already tri
   assert.match(card, /previousAttempt\.phase === 'recovered' \? 'panelUpdate\.previousAttempt\.rolledBackTitle'/);
   assert.match(card, /\{!previousStopped && \(\s*<p className="mt-1 text-fg-muted">\s*\{previousAttempt\.failure_code\s*\? t\('panelUpdate\.previousAttempt\.cause', \{ cause: t\(`recovery\.reason\.\$\{previousAttempt\.failure_code\}`\) \}\)\s*: t\('panelUpdate\.previousAttempt\.noCause'\)\}/);
   assert.match(card, /\{previousAttempt\.phase === 'recovered' && \(\s*<p className="mt-1 text-fg-muted">\{t\('panelUpdate\.previousAttempt\.again', \{ version: target\.version \}\)\}<\/p>/);
+  // {time} of the notice is the attempt's finished_at, the only time the API gives.
+  assert.match(card, /time: new Date\(previousAttempt\.finished_at\)\.toLocaleString\(/);
+  assert.doesNotMatch(card, /previousAttempt\.started_at/);
   // The notice is guidance: nothing in it disables Start or hides the version.
   const start = card.slice(card.indexOf('id="panel-update-start-button"'));
   assert.match(start, /disabled=\{starting \|\| readinessChecking \|\| readiness\?\.ready !== true\}/);
@@ -187,6 +190,12 @@ test('the update card says before Start that the offered version was already tri
     assert.equal(placeholders(value('panelUpdate.previousAttempt.recovered')), 'current,time,version');
     assert.match(value('panelUpdate.previousAttempt.rolledBackTitle'), language === 'en' ? /already tried on this server and rolled back/ : /daha önce denendi ve geri alındı/);
     assert.match(value('panelUpdate.previousAttempt.recovered'), language === 'en' ? /did not complete, and the server was returned to \{current\}, which it runs now\.$/ : /tamamlanmadı ve sunucu \{current\} sürümüne döndürüldü; şu an onu çalıştırıyor\.$/);
+    // The one time the API gives for a returned attempt is its end
+    // (finished_at). The sentence says the time is when the attempt ended and
+    // never puts it beside "started" (set4, 2026-10-09: the sentence read
+    // "was started here on {time}" and was filled with the end time).
+    assert.match(value('panelUpdate.previousAttempt.recovered'), language === 'en' ? /^\{version\} was started here, and that attempt ended on \{time\}\. / : /^\{version\} burada başlatıldı ve o deneme \{time\} tarihinde sona erdi\. /);
+    assert.doesNotMatch(value('panelUpdate.previousAttempt.recovered'), /started (here |on this server )?on \{time\}|\{time\} tarihinde başlatıldı/);
     assert.match(value('panelUpdate.previousAttempt.again'), language === 'en' ? /The button below still starts \{version\}\.$/ : /Aşağıdaki düğme \{version\} sürümünü yine başlatır\.$/);
     assert.doesNotMatch(value('panelUpdate.previousAttempt.again'), /cannot|blocked|disabled|engellen|kapalı/);
   }

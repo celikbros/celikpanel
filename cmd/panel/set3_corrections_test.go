@@ -304,7 +304,7 @@ func TestImportListsEveryMemberTheFilesStepLeftOut(t *testing.T) {
 		{Step: "files", OK: true, Detail: "2 files, 59 bytes" + importOutsideSiteFolder(ext)},
 	}
 	steps = append(steps, importRefusedMemberSteps(ext)...)
-	steps = append(steps, importStep{Step: "dns", OK: true, Detail: "panel DNS template created"})
+	steps = append(steps, importStep{Step: "dns", OK: true, State: importStateNotChosen, Detail: "panel DNS template created; archive DNS import was not selected"})
 	answer := importApplyAnswerFor("set3-hostile-absolute.test", 9, 4, steps)
 	if answer.Status != importStatusPartial || answer.Code != errCodeImportPartial || answer.DomainStatus != "active" {
 		t.Fatalf("answer = %+v", answer)
@@ -312,12 +312,15 @@ func TestImportListsEveryMemberTheFilesStepLeftOut(t *testing.T) {
 	if got := strings.Join(answer.NotImported, ","); got != "member:/etc/set3-escape-absolute.txt" {
 		t.Fatalf("not imported = %s", got)
 	}
-	if got := strings.Join(answer.Imported, ","); got != "domain,files,dns" {
+	if got := strings.Join(answer.Imported, ","); got != "domain,files" {
 		t.Fatalf("imported = %s", got)
+	}
+	if got := strings.Join(answer.LeftOut, ","); got != "dns" {
+		t.Fatalf("left out = %s", got)
 	}
 	for _, fragment := range []string{
 		"every part that was chosen was imported; set3-hostile-absolute.test is in service",
-		"Imported: domain, files, dns.", "Not imported: member:/etc/set3-escape-absolute.txt.",
+		"Imported: domain, files.", "Not imported: member:/etc/set3-escape-absolute.txt.",
 		"refused by their names, and nothing was written for them", "file manager of set3-hostile-absolute.test",
 		"Importing the archive again refuses the same entries; nothing continues by itself.",
 	} {

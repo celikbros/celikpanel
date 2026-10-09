@@ -1315,6 +1315,10 @@ export const enScreens = {
     'import.stepsTitle': "Each step",
     'import.step.done': "Imported",
     'import.step.notDone': "Not imported",
+    // A step that ended without an error and imported nothing: the part was
+    // not chosen, was left to the owner's DNS provider, or the archive holds
+    // nothing of it. The step's own line says which.
+    'import.step.nothing': "Nothing imported, nothing failed",
     'import.part.domain': "Domain and site",
     'import.part.files': "Website files",
     'import.part.mail': "Mail accounts",

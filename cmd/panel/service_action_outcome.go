@@ -159,19 +159,49 @@ func writeServiceActionOutcome(w http.ResponseWriter, unit, action string, reply
 // the line it prints). `vars`: `unit`, `failed_unit`, `result` (systemd's
 // `Result`), `command` (what clears the mark, for the owner to run).
 //
+// A Stop after which the unit's own stop had not ended (9 Oct 2026). Measured
+// on Ubuntu 24.04: the unit that runs Postfix stays `deactivating` for about
+// a second after `systemctl stop postfix` has returned, and only then is it
+// marked `failed`. The Agent now reads the unit again until it has settled,
+// within a bound. When the bound ends first, or the unit cannot be read after
+// the stop, the answer does not stay silent, which would read as "the unit was
+// looked at and is clean". It carries a note of its own:
+//
+// `reason`: `unit_not_settled` (systemd still shows the unit between two
+// states; `vars.state` is the last one read, e.g. `deactivating`) or
+// `unit_state_not_read` (the unit could not be read after the stop). `vars`:
+// `unit`, `pending_unit`, `command` (`systemctl status <pending_unit>`, which
+// only shows the unit). Nothing more is sent to the unit by the Panel.
+//
 // Başarılı olan ve birimi `failed` işaretli bırakan Durdur. Agent işareti
 // silmez: o, systemd'nin birimin kendi komutunun ne yaptığına dair kaydıdır.
 // Yanıt bunu bir `note` ile söyler; ekran onu hata olarak değil, dikkat
-// yüzeyinde gösterir.
+// yüzeyinde gösterir. Birimin durdurulması beklenen sürede bitmediyse ya da
+// birim durdurmadan sonra okunamadıysa yanıt susmaz; bunu ayrı bir `note` ile
+// söyler ve birim hakkında başka hiçbir şey ileri sürmez.
 const (
 	errCodeServiceActionNote          = "SERVICE_ACTION_NOTE"
 	serviceActionNoteUnitFailed       = "unit_marked_failed"
 	serviceActionNoteUnitFailedConfig = "unit_marked_failed_config"
+	serviceActionNoteUnitNotSettled   = "unit_not_settled"
+	serviceActionNoteUnitNotRead      = "unit_state_not_read"
 )
 
 var serviceActionSystemdResult = regexp.MustCompile(`^[a-z-]{1,40}$`)
 
 func serviceActionNoteMessage(reason string) string {
+	switch reason {
+	case serviceActionNoteUnitNotSettled:
+		return "The service was stopped and is not running. systemd had not finished stopping its unit when CelikPanel stopped waiting for it: " +
+			"the unit was still between two states, so how its stop ended was not read, and it may end marked as failed. " +
+			"The server owner runs the command shown to see the unit as systemd shows it now. " +
+			"CelikPanel sends nothing more to the unit and does not look again by itself."
+	case serviceActionNoteUnitNotRead:
+		return "The service was stopped and is not running. The state of its unit could not be read from systemd after the stop, " +
+			"so whether the unit ended marked as failed is not known. " +
+			"The server owner runs the command shown to see the unit as systemd shows it now. " +
+			"CelikPanel sends nothing more to the unit and does not look again by itself."
+	}
 	message := "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. " +
 		"That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. "
 	if reason == serviceActionNoteUnitFailedConfig {
@@ -183,8 +213,21 @@ func serviceActionNoteMessage(reason string) string {
 // serviceActionNote builds the note of a successful action, or nil. Anything
 // the Agent sent that is not a unit name or a systemd result is not repeated.
 func serviceActionNote(unit, action string, reply *transport.ServiceActionResult) *apiErrorBody {
-	if reply == nil || !reply.Success || action != "stop" || reply.Notice != transport.ServiceActionNoticeUnitFailed ||
-		!serviceActionUnitName.MatchString(reply.NoticeUnit) {
+	if reply == nil || !reply.Success || action != "stop" || !serviceActionUnitName.MatchString(reply.NoticeUnit) {
+		return nil
+	}
+	if reply.Notice == transport.ServiceActionNoticeUnitNotSettled {
+		// The last state read is repeated only when it is one of systemd's
+		// own words; with none, the unit was not read at all.
+		reason := serviceActionNoteUnitNotRead
+		vars := map[string]string{"unit": unit, "pending_unit": reply.NoticeUnit, "command": "systemctl status " + reply.NoticeUnit}
+		if serviceActionSystemdResult.MatchString(reply.NoticeResult) {
+			reason = serviceActionNoteUnitNotSettled
+			vars["state"] = reply.NoticeResult
+		}
+		return &apiErrorBody{Error: serviceActionNoteMessage(reason), Code: errCodeServiceActionNote, Reason: reason, Vars: vars}
+	}
+	if reply.Notice != transport.ServiceActionNoticeUnitFailed {
 		return nil
 	}
 	result := reply.NoticeResult
@@ -211,7 +254,7 @@ func serviceActionSuccessAnswer(unit, action string, reply transport.ServiceActi
 	if note == nil {
 		return reply
 	}
-	log.Printf("[200][service action] %s %s: %s %s: %s", action, unit, errCodeServiceActionNote, note.Reason, note.Vars["failed_unit"])
+	log.Printf("[200][service action] %s %s: %s %s: %s", action, unit, errCodeServiceActionNote, note.Reason, note.Vars["failed_unit"]+note.Vars["pending_unit"])
 	return struct {
 		transport.ServiceActionResult
 		Note *apiErrorBody `json:"note"`

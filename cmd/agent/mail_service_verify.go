@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -135,6 +136,13 @@ func (e *mailServiceError) Error() string {
 var (
 	mailServiceSleep    = time.Sleep
 	mailServiceReadFile = os.ReadFile
+	// mailServiceIsDirectory reports that path is an existing directory. An
+	// error, a missing entry and anything that is not a directory are all
+	// "not known to be one".
+	mailServiceIsDirectory = func(path string) bool {
+		info, err := os.Stat(path)
+		return err == nil && info.IsDir()
+	}
 	// mailServiceExited reports whether err is the command's own exit status.
 	// Anything else (not found, killed at a deadline, a lost lease) says
 	// nothing about the service.
@@ -211,15 +219,77 @@ func postfixMaster(run mailServiceRunner) (postfixMasterState, *mailServiceError
 		return postfixMasterState{}, mailServiceFailure("Postfix", mailServiceStageVerify, out, err)
 	}
 	state := postfixMasterState{running: true}
-	if queue, err := run("postconf", "-h", "queue_directory"); err == nil {
-		directory := strings.TrimSpace(string(queue))
-		if path.IsAbs(directory) {
-			if data, err := mailServiceReadFile(path.Join(directory, "pid", "master.pid")); err == nil {
-				state.pid, _ = strconv.Atoi(strings.TrimSpace(string(data)))
-			}
+	if directory, known := postfixQueueDirectory(run); known {
+		if data, err := mailServiceReadFile(path.Join(directory, "pid", "master.pid")); err == nil {
+			state.pid, _ = strconv.Atoi(strings.TrimSpace(string(data)))
 		}
 	}
 	return state, nil
+}
+
+// postfixQueueDirectory asks Postfix for its queue directory. known is false
+// when the answer is not exactly one absolute path.
+//
+// Measured on Ubuntu 24.04 (set4b, 2026-10-09; strace on the Agent): with the
+// owner's line `default_process_limit = 200 # raised for the campaign` in
+// main.cf, `postconf -h queue_directory` exits 0 and writes
+//
+//	/usr/sbin/postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...
+//
+// to its error stream before `/var/spool/postfix` on its output. The command
+// is run with both streams in one buffer, the buffer was taken whole as the
+// directory, and because the program's own name is an absolute path the two
+// lines passed as one. The Agent then opened
+// `<warning line>\n/var/spool/postfix/pid/master.pid`, the kernel answered
+// "no such file", and that was read as "no master ever started here": the
+// master was taken as gone at the first look, 29 to 82 ms after `systemctl
+// stop postfix` had returned, and the Stop was answered `verified: stopped`
+// while the master lived for another second.
+//
+// So the directory is the one line that is not postconf's own message, and
+// nothing else: a message line begins with the name postconf was started
+// under, `: `, and the kind of message. Any other shape (no line, two lines,
+// a relative path) is not a directory, and the caller claims nothing.
+//
+// postfixQueueDirectory, Postfix'e kuyruk dizinini sorar. Yanıt tam olarak tek
+// bir mutlak yol değilse known false olur. Ubuntu 24.04'te ölçüldü: main.cf'te
+// Postfix'in uyardığı bir satır varken `postconf` uyarısını hata akışına,
+// dizini çıktısına yazar; ikisi tek arabellekte okunuyor ve bütünü dizin
+// sayılıyordu. Agent böylece var olmayan bir yolu açtı, "dosya yok" yanıtını
+// "ana süreç hiç başlamadı" diye okudu ve ana süreç yaşarken durduruldu dedi.
+func postfixQueueDirectory(run mailServiceRunner) (directory string, known bool) {
+	out, err := run("postconf", "-h", "queue_directory")
+	if err != nil {
+		return "", false
+	}
+	return postconfOnePath(out)
+}
+
+// A line postconf writes about its own run: "postconf: warning: ...", or the
+// same after the path it was started under.
+var postconfOwnMessage = regexp.MustCompile(`^(?:\S*/)?postconf: (?:warning|error|fatal|panic): `)
+
+// postconfOnePath picks the one absolute path out of what `postconf -h <name>`
+// printed, with postconf's own messages left out.
+func postconfOnePath(out []byte) (string, bool) {
+	value := ""
+	for _, raw := range strings.Split(string(out), "\n") {
+		line := strings.TrimSpace(raw)
+		if line == "" || postconfOwnMessage.MatchString(line) {
+			continue
+		}
+		if value != "" {
+			// Two lines that are not messages: which one is the value is not known.
+			return "", false
+		}
+		value = line
+	}
+	// A clean absolute path below the root: nothing that needs joining or
+	// resolving, and never the root itself.
+	if !path.IsAbs(value) || path.Clean(value) != strings.TrimRight(value, "/") {
+		return "", false
+	}
+	return value, true
 }
 
 // applyPostfixVerified makes the running Postfix take up the configuration that
@@ -387,19 +457,22 @@ func applyDovecotVerified(run mailServiceRunner, mode mailServiceMode) (string, 
 // another program.
 //
 // known is false when one of these could not be read: the queue directory was
-// not answered, or a file could not be read for a reason other than "it does
-// not exist". Then nothing is claimed.
+// not answered as one path (postfixQueueDirectory), or a file could not be
+// read for a reason other than "it does not exist". Then nothing is claimed.
+//
+// A missing master.pid is "no master ever started with this queue directory"
+// only where the directory that would hold it exists (2026-10-09): a path that
+// does not exist at all has no file in it either, and that says nothing about
+// a master. Measured on Ubuntu 24.04: a path made of two lines was opened, the
+// kernel answered "no such file", and a running master was reported as gone.
 //
 // postfixMasterProcess, Postfix ana sürecinin yaşayıp yaşamadığını Postfix'in
 // kendi programlarına sormadan çekirdekten okur. Okunamayan bir şey varsa
-// known false olur ve hiçbir şey ileri sürülmez.
+// known false olur ve hiçbir şey ileri sürülmez. master.pid dosyasının
+// olmaması, ancak onu tutacak dizin varsa "ana süreç hiç başlamadı" demektir.
 func postfixMasterProcess(run mailServiceRunner) (alive bool, pid int, known bool) {
-	queue, err := run("postconf", "-h", "queue_directory")
-	if err != nil {
-		return false, 0, false
-	}
-	directory := strings.TrimSpace(string(queue))
-	if !path.IsAbs(directory) {
+	directory, answered := postfixQueueDirectory(run)
+	if !answered {
 		return false, 0, false
 	}
 	gone := func(err error) bool {
@@ -407,8 +480,12 @@ func postfixMasterProcess(run mailServiceRunner) (alive bool, pid int, known boo
 	}
 	data, err := mailServiceReadFile(path.Join(directory, "pid", "master.pid"))
 	if err != nil {
-		// No file: no master ever started with this queue directory.
-		return false, 0, gone(err)
+		if !gone(err) {
+			return false, 0, false
+		}
+		// No file. That is "no master ever started with this queue
+		// directory" only when the directory that holds the file is there.
+		return false, 0, mailServiceIsDirectory(path.Join(directory, "pid"))
 	}
 	pid, err = strconv.Atoi(strings.TrimSpace(string(data)))
 	if err != nil || pid <= 0 {

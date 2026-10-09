@@ -266,6 +266,11 @@ export const trServerScreens: Record<ServerScreenKey, string> = {
     'services.action.ownerUnit': "Hizmetin kendisi {owner_unit} olarak çalışır; {unit} yalnız onu gruplar.",
     'services.action.note.unit_marked_failed': "{unit} durduruldu ve çalışmıyor. systemd şimdi {failed_unit} birimini failed (sonuç: {result}) olarak gösteriyor; durdurmadan önce öyle değildi. Bu işaret, systemd’nin birimin durdurulmasının nasıl geçtiğine dair kendi kaydıdır (sonuç exit-code ise birimin bir komutu hatayla çıkmıştır) ve CelikPanel onu olduğu gibi bırakır. Bu durumdan Başlat kullanılabilir. İşareti başlatmadan temizlemek için sunucuda {command} komutunu çalıştırın.",
     'services.action.note.unit_marked_failed_config': "{unit} durduruldu ve çalışmıyor. systemd şimdi {failed_unit} birimini failed (sonuç: {result}) olarak gösteriyor; durdurmadan önce öyle değildi. Bu işaret, systemd’nin birimin durdurulmasının nasıl geçtiğine dair kendi kaydıdır ve CelikPanel onu olduğu gibi bırakır. {unit} şu an kendi yapılandırmasını reddediyor (satırı aşağıda) ve birimin durdurma komutu da aynı dosyayı okur; bu düzeltilene dek başlamaz. İşareti başlatmadan temizlemek için sunucuda {command} komutunu çalıştırın.",
+    // Birimin kendi durdurulmasının okunamadığı Durdur (9 Eki 2026): bekleme
+    // bittiğinde systemd birimi hâlâ durduruyordu ya da birim okunamadı.
+    // Söylenir; sessizlik "birim temiz" diye anlaşılmasın.
+    'services.action.note.unit_not_settled': "{unit} durduruldu ve çalışmıyor. CelikPanel beklemeyi bıraktığında systemd {pending_unit} birimini durdurmayı bitirmemişti (durumu hâlâ {state} idi); bu yüzden durdurmanın nasıl bittiği okunmadı ve birim failed olarak işaretlenmiş olabilir. systemd’nin şu an ne gösterdiğini görmek için sunucuda {command} komutunu çalıştırın. Birime başka bir şey gönderilmez ve hiçbir şey kendiliğinden yeniden bakmaz.",
+    'services.action.note.unit_state_not_read': "{unit} durduruldu ve çalışmıyor. Durdurmadan sonra {pending_unit} biriminin durumu systemd’den okunamadı; bu yüzden birimin failed olarak işaretlenip işaretlenmediği bilinmiyor. systemd’nin şu an ne gösterdiğini görmek için sunucuda {command} komutunu çalıştırın. Birime başka bir şey gönderilmez ve hiçbir şey kendiliğinden yeniden bakmaz.",
     'services.scanNow': 'Servisleri tara',
     'services.rescan': 'Yeniden tara',
     'services.scanning': 'Taranıyor\u2026',
@@ -970,7 +975,9 @@ export const trServerScreens: Record<ServerScreenKey, string> = {
     'panelUpdate.none': 'Bu kanal için yeni güncelleme yok.',
     'panelUpdate.previousAttempt.title': 'Bu sürüm bu sunucuda daha önce başarısız oldu',
     'panelUpdate.previousAttempt.rolledBackTitle': 'Bu sürüm bu sunucuda daha önce denendi ve geri alındı',
-    'panelUpdate.previousAttempt.recovered': '{version} burada {time} tarihinde başlatıldı. Güncelleme tamamlanmadı ve sunucu {current} sürümüne döndürüldü; şu an onu çalıştırıyor.',
+    // {time}, denemenin bittiği andır (API'deki finished_at); sunucu deneme
+    // için bir başlangıç zamanı kaydetmez, cümle de bir başlangıç zamanı söylemez.
+    'panelUpdate.previousAttempt.recovered': '{version} burada başlatıldı ve o deneme {time} tarihinde sona erdi. Güncelleme tamamlanmadı ve sunucu {current} sürümüne döndürüldü; şu an onu çalıştırıyor.',
     'panelUpdate.previousAttempt.noCause': 'Sunucu o deneme için daha belirli bir neden kaydetmedi.',
     'panelUpdate.previousAttempt.again': 'Yeniden başlatmak aynı güncellemeyi çalıştırır. Neden bu sunucudaysa ve giderildiyse sonuç değişebilir; değilse aynı sonucu bekleyin. Düzeltilmiş bir sürüm yayımlandığında burada daha yeni bir sürüm olarak sunulur. Aşağıdaki düğme {version} sürümünü yine başlatır.',
     'panelUpdate.previousAttempt.failed': '{version} bu sunucuda {time} tarihinde denendi ve tamamlanmadı; bu sunucu şu an {current} sürümünü çalıştırıyor. Neden giderilmediyse yeniden başlatmak aynı güncellemeyi tekrarlar.',
