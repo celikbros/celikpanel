@@ -1,0 +1,83 @@
+{
+  "at": "2026-10-09T07:25:55Z",
+  "epoch": 1791530755.8907938,
+  "mode": "read-service",
+  "owner_action": false,
+  "postfix": {
+    "master_alive": false,
+    "master_pid": 40995,
+    "status": {
+      "argv": [
+        "postfix",
+        "status"
+      ],
+      "at": "2026-10-09T07:25:55Z",
+      "returncode": 1,
+      "seconds": 0.036,
+      "status": "ok",
+      "stderr": "postfix/postlog: the Postfix mail system is not running\n",
+      "stdout": ""
+    }
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "postfix.service": {
+      "is_active": "inactive",
+      "properties": {
+        "ActiveEnterTimestamp": "Fri 2026-10-09 07:25:50 UTC",
+        "ActiveState": "inactive",
+        "ConsistsOf": "postfix@-.service",
+        "DropInPaths": "",
+        "ExecMainPID": "40995",
+        "ExecMainStartTimestamp": "Fri 2026-10-09 07:25:50 UTC",
+        "ExecReload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "ExecStart": "{ path=postfix ; argv[]=postfix debian-systemd-start ; ignore_errors=no ; start_time=[Fri 2026-10-09 07:25:50 UTC] ; stop_time=[Fri 2026-10-09 07:25:50 UTC] ; pid=40986 ; code=exited ; status=0 }",
+        "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+        "InactiveEnterTimestamp": "Fri 2026-10-09 07:25:54 UTC",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "NRestarts": "0",
+        "PartOf": "",
+        "PropagatesReloadTo": "postfix@-.service",
+        "ReloadPropagatedFrom": "",
+        "ReloadResult": "success",
+        "RemainAfterExit": "no",
+        "Result": "success",
+        "SubState": "dead",
+        "Type": "forking",
+        "WantedBy": "multi-user.target",
+        "Wants": ""
+      },
+      "returncode": 0
+    },
+    "postfix@-.service": {
+      "is_active": "inactive",
+      "properties": {
+        "ActiveEnterTimestamp": "",
+        "ActiveState": "inactive",
+        "ConsistsOf": "",
+        "DropInPaths": "",
+        "ExecMainPID": "0",
+        "ExecMainStartTimestamp": "",
+        "ExecReload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "ExecStart": "{ path=postfix ; argv[]=postfix debian-systemd-start ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+        "InactiveEnterTimestamp": "",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "NRestarts": "0",
+        "PartOf": "postfix.service",
+        "PropagatesReloadTo": "",
+        "ReloadPropagatedFrom": "postfix.service",
+        "ReloadResult": "success",
+        "RemainAfterExit": "no",
+        "Result": "success",
+        "SubState": "dead",
+        "Type": "forking",
+        "WantedBy": "",
+        "Wants": ""
+      },
+      "returncode": 0
+    }
+  }
+}

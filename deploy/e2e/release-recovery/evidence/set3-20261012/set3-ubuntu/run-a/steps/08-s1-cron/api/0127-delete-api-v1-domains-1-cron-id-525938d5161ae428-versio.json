@@ -1,0 +1,74 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S1e delete",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18462"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18462"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "22e83131598c5b1a7ff15be52ff2c65f"
+      ]
+    ],
+    "method": "DELETE",
+    "path": "/api/v1/domains/1/cron?id=525938d5161ae428&version=ct1-8a61a4f7c109c2b63d0794327fd1254705415bdfb5eba52246439eaf2147eac7"
+  },
+  "response": {
+    "elapsed_seconds": 0.016,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 07:17:13 GMT"
+      ],
+      [
+        "Content-Length",
+        "17"
+      ]
+    ],
+    "json": {
+      "success": true
+    },
+    "status": 200,
+    "text": null
+  }
+}

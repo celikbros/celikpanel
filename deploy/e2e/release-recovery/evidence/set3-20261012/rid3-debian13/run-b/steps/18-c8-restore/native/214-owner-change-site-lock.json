@@ -1,0 +1,74 @@
+{
+  "action": "owner-change-site",
+  "at": "2026-10-09T08:33:00Z",
+  "docroot": {
+    "bytes": 201330160,
+    "exists": true,
+    "file_list": {
+      "added-after-backup-lock.txt": [
+        5,
+        "d8c9f2728aa278ebcd33ccedf3ad309a866870ad5fb93a03526b4b7655c9e911"
+      ],
+      "data/blob-00.bin": [
+        67108864,
+        "4c326fb6f7240aa16fa18508e5e0a7242a11cc22e088ecae39f3ed2a5bb779e1"
+      ],
+      "data/blob-01.bin": [
+        67108864,
+        "720ba3d5d0533edfd630c15bfc330b8ad0ff446025d46292e5f5e84e7d2974c4"
+      ],
+      "data/blob-02.bin": [
+        67108864,
+        "da488bf955eb162216000d13b55c70ebd878729c7f8da079df04fb90796da9b1"
+      ],
+      "index.html": [
+        63,
+        "69771ecc9b23cbe6ee93bcafbd8df698f699369b45a7646b473e94a67650c38f"
+      ],
+      "pages/page-1.html": [
+        700,
+        "a6828c952b0d3efe14055af0ef476998c53047e9b35d7e3a9197cae220b22b7b"
+      ],
+      "pages/page-2.html": [
+        700,
+        "b33768c388e28e3a3345ebdb1fb225eb13a989c470233886a9edcc34e7b66e46"
+      ],
+      "pages/page-3.html": [
+        700,
+        "61f1e5d3a7fe16e9b43fe7cd90ef088d1c442848a1c38ee21e3daf09417d7350"
+      ],
+      "pages/page-4.html": [
+        700,
+        "01aee53780b5920e8cf4a5712f0b4817add2abf205a61f0bab6041b2fc687bfb"
+      ],
+      "pages/page-5.html": [
+        700,
+        "3af3a9969ebcddef290aa2908534b37781363f4ac538d888d57477fe51dacd98"
+      ]
+    },
+    "files": 10,
+    "mode": "0750",
+    "names": [
+      "added-after-backup-lock.txt",
+      "index.html",
+      "data/blob-00.bin",
+      "data/blob-01.bin",
+      "data/blob-02.bin",
+      "pages/page-1.html",
+      "pages/page-2.html",
+      "pages/page-3.html",
+      "pages/page-4.html",
+      "pages/page-5.html"
+    ],
+    "newest_mtime": 1791534780,
+    "non_regular": [],
+    "owner_uid": 5001,
+    "root": "/var/www/celikpanel/subscriptions/2/sites/1/public_html",
+    "sha256": "fe97af9bbee9729b5006da9518c4a078d20a8a1786d9ff17664037ca57e2a78d"
+  },
+  "lab_action": false,
+  "label": "lock",
+  "mode": "owner-change-site",
+  "owner_action": true,
+  "schema": "celikpanel/set2-request-identity-native/v1"
+}

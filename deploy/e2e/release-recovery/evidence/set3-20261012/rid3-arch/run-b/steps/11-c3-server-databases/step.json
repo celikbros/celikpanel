@@ -1,0 +1,23 @@
+{
+  "checks": {
+    "checks": 22,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T08:15:44Z",
+    "notes": [],
+    "started_at": "2026-10-09T08:15:31Z",
+    "substeps": {
+      "O10": "passed",
+      "O14": "passed",
+      "server-database-mariadb": "passed",
+      "server-database-postgresql": "passed"
+    },
+    "title": "a database on a database server (MariaDB and PostgreSQL)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T08:15:44Z",
+  "name": "C3-server-databases",
+  "started_at": "2026-10-09T08:15:31Z",
+  "verdict": "passed"
+}

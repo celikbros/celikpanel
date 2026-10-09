@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T07:19:02Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791530340",
+      "-n",
+      "400",
+      "-u",
+      "nginx.service"
+    ],
+    "at": "2026-10-09T07:19:02Z",
+    "returncode": 0,
+    "seconds": 0.007,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T07:19:00.210448+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...\n2026-10-09T07:19:00.216484+00:00 dns-ubuntu nginx[58940]: 2026/10/09 07:19:00 [notice] 58940#58940: signal process started\n2026-10-09T07:19:00.219362+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791530340,
+  "units": [
+    "nginx.service"
+  ]
+}

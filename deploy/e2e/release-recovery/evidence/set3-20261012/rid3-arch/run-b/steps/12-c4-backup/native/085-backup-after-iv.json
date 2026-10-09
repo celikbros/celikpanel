@@ -1,0 +1,54 @@
+{
+  "archives": 1,
+  "at": "2026-10-09T08:15:55Z",
+  "directory": "/var/backups/celikpanel/subscriptions/2/domains/1",
+  "entries": [
+    {
+      "bytes": 201463327,
+      "kind": "file",
+      "manifest": {
+        "created_at": "2026-10-09T08:15:45.086529352Z",
+        "databases": 4,
+        "domain_id": 1,
+        "job_key": "request:4f701763d32b9347639cbdf7567f0589",
+        "keys": [
+          "created_at",
+          "databases",
+          "domain_id",
+          "files",
+          "job_key",
+          "origin",
+          "subscription_id",
+          "type",
+          "version"
+        ],
+        "origin": "manual",
+        "subscription_id": 2,
+        "type": "full",
+        "version": 2
+      },
+      "mode": "0600",
+      "mtime": 1791533754,
+      "name": "full-20261009T081549.943871733Z-1777ec0f003cdde7.cpbak"
+    }
+  ],
+  "epoch": 1791533755.297973,
+  "exists": true,
+  "lab_action": false,
+  "manifests_read": 1,
+  "mode": "read-backups",
+  "origins": {
+    "manual": 1
+  },
+  "owner_action": false,
+  "partial_files": [],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "tree": [
+    "d 26 /var/backups/celikpanel",
+    "d 2 /var/backups/celikpanel/subscriptions",
+    "d 14 /var/backups/celikpanel/subscriptions/2",
+    "d 2 /var/backups/celikpanel/subscriptions/2/domains",
+    "d 108 /var/backups/celikpanel/subscriptions/2/domains/1",
+    "f 201463327 /var/backups/celikpanel/subscriptions/2/domains/1/full-20261009T081549.943871733Z-1777ec0f003cdde7.cpbak"
+  ]
+}

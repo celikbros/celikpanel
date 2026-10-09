@@ -1,0 +1,29 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 5,
+      "lag_samples": 1,
+      "samples": 28,
+      "verdict": "passed"
+    },
+    "final": {
+      "automatic_recovery": "paused_retry_limit",
+      "first_failure_code": "panel_start_unverified",
+      "observation": "known",
+      "observed_at": "2026-10-09T08:26:17Z",
+      "phase": "recovery_required",
+      "previous_failure": "recovery_failed",
+      "reason": "recovery_incomplete",
+      "renewal_before_update": "on",
+      "request_id": "3853e9cbda097aa62959e690b0cf0ad8",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "none"
+    },
+    "reboot": null,
+    "samples": 28
+  },
+  "finished_at": "2026-10-09T08:26:22Z",
+  "name": "track",
+  "started_at": "2026-10-09T08:19:12Z",
+  "verdict": "observed"
+}

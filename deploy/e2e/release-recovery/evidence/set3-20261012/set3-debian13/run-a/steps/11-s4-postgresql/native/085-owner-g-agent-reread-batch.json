@@ -1,0 +1,29 @@
+{
+  "action": "owner-pg-reread",
+  "answer": {
+    "argv": [
+      "sudo",
+      "-u",
+      "postgres",
+      "psql",
+      "--no-psqlrc",
+      "--set",
+      "ON_ERROR_STOP=on",
+      "--no-align",
+      "--tuples-only",
+      "--quiet"
+    ],
+    "at": "2026-10-09T07:24:22Z",
+    "returncode": 0,
+    "seconds": 1.059,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "file=/etc/postgresql/17/main/postgresql.conf\nbefore=1791530661.399278\nsignal=true\nwaited=1\nloaded=1791530662.406673\n"
+  },
+  "at": "2026-10-09T07:24:22Z",
+  "batch": "SELECT 'file=' || current_setting('config_file');\nSELECT 'before=' || extract(epoch from clock_timestamp());\nSELECT 'signal=' || pg_reload_conf();\nSELECT 'waited=' || count(*) FROM (SELECT pg_sleep(1)) AS waited;\nSELECT 'loaded=' || extract(epoch from pg_conf_load_time());\nSELECT 'error=' || sourceline || ':' || coalesce(name, '') || ':' || error FROM pg_file_settings WHERE error IS NOT NULL AND coalesce(name, '') NOT IN (SELECT name FROM pg_settings WHERE pending_restart) ORDER BY seqno LIMIT 1;\n",
+  "mode": "owner-pg-reread",
+  "owner_action": true,
+  "schema": "celikpanel/set1-native/v1",
+  "version": "PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit"
+}

@@ -1,0 +1,25 @@
+{
+  "checks": {
+    "checks": 17,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T08:17:38Z",
+    "notes": [
+      "mail is not supported on this platform: no mailbox was imported, so S1's login is not measured here",
+      "the member with an absolute path is not site payload: the files step left it out and imported the site's own files; nothing was written at that path"
+    ],
+    "started_at": "2026-10-09T08:17:25Z",
+    "substeps": {
+      "P4": "passed",
+      "S1": "passed",
+      "section": "passed"
+    },
+    "title": "the imported mailbox's password, a failed files step, hostile archive members (set3, S1 and P4)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T08:17:38Z",
+  "name": "C7b-import-answers",
+  "started_at": "2026-10-09T08:17:25Z",
+  "verdict": "passed"
+}

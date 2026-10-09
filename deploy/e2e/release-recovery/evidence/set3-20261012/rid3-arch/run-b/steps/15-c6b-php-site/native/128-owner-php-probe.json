@@ -1,0 +1,41 @@
+{
+  "action": "owner-php-probe",
+  "at": "2026-10-09T08:16:34Z",
+  "docroot": {
+    "bytes": 861,
+    "exists": true,
+    "file_list": {
+      "index.php": [
+        625,
+        "6046ce99c162de14dadd2bfa7ddf02e5168c6ef8190c88039f453d2551088fb2"
+      ],
+      "set3-probe.php": [
+        236,
+        "5bcbbf12dcc8306a7ec9da8041554fe0fb72c3cd20efef26a0708bbb0b50af54"
+      ]
+    },
+    "files": 2,
+    "mode": "2750",
+    "names": [
+      "index.php",
+      "set3-probe.php"
+    ],
+    "newest_mtime": 1791533794,
+    "non_regular": [],
+    "owner_uid": 1003,
+    "root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+    "sha256": "eb2dd11bbf295e9300fcb3e7884709fbf44a6605bcb17470cc34af8c678f219f"
+  },
+  "domain": {
+    "id": 2,
+    "name": "set3-php.test",
+    "status": "active",
+    "subscription_id": 2
+  },
+  "lab_action": false,
+  "mode": "owner-php-probe",
+  "owner_action": true,
+  "path": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set3-probe.php",
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "site_account": "set3_php_test"
+}

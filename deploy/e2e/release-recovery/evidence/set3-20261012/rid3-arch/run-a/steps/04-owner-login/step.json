@@ -1,0 +1,18 @@
+{
+  "checks": {
+    "availability": {
+      "schema": "celikpanel-panel-availability/v1",
+      "state": "ready"
+    },
+    "identity": {
+      "effective_role": "admin",
+      "role": "admin",
+      "username": "labadmin"
+    },
+    "tls_leaf": "e2aae4451f55424308f9102be81087e9dfa8747661e2bb6a5e6bbe9c82ae3ab9"
+  },
+  "finished_at": "2026-10-09T07:25:41Z",
+  "name": "owner-login",
+  "started_at": "2026-10-09T07:25:40Z",
+  "verdict": "passed"
+}

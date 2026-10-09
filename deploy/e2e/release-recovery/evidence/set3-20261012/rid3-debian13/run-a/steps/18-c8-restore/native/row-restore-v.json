@@ -1,0 +1,33 @@
+{
+  "identity": "dcd8cf8247e10c8d092f0d5d357385cb",
+  "row": {
+    "actor_user_id": 2,
+    "body": {
+      "bytes": 216,
+      "code": null,
+      "hash_shaped_values_found": 0,
+      "hash_shaped_values_in_other_columns": 0,
+      "json_keys": [
+        "safety_backup",
+        "success"
+      ],
+      "sensitive_values_of_this_run_found": 0,
+      "sensitive_words_found": [],
+      "sha256": "9e76c18733c37dd45494f042a1ab077365347d6a250ff2c32294bf8c1007a3ea",
+      "stored": true
+    },
+    "created_at": 1791529939,
+    "expires_at": 1791616339,
+    "finished_at": 1791529951,
+    "id": "dcd8cf8247e10c8d092f0d5d357385cb",
+    "lifetime_seconds": 86400,
+    "method": "POST",
+    "request_sha256": "9ac6a41da9465a62b7c4e874952145be4ce1ec6de1711a62445a33bcacd92d25",
+    "response_content_type": "application/json",
+    "response_retained": 1,
+    "response_status": 200,
+    "route": "/api/v1/domains/{id}/backups/restore",
+    "status": "done"
+  },
+  "waited_seconds": 11.9
+}

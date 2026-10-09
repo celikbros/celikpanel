@@ -1,0 +1,35 @@
+{
+  "checks": {
+    "checks": 17,
+    "error": null,
+    "failed": [
+      "P4 (dotdot): the files step refuses the archive",
+      "P4 (dotdot): the import answers 200 with status `partial`, code IMPORT_PARTIAL and the domain left `pending`",
+      "P4 (dotdot): `imported` and `not_imported` are the steps' own results and are true on the server (the domain row is `pending`; what is listed as imported is there; none of the archive's site files is in the document root)",
+      "P4: the replay of a partial import is the stored answer byte for byte and imports nothing again",
+      "P4 (absolute): the member was left out and the rest imported completely (200, active, the document root's files equal the archive's)",
+      "P4 (symlink): the files step refuses the archive",
+      "P4 (symlink): the import answers 200 with status `partial`, code IMPORT_PARTIAL and the domain left `pending`",
+      "P4 (symlink): `imported` and `not_imported` are the steps' own results and are true on the server (the domain row is `pending`; what is listed as imported is there; none of the archive's site files is in the document root)"
+    ],
+    "finished_at": "2026-10-09T07:31:08Z",
+    "notes": [
+      "mail is not supported on this platform: no mailbox was imported, so S1's login is not measured here",
+      "the member with an absolute path is not site payload: the files step left it out and imported the site's own files; nothing was written at that path"
+    ],
+    "started_at": "2026-10-09T07:30:55Z",
+    "substeps": {
+      "P4": "failed",
+      "S1": "passed",
+      "section": "passed"
+    },
+    "title": "the imported mailbox's password, a failed files step, hostile archive members (set3, S1 and P4)",
+    "unknown": [],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-09T07:31:08Z",
+  "name": "C7b-import-answers",
+  "reason": "P4 (dotdot): the files step refuses the archive; P4 (dotdot): the import answers 200 with status `partial`, code IMPORT_PARTIAL and the domain left `pending`; P4 (dotdot): `imported` and `not_imported` are the steps' own results and are true on the server (the domain row is `pending`; what is listed as imported is there; none of the archive's site files is in the document root); P4: the replay of a partial import is the stored answer byte for byte and imports nothing again; P4 (absolute): the member was left out and the rest imported completely (200, active, the document root's files equal the archive's); P4 (symlink): the files step refuses the archive; P4 (symlink): the import answers 200 with status `partial`, code IMPORT_PARTIAL and the domain left `pending`; P4 (symlink): `imported` and `not_imported` are the steps' own results and are true on the server (the domain row is `pending`; what is listed as imported is there; none of the archive's site files is in the document root)",
+  "started_at": "2026-10-09T07:30:55Z",
+  "verdict": "failed"
+}

@@ -1,0 +1,76 @@
+{
+  "at": "2026-10-09T08:33:58Z",
+  "docroot": {
+    "bytes": 201330137,
+    "exists": true,
+    "file_list": {
+      "data/blob-00.bin": [
+        67108864,
+        "4c326fb6f7240aa16fa18508e5e0a7242a11cc22e088ecae39f3ed2a5bb779e1"
+      ],
+      "data/blob-01.bin": [
+        67108864,
+        "720ba3d5d0533edfd630c15bfc330b8ad0ff446025d46292e5f5e84e7d2974c4"
+      ],
+      "data/blob-02.bin": [
+        67108864,
+        "da488bf955eb162216000d13b55c70ebd878729c7f8da079df04fb90796da9b1"
+      ],
+      "index.html": [
+        45,
+        "dd6201f9b61beaa8737d5e16c85e8e203283746991cdcb92c95c85d8e506a0ef"
+      ],
+      "pages/page-1.html": [
+        700,
+        "a6828c952b0d3efe14055af0ef476998c53047e9b35d7e3a9197cae220b22b7b"
+      ],
+      "pages/page-2.html": [
+        700,
+        "b33768c388e28e3a3345ebdb1fb225eb13a989c470233886a9edcc34e7b66e46"
+      ],
+      "pages/page-3.html": [
+        700,
+        "61f1e5d3a7fe16e9b43fe7cd90ef088d1c442848a1c38ee21e3daf09417d7350"
+      ],
+      "pages/page-4.html": [
+        700,
+        "01aee53780b5920e8cf4a5712f0b4817add2abf205a61f0bab6041b2fc687bfb"
+      ],
+      "pages/page-5.html": [
+        700,
+        "3af3a9969ebcddef290aa2908534b37781363f4ac538d888d57477fe51dacd98"
+      ]
+    },
+    "files": 9,
+    "mode": "0750",
+    "names": [
+      "index.html",
+      "data/blob-00.bin",
+      "data/blob-01.bin",
+      "data/blob-02.bin",
+      "pages/page-1.html",
+      "pages/page-2.html",
+      "pages/page-3.html",
+      "pages/page-4.html",
+      "pages/page-5.html"
+    ],
+    "newest_mtime": 1791534824,
+    "non_regular": [],
+    "owner_uid": 5001,
+    "root": "/var/www/celikpanel/subscriptions/2/sites/1/public_html",
+    "sha256": "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567"
+  },
+  "domain": {
+    "id": 1,
+    "name": "set1-owner.test",
+    "status": "active",
+    "subscription_id": 2
+  },
+  "lab_action": false,
+  "mode": "read-docroot",
+  "owner_action": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "site_home_entries": [
+    "public_html"
+  ]
+}

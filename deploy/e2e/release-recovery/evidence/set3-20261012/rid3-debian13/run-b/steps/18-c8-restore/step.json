@@ -1,0 +1,25 @@
+{
+  "checks": {
+    "checks": 24,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T08:34:37Z",
+    "notes": [
+      "the site as it is now is the site both manual backups hold: nothing changed it since C4",
+      "(vi, restart) the owner restarts the Panel's service (systemctl restart): the client saw {'status': 200, 'code': None, 'reason': None, 'replayed': None, 'seconds': 12.678, 'outcome': 'answer', 'error': None}; the row is `done`; the Agent left: finished: the document root and the rows are those of the backup; the Panel served management requests again after 12.2 s",
+      "(vi, kill) the Panel's process is killed outright (SIGKILL, as a crash or the OOM killer): the client saw {'status': None, 'code': None, 'reason': None, 'replayed': None, 'seconds': 0.778, 'outcome': 'no-answer', 'error': 'RemoteDisconnected: Remote end closed connection without response'}; the row is `interrupted`; the Agent left: finished: the document root and the rows are those of the backup; the Panel served management requests again after 13.3 s"
+    ],
+    "started_at": "2026-10-09T08:32:26Z",
+    "substeps": {
+      "restore": "passed",
+      "section": "passed"
+    },
+    "title": "domain restore, with a dropped connection and a Panel restart",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T08:34:37Z",
+  "name": "C8-restore",
+  "started_at": "2026-10-09T08:32:26Z",
+  "verdict": "passed"
+}

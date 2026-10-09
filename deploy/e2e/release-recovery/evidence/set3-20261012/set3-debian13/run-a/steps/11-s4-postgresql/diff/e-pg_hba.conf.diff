@@ -1,0 +1,6 @@
+--- before
++++ after
+@@ -131,2 +131,3 @@
+ host    replication     all             127.0.0.1/32            scram-sha-256
+ host    replication     all             ::1/128                 scram-sha-256
++host    all             all             10.99.0.0/24            scram-sha-256

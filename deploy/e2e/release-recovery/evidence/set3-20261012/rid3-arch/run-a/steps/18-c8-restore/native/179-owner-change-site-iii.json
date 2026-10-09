@@ -1,0 +1,74 @@
+{
+  "action": "owner-change-site",
+  "at": "2026-10-09T07:31:10Z",
+  "docroot": {
+    "bytes": 201330158,
+    "exists": true,
+    "file_list": {
+      "added-after-backup-iii.txt": [
+        4,
+        "310f213cc30e6ca3d19f519f746706ff95422bf30a1da4ec3d88fa2f89a00ae7"
+      ],
+      "data/blob-00.bin": [
+        67108864,
+        "0178b3ece44dd998a508d5f5b3e602a85f64e0e54e168de587cdb0259144be19"
+      ],
+      "data/blob-01.bin": [
+        67108864,
+        "0d477c25fcab1bdc501d2f896e43a0e701db57366b89b0eba41eaa3e4f108626"
+      ],
+      "data/blob-02.bin": [
+        67108864,
+        "539b6d8ffafc3e25eb0812e61f2d062fcb3fd62ec03a431ebb226cf9c101234e"
+      ],
+      "index.html": [
+        62,
+        "9245d4b7f29c05d3241885a44f27988b8f8c6c572157c0c960afa82425848af7"
+      ],
+      "pages/page-1.html": [
+        700,
+        "a6828c952b0d3efe14055af0ef476998c53047e9b35d7e3a9197cae220b22b7b"
+      ],
+      "pages/page-2.html": [
+        700,
+        "b33768c388e28e3a3345ebdb1fb225eb13a989c470233886a9edcc34e7b66e46"
+      ],
+      "pages/page-3.html": [
+        700,
+        "61f1e5d3a7fe16e9b43fe7cd90ef088d1c442848a1c38ee21e3daf09417d7350"
+      ],
+      "pages/page-4.html": [
+        700,
+        "01aee53780b5920e8cf4a5712f0b4817add2abf205a61f0bab6041b2fc687bfb"
+      ],
+      "pages/page-5.html": [
+        700,
+        "3af3a9969ebcddef290aa2908534b37781363f4ac538d888d57477fe51dacd98"
+      ]
+    },
+    "files": 10,
+    "mode": "2750",
+    "names": [
+      "added-after-backup-iii.txt",
+      "index.html",
+      "data/blob-00.bin",
+      "data/blob-01.bin",
+      "data/blob-02.bin",
+      "pages/page-1.html",
+      "pages/page-2.html",
+      "pages/page-3.html",
+      "pages/page-4.html",
+      "pages/page-5.html"
+    ],
+    "newest_mtime": 1791531069,
+    "non_regular": [],
+    "owner_uid": 1002,
+    "root": "/var/www/celikpanel/subscriptions/2/sites/1/public_html",
+    "sha256": "1e76b90d33cc3f4b4179370fcbd3cbfe677485397a68f062f3c0044cb77659f8"
+  },
+  "lab_action": false,
+  "label": "iii",
+  "mode": "owner-change-site",
+  "owner_action": true,
+  "schema": "celikpanel/set2-request-identity-native/v1"
+}

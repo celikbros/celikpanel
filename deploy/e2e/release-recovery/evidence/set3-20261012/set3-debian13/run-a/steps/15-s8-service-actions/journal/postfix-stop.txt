@@ -1,0 +1,10 @@
+2026-10-09T07:25:54.074193+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-09T07:25:54.150298+00:00 dns-debian13 postfix[41174]: postfix/postlog: stopping the Postfix mail system
+2026-10-09T07:25:54.150267+00:00 dns-debian13 postfix/postfix-script[41174]: stopping the Postfix mail system
+2026-10-09T07:25:54.152316+00:00 dns-debian13 postfix/master[40995]: terminating on signal 15
+2026-10-09T07:25:54.158225+00:00 dns-debian13 systemd[1]: postfix.service: Deactivated successfully.
+2026-10-09T07:25:54.158500+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-09T07:25:53.770642+00:00 dns-debian13 postfix/postfix-script[41143]: the Postfix mail system is running: PID: 40995
+2026-10-09T07:25:54.150267+00:00 dns-debian13 postfix/postfix-script[41174]: stopping the Postfix mail system
+2026-10-09T07:25:54.152316+00:00 dns-debian13 postfix/master[40995]: terminating on signal 15
+2026-10-09T07:25:55.925762+00:00 dns-debian13 postfix/postfix-script[41280]: the Postfix mail system is not running

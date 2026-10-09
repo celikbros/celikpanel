@@ -1,0 +1,445 @@
+2026-10-09T08:10:37.068103+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-10-09T08:10:37.111922+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-10-09T08:10:37.140932+00:00 dns-arch agent[7776]: 2026/10/09 08:10:37 Starting CelikPanel Agent...
+2026-10-09T08:10:37.273443+00:00 dns-arch agent[7776]: 2026/10/09 08:10:37 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-09T08:10:37.273587+00:00 dns-arch agent[7776]: 2026/10/09 08:10:37 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-10-09T08:10:39.207479+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-09T08:10:39.245338+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-09T08:10:39.348995+00:00 dns-arch panel[7936]: 2026/10/09 08:10:39 Starting CelikPanel Backend...
+2026-10-09T08:10:39.356761+00:00 dns-arch panel[7936]: 2026/10/09 08:10:39 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-09T08:10:39.361039+00:00 dns-arch panel[7936]: 2026/10/09 08:10:39 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-09T08:10:39.362580+00:00 dns-arch panel[7936]: 2026/10/09 08:10:39 Connected to Agent RPC; preparing normal management access
+2026-10-09T08:10:39.413316+00:00 dns-arch panel[7936]: 2026/10/09 08:10:39 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-09T08:10:39.415455+00:00 dns-arch panel[7936]: 2026/10/09 08:10:39 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-09T08:10:39.417728+00:00 dns-arch panel[7936]: 2026/10/09 08:10:39 Panel ready on :2083 (HTTPS)
+2026-10-09T08:10:40.264934+00:00 dns-arch systemd[1]: Stopping CelikPanel web panel...
+2026-10-09T08:10:41.429408+00:00 dns-arch systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-09T08:10:41.430044+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.
+2026-10-09T08:10:41.430527+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 221ms CPU time over 2.222s wall clock time, 75.5M memory peak.
+2026-10-09T08:10:41.551469+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-09T08:10:41.584427+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-09T08:10:41.680796+00:00 dns-arch panel[8000]: 2026/10/09 08:10:41 Starting CelikPanel Backend...
+2026-10-09T08:10:41.686775+00:00 dns-arch panel[8000]: 2026/10/09 08:10:41 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-09T08:10:41.687447+00:00 dns-arch panel[8000]: 2026/10/09 08:10:41 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-09T08:10:41.688321+00:00 dns-arch panel[8000]: 2026/10/09 08:10:41 Connected to Agent RPC; preparing normal management access
+2026-10-09T08:10:41.698388+00:00 dns-arch panel[8000]: 2026/10/09 08:10:41 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-09T08:10:41.700365+00:00 dns-arch panel[8000]: 2026/10/09 08:10:41 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-09T08:10:41.702779+00:00 dns-arch panel[8000]: 2026/10/09 08:10:41 Panel ready on :2083 (HTTPS)
+2026-10-09T08:10:54.168981+00:00 dns-arch systemd[1]: Stopping CelikPanel web panel...
+2026-10-09T08:10:54.597646+00:00 dns-arch systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-09T08:10:54.598056+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.
+2026-10-09T08:10:54.599941+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 190ms CPU time over 13.046s wall clock time, 76.1M memory peak.
+2026-10-09T08:10:54.624371+00:00 dns-arch systemd[1]: Stopping CelikPanel privileged agent...
+2026-10-09T08:10:54.631317+00:00 dns-arch systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-10-09T08:10:54.631607+00:00 dns-arch systemd[1]: Stopped CelikPanel privileged agent.
+-- Boot 1a27c2db1bba43b7b42f47bf85b190ad --
+2026-10-09T08:11:11.521801+00:00 dns-arch systemd[1]: Starting CelikPanel privileged agent...
+2026-10-09T08:11:11.589925+00:00 dns-arch systemd[1]: Started CelikPanel privileged agent.
+2026-10-09T08:11:11.599030+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-09T08:11:11.650429+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-09T08:11:11.730106+00:00 dns-arch agent[413]: 2026/10/09 08:11:11 Starting CelikPanel Agent...
+2026-10-09T08:11:11.739169+00:00 dns-arch agent[413]: 2026/10/09 08:11:11 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-09T08:11:11.880355+00:00 dns-arch panel[423]: 2026/10/09 08:11:11 Starting CelikPanel Backend...
+2026-10-09T08:11:11.901566+00:00 dns-arch panel[423]: 2026/10/09 08:11:11 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-09T08:11:11.906404+00:00 dns-arch panel[423]: 2026/10/09 08:11:11 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-09T08:11:11.906974+00:00 dns-arch panel[423]: 2026/10/09 08:11:11 Connected to Agent RPC; preparing normal management access
+2026-10-09T08:11:11.920339+00:00 dns-arch panel[423]: 2026/10/09 08:11:11 certificate startup reconcile: staged lineages: agent RPC platform identity is unavailable: Agent.ReconcileSiteCertLineages: read HostPlatform: detect host platform: systemd is not ready: systemd state "starting" exited with status 1
+2026-10-09T08:11:11.929541+00:00 dns-arch panel[423]: 2026/10/09 08:11:11 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: agent RPC platform identity is unavailable: Agent.SyncMailTLSV2: read HostPlatform: detect host platform: systemd is not ready: systemd state "starting" exited with status 1; preserve pending outbox: <nil>
+2026-10-09T08:11:11.932524+00:00 dns-arch panel[423]: 2026/10/09 08:11:11 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-09T08:11:11.935190+00:00 dns-arch panel[423]: 2026/10/09 08:11:11 Panel ready on :2083 (HTTPS)
+2026-10-09T08:11:46.850540+00:00 dns-arch panel[423]: 2026/10/09 08:11:46 http: TLS handshake error from 127.0.0.1:51744: EOF
+2026-10-09T08:11:47.168114+00:00 dns-arch panel[423]: 2026/10/09 08:11:47 http: TLS handshake error from 127.0.0.1:51762: EOF
+2026-10-09T08:11:47.280908+00:00 dns-arch panel[423]: 2026/10/09 08:11:47 http: TLS handshake error from 127.0.0.1:51778: EOF
+2026-10-09T08:11:47.299320+00:00 dns-arch panel[423]: 2026/10/09 08:11:47 http: TLS handshake error from 127.0.0.1:51788: EOF
+2026-10-09T08:11:47.314302+00:00 dns-arch panel[423]: 2026/10/09 08:11:47 http: TLS handshake error from 127.0.0.1:51808: EOF
+2026-10-09T08:11:47.327512+00:00 dns-arch panel[423]: 2026/10/09 08:11:47 http: TLS handshake error from 127.0.0.1:51826: EOF
+2026-10-09T08:11:47.361012+00:00 dns-arch panel[423]: 2026/10/09 08:11:47 http: TLS handshake error from 127.0.0.1:51836: EOF
+2026-10-09T08:11:47.374297+00:00 dns-arch panel[423]: 2026/10/09 08:11:47 http: TLS handshake error from 127.0.0.1:51860: EOF
+2026-10-09T08:11:47.394221+00:00 dns-arch panel[423]: 2026/10/09 08:11:47 http: TLS handshake error from 127.0.0.1:51886: EOF
+2026-10-09T08:11:47.408975+00:00 dns-arch panel[423]: 2026/10/09 08:11:47 http: TLS handshake error from 127.0.0.1:51908: EOF
+2026-10-09T08:11:47.660790+00:00 dns-arch panel[423]: 2026/10/09 08:11:47 http: TLS handshake error from 127.0.0.1:51936: EOF
+2026-10-09T08:11:47.689161+00:00 dns-arch panel[423]: 2026/10/09 08:11:47 http: TLS handshake error from 127.0.0.1:51958: EOF
+2026-10-09T08:11:48.412001+00:00 dns-arch panel[423]: 2026/10/09 08:11:48 http: TLS handshake error from 127.0.0.1:51972: EOF
+2026-10-09T08:11:48.982616+00:00 dns-arch panel[423]: 2026/10/09 08:11:48 http: TLS handshake error from 127.0.0.1:51996: EOF
+2026-10-09T08:11:50.752640+00:00 dns-arch panel[423]: 2026/10/09 08:11:50 http: TLS handshake error from 127.0.0.1:52000: EOF
+2026-10-09T08:11:55.764131+00:00 dns-arch panel[423]: 2026/10/09 08:11:55 http: TLS handshake error from 127.0.0.1:33988: EOF
+2026-10-09T08:12:00.779995+00:00 dns-arch panel[423]: 2026/10/09 08:12:00 http: TLS handshake error from 127.0.0.1:34002: EOF
+2026-10-09T08:12:05.795748+00:00 dns-arch panel[423]: 2026/10/09 08:12:05 http: TLS handshake error from 127.0.0.1:59494: EOF
+2026-10-09T08:12:10.807795+00:00 dns-arch panel[423]: 2026/10/09 08:12:10 http: TLS handshake error from 127.0.0.1:59502: EOF
+2026-10-09T08:12:15.820511+00:00 dns-arch panel[423]: 2026/10/09 08:12:15 http: TLS handshake error from 127.0.0.1:46888: EOF
+2026-10-09T08:12:21.976383+00:00 dns-arch panel[423]: 2026/10/09 08:12:21 http: TLS handshake error from 127.0.0.1:46900: EOF
+2026-10-09T08:12:26.990399+00:00 dns-arch panel[423]: 2026/10/09 08:12:26 http: TLS handshake error from 127.0.0.1:54722: EOF
+2026-10-09T08:12:30.951618+00:00 dns-arch runuser[1700]: pam_unix(runuser:session): session opened for user postgres(uid=967) by postgres(uid=0)
+2026-10-09T08:12:32.007690+00:00 dns-arch panel[423]: 2026/10/09 08:12:32 http: TLS handshake error from 127.0.0.1:54740: EOF
+2026-10-09T08:12:37.025240+00:00 dns-arch panel[423]: 2026/10/09 08:12:37 http: TLS handshake error from 127.0.0.1:44662: EOF
+2026-10-09T08:12:42.043467+00:00 dns-arch panel[423]: 2026/10/09 08:12:42 http: TLS handshake error from 127.0.0.1:44680: EOF
+2026-10-09T08:12:47.061318+00:00 dns-arch panel[423]: 2026/10/09 08:12:47 http: TLS handshake error from 127.0.0.1:54710: EOF
+2026-10-09T08:12:52.427587+00:00 dns-arch panel[423]: 2026/10/09 08:12:52 http: TLS handshake error from 127.0.0.1:54726: EOF
+2026-10-09T08:12:57.444842+00:00 dns-arch panel[423]: 2026/10/09 08:12:57 http: TLS handshake error from 127.0.0.1:33254: EOF
+2026-10-09T08:13:02.460927+00:00 dns-arch panel[423]: 2026/10/09 08:13:02 http: TLS handshake error from 127.0.0.1:33268: EOF
+2026-10-09T08:13:07.477004+00:00 dns-arch panel[423]: 2026/10/09 08:13:07 http: TLS handshake error from 127.0.0.1:34418: EOF
+2026-10-09T08:13:12.493145+00:00 dns-arch panel[423]: 2026/10/09 08:13:12 http: TLS handshake error from 127.0.0.1:34448: EOF
+2026-10-09T08:13:17.507873+00:00 dns-arch panel[423]: 2026/10/09 08:13:17 http: TLS handshake error from 127.0.0.1:55580: EOF
+2026-10-09T08:13:22.852191+00:00 dns-arch panel[423]: 2026/10/09 08:13:22 http: TLS handshake error from 127.0.0.1:55606: EOF
+2026-10-09T08:13:27.867708+00:00 dns-arch panel[423]: 2026/10/09 08:13:27 http: TLS handshake error from 127.0.0.1:45010: EOF
+2026-10-09T08:13:32.885381+00:00 dns-arch panel[423]: 2026/10/09 08:13:32 http: TLS handshake error from 127.0.0.1:45018: EOF
+2026-10-09T08:13:37.902888+00:00 dns-arch panel[423]: 2026/10/09 08:13:37 http: TLS handshake error from 127.0.0.1:55188: EOF
+2026-10-09T08:13:42.920740+00:00 dns-arch panel[423]: 2026/10/09 08:13:42 http: TLS handshake error from 127.0.0.1:55198: EOF
+2026-10-09T08:13:47.936909+00:00 dns-arch panel[423]: 2026/10/09 08:13:47 http: TLS handshake error from 127.0.0.1:48484: EOF
+2026-10-09T08:13:53.282273+00:00 dns-arch panel[423]: 2026/10/09 08:13:53 http: TLS handshake error from 127.0.0.1:41786: EOF
+2026-10-09T08:13:58.300472+00:00 dns-arch panel[423]: 2026/10/09 08:13:58 http: TLS handshake error from 127.0.0.1:41808: EOF
+2026-10-09T08:14:03.317658+00:00 dns-arch panel[423]: 2026/10/09 08:14:03 http: TLS handshake error from 127.0.0.1:57798: EOF
+2026-10-09T08:14:08.335620+00:00 dns-arch panel[423]: 2026/10/09 08:14:08 http: TLS handshake error from 127.0.0.1:57818: EOF
+2026-10-09T08:14:13.352157+00:00 dns-arch panel[423]: 2026/10/09 08:14:13 http: TLS handshake error from 127.0.0.1:42402: EOF
+2026-10-09T08:14:18.368034+00:00 dns-arch panel[423]: 2026/10/09 08:14:18 http: TLS handshake error from 127.0.0.1:42412: EOF
+2026-10-09T08:14:23.806369+00:00 dns-arch panel[423]: 2026/10/09 08:14:23 http: TLS handshake error from 127.0.0.1:43074: EOF
+2026-10-09T08:14:28.822734+00:00 dns-arch panel[423]: 2026/10/09 08:14:28 http: TLS handshake error from 127.0.0.1:43080: EOF
+2026-10-09T08:14:33.839632+00:00 dns-arch panel[423]: 2026/10/09 08:14:33 http: TLS handshake error from 127.0.0.1:34996: EOF
+2026-10-09T08:14:38.856747+00:00 dns-arch panel[423]: 2026/10/09 08:14:38 http: TLS handshake error from 127.0.0.1:35020: EOF
+2026-10-09T08:14:43.876574+00:00 dns-arch panel[423]: 2026/10/09 08:14:43 http: TLS handshake error from 127.0.0.1:34934: EOF
+2026-10-09T08:14:48.892654+00:00 dns-arch panel[423]: 2026/10/09 08:14:48 http: TLS handshake error from 127.0.0.1:34946: EOF
+2026-10-09T08:14:54.257988+00:00 dns-arch panel[423]: 2026/10/09 08:14:54 http: TLS handshake error from 127.0.0.1:55372: EOF
+2026-10-09T08:14:59.274766+00:00 dns-arch panel[423]: 2026/10/09 08:14:59 http: TLS handshake error from 127.0.0.1:55390: EOF
+2026-10-09T08:15:04.296628+00:00 dns-arch panel[423]: 2026/10/09 08:15:04 http: TLS handshake error from 127.0.0.1:48398: EOF
+2026-10-09T08:15:05.319408+00:00 dns-arch panel[423]: 2026/10/09 08:15:05 http: TLS handshake error from 127.0.0.1:48412: EOF
+2026-10-09T08:15:06.578290+00:00 dns-arch agent[413]: 2026/10/09 08:15:06 hosting root: created /var/www at 0755 0:0
+2026-10-09T08:15:06.578290+00:00 dns-arch agent[413]: 2026/10/09 08:15:06 hosting root: created /var/www/celikpanel at 0755 0:0
+2026-10-09T08:15:06.672575+00:00 dns-arch useradd[2701]: new group: name=set1_owner_test, GID=1002
+2026-10-09T08:15:06.672652+00:00 dns-arch useradd[2701]: new user: name=set1_owner_test, UID=1002, GID=1002, home=/var/www/celikpanel/subscriptions/2/sites/1, shell=/bin/bash, from=none
+2026-10-09T08:15:06.832961+00:00 dns-arch chpasswd[2702]: pam_unix(chpasswd:chauthtok): password changed for set1_owner_test
+2026-10-09T08:15:07.326576+00:00 dns-arch panel[423]: 2026/10/09 08:15:07 http: TLS handshake error from 127.0.0.1:48428: EOF
+2026-10-09T08:15:07.346126+00:00 dns-arch panel[423]: 2026/10/09 08:15:07 http: TLS handshake error from 127.0.0.1:48454: EOF
+2026-10-09T08:15:08.637473+00:00 dns-arch panel[423]: 2026/10/09 08:15:08 http: TLS handshake error from 127.0.0.1:48472: EOF
+2026-10-09T08:15:08.833341+00:00 dns-arch sudo[2782]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on
+2026-10-09T08:15:08.833942+00:00 dns-arch sudo[2782]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:15:08.861749+00:00 dns-arch sudo[2782]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:15:08.872678+00:00 dns-arch sudo[2786]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on
+2026-10-09T08:15:08.873399+00:00 dns-arch sudo[2786]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:15:08.896917+00:00 dns-arch sudo[2786]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:15:14.499351+00:00 dns-arch panel[423]: 2026/10/09 08:15:14 http: TLS handshake error from 127.0.0.1:44240: EOF
+2026-10-09T08:15:15.241093+00:00 dns-arch panel[423]: 2026/10/09 08:15:15 http: TLS handshake error from 127.0.0.1:44262: EOF
+2026-10-09T08:15:15.463703+00:00 dns-arch panel[423]: 2026/10/09 08:15:15 http: TLS handshake error from 127.0.0.1:44280: EOF
+2026-10-09T08:15:15.472245+00:00 dns-arch panel[423]: 2026/10/09 08:15:15 http: TLS handshake error from 127.0.0.1:44290: EOF
+2026-10-09T08:15:16.220406+00:00 dns-arch panel[423]: 2026/10/09 08:15:16 http: TLS handshake error from 127.0.0.1:44298: EOF
+2026-10-09T08:15:16.966078+00:00 dns-arch panel[423]: 2026/10/09 08:15:16 http: TLS handshake error from 127.0.0.1:44332: EOF
+2026-10-09T08:15:16.966214+00:00 dns-arch panel[423]: 2026/10/09 08:15:16 http: TLS handshake error from 127.0.0.1:44328: EOF
+2026-10-09T08:15:16.966436+00:00 dns-arch panel[423]: 2026/10/09 08:15:16 http: TLS handshake error from 127.0.0.1:44318: EOF
+2026-10-09T08:15:18.854690+00:00 dns-arch panel[423]: 2026/10/09 08:15:18 http: TLS handshake error from 127.0.0.1:44376: EOF
+2026-10-09T08:15:19.602226+00:00 dns-arch panel[423]: 2026/10/09 08:15:19 http: TLS handshake error from 127.0.0.1:44396: EOF
+2026-10-09T08:15:19.721403+00:00 dns-arch sudo[3157]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on
+2026-10-09T08:15:19.722302+00:00 dns-arch sudo[3157]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:15:19.747452+00:00 dns-arch sudo[3157]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:15:19.758055+00:00 dns-arch sudo[3161]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on
+2026-10-09T08:15:19.758719+00:00 dns-arch sudo[3161]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:15:19.894120+00:00 dns-arch sudo[3161]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:15:19.919689+00:00 dns-arch panel[423]: 2026/10/09 08:15:19 http: TLS handshake error from 127.0.0.1:44428: EOF
+2026-10-09T08:15:19.928366+00:00 dns-arch panel[423]: 2026/10/09 08:15:19 http: TLS handshake error from 127.0.0.1:44442: EOF
+2026-10-09T08:15:20.670424+00:00 dns-arch panel[423]: 2026/10/09 08:15:20 http: TLS handshake error from 127.0.0.1:44460: EOF
+2026-10-09T08:15:21.432363+00:00 dns-arch panel[423]: 2026/10/09 08:15:21 http: TLS handshake error from 127.0.0.1:44524: EOF
+2026-10-09T08:15:21.432363+00:00 dns-arch panel[423]: 2026/10/09 08:15:21 http: TLS handshake error from 127.0.0.1:44492: EOF
+2026-10-09T08:15:21.432363+00:00 dns-arch panel[423]: 2026/10/09 08:15:21 http: TLS handshake error from 127.0.0.1:44508: EOF
+2026-10-09T08:15:21.540481+00:00 dns-arch sudo[3238]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on
+2026-10-09T08:15:21.541198+00:00 dns-arch sudo[3238]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:15:21.561586+00:00 dns-arch sudo[3238]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:15:21.571434+00:00 dns-arch sudo[3242]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on
+2026-10-09T08:15:21.572174+00:00 dns-arch sudo[3242]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:15:21.748947+00:00 dns-arch sudo[3242]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:15:22.542013+00:00 dns-arch panel[423]: 2026/10/09 08:15:22 http: TLS handshake error from 127.0.0.1:44580: EOF
+2026-10-09T08:15:23.835013+00:00 dns-arch panel[423]: 2026/10/09 08:15:23 http: TLS handshake error from 127.0.0.1:33946: EOF
+2026-10-09T08:15:24.545279+00:00 dns-arch panel[423]: 2026/10/09 08:15:24 http: TLS handshake error from 127.0.0.1:33964: EOF
+2026-10-09T08:15:24.553342+00:00 dns-arch panel[423]: 2026/10/09 08:15:24 http: TLS handshake error from 127.0.0.1:33970: EOF
+2026-10-09T08:15:25.265700+00:00 dns-arch panel[423]: 2026/10/09 08:15:25 http: TLS handshake error from 127.0.0.1:33992: EOF
+2026-10-09T08:15:25.398386+00:00 dns-arch panel[423]: 2026/10/09 08:15:25 http: TLS handshake error from 127.0.0.1:34010: EOF
+2026-10-09T08:15:25.408434+00:00 dns-arch panel[423]: 2026/10/09 08:15:25 http: TLS handshake error from 127.0.0.1:34024: EOF
+2026-10-09T08:15:25.416962+00:00 dns-arch panel[423]: 2026/10/09 08:15:25 http: TLS handshake error from 127.0.0.1:34056: EOF
+2026-10-09T08:15:26.132332+00:00 dns-arch panel[423]: 2026/10/09 08:15:26 http: TLS handshake error from 127.0.0.1:34082: EOF
+2026-10-09T08:15:26.140475+00:00 dns-arch panel[423]: 2026/10/09 08:15:26 http: TLS handshake error from 127.0.0.1:34086: EOF
+2026-10-09T08:15:26.864577+00:00 dns-arch panel[423]: 2026/10/09 08:15:26 http: TLS handshake error from 127.0.0.1:34124: EOF
+2026-10-09T08:15:26.865094+00:00 dns-arch panel[423]: 2026/10/09 08:15:26 http: TLS handshake error from 127.0.0.1:34106: EOF
+2026-10-09T08:15:26.865094+00:00 dns-arch panel[423]: 2026/10/09 08:15:26 http: TLS handshake error from 127.0.0.1:34116: EOF
+2026-10-09T08:15:26.991842+00:00 dns-arch panel[423]: 2026/10/09 08:15:26 http: TLS handshake error from 127.0.0.1:34150: EOF
+2026-10-09T08:15:27.709393+00:00 dns-arch panel[423]: 2026/10/09 08:15:27 http: TLS handshake error from 127.0.0.1:34176: EOF
+2026-10-09T08:15:28.415515+00:00 dns-arch panel[423]: 2026/10/09 08:15:28 http: TLS handshake error from 127.0.0.1:34190: EOF
+2026-10-09T08:15:28.423736+00:00 dns-arch panel[423]: 2026/10/09 08:15:28 http: TLS handshake error from 127.0.0.1:34214: EOF
+2026-10-09T08:15:29.168582+00:00 dns-arch panel[423]: 2026/10/09 08:15:29 http: TLS handshake error from 127.0.0.1:34232: EOF
+2026-10-09T08:15:29.197449+00:00 dns-arch sudo[3444]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on
+2026-10-09T08:15:29.198071+00:00 dns-arch sudo[3444]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:15:29.210315+00:00 dns-arch sudo[3444]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:15:29.219795+00:00 dns-arch sudo[3449]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on
+2026-10-09T08:15:29.220522+00:00 dns-arch sudo[3449]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:15:29.242589+00:00 dns-arch sudo[3449]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:15:29.286240+00:00 dns-arch panel[423]: 2026/10/09 08:15:29 http: TLS handshake error from 127.0.0.1:34260: EOF
+2026-10-09T08:15:29.294322+00:00 dns-arch panel[423]: 2026/10/09 08:15:29 http: TLS handshake error from 127.0.0.1:34272: EOF
+2026-10-09T08:15:29.305416+00:00 dns-arch panel[423]: 2026/10/09 08:15:29 http: TLS handshake error from 127.0.0.1:34290: EOF
+2026-10-09T08:15:30.005630+00:00 dns-arch panel[423]: 2026/10/09 08:15:30 http: TLS handshake error from 127.0.0.1:34320: EOF
+2026-10-09T08:15:30.014099+00:00 dns-arch panel[423]: 2026/10/09 08:15:30 http: TLS handshake error from 127.0.0.1:34336: EOF
+2026-10-09T08:15:30.742676+00:00 dns-arch panel[423]: 2026/10/09 08:15:30 http: TLS handshake error from 127.0.0.1:34358: EOF
+2026-10-09T08:15:30.742676+00:00 dns-arch panel[423]: 2026/10/09 08:15:30 http: TLS handshake error from 127.0.0.1:34354: EOF
+2026-10-09T08:15:30.742882+00:00 dns-arch panel[423]: 2026/10/09 08:15:30 http: TLS handshake error from 127.0.0.1:34372: EOF
+2026-10-09T08:15:30.782411+00:00 dns-arch sudo[3499]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on
+2026-10-09T08:15:30.783505+00:00 dns-arch sudo[3499]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:15:30.798382+00:00 dns-arch sudo[3499]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:15:30.813260+00:00 dns-arch sudo[3503]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on
+2026-10-09T08:15:30.814371+00:00 dns-arch sudo[3503]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:15:30.850772+00:00 dns-arch sudo[3503]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:15:30.942077+00:00 dns-arch panel[423]: 2026/10/09 08:15:30 http: TLS handshake error from 127.0.0.1:34408: EOF
+2026-10-09T08:15:31.677129+00:00 dns-arch panel[423]: 2026/10/09 08:15:31 http: TLS handshake error from 127.0.0.1:34424: EOF
+2026-10-09T08:15:32.954590+00:00 dns-arch panel[423]: 2026/10/09 08:15:32 http: TLS handshake error from 127.0.0.1:34442: EOF
+2026-10-09T08:15:33.707477+00:00 dns-arch panel[423]: 2026/10/09 08:15:33 http: TLS handshake error from 127.0.0.1:59064: EOF
+2026-10-09T08:15:33.879454+00:00 dns-arch panel[423]: 2026/10/09 08:15:33 http: TLS handshake error from 127.0.0.1:59082: EOF
+2026-10-09T08:15:33.887645+00:00 dns-arch panel[423]: 2026/10/09 08:15:33 http: TLS handshake error from 127.0.0.1:59094: EOF
+2026-10-09T08:15:34.669714+00:00 dns-arch panel[423]: 2026/10/09 08:15:34 http: TLS handshake error from 127.0.0.1:59110: EOF
+2026-10-09T08:15:35.430234+00:00 dns-arch panel[423]: 2026/10/09 08:15:35 http: TLS handshake error from 127.0.0.1:59150: EOF
+2026-10-09T08:15:35.430234+00:00 dns-arch panel[423]: 2026/10/09 08:15:35 http: TLS handshake error from 127.0.0.1:59134: EOF
+2026-10-09T08:15:35.430234+00:00 dns-arch panel[423]: 2026/10/09 08:15:35 http: TLS handshake error from 127.0.0.1:59136: EOF
+2026-10-09T08:15:37.141028+00:00 dns-arch panel[423]: 2026/10/09 08:15:37 http: TLS handshake error from 127.0.0.1:59172: EOF
+2026-10-09T08:15:37.312689+00:00 dns-arch panel[423]: 2026/10/09 08:15:37 http: TLS handshake error from 127.0.0.1:59192: EOF
+2026-10-09T08:15:39.141026+00:00 dns-arch panel[423]: 2026/10/09 08:15:39 http: TLS handshake error from 127.0.0.1:59200: EOF
+2026-10-09T08:15:39.917584+00:00 dns-arch panel[423]: 2026/10/09 08:15:39 http: TLS handshake error from 127.0.0.1:59220: EOF
+2026-10-09T08:15:40.111764+00:00 dns-arch panel[423]: 2026/10/09 08:15:40 http: TLS handshake error from 127.0.0.1:59234: EOF
+2026-10-09T08:15:40.119937+00:00 dns-arch panel[423]: 2026/10/09 08:15:40 http: TLS handshake error from 127.0.0.1:59256: EOF
+2026-10-09T08:15:40.894548+00:00 dns-arch panel[423]: 2026/10/09 08:15:40 http: TLS handshake error from 127.0.0.1:59282: EOF
+2026-10-09T08:15:41.655441+00:00 dns-arch panel[423]: 2026/10/09 08:15:41 http: TLS handshake error from 127.0.0.1:59318: EOF
+2026-10-09T08:15:41.655441+00:00 dns-arch panel[423]: 2026/10/09 08:15:41 http: TLS handshake error from 127.0.0.1:59298: EOF
+2026-10-09T08:15:41.655441+00:00 dns-arch panel[423]: 2026/10/09 08:15:41 http: TLS handshake error from 127.0.0.1:59308: EOF
+2026-10-09T08:15:43.354098+00:00 dns-arch panel[423]: 2026/10/09 08:15:43 http: TLS handshake error from 127.0.0.1:56910: EOF
+2026-10-09T08:15:43.567031+00:00 dns-arch panel[423]: 2026/10/09 08:15:43 http: TLS handshake error from 127.0.0.1:56930: EOF
+2026-10-09T08:15:44.723608+00:00 dns-arch panel[423]: 2026/10/09 08:15:44 http: TLS handshake error from 127.0.0.1:56946: EOF
+2026-10-09T08:15:45.067637+00:00 dns-arch panel[423]: 2026/10/09 08:15:45 http: TLS handshake error from 127.0.0.1:56952: EOF
+2026-10-09T08:15:49.702005+00:00 dns-arch sudo[4081]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_seq
+2026-10-09T08:15:49.702650+00:00 dns-arch sudo[4081]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:15:49.767995+00:00 dns-arch sudo[4081]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:15:49.838345+00:00 dns-arch sudo[4086]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_con
+2026-10-09T08:15:49.839001+00:00 dns-arch sudo[4086]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:15:49.931119+00:00 dns-arch sudo[4086]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:15:54.614980+00:00 dns-arch panel[423]: 2026/10/09 08:15:54 http: TLS handshake error from 127.0.0.1:55922: EOF
+2026-10-09T08:15:54.623563+00:00 dns-arch panel[423]: 2026/10/09 08:15:54 http: TLS handshake error from 127.0.0.1:55944: EOF
+2026-10-09T08:15:54.957958+00:00 dns-arch panel[423]: 2026/10/09 08:15:54 http: TLS handshake error from 127.0.0.1:55956: EOF
+2026-10-09T08:15:55.323937+00:00 dns-arch panel[423]: 2026/10/09 08:15:55 http: TLS handshake error from 127.0.0.1:55974: EOF
+2026-10-09T08:15:55.324108+00:00 dns-arch panel[423]: 2026/10/09 08:15:55 http: TLS handshake error from 127.0.0.1:55998: EOF
+2026-10-09T08:15:55.324136+00:00 dns-arch panel[423]: 2026/10/09 08:15:55 http: TLS handshake error from 127.0.0.1:55988: EOF
+2026-10-09T08:15:59.248408+00:00 dns-arch sudo[4115]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_seq
+2026-10-09T08:15:59.249140+00:00 dns-arch sudo[4115]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:15:59.311267+00:00 dns-arch sudo[4115]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:15:59.335540+00:00 dns-arch sudo[4119]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_con
+2026-10-09T08:15:59.336342+00:00 dns-arch sudo[4119]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:15:59.397622+00:00 dns-arch sudo[4119]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:16:04.218893+00:00 dns-arch panel[423]: 2026/10/09 08:16:04 http: TLS handshake error from 127.0.0.1:56428: EOF
+2026-10-09T08:16:06.266133+00:00 dns-arch panel[423]: 2026/10/09 08:16:06 http: TLS handshake error from 127.0.0.1:56452: EOF
+2026-10-09T08:16:06.754719+00:00 dns-arch panel[423]: 2026/10/09 08:16:06 [502][certificate] set1-owner.test: CERTIFICATE_ISSUE_FAILED authority_unreachable: certbot failed: exit status 1 Output: Saving debug log to /var/log/celikpanel/certbot/letsencrypt.log An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'acme-v02.api.letsencrypt.org'. (_ssl.c:1082)"))) Ask for help or search for soluti…
+2026-10-09T08:16:09.848541+00:00 dns-arch panel[423]: 2026/10/09 08:16:09 http: TLS handshake error from 127.0.0.1:56458: EOF
+2026-10-09T08:16:11.184456+00:00 dns-arch panel[423]: 2026/10/09 08:16:11 http: TLS handshake error from 127.0.0.1:56474: EOF
+2026-10-09T08:16:11.636552+00:00 dns-arch panel[423]: 2026/10/09 08:16:11 [502][certificate] set1-owner.test: CERTIFICATE_ISSUE_FAILED authority_unreachable: certbot failed: exit status 1 Output: Saving debug log to /var/log/celikpanel/certbot/letsencrypt.log An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'acme-v02.api.letsencrypt.org'. (_ssl.c:1082)"))) Ask for help or search for soluti…
+2026-10-09T08:16:11.737306+00:00 dns-arch panel[423]: 2026/10/09 08:16:11 http: TLS handshake error from 127.0.0.1:56488: EOF
+2026-10-09T08:16:11.746529+00:00 dns-arch panel[423]: 2026/10/09 08:16:11 http: TLS handshake error from 127.0.0.1:56508: EOF
+2026-10-09T08:16:13.116687+00:00 dns-arch panel[423]: 2026/10/09 08:16:13 http: TLS handshake error from 127.0.0.1:35004: EOF
+2026-10-09T08:16:14.476957+00:00 dns-arch panel[423]: 2026/10/09 08:16:14 http: TLS handshake error from 127.0.0.1:35030: EOF
+2026-10-09T08:16:14.476957+00:00 dns-arch panel[423]: 2026/10/09 08:16:14 http: TLS handshake error from 127.0.0.1:35010: EOF
+2026-10-09T08:16:14.476957+00:00 dns-arch panel[423]: 2026/10/09 08:16:14 http: TLS handshake error from 127.0.0.1:35014: EOF
+2026-10-09T08:16:14.879859+00:00 dns-arch panel[423]: 2026/10/09 08:16:14 [502][certificate] set1-owner.test: CERTIFICATE_ISSUE_FAILED authority_unreachable: certbot failed: exit status 1 Output: Saving debug log to /var/log/celikpanel/certbot/letsencrypt.log An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'acme-v02.api.letsencrypt.org'. (_ssl.c:1082)"))) Ask for help or search for soluti…
+2026-10-09T08:16:16.313313+00:00 dns-arch panel[423]: 2026/10/09 08:16:16 http: TLS handshake error from 127.0.0.1:35070: EOF
+2026-10-09T08:16:16.328696+00:00 dns-arch panel[423]: 2026/10/09 08:16:16 http: TLS handshake error from 127.0.0.1:35098: EOF
+2026-10-09T08:16:16.357743+00:00 dns-arch panel[423]: 2026/10/09 08:16:16 http: TLS handshake error from 127.0.0.1:35124: EOF
+2026-10-09T08:16:21.374243+00:00 dns-arch panel[423]: 2026/10/09 08:16:21 http: TLS handshake error from 127.0.0.1:35144: EOF
+2026-10-09T08:16:26.391571+00:00 dns-arch panel[423]: 2026/10/09 08:16:26 http: TLS handshake error from 127.0.0.1:55076: EOF
+2026-10-09T08:16:26.406145+00:00 dns-arch panel[423]: 2026/10/09 08:16:26 http: TLS handshake error from 127.0.0.1:55104: EOF
+2026-10-09T08:16:27.752143+00:00 dns-arch panel[423]: 2026/10/09 08:16:27 http: TLS handshake error from 127.0.0.1:55122: EOF
+2026-10-09T08:16:27.770487+00:00 dns-arch panel[423]: 2026/10/09 08:16:27 http: TLS handshake error from 127.0.0.1:55134: EOF
+2026-10-09T08:16:28.472918+00:00 dns-arch panel[423]: 2026/10/09 08:16:28 http: TLS handshake error from 127.0.0.1:55150: EOF
+2026-10-09T08:16:29.149950+00:00 dns-arch panel[423]: 2026/10/09 08:16:29 http: TLS handshake error from 127.0.0.1:55178: EOF
+2026-10-09T08:16:29.475603+00:00 dns-arch panel[423]: 2026/10/09 08:16:29 http: TLS handshake error from 127.0.0.1:55184: EOF
+2026-10-09T08:16:29.511994+00:00 dns-arch panel[423]: 2026/10/09 08:16:29 http: TLS handshake error from 127.0.0.1:55192: EOF
+2026-10-09T08:16:29.520349+00:00 dns-arch panel[423]: 2026/10/09 08:16:29 http: TLS handshake error from 127.0.0.1:55204: EOF
+2026-10-09T08:16:30.219251+00:00 dns-arch panel[423]: 2026/10/09 08:16:30 http: TLS handshake error from 127.0.0.1:55214: EOF
+2026-10-09T08:16:30.898514+00:00 dns-arch panel[423]: 2026/10/09 08:16:30 http: TLS handshake error from 127.0.0.1:55250: EOF
+2026-10-09T08:16:30.898586+00:00 dns-arch panel[423]: 2026/10/09 08:16:30 http: TLS handshake error from 127.0.0.1:55236: EOF
+2026-10-09T08:16:30.898586+00:00 dns-arch panel[423]: 2026/10/09 08:16:30 http: TLS handshake error from 127.0.0.1:55242: EOF
+2026-10-09T08:16:31.206452+00:00 dns-arch panel[423]: 2026/10/09 08:16:31 http: TLS handshake error from 127.0.0.1:55296: EOF
+2026-10-09T08:16:31.897275+00:00 dns-arch panel[423]: 2026/10/09 08:16:31 http: TLS handshake error from 127.0.0.1:55302: EOF
+2026-10-09T08:16:32.638912+00:00 dns-arch panel[423]: 2026/10/09 08:16:32 http: TLS handshake error from 127.0.0.1:55318: EOF
+2026-10-09T08:16:33.991880+00:00 dns-arch useradd[5232]: new group: name=set3_php_test, GID=1003
+2026-10-09T08:16:33.991978+00:00 dns-arch useradd[5232]: new user: name=set3_php_test, UID=1003, GID=1003, home=/var/www/celikpanel/subscriptions/2/sites/2, shell=/bin/bash, from=none
+2026-10-09T08:16:34.155363+00:00 dns-arch chpasswd[5233]: pam_unix(chpasswd:chauthtok): password changed for set3_php_test
+2026-10-09T08:16:34.222731+00:00 dns-arch php-fpm[5238]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful
+2026-10-09T08:16:35.501335+00:00 dns-arch panel[423]: 2026/10/09 08:16:35 http: TLS handshake error from 127.0.0.1:38750: EOF
+2026-10-09T08:16:35.523669+00:00 dns-arch panel[423]: 2026/10/09 08:16:35 domain deletion for set3-php.test: mail runtime cleanup skipped: no mail runtime for this domain on this server
+2026-10-09T08:16:35.647281+00:00 dns-arch php-fpm[5301]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful
+2026-10-09T08:16:35.798648+00:00 dns-arch userdel[5306]: delete user 'set3_php_test'
+2026-10-09T08:16:35.799997+00:00 dns-arch userdel[5306]: removed group 'set3_php_test' owned by 'set3_php_test'
+2026-10-09T08:16:35.800025+00:00 dns-arch userdel[5306]: removed shadow group 'set3_php_test' owned by 'set3_php_test'
+2026-10-09T08:16:35.970689+00:00 dns-arch panel[423]: 2026/10/09 08:16:35 http: TLS handshake error from 127.0.0.1:38766: EOF
+2026-10-09T08:16:39.034800+00:00 dns-arch panel[423]: 2026/10/09 08:16:39 http: TLS handshake error from 127.0.0.1:38778: EOF
+2026-10-09T08:16:39.049866+00:00 dns-arch panel[423]: 2026/10/09 08:16:39 http: TLS handshake error from 127.0.0.1:38790: EOF
+2026-10-09T08:16:39.064567+00:00 dns-arch panel[423]: 2026/10/09 08:16:39 http: TLS handshake error from 127.0.0.1:38800: EOF
+2026-10-09T08:16:39.085636+00:00 dns-arch panel[423]: 2026/10/09 08:16:39 http: TLS handshake error from 127.0.0.1:38818: EOF
+2026-10-09T08:16:39.100489+00:00 dns-arch panel[423]: 2026/10/09 08:16:39 http: TLS handshake error from 127.0.0.1:38846: EOF
+2026-10-09T08:16:40.445559+00:00 dns-arch useradd[5406]: new group: name=set2_import_tar_test, GID=1003
+2026-10-09T08:16:40.445689+00:00 dns-arch useradd[5406]: new user: name=set2_import_tar_test, UID=1003, GID=1003, home=/var/www/celikpanel/subscriptions/2/sites/3, shell=/bin/bash, from=none
+2026-10-09T08:16:40.615148+00:00 dns-arch chpasswd[5407]: pam_unix(chpasswd:chauthtok): password changed for set2_import_tar_test
+2026-10-09T08:16:40.680093+00:00 dns-arch php-fpm[5412]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful
+2026-10-09T08:16:43.756304+00:00 dns-arch panel[423]: 2026/10/09 08:16:43 http: TLS handshake error from 127.0.0.1:54416: EOF
+2026-10-09T08:16:45.379783+00:00 dns-arch panel[423]: 2026/10/09 08:16:45 http: TLS handshake error from 127.0.0.1:54436: EOF
+2026-10-09T08:16:46.721102+00:00 dns-arch useradd[5623]: new group: name=set2_import_seq_test, GID=1004
+2026-10-09T08:16:46.721245+00:00 dns-arch useradd[5623]: new user: name=set2_import_seq_test, UID=1004, GID=1004, home=/var/www/celikpanel/subscriptions/2/sites/4, shell=/bin/bash, from=none
+2026-10-09T08:16:46.894502+00:00 dns-arch chpasswd[5624]: pam_unix(chpasswd:chauthtok): password changed for set2_import_seq_test
+2026-10-09T08:16:46.962308+00:00 dns-arch php-fpm[5629]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful
+2026-10-09T08:16:47.501591+00:00 dns-arch panel[423]: 2026/10/09 08:16:47 http: TLS handshake error from 127.0.0.1:54454: EOF
+2026-10-09T08:16:47.510281+00:00 dns-arch panel[423]: 2026/10/09 08:16:47 http: TLS handshake error from 127.0.0.1:54462: EOF
+2026-10-09T08:16:49.128501+00:00 dns-arch panel[423]: 2026/10/09 08:16:49 http: TLS handshake error from 127.0.0.1:54482: EOF
+2026-10-09T08:16:50.778743+00:00 dns-arch panel[423]: 2026/10/09 08:16:50 http: TLS handshake error from 127.0.0.1:54500: EOF
+2026-10-09T08:16:50.778743+00:00 dns-arch panel[423]: 2026/10/09 08:16:50 http: TLS handshake error from 127.0.0.1:54502: EOF
+2026-10-09T08:16:50.778743+00:00 dns-arch panel[423]: 2026/10/09 08:16:50 http: TLS handshake error from 127.0.0.1:54504: EOF
+2026-10-09T08:16:52.281153+00:00 dns-arch useradd[5848]: new group: name=set2_import_con_test, GID=1005
+2026-10-09T08:16:52.281264+00:00 dns-arch useradd[5848]: new user: name=set2_import_con_test, UID=1005, GID=1005, home=/var/www/celikpanel/subscriptions/2/sites/5, shell=/bin/bash, from=none
+2026-10-09T08:16:52.474174+00:00 dns-arch chpasswd[5849]: pam_unix(chpasswd:chauthtok): password changed for set2_import_con_test
+2026-10-09T08:16:52.547374+00:00 dns-arch php-fpm[5854]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful
+2026-10-09T08:16:55.631364+00:00 dns-arch panel[423]: 2026/10/09 08:16:55 http: TLS handshake error from 127.0.0.1:45706: EOF
+2026-10-09T08:16:57.044153+00:00 dns-arch useradd[6013]: new group: name=set2_import_drop_test, GID=1006
+2026-10-09T08:16:57.044225+00:00 dns-arch useradd[6013]: new user: name=set2_import_drop_test, UID=1006, GID=1006, home=/var/www/celikpanel/subscriptions/2/sites/6, shell=/bin/bash, from=none
+2026-10-09T08:16:57.208306+00:00 dns-arch chpasswd[6018]: pam_unix(chpasswd:chauthtok): password changed for set2_import_drop_test
+2026-10-09T08:16:57.277657+00:00 dns-arch php-fpm[6023]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful
+2026-10-09T08:17:24.372435+00:00 dns-arch panel[423]: 2026/10/09 08:17:24 http: TLS handshake error from 127.0.0.1:39556: EOF
+2026-10-09T08:17:25.708742+00:00 dns-arch panel[423]: 2026/10/09 08:17:25 http: TLS handshake error from 127.0.0.1:39572: EOF
+2026-10-09T08:17:26.566371+00:00 dns-arch panel[423]: 2026/10/09 08:17:26 http: TLS handshake error from 127.0.0.1:39590: EOF
+2026-10-09T08:17:27.936551+00:00 dns-arch useradd[6348]: new group: name=set3_hostile_dotdot_test, GID=1007
+2026-10-09T08:17:27.936631+00:00 dns-arch useradd[6348]: new user: name=set3_hostile_dotdot_test, UID=1007, GID=1007, home=/var/www/celikpanel/subscriptions/2/sites/7, shell=/bin/bash, from=none
+2026-10-09T08:17:28.096732+00:00 dns-arch chpasswd[6349]: pam_unix(chpasswd:chauthtok): password changed for set3_hostile_dotdot_test
+2026-10-09T08:17:28.166868+00:00 dns-arch php-fpm[6355]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful
+2026-10-09T08:17:29.655249+00:00 dns-arch panel[423]: 2026/10/09 08:17:29 http: TLS handshake error from 127.0.0.1:39614: EOF
+2026-10-09T08:17:30.885130+00:00 dns-arch panel[423]: 2026/10/09 08:17:30 http: TLS handshake error from 127.0.0.1:39638: EOF
+2026-10-09T08:17:31.698685+00:00 dns-arch panel[423]: 2026/10/09 08:17:31 http: TLS handshake error from 127.0.0.1:39658: EOF
+2026-10-09T08:17:33.052483+00:00 dns-arch useradd[6530]: new group: name=set3_hostile_absolute_test, GID=1008
+2026-10-09T08:17:33.052627+00:00 dns-arch useradd[6530]: new user: name=set3_hostile_absolute_test, UID=1008, GID=1008, home=/var/www/celikpanel/subscriptions/2/sites/8, shell=/bin/bash, from=none
+2026-10-09T08:17:33.227775+00:00 dns-arch chpasswd[6531]: pam_unix(chpasswd:chauthtok): password changed for set3_hostile_absolute_test
+2026-10-09T08:17:33.306088+00:00 dns-arch php-fpm[6536]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful
+2026-10-09T08:17:34.771301+00:00 dns-arch panel[423]: 2026/10/09 08:17:34 http: TLS handshake error from 127.0.0.1:48140: EOF
+2026-10-09T08:17:35.595896+00:00 dns-arch panel[423]: 2026/10/09 08:17:35 http: TLS handshake error from 127.0.0.1:48160: EOF
+2026-10-09T08:17:36.983753+00:00 dns-arch useradd[6657]: new group: name=set3_hostile_symlink_test, GID=1009
+2026-10-09T08:17:36.983877+00:00 dns-arch useradd[6657]: new user: name=set3_hostile_symlink_test, UID=1009, GID=1009, home=/var/www/celikpanel/subscriptions/2/sites/9, shell=/bin/bash, from=none
+2026-10-09T08:17:37.168723+00:00 dns-arch chpasswd[6658]: pam_unix(chpasswd:chauthtok): password changed for set3_hostile_symlink_test
+2026-10-09T08:17:37.243937+00:00 dns-arch php-fpm[6663]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful
+2026-10-09T08:17:41.817672+00:00 dns-arch panel[423]: 2026/10/09 08:17:41 http: TLS handshake error from 127.0.0.1:48174: EOF
+2026-10-09T08:17:43.098269+00:00 dns-arch panel[423]: 2026/10/09 08:17:43 http: TLS handshake error from 127.0.0.1:45598: EOF
+2026-10-09T08:17:47.700968+00:00 dns-arch sudo[6893]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_seq
+2026-10-09T08:17:47.701640+00:00 dns-arch sudo[6893]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:17:47.757549+00:00 dns-arch sudo[6893]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:17:47.777914+00:00 dns-arch sudo[6897]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_con
+2026-10-09T08:17:47.778668+00:00 dns-arch sudo[6897]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:17:47.828919+00:00 dns-arch sudo[6897]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:17:55.525914+00:00 dns-arch sudo[6939]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_seq
+2026-10-09T08:17:55.529076+00:00 dns-arch sudo[6939]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:17:55.539391+00:00 dns-arch sudo[6939]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:17:55.549325+00:00 dns-arch sudo[6943]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_con
+2026-10-09T08:17:55.549940+00:00 dns-arch sudo[6943]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:17:55.559371+00:00 dns-arch sudo[6943]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:17:59.121574+00:00 dns-arch panel[423]: 2026/10/09 08:17:59 http: TLS handshake error from 127.0.0.1:55328: EOF
+2026-10-09T08:17:59.129947+00:00 dns-arch panel[423]: 2026/10/09 08:17:59 http: TLS handshake error from 127.0.0.1:55354: EOF
+2026-10-09T08:18:00.436078+00:00 dns-arch panel[423]: 2026/10/09 08:18:00 http: TLS handshake error from 127.0.0.1:55358: EOF
+2026-10-09T08:18:01.738910+00:00 dns-arch panel[423]: 2026/10/09 08:18:01 http: TLS handshake error from 127.0.0.1:55418: EOF
+2026-10-09T08:18:01.739362+00:00 dns-arch panel[423]: 2026/10/09 08:18:01 http: TLS handshake error from 127.0.0.1:55388: EOF
+2026-10-09T08:18:01.739362+00:00 dns-arch panel[423]: 2026/10/09 08:18:01 http: TLS handshake error from 127.0.0.1:55402: EOF
+2026-10-09T08:18:06.193086+00:00 dns-arch sudo[7150]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_seq
+2026-10-09T08:18:06.193766+00:00 dns-arch sudo[7150]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:18:06.242966+00:00 dns-arch sudo[7150]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:18:06.265701+00:00 dns-arch sudo[7154]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_con
+2026-10-09T08:18:06.266354+00:00 dns-arch sudo[7154]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:18:06.321163+00:00 dns-arch sudo[7154]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:18:14.537491+00:00 dns-arch sudo[7162]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_seq
+2026-10-09T08:18:14.538269+00:00 dns-arch sudo[7162]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:18:14.550019+00:00 dns-arch sudo[7162]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:18:14.560256+00:00 dns-arch sudo[7166]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_con
+2026-10-09T08:18:14.560999+00:00 dns-arch sudo[7166]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:18:14.570995+00:00 dns-arch sudo[7166]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:18:18.116753+00:00 dns-arch panel[423]: 2026/10/09 08:18:18 http: TLS handshake error from 127.0.0.1:44558: EOF
+2026-10-09T08:18:18.117236+00:00 dns-arch panel[423]: 2026/10/09 08:18:18 http: TLS handshake error from 127.0.0.1:44542: EOF
+2026-10-09T08:18:22.534283+00:00 dns-arch sudo[7315]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_seq
+2026-10-09T08:18:22.535199+00:00 dns-arch sudo[7315]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:18:22.587874+00:00 dns-arch sudo[7315]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:18:22.609729+00:00 dns-arch sudo[7319]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_con
+2026-10-09T08:18:22.610394+00:00 dns-arch sudo[7319]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:18:22.661444+00:00 dns-arch sudo[7319]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:18:30.993868+00:00 dns-arch sudo[7326]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_seq
+2026-10-09T08:18:30.994940+00:00 dns-arch sudo[7326]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:18:31.009206+00:00 dns-arch sudo[7326]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:18:31.020979+00:00 dns-arch sudo[7330]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_con
+2026-10-09T08:18:31.021663+00:00 dns-arch sudo[7330]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:18:31.033011+00:00 dns-arch sudo[7330]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:18:35.071718+00:00 dns-arch panel[423]: 2026/10/09 08:18:35 http: TLS handshake error from 127.0.0.1:51858: EOF
+2026-10-09T08:18:39.595765+00:00 dns-arch sudo[7500]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_seq
+2026-10-09T08:18:39.596473+00:00 dns-arch sudo[7500]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:18:39.644357+00:00 dns-arch sudo[7500]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:18:39.666272+00:00 dns-arch sudo[7504]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_con
+2026-10-09T08:18:39.666941+00:00 dns-arch sudo[7504]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:18:39.718073+00:00 dns-arch sudo[7504]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:18:46.935676+00:00 dns-arch sudo[7541]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_seq
+2026-10-09T08:18:46.936545+00:00 dns-arch sudo[7541]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:18:46.947875+00:00 dns-arch sudo[7541]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:18:46.958420+00:00 dns-arch sudo[7545]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_con
+2026-10-09T08:18:46.959120+00:00 dns-arch sudo[7545]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:18:46.970581+00:00 dns-arch sudo[7545]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:18:49.659351+00:00 dns-arch panel[423]: 2026/10/09 08:18:49 http: TLS handshake error from 127.0.0.1:57652: EOF
+2026-10-09T08:18:53.915471+00:00 dns-arch panel[423]: 2026/10/09 08:18:53 http: TLS handshake error from 127.0.0.1:40418: EOF
+2026-10-09T08:18:54.993232+00:00 dns-arch systemd[1]: Stopping CelikPanel web panel...
+2026-10-09T08:18:58.335112+00:00 dns-arch sudo[7809]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_seq
+2026-10-09T08:18:58.336146+00:00 dns-arch sudo[7809]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:18:58.388410+00:00 dns-arch sudo[7809]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:18:58.405303+00:00 dns-arch sudo[7813]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_con
+2026-10-09T08:18:58.406042+00:00 dns-arch sudo[7813]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:18:58.459094+00:00 dns-arch sudo[7813]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:19:06.668080+00:00 dns-arch sudo[7820]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_seq
+2026-10-09T08:19:06.668771+00:00 dns-arch sudo[7820]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:19:06.681026+00:00 dns-arch sudo[7820]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:19:06.691380+00:00 dns-arch sudo[7824]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_con
+2026-10-09T08:19:06.692062+00:00 dns-arch sudo[7824]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:19:06.701983+00:00 dns-arch sudo[7824]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:19:07.026611+00:00 dns-arch systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-09T08:19:07.027068+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.
+2026-10-09T08:19:07.027205+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 1.969s CPU time over 7min 55.429s wall clock time, 166.5M memory peak.
+2026-10-09T08:19:07.032495+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-09T08:19:07.061093+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-09T08:19:07.171640+00:00 dns-arch panel[7837]: 2026/10/09 08:19:07 Starting CelikPanel Backend...
+2026-10-09T08:19:07.179730+00:00 dns-arch panel[7837]: 2026/10/09 08:19:07 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-09T08:19:07.180454+00:00 dns-arch panel[7837]: 2026/10/09 08:19:07 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-09T08:19:07.180962+00:00 dns-arch panel[7837]: 2026/10/09 08:19:07 Connected to Agent RPC; preparing normal management access
+2026-10-09T08:19:07.434632+00:00 dns-arch panel[7837]: 2026/10/09 08:19:07 certificate startup reconcile: restored 8 hosted vhosts with one nginx validation and reload
+2026-10-09T08:19:07.436396+00:00 dns-arch panel[7837]: 2026/10/09 08:19:07 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-09T08:19:07.441244+00:00 dns-arch panel[7837]: 2026/10/09 08:19:07 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-09T08:19:07.442309+00:00 dns-arch panel[7837]: 2026/10/09 08:19:07 Panel ready on :2083 (HTTPS)
+2026-10-09T08:19:08.137523+00:00 dns-arch panel[7837]: 2026/10/09 08:19:08 http: TLS handshake error from 127.0.0.1:42678: EOF
+2026-10-09T08:19:08.137628+00:00 dns-arch panel[7837]: 2026/10/09 08:19:08 http: TLS handshake error from 127.0.0.1:42668: EOF
+2026-10-09T08:19:17.847978+00:00 dns-arch panel[7837]: 2026/10/09 08:19:17 http: TLS handshake error from 127.0.0.1:52074: EOF
+2026-10-09T08:19:22.438198+00:00 dns-arch panel[7837]: 2026/10/09 08:19:22 http: TLS handshake error from 127.0.0.1:52086: EOF
+2026-10-09T08:19:23.451958+00:00 dns-arch systemd[1]: celikpanel-panel.service: Sent signal SIGKILL to main process 7837 (panel) on client request.
+2026-10-09T08:19:23.455880+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=killed, status=9/KILL
+2026-10-09T08:19:23.456070+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'signal'.
+2026-10-09T08:19:23.456356+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 227ms CPU time over 16.423s wall clock time, 81.1M memory peak.
+2026-10-09T08:19:26.706701+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 1.
+2026-10-09T08:19:27.170412+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...
+2026-10-09T08:19:27.220937+00:00 dns-arch systemd[1]: Started CelikPanel web panel.
+2026-10-09T08:19:27.351042+00:00 dns-arch panel[8208]: 2026/10/09 08:19:27 Starting CelikPanel Backend...
+2026-10-09T08:19:27.361348+00:00 dns-arch panel[8208]: 2026/10/09 08:19:27 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-09T08:19:27.601793+00:00 dns-arch panel[8208]: 2026/10/09 08:19:27 [request-identity] 1 request(s) were running when the Panel stopped; their outcome is reported as unknown
+2026-10-09T08:19:27.602941+00:00 dns-arch panel[8208]: 2026/10/09 08:19:27 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-09T08:19:27.603877+00:00 dns-arch panel[8208]: 2026/10/09 08:19:27 Connected to Agent RPC; preparing normal management access
+2026-10-09T08:19:27.763567+00:00 dns-arch panel[8208]: 2026/10/09 08:19:27 http: TLS handshake error from 127.0.0.1:44040: EOF
+2026-10-09T08:19:27.763567+00:00 dns-arch panel[8208]: 2026/10/09 08:19:27 http: TLS handshake error from 127.0.0.1:44030: EOF
+2026-10-09T08:19:27.836433+00:00 dns-arch panel[8208]: 2026/10/09 08:19:27 certificate startup reconcile: restored 8 hosted vhosts with one nginx validation and reload
+2026-10-09T08:19:27.837759+00:00 dns-arch panel[8208]: 2026/10/09 08:19:27 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-arch": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-09T08:19:27.844317+00:00 dns-arch panel[8208]: 2026/10/09 08:19:27 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-09T08:19:27.845751+00:00 dns-arch panel[8208]: 2026/10/09 08:19:27 Panel ready on :2083 (HTTPS)
+2026-10-09T08:19:27.902199+00:00 dns-arch sudo[8230]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_seq
+2026-10-09T08:19:27.903376+00:00 dns-arch sudo[8230]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:19:27.957196+00:00 dns-arch sudo[8230]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:19:27.978995+00:00 dns-arch sudo[8234]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_con
+2026-10-09T08:19:27.979952+00:00 dns-arch sudo[8234]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:19:28.050674+00:00 dns-arch sudo[8234]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:19:28.781048+00:00 dns-arch panel[8208]: 2026/10/09 08:19:28 http: TLS handshake error from 127.0.0.1:44070: EOF
+2026-10-09T08:19:28.781551+00:00 dns-arch panel[8208]: 2026/10/09 08:19:28 http: TLS handshake error from 127.0.0.1:44068: EOF
+2026-10-09T08:19:37.229350+00:00 dns-arch sudo[8316]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_seq
+2026-10-09T08:19:37.231031+00:00 dns-arch sudo[8316]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:19:37.252039+00:00 dns-arch sudo[8316]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:19:37.265742+00:00 dns-arch sudo[8320]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_con
+2026-10-09T08:19:37.267058+00:00 dns-arch sudo[8320]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T08:19:37.287082+00:00 dns-arch sudo[8320]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T08:19:53.377184+00:00 dns-arch panel[8208]: 2026/10/09 08:19:53 http: TLS handshake error from 127.0.0.1:36266: EOF
+2026-10-09T08:19:54.670008+00:00 dns-arch panel[8208]: 2026/10/09 08:19:54 http: TLS handshake error from 127.0.0.1:36296: EOF

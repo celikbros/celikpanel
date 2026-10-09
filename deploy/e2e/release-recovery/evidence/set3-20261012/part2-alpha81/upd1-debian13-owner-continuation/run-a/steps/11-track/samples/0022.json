@@ -1,0 +1,102 @@
+{
+  "agreement": {
+    "known_sources": [
+      "cli"
+    ],
+    "phase": {
+      "cli": "recovery_required"
+    },
+    "reasons": [],
+    "sources": [
+      "cli",
+      "shell"
+    ],
+    "verdict": "single-source"
+  },
+  "cli": {
+    "boot_id": "e1046840-c2d4-4ff1-be16-a65865b9eae6",
+    "captured_at": "2026-10-09T08:24:32.135463Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update was applied, but the new version's panel did not come up. The server owner should read the panel log on the server: sudo journalctl -u celikpanel-panel -n 50. The update's completion is retried automatically up to its limit; after that, sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 shows a one-time retry command for this operation. There is no supported return to the previous version from this point. The last automatic recovery attempt did not finish, and automatic recovery tries this same operation again by itself: the next attempt normally starts about 30 seconds after the previous one ended, up to three attempts in total. Nothing is needed on the server now: check this same request again in a minute and do not start another update. The server owner has to act only if automatic recovery pauses.\nRequest: 3853e9cbda097aa62959e690b0cf0ad8\nRecorded at: 2026-10-09T08:24:04Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovery_required reason=recovery_failed proof=none previous_failure=recovery_failed automatic_recovery=retry_scheduled first_failure_code=panel_start_unverified\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"automatic_recovery\":\"retry_scheduled\",\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"3853e9cbda097aa62959e690b0cf0ad8\",\"observation\":\"known\",\"phase\":\"recovery_required\",\"terminal_proof\":\"none\",\"reason\":\"recovery_failed\",\"observed_at\":\"2026-10-09T08:24:04Z\",\"previous_failure\":\"recovery_failed\",\"first_failure_code\":\"panel_start_unverified\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme uygulandı, ancak yeni sürümün paneli açılmadı. Sunucu sahibi sunucudaki panel günlüğünü okumalı: sudo journalctl -u celikpanel-panel -n 50. Güncellemenin tamamlanması sınırına kadar otomatik olarak yeniden denenir; sonrasında sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 bu işlem için tek seferlik yeniden deneme komutunu gösterir. Bu noktadan önceki sürüme desteklenen bir dönüş yok. Son otomatik kurtarma denemesi tamamlanmadı ve otomatik kurtarma aynı işlemi kendiliğinden yeniden deniyor: sonraki deneme normalde bir öncekinin bitişinden yaklaşık 30 saniye sonra başlar, toplamda en çok üç deneme yapılır. Şimdi sunucuda yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın. Sunucu sahibinin ancak otomatik kurtarma durursa işlem yapması gerekir.\nİşlem: 3853e9cbda097aa62959e690b0cf0ad8\nKayıt zamanı: 2026-10-09T08:24:04Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovery_required reason=recovery_failed proof=none previous_failure=recovery_failed automatic_recovery=retry_scheduled first_failure_code=panel_start_unverified\n"
+    }
+  },
+  "guidance_api": null,
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.automatic.retryTitle",
+      "recovery.failure.panel_start_unverified.pending",
+      "recovery.automatic.retryHelp",
+      "recovery.previousFailure",
+      "recovery.reason.recovery_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "observation": {
+      "automatic_recovery": "retry_scheduled",
+      "failure_code": null,
+      "first_failure_code": "panel_start_unverified",
+      "observation": "known",
+      "observed_at": "2026-10-09T08:24:04Z",
+      "panel_state": "ready",
+      "phase": "recovery_required",
+      "previous_failure": "recovery_failed",
+      "reason": "recovery_failed",
+      "renewal_before_update": null,
+      "request_id": "3853e9cbda097aa62959e690b0cf0ad8",
+      "terminal_proof": "none",
+      "waiting_for": null
+    },
+    "observation_unavailable": false,
+    "texts": {
+      "en": [
+        "Last recorded state: automatic recovery will try again",
+        "The update was applied, but the new version's panel did not come up. The server owner should read the panel log on the server with sudo journalctl -u celikpanel-panel -n 50. Completion is retried automatically up to its limit; after that, the recovery log shows a one-time retry command. There is no supported return to the previous version from this point.",
+        "The last automatic recovery attempt did not finish. The server tries this same operation again by itself, normally about 30 seconds after the previous attempt ended, up to three attempts in total. Nothing is needed now: the server owner has to act only if automatic recovery pauses. This page checks for the result; checking or reloading does not start anything.",
+        "Previously recorded failure: Recovery failed"
+      ],
+      "tr": [
+        "Son kaydedilen durum: otomatik kurtarma yeniden deneyecek",
+        "Güncelleme uygulandı, ancak yeni sürümün paneli açılmadı. Sunucu sahibi sunucudaki panel günlüğünü sudo journalctl -u celikpanel-panel -n 50 ile okumalıdır. Tamamlama sınırına kadar otomatik olarak yeniden denenir; sonrasında kurtarma günlüğü tek seferlik bir yeniden deneme komutu gösterir. Bu noktadan önceki sürüme desteklenen bir dönüş yok.",
+        "Son otomatik kurtarma denemesi tamamlanmadı. Sunucu aynı işlemi kendiliğinden yeniden dener; bu normalde bir önceki denemenin bitişinden yaklaşık 30 saniye sonra olur ve toplamda en çok üç deneme yapılır. Şimdi bir şey yapmanız gerekmiyor: sunucu sahibinin ancak otomatik kurtarma durursa işlem yapması gerekir. Bu sayfa sonucu kontrol eder; kontrol etmek veya sayfayı yenilemek hiçbir şeyi başlatmaz.",
+        "Önceden kaydedilmiş hata: Kurtarma başarısız oldu"
+      ]
+    }
+  },
+  "index": 21,
+  "observed": {
+    "automatic_recovery": "retry_scheduled",
+    "first_failure_code": "panel_start_unverified",
+    "observation": "known",
+    "observed_at": "2026-10-09T08:24:04Z",
+    "phase": "recovery_required",
+    "previous_failure": "recovery_failed",
+    "reason": "recovery_failed",
+    "request_id": "3853e9cbda097aa62959e690b0cf0ad8",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "panel_error": "PanelError",
+  "shell_fetch": {
+    "error": "TimeoutError",
+    "note": "only a browser-saved copy of the shell can show while the Panel is down"
+  },
+  "t": 1791534256.5810988,
+  "update_card": null,
+  "utc": "2026-10-09T08:24:16Z"
+}

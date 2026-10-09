@@ -1,0 +1,18 @@
+{
+  "action": "owner-cron-fault",
+  "applied": {
+    "kind": "spool-relocated",
+    "moved": [
+      "/var/spool/cron/crontabs",
+      "/var/spool/cron/crontabs.set1-moved-aside"
+    ],
+    "symlink": [
+      "/var/spool/cron/crontabs",
+      "/mnt/set1-data-volume/cron-spool"
+    ]
+  },
+  "at": "2026-10-09T07:23:08Z",
+  "mode": "owner-cron-fault",
+  "owner_action": true,
+  "schema": "celikpanel/set1-native/v1"
+}

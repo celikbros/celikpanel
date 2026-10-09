@@ -1,0 +1,25 @@
+{
+  "checks": {
+    "checks": 20,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T07:24:40Z",
+    "notes": [
+      "no sample cPanel archive exists in the repository, so the lab built a minimal one from the rules of the import parser (cmd/agent/cpmove_rpc.go): account file, public_html, one mailbox, one forwarder, one database dump; the dropped import's dump ends with DO SLEEP so that the import lasts long enough to drop. set3: every archive holds the directory member `homedir/public_html/` as tar writes it (the import now takes it, P4), and the mailbox's shadow entry is the sha512-crypt hash of a password the lab knows"
+    ],
+    "started_at": "2026-10-09T07:23:46Z",
+    "substeps": {
+      "P4": "passed",
+      "S1": "passed",
+      "import": "passed",
+      "section": "passed"
+    },
+    "title": "cPanel import",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T07:24:40Z",
+  "name": "C7-import",
+  "started_at": "2026-10-09T07:23:46Z",
+  "verdict": "passed"
+}

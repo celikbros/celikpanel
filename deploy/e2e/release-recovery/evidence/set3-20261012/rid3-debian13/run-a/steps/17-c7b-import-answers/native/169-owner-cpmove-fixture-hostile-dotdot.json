@@ -1,0 +1,71 @@
+{
+  "action": "owner-cpmove-fixture",
+  "at": "2026-10-09T07:11:16Z",
+  "bytes": 2596,
+  "database": "s3hdd_app",
+  "directory": {
+    "mode": "0700",
+    "uid": 0
+  },
+  "docroot_expected": {
+    "assets/site.css": [
+      34,
+      "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+    ],
+    "index.html": [
+      70,
+      "5ae8c51ec6da7f20d159311a7925d3bf4c3206854371cefb038ac0f20582370a"
+    ]
+  },
+  "domain": "set3-hostile-dotdot.test",
+  "hostile": "dotdot",
+  "hostile_members": [
+    {
+      "name": "cpmove-s3hdd/homedir/public_html/../../set3-escape-dotdot.txt",
+      "type": "file"
+    }
+  ],
+  "lab_action": false,
+  "mailbox_shadow": "the sha512-crypt hash (openssl passwd -6) of a password the lab chose; neither is recorded",
+  "members": [
+    {
+      "bytes": 58,
+      "name": "cpmove-s3hdd/cp/s3hdd"
+    },
+    {
+      "bytes": 70,
+      "name": "cpmove-s3hdd/homedir/public_html/index.html"
+    },
+    {
+      "bytes": 34,
+      "name": "cpmove-s3hdd/homedir/public_html/assets/site.css"
+    },
+    {
+      "bytes": 124,
+      "name": "cpmove-s3hdd/homedir/etc/set3-hostile-dotdot.test/shadow"
+    },
+    {
+      "bytes": 15,
+      "name": "cpmove-s3hdd/homedir/etc/set3-hostile-dotdot.test/quota"
+    },
+    {
+      "bytes": 62,
+      "name": "cpmove-s3hdd/va/set3-hostile-dotdot.test"
+    },
+    {
+      "bytes": 29,
+      "name": "cpmove-s3hdd/mysql/s3hdd_app.create"
+    },
+    {
+      "bytes": 7388,
+      "name": "cpmove-s3hdd/mysql/s3hdd_app.sql"
+    }
+  ],
+  "mode": "owner-cpmove-fixture",
+  "owner_action": true,
+  "path": "/var/lib/celikpanel-imports/cpmove-s3hdd.tar.gz",
+  "public_html_directory_member": true,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "sha256": "f078cbc3d285fc1c4e5b9217d8a32fb3b321183a848f5800e45fa1800f6e7166",
+  "user": "s3hdd"
+}

@@ -1,0 +1,23 @@
+{
+  "checks": {
+    "checks": 1,
+    "error": null,
+    "failed": [
+      "P5: a PHP site is created from the Domains page (200 with the new domain's id)"
+    ],
+    "finished_at": "2026-10-09T07:30:32Z",
+    "notes": [],
+    "started_at": "2026-10-09T07:30:30Z",
+    "substeps": {
+      "P5": "failed"
+    },
+    "title": "a PHP site: created, served by PHP-FPM through the web server, deleted (set3, P5)",
+    "unknown": [],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-09T07:30:32Z",
+  "name": "C6b-php-site",
+  "reason": "P5: a PHP site is created from the Domains page (200 with the new domain's id)",
+  "started_at": "2026-10-09T07:30:30Z",
+  "verdict": "failed"
+}

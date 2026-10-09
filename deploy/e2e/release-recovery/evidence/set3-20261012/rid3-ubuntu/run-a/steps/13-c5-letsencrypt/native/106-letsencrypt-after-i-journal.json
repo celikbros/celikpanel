@@ -1,0 +1,33 @@
+{
+  "at": "2026-10-09T07:18:19Z",
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791530291",
+      "-n",
+      "2000",
+      "-u",
+      "celikpanel-panel.service",
+      "-u",
+      "celikpanel-agent.service"
+    ],
+    "at": "2026-10-09T07:18:19Z",
+    "returncode": 0,
+    "seconds": 0.008,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T07:18:12.785378+00:00 dns-ubuntu panel[7445]: 2026/10/09 07:18:12 http: TLS handshake error from 127.0.0.1:33530: EOF\n2026-10-09T07:18:14.255008+00:00 dns-ubuntu panel[7445]: 2026/10/09 07:18:14 [502][certificate] set1-owner.test: CERTIFICATE_ISSUE_FAILED authority_unreachable: certbot failed: exit status 1 Output: Saving debug log to /var/log/celikpanel/certbot/letsencrypt.log An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'acme-v02.api.letsencrypt.org'. (_ssl.c:1000)\"))) Ask for help or search for soluti…\n2026-10-09T07:18:16.853473+00:00 dns-ubuntu panel[7445]: 2026/10/09 07:18:16 http: TLS handshake error from 127.0.0.1:33546: EOF\n2026-10-09T07:18:18.141989+00:00 dns-ubuntu panel[7445]: 2026/10/09 07:18:18 http: TLS handshake error from 127.0.0.1:33568: EOF\n2026-10-09T07:18:18.883983+00:00 dns-ubuntu panel[7445]: 2026/10/09 07:18:18 [502][certificate] set1-owner.test: CERTIFICATE_ISSUE_FAILED authority_unreachable: certbot failed: exit status 1 Output: Saving debug log to /var/log/celikpanel/certbot/letsencrypt.log An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'acme-v02.api.letsencrypt.org'. (_ssl.c:1000)\"))) Ask for help or search for soluti…\n2026-10-09T07:18:18.948946+00:00 dns-ubuntu panel[7445]: 2026/10/09 07:18:18 http: TLS handshake error from 127.0.0.1:33590: EOF\n2026-10-09T07:18:18.959505+00:00 dns-ubuntu panel[7445]: 2026/10/09 07:18:18 http: TLS handshake error from 127.0.0.1:33608: EOF\n"
+  },
+  "lab_action": false,
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service"
+  ]
+}

@@ -1,0 +1,3 @@
+-- No entries --
+2026-10-09T07:20:18.519565+00:00 dns-ubuntu postfix/postfix-script[66692]: the Postfix mail system is not running
+2026-10-09T07:20:20.748606+00:00 dns-ubuntu postfix/postfix-script[66826]: the Postfix mail system is not running

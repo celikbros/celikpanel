@@ -1,0 +1,33 @@
+{
+  "at": "2026-10-09T08:30:38Z",
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791534632",
+      "-n",
+      "2000",
+      "-u",
+      "celikpanel-panel.service",
+      "-u",
+      "celikpanel-agent.service"
+    ],
+    "at": "2026-10-09T08:30:38Z",
+    "returncode": 0,
+    "seconds": 0.008,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T08:30:33.372962+00:00 dns-debian13 panel[5205]: 2026/10/09 08:30:33 http: TLS handshake error from 127.0.0.1:52774: EOF\n2026-10-09T08:30:34.388161+00:00 dns-debian13 panel[5205]: 2026/10/09 08:30:34 [502][certificate] set1-owner.test: CERTIFICATE_ISSUE_FAILED authority_unreachable: certbot failed: exit status 1 Output: Saving debug log to /var/log/celikpanel/certbot/letsencrypt.log An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'acme-v02.api.letsencrypt.org'. (_ssl.c:1029)\"))) Ask for help or search for soluti…\n2026-10-09T08:30:36.514044+00:00 dns-debian13 panel[5205]: 2026/10/09 08:30:36 http: TLS handshake error from 127.0.0.1:60734: EOF\n2026-10-09T08:30:37.481628+00:00 dns-debian13 panel[5205]: 2026/10/09 08:30:37 http: TLS handshake error from 127.0.0.1:60754: EOF\n2026-10-09T08:30:37.883417+00:00 dns-debian13 panel[5205]: 2026/10/09 08:30:37 [502][certificate] set1-owner.test: CERTIFICATE_ISSUE_FAILED authority_unreachable: certbot failed: exit status 1 Output: Saving debug log to /var/log/celikpanel/certbot/letsencrypt.log An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'acme-v02.api.letsencrypt.org'. (_ssl.c:1029)\"))) Ask for help or search for soluti…\n2026-10-09T08:30:37.974375+00:00 dns-debian13 panel[5205]: 2026/10/09 08:30:37 http: TLS handshake error from 127.0.0.1:60776: EOF\n2026-10-09T08:30:37.983184+00:00 dns-debian13 panel[5205]: 2026/10/09 08:30:37 http: TLS handshake error from 127.0.0.1:60780: EOF\n"
+  },
+  "lab_action": false,
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service"
+  ]
+}

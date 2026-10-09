@@ -1,0 +1,9 @@
+--- before
++++ after
+@@ -38,5 +38,5 @@
+ # the first time they are touched
+ #myisam_recover_options = BACKUP
+-#max_connections        = 100
++max_connections        = 173
+ #table_cache            = 64
+ 

@@ -1,0 +1,3 @@
+2026-10-09T07:19:00.210448+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T07:19:00.216484+00:00 dns-ubuntu nginx[58940]: 2026/10/09 07:19:00 [notice] 58940#58940: signal process started
+2026-10-09T07:19:00.219362+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.

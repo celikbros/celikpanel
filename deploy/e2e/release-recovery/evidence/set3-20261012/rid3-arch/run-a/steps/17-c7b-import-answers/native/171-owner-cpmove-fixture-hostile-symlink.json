@@ -1,0 +1,75 @@
+{
+  "action": "owner-cpmove-fixture",
+  "at": "2026-10-09T07:31:04Z",
+  "bytes": 2640,
+  "database": "s3hsl_app",
+  "directory": {
+    "mode": "0700",
+    "uid": 0
+  },
+  "docroot_expected": {
+    "assets/site.css": [
+      34,
+      "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+    ],
+    "index.html": [
+      71,
+      "78596130c17e9055a1d6ec21804d77f089c5e62e17641b2f0258ef01d55f8c2c"
+    ]
+  },
+  "domain": "set3-hostile-symlink.test",
+  "hostile": "symlink",
+  "hostile_members": [
+    {
+      "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link",
+      "type": "symlink -> /etc"
+    },
+    {
+      "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link/set3-escape-symlink.txt",
+      "type": "file"
+    }
+  ],
+  "lab_action": false,
+  "mailbox_shadow": "the sha512-crypt hash (openssl passwd -6) of a password the lab chose; neither is recorded",
+  "members": [
+    {
+      "bytes": 59,
+      "name": "cpmove-s3hsl/cp/s3hsl"
+    },
+    {
+      "bytes": 71,
+      "name": "cpmove-s3hsl/homedir/public_html/index.html"
+    },
+    {
+      "bytes": 34,
+      "name": "cpmove-s3hsl/homedir/public_html/assets/site.css"
+    },
+    {
+      "bytes": 124,
+      "name": "cpmove-s3hsl/homedir/etc/set3-hostile-symlink.test/shadow"
+    },
+    {
+      "bytes": 15,
+      "name": "cpmove-s3hsl/homedir/etc/set3-hostile-symlink.test/quota"
+    },
+    {
+      "bytes": 64,
+      "name": "cpmove-s3hsl/va/set3-hostile-symlink.test"
+    },
+    {
+      "bytes": 29,
+      "name": "cpmove-s3hsl/mysql/s3hsl_app.create"
+    },
+    {
+      "bytes": 7388,
+      "name": "cpmove-s3hsl/mysql/s3hsl_app.sql"
+    }
+  ],
+  "mode": "owner-cpmove-fixture",
+  "owner_action": true,
+  "path": "/var/lib/celikpanel-imports/cpmove-s3hsl.tar.gz",
+  "public_html_directory_member": true,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "sha256": "4e6bf477d3735f23d46f100c675d54cc8a6ea1bcfe821d0ea32f0af5e11a8b5d",
+  "user": "s3hsl"
+}

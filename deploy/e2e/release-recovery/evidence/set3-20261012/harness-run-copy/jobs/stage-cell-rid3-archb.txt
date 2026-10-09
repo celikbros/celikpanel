@@ -1,0 +1,5 @@
+driver SHA256SUMS verified on the staged copy (418 files)
+2026-10-09T08:20:02Z removed /var/tmp/cp-release-drill-rid3-arch-b/cells/9f1e6b6b1275fc00269e93c8/arch/overlay.qcow2 bytes=5861474304 (evidence staged at set3-20261012/rid3-arch/run-b, checksums verified)
+2026-10-09T08:20:02Z removed /var/tmp/cp-release-drill-rid3-arch-b/cells/9f1e6b6b1275fc00269e93c8/debian13/overlay.qcow2 bytes=28049408 (evidence staged at set3-20261012/rid3-arch/run-b, checksums verified)
+429
+overall: complete-for-review | native_evidence: False | outcome: request-identity-measured

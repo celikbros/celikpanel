@@ -1,0 +1,85 @@
+{
+  "checks": {
+    "config_files": {
+      "listed": {
+        "mariadb": [
+          "/etc/mysql/mariadb.cnf",
+          "/etc/mysql/mariadb.conf.d/50-server.cnf"
+        ],
+        "postgresql": [
+          "/etc/postgresql/17/main/postgresql.conf",
+          "/etc/postgresql/17/main/pg_hba.conf"
+        ]
+      },
+      "mariadb_conf": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+      "pg_conf": "/etc/postgresql/17/main/postgresql.conf",
+      "pg_hba": "/etc/postgresql/17/main/pg_hba.conf"
+    },
+    "crontab_binary": "/usr/bin/crontab",
+    "crontab_package": "cron: /usr/bin/crontab",
+    "domain": "set1-owner.test",
+    "domain_id": 1,
+    "mailbox": {
+      "address": "owner@set1-owner.test",
+      "create_http": 200,
+      "listed": true
+    },
+    "metadata_before": {
+      "/etc/mysql/mariadb.conf.d/50-server.cnf": {
+        "exists": true,
+        "gid": 0,
+        "group": "root",
+        "inode": 134515,
+        "mode": "0644",
+        "owner": "root",
+        "sha256": "77bfecc6202ad2d72d9e881a259d6dea2e73a330ee32bb616e016447f64380e2",
+        "type": "regular",
+        "uid": 0
+      },
+      "/etc/postfix/main.cf": {
+        "exists": true,
+        "gid": 989,
+        "group": "celikpanel",
+        "inode": 265606,
+        "mode": "0644",
+        "owner": "root",
+        "sha256": "cfc3ba4a968edf44b2c678b12ce23419225cf7a4cad1636dac3dd363c2dca5cd",
+        "type": "regular",
+        "uid": 0
+      },
+      "/etc/postgresql/17/main/pg_hba.conf": {
+        "exists": true,
+        "gid": 106,
+        "group": "postgres",
+        "inode": 263951,
+        "mode": "0640",
+        "owner": "postgres",
+        "sha256": "ad0df9635890926d79a12d5627b68af6b85b6254fa23cace2bbe077838969c9e",
+        "type": "regular",
+        "uid": 104
+      },
+      "/etc/postgresql/17/main/postgresql.conf": {
+        "exists": true,
+        "gid": 106,
+        "group": "postgres",
+        "inode": 264924,
+        "mode": "0644",
+        "owner": "postgres",
+        "sha256": "a922059589236ab94341ba6504bf77f39fd6d0fe3f13b38430e4e5ab8216e748",
+        "type": "regular",
+        "uid": 104
+      }
+    },
+    "scan_http": 200,
+    "site_account": {
+      "gid": 5001,
+      "home": "/var/www/celikpanel/subscriptions/2/sites/1",
+      "uid": 5001
+    },
+    "site_user": "set1_owner_test"
+  },
+  "finished_at": "2026-10-09T08:29:41Z",
+  "name": "site",
+  "started_at": "2026-10-09T08:29:38Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,3 @@
+refs/upd1/baseline a0beb7263d1f4ca72258f6b306f9111ba4e2a334 tree=b1dffa78bcaca9e3514e5b2bc42f0e2cf47dca2f v0.1.0-alpha.81: DNS recovery, paired DNS, update recovery and the Ubuntu package-helper fix (#204)
+refs/upd1/defective cc93780e6392dfeba8dfcd70c19028e9fbb79974 tree=84adc63cb6e2a6c294c59b9bc3bb59fbf1287cab test(fixture): upd7 defective candidate - migrate-only fails (unpublished, disposable)
+refs/upd1/good 30ac1488280a7f3c5cd1bb514a7447d1dc9bf7a3 tree=ed6e45459b10fdec3da92c04037a8c8f5cf67157 test(fixture): upd7 good candidate labelled as the release after the published v0.1.0-alpha.81 (unpublished, disposable)

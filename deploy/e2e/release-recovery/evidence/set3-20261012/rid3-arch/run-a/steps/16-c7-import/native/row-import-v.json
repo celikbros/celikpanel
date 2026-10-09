@@ -1,0 +1,33 @@
+{
+  "identity": "02bbd995c0972019d539876a28a9036d",
+  "row": {
+    "actor_user_id": 2,
+    "body": {
+      "bytes": 522,
+      "code": "IMPORT_SITE_NOT_CREATED",
+      "hash_shaped_values_found": 0,
+      "hash_shaped_values_in_other_columns": 0,
+      "json_keys": [
+        "code",
+        "error"
+      ],
+      "sensitive_values_of_this_run_found": 0,
+      "sensitive_words_found": [],
+      "sha256": "53460af9ac942c6321651e6d8a40cd469eff31bf7e8cee274b8902bf60e51c8a",
+      "stored": true
+    },
+    "created_at": 1791531050,
+    "expires_at": 1791617450,
+    "finished_at": 1791531052,
+    "id": "02bbd995c0972019d539876a28a9036d",
+    "lifetime_seconds": 86400,
+    "method": "POST",
+    "request_sha256": "5115145a73d8e1ca8e2c8bb0b00cb407f8490ee85adbc762db67daa9c83a4b2f",
+    "response_content_type": "application/json",
+    "response_retained": 1,
+    "response_status": 502,
+    "route": "/api/v1/import/cpanel/apply",
+    "status": "done"
+  },
+  "waited_seconds": 0.3
+}

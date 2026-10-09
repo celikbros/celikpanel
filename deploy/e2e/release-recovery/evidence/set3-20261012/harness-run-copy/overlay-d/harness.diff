@@ -1,0 +1,1959 @@
+--- a/deploy/e2e/release-recovery/owner_update_trial.py
++++ b/deploy/e2e/release-recovery/owner_update_trial.py
+@@ -95,6 +95,9 @@
+ # The real Alpha80 release commit named as the baseline policy's predecessor
+ # (the same value the unpublished Alpha81 fixture 45dfc265 used).
+ ALPHA80_COMMIT = "bd14d97efc5cfd19acd70ddf0edb9c6343317e2b"
++# set3: the published v0.1.0-alpha.81 tag. It already carries the D-027 acceptance-license seam and its guard, so a
++# baseline built from it is the tag's own commit, unchanged (no fixture commit, no patched file).
++ALPHA81_COMMIT = "a0beb7263d1f4ca72258f6b306f9111ba4e2a334"
+ ACCEPTANCE_NOTICE = "ACCEPTANCE-LICENSE-BUILD.txt"
+ ACCEPTANCE_NOTICE_PREFIX = b"This archive is NOT a CelikPanel release."
+ # Same value as dns-pair-acceptance/pair_acceptance.py ACCEPTANCE_FIXTURE_KEY
+@@ -386,6 +389,13 @@
+ 
+ 
+ ORIGIN_NAME = "celikpanel.net"
++# set3: read-only helpers uploaded by the steps that need them (the facts after an update from the published release).
++SCHEMA_LEDGER_HELPER = "guest_schema_ledger.py"
++BACKUP_READER_HELPER = "guest_request_identity_native.py"
++REQUEST_ID_HEADER = "X-CelikPanel-Request-Id"
++RELOAD_SENTENCE = "Reload the page"
++LEDGER_AFTER_UPDATE, LEDGER_AFTER_RETURN = 43, 42
++GUARDED_TABLE = "request_identities"
+ GUEST_HELPERS = ("guest_probe.py", "guest_port_fault.py", "guest_update_kill.py", "guest_bound_worker.py",
+                  "guest_recovery_fault.py", "guest_recovery_handoff.py", "guest_owner_update_observer.py",
+                  "guest_upd1_workload.py", "guest_owner_port_hold.py")
+@@ -486,12 +496,88 @@
+     return {"at": utc_now(), "returncode": exc.returncode, "stderr_tail": lines[-3:]}
+ 
+ 
++# set3: collection-time shape rules beside the pair redactor's own (structural keys, registered values, PEM blocks).
++# No retained file may hold a hash-shaped credential value (crypt, Dovecot scheme, SCRAM verifier, MariaDB native
++# hash) or a WireGuard private or preshared key; set2 had to be redacted after collection for the first.
++HASH_SHAPED = re.compile(
++    r"(?:\{[A-Z][A-Z0-9.-]{1,24}\})?\$(?:1|2[abxy]?|5|6|7|y|gy|sha1|argon2(?:id|i|d)|scrypt|pbkdf2(?:-sha(?:1|256|512))?)"
++    r"\$[./A-Za-z0-9$=,+-]{8,}"
++    r"|\{(?:SSHA(?:256|512)?|SHA(?:256|512)?|SMD5|PLAIN|CRYPT|CRAM-MD5|[A-Z0-9]+-CRYPT|ARGON2ID?|PBKDF2)\}[^\s\"'<>\\]{4,}"
++    r"|SCRAM-SHA-256\$\d+:[A-Za-z0-9+/=]+\$[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+"
++    r"|(?<![0-9A-Za-z])\*[0-9A-F]{40}(?![0-9A-Fa-f])")
++HASH_SHAPED_MARK = "[REDACTED hash-shaped value]"
++WIREGUARD_SECRET = re.compile(r"(?i)\b(Private_?Key|Preshared_?Key)(\\?\"?\s*[:=]\s*\\?\"?)([A-Za-z0-9+/]{43}=)")
++
++
++def hash_shaped_count(text: str | bytes | None) -> int:
++    """How many hash-shaped credential values a text holds (the count only; the driver asserts on it)."""
++    if text is None:
++        return 0
++    if isinstance(text, bytes):
++        text = text.decode("utf-8", "replace")
++    return len(HASH_SHAPED.findall(text))
++
++
++def shape_text(text: str) -> str:
++    text = HASH_SHAPED.sub(HASH_SHAPED_MARK, text)
++    return WIREGUARD_SECRET.sub(lambda match: match.group(1) + match.group(2) + "[REDACTED]", text)
++
++
++def shape_redactor(redactor: Any) -> Any:
++    """The pair redactor with the set3 shape rules added to every text it handles (JSON strings, journals, logs)."""
++    plain = redactor.text
++    redactor.text = lambda value: shape_text(plain(value))
++    return redactor
++
++
++def ledger_verdict(reading: dict | None, version: int, pins: dict) -> dict:
++    """set3: one reading of guest_schema_ledger.py against the released ledger and schema that populated_database.py
++    pins for ``version`` (the same canonical digests). ``request_identities`` exists exactly from 43 on."""
++    if not isinstance(reading, dict) or reading.get("schema_version") is None:
++        return {"verdict": "inconclusive", "reason": "the ledger could not be read", "expected_version": version}
++    guarded = reading.get(GUARDED_TABLE) or {}
++    schema_equal = pins["schemas"].get(version) in (reading.get("schema_sha256"), reading.get("schema_sha256_without_statistics"))
++    facts = {"version": reading["schema_version"] == version and reading.get("ledger_rows") == version
++             and reading.get("ledger_contiguous") is True,
++             "ledger_is_the_released_one": reading.get("ledger_sha256") == pins["migrations"].get(version),
++             "schema_is_the_released_one": schema_equal,
++             "request_identities": bool(guarded.get("exists")) is (version >= LEDGER_AFTER_UPDATE),
++             "integrity": reading.get("integrity_check") == ["ok"] and reading.get("foreign_key_check_clean") is True}
++    return {"verdict": "as-expected" if all(facts.values()) else "different", "expected_version": version, "facts": facts,
++            "schema_version": reading["schema_version"], "ledger_rows": reading.get("ledger_rows"),
++            "ledger_sha256": reading.get("ledger_sha256"), "pinned_ledger_sha256": pins["migrations"].get(version),
++            "schema_sha256": reading.get("schema_sha256"),
++            "schema_sha256_without_statistics": reading.get("schema_sha256_without_statistics"),
++            "pinned_schema_sha256": pins["schemas"].get(version), "statistics_tables": reading.get("statistics_tables"),
++            "request_identities": guarded, "table_count": reading.get("table_count"), "ledger_last": reading.get("ledger_last")}
++
++
++def ledger_pins() -> dict:
++    module = _load("set3_populated_database", HERE / "populated_database.py")
++    return {"migrations": dict(module.MIGRATIONS), "schemas": dict(module.SCHEMAS)}
++
++
++def site_account_name(domain: str) -> str:
++    """internal/services.SiteUsername: '.' and '-' become '_', cut at 32."""
++    return domain.replace(".", "_").replace("-", "_")[:32]
++
++
+ def provenance_for(variant: str) -> dict:
+     """The good and migrate-only cells keep their provenance unchanged; the start kinds name their own defect."""
+     if LABEL_REF is None and variant not in KIND_PROVENANCE:
+         return PROVENANCE
+     base = dict(PROVENANCE)
+-    if LABEL_REF is not None:
++    if LABEL_REF is not None and BASELINE_REFS[LABEL_REF].get("unpatched"):
++        # set3: the baseline is the published tag's own commit; nothing is patched.
++        base["baseline"] = (f"published-tag-{LABEL_REF}-commit-unchanged (the tag carries the D-027 acceptance-license "
++                            "seam; bin/panel is built from the tag's source with the acceptance_license build tag); its "
++                            "release policy, installer, update/rollback/recovery/bootstrap scripts, get.sh, web and Agent "
++                            "are the tag's; installed by the real installer; fixture trust root enrolled; "
++                            "not-production-release-admission; not the signed release archive")
++        base["candidate"] = (f"unpublished-local-fixture-commit-over-the-source-labelled-{CANDIDATE_VERSION}; signed "
++                             "with the disposable fixture key; served by the guest-loopback celikpanel.net fixture "
++                             "origin; not a release")
++    elif LABEL_REF is not None:
+         # upd7: the baseline is the published tag's tree with only the acceptance-license seam added.
+         base["baseline"] = (f"published-tag-{LABEL_REF}-tree-plus-the-D-027-acceptance-license-seam-only (Panel license "
+                             f"code: {', '.join(BASELINE_REF_PATCHED)}); its release policy, installer, update/rollback/"
+@@ -676,7 +762,18 @@
+                         "candidate": ("v0.1.0-alpha.81", 81),
+                         "baseline_policy": {"version": "v0.1.0-alpha.80", "current": 80, "previous": 79,
+                                             "previous_version": "v0.1.0-alpha.79"}},
++    # set3: the baseline IS the tag commit (unpatched: the tag carries the seam); the candidates are the source
++    # labelled as the release after it.
++    "v0.1.0-alpha.81": {"commit": ALPHA81_COMMIT, "baseline": ("v0.1.0-alpha.81", 81),
++                        "candidate": ("v0.1.0-alpha.82", 82), "unpatched": True,
++                        "baseline_policy": {"version": "v0.1.0-alpha.81", "current": 81, "previous": 80,
++                                            "previous_version": "v0.1.0-alpha.80"}},
+ }
++
++
++def baseline_ref_patched(ref: str) -> tuple:
++    """The files the baseline fixture changes over the published tag: the seam files, or none (set3)."""
++    return () if BASELINE_REFS[ref].get("unpatched") else BASELINE_REF_PATCHED
+ SEAM_COPIED = ("internal/licensing/acceptance_off.go", "internal/licensing/acceptance_owner_linux.go",
+                "internal/licensing/acceptance_owner_other.go")
+ SEAM_ADAPTED = "internal/licensing/acceptance_fixture.go"
+@@ -758,6 +855,8 @@
+ def seam_baseline_source(repo: Path, source_commit: str, ref: str) -> dict:
+     """Apply the acceptance-license seam to a checkout of the published tag (Panel license code only)."""
+     profile = baseline_ref_profile(ref)
++    if profile.get("unpatched"):
++        raise ValueError(f"{ref} carries the acceptance-license seam; its baseline is the tag commit itself")
+     head = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True, text=True,
+                           check=True).stdout.strip()
+     if head != profile["commit"]:
+@@ -914,7 +1013,13 @@
+         # upd7: the baseline is one fixture commit over the published tag, patching only the seam files.
+         ref = document["baseline_ref"]
+         profile = baseline_ref_profile(ref.get("ref"))
+-        if (ref.get("tag_commit") != profile["commit"] or document["baseline"].get("parent") != profile["commit"]
++        if profile.get("unpatched"):
++            # set3: the baseline is the tag's own commit; no file is patched.
++            if (ref.get("tag_commit") != profile["commit"] or document["baseline"]["commit"] != profile["commit"]
++                    or ref.get("patched_files") != [] or (BASELINE_VERSION, BASELINE_SEQUENCE) != profile["baseline"]):
++                raise ValueError("the published-baseline artifact is not the tag's own commit "
++                                 "(or configure_labels was not applied)")
++        elif (ref.get("tag_commit") != profile["commit"] or document["baseline"].get("parent") != profile["commit"]
+                 or ref.get("patched_files") != list(BASELINE_REF_PATCHED)
+                 or (BASELINE_VERSION, BASELINE_SEQUENCE) != profile["baseline"]):
+             raise ValueError("the published-baseline fixture is not the seam-only commit over the tag "
+@@ -3369,7 +3474,7 @@
+         self.setup_draft_override = setup_draft_choice(dns_mode, setup_draft)
+         self.role = candidate_role(cell)
+         self.candidate = artifacts[self.role]
+-        self.redactor = self.p["redaction"].Redactor()
++        self.redactor = shape_redactor(self.p["redaction"].Redactor())
+         evidence_root = self.root / "evidence" / cell.node / "upd1"
+         evidence_root.mkdir(parents=True, mode=0o700, exist_ok=True)
+         run_id = self.p["evidence"].make_run_id(cell.name, dt.datetime.now(dt.timezone.utc))
+@@ -5145,6 +5250,241 @@
+             raise StepFailed("; ".join(failures))
+         return "passed"
+ 
++    # -- set3: what an owner meets after the update from the published release ----------------------------------------
++
++    def set3_helper(self, name: str) -> None:
++        if name not in self.state.setdefault("set3_helpers", []):
++            self.lab.put_file(self.root, self.record, self.plan, self.node_name, HERE / name, name)
++            self.state["set3_helpers"].append(name)
++
++    def schema_ledger(self, label: str, version: int) -> dict:
++        self.set3_helper(SCHEMA_LEDGER_HELPER)
++        reading = self.helper(SCHEMA_LEDGER_HELPER, "read", timeout=120)
++        self.record_json(f"ledger-{label}.json", reading)
++        return ledger_verdict(reading, version, ledger_pins())
++
++    def status_views(self, label: str) -> dict:
++        """One reading of the three owner views of this operation (update status, recovery reader, root CLI) with the
++        card and the screen the served build renders."""
++        sample = self.status_sample(None, 9000 + len(self.state.setdefault("set3_views", [])))
++        self.state["set3_views"].append(label)
++        self.record_json(f"views-{label}.json", sample)
++        cli_raw = sample.get("cli") or {}
++        cli = None
++        try:
++            cli = json.loads((cli_raw.get("json") or {}).get("stdout") or "null")
++        except (ValueError, AttributeError):
++            cli = None
++        recovery = (sample.get("recovery_api") or {}).get("body")
++        return {"update_status": sample.get("update_status"), "recovery_api": sample.get("recovery_api"),
++                "cli": {"observation": (cli or {}).get("observation"), "phase": (cli or {}).get("phase"),
++                        "terminal_proof": (cli or {}).get("terminal_proof"), "previous_failure": (cli or {}).get("previous_failure"),
++                        "text": {lang: (cli_raw.get(lang) or {}).get("stdout") for lang in ("en", "tr")}},
++                "api_pair": [recovery.get("phase"), recovery.get("terminal_proof")] if isinstance(recovery, dict) else None,
++                "cli_pair": [cli.get("phase"), cli.get("terminal_proof")] if isinstance(cli, dict) else None,
++                "agreement": sample.get("agreement"), "update_card": sample.get("update_card"),
++                "recovery_screen": sample.get("guidance_api"), "cli_error": sample.get("cli_error"),
++                "panel_error": sample.get("panel_error")}
++
++    def bare_post(self, path: str, body: Any, identity: str | None, timeout: float = 900) -> Any:
++        """A POST as a page opened before the update sends it: the session's own headers and no request identity
++        (the Panel client adds one to every change, as the updated page does); with ``identity`` the header is sent."""
++        payload = json.dumps(body, separators=(",", ":")).encode()
++        headers = dict(self.panel_client()._headers("POST", payload))
++        if identity:
++            headers[REQUEST_ID_HEADER] = identity
++        return self.transport("POST", path, headers, payload, timeout)
++
++    def versioned_write(self, name: str, read_path: str, method: str, write_path: str, body: dict, record: dict) -> bool:
++        """Read the current version as the screen does, send the change with it, read again."""
++        before = self.api("GET", read_path, purpose=f"{name}: read before the change")
++        seen = before.json() if before.status == 200 else None
++        version = seen.get("version") if isinstance(seen, dict) else None
++        without = self.api(method, write_path, dict(body), purpose=f"{name}: the change without a version (an old page)", timeout=180)
++        refused = without.json()
++        sent = self.api(method, write_path, dict(body, version=version), purpose=f"{name}: the change with the version", timeout=180)
++        after = self.api("GET", read_path, purpose=f"{name}: read after the change")
++        seen_after = after.json() if after.status == 200 else None
++        record.update(read_http=before.status, version_before=version,
++                      without_a_version={"http": without.status, "code": refused.get("code") if isinstance(refused, dict) else None,
++                                         "reason": refused.get("reason") if isinstance(refused, dict) else None,
++                                         "error": refused.get("error") if isinstance(refused, dict) else None},
++                      with_the_version={"http": sent.status, "body": sent.json()},
++                      version_after=seen_after.get("version") if isinstance(seen_after, dict) else None,
++                      read_after=seen_after)
++        return (before.status == 200 and bool(version) and sent.status == 200
++                and record["version_after"] not in (None, version))
++
++    def post_update_facts(self, checks: dict) -> str:
++        """set3: after the verified update from the published release. (a) the ledger; (b) a guarded route without
++        and with the request identity; (c) the writes that carry a version; (d) the deferred mail work; (e) the root
++        CLI and the update card on the same terminal state."""
++        failures, unknown = [], []
++        seed = self.state["seed"]
++        domain_id, domain = seed["domain_id"], seed.get("domain") or ""
++        # (a)
++        ledger = self.schema_ledger("after-update", LEDGER_AFTER_UPDATE)
++        checks["a_ledger"] = ledger
++        if ledger["verdict"] != "as-expected":
++            (unknown if ledger["verdict"] == "inconclusive" else failures).append(f"(a) the ledger is not the released {LEDGER_AFTER_UPDATE}")
++        # (b)
++        self.set3_helper(BACKUP_READER_HELPER)
++
++        def native(mode: str, **arguments: Any) -> dict:
++            payload = base64.b64encode(json.dumps(arguments).encode()).decode()
++            return self.helper(BACKUP_READER_HELPER, mode, "--args-b64", payload, timeout=300)
++
++        def archives() -> list:
++            listed = native("read-backups", domain_id=domain_id)
++            return sorted(e["name"] for e in listed["entries"] if e["name"].endswith(".cpbak") and not e["name"].startswith("."))
++        path = f"/api/v1/domains/{domain_id}/backups"
++        guard: dict[str, Any] = {"route": "POST " + path, "body": {"type": "full"}}
++        try:
++            before, rows_before = archives(), native("read-identities").get("count")
++            bare = self.bare_post(path, {"type": "full"}, None, 120)
++            refused = bare.json() if isinstance(bare.json(), dict) else {}
++            after_bare, rows_bare = archives(), native("read-identities").get("count")
++            identity = secrets.token_hex(16)
++            sent = self.bare_post(path, {"type": "full"}, identity, 2400)
++            answered = sent.json() if isinstance(sent.json(), dict) else {}
++            after_sent = archives()
++            row = (native("read-identities", ids=[identity]).get("rows") or [None])[0]
++            translator = self.candidate_translator()
++            key = "err.REQUEST_ID_REQUIRED"
++            guard.update(
++                without_the_header={"http": bare.status, "code": refused.get("code"), "error": refused.get("error"),
++                                    "screen_text": {lang: translator.text(key, {}, language=lang) for lang in ("en", "tr")}
++                                    if key in translator.catalog["en"] else None},
++                archives=[len(before), len(after_bare), len(after_sent)], identity_rows=[rows_before, rows_bare],
++                with_the_header={"http": sent.status, "backup": (answered.get("backup") or {}).get("name"),
++                                 "code": answered.get("code"), "error": answered.get("error")},
++                new_archives=sorted(set(after_sent) - set(after_bare)),
++                row={k: (row or {}).get(k) for k in ("route", "status", "response_status", "response_retained")})
++            ok_refusal = (bare.status == 428 and refused.get("code") == "REQUEST_ID_REQUIRED"
++                          and RELOAD_SENTENCE in str(refused.get("error")) and after_bare == before and rows_bare == rows_before)
++            ok_works = (sent.status == 200 and len(guard["new_archives"]) == 1
++                        and guard["with_the_header"]["backup"] == guard["new_archives"][0] and (row or {}).get("status") == "done")
++            guard.update(refused_and_nothing_changed=ok_refusal, works_with_the_header=ok_works)
++            if not ok_refusal:
++                failures.append("(b) a guarded route without the request identity was not refused 428 with nothing changed")
++            if not ok_works:
++                failures.append("(b) the same route with the request identity did not make exactly one backup")
++        except Exception as exc:  # noqa: BLE001 - recorded; the other facts are still measured
++            guard["error"] = self.redactor.text(f"{type(exc).__name__}: {exc}")[:400]
++            unknown.append("(b) the guard could not be measured")
++        checks["b_guard"] = guard
++        # (c)
++        tokens: dict[str, Any] = {}
++        try:
++            if (seed.get("cron") or {}).get("seeded"):
++                cron: dict[str, Any] = {}
++                command = "/usr/bin/true set3-after-update"
++                ok = self.versioned_write("cron add", f"/api/v1/domains/{domain_id}/cron", "POST", f"/api/v1/domains/{domain_id}/cron",
++                                          {"schedule": "*/30 * * * *", "command": command}, cron)
++                try:
++                    listed = self.guest("sudo crontab -u " + shlex.quote(site_account_name(domain)) + " -l", timeout=40).stdout
++                    cron["native_crontab_lines_with_the_command"] = sum(1 for line in listed.splitlines() if command in line)
++                except Exception as exc:  # noqa: BLE001
++                    cron["native_crontab_error"] = type(exc).__name__
++                lines = cron.get("native_crontab_lines_with_the_command")
++                cron["ok"] = ok and (lines == 1 if lines is not None else command in json.dumps(cron.get("read_after")))
++                tokens["cron"] = cron
++            else:
++                tokens["cron"] = {"measured": False, "reason": "cron was not seeded on this baseline"}
++            if self.cell.mail_required and (seed.get("mail") or {}).get("listed"):
++                policy: dict[str, Any] = {}
++                current = self.api("GET", "/api/v1/mail/policy", purpose="mail policy: values to keep").json() or {}
++                wanted = {"message_size_mb": current.get("message_size_mb"), "dnsbl_zones": current.get("dnsbl_zones") or [],
++                          "outbound_rate_limit": 37}
++                ok = self.versioned_write("mail policy save", "/api/v1/mail/policy", "PUT", "/api/v1/mail/policy", wanted, policy)
++                try:
++                    policy["native_postconf"] = self.guest("sudo postconf -h smtpd_client_message_rate_limit", timeout=40).stdout.strip()
++                except Exception as exc:  # noqa: BLE001
++                    policy["native_postconf_error"] = type(exc).__name__
++                policy["ok"] = ok and isinstance(policy.get("read_after"), dict) and policy["read_after"].get("outbound_rate_limit") == 37
++                tokens["mail_policy"] = policy
++            else:
++                tokens["mail_policy"] = {"measured": False, "reason": "mail is not part of this cell's platform"}
++            schedule: dict[str, Any] = {}
++            url = f"/api/v1/domains/{domain_id}/backups/schedule"
++            ok = self.versioned_write("backup schedule", url, "PUT", url, {"frequency": "weekly", "backup_type": "full", "retention": 30}, schedule)
++            schedule["ok"] = ok and isinstance(schedule.get("read_after"), dict) and schedule["read_after"].get("enabled") is True
++            tokens["backup_schedule"] = schedule
++            for name, item in tokens.items():
++                if item.get("measured") is False:
++                    continue
++                if not item.get("ok"):
++                    failures.append(f"(c) {name}: the write with the version did not take effect")
++                if (item.get("without_a_version") or {}).get("code") != "SETTINGS_VERSION_REQUIRED":
++                    self.finding(f"post-update {name}: a write without a version answered "
++                                 f"{(item.get('without_a_version') or {}).get('http')} {(item.get('without_a_version') or {}).get('code')}")
++        except Exception as exc:  # noqa: BLE001
++            tokens["error"] = self.redactor.text(f"{type(exc).__name__}: {exc}")[:400]
++            unknown.append("(c) the versioned writes could not be measured")
++        checks["c_version_tokens"] = tokens
++        # (d)
++        if deferred_mail_watched(self.cell):
++            deferred = self.state.get("deferred_mail")
++            last = (deferred or {}).get("last") or {}
++            checks["d_deferred_mail"] = {"measured": True, "last": last, "completed": bool(last.get("finished")),
++                                         "source": "the deferred-mail-watch step of this cell"}
++            if not last.get("finished"):
++                unknown.append("(d) the deferred mail work was not seen completed")
++        else:
++            checks["d_deferred_mail"] = {"measured": False, "reason": "no mail stack on this platform"}
++        # (e)
++        views = self.status_views("after-update")
++        expected = ["succeeded", "update_verified"]
++        card = views.get("update_card") or {}
++        checks["e_agreement"] = {"cli_pair": views["cli_pair"], "api_pair": views["api_pair"], "expected": expected,
++                                 "agreement": views.get("agreement"), "card_state": card.get("state") or card.get("kind"),
++                                 "card": card, "cli_text": views["cli"]["text"], "recovery_screen": views.get("recovery_screen"),
++                                 "update_status": views.get("update_status")}
++        if views["cli_pair"] != expected or views["api_pair"] != expected:
++            failures.append(f"(e) the root CLI ({views['cli_pair']}) and the recovery reader ({views['api_pair']}) are not both {expected}")
++        judged = judge_update_card(views.get("update_card"), ("succeeded",))
++        checks["e_agreement"]["card_judged"] = judged
++        if judged.get("findings"):
++            failures.append("(e) the update card does not show the verified update: " + "; ".join(judged["findings"])[:300])
++        if failures:
++            raise StepFailed("; ".join(failures))
++        if unknown:
++            raise StepInconclusive("; ".join(unknown))
++        return "passed"
++
++    def post_return_facts(self, checks: dict) -> str:
++        """set3: after the automatic return to the published release. Its ledger is the released 42 again (the
++        pre-update snapshot: no ``request_identities``), and what its update card and the root CLI say is recorded."""
++        ledger = self.schema_ledger("after-return", LEDGER_AFTER_RETURN)
++        checks["ledger"] = ledger
++        views = self.status_views("after-return")
++        expected = ["recovered", "rollback_verified"]
++        checks["views"] = {"cli_pair": views["cli_pair"], "api_pair": views["api_pair"], "expected": expected,
++                           "recovery_api_http": (views.get("recovery_api") or {}).get("http"),
++                           "update_status": views.get("update_status"), "agreement": views.get("agreement"),
++                           "update_card": views.get("update_card"), "recovery_screen": views.get("recovery_screen"),
++                           "cli_text": views["cli"]["text"], "cli_previous_failure": views["cli"].get("previous_failure")}
++        check = self.api("GET", "/api/v1/panel/update/check", purpose="update check after the return")
++        version = self.api("GET", "/api/v1/panel/version", purpose="version after the return")
++        checks["offered_again"] = {"http": check.status, "body": check.json()}
++        checks["version"] = {"http": version.status, "body": version.json()}
++        database = (self.state.get("terminal") or {}).get("database")
++        checks["database_against_the_pre_update_digest"] = database
++        failures = []
++        if ledger["verdict"] == "inconclusive":
++            raise StepInconclusive("the ledger could not be read after the return")
++        if ledger["verdict"] != "as-expected":
++            failures.append(f"the ledger after the return is not the released {LEDGER_AFTER_RETURN}")
++        if views["cli_pair"] != expected:
++            failures.append(f"the root CLI does not read {expected}: {views['cli_pair']}")
++        if (views.get("recovery_api") or {}).get("http") == 200 and views["api_pair"] != expected:
++            failures.append(f"the returned Panel's recovery reader does not read {expected}: {views['api_pair']}")
++        if database not in ("equal", "equal-except-volatile"):
++            failures.append(f"the database is not the pre-update one: {database}")
++        if failures:
++            raise StepFailed("; ".join(failures))
++        return "passed"
++
+     def terminal_real_start(self, checks: dict) -> str:
+         """real-start: the paused state is the terminal observation. The candidate is installed and its
+         Panel is down; the owner's workloads must still be served. Nothing is repaired or retried."""
+@@ -5772,6 +6112,13 @@
+         self.step("terminal", self.terminal, needs=("owner-start",))
+         if deferred_mail_watched(self.cell):
+             self.step("deferred-mail-watch", self.deferred_mail_watch, needs=("owner-start",))
++        # set3: with a published baseline, the facts an owner meets after the update (good cells) or after the
++        # automatic return (rollback cells). Read after the deferred mail watch, so that nothing races it.
++        if LABEL_REF is not None and BASELINE_REFS[LABEL_REF].get("unpatched") and self.scenario() is None:
++            if self.cell.variant == "good":
++                self.step("post-update-facts", self.post_update_facts, needs=("terminal",))
++            elif self.cell.variant in ROLLBACK_VARIANTS:
++                self.step("post-return-facts", self.post_return_facts, needs=("terminal",))
+         if self.cell.variant == "mgmt-off-reboot":
+             # upd4: only after the verified good update (terminal passed); management returns even when the
+             # measurement found something, as long as it was switched off.
+--- a/deploy/e2e/release-recovery/build-upd1-artifacts.sh
++++ b/deploy/e2e/release-recovery/build-upd1-artifacts.sh
+@@ -47,7 +47,8 @@
+ if [[ ${1:-} == --baseline-ref ]]; then
+     BASELINE_REF=${2:?usage: build-upd1-artifacts.sh [--baseline-ref TAG] [SOURCE_COMMIT]}
+     shift 2
+-    [[ $BASELINE_REF == v0.1.0-alpha.80 ]] || { echo "only --baseline-ref v0.1.0-alpha.80 is supported" >&2; exit 2; }
++    [[ $BASELINE_REF == v0.1.0-alpha.80 || $BASELINE_REF == v0.1.0-alpha.81 ]] \
++        || { echo "only --baseline-ref v0.1.0-alpha.80 or v0.1.0-alpha.81 is supported" >&2; exit 2; }
+ fi
+ SOURCE=${1:-HEAD}
+ BUILD_DIST="$HERE/../dns-pair-acceptance/scripts/build-dist.sh"
+@@ -104,13 +105,24 @@
+ if [[ -n $BASELINE_REF ]]; then
+     tag_commit=$(git -C "$clone" rev-parse "${BASELINE_REF}^{commit}")
+     git -C "$clone" checkout --quiet --detach "$tag_commit"
++    if [[ $BASELINE_REF == v0.1.0-alpha.81 ]]; then
++        # set3: the published v0.1.0-alpha.81 already carries the acceptance-license seam and its guard, so the
++        # baseline is the tag's own commit: no fixture commit, no patched file. A tag without them is refused.
++        for needed in internal/licensing/acceptance_fixture.go internal/licensing/acceptance_off.go \
++                deploy/release-acceptance-license-guard.sh; do
++            git -C "$clone" cat-file -e "$tag_commit:$needed" \
++                || { echo "$BASELINE_REF lacks $needed; it cannot be built unpatched" >&2; exit 1; }
++        done
++        baseline=$tag_commit
++    else
+     python3 "$DRIVER" fixture-source --repo "$clone" --kind baseline-ref --baseline-ref "$BASELINE_REF" \
+         --source-commit "$source_commit" >&2
+     git -C "$clone" add -A -- internal/licensing cmd/panel/license.go
+     git -C "$clone" commit --quiet -m "test(fixture): upd7 baseline = published $BASELINE_REF + the D-027 acceptance-license seam only (disposable)"
+     baseline=$(git -C "$clone" rev-parse HEAD)
++    fi
+     git -C "$clone" update-ref refs/upd1/baseline "$baseline"
+-    expected=$(python3 -c 'import importlib.util,sys;s=importlib.util.spec_from_file_location("o",sys.argv[1]);m=importlib.util.module_from_spec(s);sys.modules["o"]=m;s.loader.exec_module(m);print("\n".join(m.BASELINE_REF_PATCHED))' "$DRIVER")
++    expected=$(python3 -c 'import importlib.util,sys;s=importlib.util.spec_from_file_location("o",sys.argv[1]);m=importlib.util.module_from_spec(s);sys.modules["o"]=m;s.loader.exec_module(m);print("\n".join(m.baseline_ref_patched(sys.argv[2])))' "$DRIVER" "$BASELINE_REF")
+     actual=$(git -C "$clone" diff --name-only "$tag_commit" "$baseline" | LC_ALL=C sort)
+     [[ $actual == "$expected" ]] || { echo "baseline fixture changed other files than the seam: $actual" >&2; exit 1; }
+     proof=$work/baseline-ref-proof.txt
+@@ -141,17 +153,31 @@
+     [[ $(tail -n 1 "$proof") == 0 ]] || { echo "the Agent package closure includes the licensing seam; see $proof" >&2; exit 1; }
+     build_web "$work/web-dist-baseline"
+     git -C "$clone" checkout --quiet --detach "$source_commit"
+-    good=$(commit_fixture good "test(fixture): upd7 good candidate labelled v0.1.0-alpha.81 after the published $BASELINE_REF (unpublished, disposable)" "$baseline")
++    good=$(commit_fixture good "test(fixture): upd7 good candidate labelled as the release after the published $BASELINE_REF (unpublished, disposable)" "$baseline")
+     defective=$(commit_fixture defective "test(fixture): upd7 defective candidate - migrate-only fails (unpublished, disposable)")
++    startcheck=
++    if [[ $BASELINE_REF == v0.1.0-alpha.81 ]]; then
++        # set3: the start-check candidate as in the default mode: one commit over G changing its one reviewed file.
++        git -C "$clone" checkout --quiet --detach "$good"
++        startcheck=$(commit_fixture start-check "test(fixture): set3 start-check candidate - shared panel TLS preparation fails (unpublished, disposable)")
++        [[ $(git -C "$clone" diff --name-only "$good" "$startcheck") == cmd/panel/server_lifecycle.go ]] \
++            || { echo "start-check fixture changed more than cmd/panel/server_lifecycle.go" >&2; exit 1; }
++        git -C "$clone" checkout --quiet --detach "$defective"
++    fi
+     build_web "$work/web-dist-candidate"
+     [[ -z $(git -C "$clone" diff --stat "$source_commit" "$defective" -- web) ]] || { echo "fixture commit changed web/" >&2; exit 1; }
+     use_web "$work/web-dist-baseline"
+     b_json=$(build "$baseline" "$BASELINE_REF")
+     use_web "$work/web-dist-candidate"
+-    g_json=$(build "$good" v0.1.0-alpha.81)
+-    d_json=$(build "$defective" v0.1.0-alpha.81)
+-    s_json= r_json= startcheck= realstart=
+-    b_seq=80 c_seq=81 b_parent=$tag_commit
++    if [[ $BASELINE_REF == v0.1.0-alpha.81 ]]; then
++        c_version=v0.1.0-alpha.82 b_seq=81 c_seq=82 b_parent=
++    else
++        c_version=v0.1.0-alpha.81 b_seq=80 c_seq=81 b_parent=$tag_commit
++    fi
++    g_json=$(build "$good" "$c_version")
++    d_json=$(build "$defective" "$c_version")
++    s_json= r_json= realstart=
++    [[ -z $startcheck ]] || s_json=$(build "$startcheck" "$c_version")
+ else
+ baseline=$(commit_fixture baseline "test(fixture): upd1 baseline labelled v0.1.0-alpha.81 (unpublished, disposable)")
+ good=$(commit_fixture good "test(fixture): upd1 good candidate labelled v0.1.0-alpha.82 (unpublished, disposable)" "$baseline")
+@@ -220,12 +246,14 @@
+ if ref:
+     spec = importlib.util.spec_from_file_location("upd7_driver", driver)
+     module = importlib.util.module_from_spec(spec); sys.modules["upd7_driver"] = module; spec.loader.exec_module(module)
+-    document["baseline_ref"] = {"ref": ref, "tag_commit": tag, "patched_files": list(module.BASELINE_REF_PATCHED),
+-                                "proof": proof}
+-    document["provenance"] = (f"baseline: the published {ref} tree ({tag}) plus the D-027 acceptance-license seam only; "
+-                              "candidates: unpublished disposable fixture commits over the source labelled "
+-                              "v0.1.0-alpha.81; acceptance-license panels; signed only by the per-lab fixture key at "
+-                              "run time; not a release")
++    patched = list(module.baseline_ref_patched(ref))
++    document["baseline_ref"] = {"ref": ref, "tag_commit": tag, "patched_files": patched, "proof": proof}
++    document["provenance"] = (f"baseline: the published {ref} tree ({tag}) "
++                              + ("plus the D-027 acceptance-license seam only; " if patched else
++                                 "unchanged (the tag commit itself; it carries the acceptance-license seam); ")
++                              + "candidates: unpublished disposable fixture commits over the source labelled "
++                              f"{document['good']['version']}; acceptance-license panels; signed only by the per-lab "
++                              "fixture key at run time; not a release")
+ with open(out, "x") as handle:
+     json.dump(document, handle, indent=2, sort_keys=True)
+     handle.write("\n")
+--- a/deploy/e2e/release-recovery/settings_writes_trial.py
++++ b/deploy/e2e/release-recovery/settings_writes_trial.py
+@@ -15,6 +15,11 @@
+   S7 owner, group and mode of every file the Panel wrote
+   S8 (set2) service actions on the real units: start, stop, restart and reload through the Services page's route
+ 
++set3 (2026-10-12): S8 follows the second round of corrections: a Reload of a stopped Postfix or Dovecot answers
++409 ``not_running``; the PostgreSQL reload hook answers ``reload_reread`` (and a hook that fails before it signals the
++server ``reload_not_reread``); Stop of Postfix with a refused main.cf answers success when the master is gone; no
++service action is refused ``server_setup_busy`` while the setup waits at ``access_dns``. The cells ``set3-*`` name it.
++
+ set2 (2026-10-11): the expectations of S1 f, S2 c/f/g/h, S4 g, S5 c and S6 follow the corrections the product made
+ after the first native run (set1), and the cells ``set2-*`` name that run. The ``set1-*`` names stay valid.
+ 
+@@ -98,7 +103,15 @@
+     "set2-debian13": SettingsCell("set2-debian13", "debian13", "web_mail", MAIL_PRESET + ("postgresql",), True),
+     "set2-ubuntu": SettingsCell("set2-ubuntu", "ubuntu", "web_mail", MAIL_PRESET + ("postgresql",), True),
+     "set2-arch": SettingsCell("set2-arch", "arch", "web", WEB_PRESET + ("postgresql",), False),
++    # set3: the same guests and profiles, measured after the corrections of 2026-10-11 (P3, P3b, O11 in S8).
++    "set3-debian13": SettingsCell("set3-debian13", "debian13", "web_mail", MAIL_PRESET + ("postgresql",), True),
++    "set3-ubuntu": SettingsCell("set3-ubuntu", "ubuntu", "web_mail", MAIL_PRESET + ("postgresql",), True),
++    "set3-arch": SettingsCell("set3-arch", "arch", "web", WEB_PRESET + ("postgresql",), False),
+ }
++# set3: what the corrections of 2026-10-11 answer (cmd/panel/service_action_outcome.go, internal/transport/rpc.go).
++NOT_RUNNING = (409, "SERVICE_ACTION_FAILED", "not_running")
++RELOAD_REREAD = (502, "SERVICE_ACTION_FAILED", "reload_reread")
++RELOAD_NOT_REREAD = (502, "SERVICE_ACTION_FAILED", "reload_not_reread")
+ 
+ SECTIONS = (
+     ("S1-cron", "scheduled tasks: the owner's crontab", False),
+@@ -1780,7 +1793,14 @@
+         for service in order:
+             for action, situation in (("start", "already running"), ("reload", ""), ("restart", ""), ("stop", ""),
+                                       ("reload", "while stopped"), ("start", "")):
+-                self.service_action(service, action, situation)
++                # set3 (P3 b): a Reload of a stopped Postfix or Dovecot is an unmet prerequisite, answered 409.
++                stopped_mail = situation == "while stopped" and service in ("postfix", "dovecot")
++                done = self.service_action(service, action, situation, NOT_RUNNING if stopped_mail else None)
++                if stopped_mail:
++                    self.check(f"{service} (reload while stopped): the daemon was stopped before and is stopped after; nothing was started",
++                               not done["daemon_before"]["running"] and not done["daemon_after"]["running"],
++                               {"before": done["daemon_before"]["running"], "after": done["daemon_after"]["running"],
++                                "vars": done.get("vars")})
+             end = self.daemon(service, self.service_state(service + "-healthy-end", service))
+             self.check(f"{service}: runs again after the healthy sequence", end["running"], end)
+ 
+@@ -1795,7 +1815,13 @@
+                            True if refused["check"].get("returncode") not in (0, None) else None, refused["check"])
+                 self.service_action("postfix", "reload", situation, (502, "SERVICE_ACTION_FAILED", "check"))
+                 self.service_action("postfix", "restart", situation, (502, "SERVICE_ACTION_FAILED", "check"))
+-                self.service_action("postfix", "stop", situation)
++                stopped = self.service_action("postfix", "stop", situation)
++                # set3 (P3b, was O8): Stop is judged by the master's process, so it is answered as done.
++                self.check("postfix (refused configuration): Stop answers success and the master is gone",
++                           stopped["status"] == 200 and stopped["said"] == "success" and not stopped["daemon_after"]["running"],
++                           {k: stopped[k] for k in ("status", "code", "reason", "answer", "vars")}
++                           | {"master_running_after": stopped["daemon_after"]["running"],
++                              "units_after": stopped["daemon_after"]["units"]})
+                 self.service_action("postfix", "start", situation, (502, "SERVICE_ACTION_FAILED", "check"))
+             finally:
+                 self.owner("postfix-typo-removed", "owner-edit", path=MAIN_CF, content_b64=b64(base_text))
+@@ -1809,8 +1835,12 @@
+         hook = self.owner("postgresql-reload-hook", "owner-reload-hook", action="apply", unit=instance)
+         self.current["reload_hook"] = {"unit": instance, "exec_reload": hook.get("exec_reload")}
+         try:
+-            failed = self.service_action("postgresql", "reload", situation)
++            failed = self.service_action("postgresql", "reload", situation, RELOAD_REREAD)
+             moved = "pg_conf_load_time() moved" in failed["reload_evidence"]
++            self.check("postgresql (reload hook): the server did re-read its files natively (pg_conf_load_time() moved, "
++                       "same postmaster)", moved and failed["daemon_before"]["pid"] == failed["daemon_after"]["pid"],
++                       {"conf_load_time": [failed["daemon_before"]["conf_load_time"], failed["daemon_after"]["conf_load_time"]],
++                        "pid": [failed["daemon_before"]["pid"], failed["daemon_after"]["pid"]]})
+             detail = str((failed.get("vars") or {}).get("detail") or "") + " " + str(failed["answer"].get("error") or "")
+             self.current["reload_hook"].update(server_reread_its_files=moved, answer_detail=detail.strip(),
+                                                reload_result=failed["daemon_after"]["reload_result"])
+@@ -1822,6 +1852,27 @@
+             self.service_action("postgresql", "restart", situation)
+         finally:
+             self.owner("postgresql-reload-hook-removed", "owner-reload-hook", action="restore", unit=instance)
++        # set3 (P3 a, the other reading): a hook that fails BEFORE it signals the server. The unit reports the reload
++        # as failed and the server was never signalled, so it did not re-read its files.
++        situation = "the owner's reload hook fails before it signals the server"
++        hook = self.owner("postgresql-reload-hook-before-signal", "owner-reload-hook", action="apply", unit=instance,
++                          variant="fail-before-signal")
++        self.current["reload_hook_before_signal"] = {"unit": instance, "exec_reload": hook.get("exec_reload"),
++                                                     "script": hook.get("script_text")}
++        try:
++            unread = self.service_action("postgresql", "reload", situation, RELOAD_NOT_REREAD)
++            still = unread["daemon_before"]["conf_load_time"] == unread["daemon_after"]["conf_load_time"] \
++                and bool(unread["daemon_after"]["conf_load_time"])
++            self.current["reload_hook_before_signal"].update(
++                server_did_not_reread=still, reload_result=unread["daemon_after"]["reload_result"],
++                answer_detail=str((unread.get("vars") or {}).get("detail") or ""))
++            self.check("postgresql (hook fails before the signal): natively the server did not re-read its files "
++                       "(pg_conf_load_time() unchanged, same postmaster)",
++                       still and unread["daemon_before"]["pid"] == unread["daemon_after"]["pid"],
++                       {"conf_load_time": [unread["daemon_before"]["conf_load_time"], unread["daemon_after"]["conf_load_time"]],
++                        "pid": [unread["daemon_before"]["pid"], unread["daemon_after"]["pid"]]})
++        finally:
++            self.owner("postgresql-reload-hook-before-signal-removed", "owner-reload-hook", action="restore", unit=instance)
+         self.service_action("postgresql", "reload", "after the hook was removed")
+ 
+         # PostgreSQL with a postgresql.conf the server refuses at start
+@@ -1848,6 +1899,17 @@
+                           "neither Start nor Restart on the Services page brought it back", now)
+             self.check("postgresql: answers again at the end", now["running"], now)
+ 
++        # set3 (O11): while the setup waits at access_dns no service action is refused `server_setup_busy`.
++        actions = self.current.get("actions") or []
++        refusals = [dict(item, service=a["service"], action=a["action"], situation=a["situation"])
++                    for a in actions for item in a["refused_while_busy"]]
++        waiting = self.state.get("setup_waiting") or {}
++        self.current["busy_refusals"] = {"actions": len(actions), "refusals": refusals,
++                                         "server_setup_busy": sum(1 for r in refusals if r.get("code") == "server_setup_busy"),
++                                         "setup_waiting": {k: waiting.get(k) for k in ("phase", "code", "status") if k in waiting}}
++        self.check("no service action of this section was refused `server_setup_busy` while the setup waits at access_dns",
++                   self.current["busy_refusals"]["server_setup_busy"] == 0, self.current["busy_refusals"])
++
+     # -- collect and result -------------------------------------------------------------
+ 
+     def collect(self, checks: dict) -> str:
+--- a/deploy/e2e/release-recovery/guest_settings_native.py
++++ b/deploy/e2e/release-recovery/guest_settings_native.py
+@@ -582,13 +582,21 @@
+             raise Refused("a reload hook is already applied")
+         made_directory = not directory.exists()
+         directory.mkdir(mode=0o755, exist_ok=True)
+-        HOOK_SCRIPT.write_text("#!/bin/sh\n# owner hook: tell PostgreSQL to re-read its files, then reload the pooler\n"
+-                               "kill -HUP \"$MAINPID\" || exit 1\nexec /usr/bin/systemctl reload " + HOOK_POOLER + "\n")
++        if args.get("variant") == "fail-before-signal":
++            # set3: the owner's hook reloads the pooler FIRST and signals the server only when that worked, so a
++            # failing pooler reload leaves the server unsignalled (it does not re-read its files).
++            HOOK_SCRIPT.write_text("#!/bin/sh\n# owner hook: reload the pooler first, then tell PostgreSQL to re-read its files\n"
++                                   "/usr/bin/systemctl reload " + HOOK_POOLER + " || exit 1\nexec kill -HUP \"$MAINPID\"\n")
++        else:
++            HOOK_SCRIPT.write_text("#!/bin/sh\n# owner hook: tell PostgreSQL to re-read its files, then reload the pooler\n"
++                                   "kill -HUP \"$MAINPID\" || exit 1\nexec /usr/bin/systemctl reload " + HOOK_POOLER + "\n")
+         os.chmod(HOOK_SCRIPT, 0o755)
+         dropin.write_text("[Service]\nExecReload=\nExecReload=" + str(HOOK_SCRIPT) + "\n")
+         record.write_text(json.dumps({"unit": unit, "dropin": str(dropin), "made_directory": made_directory}))
+         reloaded = run(["systemctl", "daemon-reload"], timeout=60)
+-        return {"action": "owner-reload-hook", "applied": {"unit": unit, "dropin": str(dropin), "script": str(HOOK_SCRIPT)},
++        return {"action": "owner-reload-hook", "variant": args.get("variant") or "signal-then-fail",
++                "script_text": HOOK_SCRIPT.read_text(),
++                "applied": {"unit": unit, "dropin": str(dropin), "script": str(HOOK_SCRIPT)},
+                 "daemon_reload": reloaded, "exec_reload": run(["systemctl", "show", unit, "-p", "ExecReload"]).get("stdout", ""),
+                 "at": utc()}
+     done = json.loads(record.read_text())
+--- a/deploy/e2e/release-recovery/request_identity_trial.py
++++ b/deploy/e2e/release-recovery/request_identity_trial.py
+@@ -22,6 +22,13 @@
+ ``owner-*`` modes and is recorded as such. The isolated lab has no certificate authority: for the Let's Encrypt route
+ only the guard is measured. No update is started. Every result carries ``native_evidence: false``.
+ 
++set3 (2026-10-12), the cells ``rid3-*``: the expectations follow the corrections of 2026-10-11. The import preview and
++every stored answer hold no hash-shaped value and an imported mailbox authenticates with its original password (S1);
++an archive with the directory member ``homedir/public_html/`` imports completely, a failed files step answers ``200``
++``partial`` with truthful lists, hostile members are refused (P4); a PHP site is created, served by PHP-FPM and
++deleted (P5); a certbot run that cannot reach the authority answers ``502 CERTIFICATE_ISSUE_FAILED`` (O9); a sent
++database password is not echoed and its answer is replayed (O10); the MariaDB version shown is the server's (O14).
++
+   request_identity_trial.py plan --cell rid-debian13 --artifacts A.json --work-root /var/tmp/cp-release-drill-X [--dry-run]
+   request_identity_trial.py run  --cell rid-debian13 --artifacts A.json --work-root /var/tmp/cp-release-drill-X --execute
+ """
+@@ -81,7 +88,9 @@
+     ("C4-backup", "manual backup"),
+     ("C5-letsencrypt", "Let's Encrypt reissue: the guard only"),
+     ("C6-vpn-peer", "VPN peer"),
++    ("C6b-php-site", "a PHP site: created, served by PHP-FPM through the web server, deleted (set3, P5)"),
+     ("C7-import", "cPanel import"),
++    ("C7b-import-answers", "the imported mailbox's password, a failed files step, hostile archive members (set3, S1 and P4)"),
+     ("C8-restore", "domain restore, with a dropped connection and a Panel restart"),
+     ("C9-identities", "the request_identities rows"),
+ )
+@@ -89,7 +98,28 @@
+     "rid-debian13": sw.SettingsCell("rid-debian13", "debian13", "web_mail", sw.MAIL_PRESET + ("postgresql",), True),
+     "rid-ubuntu": sw.SettingsCell("rid-ubuntu", "ubuntu", "web_mail", sw.MAIL_PRESET + ("postgresql",), True),
+     "rid-arch": sw.SettingsCell("rid-arch", "arch", "web", sw.WEB_PRESET + ("postgresql",), False),
++    # set3: the same guests and profiles, measured after the corrections of 2026-10-11.
++    "rid3-debian13": sw.SettingsCell("rid3-debian13", "debian13", "web_mail", sw.MAIL_PRESET + ("postgresql",), True),
++    "rid3-ubuntu": sw.SettingsCell("rid3-ubuntu", "ubuntu", "web_mail", sw.MAIL_PRESET + ("postgresql",), True),
++    "rid3-arch": sw.SettingsCell("rid3-arch", "arch", "web", sw.WEB_PRESET + ("postgresql",), False),
+ }
++PHP_SITE_DOMAIN = "set3-php.test"
++PHP_PROBE_PATH = "/set3-probe.php"
++PHP_PROBE_MARK = "set3-php-executed:42:"
++HOSTILE_KINDS = ("dotdot", "absolute", "symlink")
++MAILBOX_KEYS = ["domain", "has_password", "quota_mb", "user"]     # cmd/panel/import_handlers.go importPreviewMailbox
++
++
++def version_number(text: Any) -> str | None:
++    """The dotted number a version string starts its first number with (10.11.14 of 10.11.14-MariaDB-0ubuntu0...)."""
++    found = re.search(r"\d+\.\d+(?:\.\d+)?", str(text or ""))
++    return found.group(0) if found else None
++
++
++def partial_lists(steps: list) -> tuple:
++    """The `imported` and `not_imported` lists an import answer must carry for its steps (finalize is not a part)."""
++    parts = [s for s in steps or [] if isinstance(s, dict) and s.get("step") != "finalize"]
++    return [s.get("step") for s in parts if s.get("ok")], [s.get("step") for s in parts if not s.get("ok")]
+ 
+ 
+ # ---------------------------------------------------------------------------
+@@ -213,6 +243,8 @@
+         self.sequence = 0
+         self.identities: dict[str, str] = {}      # identity -> what it was used for
+         self.times: dict[str, dict] = {}
++        self.answer_shapes: list[dict] = []       # set3: per guarded answer, hash-shaped values and echoed sent secrets
++        self.import_password: str | None = None   # set3: the imported mailboxes' original password (never recorded)
+ 
+     # -- helpers ------------------------------------------------------------------------------
+ 
+@@ -307,6 +339,15 @@
+                                                                    "cache-control")}
+         digest = hashlib.sha256(value.body).hexdigest()
+         self.raw_digests[entry["n"]] = digest
++        # set3: counted on the raw bytes before anything is redacted; only the counts are kept.
++        secret_key = self.p["redaction"].secret_key
++        sent = [inner for key, inner in body.items() if isinstance(inner, str) and inner and secret_key(key)] \
++            if isinstance(body, dict) else []
++        entry["hash_shaped_values_in_the_raw_answer"] = base.hash_shaped_count(value.body)
++        entry["sent_secret_values_in_the_raw_answer"] = sum(1 for item in sent if item.encode() in value.body)
++        self.answer_shapes.append({"n": entry["n"], "label": label, "path": path,
++                                   "hash_shaped": entry["hash_shaped_values_in_the_raw_answer"],
++                                   "sent_secret_echoed": entry["sent_secret_values_in_the_raw_answer"]})
+         entry.update(outcome="answer", status=value.status, seconds=round(value.elapsed, 3), headers=headers,
+                      replayed=next((v for k, v in value.headers if k.lower() == REPLAYED.lower()), None),
+                      json=self.scrub(parsed), text=None if parsed is not None else self.redactor.text(value.text[:600]),
+@@ -497,6 +538,7 @@
+         self.current["database_servers"] = [{k: s.get(k) for k in ("id", "type_name", "name", "version", "host", "port", "status")}
+                                             for s in listed]
+         self.check("the Databases page lists a MariaDB and a PostgreSQL server", {"mariadb", "postgresql"} <= set(by_type), by_type)
++        self.engine_versions("C0, as the engines were registered", listed)
+         isolated = self.snap2("lab-isolate-acme", "lab-isolate-acme", action="apply")
+         self.current["acme_isolation"] = {"resolves": isolated.get("resolves"),
+                                           "what": "lab isolation: the two Let's Encrypt directory names resolve to this "
+@@ -511,6 +553,28 @@
+         self.check("request_identities exists and is empty before the first guarded request",
+                    identities.get("count") == 0 and "request_sha256" in (identities.get("columns") or []), identities.get("states"))
+         self.current["units_before"] = self.snap2("units-before", "read-units")["units"]
++        self.state["identity_log_since"] = int(self.native2("read-clock")["epoch"])
++
++    def engine_versions(self, when: str, listed: list | None = None) -> None:
++        """set3 (O14): the version the Databases page shows for each engine beside what the engine itself reports."""
++        if listed is None:
++            servers = self.call(f"database servers (the Databases page): {when}", "GET", "/api/v1/database-servers")
++            listed = servers["_parsed"] if isinstance(servers["_parsed"], list) else []
++        tag = re.sub(r"[^a-z0-9]+", "-", when.lower()).strip("-")[:40]
++        native = self.snap2("engine-versions-" + tag, "read-engine-versions")
++        shown = {str(s.get("type_name")).lower(): s.get("version") for s in listed}
++        maria, postgres = native["mariadb"], native["postgresql"]
++        record = {"when": when, "shown": shown, "mariadb_select_version": maria["select_version"],
++                  "mariadbd_version_line": maria["server_program_version"], "mariadb_client_version_line": maria["client_program_version"],
++                  "postgresql_show_server_version": postgres["show_server_version"], "os": native.get("os_release"),
++                  "mariadb_shown_is_exactly_select_version": shown.get("mariadb") == maria["select_version"]}
++        self.current.setdefault("engine_versions", []).append(record)
++        self.check(f"O14 ({when}): the MariaDB version the Databases page shows is the server's own",
++                   bool(version_number(maria["select_version"])) and "VERSION" not in str(shown.get("mariadb"))
++                   and version_number(shown.get("mariadb")) == version_number(maria["select_version"]), record)
++        self.check(f"O14 ({when}): the PostgreSQL version shown is the server's own",
++                   bool(version_number(postgres["show_server_version"]))
++                   and version_number(shown.get("postgresql")) == version_number(postgres["show_server_version"]), record)
+ 
+     # -- C1, C3: databases ------------------------------------------------------------------------------
+ 
+@@ -568,6 +632,8 @@
+ 
+     def c3_server_databases(self) -> None:
+         servers = self.state.get("database_servers") or {}
++        # O14: C2 provisioned the Panel's account on each engine again; the engine is asked for its version then.
++        self.engine_versions("C3, after the Panel's account was provisioned again")
+         for engine in ("mariadb", "postgresql"):
+             route = "server-database-" + engine
+             server_id = servers.get(engine)
+@@ -587,19 +653,30 @@
+             self.current.setdefault("who_chose_the_database_users_pw", {})[engine] =                 "an existing database user is given access: the answer carries no password and is kept" if existing                 else "a new user without a password: the Panel mints one and shows it once (the answer is not kept)"
+             self.suite(route, path, bodies, self.database_effect(engine, lambda r, s=server_id: r.get("server_id") == s),
+                        self.one_database, retained=bool(existing), timeout=900)
+-            if engine == "postgresql":
+-                # A new user with a password the owner sent: recorded, with its replay.
+-                sent = {"database_name": "srvsent", "new_username": "srvsentu", "new_password": self.password()}
+-                identity = self._own_identity(route + " (a password the owner sent)")
+-                first = self.post(f"{route}: a new user with a password the owner sent", path, sent, identity, 900)
+-                again = self.post(f"{route}: the same request again", path, sent, identity, 900)
+-                carried = isinstance(first.get("_parsed"), dict) and "password" in first["_parsed"]
+-                self.current["sent_password"] = {"first": brief(first), "answer_carries_the_password_field": carried,
+-                                                 "replay": brief(again)}
+-                self.check("a database created with a password the owner sent: the answer carries that password, so it is "
+-                           "not kept and the replay is the status-only refusal",
+-                           first.get("status") == 200 and carried and again.get("status") == 409
+-                           and answer_code(again) == "REQUEST_COMPLETED_RESULT_NOT_RETAINED", self.current["sent_password"])
++            # set3 (O10): a new user with a password the owner sent. The answer does not send it back, so it is kept
++            # and the replay is that answer byte for byte.
++            sent = {"database_name": "srvsent", "new_username": "srvsentu", "new_password": self.password()}
++            identity = self._own_identity(route + " (a password the owner sent)")
++            before = self.database_effect(engine, lambda r, s=server_id: r.get("server_id") == s)(route + "-sent-before")
++            first = self.post(f"{route}: a new user with a password the owner sent", path, sent, identity, 900)
++            again = self.post(f"{route}: the same request again", path, sent, identity, 900)
++            after = self.database_effect(engine, lambda r, s=server_id: r.get("server_id") == s)(route + "-sent-after")
++            parsed = first.get("_parsed") if isinstance(first.get("_parsed"), dict) else {}
++            record = {"first": brief(first), "answer_keys": sorted(parsed), "answer_carries_a_password_field": "password" in parsed,
++                      "password_set": parsed.get("password_set"),
++                      "sent_value_occurs_in_the_raw_answer": first.get("sent_secret_values_in_the_raw_answer"),
++                      "replay": brief(again), "replay_sent_value_occurs": again.get("sent_secret_values_in_the_raw_answer"),
++                      "same_bytes": self.raw_digests.get(first["n"]) is not None
++                      and self.raw_digests.get(first["n"]) == self.raw_digests.get(again.get("n")),
++                      "new_on_engine": one_new(before["fp"]["on_engine"], after["fp"]["on_engine"])}
++            self.current.setdefault("sent_password", {})[engine] = record
++            self.check(f"O10 ({engine}): a database created with a password the owner sent: the answer does not echo it "
++                       "(no `password` field, `password_set: true`, the value is not in the answer's bytes)",
++                       first.get("status") == 200 and not record["answer_carries_a_password_field"]
++                       and parsed.get("password_set") is True and record["sent_value_occurs_in_the_raw_answer"] == 0, record)
++            self.check(f"O10 ({engine}): its replay is the first answer byte for byte, marked as a replay, and one database was created",
++                       again.get("status") == 200 and again.get("replayed") == "1" and record["same_bytes"]
++                       and len(record["new_on_engine"]) == 1 and record["new_on_engine"][0] == parsed.get("name"), record)   # H40
+ 
+     # -- C2: the Panel's own account ---------------------------------------------------------------------
+ 
+@@ -750,6 +827,14 @@
+                   "route's answer without ACME is recorded and only the guard is judged", self.current["answer_without_acme"])
+         self.check("no certificate was recorded for the domain", done["effects"]["ii"]["fp"]["certificates"] == 0,
+                    done["effects"]["ii"]["fp"])
++        # set3 (O9): the authority is unreachable from this guest (its names resolve to loopback): a typed answer.
++        parsed = first.get("_parsed") if isinstance(first.get("_parsed"), dict) else {}
++        self.current["certificate_failure"] = {"status": first.get("status"), "code": parsed.get("code"), "reason": parsed.get("reason"),
++                                               "error": parsed.get("error"), "vars": parsed.get("vars"),
++                                               "texts": first.get("catalogue_texts"), "one_entry_answer": brief(measured)}
++        self.check("O9: with the certificate authority unreachable the answer is 502 CERTIFICATE_ISSUE_FAILED, reason "
++                   "authority_unreachable", first.get("status") == 502 and parsed.get("code") == "CERTIFICATE_ISSUE_FAILED"
++                   and parsed.get("reason") == "authority_unreachable", self.current["certificate_failure"])
+ 
+     # -- C6: VPN peer ------------------------------------------------------------------------------------------
+ 
+@@ -836,7 +921,9 @@
+                        "forwardings": len(native["email_forwardings"]),
+                        "database_on_engine": fixture["database"] in engines["mariadb"]["databases"],
+                        "database_row": [d.get("name") for d in native["databases_v2"]], "rows": table.get("rows")},
+-                "docroot": docroot, "site_account": native.get("site_account")}
++                "docroot": docroot, "site_account": native.get("site_account"), "escapes": native.get("escapes"),
++                "site_home_entries": native.get("site_home_entries"), "file_list": docroot.get("file_list"),
++                "non_regular": docroot.get("non_regular")}
+ 
+     def import_complete(self, fixture: dict, state: dict, answer: dict | None) -> tuple:
+         fp = state["fp"]
+@@ -844,44 +931,38 @@
+         steps = parsed.get("steps") or []
+         expected_files = 2 + (1 if fixture["megabytes"] else 0)
+         mail_ok = (not self.settings.mail) or fp["mailboxes"] == ["info@" + fixture["domain"]]
++        # set3 (P4): the document root holds exactly the archive's site files (names, sizes, digests).
++        same_files = state.get("file_list") == fixture.get("docroot_expected") and not state.get("non_regular")
++        answered = answer is None or ((answer or {}).get("status") == 200 and parsed.get("status") == "active")
+         detail = {"native": fp, "expected_files": expected_files, "expected_rows": str(IMPORT_ROWS),
+                   "answer_status": (answer or {}).get("status"), "import_status": parsed.get("status"),
++                  "docroot_files_equal_the_archives": same_files, "answered_200_active": answered,
+                   "steps": [{k: s.get(k) for k in ("step", "ok", "code")} for s in steps]}
+-        return (fp["domain_row"] and fp["status"] == "active" and fp["files"] == expected_files and mail_ok
++        return (same_files and answered and fp["domain_row"] and fp["status"] == "active" and fp["files"] == expected_files and mail_ok
+                 and fp["database_on_engine"] and fp["database_row"] == [fixture["database"]] and fp["rows"] == str(IMPORT_ROWS)), detail
+ 
+     def c7_import(self) -> None:
+         route = "import"
+         subscription_id = self.state.get("subscription_id")
+         fixtures = {}
++        # set3 (S1): every archive's mailbox carries the crypt hash of one password the lab knows. The password is
++        # registered with the redactor and never written; its hash is made on the guest and never leaves it.
++        self.import_password = self.password()
++        self.redactor.register(base64.b64encode(self.import_password.encode()).decode())
+         for key, megabytes, sleep in (("i", 0, 0), ("ii", 0, 0), ("v", 16, IMPORT_DROP_SLEEP), ("tar", 0, 0)):
+             tag = {"i": "seq", "ii": "con", "v": "drop", "tar": "tar"}[key] + IMPORT_SUFFIX
+-            made = self.owner2("cpmove-fixture-" + tag, "owner-cpmove-fixture", domain=f"set2-import-{tag}.test",
+-                               user="s2imp" + tag, database="s2imp" + tag + "_app", megabytes=megabytes, sleep_seconds=sleep,
+-                               rows=IMPORT_ROWS, public_html_directory_member=key == "tar")
+-            fixtures[key] = {k: made.get(k) for k in ("path", "bytes", "sha256", "domain", "user", "database", "members",
+-                                                      "public_html_directory_member")}
+-            fixtures[key].update(megabytes=megabytes, sleep_seconds=sleep)
++            fixtures[key] = self.import_fixture(tag, f"set2-import-{tag}.test", "s2imp" + tag, megabytes, sleep)
+         self.current["fixtures"] = fixtures
++        self.state["import_fixtures"] = fixtures
+         self.note("no sample cPanel archive exists in the repository, so the lab built a minimal one from the rules of the "
+                   "import parser (cmd/agent/cpmove_rpc.go): account file, public_html, one mailbox, one forwarder, one "
+                   "database dump; the dropped import's dump ends with DO SLEEP so that the import lasts long enough to drop. "
+-                  "The archives of the arrivals i, ii and v leave out the one directory member `homedir/public_html/` "
+-                  "(H34); the archive `tar` holds it")
+-
+-        def body(fixture: dict, **changes: Any) -> dict:
+-            value = {"path": fixture["path"], "subscription_id": subscription_id, "domain": fixture["domain"], "do_files": True,
+-                     "do_mail": self.settings.mail, "do_dns": False, "do_databases": True}
+-            value.update(changes)
+-            return value
++                  "set3: every archive holds the directory member `homedir/public_html/` as tar writes it (the import "
++                  "now takes it, P4), and the mailbox's shadow entry is the sha512-crypt hash of a password the lab knows")
++        body = self.import_body
+ 
+         for key in ("i", "ii", "v", "tar"):
+-            preview = self.call(f"C7 inspect the archive of {fixtures[key]['domain']} (ImportPage preview)", "POST",
+-                                "/api/v1/import/cpanel/inspect", {"path": fixtures[key]["path"]}, timeout=300)
+-            seen = preview["_parsed"] if isinstance(preview["_parsed"], dict) else {}
+-            self.check(f"the preview of the {key} archive names its domain, its mailbox and its database",
+-                       preview["status"] == 200 and fixtures[key]["domain"] in (seen.get("domains") or seen.get("Domains") or [])
+-                       and bool(seen.get("databases") or seen.get("Databases")), preview.get("answer") or sorted(seen))
++            self.preview(key, fixtures[key])
+ 
+         # H34 (set2 run-a): an archive that holds the directory member `homedir/public_html/` the way tar writes an archive
+         # of a directory. One request with an identity of its own; what the import does with it is recorded and judged.
+@@ -892,8 +973,14 @@
+         files_step = next((s for s in parsed.get("steps") or [] if s.get("step") == "files"), {})
+         self.current["archive_as_tar_writes_it"] = {"status": whole.get("status"), "import_status": parsed.get("status"),
+                                                     "steps": parsed.get("steps"), "native": state["fp"]}
+-        self.check("an archive that holds the directory member `homedir/public_html/` as tar writes it has its site files imported",
+-                   files_step.get("ok") is True and state["fp"]["files"] == 2, self.current["archive_as_tar_writes_it"])
++        self.current["archive_as_tar_writes_it"].update(
++            docroot_files=state.get("file_list"), archive_files=fixtures["tar"]["docroot_expected"],
++            imported=parsed.get("imported"), not_imported=parsed.get("not_imported"))
++        self.check("P4: an archive that holds the directory member `homedir/public_html/` as tar writes it imports completely "
++                   "(200, active; the document root's files equal the archive's)",
++                   whole.get("status") == 200 and parsed.get("status") == "active" and files_step.get("ok") is True
++                   and state.get("file_list") == fixtures["tar"]["docroot_expected"] and not state.get("non_regular")
++                   and not parsed.get("not_imported"), self.current["archive_as_tar_writes_it"])
+ 
+         # The generic arrivals use two archives: the sequential identity imports one domain, the concurrent identity another.
+         current = {"fixture": fixtures["i"]}
+@@ -954,6 +1041,207 @@
+                    {"replay": brief(replay), "import_status": parsed.get("status"), "stored_sha256": (row.get("body") or {}).get("sha256"),
+                     "replay_sha256": self.raw_digests.get(replay["n"]), "unchanged": again["fp"] == after["fp"]})
+ 
++    # -- set3: import helpers, C6b and C7b ------------------------------------------------------------------------
++
++    def import_fixture(self, tag: str, domain: str, user: str, megabytes: int = 0, sleep: int = 0, hostile: str | None = None) -> dict:
++        made = self.owner2("cpmove-fixture-" + tag, "owner-cpmove-fixture", domain=domain, user=user, database=user + "_app",
++                           megabytes=megabytes, sleep_seconds=sleep, rows=IMPORT_ROWS, public_html_directory_member=True,
++                           hostile=hostile, password_b64=base64.b64encode((self.import_password or "").encode()).decode()
++                           if self.import_password else None)
++        fixture = {k: made.get(k) for k in ("path", "bytes", "sha256", "domain", "user", "database", "members",
++                                            "public_html_directory_member", "hostile", "hostile_members", "docroot_expected",
++                                            "mailbox_shadow")}
++        fixture.update(megabytes=megabytes, sleep_seconds=sleep)
++        return fixture
++
++    def import_body(self, fixture: dict, **changes: Any) -> dict:
++        value = {"path": fixture["path"], "subscription_id": self.state.get("subscription_id"), "domain": fixture["domain"],
++                 "do_files": True, "do_mail": self.settings.mail, "do_dns": False, "do_databases": True}
++        value.update(changes)
++        return value
++
++    def preview(self, key: str, fixture: dict) -> dict:
++        """The import page's preview of one archive. set3 (S1): the answer's raw bytes are searched for hash-shaped
++        values before anything is recorded, and only each mailbox's four named fields are kept."""
++        label = f"inspect the archive of {fixture['domain']} (ImportPage preview)"
++        response = self.api("POST", "/api/v1/import/cpanel/inspect", {"path": fixture["path"]}, purpose=label, timeout=300)
++        parsed = response.json()
++        seen = parsed if isinstance(parsed, dict) else {}
++        boxes = [box for box in seen.get("mail_accounts") or [] if isinstance(box, dict)]
++        record = {"label": label, "archive": key, "at": base.utc_now(), "status": response.status, "keys": sorted(seen),
++                  "domains": seen.get("domains"), "public_html": seen.get("public_html"),
++                  "databases": [d.get("name") if isinstance(d, dict) else d for d in seen.get("databases") or []],
++                  "mail_accounts": [{k: box.get(k) for k in MAILBOX_KEYS} for box in boxes],
++                  "mailbox_keys": sorted({k for box in boxes for k in box}),
++                  "hash_shaped_values_in_the_raw_answer": base.hash_shaped_count(response.text),
++                  "raw_bytes": len(response.text.encode())}
++        if response.status != 200:
++            record["answer"] = {k: seen.get(k) for k in ("code", "error", "reason")}
++        self.current.setdefault("previews", []).append(record)
++        self.check(f"the preview of the {key} archive names its domain, its mailbox and its database",
++                   response.status == 200 and fixture["domain"] in (seen.get("domains") or []) and bool(record["databases"])
++                   and bool(boxes), record)
++        self.check(f"S1: the preview of the {key} archive holds no hash-shaped value; a mailbox is its address, its quota and "
++                   "`has_password` only", response.status == 200 and record["hash_shaped_values_in_the_raw_answer"] == 0
++                   and record["mailbox_keys"] == MAILBOX_KEYS and all(box.get("has_password") is True for box in boxes), record)
++        return record
++
++    def c6b_php_site(self) -> None:
++        """set3 (P5): a PHP site from the Domains page, one PHP page asked for through the web server, the site
++        deleted again. The native PHP-FPM facts of the platform are recorded beside it."""
++        domain = PHP_SITE_DOMAIN
++        self.current["php_before"] = self.snap2("php-before", "read-php")
++        created = self.call("C6b create a PHP site (AddDomainModal)", "POST", "/api/v1/domains/create",
++                            {"domain": domain, "project_type": "php", "ssl_type": "none"}, timeout=600)
++        answer = created["_parsed"] if isinstance(created["_parsed"], dict) else {}
++        domain_id = answer.get("DomainID") or answer.get("domain_id")
++        self.check("P5: a PHP site is created from the Domains page (200 with the new domain's id)",
++                   created["status"] == 200 and isinstance(domain_id, int),
++                   created.get("answer") or {k: answer.get(k) for k in sorted(answer) if "id" in k.lower() or "root" in k.lower()})
++        if not isinstance(domain_id, int):
++            return
++        probe = self.owner2("php-probe", "owner-php-probe", domain_id=domain_id)
++        page = self.snap2("php-page", "read-http", domain=domain, path=PHP_PROBE_PATH)
++        text = str(page.get("body") or "")
++        parts = text.strip().split(":")
++        executed = page.get("status") == 200 and text.startswith(PHP_PROBE_MARK) and "<?php" not in text and len(parts) >= 5
++        served = {"status": page.get("status"), "headers": page.get("headers"), "body": text[:200], "error": page.get("error"),
++                  "php_version": parts[2] if executed else None, "server_api": parts[3] if executed else None,
++                  "runs_as": parts[4] if executed else None, "site_account": probe.get("site_account")}
++        self.current["php_page"] = served
++        self.check("P5: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, "
++                   "no source text, server API fpm-fcgi)", executed and served["server_api"] == "fpm-fcgi", served)
++        self.check("P5: the page runs as the site's own account", executed and served["runs_as"] == probe.get("site_account"), served)
++        facts = self.snap2("php-with-site", "read-php")
++        pool = next((p for p in facts["pools"] if p["settings"].get("user") == probe.get("site_account")), None)
++        socket_path = ((pool or {}).get("settings") or {}).get("listen")
++        native = {"units": {name: {k: unit.get(k) for k in ("LoadState", "ActiveState", "SubState", "FragmentPath", "ExecStart",
++                                                            "ProtectHome", "ProtectSystem", "PrivateTmp", "ReadWritePaths")}
++                            for name, unit in facts["units"].items()},
++                  "pool_directories": facts["pool_directories"], "site_pool": pool,
++                  "socket": facts["sockets"].get(socket_path) if socket_path else None,
++                  "run_directories": facts["run_directories"], "program": facts["program"],
++                  "program_version": facts["program_version"], "web_server_accounts": facts["web_server_accounts"]}
++        self.current["php_native"] = native
++        self.check("P5: the site's pool file exists under the platform's pool directory and its socket is a socket owned by "
++                   "an account the web server runs as", bool(pool) and bool(native["socket"])
++                   and native["socket"].get("kind") == "socket"
++                   and native["socket"].get("owner") in (facts["web_server_accounts"] + [probe.get("site_account")]), native)
++        deleted = self.call("C6b delete the PHP site (Domains page)", "DELETE", f"/api/v1/domains/{domain_id}", timeout=600)
++        gone, started, listed_now = False, time.time(), None
++        while time.time() - started < 240:
++            listing = self.api("GET", "/api/v1/domains", purpose="Domains list after the delete")
++            rows = listing.json() if listing.status == 200 else None
++            listed_now = [d.get("domain_name") for d in rows] if isinstance(rows, list) else None
++            if isinstance(listed_now, list) and domain not in listed_now:
++                gone = True
++                break
++            time.sleep(3)
++        left = self.snap2("php-after-delete", "read-imported", domain=domain)
++        facts_after = self.snap2("php-facts-after-delete", "read-php")
++        page_after = self.snap2("php-page-after-delete", "read-http", domain=domain, path=PHP_PROBE_PATH)
++        after = {"delete_status": deleted["status"], "delete_answer": deleted.get("answer") or deleted["_parsed"],
++                 "listed_after_seconds": round(time.time() - started, 1), "no_longer_listed": gone,
++                 "domain_rows": left.get("rows"), "site_account": left.get("site_account"),
++                 "pool_file_left": any(p["settings"].get("user") == probe.get("site_account") for p in facts_after["pools"]),
++                 "socket_left": bool(socket_path) and socket_path in facts_after["sockets"]
++                 and facts_after["sockets"][socket_path].get("exists"),
++                 "page_after": {"status": page_after.get("status"), "marker": PHP_PROBE_MARK in str(page_after.get("body") or "")},
++                 "php_fpm_units_after": {name: unit.get("ActiveState") for name, unit in facts_after["units"].items()}}
++        self.current["php_deleted"] = after
++        self.check("P5: the PHP site is deleted: no longer listed, no domain row, no site account, its pool file gone, the "
++                   "page no longer served, and PHP-FPM still active",
++                   gone and not after["domain_rows"] and after["site_account"] is None and not after["pool_file_left"]
++                   and not after["page_after"]["marker"]
++                   and all(state == "active" for name, state in after["php_fpm_units_after"].items()
++                           if facts["units"].get(name, {}).get("ActiveState") == "active"), after)
++
++    def c7b_import_answers(self) -> None:
++        """set3: (S1) the imported mailboxes authenticate with the original password; (P4) an import whose files
++        step fails answers 200 `partial` with truthful lists, and hostile members are never extracted."""
++        fixtures = self.state.get("import_fixtures") or {}
++        if self.settings.mail and self.import_password:
++            secret = base64.b64encode(self.import_password.encode()).decode()
++            for key in ("tar", "i", "v"):
++                fixture = fixtures.get(key)
++                if not fixture:
++                    continue
++                address = "info@" + fixture["domain"]
++                login = self.snap2("mail-login-" + key, "read-mail-login", address=address, password_b64=secret)
++                good, wrong = login["readings"]["the_original_password"], login["readings"]["a_wrong_password"]
++                record = {"address": address, "the_original_password": good, "a_wrong_password": wrong,
++                          "dovecot": login.get("dovecot_version"), "doveadm_user": login.get("doveadm_user")}
++                self.current.setdefault("mail_logins", []).append(record)
++                self.check(f"S1: the imported mailbox {address} authenticates with its original password (an IMAP LOGIN on "
++                           "loopback and `doveadm auth test`)", good["imap"].get("logged_in") is True
++                           and good["doveadm_auth_test"].get("returncode") == 0, record)
++                self.check(f"S1: the same mailbox refuses a wrong password (both readings)",
++                           wrong["imap"].get("logged_in") is False and wrong["doveadm_auth_test"].get("returncode") not in (0, None), record)
++        else:
++            self.note("mail is not supported on this platform: no mailbox was imported, so S1's login is not measured here")
++
++        for kind in HOSTILE_KINDS:
++            short = {"dotdot": "dd", "absolute": "ab", "symlink": "sl"}[kind]
++            fixture = self.import_fixture("hostile-" + kind, f"set3-hostile-{kind}.test", "s3h" + short, hostile=kind)
++            self.preview("hostile-" + kind, fixture)
++            whole = kind == "dotdot"     # the one that also imports mail and the database, for the two lists
++            request = self.import_body(fixture) if whole else self.import_body(fixture, do_mail=False, do_databases=False)
++            identity = self._own_identity(f"import (hostile member: {kind})")
++            before = self.imported(f"hostile-{kind}-before", fixture)
++            answer = self.post(f"import: an archive with a hostile member ({kind})", "/api/v1/import/cpanel/apply", request, identity, 3600)
++            state = self.imported(f"hostile-{kind}-after", fixture)
++            parsed = answer.get("_parsed") if isinstance(answer.get("_parsed"), dict) else {}
++            steps = parsed.get("steps") or []
++            files_step = next((s for s in steps if s.get("step") == "files"), {})
++            should_in, should_out = partial_lists(steps)
++            archive_files = fixture["docroot_expected"]
++            site_files = state.get("file_list") or {}
++            from_archive = sorted(name for name, value in archive_files.items() if site_files.get(name) == value)
++            record = {"kind": kind, "hostile_members": fixture.get("hostile_members"), "request": {k: request[k] for k in (
++                          "do_files", "do_mail", "do_dns", "do_databases")},
++                      "status": answer.get("status"), "import_status": parsed.get("status"), "code": parsed.get("code"),
++                      "domain_status": parsed.get("domain_status"), "message": parsed.get("message"),
++                      "imported": parsed.get("imported"), "not_imported": parsed.get("not_imported"), "steps": steps,
++                      "native": state["fp"], "site_home_entries": state.get("site_home_entries"),
++                      "docroot_files": sorted(site_files), "archive_files_in_the_docroot": from_archive,
++                      "non_regular_in_the_docroot": state.get("non_regular"), "entries_outside": state.get("escapes"),
++                      "entries_outside_before": before.get("escapes")}
++            self.current.setdefault("hostile", {})[kind] = record
++            self.check(f"P4 ({kind}): nothing of the hostile member exists anywhere on the server, the document root holds no "
++                       "link and no stage directory was left in the site's home",
++                       state.get("escapes") == [] and not state.get("non_regular")
++                       and not any(str(name).startswith(".cpmove") for name in state.get("site_home_entries") or []), record)
++            refused = files_step.get("ok") is False
++            if kind == "absolute" and not refused:
++                self.note("the member with an absolute path is not site payload: the files step left it out and imported the "
++                          "site's own files; nothing was written at that path", record)
++                self.check("P4 (absolute): the member was left out and the rest imported completely (200, active, the "
++                           "document root's files equal the archive's)", answer.get("status") == 200
++                           and parsed.get("status") == "active" and site_files == archive_files, record)
++                continue
++            self.check(f"P4 ({kind}): the files step refuses the archive", refused, files_step)
++            self.check(f"P4 ({kind}): the import answers 200 with status `partial`, code IMPORT_PARTIAL and the domain left `pending`",
++                       answer.get("status") == 200 and parsed.get("status") == "partial" and parsed.get("code") == "IMPORT_PARTIAL"
++                       and parsed.get("domain_status") == "pending" and bool(parsed.get("message")), record)
++            mail_ok = (not request["do_mail"]) or state["fp"]["mailboxes"] == ["info@" + fixture["domain"]]
++            data_ok = (not request["do_databases"]) or (state["fp"]["database_on_engine"] and state["fp"]["rows"] == str(IMPORT_ROWS)
++                                                        and state["fp"]["database_row"] == [fixture["database"]])
++            self.check(f"P4 ({kind}): `imported` and `not_imported` are the steps' own results and are true on the server "
++                       "(the domain row is `pending`; what is listed as imported is there; none of the archive's site files is "
++                       "in the document root)",
++                       parsed.get("imported") == should_in and parsed.get("not_imported") == should_out
++                       and "files" in (parsed.get("not_imported") or []) and "domain" in (parsed.get("imported") or [])
++                       and state["fp"]["domain_row"] and state["fp"]["status"] == "pending" and not from_archive
++                       and mail_ok and data_ok, record)
++            if whole:
++                again = self.post("import: the same partial import again (the same identity)", "/api/v1/import/cpanel/apply",
++                                  request, identity, 3600)
++                later = self.imported(f"hostile-{kind}-after-replay", fixture)
++                self.check("P4: the replay of a partial import is the stored answer byte for byte and imports nothing again",
++                           again.get("status") == 200 and again.get("replayed") == "1"
++                           and self.raw_digests.get(again["n"]) == self.raw_digests.get(answer["n"]) and later["fp"] == state["fp"],
++                           {"replay": brief(again), "unchanged": later["fp"] == state["fp"]})
++
+     # -- C8: restore ----------------------------------------------------------------------------------------------
+ 
+     def site_state(self, label: str) -> dict:
+@@ -1255,6 +1543,24 @@
+         words = {r["id"]: r["body"]["sensitive_words_found"] for r in rows if r["body"].get("sensitive_words_found")}
+         self.judge("rows", "vii", "no stored answer contains a private key, a client configuration, a delivery token or a password field",
+                    not words, words)
++        # set3 (S1): no stored row and no answer of a guarded route holds a hash-shaped value; no answer echoed a
++        # secret the request sent (O10).
++        self.judge("rows", "vii", "no request_identities row holds a hash-shaped value (stored answer and every other column)",
++                   table.get("rows_holding_a_hash_shaped_value") == [] and len(rows) > 0,
++                   {"rows": len(rows), "rows_holding_one": table.get("rows_holding_a_hash_shaped_value")})
++        shaped = [a for a in self.answer_shapes if a["hash_shaped"]]
++        echoed = [a for a in self.answer_shapes if a["sent_secret_echoed"]]
++        self.current["answers_searched"] = {"answers": len(self.answer_shapes), "holding_a_hash_shaped_value": shaped,
++                                            "echoing_a_sent_secret": echoed}
++        self.judge("rows", "vii", "no answer of a guarded route held a hash-shaped value, and none echoed a secret its request sent",
++                   bool(self.answer_shapes) and not shaped and not echoed, self.current["answers_searched"])
++        start = self.state.get("identity_log_since")
++        if start:
++            log = self.native2("read-journal", units=["celikpanel-panel.service", "celikpanel-agent.service"],
++                               since_epoch=start, lines=3000)["journal"].get("stdout", "")
++            self.current["journal_searched"] = {"lines": len(log.splitlines()), "hash_shaped_values": base.hash_shaped_count(log)}
++            self.judge("rows", "vii", "the Panel's and the Agent's journal lines of this cell hold no hash-shaped value",
++                       self.current["journal_searched"]["hash_shaped_values"] == 0 and bool(log), self.current["journal_searched"])
+         self.judge("rows", "vii", "every row lives 24 hours and none is still `running`",
+                    all(r["lifetime_seconds"] == 86400 for r in rows) and "running" not in (table.get("states") or {}),
+                    {"states": table.get("states"), "lifetimes": sorted({r["lifetime_seconds"] for r in rows})})
+@@ -1279,7 +1585,8 @@
+         functions = {"C0-prepare": self.c0_prepare, "C1-domain-databases": self.c1_domain_databases,
+                      "C2-admin-account": self.c2_admin_account, "C3-server-databases": self.c3_server_databases,
+                      "C4-backup": self.c4_backup, "C5-letsencrypt": self.c5_letsencrypt, "C6-vpn-peer": self.c6_vpn_peer,
+-                     "C7-import": self.c7_import, "C8-restore": self.c8_restore, "C9-identities": self.c9_identities}
++                     "C7-import": self.c7_import, "C8-restore": self.c8_restore, "C9-identities": self.c9_identities,
++                     "C6b-php-site": self.c6b_php_site, "C7b-import-answers": self.c7b_import_answers}
+         for key, title in SECTIONS:
+             self.section(key, title, functions[key], needs=("site",))
+             self.sections.setdefault(key, {"title": title, "verdict": "not-run", "reason": "the site step did not pass"})
+--- a/deploy/e2e/release-recovery/guest_request_identity_native.py
++++ b/deploy/e2e/release-recovery/guest_request_identity_native.py
+@@ -20,6 +20,7 @@
+ import base64
+ import gzip
+ import hashlib
++import imaplib
+ import importlib.util
+ import io
+ import json
+@@ -27,8 +28,11 @@
+ from pathlib import Path
+ import pwd
+ import re
++import secrets as secrets_module
+ import shutil
++import socket
+ import sqlite3
++import ssl
+ import stat
+ import subprocess
+ import sys
+@@ -47,11 +51,25 @@
+ NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,62}\Z")
+ DOMAIN_RE = re.compile(r"(?=.{1,253}\Z)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}\Z")
+ JOURNAL_UNITS = ("celikpanel-panel.service", "celikpanel-agent.service", "nginx.service", "mariadb.service",
+-                 "wg-quick@wg0.service")
++                 "wg-quick@wg0.service", "dovecot.service", "php-fpm.service")
+ ACME_HOSTS = ("acme-v02.api.letsencrypt.org", "acme-staging-v02.api.letsencrypt.org")
+ ACME_MARK = "# set2 lab isolation: no ACME directory is reachable from this guest"
+ HOSTS = Path("/etc/hosts")
+ SEED_TABLE = "set2_rows"
++# set3: the same shapes owner_update_trial.HASH_SHAPED redacts at collection time (pinned equal by the offline test).
++HASH_SHAPED = (
++    r"(?:\{[A-Z][A-Z0-9.-]{1,24}\})?\$(?:1|2[abxy]?|5|6|7|y|gy|sha1|argon2(?:id|i|d)|scrypt|pbkdf2(?:-sha(?:1|256|512))?)"
++    r"\$[./A-Za-z0-9$=,+-]{8,}"
++    r"|\{(?:SSHA(?:256|512)?|SHA(?:256|512)?|SMD5|PLAIN|CRYPT|CRAM-MD5|[A-Z0-9]+-CRYPT|ARGON2ID?|PBKDF2)\}[^\s\"'<>\\]{4,}"
++    r"|SCRAM-SHA-256\$\d+:[A-Za-z0-9+/=]+\$[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+"
++    r"|(?<![0-9A-Za-z])\*[0-9A-F]{40}(?![0-9A-Fa-f])")
++HASH_SHAPED_BYTES = re.compile(HASH_SHAPED.encode())
++ESCAPE_PREFIX = "set3-escape"
++ESCAPE_ROOTS = ("/var/www", "/var/lib", "/var/tmp", "/var/backups", "/etc", "/tmp", "/home", "/root", "/srv", "/opt", "/usr/local")
++HOSTILE_KINDS = ("dotdot", "absolute", "symlink")
++PHP_PROBE = "set3-probe.php"
++PHP_PROBE_MARK = "set3-php-executed"
++ADDRESS_RE = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}@(?=.{1,253}\Z)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}\Z")
+ 
+ 
+ class Refused(ValueError):
+@@ -144,7 +162,7 @@
+ 
+ 
+ def cpmove_members(domain: str, user: str, database: str, megabytes: int, sleep_seconds: int, rows: int,
+-                   random_bytes=os.urandom) -> list:
++                   random_bytes=os.urandom, shadow_hash: bytes | None = None) -> list:
+     """The members of a minimal cPanel account archive that ``cmd/agent/cpmove_rpc.go`` reads: the account file
+     (``cp/<user>``, its ``DNS=`` line names the domain), the site (``homedir/public_html``), one mailbox
+     (``homedir/etc/<domain>/shadow`` and ``quota``), one forwarder (``va/<domain>``) and one database
+@@ -162,8 +180,11 @@
+         (f"{top}/cp/{user}", f"DNS={domain}\nUSER={user}\nPLAN=set2-fixture\n".encode()),
+         (f"{top}/homedir/public_html/index.html", f"<h1>{domain}</h1>\n<p>imported by the set2 fixture</p>\n".encode()),
+         (f"{top}/homedir/public_html/assets/site.css", b"body { font-family: sans-serif; }\n"),
++        # set3: with ``shadow_hash`` the mailbox carries the crypt hash of a password the lab knows, so that the
++        # imported mailbox can be asked to authenticate with it; without it the fabricated value of set2.
+         (f"{top}/homedir/etc/{domain}/shadow",
+-         b"info:$6$set2fixture$" + hashlib.sha512((domain + user).encode()).hexdigest()[:86].encode() + b":19000::::::\n"),
++         b"info:" + (shadow_hash or b"$6$set2fixture$" + hashlib.sha512((domain + user).encode()).hexdigest()[:86].encode())
++         + b":19000::::::\n"),
+         (f"{top}/homedir/etc/{domain}/quota", b"info:268435456\n"),
+         (f"{top}/va/{domain}", f"sales@{domain}: info@{domain}\n".encode()),
+         (f"{top}/mysql/{database}.create", f"CREATE DATABASE `{database}`;\n".encode()),
+@@ -180,7 +201,32 @@
+     return bool(addresses) and all(address in ("127.0.0.1", "::1") for address in addresses)
+ 
+ 
+-def cpmove_archive(members: list, public_html_directory_member: bool = True) -> bytes:
++def hostile_members(top: str, kind: str) -> list:
++    """set3: members an import must never extract: a ``..`` path out of the document root, an absolute path, a
++    symbolic link out of the document root with a file named through it. (name, data or link target, tar type)."""
++    payload = f"{top}/homedir/public_html"
++    note = ("hostile member of the set3 fixture: " + kind + "\n").encode()
++    if kind == "dotdot":
++        return [(f"{payload}/../../{ESCAPE_PREFIX}-dotdot.txt", note, tarfile.REGTYPE)]
++    if kind == "absolute":
++        return [(f"/etc/{ESCAPE_PREFIX}-absolute.txt", note, tarfile.REGTYPE)]
++    if kind == "symlink":
++        return [(f"{payload}/{ESCAPE_PREFIX}-link", "/etc", tarfile.SYMTYPE),
++                (f"{payload}/{ESCAPE_PREFIX}-link/{ESCAPE_PREFIX}-symlink.txt", note, tarfile.REGTYPE)]
++    raise Refused("unknown hostile member kind")
++
++
++def payload_files(members: list) -> dict:
++    """What the document root must hold after a complete import: {relative path: [bytes, sha256]}."""
++    expected = {}
++    for name, data in members:
++        relative = name.split("/", 1)[-1]
++        if relative.startswith(PUBLIC_HTML_MEMBER + "/"):
++            expected[relative[len(PUBLIC_HTML_MEMBER) + 1:]] = [len(data), hashlib.sha256(data).hexdigest()]
++    return expected
++
++
++def cpmove_archive(members: list, public_html_directory_member: bool = True, hostile: str | None = None) -> bytes:
+     """A gzip tar of the members with a directory member for every parent, as tar writes an archive of a directory
+     (a directory member's name ends with "/"). With ``public_html_directory_member`` false the one directory member
+     ``<top>/homedir/public_html/`` is left out (set2 H34: the import's files step refuses an archive that holds it)."""
+@@ -202,6 +248,17 @@
+                 info = tarfile.TarInfo(name)
+                 info.size, info.mode, info.mtime = len(data), 0o644, 1760000000
+                 archive.addfile(info, io.BytesIO(data))
++            if hostile:
++                top = members[0][0].split("/", 1)[0]
++                for name, data, kind in hostile_members(top, hostile):
++                    info = tarfile.TarInfo(name)
++                    info.type, info.mode, info.mtime = kind, 0o644, 1760000000
++                    if kind == tarfile.SYMTYPE:
++                        info.linkname = data
++                        archive.addfile(info)
++                    else:
++                        info.size = len(data)
++                        archive.addfile(info, io.BytesIO(data))
+     return buffer.getvalue()
+ 
+ 
+@@ -286,6 +343,11 @@
+             shape = body_shape(body)
+             shape["sensitive_values_of_this_run_found"] = secret_occurrences(body or b"", needles)
+             shape["sensitive_words_found"] = sorted(word.decode() for word in generic if body and word in body)
++            # set3 (S1): hash-shaped values in the stored answer and in the row's other text columns (counts only).
++            shape["hash_shaped_values_found"] = len(HASH_SHAPED_BYTES.findall(body or b""))
++            shape["hash_shaped_values_in_other_columns"] = sum(
++                len(HASH_SHAPED_BYTES.findall(str(row[column]).encode())) for column in ("id", "method", "route", "request_sha256",
++                                                                                      "status", "response_content_type"))
+             rows.append({"id": row["id"], "actor_user_id": row["actor_user_id"], "method": row["method"], "route": row["route"],
+                          "request_sha256": row["request_sha256"], "status": row["status"],
+                          "response_status": row["response_status"], "response_retained": row["response_retained"],
+@@ -302,6 +364,8 @@
+         states[row["status"]] = states.get(row["status"], 0) + 1
+     return {"rows": rows, "count": len(rows), "states": states, "columns": columns, "needles_compared": len(needles),
+             "rows_holding_a_sensitive_value_of_this_run": [r["id"] for r in rows if r["body"]["sensitive_values_of_this_run_found"]],
++            "rows_holding_a_hash_shaped_value": [r["id"] for r in rows if r["body"]["hash_shaped_values_found"]
++                                                 or r["body"]["hash_shaped_values_in_other_columns"]],
+             "now_epoch": int(time.time()), "at": utc()}
+ 
+ 
+@@ -350,7 +414,7 @@
+ 
+ def _tree_digest(root: str) -> dict:
+     digest, files, total, newest = hashlib.sha256(), 0, 0, 0
+-    names = []
++    names, file_list, non_regular = [], {}, []
+     if not os.path.isdir(root):
+         return {"root": root, "exists": False}
+     for directory, subdirectories, filenames in os.walk(root):
+@@ -362,6 +426,7 @@
+                 info = os.lstat(path)
+                 if not stat.S_ISREG(info.st_mode):
+                     digest.update(("L " + relative + "\n").encode())
++                    non_regular.append(relative)
+                     continue
+                 inner = hashlib.sha256()
+                 with open(path, "rb") as stream:
+@@ -376,8 +441,14 @@
+             newest = max(newest, int(info.st_mtime))
+             if len(names) < 40:
+                 names.append(relative)
++            if len(file_list) < 300:
++                file_list[relative] = [info.st_size, inner.hexdigest()]
++        for name in subdirectories:
++            if os.path.islink(os.path.join(directory, name)):
++                non_regular.append(os.path.relpath(os.path.join(directory, name), root))
+     info = os.lstat(root)
+     return {"root": root, "exists": True, "files": files, "bytes": total, "sha256": digest.hexdigest(), "names": names,
++            "file_list": file_list, "non_regular": non_regular,
+             "newest_mtime": newest, "owner_uid": info.st_uid, "mode": "%04o" % stat.S_IMODE(info.st_mode)}
+ 
+ 
+@@ -522,7 +593,11 @@
+     finally:
+         connection.close()
+     if domain_id:
+-        result["docroot"] = _tree_digest(document_root(rows[0]["subscription_id"], domain_id))
++        root = document_root(rows[0]["subscription_id"], domain_id)
++        result["docroot"] = _tree_digest(root)
++        home = os.path.dirname(root)
++        result["site_home_entries"] = sorted(os.listdir(home)) if os.path.isdir(home) else []
++    result["escapes"] = find_escapes()
+     account = None
+     try:
+         entry = pwd.getpwnam(site_username(domain))
+@@ -538,6 +613,193 @@
+     return {"epoch": time.time(), "at": utc()}
+ 
+ 
++# -- set3 readers ---------------------------------------------------------------------------
++
++def find_escapes() -> list:
++    """Every file system entry whose name starts with the hostile members' prefix, outside the import directory
++    (where the archives themselves live). An import that refuses them leaves this list empty."""
++    found = run(["find", *[root for root in ESCAPE_ROOTS if os.path.isdir(root)], "-xdev", "-name", ESCAPE_PREFIX + "*",
++                 "-not", "-path", str(IMPORT_ROOT) + "/*"], timeout=120)
++    return sorted(line for line in found.get("stdout", "").splitlines() if line)
++
++
++def _mail_address(address) -> str:
++    if not isinstance(address, str) or not ADDRESS_RE.fullmatch(address):
++        raise Refused("not a plain mailbox address")
++    return address
++
++
++def _imap_login(address: str, password: str) -> dict:
++    """A real IMAP LOGIN against this guest's own Dovecot on loopback (TLS on 993; the certificate is not judged)."""
++    context = ssl.create_default_context()
++    context.check_hostname = False
++    context.verify_mode = ssl.CERT_NONE
++    scrub = lambda text: str(text).replace(password, "[REDACTED]")[:200]  # noqa: E731
++    try:
++        client = imaplib.IMAP4_SSL("127.0.0.1", 993, ssl_context=context, timeout=20)
++    except Exception as exc:  # noqa: BLE001 - reported as data
++        return {"transport": "imaps 127.0.0.1:993", "connected": False, "error": type(exc).__name__ + ": " + scrub(exc)}
++    try:
++        kind, data = client.login(address, password)
++        answer = {"transport": "imaps 127.0.0.1:993", "connected": True, "logged_in": kind == "OK", "answer": kind}
++        try:
++            kind, data = client.select("INBOX", readonly=True)
++            answer["inbox_selected"] = kind == "OK"
++        except Exception as exc:  # noqa: BLE001
++            answer["inbox_selected"] = False
++            answer["select_error"] = type(exc).__name__ + ": " + scrub(exc)
++        return answer
++    except imaplib.IMAP4.error as exc:
++        return {"transport": "imaps 127.0.0.1:993", "connected": True, "logged_in": False, "answer": scrub(exc)}
++    finally:
++        try:
++            client.logout()
++        except Exception:  # noqa: BLE001
++            pass
++
++
++def read_mail_login(args: dict) -> dict:
++    """Whether a mailbox authenticates with a given password: an IMAP LOGIN on loopback and Dovecot's own
++    ``doveadm auth test``. A password that is certainly wrong is tried beside it, so that a login that accepts
++    anything cannot pass. The password arrives over the lab's SSH channel and is never printed."""
++    address = _mail_address(args["address"])
++    password = base64.b64decode(args["password_b64"], validate=True).decode()
++    readings = {}
++    for label, value in (("the_original_password", password), ("a_wrong_password", secrets_module.token_urlsafe(18))):
++        tested = run(["doveadm", "auth", "test", "-x", "service=imap", "-x", "rip=127.0.0.1", address, value], timeout=30)
++        scrub = lambda text, value=value: str(text).replace(value, "[REDACTED]")  # noqa: E731
++        readings[label] = {"imap": _imap_login(address, value),
++                           "doveadm_auth_test": {"status": tested.get("status"), "returncode": tested.get("returncode"),
++                                                 "stdout": scrub(tested.get("stdout", ""))[:300],
++                                                 "stderr": scrub(tested.get("stderr", ""))[-300:]}}
++    looked_up = run(["doveadm", "user", address], timeout=30)
++    return {"address": address, "readings": readings,
++            "doveadm_user": {"returncode": looked_up.get("returncode"),
++                             "fields": sorted(line.split()[0] for line in looked_up.get("stdout", "").splitlines()[1:] if line.split())},
++            "dovecot_version": run(["dovecot", "--version"]).get("stdout", "").strip(), "at": utc()}
++
++
++def read_engine_versions(args: dict) -> dict:
++    """The version each engine itself reports (O14): the running servers through their local clients, and the
++    server and client programs' own ``--version`` lines."""
++    server = shutil.which("mariadbd", path=ENV["PATH"]) or shutil.which("mysqld", path=ENV["PATH"])
++    client = shutil.which("mariadb", path=ENV["PATH"]) or shutil.which("mysql", path=ENV["PATH"])
++    return {"mariadb": {"select_version": _mysql("SELECT VERSION()").get("stdout", "").strip(),
++                        "server_program": server, "server_program_version": run([server, "--version"]).get("stdout", "").strip() if server else None,
++                        "client_program": client, "client_program_version": run([client, "--version"]).get("stdout", "").strip() if client else None},
++            "postgresql": {"show_server_version": _psql("SHOW server_version;").get("stdout", "").strip(),
++                           "select_version": _psql("SELECT version();").get("stdout", "").strip()},
++            "os_release": {k: v.strip('"') for k, v in (line.split("=", 1) for line in Path("/etc/os-release").read_text().splitlines()
++                                                         if "=" in line) if k in ("ID", "VERSION_ID", "PRETTY_NAME")},
++            "at": utc()}
++
++
++def _stat(path: str) -> dict:
++    try:
++        info = os.lstat(path)
++    except OSError as exc:
++        return {"path": path, "exists": False, "error": type(exc).__name__}
++    try:
++        owner = pwd.getpwuid(info.st_uid).pw_name
++    except KeyError:
++        owner = str(info.st_uid)
++    try:
++        import grp
++        group = grp.getgrgid(info.st_gid).gr_name
++    except (KeyError, ImportError):
++        group = str(info.st_gid)
++    kind = "socket" if stat.S_ISSOCK(info.st_mode) else "directory" if stat.S_ISDIR(info.st_mode) else \
++        "symlink" if stat.S_ISLNK(info.st_mode) else "file" if stat.S_ISREG(info.st_mode) else "other"
++    return {"path": path, "exists": True, "kind": kind, "owner": owner, "group": group, "mode": "%04o" % stat.S_IMODE(info.st_mode)}
++
++
++def read_php(args: dict) -> dict:
++    """The native PHP-FPM facts of this host (P5): the units, the pool directories and files with their ``listen``,
++    ``user`` and ``listen.owner`` lines, each socket's owner and mode, and the program's own version."""
++    units = run(["systemctl", "list-units", "--type=service", "--all", "--no-legend", "--plain", "php*"]).get("stdout", "")
++    unit_names = sorted({line.split()[0] for line in units.splitlines() if line.split()})
++    shown = {}
++    for unit in unit_names:
++        answer = run(["systemctl", "show", unit, "-p", "LoadState", "-p", "ActiveState", "-p", "SubState", "-p", "MainPID",
++                      "-p", "FragmentPath", "-p", "ExecStart", "-p", "ProtectHome", "-p", "ProtectSystem", "-p", "PrivateTmp",
++                      "-p", "ReadWritePaths", "-p", "NoNewPrivileges", "-p", "DropInPaths"])
++        shown[unit] = dict(line.split("=", 1) for line in answer.get("stdout", "").splitlines() if "=" in line)
++    pools, sockets = [], {}
++    for directory in sorted(set(str(p) for p in list(Path("/etc/php").glob("*/fpm/pool.d")) + [Path("/etc/php/php-fpm.d")] if p.is_dir())):
++        for name in sorted(os.listdir(directory)):
++            path = os.path.join(directory, name)
++            if not name.endswith(".conf") or not os.path.isfile(path):
++                continue
++            keep = {}
++            for line in Path(path).read_text(errors="replace").splitlines():
++                text = line.strip()
++                if text.startswith("[") and text.endswith("]"):
++                    keep["pool"] = text[1:-1]
++                for key in ("listen", "user", "group", "listen.owner", "listen.group", "listen.mode"):
++                    if re.match(re.escape(key) + r"\s*=", text):
++                        keep[key] = text.split("=", 1)[1].strip()
++            pools.append(dict(_stat(path), directory=directory, settings=keep))
++            if str(keep.get("listen", "")).startswith("/"):
++                sockets[keep["listen"]] = _stat(keep["listen"])
++    program = shutil.which("php-fpm", path=ENV["PATH"]) or next(
++        (shutil.which(name, path=ENV["PATH"]) for name in ("php-fpm8.4", "php-fpm8.3", "php-fpm8.2", "php-fpm8.5") if shutil.which(name, path=ENV["PATH"])), None)
++    return {"units": shown, "pools": pools, "sockets": sockets,
++            "pool_directories": sorted({p["directory"] for p in pools}),
++            "run_directories": [_stat(path) for path in ("/run/php-fpm", "/run/php") if os.path.exists(path)],
++            "program": program, "program_version": run([program, "-v"]).get("stdout", "").splitlines()[:1] if program else None,
++            "web_server_accounts": [name for name in ("www-data", "nginx", "http") if _exists_user(name)], "at": utc()}
++
++
++def _exists_user(name: str) -> bool:
++    try:
++        pwd.getpwnam(name)
++        return True
++    except KeyError:
++        return False
++
++
++def read_http(args: dict) -> dict:
++    """One GET to this guest's own web server on loopback with the site's Host header (never another host)."""
++    host = domain_name(args["domain"])
++    path = args.get("path", "/")
++    if path not in ("/", "/" + PHP_PROBE, "/index.html", "/index.php"):
++        raise Refused("not a path this reader asks for")
++    # A plain socket to 127.0.0.1:80 and nothing else: this helper holds no client that could name another host.
++    try:
++        with socket.create_connection(("127.0.0.1", 80), timeout=20) as connection:
++            connection.sendall(("GET " + path + " HTTP/1.0\r\nHost: " + host + "\r\nConnection: close\r\n\r\n").encode())
++            raw = b""
++            while len(raw) < 131072:
++                chunk = connection.recv(65536)
++                if not chunk:
++                    break
++                raw += chunk
++    except Exception as exc:  # noqa: BLE001 - reported as data
++        return {"host": host, "path": path, "error": type(exc).__name__ + ": " + str(exc)[:200], "at": utc()}
++    head, _, body = raw.partition(b"\r\n\r\n")
++    lines = head.decode("latin-1").split("\r\n")
++    status = int(lines[0].split()[1]) if len(lines[0].split()) > 1 and lines[0].split()[1].isdigit() else None
++    headers = {}
++    for line in lines[1:]:
++        name, _, value = line.partition(":")
++        if name.lower() in ("content-type", "server", "x-powered-by", "transfer-encoding"):
++            headers[name.lower()] = value.strip()
++    return {"host": host, "path": path, "status": status, "headers": headers, "bytes": len(body),
++            "body": body[:600].decode("utf-8", "replace"), "at": utc()}
++
++
++def owner_php_probe(args: dict) -> dict:
++    """The owner uploads one PHP page to the site: it prints a marker, a product only PHP can compute, the PHP
++    version, the server API and the account it runs as. Served as text it would show its source instead."""
++    identity, root, uid, gid = _site(args)
++    source = ("<?php\nheader('Content-Type: text/plain');\n"
++              "echo '" + PHP_PROBE_MARK + ":' . (6 * 7) . ':' . PHP_VERSION . ':' . php_sapi_name() . ':' . "
++              "(function_exists('posix_geteuid') ? posix_getpwuid(posix_geteuid())['name'] : get_current_user()) . \"\\n\";\n")
++    _write(os.path.join(root, PHP_PROBE), source.encode(), uid, gid)
++    return {"action": "owner-php-probe", "domain": identity, "path": os.path.join(root, PHP_PROBE),
++            "docroot": _tree_digest(root), "site_account": pwd.getpwuid(uid).pw_name, "at": utc()}
++
++
+ # -- owner actions --------------------------------------------------------------------------
+ 
+ def _site(args: dict) -> tuple:
+@@ -607,10 +869,23 @@
+     """The owner uploads a cPanel account archive to the import directory, as the import page asks: a root-owned
+     0600 file under a root-owned directory. The archive is the minimal one of ``cpmove_members``."""
+     domain, user, database = domain_name(args["domain"]), user_name(args["user"]), sql_name(args["database"])
++    shadow_hash, mailbox = None, "the fabricated value of set2 (the hash of no password)"
++    if args.get("password_b64"):
++        # set3 (S1): the crypt hash of a password the lab chose, made by the guest's own openssl; neither is recorded.
++        made = subprocess.run(["openssl", "passwd", "-6", "-stdin"], input=base64.b64decode(args["password_b64"], validate=True) + b"\n",
++                              capture_output=True, timeout=30, env=ENV)
++        shadow_hash = made.stdout.strip()
++        if made.returncode != 0 or not shadow_hash.startswith(b"$6$") or b":" in shadow_hash:
++            raise Refused("openssl did not produce a sha512-crypt hash")
++        mailbox = "the sha512-crypt hash (openssl passwd -6) of a password the lab chose; neither is recorded"
+     members = cpmove_members(domain, user, database, max(0, min(int(args.get("megabytes", 0)), 512)),
+-                             max(0, min(int(args.get("sleep_seconds", 0)), 120)), max(1, min(int(args.get("rows", 200)), 50000)))
++                             max(0, min(int(args.get("sleep_seconds", 0)), 120)), max(1, min(int(args.get("rows", 200)), 50000)),
++                             shadow_hash=shadow_hash)
+     with_member = bool(args.get("public_html_directory_member", True))
+-    data = cpmove_archive(members, with_member)
++    hostile = args.get("hostile") or None
++    if hostile is not None and hostile not in HOSTILE_KINDS:
++        raise Refused("unknown hostile member kind")
++    data = cpmove_archive(members, with_member, hostile)
+     IMPORT_ROOT.mkdir(mode=0o700, exist_ok=True)
+     os.chown(IMPORT_ROOT, 0, 0)
+     target = IMPORT_ROOT / f"cpmove-{user}.tar.gz"
+@@ -623,6 +898,9 @@
+     info = IMPORT_ROOT.lstat()
+     return {"action": "owner-cpmove-fixture", "path": str(target), "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
+             "members": [{"name": name, "bytes": len(content)} for name, content in members],
++            "hostile": hostile, "hostile_members": [{"name": name, "type": "symlink -> " + data if kind == tarfile.SYMTYPE else "file"}
++                                                    for name, data, kind in (hostile_members("cpmove-" + user, hostile) if hostile else [])],
++            "docroot_expected": payload_files(members), "mailbox_shadow": mailbox,
+             "directory": {"mode": "%04o" % stat.S_IMODE(info.st_mode), "uid": info.st_uid},
+             "public_html_directory_member": with_member, "domain": domain, "user": user, "database": database, "at": utc()}
+ 
+@@ -693,6 +971,8 @@
+     "read-docroot": read_docroot, "read-engines": read_engines, "read-login": read_login,
+     "read-wireguard": read_wireguard, "read-journal": read_journal, "read-units": read_units, "read-acme": read_acme,
+     "read-imported": read_imported, "read-clock": read_clock,
++    "read-mail-login": read_mail_login, "read-engine-versions": read_engine_versions, "read-php": read_php,
++    "read-http": read_http, "owner-php-probe": owner_php_probe,
+     "owner-seed-site": owner_seed_site, "owner-change-site": owner_change_site, "owner-seed-rows": owner_seed_rows,
+     "owner-cpmove-fixture": owner_cpmove_fixture, "owner-restart-panel": owner_restart_panel,
+     "lab-isolate-acme": lab_isolate_acme, "lab-kill-panel": lab_kill_panel,
+--- a/deploy/e2e/release-recovery/run-set2.sh
++++ b/deploy/e2e/release-recovery/run-set2.sh
+@@ -8,8 +8,8 @@
+ #       Prepare and start a NEW lab /var/tmp/cp-release-drill-LAB_NAME, run the one cell on its node, then
+ #       stop the lab (disks and evidence retained).
+ #
+-# CELL: set2-debian13 | set2-ubuntu | set2-arch   (settings_writes_trial.py; groups A and B)
+-#       rid-debian13  | rid-ubuntu  | rid-arch    (request_identity_trial.py; group C)
++# CELL: set2-debian13 | set2-ubuntu | set2-arch   (settings_writes_trial.py; groups A and B; set3-* likewise)
++#       rid-debian13  | rid-ubuntu  | rid-arch    (request_identity_trial.py; group C; rid3-* likewise)
+ # ARTIFACTS_JSON: an upd1-artifacts.json from run-upd1.sh build (the baseline B is the installed candidate).
+ # One cell per new lab. Never reuse a lab or a guest. No update is started by either cell kind.
+ set -euo pipefail
+@@ -20,8 +20,8 @@
+ usage() { sed -n '2,15p' "${BASH_SOURCE[0]}" >&2; exit 2; }
+ driver_for() {
+     case $1 in
+-        set2-debian13|set2-ubuntu|set2-arch) DRIVER=(python3 "$HERE/settings_writes_trial.py") ;;
+-        rid-debian13|rid-ubuntu|rid-arch) DRIVER=(python3 "$HERE/request_identity_trial.py") ;;
++        set2-debian13|set2-ubuntu|set2-arch|set3-debian13|set3-ubuntu|set3-arch) DRIVER=(python3 "$HERE/settings_writes_trial.py") ;;
++        rid-debian13|rid-ubuntu|rid-arch|rid3-debian13|rid3-ubuntu|rid3-arch) DRIVER=(python3 "$HERE/request_identity_trial.py") ;;
+         *) usage ;;
+     esac
+ }
+--- a/deploy/e2e/release-recovery/test_settings_writes_trial.py
++++ b/deploy/e2e/release-recovery/test_settings_writes_trial.py
+@@ -9,6 +9,7 @@
+ import unittest
+ 
+ HERE = Path(__file__).resolve().parent
++REPO = HERE.parents[2]
+ 
+ 
+ def load(name):
+@@ -25,13 +26,56 @@
+ ARTIFACT = {"version": "v0.1.0-alpha.81", "commit": "a" * 40, "sha256": "b" * 64}
+ 
+ 
++class Set3Tests(unittest.TestCase):
++    def test_the_answers_of_the_second_round_are_the_products(self):
++        rpc = (REPO / "internal" / "transport" / "rpc.go").read_text(encoding="utf-8")
++        outcome = (REPO / "cmd" / "panel" / "service_action_outcome.go").read_text(encoding="utf-8")
++        for expected in (trial.NOT_RUNNING, trial.RELOAD_REREAD, trial.RELOAD_NOT_REREAD):
++            self.assertIn('"' + expected[2] + '"', rpc)
++            self.assertIn('"' + expected[1] + '"', outcome)
++        self.assertEqual(trial.NOT_RUNNING[0], 409)
++        self.assertIn("status = http.StatusConflict", outcome)
++
++    def test_collection_time_shapes(self):
++        base = trial.base
++        fabricated = "$6$" + "saltsalt" + "$" + "A" * 86
++        for text in (fabricated, "{SHA512-CRYPT}" + fabricated, "{SSHA256}" + "QUJD" * 12, "$2y$10$" + "b" * 53,
++                     "SCRAM-SHA-256$4096:" + "c2FsdA==" + "$" + "QUJD" * 11 + ":" + "QUJD" * 11, "*" + "A1" * 20,
++                     "$argon2id$v=19$m=65536,t=3,p=4$" + "c2FsdHNhbHQ" + "$" + "QUJD" * 10):
++            self.assertEqual(base.hash_shaped_count("x " + text + " y"), 1, text[:12])
++            self.assertNotIn(text, base.shape_text('{"k": "' + text + '"}'))
++        for harmless in ("a 40-digit sha1 da39a3ee5e6b4b0d3255bfef95601890afd80709", "price $5 and $6", "{id}/admin-account",
++                         "echo $1 $2", "2 * 3"):
++            self.assertEqual(base.hash_shaped_count(harmless), 0, harmless)
++            self.assertEqual(base.shape_text(harmless), harmless)
++        key = "A" * 43 + "="
++        self.assertEqual(base.shape_text("PrivateKey = " + key), "PrivateKey = [REDACTED]")
++        self.assertEqual(base.shape_text('"preshared_key": "' + key + '"'), '"preshared_key": "[REDACTED]"')
++        self.assertEqual(base.shape_text("PublicKey = " + key), "PublicKey = " + key)   # peers are named by it
++
++        class Plain:
++            def text(self, value):
++                return value.replace("registered", "[REDACTED]")
++        shaped = base.shape_redactor(Plain())
++        self.assertEqual(shaped.text("registered " + fabricated), "[REDACTED] " + base.HASH_SHAPED_MARK)
++
++    def test_the_hook_that_fails_before_the_signal(self):
++        source = (HERE / "guest_settings_native.py").read_text(encoding="utf-8")
++        self.assertIn('"fail-before-signal"', source)
++        before, after = source.split('"fail-before-signal"', 1)[1].split("else:", 1)
++        self.assertLess(before.index("systemctl reload"), before.index("kill -HUP"))
++        self.assertLess(after.index("kill -HUP"), after.index("systemctl reload"))
++
++
+ class CellTests(unittest.TestCase):
+     def test_cells_cover_the_three_platforms_and_mail_follows_the_catalogue(self):
+         self.assertEqual(sorted(trial.CELLS), ["set1-arch", "set1-debian13", "set1-ubuntu",
+-                                               "set2-arch", "set2-debian13", "set2-ubuntu"])
++                                               "set2-arch", "set2-debian13", "set2-ubuntu",
++                                               "set3-arch", "set3-debian13", "set3-ubuntu"])
+         for platform in ("arch", "debian13", "ubuntu"):
+             first, second = trial.CELLS["set1-" + platform], trial.CELLS["set2-" + platform]
+             self.assertEqual(dataclasses.replace(second, name=first.name), first)
++            self.assertEqual(dataclasses.replace(trial.CELLS["set3-" + platform], name=first.name), first)
+         for name, cell in trial.CELLS.items():
+             self.assertEqual(cell.name, name)
+             self.assertIn("postgresql", cell.components)
+--- a/deploy/e2e/release-recovery/test_request_identity_trial.py
++++ b/deploy/e2e/release-recovery/test_request_identity_trial.py
+@@ -1,4 +1,5 @@
+ """Offline tests of the set2 ``request-identity`` cell: the pure rules of the driver and of its guest helper."""
++import dataclasses
+ import gzip
+ import hashlib
+ import importlib.util
+@@ -67,9 +68,58 @@
+         self.assertEqual(native.site_username("set2-import-seq.test"), "set2_import_seq_test")
+ 
+ 
++class Set3Tests(unittest.TestCase):
++    def test_the_guest_helper_searches_the_shapes_the_driver_redacts(self):
++        self.assertEqual(native.HASH_SHAPED, trial.base.HASH_SHAPED.pattern)
++        fabricated = b"$6$" + b"saltsalt" + b"$" + b"A" * 86
++        self.assertEqual(len(native.HASH_SHAPED_BYTES.findall(b'{"crypt_hash": "' + fabricated + b'"}')), 1)
++        self.assertEqual(len(native.HASH_SHAPED_BYTES.findall(b'{"has_password": true, "code": "IMPORT_PARTIAL"}')), 0)
++
++    def test_the_answers_the_corrections_define(self):
++        handlers = (REPO / "cmd" / "panel" / "import_handlers.go").read_text(encoding="utf-8")
++        for key in trial.MAILBOX_KEYS:
++            self.assertIn('json:"' + key + '"', handlers.split("type importPreviewMailbox struct", 1)[1].split("}", 1)[0])
++        for word in ('"partial"', '"IMPORT_PARTIAL"', 'json:"imported"', 'json:"not_imported"', 'json:"domain_status"'):
++            self.assertIn(word, handlers)
++        self.assertIn('"CERTIFICATE_ISSUE_FAILED"', (REPO / "cmd" / "panel" / "certificate_issue_failure.go").read_text(encoding="utf-8"))
++        self.assertIn('"authority_unreachable"', (REPO / "internal" / "transport" / "ssl_contracts.go").read_text(encoding="utf-8"))
++        self.assertIn('"password_set"', (REPO / "cmd" / "panel" / "database_v2_handlers.go").read_text(encoding="utf-8"))
++        self.assertEqual(trial.version_number("10.11.14-MariaDB-0ubuntu0.24.04.1"), "10.11.14")
++        self.assertEqual(trial.version_number("15.1"), "15.1")
++        self.assertIsNone(trial.version_number("VERSION()"))
++        steps = [{"step": "domain", "ok": True}, {"step": "files", "ok": False}, {"step": "mail", "ok": True},
++                 {"step": "finalize", "ok": False}]
++        self.assertEqual(trial.partial_lists(steps), (["domain", "mail"], ["files"]))
++
++    def test_hostile_members_and_the_known_password(self):
++        members = native.cpmove_members("a.test", "u", "d", 0, 0, 3, shadow_hash=b"$6$salt$" + b"h" * 86)
++        relative = {name.split("/", 1)[1]: data for name, data in members}
++        self.assertEqual(relative["homedir/etc/a.test/shadow"], b"info:$6$salt$" + b"h" * 86 + b":19000::::::\n")
++        self.assertEqual(sorted(native.payload_files(members)), ["assets/site.css", "index.html"])
++        self.assertEqual(trial.HOSTILE_KINDS, native.HOSTILE_KINDS)
++        for kind in native.HOSTILE_KINDS:
++            with tarfile.open(fileobj=io.BytesIO(native.cpmove_archive(members, True, kind)), mode="r:gz") as archive:
++                listed = {member.name: member for member in archive.getmembers()}
++            hostile = [name for name in listed if native.ESCAPE_PREFIX in name]
++            self.assertTrue(hostile, kind)
++            if kind == "dotdot":
++                self.assertTrue(any("/../../" in name for name in hostile))
++            if kind == "absolute":
++                self.assertIn("etc/" + native.ESCAPE_PREFIX + "-absolute.txt", [name.lstrip("/") for name in hostile])
++            if kind == "symlink":
++                self.assertTrue(any(listed[name].issym() and listed[name].linkname == "/etc" for name in hostile))
++        self.assertIn("cpmove-u/homedir/public_html", listed)       # every set3 archive holds the directory member
++        self.assertEqual(native.PHP_PROBE_MARK + ":42:", trial.PHP_PROBE_MARK)
++        self.assertEqual("/" + native.PHP_PROBE, trial.PHP_PROBE_PATH)
++
++
+ class CellTests(unittest.TestCase):
+     def test_cells_and_plan(self):
+-        self.assertEqual(sorted(trial.CELLS), ["rid-arch", "rid-debian13", "rid-ubuntu"])
++        self.assertEqual(sorted(trial.CELLS), ["rid-arch", "rid-debian13", "rid-ubuntu",
++                                               "rid3-arch", "rid3-debian13", "rid3-ubuntu"])
++        for platform in ("arch", "debian13", "ubuntu"):
++            self.assertEqual(dataclasses.replace(trial.CELLS["rid3-" + platform], name="rid-" + platform),
++                             trial.CELLS["rid-" + platform])
+         self.assertFalse(set(trial.CELLS) & set(trial.base.CELLS))
+         self.assertFalse(set(trial.CELLS) & set(trial.sw.CELLS))
+         plan = trial.build_plan(trial.CELLS["rid-ubuntu"], {"baseline": ARTIFACT}, "/var/tmp/cp-release-drill-x", 18443)
+@@ -184,7 +234,7 @@
+         self.assertTrue(all(mode.startswith(("read-", "owner-", "lab-")) for mode in native.MODES))
+         self.assertEqual(sorted(m for m in native.MODES if not m.startswith("read-")),
+                          ["lab-isolate-acme", "lab-kill-panel", "owner-change-site", "owner-cpmove-fixture",
+-                          "owner-restart-panel", "owner-seed-rows", "owner-seed-site"])
++                          "owner-php-probe", "owner-restart-panel", "owner-seed-rows", "owner-seed-site"])
+         unit = (REPO / "deploy" / "systemd" / "celikpanel-panel.service").read_text(encoding="utf-8")
+         self.assertIn("Restart=on-failure", unit)     # what brings the Panel back after lab-kill-panel
+         self.assertNotIn("restore", native.lab_isolate_acme.__doc__.lower().split("isolation")[0])
+--- a/deploy/e2e/release-recovery/test_owner_update_trial.py
++++ b/deploy/e2e/release-recovery/test_owner_update_trial.py
+@@ -1464,6 +1464,41 @@
+         self.assertEqual(t.classify_outcome("real-start", succeeded, False), "real-start-candidate-reported-success")
+ 
+ 
++class Set3PublishedBaselineTests(unittest.TestCase):
++    def test_the_ledger_is_judged_against_the_pinned_released_digests(self):
++        pins = t.ledger_pins()
++        self.assertEqual(sorted(pins["migrations"]), [38, 42, 43])
++
++        def reading(version, guarded):
++            return {"schema_version": version, "ledger_rows": version, "ledger_contiguous": True,
++                    "ledger_sha256": pins["migrations"][version], "schema_sha256": "x" * 64,
++                    "schema_sha256_without_statistics": pins["schemas"][version], "statistics_tables": ["sqlite_stat1"],
++                    "request_identities": {"exists": guarded}, "integrity_check": ["ok"], "foreign_key_check_clean": True}
++        self.assertEqual(t.ledger_verdict(reading(43, True), 43, pins)["verdict"], "as-expected")
++        self.assertEqual(t.ledger_verdict(reading(42, False), 42, pins)["verdict"], "as-expected")
++        for wrong in (reading(43, True), reading(42, True)):
++            self.assertEqual(t.ledger_verdict(wrong, 42, pins)["verdict"], "different")
++        self.assertEqual(t.ledger_verdict(reading(42, False), 43, pins)["verdict"], "different")
++        self.assertFalse(t.ledger_verdict(dict(reading(43, True), ledger_sha256="0" * 64), 43, pins)["facts"]["ledger_is_the_released_one"])
++        self.assertEqual(t.ledger_verdict(None, 42, pins)["verdict"], "inconclusive")
++        helper = (HERE / t.SCHEMA_LEDGER_HELPER).read_text(encoding="utf-8")
++        self.assertIn("mode=ro", helper)
++        self.assertIn("query_only=ON", helper)
++        self.assertNotIn("INSERT", helper.upper().replace("INSERTS", ""))
++        self.assertEqual(t.site_account_name("upd1-owner.test"), "upd1_owner_test")
++
++    def test_the_guard_and_the_published_baseline(self):
++        middleware = "".join(path.read_text(encoding="utf-8") for path in (REPO / "cmd" / "panel").glob("request_identity*.go"))
++        self.assertIn(t.REQUEST_ID_HEADER, middleware)
++        self.assertIn("REQUEST_ID_REQUIRED", middleware)
++        self.assertIn(t.RELOAD_SENTENCE, middleware)
++        self.assertTrue((REPO / "internal" / "db" / "migrations").glob("043_*"))
++        self.assertEqual(len(list((REPO / "internal" / "db" / "migrations").glob("043_*.sql"))), 1)
++        profile = t.BASELINE_REFS["v0.1.0-alpha.81"]
++        self.assertEqual((profile["baseline"], profile["candidate"]), (("v0.1.0-alpha.81", 81), ("v0.1.0-alpha.82", 82)))
++        self.assertTrue(profile["unpatched"])
++
++
+ class Upd3FixturePatchTests(unittest.TestCase):
+     def test_start_check_patch_sits_in_the_function_the_check_and_the_real_start_share(self):
+         source = (REPO / t.START_CHECK_FILE).read_text(encoding="utf-8")
+@@ -1514,7 +1549,7 @@
+         text = (HERE / "build-upd1-artifacts.sh").read_text()
+         self.assertIn('startcheck=$(commit_fixture start-check', text)
+         self.assertIn('realstart=$(commit_fixture real-start', text)
+-        self.assertEqual(text.count('git -C "$clone" checkout --quiet --detach "$good"'), 2)
++        self.assertEqual(text.count('git -C "$clone" checkout --quiet --detach "$good"'), 3)   # set3: once more in the published-alpha.81 mode
+         self.assertIn('update-ref "refs/upd1/$kind"', text)
+         self.assertIn('s_json=$(build "$startcheck" v0.1.0-alpha.82)', text)
+         self.assertIn('r_json=$(build "$realstart" v0.1.0-alpha.82)', text)
+@@ -1524,7 +1559,15 @@
+         # upd7: the published-baseline mode builds B from the tag (seam only), then G and D over the source.
+         self.assertIn("--kind baseline-ref --baseline-ref", text)
+         self.assertIn('b_json=$(build "$baseline" "$BASELINE_REF")', text)
+-        self.assertIn('g_json=$(build "$good" v0.1.0-alpha.81)', text)
++        self.assertIn('g_json=$(build "$good" "$c_version")', text)
++        self.assertIn("c_version=v0.1.0-alpha.81 b_seq=80 c_seq=81", text)
++        # set3: the published v0.1.0-alpha.81 is built unpatched (the tag commit itself); candidates are alpha.82.
++        self.assertIn("c_version=v0.1.0-alpha.82 b_seq=81 c_seq=82 b_parent=", text)
++        self.assertIn('baseline=$tag_commit', text)
++        self.assertIn('startcheck=$(commit_fixture start-check "test(fixture): set3 start-check candidate', text)
++        self.assertIn('[[ -z $startcheck ]] || s_json=$(build "$startcheck" "$c_version")', text)
++        self.assertEqual(t.baseline_ref_patched("v0.1.0-alpha.81"), ())
++        self.assertEqual(t.baseline_ref_patched("v0.1.0-alpha.80"), t.BASELINE_REF_PATCHED)
+         self.assertIn("b_seq=80 c_seq=81 b_parent=$tag_commit", text)
+         self.assertIn("grep -q DIFFERENT", text)
+         wrapper = (HERE / "run-upd1.sh").read_text().splitlines()
+--- /dev/null
++++ b/deploy/e2e/release-recovery/guest_schema_ledger.py
+@@ -0,0 +1,105 @@
++#!/usr/bin/env python3
++"""set3: the Panel database's migration ledger and schema, read-only, inside a marked disposable QEMU guest.
++
++One mode, ``read``: opens ``/var/lib/celikpanel/celikpanel.db`` read-only in one read transaction and reports
++
++  - the ledger (``schema_migrations``: version, filename, sha256) as its highest version, its row count and the
++    SHA-256 that ``populated_database.MIGRATIONS`` pins for a released ledger (the same canonical JSON);
++  - the schema (``sqlite_schema``: type, name, tbl_name, sql, ordered by type and name) as the SHA-256 that
++    ``populated_database.SCHEMAS`` pins, and the same without SQLite's own statistics tables;
++  - the table names, whether ``request_identities`` exists with its columns and row count, and SQLite's own
++    ``integrity_check`` and ``foreign_key_check``.
++
++It prints no row of any table but the ledger's three public columns. Nothing is written; no service is touched.
++
++set3: Panel veritabanının geçiş defteri ve şeması, işaretli geçici QEMU konuğunda salt-okunur okunur.
++"""
++from __future__ import annotations
++
++import argparse
++import hashlib
++import importlib.util
++import json
++from pathlib import Path
++import sqlite3
++import sys
++import time
++
++HERE = Path(__file__).resolve().parent
++PANEL_DB = Path("/var/lib/celikpanel/celikpanel.db")
++SCHEMA = "celikpanel/set3-schema-ledger/v1"
++GUARDED_TABLE = "request_identities"
++
++
++def _load_probe():
++    spec = importlib.util.spec_from_file_location("set3_ledger_probe", HERE / "guest_probe.py")
++    value = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(value)
++    return value
++
++
++def _sha(raw: bytes) -> str:
++    return hashlib.sha256(raw).hexdigest()
++
++
++def ledger_digest(rows: list) -> str:
++    """populated_database._schema: the canonical JSON of the ledger rows."""
++    return _sha(json.dumps(rows, sort_keys=True, ensure_ascii=True, separators=(",", ":"), allow_nan=False).encode())
++
++
++def schema_digest(objects: list) -> str:
++    """populated_database._schema: the JSON of (type, name, tbl_name, sql) ordered by type and name."""
++    return _sha(json.dumps([list(item) for item in objects], ensure_ascii=True, separators=(",", ":")).encode())
++
++
++def describe(connection) -> dict:
++    connection.execute("BEGIN")
++    try:
++        rows = [{"version": version, "filename": name, "sha256": digest} for version, name, digest in connection.execute(
++            "SELECT version,filename,sha256 FROM schema_migrations ORDER BY version")]
++        objects = connection.execute("SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY type,name").fetchall()
++        tables = sorted(name for kind, name, _, _ in objects if kind == "table")
++        guarded = {"exists": GUARDED_TABLE in tables}
++        if guarded["exists"]:
++            guarded["columns"] = [row[1] for row in connection.execute(f"PRAGMA table_info({GUARDED_TABLE})")]
++            guarded["rows"] = connection.execute(f"SELECT COUNT(*) FROM {GUARDED_TABLE}").fetchone()[0]
++        integrity = [row[0] for row in connection.execute("PRAGMA integrity_check").fetchall()][:5]
++        foreign = connection.execute("PRAGMA foreign_key_check").fetchone()
++    finally:
++        connection.execute("ROLLBACK")
++    without_statistics = [item for item in objects if not str(item[1]).startswith("sqlite_stat")]
++    return {"schema_version": max((row["version"] for row in rows), default=None), "ledger_rows": len(rows),
++            "ledger_contiguous": [row["version"] for row in rows] == list(range(1, len(rows) + 1)),
++            "ledger_sha256": ledger_digest(rows), "ledger_last": rows[-3:],
++            "schema_sha256": schema_digest(objects), "schema_sha256_without_statistics": schema_digest(without_statistics),
++            "schema_objects": len(objects), "statistics_tables": sorted(str(item[1]) for item in objects
++                                                                        if str(item[1]).startswith("sqlite_stat")),
++            "tables": tables, "table_count": len(tables), GUARDED_TABLE: guarded,
++            "integrity_check": integrity, "foreign_key_check_clean": foreign is None}
++
++
++def main(argv=None) -> int:
++    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
++    parser.add_argument("mode", choices=("read",))
++    for name in ("lab-nonce", "vm-uuid", "cell-id", "node"):
++        parser.add_argument("--" + name, required=True)
++    args = parser.parse_args(argv)
++    _load_probe().guard_guest(args)
++    connection = sqlite3.connect("file:" + str(PANEL_DB) + "?mode=ro", uri=True, timeout=20, isolation_level=None)
++    try:
++        connection.execute("PRAGMA query_only=ON")
++        value = describe(connection)
++    finally:
++        connection.close()
++    value.update(schema=SCHEMA, mode=args.mode, database=str(PANEL_DB),
++                 at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
++    print(json.dumps(value, sort_keys=True))
++    return 0
++
++
++if __name__ == "__main__":
++    try:
++        raise SystemExit(main())
++    except Exception as exc:  # noqa: BLE001 - reported as data; the driver decides
++        print(json.dumps({"refused": type(exc).__name__, "reason": str(exc)[:300]}), file=sys.stderr)
++        raise SystemExit(2)

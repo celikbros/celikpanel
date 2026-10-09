@@ -1,0 +1,21 @@
+{
+  "checks": {
+    "checks": 18,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T08:29:58Z",
+    "notes": [],
+    "started_at": "2026-10-09T08:29:52Z",
+    "substeps": {
+      "admin-account-mariadb": "passed",
+      "admin-account-postgresql": "passed"
+    },
+    "title": "the Panel's own account on each database engine",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T08:29:58Z",
+  "name": "C2-admin-account",
+  "started_at": "2026-10-09T08:29:52Z",
+  "verdict": "passed"
+}

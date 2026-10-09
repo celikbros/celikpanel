@@ -1,0 +1,66 @@
+{
+  "action": "owner-cpmove-fixture",
+  "at": "2026-10-09T08:31:00Z",
+  "bytes": 2502,
+  "database": "s2impseq_app",
+  "directory": {
+    "mode": "0700",
+    "uid": 0
+  },
+  "docroot_expected": {
+    "assets/site.css": [
+      34,
+      "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+    ],
+    "index.html": [
+      66,
+      "62962c4807e785f9e83250d95d52c889e439f32d36227d284e1e865d6a2f6ed7"
+    ]
+  },
+  "domain": "set2-import-seq.test",
+  "hostile": null,
+  "hostile_members": [],
+  "lab_action": false,
+  "mailbox_shadow": "the sha512-crypt hash (openssl passwd -6) of a password the lab chose; neither is recorded",
+  "members": [
+    {
+      "bytes": 57,
+      "name": "cpmove-s2impseq/cp/s2impseq"
+    },
+    {
+      "bytes": 66,
+      "name": "cpmove-s2impseq/homedir/public_html/index.html"
+    },
+    {
+      "bytes": 34,
+      "name": "cpmove-s2impseq/homedir/public_html/assets/site.css"
+    },
+    {
+      "bytes": 124,
+      "name": "cpmove-s2impseq/homedir/etc/set2-import-seq.test/shadow"
+    },
+    {
+      "bytes": 15,
+      "name": "cpmove-s2impseq/homedir/etc/set2-import-seq.test/quota"
+    },
+    {
+      "bytes": 54,
+      "name": "cpmove-s2impseq/va/set2-import-seq.test"
+    },
+    {
+      "bytes": 32,
+      "name": "cpmove-s2impseq/mysql/s2impseq_app.create"
+    },
+    {
+      "bytes": 7388,
+      "name": "cpmove-s2impseq/mysql/s2impseq_app.sql"
+    }
+  ],
+  "mode": "owner-cpmove-fixture",
+  "owner_action": true,
+  "path": "/var/lib/celikpanel-imports/cpmove-s2impseq.tar.gz",
+  "public_html_directory_member": true,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "sha256": "eb9a8311031cc965c977bed35549036249914528efd2683f9e448000953da683",
+  "user": "s2impseq"
+}

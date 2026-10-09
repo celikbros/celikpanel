@@ -1,0 +1,26 @@
+{
+  "note": "ConnectionResetError: [Errno 104] Connection reset by peer",
+  "outcome": "unknown",
+  "panel": "owner",
+  "purpose": "SystemUpdateOperation status (read-only poll)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18477"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/panel/update/status?request_id=0318dd07312907bf6a0a04f9df144815"
+  },
+  "response": null
+}

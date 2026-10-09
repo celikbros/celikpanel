@@ -1,0 +1,40 @@
+{
+  "action": "owner-nginx-php-snippet",
+  "at": "2026-10-09T08:16:32Z",
+  "existed_before": false,
+  "fastcgi_conf": {
+    "exists": true,
+    "group": "root",
+    "kind": "file",
+    "mode": "0644",
+    "owner": "root",
+    "path": "/etc/nginx/fastcgi.conf"
+  },
+  "file": {
+    "exists": true,
+    "group": "root",
+    "kind": "file",
+    "mode": "0644",
+    "owner": "root",
+    "path": "/etc/nginx/snippets/fastcgi-php.conf"
+  },
+  "lab_action": false,
+  "made_directory": true,
+  "mode": "owner-nginx-php-snippet",
+  "nginx_test": {
+    "argv": [
+      "nginx",
+      "-t"
+    ],
+    "at": "2026-10-09T08:16:32Z",
+    "returncode": 0,
+    "seconds": 0.012,
+    "status": "ok",
+    "stderr": "2026/10/09 08:16:32 [warn] 5215#5215: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "stdout": ""
+  },
+  "owner_action": true,
+  "path": "/etc/nginx/snippets/fastcgi-php.conf",
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "sha256": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2"
+}

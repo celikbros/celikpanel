@@ -1,0 +1,39 @@
+2026-10-09T08:39:22Z
+4.7G	/var/tmp/cp-set3-run
+924M	/var/tmp/cp-release-drill-set3-d13-a
+665M	/var/tmp/cp-release-drill-set3-ub-a
+923M	/var/tmp/cp-release-drill-rid3-arch-a
+923M	/var/tmp/cp-release-drill-rid3-arch-b
+923M	/var/tmp/cp-release-drill-rid3-d13-a
+923M	/var/tmp/cp-release-drill-rid3-d13-b
+664M	/var/tmp/cp-release-drill-rid3-ub-a
+921M	/var/tmp/cp-release-drill-u14-arch-def-a
+921M	/var/tmp/cp-release-drill-u14-arch-good-a
+922M	/var/tmp/cp-release-drill-u14-d13-def-a
+921M	/var/tmp/cp-release-drill-u14-d13-good-a
+922M	/var/tmp/cp-release-drill-u14-d13-mr-a
+922M	/var/tmp/cp-release-drill-u14-d13-oc-a
+922M	/var/tmp/cp-release-drill-u14-d13-sc-a
+662M	/var/tmp/cp-release-drill-u14-ub-def-a
+662M	/var/tmp/cp-release-drill-u14-ub-good-a
+662M	/var/tmp/cp-release-drill-u14-ub-oc-a
+945M	/var/tmp/cp-upd1-build/20261009t061555z
+950M	/var/tmp/cp-upd1-build/20261009t064831z
+950M	/var/tmp/cp-upd1-build/20261009t070418z
+911M	/var/tmp/cp-pair-accept/dist/0473af3e56364e4e0f78b4b6b971f3ccfefb59fe-acceptance-license
+911M	/var/tmp/cp-pair-accept/dist/105d32bbe88fd5afb2d3832ff1b5c5ae41bf451b-acceptance-license
+911M	/var/tmp/cp-pair-accept/dist/1831a16184dbe62325ed76f19844428df3c8dbcc-acceptance-license
+911M	/var/tmp/cp-pair-accept/dist/30ac1488280a7f3c5cd1bb514a7447d1dc9bf7a3-acceptance-license
+911M	/var/tmp/cp-pair-accept/dist/9e8c2029b846afa958986aedcda4de7af40eb0a3-acceptance-license
+911M	/var/tmp/cp-pair-accept/dist/9f9064bd0143e6e9978f472e3027ac18aa357ec1-acceptance-license
+839M	/var/tmp/cp-pair-accept/dist/a0beb7263d1f4ca72258f6b306f9111ba4e2a334-acceptance-license
+911M	/var/tmp/cp-pair-accept/dist/b11032be780c6b4f3c2edf392af7af754d124083-acceptance-license
+911M	/var/tmp/cp-pair-accept/dist/c309f79e64d144f374d9b98fe5c67a34f9bc885c-acceptance-license
+911M	/var/tmp/cp-pair-accept/dist/cc93780e6392dfeba8dfcd70c19028e9fbb79974-acceptance-license
+911M	/var/tmp/cp-pair-accept/dist/f18a9d416fbc785236891e6645cd53063d8f91ec-acceptance-license
+overlay disks still present in this run's labs:
+none
+no dry-run lab
+830 bash /mnt/c/Users/alice/AppData/Local/Temp/claude/c--CELIKBROS-PROJECTS-celikpanel/ab34f56e-94b5-4834-a9ea-4e8dbe057
+git local config key list fingerprint: b6f8491de6f4969250c85cd1d20d8607  -
+HEAD cfa329676160005ecc2ec4b9a679231d1387ad94

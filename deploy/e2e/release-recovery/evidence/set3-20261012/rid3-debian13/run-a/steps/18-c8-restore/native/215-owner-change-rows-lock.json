@@ -1,0 +1,16 @@
+{
+  "action": "owner-seed-rows",
+  "at": "2026-10-09T07:12:04Z",
+  "database": "set1_owner_test_seq",
+  "kind": "drift",
+  "lab_action": false,
+  "mode": "owner-seed-rows",
+  "owner_action": true,
+  "returncode": 0,
+  "rows_and_sum": [
+    "10001",
+    "109632231"
+  ],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "stderr": ""
+}

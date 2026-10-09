@@ -1,0 +1,57 @@
+{
+  "at": "2026-10-09T08:16:54Z",
+  "databases_v2": [
+    {
+      "name": "s2impcon_app",
+      "server_id": 1
+    }
+  ],
+  "docroot": {
+    "bytes": 100,
+    "exists": true,
+    "file_list": {
+      "assets/site.css": [
+        34,
+        "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+      ],
+      "index.html": [
+        66,
+        "66f833c2fcb7199f3bfc3c828a36ffe93348a6149e886a53fa2e45778e62e559"
+      ]
+    },
+    "files": 2,
+    "mode": "0750",
+    "names": [
+      "index.html",
+      "assets/site.css"
+    ],
+    "newest_mtime": 1791533812,
+    "non_regular": [],
+    "owner_uid": 1005,
+    "root": "/var/www/celikpanel/subscriptions/2/sites/5/public_html",
+    "sha256": "94f48d5110d297bf6849c8bb3fcea41673f7ad39af6f478f2784bfe506eab4c7"
+  },
+  "domain": "set2-import-con.test",
+  "email_accounts": [],
+  "email_forwardings": [],
+  "escapes": [],
+  "lab_action": false,
+  "mode": "read-imported",
+  "owner_action": false,
+  "rows": [
+    {
+      "id": 5,
+      "name": "set2-import-con.test",
+      "status": "active",
+      "subscription_id": 2
+    }
+  ],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "site_account": {
+    "home": "/var/www/celikpanel/subscriptions/2/sites/5",
+    "uid": 1005
+  },
+  "site_home_entries": [
+    "public_html"
+  ]
+}

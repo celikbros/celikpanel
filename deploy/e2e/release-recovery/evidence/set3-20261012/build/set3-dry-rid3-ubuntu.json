@@ -1,0 +1,127 @@
+{
+  "arrivals": {
+    "i": "the same request three times in a row",
+    "ii": "three times at once",
+    "iii": "without the header",
+    "iv": "the same identity with a different body",
+    "v": "the connection dropped while the request runs (restore, import)",
+    "vi": "the Panel goes away while a restore runs: the owner's systemctl restart, and the process killed",
+    "vii": "the request_identities rows afterwards"
+  },
+  "candidate": {
+    "commit": "0473af3e56364e4e0f78b4b6b971f3ccfefb59fe",
+    "sha256": "a94e84bfefdf842747a5d76d636271ec7fa547339f79012e3223148c230e5a57",
+    "version": "v0.1.0-alpha.81"
+  },
+  "cell": {
+    "components": [
+      "nginx",
+      "php-fpm",
+      "mariadb",
+      "postfix",
+      "dovecot",
+      "roundcube",
+      "rspamd",
+      "postgresql"
+    ],
+    "mail": true,
+    "name": "rid3-ubuntu",
+    "node": "ubuntu",
+    "purpose": "web_mail"
+  },
+  "cell_kind": "request-identity",
+  "local_port": 18443,
+  "native_evidence": false,
+  "routes": [
+    {
+      "id": "domain-database-mariadb",
+      "route": "POST /api/v1/domains/{id}/databases (MariaDB)"
+    },
+    {
+      "id": "domain-database-postgresql",
+      "route": "POST /api/v1/domains/{id}/databases (PostgreSQL)"
+    },
+    {
+      "id": "admin-account-mariadb",
+      "route": "POST /api/v1/database-servers/{id}/admin-account (MariaDB)"
+    },
+    {
+      "id": "admin-account-postgresql",
+      "route": "POST /api/v1/database-servers/{id}/admin-account (PostgreSQL)"
+    },
+    {
+      "id": "server-database-mariadb",
+      "route": "POST /api/v1/database-servers/{id}/databases (MariaDB)"
+    },
+    {
+      "id": "server-database-postgresql",
+      "route": "POST /api/v1/database-servers/{id}/databases (PostgreSQL)"
+    },
+    {
+      "id": "backup",
+      "route": "POST /api/v1/domains/{id}/backups"
+    },
+    {
+      "id": "letsencrypt",
+      "route": "POST /api/v1/domains/{id}/ssl/letsencrypt (reissue)"
+    },
+    {
+      "id": "vpn-peer",
+      "route": "POST /api/v1/vpn/peers"
+    },
+    {
+      "id": "import",
+      "route": "POST /api/v1/import/cpanel/apply"
+    },
+    {
+      "id": "restore",
+      "route": "POST /api/v1/domains/{id}/backups/restore"
+    }
+  ],
+  "rule": "the driver calls only the Panel's HTTP API as the logged-in owner; every native fact is a read-only SSH inspection; owner actions on the guest are recorded as such; no certificate authority is contacted or imitated; no update is started",
+  "schema": "celikpanel/set2-request-identity-plan/v1",
+  "setup": {
+    "customization": {
+      "components": [
+        "dovecot",
+        "mariadb",
+        "nginx",
+        "php-fpm",
+        "postfix",
+        "postgresql",
+        "roundcube",
+        "rspamd"
+      ]
+    },
+    "dns_mode": "external",
+    "purpose": "web_mail"
+  },
+  "site": {
+    "domain": "set1-owner.test",
+    "megabytes": 192,
+    "rows": 20000
+  },
+  "steps": [
+    "preflight",
+    "origin",
+    "baseline-install",
+    "owner-login",
+    "license",
+    "setup",
+    "site",
+    "C0-prepare",
+    "C1-domain-databases",
+    "C2-admin-account",
+    "C3-server-databases",
+    "C4-backup",
+    "C5-letsencrypt",
+    "C6-vpn-peer",
+    "C6b-php-site",
+    "C7-import",
+    "C7b-import-answers",
+    "C8-restore",
+    "C9-identities",
+    "collect"
+  ],
+  "work_root": "/var/tmp/cp-release-drill-dry-rid3-ubuntu"
+}

@@ -1,0 +1,67 @@
+{
+  "at": "2026-10-09T08:18:52Z",
+  "lab_action": false,
+  "mariadb": {
+    "databases": [
+      "s2_srvcon",
+      "s2_srvsent",
+      "s2_srvseq",
+      "s2impcon_app",
+      "s2impdrop_app",
+      "s2impseq_app",
+      "s2imptar_app",
+      "s3hdd_app",
+      "set1_owner_test_con",
+      "set1_owner_test_seq",
+      "test"
+    ],
+    "returncode": 0,
+    "stderr": "",
+    "users": [
+      "@dns-arch",
+      "@localhost",
+      "PUBLIC@",
+      "celikpanel_admin@localhost",
+      "mariadb.sys@localhost",
+      "mysql@localhost",
+      "root@localhost",
+      "s2_srvconu@localhost",
+      "s2_srvsentu@localhost",
+      "s2_srvsequ@localhost",
+      "set1_owner_test_con_user@localhost",
+      "set1_owner_test_seq_user@localhost"
+    ]
+  },
+  "mode": "read-engines",
+  "owner_action": false,
+  "postgresql": {
+    "databases": [
+      "s2_srvcon",
+      "s2_srvsent",
+      "s2_srvseq",
+      "set1_owner_test_con",
+      "set1_owner_test_seq"
+    ],
+    "returncode": 0,
+    "roles": [
+      "celikpanel_admin",
+      "postgres",
+      "s2_srvsentu",
+      "set1_owner_test_con_user",
+      "set1_owner_test_seq_user"
+    ],
+    "stderr": ""
+  },
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "seed_tables": {
+    "set1_owner_test_seq": {
+      "checksum": [
+        "3223983406"
+      ],
+      "max_id": "9427566",
+      "rows": "10001",
+      "sum_id": "109427566",
+      "table_exists": true
+    }
+  }
+}

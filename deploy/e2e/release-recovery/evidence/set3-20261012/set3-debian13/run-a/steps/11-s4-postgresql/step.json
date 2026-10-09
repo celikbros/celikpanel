@@ -1,0 +1,26 @@
+{
+  "checks": {
+    "checks": 37,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T07:24:23Z",
+    "notes": [],
+    "started_at": "2026-10-09T07:24:02Z",
+    "substeps": {
+      "a": "passed",
+      "b": "passed",
+      "c": "passed",
+      "d": "passed",
+      "e": "passed",
+      "f": "passed",
+      "g": "passed"
+    },
+    "title": "postgresql.conf and pg_hba.conf",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T07:24:23Z",
+  "name": "S4-postgresql",
+  "started_at": "2026-10-09T07:24:02Z",
+  "verdict": "passed"
+}

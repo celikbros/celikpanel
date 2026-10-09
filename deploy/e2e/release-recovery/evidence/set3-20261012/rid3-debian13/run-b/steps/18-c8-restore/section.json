@@ -1,0 +1,2518 @@
+{
+  "calls": [
+    {
+      "answer": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "at": "2026-10-09T08:32:29Z",
+      "body_bytes": 354,
+      "body_sha256": "7493044ee0ab05fdc18ae1bd147cae25a5bf4de689629b9df545994dd58da413",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REQUIRED": {
+          "en": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again.",
+          "tr": "Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json"
+      },
+      "json": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "label": "restore (iii) without the header",
+      "n": 93,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak"
+        },
+        "header_sent": false,
+        "identity": null,
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "seconds": 0.004,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 428,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T08:32:30Z",
+      "body_bytes": 217,
+      "body_sha256": "e0d2777451027de1bb2f2396fb27ab3d0f49eea0c90544305e590e36ba5ee62e",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "871f632c868f43f2aefaa003c19a6556"
+      },
+      "json": {
+        "safety_backup": {
+          "created_at": "2026-10-09T08:32:31.131285339Z",
+          "name": "full-20261009T083235.737184567Z-5bc32a0789e2ab48.cpbak",
+          "origin": "pre_restore",
+          "restorable": true,
+          "size": 201460690,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "restore (i) sequential arrival 1 of 3",
+      "n": 94,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak"
+        },
+        "header_sent": true,
+        "identity": "871f632c868f43f2aefaa003c19a6556",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "seconds": 12.195,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T08:32:45Z",
+      "body_bytes": 217,
+      "body_sha256": "e0d2777451027de1bb2f2396fb27ab3d0f49eea0c90544305e590e36ba5ee62e",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "871f632c868f43f2aefaa003c19a6556",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "safety_backup": {
+          "created_at": "2026-10-09T08:32:31.131285339Z",
+          "name": "full-20261009T083235.737184567Z-5bc32a0789e2ab48.cpbak",
+          "origin": "pre_restore",
+          "restorable": true,
+          "size": 201460690,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "restore (i) sequential arrival 2 of 3",
+      "n": 95,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak"
+        },
+        "header_sent": true,
+        "identity": "871f632c868f43f2aefaa003c19a6556",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "seconds": 0.004,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T08:32:45Z",
+      "body_bytes": 217,
+      "body_sha256": "e0d2777451027de1bb2f2396fb27ab3d0f49eea0c90544305e590e36ba5ee62e",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "871f632c868f43f2aefaa003c19a6556",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "safety_backup": {
+          "created_at": "2026-10-09T08:32:31.131285339Z",
+          "name": "full-20261009T083235.737184567Z-5bc32a0789e2ab48.cpbak",
+          "origin": "pre_restore",
+          "restorable": true,
+          "size": 201460690,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "restore (i) sequential arrival 3 of 3",
+      "n": 96,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak"
+        },
+        "header_sent": true,
+        "identity": "871f632c868f43f2aefaa003c19a6556",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "seconds": 0.01,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "871f632c868f43f2aefaa003c19a6556"
+        }
+      },
+      "at": "2026-10-09T08:32:47Z",
+      "body_bytes": 256,
+      "body_sha256": "c22cccb4d2f0e61ebb5122a66dc585c2f663f84a9eb28432efd17c28dc381b65",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REUSED": {
+          "en": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+          "tr": "Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "871f632c868f43f2aefaa003c19a6556"
+      },
+      "json": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "871f632c868f43f2aefaa003c19a6556"
+        }
+      },
+      "label": "restore (iv) the same identity with a different body",
+      "n": 97,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083027.704648183Z-5ca52523f5ea9db3.cpbak"
+        },
+        "header_sent": true,
+        "identity": "871f632c868f43f2aefaa003c19a6556",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "seconds": 0.004,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T08:32:48Z",
+      "body_bytes": 217,
+      "body_sha256": "0b05a9d5e02af0c05b7bff4661a02b599c97afe09e9f56a0472fb24c4a0cacd3",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "74966502f5fe1912506d1fadeedbf707",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "safety_backup": {
+          "created_at": "2026-10-09T08:32:48.518344958Z",
+          "name": "full-20261009T083252.606614879Z-652fbbf9f577610d.cpbak",
+          "origin": "pre_restore",
+          "restorable": true,
+          "size": 201460755,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "restore (ii) concurrent arrival 1 of 3",
+      "n": 98,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak"
+        },
+        "header_sent": true,
+        "identity": "74966502f5fe1912506d1fadeedbf707",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "seconds": 10.51,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T08:32:48Z",
+      "body_bytes": 217,
+      "body_sha256": "0b05a9d5e02af0c05b7bff4661a02b599c97afe09e9f56a0472fb24c4a0cacd3",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "74966502f5fe1912506d1fadeedbf707",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "safety_backup": {
+          "created_at": "2026-10-09T08:32:48.518344958Z",
+          "name": "full-20261009T083252.606614879Z-652fbbf9f577610d.cpbak",
+          "origin": "pre_restore",
+          "restorable": true,
+          "size": 201460755,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "restore (ii) concurrent arrival 2 of 3",
+      "n": 99,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak"
+        },
+        "header_sent": true,
+        "identity": "74966502f5fe1912506d1fadeedbf707",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "seconds": 10.511,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T08:32:48Z",
+      "body_bytes": 217,
+      "body_sha256": "0b05a9d5e02af0c05b7bff4661a02b599c97afe09e9f56a0472fb24c4a0cacd3",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "74966502f5fe1912506d1fadeedbf707"
+      },
+      "json": {
+        "safety_backup": {
+          "created_at": "2026-10-09T08:32:48.518344958Z",
+          "name": "full-20261009T083252.606614879Z-652fbbf9f577610d.cpbak",
+          "origin": "pre_restore",
+          "restorable": true,
+          "size": 201460755,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "restore (ii) concurrent arrival 3 of 3",
+      "n": 100,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak"
+        },
+        "header_sent": true,
+        "identity": "74966502f5fe1912506d1fadeedbf707",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "seconds": 10.511,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "BACKUP_RESTORE_IN_PROGRESS",
+        "error": "Another restore of this domain is still running, so this one was not started and changed nothing. Wait for it to finish and check the site; restore again only if it is still needed."
+      },
+      "at": "2026-10-09T08:33:01Z",
+      "body_bytes": 230,
+      "body_sha256": "ccd4d7ba96837600b028b7fd68edd25448c6b95d4a72053036817ad750c3e788",
+      "catalogue_texts": {
+        "err.BACKUP_RESTORE_IN_PROGRESS": {
+          "en": "Another restore of this domain is still running, so this one was not started and changed nothing. Wait for it to finish and check the site; restore again only if it is still needed.",
+          "tr": "Bu alan adının başka bir geri yüklemesi hâlâ sürüyor; bu yüzden bu geri yükleme başlatılmadı ve hiçbir şeyi değiştirmedi. Bitmesini bekleyip siteyi kontrol edin; yalnızca hâlâ gerekiyorsa yeniden geri yükleyin."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "faa5e0486d2e0388028a0d1c88f1ba7f"
+      },
+      "json": {
+        "code": "BACKUP_RESTORE_IN_PROGRESS",
+        "error": "Another restore of this domain is still running, so this one was not started and changed nothing. Wait for it to finish and check the site; restore again only if it is still needed."
+      },
+      "label": "restore (lock) two different identities at once, arrival 1 of 2",
+      "n": 101,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak"
+        },
+        "header_sent": true,
+        "identity": "faa5e0486d2e0388028a0d1c88f1ba7f",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "seconds": 0.04,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T08:33:01Z",
+      "body_bytes": 217,
+      "body_sha256": "e132c1152cacb82c43fd13ee0fcc74f1bd2d4342d10b7d944f57b1b8698b6c8a",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "296722f8da353af697dafae593c06b08"
+      },
+      "json": {
+        "safety_backup": {
+          "created_at": "2026-10-09T08:33:02.045080475Z",
+          "name": "full-20261009T083306.012826723Z-beff2d253f21032e.cpbak",
+          "origin": "pre_restore",
+          "restorable": true,
+          "size": 201460674,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "restore (lock) two different identities at once, arrival 2 of 2",
+      "n": 102,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak"
+        },
+        "header_sent": true,
+        "identity": "296722f8da353af697dafae593c06b08",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "seconds": 10.204,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer_bytes_received_before_the_drop": 0,
+      "at": "2026-10-09T08:33:15Z",
+      "dropped_after_seconds": 0.568,
+      "held": {
+        "after_seconds": 0.3,
+        "new_entries": [
+          ".build-3090965086",
+          "payload",
+          "files.tar.gz"
+        ],
+        "seen": "the Agent is writing in the domain's backup directory"
+      },
+      "label": "restore (v) the connection is dropped while the restore runs",
+      "n": 103,
+      "outcome": "connection-dropped-by-the-client",
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak"
+        },
+        "header_sent": true,
+        "identity": "ab87daf65f73d52de2a9897aea7e6934",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "status": null
+    },
+    {
+      "at": "2026-10-09T08:33:28Z",
+      "body_bytes": 217,
+      "body_sha256": "4be907825a3afc8dc098e33f9c1116e290b4c8bf923befa7718aa46bef1e90ea",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "ab87daf65f73d52de2a9897aea7e6934",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "safety_backup": {
+          "created_at": "2026-10-09T08:33:15.561320612Z",
+          "name": "full-20261009T083319.797481877Z-e615fe6d862df11a.cpbak",
+          "origin": "pre_restore",
+          "restorable": true,
+          "size": 201460671,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "restore (v) the same identity again after the drop",
+      "n": 104,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak"
+        },
+        "header_sent": true,
+        "identity": "ab87daf65f73d52de2a9897aea7e6934",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "seconds": 0.004,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T08:33:32Z",
+      "body_bytes": 217,
+      "body_sha256": "319f0a3b7b2077e03b652ed22ff0533336248a60c3fa174c76d1d4156416cc76",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "615a54834006edfa7dcc853946a7e905"
+      },
+      "json": {
+        "safety_backup": {
+          "created_at": "2026-10-09T08:33:32.395639972Z",
+          "name": "full-20261009T083336.992132623Z-dd24e511ee395f5f.cpbak",
+          "origin": "pre_restore",
+          "restorable": true,
+          "size": 201460758,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "restore (vi, restart) the restore that is running when the Panel goes away",
+      "n": 105,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak"
+        },
+        "header_sent": true,
+        "identity": "615a54834006edfa7dcc853946a7e905",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "seconds": 12.678,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T08:34:06Z",
+      "body_bytes": 217,
+      "body_sha256": "319f0a3b7b2077e03b652ed22ff0533336248a60c3fa174c76d1d4156416cc76",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "615a54834006edfa7dcc853946a7e905",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "safety_backup": {
+          "created_at": "2026-10-09T08:33:32.395639972Z",
+          "name": "full-20261009T083336.992132623Z-dd24e511ee395f5f.cpbak",
+          "origin": "pre_restore",
+          "restorable": true,
+          "size": 201460758,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "restore (vi, restart) the same identity again after the Panel came back",
+      "n": 106,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak"
+        },
+        "header_sent": true,
+        "identity": "615a54834006edfa7dcc853946a7e905",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "seconds": 0.004,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T08:34:09Z",
+      "error": "RemoteDisconnected: Remote end closed connection without response",
+      "label": "restore (vi, kill) the restore that is running when the Panel goes away",
+      "n": 107,
+      "outcome": "no-answer",
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak"
+        },
+        "header_sent": true,
+        "identity": "3dadc30d872887900c244bbe9c983149",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "seconds": 0.778,
+      "status": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_OUTCOME_UNKNOWN",
+        "error": "CelikPanel restarted or failed while this change was running, so it is not known whether the change was completed. It will not be run again by itself. Reload the page and check the current state; make the change again only if it is missing.",
+        "vars": {
+          "request_id": "3dadc30d872887900c244bbe9c983149"
+        }
+      },
+      "at": "2026-10-09T08:34:36Z",
+      "body_bytes": 343,
+      "body_sha256": "991eb53947f2ebea304200aaf26a552dad61339b5e2e1a4c78880f98a227144e",
+      "catalogue_texts": {
+        "err.REQUEST_OUTCOME_UNKNOWN": {
+          "en": "CelikPanel restarted or failed while this change was running, so it is not known whether the change was completed. It will not be run again by itself. Reload the page and check the current state; make the change again only if it is missing.",
+          "tr": "CelikPanel bu değişiklik sürerken yeniden başladı ya da hata verdi; bu yüzden değişikliğin tamamlanıp tamamlanmadığı bilinmiyor. Kendiliğinden yeniden çalıştırılmayacak. Sayfayı yeniden yükleyip mevcut durumu kontrol edin; değişikliği yalnızca eksikse yeniden yapın."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "3dadc30d872887900c244bbe9c983149"
+      },
+      "json": {
+        "code": "REQUEST_OUTCOME_UNKNOWN",
+        "error": "CelikPanel restarted or failed while this change was running, so it is not known whether the change was completed. It will not be run again by itself. Reload the page and check the current state; make the change again only if it is missing.",
+        "vars": {
+          "request_id": "3dadc30d872887900c244bbe9c983149"
+        }
+      },
+      "label": "restore (vi, kill) the same identity again after the Panel came back",
+      "n": 108,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "backup_name": "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak"
+        },
+        "header_sent": true,
+        "identity": "3dadc30d872887900c244bbe9c983149",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups/restore"
+      },
+      "seconds": 0.004,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T08:34:37Z",
+      "json": {
+        "account_type": "account",
+        "effective_role": "admin",
+        "email": "labadmin@example.invalid",
+        "features": {
+          "team_members": false
+        },
+        "impersonating": false,
+        "role": "admin",
+        "username": "labadmin"
+      },
+      "label": "C8 the owner's session after the Panel came back",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/auth/me"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "docroot": [
+          "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567",
+          "e36d0e6b8364808a7cc33736588ef3837e908c9886487c1387151b47a91964b4"
+        ],
+        "rows": [
+          [
+            "20000",
+            "200010000"
+          ],
+          [
+            "10001",
+            "109255150"
+          ]
+        ]
+      },
+      "name": "restore (iii): before the arrivals the owner's change is in place (the site is not the backup's)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.004,
+        "status": 428
+      },
+      "name": "restore (iii): without the header the answer is 428 REQUEST_ID_REQUIRED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "archives": [
+          2,
+          2
+        ]
+      },
+      "name": "restore (iii): and nothing was restored and no archive was written",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 12.195,
+          "status": 200
+        },
+        "docroot": [
+          "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567",
+          "e36d0e6b8364808a7cc33736588ef3837e908c9886487c1387151b47a91964b4",
+          "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567"
+        ],
+        "new_archive_origins": [
+          "pre_restore"
+        ],
+        "new_archives": [
+          "full-20261009T083235.737184567Z-5bc32a0789e2ab48.cpbak"
+        ],
+        "partial_files": [],
+        "rows": [
+          [
+            "20000",
+            "200010000"
+          ],
+          [
+            "10001",
+            "109255150"
+          ],
+          [
+            "20000",
+            "200010000"
+          ]
+        ],
+        "seconds": 12.195,
+        "site_is_the_backups": true,
+        "site_was_changed_before": true
+      },
+      "name": "restore (i): the first arrival restored the site and wrote one pre-restore archive",
+      "ok": true
+    },
+    {
+      "detail": {
+        "archives": [
+          3,
+          3
+        ],
+        "docroot": [
+          "b28a96f5e4ec6df9c8f5cd86b05ff4ef9b2afa97c8ad4ed82b87ea352bfa5afd",
+          "b28a96f5e4ec6df9c8f5cd86b05ff4ef9b2afa97c8ad4ed82b87ea352bfa5afd"
+        ],
+        "rows": [
+          [
+            "10001",
+            "109047166"
+          ],
+          [
+            "10001",
+            "109047166"
+          ]
+        ]
+      },
+      "name": "restore (i): the second and third arrival restored nothing: the owner's later change is still in place and no archive was added",
+      "ok": true
+    },
+    {
+      "detail": {
+        "replays_marked": true,
+        "same_bytes": true,
+        "statuses": [
+          200,
+          200,
+          200
+        ]
+      },
+      "name": "restore (i): the three answers are the same bytes, the later two marked as replays",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REUSED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.004,
+        "status": 409
+      },
+      "name": "restore (iv): the same identity with a different body is refused 409 REQUEST_ID_REUSED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "archives": [
+          3,
+          3
+        ]
+      },
+      "name": "restore (iv): and there is no second effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answers": [
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 10.51,
+            "status": 200
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 10.511,
+            "status": 200
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 10.511,
+            "status": 200
+          }
+        ],
+        "docroot": [
+          "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567",
+          "b28a96f5e4ec6df9c8f5cd86b05ff4ef9b2afa97c8ad4ed82b87ea352bfa5afd",
+          "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567"
+        ],
+        "new_archive_origins": [
+          "pre_restore"
+        ],
+        "new_archives": [
+          "full-20261009T083252.606614879Z-652fbbf9f577610d.cpbak"
+        ],
+        "partial_files": [],
+        "rows": [
+          [
+            "20000",
+            "200010000"
+          ],
+          [
+            "10001",
+            "109047166"
+          ],
+          [
+            "20000",
+            "200010000"
+          ]
+        ],
+        "site_is_the_backups": true,
+        "site_was_changed_before": true
+      },
+      "name": "restore (ii): three arrivals at once of one identity restored the site once (one pre-restore archive)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answers": [
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 10.51,
+            "status": 200
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 10.511,
+            "status": 200
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 10.511,
+            "status": 200
+          }
+        ],
+        "in_progress": 0
+      },
+      "name": "restore (ii): the answers are the same bytes, or REQUEST_IN_PROGRESS for a waiter",
+      "ok": true
+    },
+    {
+      "detail": [
+        {
+          "code": "BACKUP_RESTORE_IN_PROGRESS",
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.04,
+          "status": 409
+        },
+        {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 10.204,
+          "status": 200
+        }
+      ],
+      "name": "restore (ii): of two different identities at once one restore ran and the other was refused by the Agent's lock (409 BACKUP_RESTORE_IN_PROGRESS)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "docroot": [
+          "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567",
+          "fe97af9bbee9729b5006da9518c4a078d20a8a1786d9ff17664037ca57e2a78d",
+          "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567"
+        ],
+        "new_archive_origins": [
+          "pre_restore"
+        ],
+        "new_archives": [
+          "full-20261009T083306.012826723Z-beff2d253f21032e.cpbak"
+        ],
+        "partial_files": [],
+        "rows": [
+          [
+            "20000",
+            "200010000"
+          ],
+          [
+            "10001",
+            "109135790"
+          ],
+          [
+            "20000",
+            "200010000"
+          ]
+        ],
+        "site_is_the_backups": true,
+        "site_was_changed_before": true
+      },
+      "name": "restore (ii): and the site was restored once (one pre-restore archive)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "dropped": {
+          "answer_bytes_received_before_the_drop": 0,
+          "dropped_after_seconds": 0.568,
+          "held": {
+            "after_seconds": 0.3,
+            "new_entries": [
+              ".build-3090965086",
+              "payload",
+              "files.tar.gz"
+            ],
+            "seen": "the Agent is writing in the domain's backup directory"
+          }
+        },
+        "row_at_drop": {
+          "actor_user_id": 2,
+          "body": {
+            "hash_shaped_values_found": 0,
+            "hash_shaped_values_in_other_columns": 0,
+            "sensitive_values_of_this_run_found": 0,
+            "sensitive_words_found": [],
+            "stored": false
+          },
+          "created_at": 1791534795,
+          "expires_at": 1791621195,
+          "finished_at": 0,
+          "id": "ab87daf65f73d52de2a9897aea7e6934",
+          "lifetime_seconds": 86400,
+          "method": "POST",
+          "request_sha256": "62dc22d06eeebe666022b13e706a1556499d06ce48a35fdf3777c9691b767077",
+          "response_content_type": "",
+          "response_retained": 0,
+          "response_status": 0,
+          "route": "/api/v1/domains/{id}/backups/restore",
+          "status": "running"
+        }
+      },
+      "name": "restore (v): the request was still running when the connection was dropped",
+      "ok": true
+    },
+    {
+      "detail": {
+        "docroot": [
+          "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567",
+          "64febec44cd0520aaf62eb3efb232b0f26555bd271974c4fc8169f2989f7c2a2",
+          "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567"
+        ],
+        "new_archive_origins": [
+          "pre_restore"
+        ],
+        "new_archives": [
+          "full-20261009T083319.797481877Z-e615fe6d862df11a.cpbak"
+        ],
+        "partial_files": [],
+        "row": {
+          "actor_user_id": 2,
+          "body": {
+            "bytes": 217,
+            "code": null,
+            "hash_shaped_values_found": 0,
+            "hash_shaped_values_in_other_columns": 0,
+            "json_keys": [
+              "safety_backup",
+              "success"
+            ],
+            "sensitive_values_of_this_run_found": 0,
+            "sensitive_words_found": [],
+            "sha256": "4be907825a3afc8dc098e33f9c1116e290b4c8bf923befa7718aa46bef1e90ea",
+            "stored": true
+          },
+          "created_at": 1791534795,
+          "expires_at": 1791621195,
+          "finished_at": 1791534806,
+          "id": "ab87daf65f73d52de2a9897aea7e6934",
+          "lifetime_seconds": 86400,
+          "method": "POST",
+          "request_sha256": "62dc22d06eeebe666022b13e706a1556499d06ce48a35fdf3777c9691b767077",
+          "response_content_type": "application/json",
+          "response_retained": 1,
+          "response_status": 200,
+          "route": "/api/v1/domains/{id}/backups/restore",
+          "status": "done"
+        },
+        "rows": [
+          [
+            "20000",
+            "200010000"
+          ],
+          [
+            "10001",
+            "109014522"
+          ],
+          [
+            "20000",
+            "200010000"
+          ]
+        ],
+        "site_is_the_backups": true,
+        "site_was_changed_before": true,
+        "waited_seconds": 11.7
+      },
+      "name": "restore (v): the server finished the restore after the client was gone (one pre-restore archive)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "actor_user_id": 2,
+        "body": {
+          "bytes": 217,
+          "code": null,
+          "hash_shaped_values_found": 0,
+          "hash_shaped_values_in_other_columns": 0,
+          "json_keys": [
+            "safety_backup",
+            "success"
+          ],
+          "sensitive_values_of_this_run_found": 0,
+          "sensitive_words_found": [],
+          "sha256": "4be907825a3afc8dc098e33f9c1116e290b4c8bf923befa7718aa46bef1e90ea",
+          "stored": true
+        },
+        "created_at": 1791534795,
+        "expires_at": 1791621195,
+        "finished_at": 1791534806,
+        "id": "ab87daf65f73d52de2a9897aea7e6934",
+        "lifetime_seconds": 86400,
+        "method": "POST",
+        "request_sha256": "62dc22d06eeebe666022b13e706a1556499d06ce48a35fdf3777c9691b767077",
+        "response_content_type": "application/json",
+        "response_retained": 1,
+        "response_status": 200,
+        "route": "/api/v1/domains/{id}/backups/restore",
+        "status": "done"
+      },
+      "name": "restore (v): the row is done with the handler's answer kept",
+      "ok": true
+    },
+    {
+      "detail": {
+        "archives": [
+          6,
+          6
+        ],
+        "replay": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": "1",
+          "seconds": 0.004,
+          "status": 200
+        },
+        "replay_sha256": "4be907825a3afc8dc098e33f9c1116e290b4c8bf923befa7718aa46bef1e90ea",
+        "stored_sha256": "4be907825a3afc8dc098e33f9c1116e290b4c8bf923befa7718aa46bef1e90ea"
+      },
+      "name": "restore (v): the replay gets the stored answer (the first run's bytes, marked as a replay) and restores nothing again",
+      "ok": true
+    },
+    {
+      "detail": {
+        "agent_main_pid": [
+          "5016",
+          "5016"
+        ],
+        "client_saw": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 12.678,
+          "status": 200
+        },
+        "held": {
+          "after_seconds": 0.3,
+          "new_entries": [
+            ".build-3530445353",
+            "payload",
+            "files.tar.gz"
+          ],
+          "seen": "the Agent is writing in the domain's backup directory"
+        },
+        "panel_main_pid": [
+          "5205",
+          "37144"
+        ],
+        "row_when_the_panel_went_away": {
+          "actor_user_id": 2,
+          "body": {
+            "hash_shaped_values_found": 0,
+            "hash_shaped_values_in_other_columns": 0,
+            "sensitive_values_of_this_run_found": 0,
+            "sensitive_words_found": [],
+            "stored": false
+          },
+          "created_at": 1791534812,
+          "expires_at": 1791621212,
+          "finished_at": 0,
+          "id": "615a54834006edfa7dcc853946a7e905",
+          "lifetime_seconds": 86400,
+          "method": "POST",
+          "request_sha256": "62dc22d06eeebe666022b13e706a1556499d06ce48a35fdf3777c9691b767077",
+          "response_content_type": "",
+          "response_retained": 0,
+          "response_status": 0,
+          "route": "/api/v1/domains/{id}/backups/restore",
+          "status": "running"
+        }
+      },
+      "name": "restore (vi): restart: the restore was running when the Panel went away (row running; the Agent at work; a new Panel process afterwards)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "agent_kept_its_process": true,
+        "client_saw": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 12.678,
+          "status": 200
+        },
+        "new_archives": [
+          {
+            "bytes": 201460758,
+            "name": "full-20261009T083336.992132623Z-dd24e511ee395f5f.cpbak",
+            "origin": "pre_restore"
+          }
+        ],
+        "partial_files": [],
+        "row_afterwards": {
+          "actor_user_id": 2,
+          "body": {
+            "bytes": 217,
+            "code": null,
+            "hash_shaped_values_found": 0,
+            "hash_shaped_values_in_other_columns": 0,
+            "json_keys": [
+              "safety_backup",
+              "success"
+            ],
+            "sensitive_values_of_this_run_found": 0,
+            "sensitive_words_found": [],
+            "sha256": "319f0a3b7b2077e03b652ed22ff0533336248a60c3fa174c76d1d4156416cc76",
+            "stored": true
+          },
+          "created_at": 1791534812,
+          "expires_at": 1791621212,
+          "finished_at": 1791534825,
+          "id": "615a54834006edfa7dcc853946a7e905",
+          "lifetime_seconds": 86400,
+          "method": "POST",
+          "request_sha256": "62dc22d06eeebe666022b13e706a1556499d06ce48a35fdf3777c9691b767077",
+          "response_content_type": "application/json",
+          "response_retained": 1,
+          "response_status": 200,
+          "route": "/api/v1/domains/{id}/backups/restore",
+          "status": "done"
+        },
+        "site_home_entries": [
+          "public_html"
+        ],
+        "what_the_agent_left": "finished: the document root and the rows are those of the backup"
+      },
+      "name": "restore (vi): restart: what the Agent left was read (recorded; the state itself is the observation)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "client_saw": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 12.678,
+          "status": 200
+        },
+        "new_archives": [
+          {
+            "bytes": 201460758,
+            "name": "full-20261009T083336.992132623Z-dd24e511ee395f5f.cpbak",
+            "origin": "pre_restore"
+          }
+        ],
+        "replay": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": "1",
+          "seconds": 0.004,
+          "status": 200
+        },
+        "site_is_the_backups": true
+      },
+      "name": "restore (vi): restart: the row is `done`: the request finished before the Panel stopped, the site is the backup's, and the replay is the stored answer",
+      "ok": true
+    },
+    {
+      "detail": {
+        "agent_main_pid": [
+          "5016",
+          "5016"
+        ],
+        "client_saw": {
+          "code": null,
+          "error": "RemoteDisconnected: Remote end closed connection without response",
+          "outcome": "no-answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.778,
+          "status": null
+        },
+        "held": {
+          "after_seconds": 0.2,
+          "new_entries": [
+            ".build-2187026155",
+            "payload",
+            "files.tar.gz"
+          ],
+          "seen": "the Agent is writing in the domain's backup directory"
+        },
+        "panel_main_pid": [
+          "37144",
+          "38566"
+        ],
+        "row_when_the_panel_went_away": {
+          "actor_user_id": 2,
+          "body": {
+            "hash_shaped_values_found": 0,
+            "hash_shaped_values_in_other_columns": 0,
+            "sensitive_values_of_this_run_found": 0,
+            "sensitive_words_found": [],
+            "stored": false
+          },
+          "created_at": 1791534850,
+          "expires_at": 1791621250,
+          "finished_at": 0,
+          "id": "3dadc30d872887900c244bbe9c983149",
+          "lifetime_seconds": 86400,
+          "method": "POST",
+          "request_sha256": "62dc22d06eeebe666022b13e706a1556499d06ce48a35fdf3777c9691b767077",
+          "response_content_type": "",
+          "response_retained": 0,
+          "response_status": 0,
+          "route": "/api/v1/domains/{id}/backups/restore",
+          "status": "running"
+        }
+      },
+      "name": "restore (vi): kill: the restore was running when the Panel went away (row running; the Agent at work; a new Panel process afterwards)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "agent_kept_its_process": true,
+        "client_saw": {
+          "code": null,
+          "error": "RemoteDisconnected: Remote end closed connection without response",
+          "outcome": "no-answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.778,
+          "status": null
+        },
+        "new_archives": [
+          {
+            "bytes": 201460699,
+            "name": "full-20261009T083414.244602345Z-4f35513b4d534c6c.cpbak",
+            "origin": "pre_restore"
+          }
+        ],
+        "partial_files": [],
+        "row_afterwards": {
+          "actor_user_id": 2,
+          "body": {
+            "hash_shaped_values_found": 0,
+            "hash_shaped_values_in_other_columns": 0,
+            "sensitive_values_of_this_run_found": 0,
+            "sensitive_words_found": [],
+            "stored": false
+          },
+          "created_at": 1791534850,
+          "expires_at": 1791621250,
+          "finished_at": 1791534854,
+          "id": "3dadc30d872887900c244bbe9c983149",
+          "lifetime_seconds": 86400,
+          "method": "POST",
+          "request_sha256": "62dc22d06eeebe666022b13e706a1556499d06ce48a35fdf3777c9691b767077",
+          "response_content_type": "",
+          "response_retained": 0,
+          "response_status": 0,
+          "route": "/api/v1/domains/{id}/backups/restore",
+          "status": "interrupted"
+        },
+        "site_home_entries": [
+          "public_html"
+        ],
+        "what_the_agent_left": "finished: the document root and the rows are those of the backup"
+      },
+      "name": "restore (vi): kill: what the Agent left was read (recorded; the state itself is the observation)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_OUTCOME_UNKNOWN",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.004,
+        "status": 409
+      },
+      "name": "restore (vi): kill: the row is `interrupted` and the replay answers 409 REQUEST_OUTCOME_UNKNOWN, starting nothing",
+      "ok": true
+    },
+    {
+      "detail": {
+        "actor_user_id": 2,
+        "body": {
+          "hash_shaped_values_found": 0,
+          "hash_shaped_values_in_other_columns": 0,
+          "sensitive_values_of_this_run_found": 0,
+          "sensitive_words_found": [],
+          "stored": false
+        },
+        "created_at": 1791534850,
+        "expires_at": 1791621250,
+        "finished_at": 1791534854,
+        "id": "3dadc30d872887900c244bbe9c983149",
+        "lifetime_seconds": 86400,
+        "method": "POST",
+        "request_sha256": "62dc22d06eeebe666022b13e706a1556499d06ce48a35fdf3777c9691b767077",
+        "response_content_type": "",
+        "response_retained": 0,
+        "response_status": 0,
+        "route": "/api/v1/domains/{id}/backups/restore",
+        "status": "interrupted"
+      },
+      "name": "restore (vi): kill: the row of a request whose Panel process was killed is `interrupted`",
+      "ok": true
+    },
+    {
+      "detail": 200,
+      "name": "the owner's session is still valid after the Panel came back",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T08:34:37Z",
+  "lab_faults": [
+    {
+      "at": "2026-10-09T08:34:14Z",
+      "what": "the Panel's process is killed outright (SIGKILL, as a crash or the OOM killer)"
+    }
+  ],
+  "lock": {
+    "answers": [
+      {
+        "code": "BACKUP_RESTORE_IN_PROGRESS",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.04,
+        "status": 409
+      },
+      {
+        "code": null,
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 10.204,
+        "status": 200
+      }
+    ],
+    "refusal": {
+      "code": "BACKUP_RESTORE_IN_PROGRESS",
+      "error": "Another restore of this domain is still running, so this one was not started and changed nothing. Wait for it to finish and check the site; restore again only if it is still needed."
+    },
+    "texts": {
+      "err.BACKUP_RESTORE_IN_PROGRESS": {
+        "en": "Another restore of this domain is still running, so this one was not started and changed nothing. Wait for it to finish and check the site; restore again only if it is still needed.",
+        "tr": "Bu alan adının başka bir geri yüklemesi hâlâ sürüyor; bu yüzden bu geri yükleme başlatılmadı ve hiçbir şeyi değiştirmedi. Bitmesini bekleyip siteyi kontrol edin; yalnızca hâlâ gerekiyorsa yeniden geri yükleyin."
+      }
+    }
+  },
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/186-reference-docroot.json",
+      "lab_action": false,
+      "label": "reference-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/187-reference-rows.json",
+      "lab_action": false,
+      "label": "reference-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/188-reference-backups.json",
+      "lab_action": false,
+      "label": "reference-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/189-owner-change-site-iii.json",
+      "lab_action": false,
+      "label": "owner-change-site-iii",
+      "mode": "owner-change-site",
+      "owner_action": true
+    },
+    {
+      "file": "native/190-owner-change-rows-iii.json",
+      "lab_action": false,
+      "label": "owner-change-rows-iii",
+      "mode": "owner-seed-rows",
+      "owner_action": true
+    },
+    {
+      "file": "native/191-drifted-iii-docroot.json",
+      "lab_action": false,
+      "label": "drifted-iii-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/192-drifted-iii-rows.json",
+      "lab_action": false,
+      "label": "drifted-iii-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/193-drifted-iii-backups.json",
+      "lab_action": false,
+      "label": "drifted-iii-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/194-after-iii-docroot.json",
+      "lab_action": false,
+      "label": "after-iii-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/195-after-iii-rows.json",
+      "lab_action": false,
+      "label": "after-iii-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/196-after-iii-backups.json",
+      "lab_action": false,
+      "label": "after-iii-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/197-after-i-first-docroot.json",
+      "lab_action": false,
+      "label": "after-i-first-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/198-after-i-first-rows.json",
+      "lab_action": false,
+      "label": "after-i-first-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/199-after-i-first-backups.json",
+      "lab_action": false,
+      "label": "after-i-first-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/200-owner-change-site-i-after-first.json",
+      "lab_action": false,
+      "label": "owner-change-site-i-after-first",
+      "mode": "owner-change-site",
+      "owner_action": true
+    },
+    {
+      "file": "native/201-owner-change-rows-i-after-first.json",
+      "lab_action": false,
+      "label": "owner-change-rows-i-after-first",
+      "mode": "owner-seed-rows",
+      "owner_action": true
+    },
+    {
+      "file": "native/202-drifted-i-after-first-docroot.json",
+      "lab_action": false,
+      "label": "drifted-i-after-first-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/203-drifted-i-after-first-rows.json",
+      "lab_action": false,
+      "label": "drifted-i-after-first-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/204-drifted-i-after-first-backups.json",
+      "lab_action": false,
+      "label": "drifted-i-after-first-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/205-after-i-docroot.json",
+      "lab_action": false,
+      "label": "after-i-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/206-after-i-rows.json",
+      "lab_action": false,
+      "label": "after-i-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/207-after-i-backups.json",
+      "lab_action": false,
+      "label": "after-i-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/208-after-iv-docroot.json",
+      "lab_action": false,
+      "label": "after-iv-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/209-after-iv-rows.json",
+      "lab_action": false,
+      "label": "after-iv-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/210-after-iv-backups.json",
+      "lab_action": false,
+      "label": "after-iv-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/211-after-ii-docroot.json",
+      "lab_action": false,
+      "label": "after-ii-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/212-after-ii-rows.json",
+      "lab_action": false,
+      "label": "after-ii-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/213-after-ii-backups.json",
+      "lab_action": false,
+      "label": "after-ii-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/214-owner-change-site-lock.json",
+      "lab_action": false,
+      "label": "owner-change-site-lock",
+      "mode": "owner-change-site",
+      "owner_action": true
+    },
+    {
+      "file": "native/215-owner-change-rows-lock.json",
+      "lab_action": false,
+      "label": "owner-change-rows-lock",
+      "mode": "owner-seed-rows",
+      "owner_action": true
+    },
+    {
+      "file": "native/216-drifted-lock-docroot.json",
+      "lab_action": false,
+      "label": "drifted-lock-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/217-drifted-lock-rows.json",
+      "lab_action": false,
+      "label": "drifted-lock-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/218-drifted-lock-backups.json",
+      "lab_action": false,
+      "label": "drifted-lock-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/219-after-lock-docroot.json",
+      "lab_action": false,
+      "label": "after-lock-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/220-after-lock-rows.json",
+      "lab_action": false,
+      "label": "after-lock-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/221-after-lock-backups.json",
+      "lab_action": false,
+      "label": "after-lock-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/222-owner-change-site-v.json",
+      "lab_action": false,
+      "label": "owner-change-site-v",
+      "mode": "owner-change-site",
+      "owner_action": true
+    },
+    {
+      "file": "native/223-owner-change-rows-v.json",
+      "lab_action": false,
+      "label": "owner-change-rows-v",
+      "mode": "owner-seed-rows",
+      "owner_action": true
+    },
+    {
+      "file": "native/224-drifted-v-docroot.json",
+      "lab_action": false,
+      "label": "drifted-v-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/225-drifted-v-rows.json",
+      "lab_action": false,
+      "label": "drifted-v-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/226-drifted-v-backups.json",
+      "lab_action": false,
+      "label": "drifted-v-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/227-after-v-docroot.json",
+      "lab_action": false,
+      "label": "after-v-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/228-after-v-rows.json",
+      "lab_action": false,
+      "label": "after-v-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/229-after-v-backups.json",
+      "lab_action": false,
+      "label": "after-v-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/230-after-v-replay-docroot.json",
+      "lab_action": false,
+      "label": "after-v-replay-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/231-after-v-replay-rows.json",
+      "lab_action": false,
+      "label": "after-v-replay-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/232-after-v-replay-backups.json",
+      "lab_action": false,
+      "label": "after-v-replay-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/233-owner-change-site-vi-restart.json",
+      "lab_action": false,
+      "label": "owner-change-site-vi-restart",
+      "mode": "owner-change-site",
+      "owner_action": true
+    },
+    {
+      "file": "native/234-owner-change-rows-vi-restart.json",
+      "lab_action": false,
+      "label": "owner-change-rows-vi-restart",
+      "mode": "owner-seed-rows",
+      "owner_action": true
+    },
+    {
+      "file": "native/235-drifted-vi-restart-docroot.json",
+      "lab_action": false,
+      "label": "drifted-vi-restart-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/236-drifted-vi-restart-rows.json",
+      "lab_action": false,
+      "label": "drifted-vi-restart-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/237-drifted-vi-restart-backups.json",
+      "lab_action": false,
+      "label": "drifted-vi-restart-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/238-vi-restart-units-before.json",
+      "lab_action": false,
+      "label": "vi-restart-units-before",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/239-owner-restart-panel.json",
+      "lab_action": false,
+      "label": "owner-restart-panel",
+      "mode": "owner-restart-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/240-vi-restart-units-after.json",
+      "lab_action": false,
+      "label": "vi-restart-units-after",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/241-vi-restart-agent-01-docroot.json",
+      "lab_action": false,
+      "label": "vi-restart-agent-01-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/242-vi-restart-agent-01-rows.json",
+      "lab_action": false,
+      "label": "vi-restart-agent-01-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/243-vi-restart-agent-01-backups.json",
+      "lab_action": false,
+      "label": "vi-restart-agent-01-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/244-vi-restart-agent-02-docroot.json",
+      "lab_action": false,
+      "label": "vi-restart-agent-02-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/245-vi-restart-agent-02-rows.json",
+      "lab_action": false,
+      "label": "vi-restart-agent-02-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/246-vi-restart-agent-02-backups.json",
+      "lab_action": false,
+      "label": "vi-restart-agent-02-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/247-vi-restart-journal.json",
+      "lab_action": false,
+      "label": "vi-restart-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/248-vi-restart-after-replay-docroot.json",
+      "lab_action": false,
+      "label": "vi-restart-after-replay-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/249-vi-restart-after-replay-rows.json",
+      "lab_action": false,
+      "label": "vi-restart-after-replay-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/250-vi-restart-after-replay-backups.json",
+      "lab_action": false,
+      "label": "vi-restart-after-replay-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/251-owner-change-site-vi-kill.json",
+      "lab_action": false,
+      "label": "owner-change-site-vi-kill",
+      "mode": "owner-change-site",
+      "owner_action": true
+    },
+    {
+      "file": "native/252-owner-change-rows-vi-kill.json",
+      "lab_action": false,
+      "label": "owner-change-rows-vi-kill",
+      "mode": "owner-seed-rows",
+      "owner_action": true
+    },
+    {
+      "file": "native/253-drifted-vi-kill-docroot.json",
+      "lab_action": false,
+      "label": "drifted-vi-kill-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/254-drifted-vi-kill-rows.json",
+      "lab_action": false,
+      "label": "drifted-vi-kill-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/255-drifted-vi-kill-backups.json",
+      "lab_action": false,
+      "label": "drifted-vi-kill-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/256-vi-kill-units-before.json",
+      "lab_action": false,
+      "label": "vi-kill-units-before",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/257-lab-kill-panel.json",
+      "lab_action": true,
+      "label": "lab-kill-panel",
+      "mode": "lab-kill-panel",
+      "owner_action": false
+    },
+    {
+      "file": "native/258-vi-kill-units-after.json",
+      "lab_action": false,
+      "label": "vi-kill-units-after",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/259-vi-kill-agent-01-docroot.json",
+      "lab_action": false,
+      "label": "vi-kill-agent-01-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/260-vi-kill-agent-01-rows.json",
+      "lab_action": false,
+      "label": "vi-kill-agent-01-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/261-vi-kill-agent-01-backups.json",
+      "lab_action": false,
+      "label": "vi-kill-agent-01-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/262-vi-kill-agent-02-docroot.json",
+      "lab_action": false,
+      "label": "vi-kill-agent-02-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/263-vi-kill-agent-02-rows.json",
+      "lab_action": false,
+      "label": "vi-kill-agent-02-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/264-vi-kill-agent-02-backups.json",
+      "lab_action": false,
+      "label": "vi-kill-agent-02-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/265-vi-kill-journal.json",
+      "lab_action": false,
+      "label": "vi-kill-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/266-vi-kill-after-replay-docroot.json",
+      "lab_action": false,
+      "label": "vi-kill-after-replay-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/267-vi-kill-after-replay-rows.json",
+      "lab_action": false,
+      "label": "vi-kill-after-replay-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/268-vi-kill-after-replay-backups.json",
+      "lab_action": false,
+      "label": "vi-kill-after-replay-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    }
+  ],
+  "node": "debian13",
+  "notes": [
+    {
+      "detail": {
+        "archives": [
+          "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak",
+          "full-20261009T083027.704648183Z-5ca52523f5ea9db3.cpbak"
+        ],
+        "docroot": "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567",
+        "files": 9,
+        "rows": [
+          "20000",
+          "200010000"
+        ]
+      },
+      "note": "the site as it is now is the site both manual backups hold: nothing changed it since C4"
+    },
+    {
+      "detail": {
+        "answers_in_order": [
+          {
+            "after_seconds": 0.0,
+            "answer": {
+              "no_answer": "PanelError"
+            }
+          },
+          {
+            "after_seconds": 1.0,
+            "answer": {
+              "code": "PANEL_STARTING",
+              "status": 503
+            }
+          },
+          {
+            "after_seconds": 12.2,
+            "answer": {
+              "code": null,
+              "status": 200
+            }
+          }
+        ],
+        "ready_after_seconds": 12.2
+      },
+      "note": "(vi, restart) the owner restarts the Panel's service (systemctl restart): the client saw {'status': 200, 'code': None, 'reason': None, 'replayed': None, 'seconds': 12.678, 'outcome': 'answer', 'error': None}; the row is `done`; the Agent left: finished: the document root and the rows are those of the backup; the Panel served management requests again after 12.2 s"
+    },
+    {
+      "detail": {
+        "answers_in_order": [
+          {
+            "after_seconds": 0.0,
+            "answer": {
+              "code": "PANEL_STARTING",
+              "status": 503
+            }
+          },
+          {
+            "after_seconds": 13.3,
+            "answer": {
+              "code": null,
+              "status": 200
+            }
+          }
+        ],
+        "ready_after_seconds": 13.3
+      },
+      "note": "(vi, kill) the Panel's process is killed outright (SIGKILL, as a crash or the OOM killer): the client saw {'status': None, 'code': None, 'reason': None, 'replayed': None, 'seconds': 0.778, 'outcome': 'no-answer', 'error': 'RemoteDisconnected: Remote end closed connection without response'}; the row is `interrupted`; the Agent left: finished: the document root and the rows are those of the backup; the Panel served management requests again after 13.3 s"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T08:32:28Z",
+      "label": "change-site-iii",
+      "mode": "owner-change-site"
+    },
+    {
+      "at": "2026-10-09T08:32:28Z",
+      "label": "change-rows-iii",
+      "mode": "owner-seed-rows"
+    },
+    {
+      "at": "2026-10-09T08:32:44Z",
+      "label": "change-site-i-after-first",
+      "mode": "owner-change-site"
+    },
+    {
+      "at": "2026-10-09T08:32:45Z",
+      "label": "change-rows-i-after-first",
+      "mode": "owner-seed-rows"
+    },
+    {
+      "at": "2026-10-09T08:33:00Z",
+      "label": "change-site-lock",
+      "mode": "owner-change-site"
+    },
+    {
+      "at": "2026-10-09T08:33:00Z",
+      "label": "change-rows-lock",
+      "mode": "owner-seed-rows"
+    },
+    {
+      "at": "2026-10-09T08:33:13Z",
+      "label": "change-site-v",
+      "mode": "owner-change-site"
+    },
+    {
+      "at": "2026-10-09T08:33:14Z",
+      "label": "change-rows-v",
+      "mode": "owner-seed-rows"
+    },
+    {
+      "at": "2026-10-09T08:33:30Z",
+      "label": "change-site-vi-restart",
+      "mode": "owner-change-site"
+    },
+    {
+      "at": "2026-10-09T08:33:30Z",
+      "label": "change-rows-vi-restart",
+      "mode": "owner-seed-rows"
+    },
+    {
+      "at": "2026-10-09T08:33:45Z",
+      "label": "restart-panel",
+      "mode": "owner-restart-panel"
+    },
+    {
+      "at": "2026-10-09T08:34:08Z",
+      "label": "change-site-vi-kill",
+      "mode": "owner-change-site"
+    },
+    {
+      "at": "2026-10-09T08:34:08Z",
+      "label": "change-rows-vi-kill",
+      "mode": "owner-seed-rows"
+    }
+  ],
+  "panel_goes_away": {
+    "kill": {
+      "agent_kept_its_process": true,
+      "agent_main_pid": [
+        "5016",
+        "5016"
+      ],
+      "backup_directory_entries_that_are_not_archives": [],
+      "client_saw": {
+        "code": null,
+        "error": "RemoteDisconnected: Remote end closed connection without response",
+        "outcome": "no-answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.778,
+        "status": null
+      },
+      "held": {
+        "after_seconds": 0.2,
+        "new_entries": [
+          ".build-2187026155",
+          "payload",
+          "files.tar.gz"
+        ],
+        "seen": "the Agent is writing in the domain's backup directory"
+      },
+      "new_archives": [
+        {
+          "bytes": 201460699,
+          "name": "full-20261009T083414.244602345Z-4f35513b4d534c6c.cpbak",
+          "origin": "pre_restore"
+        }
+      ],
+      "observations": [
+        {
+          "archives": 8,
+          "at": "2026-10-09T08:34:29Z",
+          "classification": "finished: the document root and the rows are those of the backup",
+          "docroot": "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567",
+          "partial_files": [],
+          "rows": [
+            "20000",
+            "200010000"
+          ],
+          "site_home_entries": [
+            "public_html"
+          ]
+        },
+        {
+          "archives": 8,
+          "at": "2026-10-09T08:34:36Z",
+          "classification": "finished: the document root and the rows are those of the backup",
+          "docroot": "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567",
+          "partial_files": [],
+          "rows": [
+            "20000",
+            "200010000"
+          ],
+          "site_home_entries": [
+            "public_html"
+          ]
+        }
+      ],
+      "panel_main_pid": [
+        "37144",
+        "38566"
+      ],
+      "panel_ready_again": {
+        "answers_in_order": [
+          {
+            "after_seconds": 0.0,
+            "answer": {
+              "code": "PANEL_STARTING",
+              "status": 503
+            }
+          },
+          {
+            "after_seconds": 13.3,
+            "answer": {
+              "code": null,
+              "status": 200
+            }
+          }
+        ],
+        "ready_after_seconds": 13.3
+      },
+      "partial_files": [],
+      "replay": {
+        "code": "REQUEST_OUTCOME_UNKNOWN",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.004,
+        "status": 409
+      },
+      "replay_answer": {
+        "code": "REQUEST_OUTCOME_UNKNOWN",
+        "error": "CelikPanel restarted or failed while this change was running, so it is not known whether the change was completed. It will not be run again by itself. Reload the page and check the current state; make the change again only if it is missing.",
+        "vars": {
+          "request_id": "3dadc30d872887900c244bbe9c983149"
+        }
+      },
+      "replay_texts": {
+        "err.REQUEST_OUTCOME_UNKNOWN": {
+          "en": "CelikPanel restarted or failed while this change was running, so it is not known whether the change was completed. It will not be run again by itself. Reload the page and check the current state; make the change again only if it is missing.",
+          "tr": "CelikPanel bu değişiklik sürerken yeniden başladı ya da hata verdi; bu yüzden değişikliğin tamamlanıp tamamlanmadığı bilinmiyor. Kendiliğinden yeniden çalıştırılmayacak. Sayfayı yeniden yükleyip mevcut durumu kontrol edin; değişikliği yalnızca eksikse yeniden yapın."
+        }
+      },
+      "returncode": 0,
+      "row_afterwards": {
+        "actor_user_id": 2,
+        "body": {
+          "hash_shaped_values_found": 0,
+          "hash_shaped_values_in_other_columns": 0,
+          "sensitive_values_of_this_run_found": 0,
+          "sensitive_words_found": [],
+          "stored": false
+        },
+        "created_at": 1791534850,
+        "expires_at": 1791621250,
+        "finished_at": 1791534854,
+        "id": "3dadc30d872887900c244bbe9c983149",
+        "lifetime_seconds": 86400,
+        "method": "POST",
+        "request_sha256": "62dc22d06eeebe666022b13e706a1556499d06ce48a35fdf3777c9691b767077",
+        "response_content_type": "",
+        "response_retained": 0,
+        "response_status": 0,
+        "route": "/api/v1/domains/{id}/backups/restore",
+        "status": "interrupted"
+      },
+      "row_when_the_panel_went_away": {
+        "actor_user_id": 2,
+        "body": {
+          "hash_shaped_values_found": 0,
+          "hash_shaped_values_in_other_columns": 0,
+          "sensitive_values_of_this_run_found": 0,
+          "sensitive_words_found": [],
+          "stored": false
+        },
+        "created_at": 1791534850,
+        "expires_at": 1791621250,
+        "finished_at": 0,
+        "id": "3dadc30d872887900c244bbe9c983149",
+        "lifetime_seconds": 86400,
+        "method": "POST",
+        "request_sha256": "62dc22d06eeebe666022b13e706a1556499d06ce48a35fdf3777c9691b767077",
+        "response_content_type": "",
+        "response_retained": 0,
+        "response_status": 0,
+        "route": "/api/v1/domains/{id}/backups/restore",
+        "status": "running"
+      },
+      "site_home_entries": [
+        "public_html"
+      ],
+      "systemctl": {
+        "restart_took_seconds": null,
+        "unit_policy": [
+          "Restart=on-failure",
+          "RestartUSec=3s",
+          "TimeoutStopUSec=30s",
+          "NRestarts=1",
+          "KillMode=control-group"
+        ]
+      },
+      "what": "the Panel's process is killed outright (SIGKILL, as a crash or the OOM killer)",
+      "what_the_agent_left": "finished: the document root and the rows are those of the backup"
+    },
+    "restart": {
+      "agent_kept_its_process": true,
+      "agent_main_pid": [
+        "5016",
+        "5016"
+      ],
+      "backup_directory_entries_that_are_not_archives": [],
+      "client_saw": {
+        "code": null,
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 12.678,
+        "status": 200
+      },
+      "held": {
+        "after_seconds": 0.3,
+        "new_entries": [
+          ".build-3530445353",
+          "payload",
+          "files.tar.gz"
+        ],
+        "seen": "the Agent is writing in the domain's backup directory"
+      },
+      "new_archives": [
+        {
+          "bytes": 201460758,
+          "name": "full-20261009T083336.992132623Z-dd24e511ee395f5f.cpbak",
+          "origin": "pre_restore"
+        }
+      ],
+      "observations": [
+        {
+          "archives": 7,
+          "at": "2026-10-09T08:33:58Z",
+          "classification": "finished: the document root and the rows are those of the backup",
+          "docroot": "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567",
+          "partial_files": [],
+          "rows": [
+            "20000",
+            "200010000"
+          ],
+          "site_home_entries": [
+            "public_html"
+          ]
+        },
+        {
+          "archives": 7,
+          "at": "2026-10-09T08:34:06Z",
+          "classification": "finished: the document root and the rows are those of the backup",
+          "docroot": "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567",
+          "partial_files": [],
+          "rows": [
+            "20000",
+            "200010000"
+          ],
+          "site_home_entries": [
+            "public_html"
+          ]
+        }
+      ],
+      "panel_main_pid": [
+        "5205",
+        "37144"
+      ],
+      "panel_ready_again": {
+        "answers_in_order": [
+          {
+            "after_seconds": 0.0,
+            "answer": {
+              "no_answer": "PanelError"
+            }
+          },
+          {
+            "after_seconds": 1.0,
+            "answer": {
+              "code": "PANEL_STARTING",
+              "status": 503
+            }
+          },
+          {
+            "after_seconds": 12.2,
+            "answer": {
+              "code": null,
+              "status": 200
+            }
+          }
+        ],
+        "ready_after_seconds": 12.2
+      },
+      "partial_files": [],
+      "replay": {
+        "code": null,
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": "1",
+        "seconds": 0.004,
+        "status": 200
+      },
+      "replay_answer": null,
+      "replay_texts": null,
+      "returncode": 0,
+      "row_afterwards": {
+        "actor_user_id": 2,
+        "body": {
+          "bytes": 217,
+          "code": null,
+          "hash_shaped_values_found": 0,
+          "hash_shaped_values_in_other_columns": 0,
+          "json_keys": [
+            "safety_backup",
+            "success"
+          ],
+          "sensitive_values_of_this_run_found": 0,
+          "sensitive_words_found": [],
+          "sha256": "319f0a3b7b2077e03b652ed22ff0533336248a60c3fa174c76d1d4156416cc76",
+          "stored": true
+        },
+        "created_at": 1791534812,
+        "expires_at": 1791621212,
+        "finished_at": 1791534825,
+        "id": "615a54834006edfa7dcc853946a7e905",
+        "lifetime_seconds": 86400,
+        "method": "POST",
+        "request_sha256": "62dc22d06eeebe666022b13e706a1556499d06ce48a35fdf3777c9691b767077",
+        "response_content_type": "application/json",
+        "response_retained": 1,
+        "response_status": 200,
+        "route": "/api/v1/domains/{id}/backups/restore",
+        "status": "done"
+      },
+      "row_when_the_panel_went_away": {
+        "actor_user_id": 2,
+        "body": {
+          "hash_shaped_values_found": 0,
+          "hash_shaped_values_in_other_columns": 0,
+          "sensitive_values_of_this_run_found": 0,
+          "sensitive_words_found": [],
+          "stored": false
+        },
+        "created_at": 1791534812,
+        "expires_at": 1791621212,
+        "finished_at": 0,
+        "id": "615a54834006edfa7dcc853946a7e905",
+        "lifetime_seconds": 86400,
+        "method": "POST",
+        "request_sha256": "62dc22d06eeebe666022b13e706a1556499d06ce48a35fdf3777c9691b767077",
+        "response_content_type": "",
+        "response_retained": 0,
+        "response_status": 0,
+        "route": "/api/v1/domains/{id}/backups/restore",
+        "status": "running"
+      },
+      "site_home_entries": [
+        "public_html"
+      ],
+      "systemctl": {
+        "restart_took_seconds": 12.2,
+        "unit_policy": [
+          "Restart=on-failure",
+          "RestartUSec=3s",
+          "TimeoutStopUSec=30s",
+          "NRestarts=0",
+          "KillMode=control-group"
+        ]
+      },
+      "what": "the owner restarts the Panel's service (systemctl restart)",
+      "what_the_agent_left": "finished: the document root and the rows are those of the backup"
+    }
+  },
+  "reference": {
+    "archives": [
+      "full-20261009T083019.005910391Z-1fc7bdaddee6ad6a.cpbak",
+      "full-20261009T083027.704648183Z-5ca52523f5ea9db3.cpbak"
+    ],
+    "docroot": "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567",
+    "files": 9,
+    "rows": [
+      "20000",
+      "200010000"
+    ]
+  },
+  "restore_seconds": 12.195,
+  "section": "C8-restore",
+  "started_at": "2026-10-09T08:32:26Z",
+  "substeps": {
+    "restore": "passed",
+    "section": "passed"
+  },
+  "title": "domain restore, with a dropped connection and a Panel restart",
+  "verdict": "passed"
+}

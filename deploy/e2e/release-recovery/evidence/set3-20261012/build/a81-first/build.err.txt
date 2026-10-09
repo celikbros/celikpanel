@@ -1,0 +1,587 @@
+
+added 181 packages in 4s
+npm notice run celikpanel-web@0.0.0 build
+npm notice run tsc && vite build && node scripts/build-recovery-worker.mjs && node scripts/check-bundle-budget.mjs
+vite v8.2.0 building client environment for production...
+[2Ktransforming...✓ 1619 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                       1.03 kB │ gzip:  0.43 kB
+dist/recovery-offline.html                            2.22 kB │ gzip:  1.04 kB
+dist/assets/overpass-mono-latin-CujxpGkb.woff2       22.01 kB
+dist/.vite/manifest.json                             31.60 kB │ gzip:  3.68 kB
+dist/assets/overpass-mono-latin-ext-D14p1K_g.woff2   32.64 kB
+dist/assets/OpenSans-latin-ext-DPNHYqvY.woff2        35.15 kB
+dist/assets/overpass-latin-qAR8M_co.woff2            39.38 kB
+dist/assets/overpass-latin-ext-DvafStyF.woff2        46.08 kB
+dist/assets/OpenSans-latin-CWNzRldh.woff2            48.32 kB
+dist/assets/InterVariable-DiVDrmQJ.woff2            352.24 kB
+dist/assets/recovery-DHYxdHJ0.css                     1.89 kB │ gzip:  0.86 kB
+dist/assets/app-B2Gm41fK.css                         50.39 kB │ gzip: 10.25 kB
+dist/assets/chevron-right-0l_NeFQb.js                 0.12 kB │ gzip:  0.14 kB
+dist/assets/play-tNK8gSG8.js                          0.13 kB │ gzip:  0.15 kB
+dist/assets/loader-2-BDSr4jiY.js                      0.13 kB │ gzip:  0.15 kB
+dist/assets/plus-BOB-Zuhm.js                          0.15 kB │ gzip:  0.15 kB
+dist/assets/arrow-left-B1DWToeP.js                    0.16 kB │ gzip:  0.16 kB
+dist/assets/arrow-right-CrblK9Tq.js                   0.16 kB │ gzip:  0.16 kB
+dist/assets/search-CxlCCs-u.js                        0.17 kB │ gzip:  0.16 kB
+dist/assets/ban-ECkHh-hf.js                           0.17 kB │ gzip:  0.16 kB
+dist/assets/gauge-BMpNy-AH.js                         0.17 kB │ gzip:  0.17 kB
+dist/assets/check-circle-2-Ci60QB5f.js                0.17 kB │ gzip:  0.17 kB
+dist/assets/clock-DZTqhbcn.js                         0.18 kB │ gzip:  0.17 kB
+dist/assets/lock-BmXb4H6E.js                          0.20 kB │ gzip:  0.19 kB
+dist/assets/mail-BmPLeDCL.js                          0.21 kB │ gzip:  0.20 kB
+dist/assets/key-DrQ-7Vrm.js                           0.22 kB │ gzip:  0.19 kB
+dist/assets/copy-CvYLQPQS.js                          0.23 kB │ gzip:  0.21 kB
+dist/assets/alert-circle-CBhtkz6U.js                  0.24 kB │ gzip:  0.18 kB
+dist/assets/external-link-jDsEe1bq.js                 0.25 kB │ gzip:  0.20 kB
+dist/assets/download-BV_QfFuf.js                      0.26 kB │ gzip:  0.22 kB
+dist/assets/alert-triangle-GGpg7lJ1.js                0.26 kB │ gzip:  0.21 kB
+dist/assets/save-DOTF0jza.js                          0.28 kB │ gzip:  0.22 kB
+dist/assets/inbox-B2EzWMvA.js                         0.28 kB │ gzip:  0.23 kB
+dist/assets/square-BvFf3pSE.js                        0.29 kB │ gzip:  0.24 kB
+dist/assets/file-code-Siu5aPY5.js                     0.30 kB │ gzip:  0.21 kB
+dist/assets/badge-check-DWJsPN3y.js                   0.31 kB │ gzip:  0.21 kB
+dist/assets/refresh-cw-p2tlarjg.js                    0.32 kB │ gzip:  0.23 kB
+dist/assets/file-text-D5DzyfvN.js                     0.33 kB │ gzip:  0.21 kB
+dist/assets/pencil-gXicHKAG.js                        0.34 kB │ gzip:  0.25 kB
+dist/assets/layout-grid-D4XigUY7.js                   0.34 kB │ gzip:  0.19 kB
+dist/assets/shield-alert-DMkvoCw8.js                  0.35 kB │ gzip:  0.26 kB
+dist/assets/trash-2-61T6dv8t.js                       0.35 kB │ gzip:  0.25 kB
+dist/assets/layers-D7avhwDV.js                        0.36 kB │ gzip:  0.24 kB
+dist/assets/network-DKxePdX1.js                       0.38 kB │ gzip:  0.24 kB
+dist/assets/clock-3-BtC1Ihoy.js                       0.38 kB │ gzip:  0.28 kB
+dist/assets/scan-search-SoW5RkoL.js                   0.38 kB │ gzip:  0.25 kB
+dist/assets/hard-drive-bolGxscP.js                    0.39 kB │ gzip:  0.26 kB
+dist/assets/shield-off-CBdFArGr.js                    0.39 kB │ gzip:  0.28 kB
+dist/assets/settings-2-DqMUfcg2.js                    0.45 kB │ gzip:  0.30 kB
+dist/assets/wifi-off-B5l-gDBW.js                      0.45 kB │ gzip:  0.27 kB
+dist/assets/domainAccess-B11bb1Ea.js                  0.53 kB │ gzip:  0.32 kB
+dist/assets/createLucideIcon-FXKTpBD8.js              0.71 kB │ gzip:  0.47 kB
+dist/assets/rolldown-runtime-hePW80VL.js              0.71 kB │ gzip:  0.42 kB
+dist/assets/VsftpdManagement-BSlp4Vdh.js              0.83 kB │ gzip:  0.45 kB
+dist/assets/boxes-CW2mQwvl.js                         0.85 kB │ gzip:  0.39 kB
+dist/assets/WebmailAccess-BZP_Sf_u.js                 1.01 kB │ gzip:  0.55 kB
+dist/assets/PageHeader-BzhI12-S.js                    1.34 kB │ gzip:  0.64 kB
+dist/assets/FirewallSSHNotice-BbjSrXzR.js             1.51 kB │ gzip:  0.68 kB
+dist/assets/DovecotManagement-BkONI-mi.js             1.53 kB │ gzip:  0.73 kB
+dist/assets/ConfigEditor-tNez9UBs.js                  1.89 kB │ gzip:  0.85 kB
+dist/assets/AuditLogPage-C4T-fo4K.js                  2.38 kB │ gzip:  0.96 kB
+dist/assets/DomainAppsPanel-DkPHy2Nx.js               2.58 kB │ gzip:  1.19 kB
+dist/assets/MonitoringPage-9lLzHfcr.js                3.41 kB │ gzip:  1.49 kB
+dist/assets/LicenseLockScreen-BDqfMNXk.js             3.47 kB │ gzip:  1.29 kB
+dist/assets/i18n-Ce2gijID.js                          3.90 kB │ gzip:  1.81 kB
+dist/assets/NginxManagement-CkpJhP0Z.js               4.38 kB │ gzip:  1.52 kB
+dist/assets/PowerDNSManagement-DZVx4osu.js            4.52 kB │ gzip:  1.63 kB
+dist/assets/Fail2banManagement-CdeCPFA0.js            4.64 kB │ gzip:  1.67 kB
+dist/assets/recovery-Dv0w_v0X.js                      5.22 kB │ gzip:  2.44 kB
+dist/assets/OperationOverlay-kXCTDtLO.js              5.30 kB │ gzip:  1.99 kB
+dist/assets/LicensePanel-BlLEVk6i.js                  5.50 kB │ gzip:  2.25 kB
+dist/assets/ComponentDetail-BJva1Wbk.js               5.88 kB │ gzip:  2.12 kB
+dist/assets/recoveryObservation-Dl-oP9FC.js           5.93 kB │ gzip:  1.83 kB
+dist/assets/ServiceShell-A90qbsBQ.js                  6.90 kB │ gzip:  2.58 kB
+dist/assets/jsx-runtime-096o_Uk7.js                   7.11 kB │ gzip:  2.72 kB
+dist/assets/PostfixManagement-BSK3S76Z.js             8.05 kB │ gzip:  2.39 kB
+dist/assets/MariaDBManagement-BESS_xvp.js             8.09 kB │ gzip:  2.93 kB
+dist/assets/ServerSetupGate-MH6xn7l4.js               8.61 kB │ gzip:  3.28 kB
+dist/assets/PHPManagement-Cw-Qm4Jp.js                 9.14 kB │ gzip:  3.09 kB
+dist/assets/ImportPage-C0LUfHwc.js                    9.27 kB │ gzip:  2.87 kB
+dist/assets/SystemSQLiteManager-DPIf8vVs.js          10.14 kB │ gzip:  3.26 kB
+dist/assets/PanelUpdateCard-BZBNRVSr.js              10.83 kB │ gzip:  3.27 kB
+dist/assets/ui-6FgYLdJF.js                           12.89 kB │ gzip:  4.58 kB
+dist/assets/PostgreSQLManagement-Dl8UyT53.js         14.26 kB │ gzip:  4.30 kB
+dist/assets/ServerSetupChoice-YHBMjX-l.js            16.96 kB │ gzip:  4.77 kB
+dist/assets/DatabaseManagementV2-CKumbmVg.js         18.70 kB │ gzip:  4.75 kB
+dist/assets/Domains-B58tGh3p.js                      18.96 kB │ gzip:  6.01 kB
+dist/assets/VPNPage-CrCSuwCE.js                      21.20 kB │ gzip:  5.76 kB
+dist/assets/browser-Bg25_sDh.js                      23.47 kB │ gzip:  8.86 kB
+dist/assets/UsersPage-DopqUYx4.js                    27.36 kB │ gzip:  6.24 kB
+dist/assets/Dashboard-B4KxuMhC.js                    32.67 kB │ gzip:  8.60 kB
+dist/assets/AddonsPage-Cg9Ibx34.js                   37.24 kB │ gzip: 10.22 kB
+dist/assets/en-B58OQWgc.js                           40.79 kB │ gzip: 11.46 kB
+dist/assets/tr-CGWjZr3H.js                           43.54 kB │ gzip: 12.41 kB
+dist/assets/SystemUpdateOperation-BmIPlfb7.js        45.50 kB │ gzip: 13.26 kB
+dist/assets/ServiceList-gU-HDFm6.js                  59.47 kB │ gzip: 14.01 kB
+dist/assets/en-CL_r03iD.js                           61.37 kB │ gzip: 17.74 kB
+dist/assets/tr-DkbKxclQ.js                           65.84 kB │ gzip: 19.27 kB
+dist/assets/ServerSetup-GPNfAunw.js                  82.10 kB │ gzip: 21.09 kB
+dist/assets/en-56G2F7Pp.js                          102.75 kB │ gzip: 29.14 kB
+dist/assets/HelpDrawer-Cp1fV4TA.js                  103.39 kB │ gzip: 35.40 kB
+dist/assets/tr-njc-wja5.js                          110.74 kB │ gzip: 31.49 kB
+dist/assets/Settings-BGYF2-NX.js                    146.14 kB │ gzip: 35.80 kB
+dist/assets/DomainDetail-B7h8vxfv.js                162.47 kB │ gzip: 34.57 kB
+dist/assets/app-DbPgCiop.js                         224.07 kB │ gzip: 69.18 kB
+
+✓ built in 1.69s
+Recovery shell: 4 static files, 15288 bytes; no authenticated cache
+Bundle budget: entry file 218.82 KiB raw / 66.65 KiB gzip; critical boot 292.14 KiB / 90.42 KiB; largest route src/components/Settings.tsx 272.99 KiB / 79.55 KiB; largest individual async DomainDetail-B7h8vxfv.js 158.67 KiB / 33.46 KiB
+Bundle budget per part: raw size / limit (headroom) | gzip size / limit (headroom)
+  chunk DomainDetail-B7h8vxfv.js (src/components/DomainDetail.tsx): 158.67 KiB / 160.25 KiB (1.58 KiB left, 1.0%) | 33.46 KiB / 45.25 KiB (11.79 KiB left, 26.0%)
+  route src/components/Settings.tsx: 272.99 KiB / 280.00 KiB (7.01 KiB left, 2.5%) | 79.55 KiB / 80.00 KiB (0.45 KiB left, 0.6%)
+  route src/components/DomainDetail.tsx: 266.79 KiB / 280.00 KiB (13.21 KiB left, 4.7%) | 73.27 KiB / 80.00 KiB (6.73 KiB left, 8.4%)
+  chunk Settings-BGYF2-NX.js (src/components/Settings.tsx): 142.72 KiB / 160.25 KiB (17.53 KiB left, 10.9%) | 34.53 KiB / 45.25 KiB (10.72 KiB left, 23.7%)
+  critical boot path: 292.14 KiB / 361.00 KiB (68.86 KiB left, 19.1%) | 90.42 KiB / 110.00 KiB (19.58 KiB left, 17.8%)
+  chunk app-DbPgCiop.js (index.html): 218.82 KiB / 300.00 KiB (81.18 KiB left, 27.1%) | 66.65 KiB / 90.00 KiB (23.35 KiB left, 25.9%)
+  chunk tr-njc-wja5.js (src/i18n/screens/tr.ts): 108.15 KiB / 160.25 KiB (52.10 KiB left, 32.5%) | 30.39 KiB / 45.25 KiB (14.86 KiB left, 32.8%)
+  chunk HelpDrawer-Cp1fV4TA.js (HelpDrawer): 100.97 KiB / 160.25 KiB (59.28 KiB left, 37.0%) | 34.26 KiB / 45.25 KiB (10.99 KiB left, 24.3%)
+  chunk en-56G2F7Pp.js (src/i18n/screens/en.ts): 100.35 KiB / 160.25 KiB (59.90 KiB left, 37.4%) | 28.19 KiB / 45.25 KiB (17.06 KiB left, 37.7%)
+  chunk ServerSetup-GPNfAunw.js (src/components/ServerSetup.tsx): 80.18 KiB / 160.25 KiB (80.07 KiB left, 50.0%) | 20.39 KiB / 45.25 KiB (24.86 KiB left, 54.9%)
+  route src/components/PostgreSQLManagement.tsx: 133.53 KiB / 280.00 KiB (146.47 KiB left, 52.3%) | 47.00 KiB / 80.00 KiB (33.00 KiB left, 41.3%)
+  route src/components/MariaDBManagement.tsx: 124.86 KiB / 280.00 KiB (155.14 KiB left, 55.4%) | 44.22 KiB / 80.00 KiB (35.78 KiB left, 44.7%)
+  route src/components/VPNPage.tsx: 124.84 KiB / 280.00 KiB (155.16 KiB left, 55.4%) | 41.91 KiB / 80.00 KiB (38.09 KiB left, 47.6%)
+  route src/components/PHPManagement.tsx: 119.07 KiB / 280.00 KiB (160.93 KiB left, 57.5%) | 41.63 KiB / 80.00 KiB (38.37 KiB left, 48.0%)
+  route src/components/DovecotManagement.tsx: 118.27 KiB / 280.00 KiB (161.73 KiB left, 57.8%) | 41.97 KiB / 80.00 KiB (38.03 KiB left, 47.5%)
+  route src/components/PostfixManagement.tsx: 117.67 KiB / 280.00 KiB (162.33 KiB left, 58.0%) | 40.78 KiB / 80.00 KiB (39.22 KiB left, 49.0%)
+  route src/components/VsftpdManagement.tsx: 117.13 KiB / 280.00 KiB (162.87 KiB left, 58.2%) | 41.30 KiB / 80.00 KiB (38.70 KiB left, 48.4%)
+  route src/components/ComponentDetail.tsx: 116.31 KiB / 280.00 KiB (163.69 KiB left, 58.5%) | 40.85 KiB / 80.00 KiB (39.15 KiB left, 48.9%)
+  route src/components/PowerDNSManagement.tsx: 114.35 KiB / 280.00 KiB (165.65 KiB left, 59.2%) | 40.12 KiB / 80.00 KiB (39.88 KiB left, 49.9%)
+  route src/components/Fail2banManagement.tsx: 113.84 KiB / 280.00 KiB (166.16 KiB left, 59.3%) | 39.76 KiB / 80.00 KiB (40.24 KiB left, 50.3%)
+  route src/components/NginxManagement.tsx: 113.39 KiB / 280.00 KiB (166.61 KiB left, 59.5%) | 39.44 KiB / 80.00 KiB (40.56 KiB left, 50.7%)
+  chunk tr-DkbKxclQ.js (src/i18n/screens/server/tr.ts): 64.30 KiB / 160.25 KiB (95.95 KiB left, 59.9%) | 18.63 KiB / 45.25 KiB (26.62 KiB left, 58.8%)
+  route src/components/ServerSetup.tsx: 105.45 KiB / 280.00 KiB (174.55 KiB left, 62.3%) | 28.52 KiB / 80.00 KiB (51.48 KiB left, 64.3%)
+  chunk en-CL_r03iD.js (src/i18n/screens/server/en.ts): 59.94 KiB / 160.25 KiB (100.31 KiB left, 62.6%) | 17.25 KiB / 45.25 KiB (28.00 KiB left, 61.9%)
+  chunk ServiceList-gU-HDFm6.js (src/components/ServiceList.tsx): 58.08 KiB / 160.25 KiB (102.17 KiB left, 63.8%) | 13.56 KiB / 45.25 KiB (31.69 KiB left, 70.0%)
+  chunk SystemUpdateOperation-BmIPlfb7.js (SystemUpdateOperation): 44.43 KiB / 160.25 KiB (115.82 KiB left, 72.3%) | 12.80 KiB / 45.25 KiB (32.45 KiB left, 71.7%)
+  chunk tr-CGWjZr3H.js (src/i18n/tr.ts): 42.52 KiB / 160.25 KiB (117.73 KiB left, 73.5%) | 11.98 KiB / 45.25 KiB (33.27 KiB left, 73.5%)
+  chunk en-B58OQWgc.js (src/i18n/en.ts): 39.83 KiB / 160.25 KiB (120.42 KiB left, 75.1%) | 11.11 KiB / 45.25 KiB (34.14 KiB left, 75.5%)
+  route src/components/LicenseLockScreen.tsx: 65.16 KiB / 280.00 KiB (214.84 KiB left, 76.7%) | 20.46 KiB / 80.00 KiB (59.54 KiB left, 74.4%)
+  route src/components/ServiceList.tsx: 65.13 KiB / 280.00 KiB (214.87 KiB left, 76.7%) | 17.84 KiB / 80.00 KiB (62.16 KiB left, 77.7%)
+  chunk AddonsPage-Cg9Ibx34.js (src/components/AddonsPage.tsx): 36.37 KiB / 160.25 KiB (123.88 KiB left, 77.3%) | 9.88 KiB / 45.25 KiB (35.37 KiB left, 78.2%)
+  route src/components/PanelUpdateCard.tsx: 56.09 KiB / 280.00 KiB (223.91 KiB left, 80.0%) | 16.80 KiB / 80.00 KiB (63.20 KiB left, 79.0%)
+  chunk Dashboard-B4KxuMhC.js (src/components/Dashboard.tsx): 31.90 KiB / 160.25 KiB (128.35 KiB left, 80.1%) | 8.34 KiB / 45.25 KiB (36.91 KiB left, 81.6%)
+  chunk UsersPage-DopqUYx4.js (src/components/UsersPage.tsx): 26.72 KiB / 160.25 KiB (133.53 KiB left, 83.3%) | 6.07 KiB / 45.25 KiB (39.18 KiB left, 86.6%)
+  route src/components/Dashboard.tsx: 45.98 KiB / 280.00 KiB (234.02 KiB left, 83.6%) | 14.99 KiB / 80.00 KiB (65.01 KiB left, 81.3%)
+  route src/components/AddonsPage.tsx: 41.31 KiB / 280.00 KiB (238.69 KiB left, 85.2%) | 13.41 KiB / 80.00 KiB (66.59 KiB left, 83.2%)
+  chunk browser-Bg25_sDh.js (node_modules/qrcode/lib/browser.js): 22.93 KiB / 160.25 KiB (137.32 KiB left, 85.7%) | 8.54 KiB / 45.25 KiB (36.71 KiB left, 81.1%)
+  chunk VPNPage-CrCSuwCE.js (src/components/VPNPage.tsx): 20.71 KiB / 160.25 KiB (139.54 KiB left, 87.1%) | 5.59 KiB / 45.25 KiB (39.66 KiB left, 87.6%)
+  chunk Domains-B58tGh3p.js (src/components/Domains.tsx): 18.52 KiB / 160.25 KiB (141.73 KiB left, 88.4%) | 5.84 KiB / 45.25 KiB (39.41 KiB left, 87.1%)
+  chunk DatabaseManagementV2-CKumbmVg.js (src/components/DatabaseManagementV2.tsx): 18.27 KiB / 160.25 KiB (141.98 KiB left, 88.6%) | 4.62 KiB / 45.25 KiB (40.63 KiB left, 89.8%)
+  route src/components/UsersPage.tsx: 29.62 KiB / 280.00 KiB (250.38 KiB left, 89.4%) | 7.93 KiB / 80.00 KiB (72.07 KiB left, 90.1%)
+  chunk ServerSetupChoice-YHBMjX-l.js (ServerSetupChoice): 16.57 KiB / 160.25 KiB (143.68 KiB left, 89.7%) | 4.64 KiB / 45.25 KiB (40.61 KiB left, 89.7%)
+  chunk PostgreSQLManagement-Dl8UyT53.js (src/components/PostgreSQLManagement.tsx): 13.93 KiB / 160.25 KiB (146.32 KiB left, 91.3%) | 4.18 KiB / 45.25 KiB (41.07 KiB left, 90.8%)
+  route src/components/Domains.tsx: 22.06 KiB / 280.00 KiB (257.94 KiB left, 92.1%) | 8.05 KiB / 80.00 KiB (71.95 KiB left, 89.9%)
+  chunk ui-6FgYLdJF.js (ui): 12.59 KiB / 160.25 KiB (147.66 KiB left, 92.1%) | 4.45 KiB / 45.25 KiB (40.80 KiB left, 90.2%)
+  route src/components/DatabaseManagementV2.tsx: 20.84 KiB / 280.00 KiB (259.16 KiB left, 92.6%) | 6.26 KiB / 80.00 KiB (73.74 KiB left, 92.2%)
+  chunk PanelUpdateCard-BZBNRVSr.js (src/components/PanelUpdateCard.tsx): 10.58 KiB / 160.25 KiB (149.67 KiB left, 93.4%) | 3.19 KiB / 45.25 KiB (42.06 KiB left, 93.0%)
+  chunk SystemSQLiteManager-DPIf8vVs.js (src/components/SystemSQLiteManager.tsx): 9.91 KiB / 160.25 KiB (150.34 KiB left, 93.8%) | 3.17 KiB / 45.25 KiB (42.08 KiB left, 93.0%)
+  chunk ImportPage-C0LUfHwc.js (src/components/ImportPage.tsx): 9.05 KiB / 160.25 KiB (151.20 KiB left, 94.4%) | 2.81 KiB / 45.25 KiB (42.44 KiB left, 93.8%)
+  chunk PHPManagement-Cw-Qm4Jp.js (src/components/PHPManagement.tsx): 8.93 KiB / 160.25 KiB (151.32 KiB left, 94.4%) | 2.99 KiB / 45.25 KiB (42.26 KiB left, 93.4%)
+  chunk ServerSetupGate-MH6xn7l4.js (ServerSetupGate): 8.41 KiB / 160.25 KiB (151.84 KiB left, 94.8%) | 3.18 KiB / 45.25 KiB (42.07 KiB left, 93.0%)
+  chunk MariaDBManagement-BESS_xvp.js (src/components/MariaDBManagement.tsx): 7.91 KiB / 160.25 KiB (152.34 KiB left, 95.1%) | 2.83 KiB / 45.25 KiB (42.42 KiB left, 93.7%)
+  chunk PostfixManagement-BSK3S76Z.js (src/components/PostfixManagement.tsx): 7.87 KiB / 160.25 KiB (152.38 KiB left, 95.1%) | 2.34 KiB / 45.25 KiB (42.91 KiB left, 94.8%)
+  chunk jsx-runtime-096o_Uk7.js (jsx-runtime): 6.95 KiB / 160.25 KiB (153.30 KiB left, 95.7%) | 2.67 KiB / 45.25 KiB (42.58 KiB left, 94.1%)
+  chunk ServiceShell-A90qbsBQ.js (ServiceShell): 6.75 KiB / 160.25 KiB (153.50 KiB left, 95.8%) | 2.52 KiB / 45.25 KiB (42.73 KiB left, 94.4%)
+  route src/components/SystemSQLiteManager.tsx: 11.65 KiB / 280.00 KiB (268.35 KiB left, 95.8%) | 4.49 KiB / 80.00 KiB (75.51 KiB left, 94.4%)
+  route src/components/ImportPage.tsx: 11.61 KiB / 280.00 KiB (268.39 KiB left, 95.9%) | 4.41 KiB / 80.00 KiB (75.59 KiB left, 94.5%)
+  chunk recoveryObservation-Dl-oP9FC.js (recoveryObservation): 5.79 KiB / 160.25 KiB (154.46 KiB left, 96.4%) | 1.79 KiB / 45.25 KiB (43.46 KiB left, 96.0%)
+  chunk ComponentDetail-BJva1Wbk.js (src/components/ComponentDetail.tsx): 5.75 KiB / 160.25 KiB (154.50 KiB left, 96.4%) | 2.08 KiB / 45.25 KiB (43.17 KiB left, 95.4%)
+  chunk LicensePanel-BlLEVk6i.js (src/components/LicensePanel.tsx): 5.37 KiB / 160.25 KiB (154.88 KiB left, 96.6%) | 2.20 KiB / 45.25 KiB (43.05 KiB left, 95.1%)
+  chunk OperationOverlay-kXCTDtLO.js (src/components/OperationOverlay.tsx): 5.18 KiB / 160.25 KiB (155.07 KiB left, 96.8%) | 1.93 KiB / 45.25 KiB (43.32 KiB left, 95.7%)
+  chunk recovery-Dv0w_v0X.js (recovery-offline.html): 5.11 KiB / 160.25 KiB (155.14 KiB left, 96.8%) | 2.38 KiB / 45.25 KiB (42.87 KiB left, 94.7%)
+  chunk Fail2banManagement-CdeCPFA0.js (src/components/Fail2banManagement.tsx): 4.53 KiB / 160.25 KiB (155.72 KiB left, 97.2%) | 1.63 KiB / 45.25 KiB (43.62 KiB left, 96.4%)
+  chunk PowerDNSManagement-DZVx4osu.js (src/components/PowerDNSManagement.tsx): 4.42 KiB / 160.25 KiB (155.83 KiB left, 97.2%) | 1.58 KiB / 45.25 KiB (43.67 KiB left, 96.5%)
+  chunk NginxManagement-CkpJhP0Z.js (src/components/NginxManagement.tsx): 4.29 KiB / 160.25 KiB (155.96 KiB left, 97.3%) | 1.48 KiB / 45.25 KiB (43.77 KiB left, 96.7%)
+  chunk i18n-Ce2gijID.js (i18n): 3.81 KiB / 160.25 KiB (156.44 KiB left, 97.6%) | 1.78 KiB / 45.25 KiB (43.47 KiB left, 96.1%)
+  chunk LicenseLockScreen-BDqfMNXk.js (src/components/LicenseLockScreen.tsx): 3.40 KiB / 160.25 KiB (156.85 KiB left, 97.9%) | 1.26 KiB / 45.25 KiB (43.99 KiB left, 97.2%)
+  chunk MonitoringPage-9lLzHfcr.js (src/components/MonitoringPage.tsx): 3.33 KiB / 160.25 KiB (156.92 KiB left, 97.9%) | 1.45 KiB / 45.25 KiB (43.80 KiB left, 96.8%)
+  route src/components/OperationOverlay.tsx: 5.77 KiB / 280.00 KiB (274.23 KiB left, 97.9%) | 2.35 KiB / 80.00 KiB (77.65 KiB left, 97.1%)
+  route src/components/LicensePanel.tsx: 5.68 KiB / 280.00 KiB (274.32 KiB left, 98.0%) | 2.40 KiB / 80.00 KiB (77.60 KiB left, 97.0%)
+  route src/components/MonitoringPage.tsx: 4.64 KiB / 280.00 KiB (275.36 KiB left, 98.3%) | 2.08 KiB / 80.00 KiB (77.92 KiB left, 97.4%)
+  chunk DomainAppsPanel-DkPHy2Nx.js (src/components/DomainAppsPanel.tsx): 2.52 KiB / 160.25 KiB (157.73 KiB left, 98.4%) | 1.16 KiB / 45.25 KiB (44.09 KiB left, 97.4%)
+  chunk AuditLogPage-C4T-fo4K.js (src/components/AuditLogPage.tsx): 2.33 KiB / 160.25 KiB (157.92 KiB left, 98.5%) | 0.94 KiB / 45.25 KiB (44.31 KiB left, 97.9%)
+  route src/components/AuditLogPage.tsx: 3.64 KiB / 280.00 KiB (276.36 KiB left, 98.7%) | 1.58 KiB / 80.00 KiB (78.42 KiB left, 98.0%)
+  route src/components/DomainAppsPanel.tsx: 3.49 KiB / 280.00 KiB (276.51 KiB left, 98.8%) | 1.91 KiB / 80.00 KiB (78.09 KiB left, 97.6%)
+  chunk ConfigEditor-tNez9UBs.js (src/components/ConfigEditor.tsx): 1.85 KiB / 160.25 KiB (158.40 KiB left, 98.8%) | 0.84 KiB / 45.25 KiB (44.41 KiB left, 98.2%)
+  chunk DovecotManagement-BkONI-mi.js (src/components/DovecotManagement.tsx): 1.50 KiB / 160.25 KiB (158.75 KiB left, 99.1%) | 0.72 KiB / 45.25 KiB (44.53 KiB left, 98.4%)
+  chunk FirewallSSHNotice-BbjSrXzR.js (FirewallSSHNotice): 1.48 KiB / 160.25 KiB (158.77 KiB left, 99.1%) | 0.67 KiB / 45.25 KiB (44.58 KiB left, 98.5%)
+  route src/components/ConfigEditor.tsx: 2.58 KiB / 280.00 KiB (277.42 KiB left, 99.1%) | 1.42 KiB / 80.00 KiB (78.58 KiB left, 98.2%)
+  chunk PageHeader-BzhI12-S.js (PageHeader): 1.31 KiB / 160.25 KiB (158.94 KiB left, 99.2%) | 0.64 KiB / 45.25 KiB (44.61 KiB left, 98.6%)
+  chunk WebmailAccess-BZP_Sf_u.js (src/components/WebmailAccess.tsx): 0.99 KiB / 160.25 KiB (159.26 KiB left, 99.4%) | 0.54 KiB / 45.25 KiB (44.71 KiB left, 98.8%)
+  chunk boxes-CW2mQwvl.js (boxes): 0.83 KiB / 160.25 KiB (159.42 KiB left, 99.5%) | 0.39 KiB / 45.25 KiB (44.86 KiB left, 99.1%)
+  chunk VsftpdManagement-BSlp4Vdh.js (src/components/VsftpdManagement.tsx): 0.81 KiB / 160.25 KiB (159.44 KiB left, 99.5%) | 0.44 KiB / 45.25 KiB (44.81 KiB left, 99.0%)
+  chunk rolldown-runtime-hePW80VL.js (rolldown-runtime): 0.70 KiB / 160.25 KiB (159.55 KiB left, 99.6%) | 0.42 KiB / 45.25 KiB (44.83 KiB left, 99.1%)
+  chunk createLucideIcon-FXKTpBD8.js (createLucideIcon): 0.70 KiB / 160.25 KiB (159.55 KiB left, 99.6%) | 0.46 KiB / 45.25 KiB (44.79 KiB left, 99.0%)
+  route src/components/WebmailAccess.tsx: 0.99 KiB / 280.00 KiB (279.01 KiB left, 99.6%) | 0.54 KiB / 80.00 KiB (79.46 KiB left, 99.3%)
+  chunk domainAccess-B11bb1Ea.js (domainAccess): 0.53 KiB / 160.25 KiB (159.72 KiB left, 99.7%) | 0.31 KiB / 45.25 KiB (44.94 KiB left, 99.3%)
+  chunk wifi-off-B5l-gDBW.js (wifi-off): 0.45 KiB / 160.25 KiB (159.80 KiB left, 99.7%) | 0.27 KiB / 45.25 KiB (44.98 KiB left, 99.4%)
+  chunk settings-2-DqMUfcg2.js (settings-2): 0.44 KiB / 160.25 KiB (159.81 KiB left, 99.7%) | 0.29 KiB / 45.25 KiB (44.96 KiB left, 99.4%)
+  chunk shield-off-CBdFArGr.js (shield-off): 0.39 KiB / 160.25 KiB (159.86 KiB left, 99.8%) | 0.28 KiB / 45.25 KiB (44.97 KiB left, 99.4%)
+  chunk hard-drive-bolGxscP.js (hard-drive): 0.38 KiB / 160.25 KiB (159.87 KiB left, 99.8%) | 0.25 KiB / 45.25 KiB (45.00 KiB left, 99.4%)
+  chunk clock-3-BtC1Ihoy.js (clock-3): 0.38 KiB / 160.25 KiB (159.87 KiB left, 99.8%) | 0.27 KiB / 45.25 KiB (44.98 KiB left, 99.4%)
+  chunk scan-search-SoW5RkoL.js (scan-search): 0.38 KiB / 160.25 KiB (159.87 KiB left, 99.8%) | 0.25 KiB / 45.25 KiB (45.00 KiB left, 99.5%)
+  chunk network-DKxePdX1.js (network): 0.38 KiB / 160.25 KiB (159.88 KiB left, 99.8%) | 0.23 KiB / 45.25 KiB (45.02 KiB left, 99.5%)
+  chunk layers-D7avhwDV.js (layers): 0.36 KiB / 160.25 KiB (159.89 KiB left, 99.8%) | 0.23 KiB / 45.25 KiB (45.02 KiB left, 99.5%)
+  chunk trash-2-61T6dv8t.js (trash-2): 0.35 KiB / 160.25 KiB (159.90 KiB left, 99.8%) | 0.24 KiB / 45.25 KiB (45.01 KiB left, 99.5%)
+  chunk shield-alert-DMkvoCw8.js (shield-alert): 0.34 KiB / 160.25 KiB (159.91 KiB left, 99.8%) | 0.26 KiB / 45.25 KiB (44.99 KiB left, 99.4%)
+  chunk layout-grid-D4XigUY7.js (layout-grid): 0.34 KiB / 160.25 KiB (159.91 KiB left, 99.8%) | 0.19 KiB / 45.25 KiB (45.06 KiB left, 99.6%)
+  chunk pencil-gXicHKAG.js (pencil): 0.33 KiB / 160.25 KiB (159.92 KiB left, 99.8%) | 0.24 KiB / 45.25 KiB (45.01 KiB left, 99.5%)
+  chunk file-text-D5DzyfvN.js (file-text): 0.32 KiB / 160.25 KiB (159.93 KiB left, 99.8%) | 0.21 KiB / 45.25 KiB (45.04 KiB left, 99.5%)
+  chunk refresh-cw-p2tlarjg.js (refresh-cw): 0.31 KiB / 160.25 KiB (159.94 KiB left, 99.8%) | 0.22 KiB / 45.25 KiB (45.03 KiB left, 99.5%)
+  chunk badge-check-DWJsPN3y.js (badge-check): 0.31 KiB / 160.25 KiB (159.94 KiB left, 99.8%) | 0.21 KiB / 45.25 KiB (45.04 KiB left, 99.5%)
+  chunk file-code-Siu5aPY5.js (file-code): 0.30 KiB / 160.25 KiB (159.95 KiB left, 99.8%) | 0.21 KiB / 45.25 KiB (45.04 KiB left, 99.5%)
+  chunk square-BvFf3pSE.js (square): 0.29 KiB / 160.25 KiB (159.96 KiB left, 99.8%) | 0.24 KiB / 45.25 KiB (45.01 KiB left, 99.5%)
+  chunk inbox-B2EzWMvA.js (inbox): 0.28 KiB / 160.25 KiB (159.97 KiB left, 99.8%) | 0.23 KiB / 45.25 KiB (45.02 KiB left, 99.5%)
+  chunk save-DOTF0jza.js (save): 0.27 KiB / 160.25 KiB (159.98 KiB left, 99.8%) | 0.21 KiB / 45.25 KiB (45.04 KiB left, 99.5%)
+  chunk alert-triangle-GGpg7lJ1.js (alert-triangle): 0.26 KiB / 160.25 KiB (159.99 KiB left, 99.8%) | 0.21 KiB / 45.25 KiB (45.04 KiB left, 99.5%)
+  chunk download-BV_QfFuf.js (download): 0.26 KiB / 160.25 KiB (159.99 KiB left, 99.8%) | 0.21 KiB / 45.25 KiB (45.04 KiB left, 99.5%)
+  chunk external-link-jDsEe1bq.js (external-link): 0.24 KiB / 160.25 KiB (160.01 KiB left, 99.8%) | 0.20 KiB / 45.25 KiB (45.05 KiB left, 99.6%)
+  chunk alert-circle-CBhtkz6U.js (alert-circle): 0.24 KiB / 160.25 KiB (160.01 KiB left, 99.8%) | 0.18 KiB / 45.25 KiB (45.07 KiB left, 99.6%)
+  chunk copy-CvYLQPQS.js (copy): 0.23 KiB / 160.25 KiB (160.02 KiB left, 99.9%) | 0.20 KiB / 45.25 KiB (45.05 KiB left, 99.6%)
+  chunk key-DrQ-7Vrm.js (key): 0.22 KiB / 160.25 KiB (160.03 KiB left, 99.9%) | 0.19 KiB / 45.25 KiB (45.06 KiB left, 99.6%)
+  chunk mail-BmPLeDCL.js (mail): 0.21 KiB / 160.25 KiB (160.04 KiB left, 99.9%) | 0.20 KiB / 45.25 KiB (45.05 KiB left, 99.6%)
+  chunk lock-BmXb4H6E.js (lock): 0.20 KiB / 160.25 KiB (160.05 KiB left, 99.9%) | 0.19 KiB / 45.25 KiB (45.06 KiB left, 99.6%)
+  chunk clock-DZTqhbcn.js (clock): 0.18 KiB / 160.25 KiB (160.07 KiB left, 99.9%) | 0.17 KiB / 45.25 KiB (45.08 KiB left, 99.6%)
+  chunk check-circle-2-Ci60QB5f.js (check-circle-2): 0.17 KiB / 160.25 KiB (160.08 KiB left, 99.9%) | 0.17 KiB / 45.25 KiB (45.08 KiB left, 99.6%)
+  chunk gauge-BMpNy-AH.js (gauge): 0.17 KiB / 160.25 KiB (160.08 KiB left, 99.9%) | 0.17 KiB / 45.25 KiB (45.08 KiB left, 99.6%)
+  chunk ban-ECkHh-hf.js (ban): 0.17 KiB / 160.25 KiB (160.08 KiB left, 99.9%) | 0.16 KiB / 45.25 KiB (45.09 KiB left, 99.6%)
+  chunk search-CxlCCs-u.js (search): 0.17 KiB / 160.25 KiB (160.08 KiB left, 99.9%) | 0.17 KiB / 45.25 KiB (45.08 KiB left, 99.6%)
+  chunk arrow-left-B1DWToeP.js (arrow-left): 0.16 KiB / 160.25 KiB (160.09 KiB left, 99.9%) | 0.16 KiB / 45.25 KiB (45.09 KiB left, 99.6%)
+  chunk arrow-right-CrblK9Tq.js (arrow-right): 0.16 KiB / 160.25 KiB (160.09 KiB left, 99.9%) | 0.16 KiB / 45.25 KiB (45.09 KiB left, 99.6%)
+  chunk plus-BOB-Zuhm.js (plus): 0.15 KiB / 160.25 KiB (160.10 KiB left, 99.9%) | 0.15 KiB / 45.25 KiB (45.10 KiB left, 99.7%)
+  chunk loader-2-BDSr4jiY.js (loader-2): 0.13 KiB / 160.25 KiB (160.12 KiB left, 99.9%) | 0.15 KiB / 45.25 KiB (45.10 KiB left, 99.7%)
+  chunk play-tNK8gSG8.js (play): 0.13 KiB / 160.25 KiB (160.12 KiB left, 99.9%) | 0.14 KiB / 45.25 KiB (45.11 KiB left, 99.7%)
+  chunk chevron-right-0l_NeFQb.js (chevron-right): 0.13 KiB / 160.25 KiB (160.12 KiB left, 99.9%) | 0.14 KiB / 45.25 KiB (45.11 KiB left, 99.7%)
+{"kind": "good", "changed": ["deploy/release-sequence-policy"]}
+{"kind": "defective", "changed": ["cmd/panel/main.go"]}
+
+added 181 packages in 4s
+npm notice run celikpanel-web@0.0.0 build
+npm notice run tsc && vite build && node scripts/build-recovery-worker.mjs && node scripts/check-bundle-budget.mjs
+vite v8.2.0 building client environment for production...
+[2Ktransforming...✓ 1645 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                       0.70 kB │ gzip:  0.36 kB
+dist/recovery-offline.html                            2.22 kB │ gzip:  1.04 kB
+dist/assets/overpass-mono-latin-CujxpGkb.woff2       22.01 kB
+dist/assets/overpass-mono-latin-ext-D14p1K_g.woff2   32.64 kB
+dist/.vite/manifest.json                             32.83 kB │ gzip:  4.14 kB
+dist/assets/OpenSans-latin-ext-DPNHYqvY.woff2        35.15 kB
+dist/assets/overpass-latin-qAR8M_co.woff2            39.38 kB
+dist/assets/overpass-latin-ext-DvafStyF.woff2        46.08 kB
+dist/assets/OpenSans-latin-CWNzRldh.woff2            48.32 kB
+dist/assets/InterVariable-DiVDrmQJ.woff2            352.24 kB
+dist/assets/recovery-DHYxdHJ0.css                     1.89 kB │ gzip:  0.86 kB
+dist/assets/app-g92bIhQu.css                         52.35 kB │ gzip: 10.89 kB
+dist/assets/chevron-right-DNs5keoQ.js                 0.11 kB │ gzip:  0.12 kB
+dist/assets/play-DARNGTF6.js                          0.12 kB │ gzip:  0.13 kB
+dist/assets/subscriptions-Bfo4heda.js                 0.12 kB │ gzip:  0.12 kB
+dist/assets/loader-2-C9oVadpn.js                      0.12 kB │ gzip:  0.14 kB
+dist/assets/plus-BtBzhBzo.js                          0.13 kB │ gzip:  0.13 kB
+dist/assets/accounts-DYYhrfem.js                      0.15 kB │ gzip:  0.13 kB
+dist/assets/arrow-left-D3Y6cODy.js                    0.15 kB │ gzip:  0.15 kB
+dist/assets/arrow-right-CQ0B-stT.js                   0.15 kB │ gzip:  0.15 kB
+dist/assets/search-CQ220lOp.js                        0.15 kB │ gzip:  0.16 kB
+dist/assets/ban-DcVBO7_L.js                           0.16 kB │ gzip:  0.15 kB
+dist/assets/gauge-Cmuzxsim.js                         0.16 kB │ gzip:  0.16 kB
+dist/assets/check-circle-2-uQsE_qee.js                0.16 kB │ gzip:  0.16 kB
+dist/assets/clock-Bkkh3aby.js                         0.16 kB │ gzip:  0.16 kB
+dist/assets/clock-3-DZMsBXeV.js                       0.17 kB │ gzip:  0.16 kB
+dist/assets/pencil-BHg7Opg-.js                        0.18 kB │ gzip:  0.17 kB
+dist/assets/pause-D0907I4S.js                         0.18 kB │ gzip:  0.15 kB
+dist/assets/lock-DBEiiAgx.js                          0.19 kB │ gzip:  0.18 kB
+dist/assets/mail-Brvc3NUm.js                          0.20 kB │ gzip:  0.19 kB
+dist/assets/key-CTPGGcOl.js                           0.21 kB │ gzip:  0.18 kB
+dist/assets/copy-DXAZMbxm.js                          0.22 kB │ gzip:  0.19 kB
+dist/assets/external-link-p6sZHcjS.js                 0.23 kB │ gzip:  0.19 kB
+dist/assets/archive-BouV0lwZ.js                       0.23 kB │ gzip:  0.20 kB
+dist/assets/download-CdRIVpXw.js                      0.24 kB │ gzip:  0.21 kB
+dist/assets/save-YSkNyrfl.js                          0.26 kB │ gzip:  0.21 kB
+dist/assets/inbox-Bf8AetQ_.js                         0.27 kB │ gzip:  0.22 kB
+dist/assets/square-DEx5n7qg.js                        0.28 kB │ gzip:  0.23 kB
+dist/assets/file-code-FmJ9YzSX.js                     0.29 kB │ gzip:  0.20 kB
+dist/assets/badge-check-C9BIcPDR.js                   0.30 kB │ gzip:  0.20 kB
+dist/assets/refresh-cw-Ciq5BZkj.js                    0.30 kB │ gzip:  0.22 kB
+dist/assets/file-text-n7NBjf0k.js                     0.31 kB │ gzip:  0.20 kB
+dist/assets/layout-grid-B1JiBP7d.js                   0.33 kB │ gzip:  0.18 kB
+dist/assets/shield-alert-DvPkDJ8F.js                  0.33 kB │ gzip:  0.25 kB
+dist/assets/trash-2-BXmCB-BN.js                       0.34 kB │ gzip:  0.24 kB
+dist/assets/layers-XRcXWO03.js                        0.35 kB │ gzip:  0.23 kB
+dist/assets/network-Ch9mm9pl.js                       0.37 kB │ gzip:  0.22 kB
+dist/assets/scan-search-CbIwLGxs.js                   0.37 kB │ gzip:  0.24 kB
+dist/assets/hard-drive-rOeFEUs4.js                    0.37 kB │ gzip:  0.25 kB
+dist/assets/shield-off-B6PEFwEd.js                    0.38 kB │ gzip:  0.27 kB
+dist/assets/domainDatabases-DsCZ93aS.js               0.42 kB │ gzip:  0.30 kB
+dist/assets/settings-2-BhkqVwUB.js                    0.43 kB │ gzip:  0.29 kB
+dist/assets/wifi-off-BimzJkI2.js                      0.44 kB │ gzip:  0.26 kB
+dist/assets/managedServices-DLBcLdaz.js               0.55 kB │ gzip:  0.36 kB
+dist/assets/mailSetup-B4PA7BL2.js                     0.56 kB │ gzip:  0.30 kB
+dist/assets/CurrentSettings-adeKOmdd.js               0.71 kB │ gzip:  0.41 kB
+dist/assets/rolldown-runtime-hePW80VL.js              0.71 kB │ gzip:  0.42 kB
+dist/assets/VsftpdManagement-6YTy0XGp.js              0.78 kB │ gzip:  0.43 kB
+dist/assets/boxes-DD286CYq.js                         0.83 kB │ gzip:  0.38 kB
+dist/assets/OnceOnlyNotice-CxqtDxE3.js                0.87 kB │ gzip:  0.55 kB
+dist/assets/ServiceRecordLookup-CFiQDjCn.js           0.95 kB │ gzip:  0.55 kB
+dist/assets/AccessGuidance-8KP6RIxw.js                1.15 kB │ gzip:  0.57 kB
+dist/assets/WebmailAccess-BW2KB2le.js                 1.16 kB │ gzip:  0.60 kB
+dist/assets/PageHeader-CcBGZ1mK.js                    1.33 kB │ gzip:  0.64 kB
+dist/assets/lostAnswer-BB2g12Dg.js                    1.45 kB │ gzip:  0.79 kB
+dist/assets/FirewallSSHNotice-rjavZuVz.js             1.47 kB │ gzip:  0.66 kB
+dist/assets/domainAccess-BUFvEYK5.js                  1.70 kB │ gzip:  0.73 kB
+dist/assets/DovecotManagement-DwgBXGvs.js             1.78 kB │ gzip:  0.86 kB
+dist/assets/ServiceActionNotice-CBjKVGIR.js           1.90 kB │ gzip:  0.92 kB
+dist/assets/AuditLogPage-CcoWOVgj.js                  2.31 kB │ gzip:  0.93 kB
+dist/assets/ConfigEditor-By67mQ4H.js                  2.44 kB │ gzip:  1.09 kB
+dist/assets/DomainAppsPanel-Cy4nTwJi.js               2.89 kB │ gzip:  1.33 kB
+dist/assets/MariaDBManagement-BA00fFNx.js             3.27 kB │ gzip:  1.32 kB
+dist/assets/MonitoringPage-Ra4chn9T.js                3.33 kB │ gzip:  1.46 kB
+dist/assets/LicenseLockScreen-BvMLg8P1.js             3.43 kB │ gzip:  1.27 kB
+dist/assets/HelpDrawer-BFYionmL.js                    4.65 kB │ gzip:  1.73 kB
+dist/assets/PowerDNSManagement-DbCr_0N5.js            4.71 kB │ gzip:  1.65 kB
+dist/assets/NginxManagement-Dq7Vw6We.js               4.84 kB │ gzip:  1.61 kB
+dist/assets/recovery-C7qGyqtH.js                      5.23 kB │ gzip:  2.44 kB
+dist/assets/OperationOverlay-9WXmh75T.js              5.41 kB │ gzip:  2.00 kB
+dist/assets/LicensePanel-DXhsefdD.js                  5.43 kB │ gzip:  2.22 kB
+dist/assets/Fail2banManagement-BfnD-RGf.js            5.52 kB │ gzip:  1.93 kB
+dist/assets/recoveryObservation-COiPEiNp.js           6.10 kB │ gzip:  1.87 kB
+dist/assets/ComponentDetail-DNIdbBy0.js               6.27 kB │ gzip:  2.26 kB
+dist/assets/ConfigFileNotices-DaeK4ctt.js             6.58 kB │ gzip:  2.52 kB
+dist/assets/ServiceShell-Geix1BxE.js                  7.79 kB │ gzip:  2.87 kB
+dist/assets/ServerSetupGate-DIZvQv4R.js               8.54 kB │ gzip:  3.26 kB
+dist/assets/ConfigSettingsEditor-MPCvSLG3.js          9.56 kB │ gzip:  3.78 kB
+dist/assets/PHPManagement-DKdaVsYN.js                 9.58 kB │ gzip:  3.29 kB
+dist/assets/PostgreSQLManagement-e-NJ1NwZ.js          9.92 kB │ gzip:  3.29 kB
+dist/assets/SystemSQLiteManager-DaQIg21X.js          10.02 kB │ gzip:  3.20 kB
+dist/assets/DomainCronManager-BGRUul5Q.js            10.38 kB │ gzip:  3.14 kB
+dist/assets/PanelUpdateCard-CrNZdlEn.js              10.73 kB │ gzip:  3.21 kB
+dist/assets/PostfixManagement-BL5BMTaC.js            11.51 kB │ gzip:  3.57 kB
+dist/assets/DomainLogsViewer-DnbAQ4DV.js             12.53 kB │ gzip:  3.97 kB
+dist/assets/DomainBackupManager-C23mVGsW.js          16.52 kB │ gzip:  4.50 kB
+dist/assets/ImportPage-2x5htmyD.js                   16.84 kB │ gzip:  5.03 kB
+dist/assets/ServerSetupChoice--DdhHWzY.js            16.85 kB │ gzip:  4.72 kB
+dist/assets/Domains-snphZWdx.js                      18.84 kB │ gzip:  6.05 kB
+dist/assets/DatabaseManagementV2-DM55SKUY.js         20.40 kB │ gzip:  5.46 kB
+dist/assets/VPNPage-COT8Tx9W.js                      21.78 kB │ gzip:  6.02 kB
+dist/assets/browser-Bg25_sDh.js                      23.47 kB │ gzip:  8.86 kB
+dist/assets/UsersPage-CZN7lwFM.js                    27.87 kB │ gzip:  6.49 kB
+dist/assets/ui-DZr5XFQJ.js                           28.55 kB │ gzip:  9.83 kB
+dist/assets/Dashboard-C7QEwBuZ.js                    35.05 kB │ gzip:  9.41 kB
+dist/assets/AddonsPage-BpARnTPK.js                   37.13 kB │ gzip: 10.17 kB
+dist/assets/SystemUpdateOperation-B9O8MFQM.js        45.43 kB │ gzip: 13.24 kB
+dist/assets/en-Cup8CxD8.js                           51.34 kB │ gzip: 13.79 kB
+dist/assets/tr-gCaZonqC.js                           55.72 kB │ gzip: 14.97 kB
+dist/assets/ServiceList-efDiD41v.js                  60.19 kB │ gzip: 14.20 kB
+dist/assets/en-D6URnn1t.js                           79.39 kB │ gzip: 22.13 kB
+dist/assets/ServerSetup-QHsgV4gc.js                  85.32 kB │ gzip: 21.96 kB
+dist/assets/tr-CGv3xmx5.js                           85.59 kB │ gzip: 24.10 kB
+dist/assets/serviceHelp-rPjObIP1.js                  99.36 kB │ gzip: 33.78 kB
+dist/assets/en-UuSTWMRz.js                          128.52 kB │ gzip: 34.89 kB
+dist/assets/tr-CtfCjyhk.js                          139.31 kB │ gzip: 37.54 kB
+dist/assets/DomainDetail-CJdQfqy5.js                142.43 kB │ gzip: 32.71 kB
+dist/assets/Settings-4MY4f7rM.js                    154.44 kB │ gzip: 38.04 kB
+dist/assets/app-DUf8oeq9.js                         238.31 kB │ gzip: 74.00 kB
+
+✓ built in 1.75s
+Recovery shell: 4 static files, 15459 bytes; no authenticated cache
+Bundle budget: entry file 232.72 KiB raw / 71.30 KiB gzip; critical boot 321.68 KiB / 97.55 KiB; largest route src/components/Settings.tsx 184.33 KiB / 48.94 KiB; largest individual async Settings-4MY4f7rM.js 150.83 KiB / 36.69 KiB
+Bundle budget per part: raw size / limit (headroom) | gzip size / limit (headroom)
+  chunk Settings-4MY4f7rM.js (src/components/Settings.tsx): 150.83 KiB / 160.25 KiB (9.42 KiB left, 5.9%) | 36.69 KiB / 45.25 KiB (8.56 KiB left, 18.9%)
+  critical boot path: 321.68 KiB / 361.00 KiB (39.32 KiB left, 10.9%) | 97.55 KiB / 110.00 KiB (12.45 KiB left, 11.3%)
+  chunk DomainDetail-CJdQfqy5.js (src/components/DomainDetail.tsx): 139.09 KiB / 160.25 KiB (21.16 KiB left, 13.2%) | 31.66 KiB / 45.25 KiB (13.59 KiB left, 30.0%)
+  chunk tr-CtfCjyhk.js (src/i18n/screens/tr.ts): 136.05 KiB / 160.25 KiB (24.20 KiB left, 15.1%) | 36.26 KiB / 45.25 KiB (8.99 KiB left, 19.9%)
+  chunk en-UuSTWMRz.js (src/i18n/screens/en.ts): 125.51 KiB / 160.25 KiB (34.74 KiB left, 21.7%) | 33.79 KiB / 45.25 KiB (11.46 KiB left, 25.3%)
+  chunk app-DUf8oeq9.js (index.html): 232.72 KiB / 300.00 KiB (67.28 KiB left, 22.4%) | 71.30 KiB / 90.00 KiB (18.70 KiB left, 20.8%)
+  route src/components/Settings.tsx: 184.33 KiB / 280.00 KiB (95.67 KiB left, 34.2%) | 48.94 KiB / 80.00 KiB (31.06 KiB left, 38.8%)
+  chunk serviceHelp-rPjObIP1.js (src/help/serviceHelp.ts): 97.03 KiB / 160.25 KiB (63.22 KiB left, 39.5%) | 32.73 KiB / 45.25 KiB (12.52 KiB left, 27.7%)
+  route src/components/DomainDetail.tsx: 153.19 KiB / 280.00 KiB (126.81 KiB left, 45.3%) | 39.71 KiB / 80.00 KiB (40.29 KiB left, 50.4%)
+  chunk tr-CGv3xmx5.js (src/i18n/screens/server/tr.ts): 83.59 KiB / 160.25 KiB (76.66 KiB left, 47.8%) | 23.29 KiB / 45.25 KiB (21.96 KiB left, 48.5%)
+  chunk ServerSetup-QHsgV4gc.js (src/components/ServerSetup.tsx): 83.32 KiB / 160.25 KiB (76.93 KiB left, 48.0%) | 21.21 KiB / 45.25 KiB (24.04 KiB left, 53.1%)
+  chunk en-D6URnn1t.js (src/i18n/screens/server/en.ts): 77.53 KiB / 160.25 KiB (82.72 KiB left, 51.6%) | 21.48 KiB / 45.25 KiB (23.77 KiB left, 52.5%)
+  route src/components/ServerSetup.tsx: 108.40 KiB / 280.00 KiB (171.60 KiB left, 61.3%) | 29.25 KiB / 80.00 KiB (50.75 KiB left, 63.4%)
+  chunk ServiceList-efDiD41v.js (src/components/ServiceList.tsx): 58.78 KiB / 160.25 KiB (101.47 KiB left, 63.3%) | 13.75 KiB / 45.25 KiB (31.50 KiB left, 69.6%)
+  chunk tr-gCaZonqC.js (src/i18n/tr.ts): 54.42 KiB / 160.25 KiB (105.83 KiB left, 66.0%) | 14.44 KiB / 45.25 KiB (30.81 KiB left, 68.1%)
+  chunk en-Cup8CxD8.js (src/i18n/en.ts): 50.14 KiB / 160.25 KiB (110.11 KiB left, 68.7%) | 13.37 KiB / 45.25 KiB (31.88 KiB left, 70.5%)
+  chunk SystemUpdateOperation-B9O8MFQM.js (SystemUpdateOperation): 44.37 KiB / 160.25 KiB (115.88 KiB left, 72.3%) | 12.78 KiB / 45.25 KiB (32.47 KiB left, 71.8%)
+  route src/components/ServiceList.tsx: 67.47 KiB / 280.00 KiB (212.53 KiB left, 75.9%) | 18.76 KiB / 80.00 KiB (61.24 KiB left, 76.5%)
+  route src/components/LicenseLockScreen.tsx: 64.82 KiB / 280.00 KiB (215.18 KiB left, 76.8%) | 20.28 KiB / 80.00 KiB (59.72 KiB left, 74.6%)
+  chunk AddonsPage-BpARnTPK.js (src/components/AddonsPage.tsx): 36.27 KiB / 160.25 KiB (123.98 KiB left, 77.4%) | 9.83 KiB / 45.25 KiB (35.42 KiB left, 78.3%)
+  chunk Dashboard-C7QEwBuZ.js (src/components/Dashboard.tsx): 34.24 KiB / 160.25 KiB (126.01 KiB left, 78.6%) | 9.13 KiB / 45.25 KiB (36.12 KiB left, 79.8%)
+  route src/components/PanelUpdateCard.tsx: 55.87 KiB / 280.00 KiB (224.13 KiB left, 80.0%) | 16.67 KiB / 80.00 KiB (63.33 KiB left, 79.2%)
+  route src/components/PostgreSQLManagement.tsx: 52.13 KiB / 280.00 KiB (227.88 KiB left, 81.4%) | 20.92 KiB / 80.00 KiB (59.08 KiB left, 73.8%)
+  chunk ui-DZr5XFQJ.js (ui): 27.88 KiB / 160.25 KiB (132.37 KiB left, 82.6%) | 9.56 KiB / 45.25 KiB (35.69 KiB left, 78.9%)
+  route src/components/Dashboard.tsx: 48.21 KiB / 280.00 KiB (231.79 KiB left, 82.8%) | 15.76 KiB / 80.00 KiB (64.24 KiB left, 80.3%)
+  chunk UsersPage-CZN7lwFM.js (src/components/UsersPage.tsx): 27.22 KiB / 160.25 KiB (133.03 KiB left, 83.0%) | 6.31 KiB / 45.25 KiB (38.94 KiB left, 86.1%)
+  route src/components/MariaDBManagement.tsx: 42.48 KiB / 280.00 KiB (237.52 KiB left, 84.8%) | 17.38 KiB / 80.00 KiB (62.62 KiB left, 78.3%)
+  route src/components/AddonsPage.tsx: 41.05 KiB / 280.00 KiB (238.95 KiB left, 85.3%) | 13.30 KiB / 80.00 KiB (66.70 KiB left, 83.4%)
+  chunk browser-Bg25_sDh.js (node_modules/qrcode/lib/browser.js): 22.93 KiB / 160.25 KiB (137.32 KiB left, 85.7%) | 8.54 KiB / 45.25 KiB (36.71 KiB left, 81.1%)
+  chunk VPNPage-COT8Tx9W.js (src/components/VPNPage.tsx): 21.27 KiB / 160.25 KiB (138.98 KiB left, 86.7%) | 5.84 KiB / 45.25 KiB (39.41 KiB left, 87.1%)
+  chunk DatabaseManagementV2-DM55SKUY.js (src/components/DatabaseManagementV2.tsx): 19.92 KiB / 160.25 KiB (140.33 KiB left, 87.6%) | 5.32 KiB / 45.25 KiB (39.93 KiB left, 88.2%)
+  chunk Domains-snphZWdx.js (src/components/Domains.tsx): 18.41 KiB / 160.25 KiB (141.84 KiB left, 88.5%) | 5.88 KiB / 45.25 KiB (39.37 KiB left, 87.0%)
+  route src/components/VPNPage.tsx: 31.14 KiB / 280.00 KiB (248.86 KiB left, 88.9%) | 10.81 KiB / 80.00 KiB (69.19 KiB left, 86.5%)
+  route src/components/UsersPage.tsx: 30.22 KiB / 280.00 KiB (249.78 KiB left, 89.2%) | 8.31 KiB / 80.00 KiB (71.69 KiB left, 89.6%)
+  chunk ServerSetupChoice--DdhHWzY.js (ServerSetupChoice): 16.46 KiB / 160.25 KiB (143.79 KiB left, 89.7%) | 4.59 KiB / 45.25 KiB (40.66 KiB left, 89.9%)
+  chunk ImportPage-2x5htmyD.js (src/components/ImportPage.tsx): 16.45 KiB / 160.25 KiB (143.80 KiB left, 89.7%) | 4.89 KiB / 45.25 KiB (40.36 KiB left, 89.2%)
+  chunk DomainBackupManager-C23mVGsW.js (src/components/DomainBackupManager.tsx): 16.14 KiB / 160.25 KiB (144.11 KiB left, 89.9%) | 4.36 KiB / 45.25 KiB (40.89 KiB left, 90.4%)
+  route src/components/PostfixManagement.tsx: 27.92 KiB / 280.00 KiB (252.08 KiB left, 90.0%) | 10.84 KiB / 80.00 KiB (69.16 KiB left, 86.4%)
+  route src/components/PHPManagement.tsx: 25.67 KiB / 280.00 KiB (254.33 KiB left, 90.8%) | 10.32 KiB / 80.00 KiB (69.68 KiB left, 87.1%)
+  route src/components/DovecotManagement.tsx: 25.57 KiB / 280.00 KiB (254.43 KiB left, 90.9%) | 11.06 KiB / 80.00 KiB (68.94 KiB left, 86.2%)
+  route src/components/DatabaseManagementV2.tsx: 24.70 KiB / 280.00 KiB (255.30 KiB left, 91.2%) | 8.21 KiB / 80.00 KiB (71.79 KiB left, 89.7%)
+  route src/components/VsftpdManagement.tsx: 24.17 KiB / 280.00 KiB (255.83 KiB left, 91.4%) | 10.26 KiB / 80.00 KiB (69.74 KiB left, 87.2%)
+  route src/components/ComponentDetail.tsx: 23.40 KiB / 280.00 KiB (256.60 KiB left, 91.6%) | 9.85 KiB / 80.00 KiB (70.15 KiB left, 87.7%)
+  route src/components/Domains.tsx: 23.12 KiB / 280.00 KiB (256.88 KiB left, 91.7%) | 8.54 KiB / 80.00 KiB (71.46 KiB left, 89.3%)
+  chunk DomainLogsViewer-DnbAQ4DV.js (src/components/DomainLogsViewer.tsx): 12.24 KiB / 160.25 KiB (148.01 KiB left, 92.4%) | 3.86 KiB / 45.25 KiB (41.39 KiB left, 91.5%)
+  route src/components/PowerDNSManagement.tsx: 21.24 KiB / 280.00 KiB (258.76 KiB left, 92.4%) | 8.99 KiB / 80.00 KiB (71.01 KiB left, 88.8%)
+  route src/components/Fail2banManagement.tsx: 20.88 KiB / 280.00 KiB (259.12 KiB left, 92.5%) | 8.54 KiB / 80.00 KiB (71.46 KiB left, 89.3%)
+  route src/components/ImportPage.tsx: 20.47 KiB / 280.00 KiB (259.53 KiB left, 92.7%) | 7.32 KiB / 80.00 KiB (72.68 KiB left, 90.8%)
+  route src/components/DomainBackupManager.tsx: 20.31 KiB / 280.00 KiB (259.69 KiB left, 92.7%) | 7.08 KiB / 80.00 KiB (72.92 KiB left, 91.2%)
+  route src/components/NginxManagement.tsx: 20.04 KiB / 280.00 KiB (259.96 KiB left, 92.8%) | 8.05 KiB / 80.00 KiB (71.95 KiB left, 89.9%)
+  chunk PostfixManagement-BL5BMTaC.js (src/components/PostfixManagement.tsx): 11.24 KiB / 160.25 KiB (149.01 KiB left, 93.0%) | 3.48 KiB / 45.25 KiB (41.77 KiB left, 92.3%)
+  chunk PanelUpdateCard-CrNZdlEn.js (src/components/PanelUpdateCard.tsx): 10.48 KiB / 160.25 KiB (149.77 KiB left, 93.5%) | 3.13 KiB / 45.25 KiB (42.12 KiB left, 93.1%)
+  chunk DomainCronManager-BGRUul5Q.js (src/components/DomainCronManager.tsx): 10.14 KiB / 160.25 KiB (150.11 KiB left, 93.7%) | 3.06 KiB / 45.25 KiB (42.19 KiB left, 93.2%)
+  chunk SystemSQLiteManager-DaQIg21X.js (src/components/SystemSQLiteManager.tsx): 9.79 KiB / 160.25 KiB (150.46 KiB left, 93.9%) | 3.12 KiB / 45.25 KiB (42.13 KiB left, 93.1%)
+  chunk PostgreSQLManagement-e-NJ1NwZ.js (src/components/PostgreSQLManagement.tsx): 9.70 KiB / 160.25 KiB (150.55 KiB left, 93.9%) | 3.19 KiB / 45.25 KiB (42.06 KiB left, 92.9%)
+  chunk PHPManagement-DKdaVsYN.js (src/components/PHPManagement.tsx): 9.36 KiB / 160.25 KiB (150.89 KiB left, 94.2%) | 3.18 KiB / 45.25 KiB (42.07 KiB left, 93.0%)
+  chunk ConfigSettingsEditor-MPCvSLG3.js (ConfigSettingsEditor): 9.34 KiB / 160.25 KiB (150.91 KiB left, 94.2%) | 3.67 KiB / 45.25 KiB (41.58 KiB left, 91.9%)
+  route src/components/DomainLogsViewer.tsx: 15.16 KiB / 280.00 KiB (264.84 KiB left, 94.6%) | 5.79 KiB / 80.00 KiB (74.21 KiB left, 92.8%)
+  chunk ServerSetupGate-DIZvQv4R.js (ServerSetupGate): 8.34 KiB / 160.25 KiB (151.91 KiB left, 94.8%) | 3.16 KiB / 45.25 KiB (42.09 KiB left, 93.0%)
+  chunk ServiceShell-Geix1BxE.js (ServiceShell): 7.61 KiB / 160.25 KiB (152.64 KiB left, 95.3%) | 2.81 KiB / 45.25 KiB (42.44 KiB left, 93.8%)
+  route src/components/DomainCronManager.tsx: 12.33 KiB / 280.00 KiB (267.67 KiB left, 95.6%) | 4.68 KiB / 80.00 KiB (75.32 KiB left, 94.1%)
+  route src/components/SystemSQLiteManager.tsx: 11.45 KiB / 280.00 KiB (268.55 KiB left, 95.9%) | 4.36 KiB / 80.00 KiB (75.64 KiB left, 94.5%)
+  chunk ConfigFileNotices-DaeK4ctt.js (ConfigFileNotices): 6.43 KiB / 160.25 KiB (153.82 KiB left, 96.0%) | 2.45 KiB / 45.25 KiB (42.80 KiB left, 94.6%)
+  chunk ComponentDetail-DNIdbBy0.js (src/components/ComponentDetail.tsx): 6.13 KiB / 160.25 KiB (154.12 KiB left, 96.2%) | 2.22 KiB / 45.25 KiB (43.03 KiB left, 95.1%)
+  chunk recoveryObservation-COiPEiNp.js (recoveryObservation): 5.96 KiB / 160.25 KiB (154.29 KiB left, 96.3%) | 1.83 KiB / 45.25 KiB (43.42 KiB left, 96.0%)
+  chunk Fail2banManagement-BfnD-RGf.js (src/components/Fail2banManagement.tsx): 5.39 KiB / 160.25 KiB (154.86 KiB left, 96.6%) | 1.89 KiB / 45.25 KiB (43.36 KiB left, 95.8%)
+  chunk LicensePanel-DXhsefdD.js (src/components/LicensePanel.tsx): 5.31 KiB / 160.25 KiB (154.94 KiB left, 96.7%) | 2.17 KiB / 45.25 KiB (43.08 KiB left, 95.2%)
+  route src/components/ConfigEditor.tsx: 9.25 KiB / 280.00 KiB (270.75 KiB left, 96.7%) | 3.87 KiB / 80.00 KiB (76.13 KiB left, 95.2%)
+  chunk OperationOverlay-9WXmh75T.js (src/components/OperationOverlay.tsx): 5.28 KiB / 160.25 KiB (154.97 KiB left, 96.7%) | 1.94 KiB / 45.25 KiB (43.31 KiB left, 95.7%)
+  chunk recovery-C7qGyqtH.js (recovery-offline.html): 5.11 KiB / 160.25 KiB (155.14 KiB left, 96.8%) | 2.38 KiB / 45.25 KiB (42.87 KiB left, 94.7%)
+  chunk NginxManagement-Dq7Vw6We.js (src/components/NginxManagement.tsx): 4.73 KiB / 160.25 KiB (155.52 KiB left, 97.0%) | 1.57 KiB / 45.25 KiB (43.68 KiB left, 96.5%)
+  chunk PowerDNSManagement-DbCr_0N5.js (src/components/PowerDNSManagement.tsx): 4.60 KiB / 160.25 KiB (155.65 KiB left, 97.1%) | 1.60 KiB / 45.25 KiB (43.65 KiB left, 96.5%)
+  chunk HelpDrawer-BFYionmL.js (HelpDrawer): 4.54 KiB / 160.25 KiB (155.71 KiB left, 97.2%) | 1.68 KiB / 45.25 KiB (43.57 KiB left, 96.3%)
+  chunk LicenseLockScreen-BvMLg8P1.js (src/components/LicenseLockScreen.tsx): 3.36 KiB / 160.25 KiB (156.89 KiB left, 97.9%) | 1.25 KiB / 45.25 KiB (44.00 KiB left, 97.2%)
+  route src/components/OperationOverlay.tsx: 5.84 KiB / 280.00 KiB (274.16 KiB left, 97.9%) | 2.34 KiB / 80.00 KiB (77.66 KiB left, 97.1%)
+  chunk MonitoringPage-Ra4chn9T.js (src/components/MonitoringPage.tsx): 3.25 KiB / 160.25 KiB (157.00 KiB left, 98.0%) | 1.41 KiB / 45.25 KiB (43.84 KiB left, 96.9%)
+  route src/components/LicensePanel.tsx: 5.60 KiB / 280.00 KiB (274.40 KiB left, 98.0%) | 2.37 KiB / 80.00 KiB (77.63 KiB left, 97.0%)
+  chunk MariaDBManagement-BA00fFNx.js (src/components/MariaDBManagement.tsx): 3.20 KiB / 160.25 KiB (157.05 KiB left, 98.0%) | 1.29 KiB / 45.25 KiB (43.96 KiB left, 97.1%)
+  route src/components/DomainAppsPanel.tsx: 5.17 KiB / 280.00 KiB (274.83 KiB left, 98.2%) | 2.77 KiB / 80.00 KiB (77.23 KiB left, 96.5%)
+  chunk DomainAppsPanel-Cy4nTwJi.js (src/components/DomainAppsPanel.tsx): 2.83 KiB / 160.25 KiB (157.42 KiB left, 98.2%) | 1.30 KiB / 45.25 KiB (43.95 KiB left, 97.1%)
+  route src/components/MonitoringPage.tsx: 4.56 KiB / 280.00 KiB (275.44 KiB left, 98.4%) | 2.05 KiB / 80.00 KiB (77.95 KiB left, 97.4%)
+  chunk ConfigEditor-By67mQ4H.js (src/components/ConfigEditor.tsx): 2.39 KiB / 160.25 KiB (157.86 KiB left, 98.5%) | 1.07 KiB / 45.25 KiB (44.18 KiB left, 97.6%)
+  chunk AuditLogPage-CcoWOVgj.js (src/components/AuditLogPage.tsx): 2.26 KiB / 160.25 KiB (157.99 KiB left, 98.6%) | 0.92 KiB / 45.25 KiB (44.33 KiB left, 98.0%)
+  route src/components/AuditLogPage.tsx: 3.57 KiB / 280.00 KiB (276.43 KiB left, 98.7%) | 1.55 KiB / 80.00 KiB (78.45 KiB left, 98.1%)
+  chunk ServiceActionNotice-CBjKVGIR.js (ServiceActionNotice): 1.86 KiB / 160.25 KiB (158.39 KiB left, 98.8%) | 0.89 KiB / 45.25 KiB (44.36 KiB left, 98.0%)
+  chunk DovecotManagement-DwgBXGvs.js (src/components/DovecotManagement.tsx): 1.74 KiB / 160.25 KiB (158.51 KiB left, 98.9%) | 0.84 KiB / 45.25 KiB (44.41 KiB left, 98.1%)
+  chunk domainAccess-BUFvEYK5.js (domainAccess): 1.67 KiB / 160.25 KiB (158.58 KiB left, 99.0%) | 0.71 KiB / 45.25 KiB (44.54 KiB left, 98.4%)
+  chunk FirewallSSHNotice-rjavZuVz.js (FirewallSSHNotice): 1.44 KiB / 160.25 KiB (158.81 KiB left, 99.1%) | 0.65 KiB / 45.25 KiB (44.60 KiB left, 98.6%)
+  chunk lostAnswer-BB2g12Dg.js (lostAnswer): 1.42 KiB / 160.25 KiB (158.83 KiB left, 99.1%) | 0.77 KiB / 45.25 KiB (44.48 KiB left, 98.3%)
+  route src/components/ServiceRecordLookup.tsx: 2.29 KiB / 280.00 KiB (277.71 KiB left, 99.2%) | 1.27 KiB / 80.00 KiB (78.73 KiB left, 98.4%)
+  chunk PageHeader-CcBGZ1mK.js (PageHeader): 1.31 KiB / 160.25 KiB (158.94 KiB left, 99.2%) | 0.63 KiB / 45.25 KiB (44.62 KiB left, 98.6%)
+  chunk WebmailAccess-BW2KB2le.js (src/components/WebmailAccess.tsx): 1.14 KiB / 160.25 KiB (159.11 KiB left, 99.3%) | 0.59 KiB / 45.25 KiB (44.66 KiB left, 98.7%)
+  chunk AccessGuidance-8KP6RIxw.js (src/components/AccessGuidance.tsx): 1.13 KiB / 160.25 KiB (159.12 KiB left, 99.3%) | 0.57 KiB / 45.25 KiB (44.68 KiB left, 98.7%)
+  route src/components/WebmailAccess.tsx: 1.68 KiB / 280.00 KiB (278.32 KiB left, 99.4%) | 0.88 KiB / 80.00 KiB (79.12 KiB left, 98.9%)
+  chunk ServiceRecordLookup-CFiQDjCn.js (src/components/ServiceRecordLookup.tsx): 0.93 KiB / 160.25 KiB (159.32 KiB left, 99.4%) | 0.54 KiB / 45.25 KiB (44.71 KiB left, 98.8%)
+  chunk OnceOnlyNotice-CxqtDxE3.js (OnceOnlyNotice): 0.85 KiB / 160.25 KiB (159.40 KiB left, 99.5%) | 0.54 KiB / 45.25 KiB (44.71 KiB left, 98.8%)
+  chunk boxes-DD286CYq.js (boxes): 0.82 KiB / 160.25 KiB (159.43 KiB left, 99.5%) | 0.38 KiB / 45.25 KiB (44.87 KiB left, 99.2%)
+  chunk VsftpdManagement-6YTy0XGp.js (src/components/VsftpdManagement.tsx): 0.77 KiB / 160.25 KiB (159.48 KiB left, 99.5%) | 0.42 KiB / 45.25 KiB (44.83 KiB left, 99.1%)
+  chunk rolldown-runtime-hePW80VL.js (rolldown-runtime): 0.70 KiB / 160.25 KiB (159.55 KiB left, 99.6%) | 0.42 KiB / 45.25 KiB (44.83 KiB left, 99.1%)
+  chunk CurrentSettings-adeKOmdd.js (CurrentSettings): 0.70 KiB / 160.25 KiB (159.55 KiB left, 99.6%) | 0.41 KiB / 45.25 KiB (44.84 KiB left, 99.1%)
+  route src/components/AccessGuidance.tsx: 1.13 KiB / 280.00 KiB (278.87 KiB left, 99.6%) | 0.57 KiB / 80.00 KiB (79.43 KiB left, 99.3%)
+  chunk mailSetup-B4PA7BL2.js (mailSetup): 0.55 KiB / 160.25 KiB (159.70 KiB left, 99.7%) | 0.29 KiB / 45.25 KiB (44.96 KiB left, 99.4%)
+  chunk managedServices-DLBcLdaz.js (managedServices): 0.54 KiB / 160.25 KiB (159.71 KiB left, 99.7%) | 0.35 KiB / 45.25 KiB (44.90 KiB left, 99.2%)
+  chunk wifi-off-BimzJkI2.js (wifi-off): 0.43 KiB / 160.25 KiB (159.82 KiB left, 99.7%) | 0.26 KiB / 45.25 KiB (44.99 KiB left, 99.4%)
+  chunk settings-2-BhkqVwUB.js (settings-2): 0.43 KiB / 160.25 KiB (159.82 KiB left, 99.7%) | 0.29 KiB / 45.25 KiB (44.96 KiB left, 99.4%)
+  chunk domainDatabases-DsCZ93aS.js (domainDatabases): 0.42 KiB / 160.25 KiB (159.83 KiB left, 99.7%) | 0.30 KiB / 45.25 KiB (44.95 KiB left, 99.3%)
+  chunk shield-off-B6PEFwEd.js (shield-off): 0.38 KiB / 160.25 KiB (159.87 KiB left, 99.8%) | 0.27 KiB / 45.25 KiB (44.98 KiB left, 99.4%)
+  chunk hard-drive-rOeFEUs4.js (hard-drive): 0.37 KiB / 160.25 KiB (159.88 KiB left, 99.8%) | 0.25 KiB / 45.25 KiB (45.00 KiB left, 99.5%)
+  chunk scan-search-CbIwLGxs.js (scan-search): 0.36 KiB / 160.25 KiB (159.89 KiB left, 99.8%) | 0.24 KiB / 45.25 KiB (45.01 KiB left, 99.5%)
+  chunk network-Ch9mm9pl.js (network): 0.36 KiB / 160.25 KiB (159.89 KiB left, 99.8%) | 0.22 KiB / 45.25 KiB (45.03 KiB left, 99.5%)
+  chunk layers-XRcXWO03.js (layers): 0.34 KiB / 160.25 KiB (159.91 KiB left, 99.8%) | 0.22 KiB / 45.25 KiB (45.03 KiB left, 99.5%)
+  chunk trash-2-BXmCB-BN.js (trash-2): 0.33 KiB / 160.25 KiB (159.92 KiB left, 99.8%) | 0.23 KiB / 45.25 KiB (45.02 KiB left, 99.5%)
+  chunk shield-alert-DvPkDJ8F.js (shield-alert): 0.33 KiB / 160.25 KiB (159.92 KiB left, 99.8%) | 0.25 KiB / 45.25 KiB (45.00 KiB left, 99.5%)
+  chunk layout-grid-B1JiBP7d.js (layout-grid): 0.32 KiB / 160.25 KiB (159.93 KiB left, 99.8%) | 0.18 KiB / 45.25 KiB (45.07 KiB left, 99.6%)
+  chunk file-text-n7NBjf0k.js (file-text): 0.31 KiB / 160.25 KiB (159.94 KiB left, 99.8%) | 0.20 KiB / 45.25 KiB (45.05 KiB left, 99.6%)
+  chunk refresh-cw-Ciq5BZkj.js (refresh-cw): 0.30 KiB / 160.25 KiB (159.95 KiB left, 99.8%) | 0.21 KiB / 45.25 KiB (45.04 KiB left, 99.5%)
+  chunk badge-check-C9BIcPDR.js (badge-check): 0.29 KiB / 160.25 KiB (159.96 KiB left, 99.8%) | 0.20 KiB / 45.25 KiB (45.05 KiB left, 99.6%)
+  chunk file-code-FmJ9YzSX.js (file-code): 0.29 KiB / 160.25 KiB (159.96 KiB left, 99.8%) | 0.20 KiB / 45.25 KiB (45.05 KiB left, 99.6%)
+  chunk square-DEx5n7qg.js (square): 0.27 KiB / 160.25 KiB (159.98 KiB left, 99.8%) | 0.23 KiB / 45.25 KiB (45.02 KiB left, 99.5%)
+  chunk inbox-Bf8AetQ_.js (inbox): 0.27 KiB / 160.25 KiB (159.98 KiB left, 99.8%) | 0.22 KiB / 45.25 KiB (45.03 KiB left, 99.5%)
+  chunk save-YSkNyrfl.js (save): 0.26 KiB / 160.25 KiB (159.99 KiB left, 99.8%) | 0.20 KiB / 45.25 KiB (45.05 KiB left, 99.6%)
+  chunk download-CdRIVpXw.js (download): 0.24 KiB / 160.25 KiB (160.01 KiB left, 99.8%) | 0.20 KiB / 45.25 KiB (45.05 KiB left, 99.6%)
+  chunk archive-BouV0lwZ.js (archive): 0.23 KiB / 160.25 KiB (160.02 KiB left, 99.9%) | 0.20 KiB / 45.25 KiB (45.05 KiB left, 99.6%)
+  chunk external-link-p6sZHcjS.js (external-link): 0.23 KiB / 160.25 KiB (160.02 KiB left, 99.9%) | 0.19 KiB / 45.25 KiB (45.06 KiB left, 99.6%)
+  chunk copy-DXAZMbxm.js (copy): 0.22 KiB / 160.25 KiB (160.03 KiB left, 99.9%) | 0.19 KiB / 45.25 KiB (45.06 KiB left, 99.6%)
+  chunk key-CTPGGcOl.js (key): 0.21 KiB / 160.25 KiB (160.04 KiB left, 99.9%) | 0.18 KiB / 45.25 KiB (45.07 KiB left, 99.6%)
+  chunk mail-Brvc3NUm.js (mail): 0.20 KiB / 160.25 KiB (160.05 KiB left, 99.9%) | 0.18 KiB / 45.25 KiB (45.07 KiB left, 99.6%)
+  chunk lock-DBEiiAgx.js (lock): 0.19 KiB / 160.25 KiB (160.06 KiB left, 99.9%) | 0.18 KiB / 45.25 KiB (45.07 KiB left, 99.6%)
+  chunk pause-D0907I4S.js (pause): 0.18 KiB / 160.25 KiB (160.07 KiB left, 99.9%) | 0.15 KiB / 45.25 KiB (45.10 KiB left, 99.7%)
+  chunk pencil-BHg7Opg-.js (pencil): 0.18 KiB / 160.25 KiB (160.07 KiB left, 99.9%) | 0.17 KiB / 45.25 KiB (45.08 KiB left, 99.6%)
+  chunk clock-3-DZMsBXeV.js (clock-3): 0.17 KiB / 160.25 KiB (160.08 KiB left, 99.9%) | 0.16 KiB / 45.25 KiB (45.09 KiB left, 99.6%)
+  chunk clock-Bkkh3aby.js (clock): 0.17 KiB / 160.25 KiB (160.08 KiB left, 99.9%) | 0.16 KiB / 45.25 KiB (45.09 KiB left, 99.6%)
+  chunk check-circle-2-uQsE_qee.js (check-circle-2): 0.16 KiB / 160.25 KiB (160.09 KiB left, 99.9%) | 0.16 KiB / 45.25 KiB (45.09 KiB left, 99.7%)
+  chunk gauge-Cmuzxsim.js (gauge): 0.16 KiB / 160.25 KiB (160.09 KiB left, 99.9%) | 0.15 KiB / 45.25 KiB (45.10 KiB left, 99.7%)
+  chunk ban-DcVBO7_L.js (ban): 0.16 KiB / 160.25 KiB (160.09 KiB left, 99.9%) | 0.15 KiB / 45.25 KiB (45.10 KiB left, 99.7%)
+  chunk search-CQ220lOp.js (search): 0.15 KiB / 160.25 KiB (160.10 KiB left, 99.9%) | 0.16 KiB / 45.25 KiB (45.09 KiB left, 99.7%)
+  chunk accounts-DYYhrfem.js (accounts): 0.15 KiB / 160.25 KiB (160.10 KiB left, 99.9%) | 0.13 KiB / 45.25 KiB (45.12 KiB left, 99.7%)
+  chunk arrow-left-D3Y6cODy.js (arrow-left): 0.15 KiB / 160.25 KiB (160.10 KiB left, 99.9%) | 0.15 KiB / 45.25 KiB (45.10 KiB left, 99.7%)
+  chunk arrow-right-CQ0B-stT.js (arrow-right): 0.15 KiB / 160.25 KiB (160.10 KiB left, 99.9%) | 0.15 KiB / 45.25 KiB (45.10 KiB left, 99.7%)
+  chunk plus-BtBzhBzo.js (plus): 0.14 KiB / 160.25 KiB (160.11 KiB left, 99.9%) | 0.13 KiB / 45.25 KiB (45.12 KiB left, 99.7%)
+  chunk loader-2-C9oVadpn.js (loader-2): 0.12 KiB / 160.25 KiB (160.13 KiB left, 99.9%) | 0.14 KiB / 45.25 KiB (45.11 KiB left, 99.7%)
+  chunk subscriptions-Bfo4heda.js (subscriptions): 0.12 KiB / 160.25 KiB (160.13 KiB left, 99.9%) | 0.12 KiB / 45.25 KiB (45.13 KiB left, 99.7%)
+  chunk play-DARNGTF6.js (play): 0.12 KiB / 160.25 KiB (160.13 KiB left, 99.9%) | 0.13 KiB / 45.25 KiB (45.12 KiB left, 99.7%)
+  chunk chevron-right-DNs5keoQ.js (chevron-right): 0.11 KiB / 160.25 KiB (160.14 KiB left, 99.9%) | 0.12 KiB / 45.25 KiB (45.13 KiB left, 99.7%)
+{
+  "archive": "/var/tmp/cp-pair-accept/dist/a0beb7263d1f4ca72258f6b306f9111ba4e2a334-acceptance-license/celikpanel-v0.1.0-alpha.81-acceptance-license.tar.gz",
+  "archive_observation": {
+    "entries_under_deploy_e2e": 0,
+    "entries_under_evidence_dirs": 0,
+    "file": "/var/tmp/cp-pair-accept/dist/a0beb7263d1f4ca72258f6b306f9111ba4e2a334-acceptance-license/archive-evidence-entries.json",
+    "note": "recorded observation only; entries are counted, nothing is refused on them",
+    "total_entries": 219
+  },
+  "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+  "license_mode": "acceptance-fixture",
+  "note": "not a release; use only with pair_acceptance.py --license-mode acceptance-fixture",
+  "panel_build_tags": "acceptance_license",
+  "product_web_src": "/var/tmp/cp-pair-accept/dist/a0beb7263d1f4ca72258f6b306f9111ba4e2a334-acceptance-license/product-web-src",
+  "product_web_src_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+  "release": false,
+  "root": "celikpanel-v0.1.0-alpha.81",
+  "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+  "tree": "b1dffa78bcaca9e3514e5b2bc42f0e2cf47dca2f",
+  "version": "v0.1.0-alpha.81"
+}
+BUILD-OK
+{
+  "archive": "/var/tmp/cp-pair-accept/dist/30ac1488280a7f3c5cd1bb514a7447d1dc9bf7a3-acceptance-license/celikpanel-v0.1.0-alpha.82-acceptance-license.tar.gz",
+  "archive_observation": {
+    "entries_under_deploy_e2e": 0,
+    "entries_under_evidence_dirs": 0,
+    "file": "/var/tmp/cp-pair-accept/dist/30ac1488280a7f3c5cd1bb514a7447d1dc9bf7a3-acceptance-license/archive-evidence-entries.json",
+    "note": "recorded observation only; entries are counted, nothing is refused on them",
+    "total_entries": 233
+  },
+  "commit": "30ac1488280a7f3c5cd1bb514a7447d1dc9bf7a3",
+  "license_mode": "acceptance-fixture",
+  "note": "not a release; use only with pair_acceptance.py --license-mode acceptance-fixture",
+  "panel_build_tags": "acceptance_license",
+  "product_web_src": "/var/tmp/cp-pair-accept/dist/30ac1488280a7f3c5cd1bb514a7447d1dc9bf7a3-acceptance-license/product-web-src",
+  "product_web_src_commit": "30ac1488280a7f3c5cd1bb514a7447d1dc9bf7a3",
+  "release": false,
+  "root": "celikpanel-v0.1.0-alpha.82",
+  "sha256": "6fb0b8d5f0be38830294c364137da46f20c3834b3b005331fb9196f855465953",
+  "tree": "ed6e45459b10fdec3da92c04037a8c8f5cf67157",
+  "version": "v0.1.0-alpha.82"
+}
+BUILD-OK
+{
+  "archive": "/var/tmp/cp-pair-accept/dist/cc93780e6392dfeba8dfcd70c19028e9fbb79974-acceptance-license/celikpanel-v0.1.0-alpha.82-acceptance-license.tar.gz",
+  "archive_observation": {
+    "entries_under_deploy_e2e": 0,
+    "entries_under_evidence_dirs": 0,
+    "file": "/var/tmp/cp-pair-accept/dist/cc93780e6392dfeba8dfcd70c19028e9fbb79974-acceptance-license/archive-evidence-entries.json",
+    "note": "recorded observation only; entries are counted, nothing is refused on them",
+    "total_entries": 233
+  },
+  "commit": "cc93780e6392dfeba8dfcd70c19028e9fbb79974",
+  "license_mode": "acceptance-fixture",
+  "note": "not a release; use only with pair_acceptance.py --license-mode acceptance-fixture",
+  "panel_build_tags": "acceptance_license",
+  "product_web_src": "/var/tmp/cp-pair-accept/dist/cc93780e6392dfeba8dfcd70c19028e9fbb79974-acceptance-license/product-web-src",
+  "product_web_src_commit": "cc93780e6392dfeba8dfcd70c19028e9fbb79974",
+  "release": false,
+  "root": "celikpanel-v0.1.0-alpha.82",
+  "sha256": "85e4b7d434ee712ce8efb0880b244e0f011c8175349a648bfc3a5007449b3933",
+  "tree": "84adc63cb6e2a6c294c59b9bc3bb59fbf1287cab",
+  "version": "v0.1.0-alpha.82"
+}
+BUILD-OK

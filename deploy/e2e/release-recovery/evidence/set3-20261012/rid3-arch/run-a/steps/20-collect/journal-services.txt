@@ -1,0 +1,146 @@
+2026-10-09T07:26:02.059505+00:00 dns-arch systemd[1]: Starting MariaDB 13.0.2 database server...
+2026-10-09T07:26:02.193401+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] Starting MariaDB 13.0.2-MariaDB source revision 620a4b5624222048fece7fe1789978ae0675cae2 server_uid 84n076SGZKCVkhomPv3Lk5nb1PQ= as process 916
+2026-10-09T07:26:02.222527+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: Compressed tables use zlib 1.3.2
+2026-10-09T07:26:02.227382+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-09T07:26:02.227521+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-09T07:26:02.227782+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: Using io_uring
+2026-10-09T07:26:02.228058+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: innodb_buffer_pool_size_max=8388608m, innodb_buffer_pool_size=128m
+2026-10-09T07:26:02.237550+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: Initialized memory pressure event listener
+2026-10-09T07:26:02.237550+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-09T07:26:02.237799+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: Buffered log writes (block size=512 bytes)
+2026-10-09T07:26:02.339734+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: End of log at LSN=45418
+2026-10-09T07:26:02.427144+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: Opened 3 undo tablespaces
+2026-10-09T07:26:02.427391+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+2026-10-09T07:26:02.428373+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-09T07:26:02.428419+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-09T07:26:02.432953+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: log sequence number 45418; transaction id 14
+2026-10-09T07:26:02.432953+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] Plugin 'wsrep-provider' is disabled.
+2026-10-09T07:26:02.436273+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+2026-10-09T07:26:02.450457+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] InnoDB: Buffer pool(s) load completed at 261009  7:26:02
+2026-10-09T07:26:02.628641+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] Server socket created on IP: '0.0.0.0', port: '3306'.
+2026-10-09T07:26:02.628641+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] Server socket created on IP: '::', port: '3306'.
+2026-10-09T07:26:02.672366+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] mariadbd: Event Scheduler: Loaded 0 events
+2026-10-09T07:26:02.679897+00:00 dns-arch mariadbd[916]: 2026-10-09  7:26:02 0 [Note] /usr/bin/mariadbd: ready for connections.
+2026-10-09T07:26:02.679897+00:00 dns-arch mariadbd[916]: Version: '13.0.2-MariaDB'  socket: '/run/mysqld/mysqld.sock'  port: 3306  Arch Linux
+2026-10-09T07:26:02.680313+00:00 dns-arch systemd[1]: Started MariaDB 13.0.2 database server.
+2026-10-09T07:26:09.245690+00:00 dns-arch systemd[1]: Starting nginx web server...
+2026-10-09T07:26:09.268320+00:00 dns-arch nginx[1198]: 2026/10/09 07:26:09 [warn] 1198#1198: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:26:09.274003+00:00 dns-arch systemd[1]: Started nginx web server.
+2026-10-09T07:26:09.387380+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:26:09.410412+00:00 dns-arch nginx[1214]: 2026/10/09 07:26:09 [warn] 1214#1214: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:26:09.413785+00:00 dns-arch nginx[1214]: 2026/10/09 07:26:09 [notice] 1214#1214: signal process started
+2026-10-09T07:26:09.415407+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:26:30.204744+00:00 dns-arch systemd[1]: Starting PostgreSQL database server...
+2026-10-09T07:26:30.328615+00:00 dns-arch postgres[1777]: 2026-10-09 07:26:30.328 UTC [1777] LOG:  starting PostgreSQL 18.6 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 16.2.1 20260810, 64-bit
+2026-10-09T07:26:30.330046+00:00 dns-arch postgres[1777]: 2026-10-09 07:26:30.329 UTC [1777] LOG:  listening on IPv6 address "::1", port 5432
+2026-10-09T07:26:30.330046+00:00 dns-arch postgres[1777]: 2026-10-09 07:26:30.330 UTC [1777] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-10-09T07:26:30.335493+00:00 dns-arch postgres[1777]: 2026-10-09 07:26:30.335 UTC [1777] LOG:  listening on Unix socket "/run/postgresql/.s.PGSQL.5432"
+2026-10-09T07:26:30.349751+00:00 dns-arch postgres[1785]: 2026-10-09 07:26:30.349 UTC [1785] LOG:  database system was shut down at 2026-10-09 07:26:29 UTC
+2026-10-09T07:26:30.359070+00:00 dns-arch postgres[1777]: 2026-10-09 07:26:30.358 UTC [1777] LOG:  database system is ready to accept connections
+2026-10-09T07:26:30.364708+00:00 dns-arch systemd[1]: Started PostgreSQL database server.
+2026-10-09T07:26:37.049556+00:00 dns-arch systemd[1]: Started Command Scheduler.
+2026-10-09T07:26:37.064236+00:00 dns-arch crond[2065]: (CRON) STARTUP (1.7.2)
+2026-10-09T07:26:37.064274+00:00 dns-arch crond[2065]: (CRON) INFO (Syslog will be used instead of sendmail.)
+2026-10-09T07:26:37.064283+00:00 dns-arch crond[2065]: (CRON) INFO (RANDOM_DELAY will be scaled with factor 96% if used.)
+2026-10-09T07:26:37.064370+00:00 dns-arch crond[2065]: (CRON) INFO (running with inotify support)
+2026-10-09T07:28:58.646977+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:28:58.672456+00:00 dns-arch nginx[2716]: 2026/10/09 07:28:58 [warn] 2716#2716: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:28:58.676964+00:00 dns-arch nginx[2716]: 2026/10/09 07:28:58 [notice] 2716#2716: signal process started
+2026-10-09T07:28:58.678873+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:05.562683+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:05.587060+00:00 dns-arch nginx[4211]: 2026/10/09 07:30:05 [warn] 4211#4211: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:05.590853+00:00 dns-arch nginx[4211]: 2026/10/09 07:30:05 [notice] 4211#4211: signal process started
+2026-10-09T07:30:05.593216+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:06.034067+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:06.059861+00:00 dns-arch nginx[4217]: 2026/10/09 07:30:06 [warn] 4217#4217: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:06.063715+00:00 dns-arch nginx[4217]: 2026/10/09 07:30:06 [notice] 4217#4217: signal process started
+2026-10-09T07:30:06.065951+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:10.181057+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:10.201724+00:00 dns-arch nginx[4358]: 2026/10/09 07:30:10 [warn] 4358#4358: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:10.205875+00:00 dns-arch nginx[4358]: 2026/10/09 07:30:10 [notice] 4358#4358: signal process started
+2026-10-09T07:30:10.208243+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:10.586523+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:10.609464+00:00 dns-arch nginx[4365]: 2026/10/09 07:30:10 [warn] 4365#4365: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:10.614580+00:00 dns-arch nginx[4365]: 2026/10/09 07:30:10 [notice] 4365#4365: signal process started
+2026-10-09T07:30:10.618118+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:13.290024+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:13.314139+00:00 dns-arch nginx[4495]: 2026/10/09 07:30:13 [warn] 4495#4495: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:13.318548+00:00 dns-arch nginx[4495]: 2026/10/09 07:30:13 [notice] 4495#4495: signal process started
+2026-10-09T07:30:13.321115+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:13.700647+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:13.724494+00:00 dns-arch nginx[4501]: 2026/10/09 07:30:13 [warn] 4501#4501: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:13.728397+00:00 dns-arch nginx[4501]: 2026/10/09 07:30:13 [notice] 4501#4501: signal process started
+2026-10-09T07:30:13.731267+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:32.548036+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:32.571973+00:00 dns-arch nginx[5257]: 2026/10/09 07:30:32 [warn] 5257#5257: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:32.576587+00:00 dns-arch nginx[5257]: 2026/10/09 07:30:32 [notice] 5257#5257: signal process started
+2026-10-09T07:30:32.578208+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:32.823952+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:32.849776+00:00 dns-arch nginx[5270]: 2026/10/09 07:30:32 [warn] 5270#5270: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:32.855095+00:00 dns-arch nginx[5270]: 2026/10/09 07:30:32 [notice] 5270#5270: signal process started
+2026-10-09T07:30:32.857487+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:36.416524+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:36.438267+00:00 dns-arch nginx[5358]: 2026/10/09 07:30:36 [warn] 5358#5358: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:36.443385+00:00 dns-arch nginx[5358]: 2026/10/09 07:30:36 [notice] 5358#5358: signal process started
+2026-10-09T07:30:36.446494+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:36.680080+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:36.702992+00:00 dns-arch nginx[5371]: 2026/10/09 07:30:36 [warn] 5371#5371: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:36.706665+00:00 dns-arch nginx[5371]: 2026/10/09 07:30:36 [notice] 5371#5371: signal process started
+2026-10-09T07:30:36.709792+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:42.259686+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:42.290899+00:00 dns-arch nginx[5606]: 2026/10/09 07:30:42 [warn] 5606#5606: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:42.296194+00:00 dns-arch nginx[5606]: 2026/10/09 07:30:42 [notice] 5606#5606: signal process started
+2026-10-09T07:30:42.298935+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:42.544051+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:42.570467+00:00 dns-arch nginx[5619]: 2026/10/09 07:30:42 [warn] 5619#5619: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:42.574778+00:00 dns-arch nginx[5619]: 2026/10/09 07:30:42 [notice] 5619#5619: signal process started
+2026-10-09T07:30:42.577671+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:47.439144+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:47.461449+00:00 dns-arch nginx[5789]: 2026/10/09 07:30:47 [warn] 5789#5789: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:47.465414+00:00 dns-arch nginx[5789]: 2026/10/09 07:30:47 [notice] 5789#5789: signal process started
+2026-10-09T07:30:47.467141+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:47.718372+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:47.742303+00:00 dns-arch nginx[5805]: 2026/10/09 07:30:47 [warn] 5805#5805: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:47.746468+00:00 dns-arch nginx[5805]: 2026/10/09 07:30:47 [notice] 5805#5805: signal process started
+2026-10-09T07:30:47.749106+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:51.816220+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:51.842386+00:00 dns-arch nginx[5951]: 2026/10/09 07:30:51 [warn] 5951#5951: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:51.845761+00:00 dns-arch nginx[5951]: 2026/10/09 07:30:51 [notice] 5951#5951: signal process started
+2026-10-09T07:30:51.848947+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:52.102129+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:52.128348+00:00 dns-arch nginx[5965]: 2026/10/09 07:30:52 [warn] 5965#5965: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:52.132144+00:00 dns-arch nginx[5965]: 2026/10/09 07:30:52 [notice] 5965#5965: signal process started
+2026-10-09T07:30:52.134238+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:58.616009+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:58.641361+00:00 dns-arch nginx[6136]: 2026/10/09 07:30:58 [warn] 6136#6136: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:58.645808+00:00 dns-arch nginx[6136]: 2026/10/09 07:30:58 [notice] 6136#6136: signal process started
+2026-10-09T07:30:58.650394+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:30:58.887426+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:30:58.910501+00:00 dns-arch nginx[6149]: 2026/10/09 07:30:58 [warn] 6149#6149: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:30:58.914294+00:00 dns-arch nginx[6149]: 2026/10/09 07:30:58 [notice] 6149#6149: signal process started
+2026-10-09T07:30:58.916252+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:31:03.188702+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:31:03.214733+00:00 dns-arch nginx[6300]: 2026/10/09 07:31:03 [warn] 6300#6300: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:31:03.218239+00:00 dns-arch nginx[6300]: 2026/10/09 07:31:03 [notice] 6300#6300: signal process started
+2026-10-09T07:31:03.220176+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:31:03.463611+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:31:03.488577+00:00 dns-arch nginx[6313]: 2026/10/09 07:31:03 [warn] 6313#6313: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:31:03.492754+00:00 dns-arch nginx[6313]: 2026/10/09 07:31:03 [notice] 6313#6313: signal process started
+2026-10-09T07:31:03.495017+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:31:07.327818+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:31:07.352025+00:00 dns-arch nginx[6430]: 2026/10/09 07:31:07 [warn] 6430#6430: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:31:07.355849+00:00 dns-arch nginx[6430]: 2026/10/09 07:31:07 [notice] 6430#6430: signal process started
+2026-10-09T07:31:07.358168+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:31:07.592834+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:31:07.616118+00:00 dns-arch nginx[6443]: 2026/10/09 07:31:07 [warn] 6443#6443: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:31:07.619744+00:00 dns-arch nginx[6443]: 2026/10/09 07:31:07 [notice] 6443#6443: signal process started
+2026-10-09T07:31:07.622182+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:31:30.415359+00:00 dns-arch postgres[1783]: 2026-10-09 07:31:30.415 UTC [1783] LOG:  checkpoint starting: time
+2026-10-09T07:32:39.013146+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:32:39.038244+00:00 dns-arch nginx[7611]: 2026/10/09 07:32:39 [warn] 7611#7611: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:32:39.042368+00:00 dns-arch nginx[7611]: 2026/10/09 07:32:39 [notice] 7611#7611: signal process started
+2026-10-09T07:32:39.043979+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T07:32:58.444124+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T07:32:58.467400+00:00 dns-arch nginx[7981]: 2026/10/09 07:32:58 [warn] 7981#7981: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T07:32:58.472106+00:00 dns-arch nginx[7981]: 2026/10/09 07:32:58 [notice] 7981#7981: signal process started
+2026-10-09T07:32:58.476225+00:00 dns-arch systemd[1]: Reloaded nginx web server.

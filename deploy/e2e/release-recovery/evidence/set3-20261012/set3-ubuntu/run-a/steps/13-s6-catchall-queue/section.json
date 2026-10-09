@@ -1,0 +1,620 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-09T07:18:43Z",
+      "json": {
+        "destination": "",
+        "enabled": false,
+        "version": "ca1-98151954f217a510702d236de168cc35d0ab2f99c4479cc9b07eeede7ef73a66"
+      },
+      "label": "S6 catch-all read",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/mail/catch-all"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SETTINGS_VERSION_REQUIRED",
+        "error": "This request did not say which settings it was built from, so nothing was changed. Reload the page so it reads the current settings, then make the change again.",
+        "reason": "mail_catch_all"
+      },
+      "at": "2026-10-09T07:18:43Z",
+      "catalogue_texts": {
+        "mail.catchAll.stale": {
+          "en": "The catch-all address changed on the server after this page read it, so nothing was saved. What you typed is still in the field. Reload the current address, then make your change again.",
+          "tr": "Catch-all adresi, bu sayfa onu okuduktan sonra sunucuda değişti; bu yüzden hiçbir şey kaydedilmedi. Yazdığınız adres alanda duruyor. Geçerli adresi yeniden yükleyin, sonra değişikliğinizi tekrar yapın."
+        }
+      },
+      "json": {
+        "code": "SETTINGS_VERSION_REQUIRED",
+        "error": "This request did not say which settings it was built from, so nothing was changed. Reload the page so it reads the current settings, then make the change again.",
+        "reason": "mail_catch_all"
+      },
+      "label": "S6 catch-all set without a version",
+      "request": {
+        "body": {
+          "destination": "owner@set1-owner.test"
+        },
+        "method": "PUT",
+        "path": "/api/v1/domains/1/mail/catch-all"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:18:43Z",
+      "json": {
+        "destination": "owner@set1-owner.test",
+        "enabled": true,
+        "source": "@set1-owner.test",
+        "version": "ca1-25ce47fcef22eb21734d46f312742fbf8e7aa1d9de12b0ae543ab6fe9b608c0c"
+      },
+      "label": "S6 catch-all set",
+      "request": {
+        "body": {
+          "destination": "owner@set1-owner.test",
+          "version": "ca1-98151954f217a510702d236de168cc35d0ab2f99c4479cc9b07eeede7ef73a66"
+        },
+        "method": "PUT",
+        "path": "/api/v1/domains/1/mail/catch-all"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "mail_catch_all"
+      },
+      "at": "2026-10-09T07:18:43Z",
+      "catalogue_texts": {
+        "mail.catchAll.stale": {
+          "en": "The catch-all address changed on the server after this page read it, so nothing was saved. What you typed is still in the field. Reload the current address, then make your change again.",
+          "tr": "Catch-all adresi, bu sayfa onu okuduktan sonra sunucuda değişti; bu yüzden hiçbir şey kaydedilmedi. Yazdığınız adres alanda duruyor. Geçerli adresi yeniden yükleyin, sonra değişikliğinizi tekrar yapın."
+        }
+      },
+      "json": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "mail_catch_all"
+      },
+      "label": "S6 catch-all stale set (the version from before)",
+      "request": {
+        "body": {
+          "destination": "postmaster@set1-owner.test",
+          "version": "ca1-98151954f217a510702d236de168cc35d0ab2f99c4479cc9b07eeede7ef73a66"
+        },
+        "method": "PUT",
+        "path": "/api/v1/domains/1/mail/catch-all"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "mail_catch_all"
+      },
+      "at": "2026-10-09T07:18:44Z",
+      "catalogue_texts": {
+        "mail.catchAll.stale": {
+          "en": "The catch-all address changed on the server after this page read it, so nothing was saved. What you typed is still in the field. Reload the current address, then make your change again.",
+          "tr": "Catch-all adresi, bu sayfa onu okuduktan sonra sunucuda değişti; bu yüzden hiçbir şey kaydedilmedi. Yazdığınız adres alanda duruyor. Geçerli adresi yeniden yükleyin, sonra değişikliğinizi tekrar yapın."
+        }
+      },
+      "json": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "mail_catch_all"
+      },
+      "label": "S6 catch-all stale disable",
+      "request": {
+        "body": null,
+        "method": "DELETE",
+        "path": "/api/v1/domains/1/mail/catch-all?version=ca1-98151954f217a510702d236de168cc35d0ab2f99c4479cc9b07eeede7ef73a66"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:18:44Z",
+      "json": {
+        "destination": "",
+        "enabled": false,
+        "version": "ca1-98151954f217a510702d236de168cc35d0ab2f99c4479cc9b07eeede7ef73a66"
+      },
+      "label": "S6 catch-all disable",
+      "request": {
+        "body": null,
+        "method": "DELETE",
+        "path": "/api/v1/domains/1/mail/catch-all?version=ca1-25ce47fcef22eb21734d46f312742fbf8e7aa1d9de12b0ae543ab6fe9b608c0c"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:18:45Z",
+      "json": [],
+      "label": "S6 mail queue: queue-idle",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/postfix/queue"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:18:46Z",
+      "json": [],
+      "label": "S6 mail queue: queue-postfix-stopped",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/postfix/queue"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "MAIL_QUEUE_UNREADABLE",
+        "error": "The mail queue could not be read because Postfix refuses its own configuration: a setting in /etc/postfix/main.cf or master.cf has an error, and Postfix's programs stop on it. What Postfix said about it is shown with this message. Nothing was changed, and this does not mean the queue is empty. The server owner corrects that setting, runs sudo postfix check until it prints no error, then reloads this page.",
+        "reason": "postfix_config",
+        "vars": {
+          "detail": "bad numerical configuration: default_process_limit = 200 # raised for the campaign"
+        }
+      },
+      "at": "2026-10-09T07:18:50Z",
+      "catalogue_texts": {
+        "postfix.queue.said": {
+          "en": "Postfix said: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+          "tr": "Postfix’in yanıtı: bad numerical configuration: default_process_limit = 200 # raised for the campaign"
+        },
+        "postfix.queue.unreadable.postfix_config": {
+          "en": "The mail queue could not be read because Postfix refuses its own configuration: a setting in /etc/postfix/main.cf or master.cf has an error, and Postfix’s programs stop on it. This does not mean the queue is empty. Nothing was changed. On the server, correct the setting Postfix names, run sudo postfix check until it prints no error, then try again.",
+          "tr": "Mail kuyruğu okunamadı, çünkü Postfix kendi yapılandırmasını reddediyor: /etc/postfix/main.cf ya da master.cf içindeki bir ayar hatalı ve Postfix’in programları onda duruyor. Bu, kuyruğun boş olduğu anlamına gelmez. Hiçbir şey değiştirilmedi. Sunucuda Postfix’in adını verdiği ayarı düzeltin, hata yazmayana kadar sudo postfix check komutunu çalıştırın, sonra tekrar deneyin."
+        }
+      },
+      "json": {
+        "code": "MAIL_QUEUE_UNREADABLE",
+        "error": "The mail queue could not be read because Postfix refuses its own configuration: a setting in /etc/postfix/main.cf or master.cf has an error, and Postfix's programs stop on it. What Postfix said about it is shown with this message. Nothing was changed, and this does not mean the queue is empty. The server owner corrects that setting, runs sudo postfix check until it prints no error, then reloads this page.",
+        "reason": "postfix_config",
+        "vars": {
+          "detail": "bad numerical configuration: default_process_limit = 200 # raised for the campaign"
+        }
+      },
+      "label": "S6 mail queue: queue-main.cf-typo",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/postfix/queue"
+      },
+      "status": 502,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:18:52Z",
+      "json": [],
+      "label": "S6 mail queue: queue-after-restore",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/postfix/queue"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "answer": {
+          "destination": "",
+          "enabled": false,
+          "version": "ca1-98151954f217a510702d236de168cc35d0ab2f99c4479cc9b07eeede7ef73a66"
+        },
+        "native": {
+          "postfix": [],
+          "row": null
+        }
+      },
+      "name": "catch-all: the read answers 200, off, with a version; Postfix has no catch-all for the domain",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SETTINGS_VERSION_REQUIRED",
+        "error": "This request did not say which settings it was built from, so nothing was changed. Reload the page so it reads the current settings, then make the change again.",
+        "reason": "mail_catch_all",
+        "status": 409,
+        "vars": null
+      },
+      "name": "catch-all: a write without a version is refused 409 SETTINGS_VERSION_REQUIRED (mail_catch_all)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "destination": "owner@set1-owner.test",
+          "enabled": true,
+          "source": "@set1-owner.test",
+          "version": "ca1-25ce47fcef22eb21734d46f312742fbf8e7aa1d9de12b0ae543ab6fe9b608c0c"
+        },
+        "native": {
+          "postfix": [
+            "owner@set1-owner.test"
+          ],
+          "row": "owner@set1-owner.test"
+        }
+      },
+      "name": "catch-all: set answers 200 and Postfix resolves @domain to the mailbox",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "mail_catch_all",
+        "status": 409,
+        "vars": null
+      },
+      "name": "catch-all: a stale set is refused 409 SETTINGS_CHANGED (mail_catch_all)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "mail_catch_all",
+        "status": 409,
+        "vars": null
+      },
+      "name": "catch-all: a stale disable is refused 409 SETTINGS_CHANGED (mail_catch_all)",
+      "ok": true
+    },
+    {
+      "detail": null,
+      "name": "catch-all: nothing changed by the stale writes",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "destination": "",
+          "enabled": false,
+          "version": "ca1-98151954f217a510702d236de168cc35d0ab2f99c4479cc9b07eeede7ef73a66"
+        },
+        "native": {
+          "postfix": [],
+          "row": null
+        }
+      },
+      "name": "catch-all: disable answers 200 and Postfix has no catch-all for the domain again",
+      "ok": true
+    },
+    {
+      "detail": {
+        "json": [],
+        "native": {
+          "argv": [
+            "postqueue",
+            "-j"
+          ],
+          "at": "2026-10-09T07:18:45Z",
+          "returncode": 0,
+          "seconds": 0.011,
+          "status": "ok",
+          "stderr": "",
+          "stdout": ""
+        },
+        "status": 200
+      },
+      "name": "queue: with Postfix running the native queue is empty and the Panel answers a known empty list",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": null,
+        "native_returncode": 0,
+        "native_stderr": "postqueue: warning: Mail system is down -- accessing queue directly (Connect to the Postfix showq service: Connection refused)\n",
+        "native_stdout": "",
+        "status": 200
+      },
+      "name": "queue (Postfix stopped): the native read still succeeds for root and the Panel answers the known list",
+      "ok": true
+    },
+    {
+      "detail": {
+        "argv": [
+          "systemctl",
+          "start",
+          "postfix.service"
+        ],
+        "at": "2026-10-09T07:18:47Z",
+        "returncode": 0,
+        "seconds": 0.642,
+        "status": "ok",
+        "stderr": "",
+        "stdout": ""
+      },
+      "name": "queue: Postfix is started again",
+      "ok": true
+    },
+    {
+      "detail": {
+        "argv": [
+          "postqueue",
+          "-j"
+        ],
+        "at": "2026-10-09T07:18:50Z",
+        "returncode": 69,
+        "seconds": 2.117,
+        "status": "ok",
+        "stderr": "postqueue: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n",
+        "stdout": ""
+      },
+      "name": "queue (owner's typo in main.cf): the native `postqueue -j` fails",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "MAIL_QUEUE_UNREADABLE",
+        "error": "The mail queue could not be read because Postfix refuses its own configuration: a setting in /etc/postfix/main.cf or master.cf has an error, and Postfix's programs stop on it. What Postfix said about it is shown with this message. Nothing was changed, and this does not mean the queue is empty. The server owner corrects that setting, runs sudo postfix check until it prints no error, then reloads this page.",
+        "reason": "postfix_config",
+        "status": 502,
+        "vars": {
+          "detail": "bad numerical configuration: default_process_limit = 200 # raised for the campaign"
+        }
+      },
+      "name": "queue (owner's typo): the Panel answers 502 MAIL_QUEUE_UNREADABLE with the verified cause postfix_config, not an empty queue",
+      "ok": true
+    },
+    {
+      "detail": {
+        "postqueue_printed": "postqueue: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n",
+        "vars.detail": "bad numerical configuration: default_process_limit = 200 # raised for the campaign"
+      },
+      "name": "queue (owner's typo): the answer carries postqueue's own line",
+      "ok": true
+    },
+    {
+      "detail": {
+        "native": {
+          "argv": [
+            "postqueue",
+            "-j"
+          ],
+          "at": "2026-10-09T07:18:52Z",
+          "returncode": 0,
+          "seconds": 1.527,
+          "status": "ok",
+          "stderr": "",
+          "stdout": ""
+        },
+        "status": 200
+      },
+      "name": "queue: after the owner's correction the queue is known and empty again",
+      "ok": true
+    },
+    {
+      "detail": {
+        "25": {
+          "banner": "220 mail-ubuntu.upd1-infra.test ESMTP Postfix (Ubuntu)",
+          "ehlo": "250",
+          "ehlo_last_line": "250 CHUNKING",
+          "mail": "250",
+          "mail_last_line": "250 2.1.0 Ok",
+          "ok": true,
+          "port": 25,
+          "rcpt": "250",
+          "rcpt_last_line": "250 2.1.5 Ok",
+          "rset": "250",
+          "rset_last_line": "250 2.0.0 Ok"
+        },
+        "587": {
+          "banner": "220 mail-ubuntu.upd1-infra.test ESMTP Postfix (Ubuntu)",
+          "ehlo": "250",
+          "ehlo_last_line": "250 CHUNKING",
+          "ok": true,
+          "port": 587
+        },
+        "at": "2026-10-09T07:18:52Z",
+        "mode": "read-smtp",
+        "owner_action": false,
+        "schema": "celikpanel/set1-native/v1"
+      },
+      "name": "end: mail is accepted on 25 and 587 answers",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T07:18:52Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/103-a-catchall-before.json",
+      "label": "a-catchall-before",
+      "mode": "read-catchall",
+      "owner_action": false
+    },
+    {
+      "file": "native/104-a-catchall-before-rows.json",
+      "label": "a-catchall-before-rows",
+      "mode": "read-panel-rows",
+      "owner_action": false
+    },
+    {
+      "file": "native/105-c-catchall-after-set.json",
+      "label": "c-catchall-after-set",
+      "mode": "read-catchall",
+      "owner_action": false
+    },
+    {
+      "file": "native/106-c-catchall-after-set-rows.json",
+      "label": "c-catchall-after-set-rows",
+      "mode": "read-panel-rows",
+      "owner_action": false
+    },
+    {
+      "file": "native/107-e-catchall-after-stale.json",
+      "label": "e-catchall-after-stale",
+      "mode": "read-catchall",
+      "owner_action": false
+    },
+    {
+      "file": "native/108-e-catchall-after-stale-rows.json",
+      "label": "e-catchall-after-stale-rows",
+      "mode": "read-panel-rows",
+      "owner_action": false
+    },
+    {
+      "file": "native/109-f-catchall-after-disable.json",
+      "label": "f-catchall-after-disable",
+      "mode": "read-catchall",
+      "owner_action": false
+    },
+    {
+      "file": "native/110-f-catchall-after-disable-rows.json",
+      "label": "f-catchall-after-disable-rows",
+      "mode": "read-panel-rows",
+      "owner_action": false
+    },
+    {
+      "file": "native/111-queue-idle.json",
+      "label": "queue-idle",
+      "mode": "read-queue",
+      "owner_action": false
+    },
+    {
+      "file": "native/112-owner-queue-stop-postfix.json",
+      "label": "owner-queue-stop-postfix",
+      "mode": "owner-systemctl",
+      "owner_action": true
+    },
+    {
+      "file": "native/113-queue-postfix-stopped.json",
+      "label": "queue-postfix-stopped",
+      "mode": "read-queue",
+      "owner_action": false
+    },
+    {
+      "file": "native/114-owner-queue-start-postfix.json",
+      "label": "owner-queue-start-postfix",
+      "mode": "owner-systemctl",
+      "owner_action": true
+    },
+    {
+      "file": "native/115-queue-main.cf-before-typo.json",
+      "label": "queue-main.cf-before-typo",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/116-owner-queue-typo-main-cf.json",
+      "label": "owner-queue-typo-main-cf",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/117-queue-main.cf-typo.json",
+      "label": "queue-main.cf-typo",
+      "mode": "read-queue",
+      "owner_action": false
+    },
+    {
+      "file": "native/118-owner-queue-typo-removed.json",
+      "label": "owner-queue-typo-removed",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/119-queue-after-restore.json",
+      "label": "queue-after-restore",
+      "mode": "read-queue",
+      "owner_action": false
+    },
+    {
+      "file": "native/120-smtp-end.json",
+      "label": "smtp-end",
+      "mode": "read-smtp",
+      "owner_action": false
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [
+    {
+      "detail": {
+        "answer": null,
+        "native_returncode": 0,
+        "native_stderr": "postqueue: warning: Mail system is down -- accessing queue directly (Connect to the Postfix showq service: Connection refused)\n",
+        "native_stdout": "",
+        "status": 200
+      },
+      "note": "with Postfix stopped root's `postqueue -j` still reads the queue directly, so the queue is known; the Panel's answer is judged against that"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T07:18:46Z",
+      "label": "queue-stop-postfix",
+      "mode": "owner-systemctl"
+    },
+    {
+      "at": "2026-10-09T07:18:47Z",
+      "label": "queue-start-postfix",
+      "mode": "owner-systemctl"
+    },
+    {
+      "at": "2026-10-09T07:18:48Z",
+      "label": "queue-typo-main-cf",
+      "mode": "owner-edit"
+    },
+    {
+      "at": "2026-10-09T07:18:50Z",
+      "label": "queue-typo-removed",
+      "mode": "owner-edit"
+    }
+  ],
+  "owner_waited_for_idle": {
+    "at": "2026-10-09T07:18:42Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.3
+  },
+  "queue_postfix_stopped": {
+    "answer": null,
+    "native_returncode": 0,
+    "native_stderr": "postqueue: warning: Mail system is down -- accessing queue directly (Connect to the Postfix showq service: Connection refused)\n",
+    "native_stdout": "",
+    "status": 200
+  },
+  "queue_typo": {
+    "answer": {
+      "code": "MAIL_QUEUE_UNREADABLE",
+      "error": "The mail queue could not be read because Postfix refuses its own configuration: a setting in /etc/postfix/main.cf or master.cf has an error, and Postfix's programs stop on it. What Postfix said about it is shown with this message. Nothing was changed, and this does not mean the queue is empty. The server owner corrects that setting, runs sudo postfix check until it prints no error, then reloads this page.",
+      "reason": "postfix_config",
+      "vars": {
+        "detail": "bad numerical configuration: default_process_limit = 200 # raised for the campaign"
+      }
+    },
+    "native_returncode": 69,
+    "native_stderr": "postqueue: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n",
+    "status": 502
+  },
+  "section": "S6-catchall-queue",
+  "started_at": "2026-10-09T07:18:42Z",
+  "substeps": {
+    "catch-all": "passed",
+    "end": "passed",
+    "queue": "passed"
+  },
+  "title": "catch-all and mail queue",
+  "verdict": "passed"
+}

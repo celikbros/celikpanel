@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 7,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T08:29:44Z",
+    "notes": [],
+    "started_at": "2026-10-09T08:29:41Z",
+    "substeps": {
+      "O14": "passed",
+      "lab isolation": "passed",
+      "section": "passed"
+    },
+    "title": "the owner's site, the engines and the lab's isolation",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T08:29:44Z",
+  "name": "C0-prepare",
+  "started_at": "2026-10-09T08:29:41Z",
+  "verdict": "passed"
+}

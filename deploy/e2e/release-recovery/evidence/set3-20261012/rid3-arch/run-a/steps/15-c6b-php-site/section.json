@@ -1,0 +1,136 @@
+{
+  "calls": [
+    {
+      "answer": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "at": "2026-10-09T07:30:32Z",
+      "catalogue_texts": {
+        "err.INTERNAL": {
+          "en": "The server hit an internal error. Try again; if it persists, check the panel logs.",
+          "tr": "Sunucuda bir iç hata oluştu. Yeniden deneyin; sürerse panel günlüklerine bakın."
+        }
+      },
+      "json": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "label": "C6b create a PHP site (AddDomainModal)",
+      "request": {
+        "body": {
+          "domain": "set3-php.test",
+          "project_type": "php",
+          "ssl_type": "none"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/create"
+      },
+      "status": 500,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "name": "P5: a PHP site is created from the Domains page (200 with the new domain's id)",
+      "ok": false
+    }
+  ],
+  "finished_at": "2026-10-09T07:30:32Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/126-php-before.json",
+      "lab_action": false,
+      "label": "php-before",
+      "mode": "read-php",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [],
+  "owner_actions": [],
+  "php_before": {
+    "at": "2026-10-09T07:30:30Z",
+    "lab_action": false,
+    "mode": "read-php",
+    "owner_action": false,
+    "pool_directories": [
+      "/etc/php/php-fpm.d"
+    ],
+    "pools": [
+      {
+        "directory": "/etc/php/php-fpm.d",
+        "exists": true,
+        "group": "root",
+        "kind": "file",
+        "mode": "0644",
+        "owner": "root",
+        "path": "/etc/php/php-fpm.d/www.conf",
+        "settings": {
+          "group": "http",
+          "listen": "/run/php-fpm/php-fpm.sock",
+          "listen.group": "http",
+          "listen.owner": "http",
+          "pool": "www",
+          "user": "http"
+        }
+      }
+    ],
+    "program": "/usr/sbin/php-fpm",
+    "program_version": [
+      "PHP 8.5.11 (fpm-fcgi) (built: Sep 23 2026 17:41:29) (NTS)"
+    ],
+    "run_directories": [
+      {
+        "exists": true,
+        "group": "root",
+        "kind": "directory",
+        "mode": "0755",
+        "owner": "root",
+        "path": "/run/php-fpm"
+      }
+    ],
+    "schema": "celikpanel/set2-request-identity-native/v1",
+    "sockets": {
+      "/run/php-fpm/php-fpm.sock": {
+        "exists": true,
+        "group": "http",
+        "kind": "socket",
+        "mode": "0660",
+        "owner": "http",
+        "path": "/run/php-fpm/php-fpm.sock"
+      }
+    },
+    "units": {
+      "php-fpm.service": {
+        "ActiveState": "active",
+        "DropInPaths": "",
+        "ExecStart": "{ path=/usr/bin/php-fpm ; argv[]=/usr/bin/php-fpm --nodaemonize --fpm-config /etc/php/php-fpm.conf ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "FragmentPath": "/usr/lib/systemd/system/php-fpm.service",
+        "LoadState": "loaded",
+        "MainPID": "1488",
+        "NoNewPrivileges": "no",
+        "PrivateTmp": "[REDACTED]",
+        "ProtectHome": "no",
+        "ProtectSystem": "full",
+        "ReadWritePaths": "",
+        "SubState": "running"
+      }
+    },
+    "web_server_accounts": [
+      "http"
+    ]
+  },
+  "section": "C6b-php-site",
+  "started_at": "2026-10-09T07:30:30Z",
+  "substeps": {
+    "P5": "failed"
+  },
+  "title": "a PHP site: created, served by PHP-FPM through the web server, deleted (set3, P5)",
+  "verdict": "failed"
+}

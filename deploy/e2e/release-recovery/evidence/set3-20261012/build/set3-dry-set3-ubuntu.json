@@ -1,0 +1,109 @@
+{
+  "candidate": {
+    "commit": "0473af3e56364e4e0f78b4b6b971f3ccfefb59fe",
+    "sha256": "a94e84bfefdf842747a5d76d636271ec7fa547339f79012e3223148c230e5a57",
+    "version": "v0.1.0-alpha.81"
+  },
+  "cell": {
+    "components": [
+      "nginx",
+      "php-fpm",
+      "mariadb",
+      "postfix",
+      "dovecot",
+      "roundcube",
+      "rspamd",
+      "postgresql"
+    ],
+    "mail": true,
+    "name": "set3-ubuntu",
+    "node": "ubuntu",
+    "purpose": "web_mail"
+  },
+  "cell_kind": "settings-writes",
+  "local_port": 18443,
+  "native_evidence": false,
+  "rule": "the driver calls only the Panel's HTTP API as the logged-in owner; every native fact is a read-only SSH inspection; owner actions on the guest are recorded as such; no update is started",
+  "schema": "celikpanel/set1-settings-writes-plan/v1",
+  "sections": [
+    {
+      "id": "S1-cron",
+      "runs": true,
+      "title": "scheduled tasks: the owner's crontab"
+    },
+    {
+      "id": "S2-mail-policy",
+      "runs": true,
+      "title": "server mail policy: the owner's main.cf"
+    },
+    {
+      "id": "S3-backup-schedule",
+      "runs": true,
+      "title": "automatic backup schedule"
+    },
+    {
+      "id": "S4-postgresql",
+      "runs": true,
+      "title": "postgresql.conf and pg_hba.conf"
+    },
+    {
+      "id": "S5-mariadb",
+      "runs": true,
+      "title": "the MariaDB option file"
+    },
+    {
+      "id": "S6-catchall-queue",
+      "runs": true,
+      "title": "catch-all and mail queue"
+    },
+    {
+      "id": "S7-file-metadata",
+      "runs": true,
+      "title": "owner, group and mode of the files the Panel wrote"
+    },
+    {
+      "id": "S8-service-actions",
+      "runs": true,
+      "title": "service actions on the real units (the Services page's route)"
+    }
+  ],
+  "setup": {
+    "customization": {
+      "components": [
+        "dovecot",
+        "mariadb",
+        "nginx",
+        "php-fpm",
+        "postfix",
+        "postgresql",
+        "roundcube",
+        "rspamd"
+      ]
+    },
+    "dns_mode": "external",
+    "purpose": "web_mail"
+  },
+  "site": {
+    "domain": "set1-owner.test",
+    "site_user": "set1_owner_test"
+  },
+  "steps": [
+    "preflight",
+    "origin",
+    "baseline-install",
+    "owner-login",
+    "license",
+    "setup",
+    "site",
+    "S1-cron",
+    "S2-mail-policy",
+    "S3-backup-schedule",
+    "S4-postgresql",
+    "S5-mariadb",
+    "S6-catchall-queue",
+    "S7-file-metadata",
+    "S8-service-actions",
+    "collect"
+  ],
+  "work_root": "/var/tmp/cp-release-drill-dry-set3-ubuntu"
+}

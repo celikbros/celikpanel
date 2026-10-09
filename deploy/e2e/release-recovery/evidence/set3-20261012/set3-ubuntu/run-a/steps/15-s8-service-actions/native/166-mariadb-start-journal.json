@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T07:19:35Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791530372",
+      "-n",
+      "400",
+      "-u",
+      "mariadb.service"
+    ],
+    "at": "2026-10-09T07:19:35Z",
+    "returncode": 0,
+    "seconds": 0.006,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T07:19:32.663516+00:00 dns-ubuntu systemd[1]: Starting mariadb.service - MariaDB 10.11.14 database server...\n2026-10-09T07:19:32.749336+00:00 dns-ubuntu (mariadbd)[61875]: mariadb.service: Referenced but unset environment variable evaluates to an empty string: MYSQLD_OPTS, _WSREP_NEW_CLUSTER\n2026-10-09T07:19:32.772671+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] Starting MariaDB 10.11.14-MariaDB-0ubuntu0.24.04.1 source revision 053f9bcb5b147bf00edb99e1310bae9125b7f125 server_uid W4SCr1TT1XkuiEEx9TvPKXjj4bk= as process 61875\n2026-10-09T07:19:32.809918+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] InnoDB: Compressed tables use zlib 1.3\n2026-10-09T07:19:32.812538+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] InnoDB: Number of transaction pools: 1\n2026-10-09T07:19:32.812761+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions\n2026-10-09T07:19:32.812904+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] InnoDB: Using io_uring\n2026-10-09T07:19:32.813377+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] InnoDB: innodb_buffer_pool_size_max=128m, innodb_buffer_pool_size=128m\n2026-10-09T07:19:32.814590+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] InnoDB: Initialized memory pressure event listener\n2026-10-09T07:19:32.814590+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] InnoDB: Completed initialization of buffer pool\n2026-10-09T07:19:32.815544+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] InnoDB: File system buffers for log disabled (block size=512 bytes)\n2026-10-09T07:19:32.834419+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] InnoDB: End of log at LSN=46846\n2026-10-09T07:19:32.892937+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] InnoDB: 128 rollback segments are active.\n2026-10-09T07:19:32.893350+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...\n2026-10-09T07:19:32.893437+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.\n2026-10-09T07:19:32.895041+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] InnoDB: log sequence number 46846; transaction id 14\n2026-10-09T07:19:32.895041+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] Plugin 'FEEDBACK' is disabled.\n2026-10-09T07:19:32.895185+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool\n2026-10-09T07:19:32.896721+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Warning] You need to use --log-bin to make --expire-logs-days or --binlog-expire-logs-seconds work.\n2026-10-09T07:19:32.898464+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] Server socket created on IP: '127.0.0.1', port: '3306'.\n2026-10-09T07:19:32.901255+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] InnoDB: Buffer pool(s) load completed at 261009  7:19:32\n2026-10-09T07:19:32.904036+00:00 dns-ubuntu mariadbd[61875]: 2026-10-09  7:19:32 0 [Note] /usr/sbin/mariadbd: ready for connections.\n2026-10-09T07:19:32.904036+00:00 dns-ubuntu mariadbd[61875]: Version: '10.11.14-MariaDB-0ubuntu0.24.04.1'  socket: '/run/mysqld/mysqld.sock'  port: 3306  Ubuntu 24.04\n2026-10-09T07:19:32.950523+00:00 dns-ubuntu systemd[1]: Started mariadb.service - MariaDB 10.11.14 database server.\n2026-10-09T07:19:32.952877+00:00 dns-ubuntu /etc/mysql/debian-start[61892]: Upgrading MariaDB tables if necessary.\n2026-10-09T07:19:32.992260+00:00 dns-ubuntu /etc/mysql/debian-start[61907]: Triggering myisam-recover for all MyISAM tables and aria-recover for all Aria tables\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791530372,
+  "units": [
+    "mariadb.service"
+  ]
+}

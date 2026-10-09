@@ -1,0 +1,6 @@
+driver SHA256SUMS verified on the staged copy (513 files)
+2026-10-09T07:28:20Z removed /var/tmp/cp-release-drill-rid3-ub-a/cells/012914b7420256746e939e89/ubuntu/overlay.qcow2 bytes=4232708096 (evidence staged at set3-20261012/rid3-ubuntu/run-a, checksums verified)
+524
+overall: failed | native_evidence: False | outcome: request-identity-measured
+  step C3-server-databases failed | O10 (mariadb): its replay is the first answer byte for byte, marked as a replay, and one database was created; O10 (postgresql): its replay is the first answer byte for byte, marked as a replay, and one database was created
+  section C3-server-databases failed | failed: ['O10 (mariadb): its replay is the first answer byte for byte, marked as a replay, and one database was created', 'O10 (postgresql): its replay is the first answer byte for byte, marked as a replay, and one database was created'] | unknown: [] | error: None

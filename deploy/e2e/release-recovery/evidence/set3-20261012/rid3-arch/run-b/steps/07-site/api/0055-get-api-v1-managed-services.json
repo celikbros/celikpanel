@@ -1,0 +1,698 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "useManagedServices (component config files)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18481"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/managed-services"
+  },
+  "response": {
+    "elapsed_seconds": 0.004,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 08:15:07 GMT"
+      ],
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ]
+    ],
+    "json": {
+      "dns_identity_ready": true,
+      "mail_hostname": {
+        "current": "dns-arch",
+        "current_usable": false,
+        "will_set_hostname": false
+      },
+      "profiles": [
+        {
+          "available": false,
+          "blocked_reason": "Dovecot: CelikPanel cannot set up Dovecot on Arch Linux yet: the Arch package keeps its mail, login and TLS settings in one /etc/dovecot/dovecot.conf that CelikPanel does not manage. The server administrator can choose a setup purpose without mail (Web hosting), or install and configure mail with the operating system's own tools.",
+          "description": "Postfix SMTP and Dovecot IMAP/POP3 with authenticated submission.",
+          "id": "core-mail",
+          "latest_attempt_status": "none",
+          "name": "Core Mail",
+          "services": [
+            "postfix",
+            "dovecot"
+          ],
+          "status": "blocked",
+          "verified": false
+        },
+        {
+          "available": false,
+          "blocked_reason": "Dovecot: CelikPanel cannot set up Dovecot on Arch Linux yet: the Arch package keeps its mail, login and TLS settings in one /etc/dovecot/dovecot.conf that CelikPanel does not manage. The server administrator can choose a setup purpose without mail (Web hosting), or install and configure mail with the operating system's own tools.",
+          "description": "Core mail plus Nginx, PHP-FPM and Roundcube webmail.",
+          "id": "webmail",
+          "latest_attempt_status": "none",
+          "name": "Webmail",
+          "services": [
+            "postfix",
+            "dovecot",
+            "nginx",
+            "php-fpm",
+            "roundcube"
+          ],
+          "status": "blocked",
+          "verified": false
+        },
+        {
+          "available": false,
+          "blocked_reason": "Dovecot: CelikPanel cannot set up Dovecot on Arch Linux yet: the Arch package keeps its mail, login and TLS settings in one /etc/dovecot/dovecot.conf that CelikPanel does not manage. The server administrator can choose a setup purpose without mail (Web hosting), or install and configure mail with the operating system's own tools.",
+          "description": "Core mail with Rspamd spam filtering.",
+          "id": "protected-mail",
+          "latest_attempt_status": "none",
+          "name": "Spam-Protected Mail",
+          "services": [
+            "postfix",
+            "dovecot",
+            "rspamd"
+          ],
+          "status": "blocked",
+          "verified": false
+        }
+      ],
+      "scanned_at": "2026-10-09T08:12:55Z",
+      "services": [
+        {
+          "category": "web",
+          "config_files": [],
+          "description": "PHP FastCGI Process Manager",
+          "icon": "🐘",
+          "id": "php-fpm",
+          "installed_evidence": "systemd_unit",
+          "instances": [
+            {
+              "managed": true,
+              "path": "/etc/php",
+              "status": "active (running)",
+              "unit": "php-fpm",
+              "version": "8.5"
+            }
+          ],
+          "is_installed": true,
+          "kind": "runtime",
+          "name": "PHP-FPM",
+          "packages": [
+            "php-fpm"
+          ],
+          "repair_available": true,
+          "status": "active (running)",
+          "unit": "php-fpm",
+          "versions": [
+            "8.5"
+          ]
+        },
+        {
+          "category": "web",
+          "config_files": [],
+          "description": "JavaScript Runtime",
+          "icon": "🟩",
+          "id": "node",
+          "instances": [],
+          "is_installed": false,
+          "kind": "runtime",
+          "name": "Node.js",
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "web",
+          "config_files": [
+            {
+              "is_managed": true,
+              "path": "/etc/nginx/nginx.conf"
+            }
+          ],
+          "description": "Reverse Proxy Server",
+          "icon": "🔄",
+          "id": "nginx",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": true,
+          "kind": "service",
+          "name": "Nginx",
+          "packages": [
+            "nginx"
+          ],
+          "ports": [
+            "80/tcp",
+            "443/tcp"
+          ],
+          "repair_available": true,
+          "status": "active (running)",
+          "unit": "nginx",
+          "versions": []
+        },
+        {
+          "category": "web",
+          "config_files": [],
+          "conflict_with": "Nginx",
+          "description": "Web Server",
+          "icon": "🪶",
+          "id": "apache",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Apache",
+          "not_offered": true,
+          "not_offered_kind": "integration",
+          "not_offered_reason": "Apache virtual-host integration is not available in CelikPanel yet; use Nginx.",
+          "packages": [
+            "apache"
+          ],
+          "ports": [
+            "80/tcp",
+            "443/tcp"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "database",
+          "config_files": [
+            {
+              "is_managed": true,
+              "path": "/var/lib/postgres/data/postgresql.conf"
+            },
+            {
+              "is_managed": true,
+              "path": "/var/lib/postgres/data/pg_hba.conf"
+            }
+          ],
+          "description": "Database Server",
+          "icon": "🐘",
+          "id": "postgresql",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": true,
+          "kind": "service",
+          "name": "PostgreSQL",
+          "packages": [
+            "postgresql"
+          ],
+          "repair_available": true,
+          "status": "active (running)",
+          "unit": "postgresql",
+          "versions": []
+        },
+        {
+          "category": "database",
+          "config_files": [
+            {
+              "is_managed": true,
+              "path": "/etc/my.cnf"
+            }
+          ],
+          "description": "Database Server",
+          "icon": "🦭",
+          "id": "mariadb",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": true,
+          "kind": "service",
+          "name": "MariaDB",
+          "packages": [
+            "mariadb"
+          ],
+          "repair_available": true,
+          "status": "active (running)",
+          "unit": "mariadb",
+          "versions": []
+        },
+        {
+          "category": "database",
+          "config_files": [],
+          "description": "MariaDB/MySQL web admin tool",
+          "icon": "🐬",
+          "id": "phpmyadmin",
+          "installed_evidence": "package",
+          "instances": [],
+          "is_installed": false,
+          "kind": "tool",
+          "name": "phpMyAdmin",
+          "packages": [
+            "phpmyadmin"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "database",
+          "config_files": [],
+          "description": "PostgreSQL web admin tool",
+          "icon": "🐘",
+          "id": "phppgadmin",
+          "instances": [],
+          "is_installed": false,
+          "kind": "tool",
+          "name": "phpPgAdmin",
+          "not_offered": true,
+          "not_offered_kind": "distribution",
+          "not_offered_reason": "automatic installation is not supported on this Linux distribution yet",
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "email",
+          "config_files": [],
+          "description": "SMTP Server",
+          "icon": "📧",
+          "id": "postfix",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Postfix",
+          "packages": [
+            "postfix"
+          ],
+          "ports": [
+            "25/tcp",
+            "587/tcp",
+            "465/tcp"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "email",
+          "config_files": [],
+          "description": "SMTP Server",
+          "icon": "📮",
+          "id": "exim",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Exim",
+          "not_offered": true,
+          "not_offered_kind": "integration",
+          "not_offered_reason": "Exim mailbox, TLS and submission integration is not available in CelikPanel yet; use Postfix.",
+          "packages": [
+            "exim"
+          ],
+          "ports": [
+            "25/tcp",
+            "587/tcp",
+            "465/tcp"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "email",
+          "config_files": [],
+          "description": "Spam Filter & DKIM",
+          "icon": "🧹",
+          "id": "rspamd",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Rspamd",
+          "packages": [
+            "rspamd"
+          ],
+          "repair_available": true,
+          "requires_missing": [
+            "smtp-server"
+          ],
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "email",
+          "config_files": [],
+          "description": "IMAP/POP3 Server",
+          "icon": "📬",
+          "id": "dovecot",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Dovecot",
+          "not_offered": true,
+          "not_offered_kind": "distribution",
+          "not_offered_reason": "CelikPanel cannot set up Dovecot on Arch Linux yet: the Arch package keeps its mail, login and TLS settings in one /etc/dovecot/dovecot.conf that CelikPanel does not manage. The server administrator can choose a setup purpose without mail (Web hosting), or install and configure mail with the operating system's own tools.",
+          "packages": [
+            "dovecot"
+          ],
+          "ports": [
+            "143/tcp",
+            "993/tcp",
+            "110/tcp",
+            "995/tcp"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "email",
+          "config_files": [],
+          "description": "Webmail",
+          "icon": "✉️",
+          "id": "roundcube",
+          "installed_evidence": "application_files",
+          "instances": [],
+          "is_installed": false,
+          "kind": "tool",
+          "name": "Roundcube",
+          "repair_available": true,
+          "requires_missing": [
+            "smtp-server",
+            "imap-server"
+          ],
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "email",
+          "config_files": [],
+          "description": "Spam Filter",
+          "icon": "🛡️",
+          "id": "spamassassin",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "SpamAssassin",
+          "not_offered": true,
+          "not_offered_kind": "distribution",
+          "not_offered_reason": "automatic installation is not supported on this Linux distribution yet",
+          "repair_available": true,
+          "requires_missing": [
+            "smtp-server"
+          ],
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "security",
+          "config_files": [],
+          "description": "Built-in VPN server",
+          "icon": "🔐",
+          "id": "wireguard",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "WireGuard VPN",
+          "packages": [
+            "wireguard-tools"
+          ],
+          "ports": [
+            "51820/udp"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "security",
+          "config_files": [],
+          "description": "SSL certificate provider",
+          "icon": "🔐",
+          "id": "certbot",
+          "installed_evidence": "package",
+          "instances": [],
+          "is_installed": true,
+          "kind": "tool",
+          "name": "Let's Encrypt client (certbot)",
+          "packages": [
+            "certbot"
+          ],
+          "repair_available": true,
+          "status": "installed",
+          "versions": []
+        },
+        {
+          "category": "security",
+          "config_files": [],
+          "description": "Intrusion Prevention",
+          "icon": "🚫",
+          "id": "fail2ban",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Fail2ban",
+          "packages": [
+            "fail2ban"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "security",
+          "config_files": [],
+          "description": "nftables — the panel firewall's packet-filtering engine",
+          "icon": "🧱",
+          "id": "nftables",
+          "installed_evidence": "package",
+          "instances": [],
+          "is_installed": true,
+          "kind": "tool",
+          "name": "Firewall engine",
+          "packages": [
+            "nftables"
+          ],
+          "repair_available": true,
+          "status": "installed",
+          "versions": []
+        },
+        {
+          "category": "security",
+          "config_files": [],
+          "description": "Antivirus / malware scanner",
+          "icon": "🦠",
+          "id": "clamav",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "ClamAV",
+          "packages": [
+            "clamav"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "dns",
+          "config_files": [],
+          "description": "DNS Server",
+          "icon": "🌐",
+          "id": "bind",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "BIND",
+          "packages": [
+            "bind"
+          ],
+          "ports": [
+            "53/tcp",
+            "53/udp"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "dns",
+          "config_files": [],
+          "description": "DNS Server",
+          "icon": "⚡",
+          "id": "pdns",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "PowerDNS",
+          "not_offered": true,
+          "not_offered_kind": "distribution",
+          "not_offered_reason": "the managed service lifecycle is not supported in this package ecosystem yet",
+          "packages": [
+            "powerdns"
+          ],
+          "ports": [
+            "53/tcp",
+            "53/udp"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "ftp",
+          "config_files": [],
+          "description": "FTP Server",
+          "icon": "📂",
+          "id": "vsftpd",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "vsftpd",
+          "not_offered": true,
+          "not_offered_kind": "integration",
+          "not_offered_reason": "vsftpd passive-mode ports, TLS and per-subscription access are not integrated in CelikPanel yet.",
+          "packages": [
+            "vsftpd"
+          ],
+          "ports": [
+            "21/tcp"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "cache",
+          "config_files": [],
+          "description": "Cache Server",
+          "icon": "⚡",
+          "id": "redis",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Redis",
+          "not_offered": true,
+          "not_offered_kind": "distribution",
+          "not_offered_reason": "automatic installation is not supported on this Linux distribution yet",
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "cache",
+          "config_files": [],
+          "description": "Cache Server",
+          "icon": "🗝️",
+          "id": "valkey",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Valkey",
+          "packages": [
+            "valkey"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "cache",
+          "config_files": [],
+          "description": "Cache Server",
+          "icon": "💾",
+          "id": "memcached",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Memcached",
+          "packages": [
+            "memcached"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "monitoring",
+          "config_files": [],
+          "description": "Real-time metrics agent",
+          "icon": "📈",
+          "id": "netdata",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Netdata",
+          "packages": [
+            "netdata"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "system",
+          "config_files": [],
+          "description": "Native cron daemon that runs scheduled tasks",
+          "icon": "⏰",
+          "id": "cron",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": true,
+          "kind": "service",
+          "name": "Scheduled tasks (cron)",
+          "packages": [
+            "cronie"
+          ],
+          "repair_available": true,
+          "status": "active (running)",
+          "unit": "cronie",
+          "versions": []
+        }
+      ]
+    },
+    "status": 200,
+    "text": null
+  }
+}

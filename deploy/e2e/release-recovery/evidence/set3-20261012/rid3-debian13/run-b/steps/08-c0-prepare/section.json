@@ -1,0 +1,316 @@
+{
+  "acme_isolation": {
+    "after_seconds": 0.0,
+    "confirmed": true,
+    "resolves": {
+      "acme-staging-v02.api.letsencrypt.org": "::1             acme-staging-v02.api.letsencrypt.org",
+      "acme-v02.api.letsencrypt.org": "::1             acme-v02.api.letsencrypt.org"
+    },
+    "what": "lab isolation: the two Let's Encrypt directory names resolve to this guest's own loopback, where nothing answers for them"
+  },
+  "calls": [
+    {
+      "at": "2026-10-09T08:29:41Z",
+      "json": [
+        {
+          "admin_username": "celikpanel_admin",
+          "created_at": "2026-10-09T08:29:41Z",
+          "host": "localhost",
+          "id": 1,
+          "is_default": true,
+          "is_local": true,
+          "name": "MariaDB",
+          "port": 3306,
+          "status": "active",
+          "type_icon": "🦭",
+          "type_id": 2,
+          "type_name": "MariaDB",
+          "version": "11.8.6-MariaDB-0+deb13u1 from Debian"
+        },
+        {
+          "admin_username": "celikpanel_admin",
+          "created_at": "2026-10-09T08:29:41Z",
+          "host": "localhost",
+          "id": 2,
+          "is_default": false,
+          "is_local": true,
+          "name": "PostgreSQL",
+          "port": 5432,
+          "status": "active",
+          "type_icon": "🐘",
+          "type_id": 1,
+          "type_name": "PostgreSQL",
+          "version": "17.11 (Debian 17.11-0+deb13u1)"
+        }
+      ],
+      "label": "C0 database servers (the Databases page)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/database-servers"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "id": 1,
+        "name": "set1-owner.test",
+        "status": "active",
+        "subscription_id": 2
+      },
+      "name": "the Panel's database names the site's domain and its subscription",
+      "ok": true
+    },
+    {
+      "detail": {
+        "mariadb": 1,
+        "postgresql": 2
+      },
+      "name": "the Databases page lists a MariaDB and a PostgreSQL server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "mariadb_client_version_line": "/usr/bin/mariadb from 11.8.6-MariaDB, client 15.2 for debian-linux-gnu (x86_64) using  EditLine wrapper",
+        "mariadb_select_version": "11.8.6-MariaDB-0+deb13u1 from Debian",
+        "mariadb_shown_is_exactly_select_version": true,
+        "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 11.8.6-MariaDB-0+deb13u1 from Debian for debian-linux-gnu on x86_64 (-- Please help get to 10k stars at https://github.com/MariaDB/Server)",
+        "os": {
+          "ID": "debian",
+          "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+          "VERSION_ID": "13"
+        },
+        "postgresql_show_server_version": "17.11 (Debian 17.11-0+deb13u1)",
+        "shown": {
+          "mariadb": "11.8.6-MariaDB-0+deb13u1 from Debian",
+          "postgresql": "17.11 (Debian 17.11-0+deb13u1)"
+        },
+        "when": "C0, as the engines were registered"
+      },
+      "name": "O14 (C0, as the engines were registered): the MariaDB version the Databases page shows is the server's own",
+      "ok": true
+    },
+    {
+      "detail": {
+        "mariadb_client_version_line": "/usr/bin/mariadb from 11.8.6-MariaDB, client 15.2 for debian-linux-gnu (x86_64) using  EditLine wrapper",
+        "mariadb_select_version": "11.8.6-MariaDB-0+deb13u1 from Debian",
+        "mariadb_shown_is_exactly_select_version": true,
+        "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 11.8.6-MariaDB-0+deb13u1 from Debian for debian-linux-gnu on x86_64 (-- Please help get to 10k stars at https://github.com/MariaDB/Server)",
+        "os": {
+          "ID": "debian",
+          "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+          "VERSION_ID": "13"
+        },
+        "postgresql_show_server_version": "17.11 (Debian 17.11-0+deb13u1)",
+        "shown": {
+          "mariadb": "11.8.6-MariaDB-0+deb13u1 from Debian",
+          "postgresql": "17.11 (Debian 17.11-0+deb13u1)"
+        },
+        "when": "C0, as the engines were registered"
+      },
+      "name": "O14 (C0, as the engines were registered): the PostgreSQL version shown is the server's own",
+      "ok": true
+    },
+    {
+      "detail": {
+        "acme-staging-v02.api.letsencrypt.org": "::1             acme-staging-v02.api.letsencrypt.org",
+        "acme-v02.api.letsencrypt.org": "::1             acme-v02.api.letsencrypt.org"
+      },
+      "name": "lab isolation: the Let's Encrypt directory names resolve to this guest's loopback only",
+      "ok": true
+    },
+    {
+      "detail": {
+        "bytes": 201330137,
+        "exists": true,
+        "file_list": {
+          "data/blob-00.bin": [
+            67108864,
+            "4c326fb6f7240aa16fa18508e5e0a7242a11cc22e088ecae39f3ed2a5bb779e1"
+          ],
+          "data/blob-01.bin": [
+            67108864,
+            "720ba3d5d0533edfd630c15bfc330b8ad0ff446025d46292e5f5e84e7d2974c4"
+          ],
+          "data/blob-02.bin": [
+            67108864,
+            "da488bf955eb162216000d13b55c70ebd878729c7f8da079df04fb90796da9b1"
+          ],
+          "index.html": [
+            45,
+            "dd6201f9b61beaa8737d5e16c85e8e203283746991cdcb92c95c85d8e506a0ef"
+          ],
+          "pages/page-1.html": [
+            700,
+            "a6828c952b0d3efe14055af0ef476998c53047e9b35d7e3a9197cae220b22b7b"
+          ],
+          "pages/page-2.html": [
+            700,
+            "b33768c388e28e3a3345ebdb1fb225eb13a989c470233886a9edcc34e7b66e46"
+          ],
+          "pages/page-3.html": [
+            700,
+            "61f1e5d3a7fe16e9b43fe7cd90ef088d1c442848a1c38ee21e3daf09417d7350"
+          ],
+          "pages/page-4.html": [
+            700,
+            "01aee53780b5920e8cf4a5712f0b4817add2abf205a61f0bab6041b2fc687bfb"
+          ],
+          "pages/page-5.html": [
+            700,
+            "3af3a9969ebcddef290aa2908534b37781363f4ac538d888d57477fe51dacd98"
+          ]
+        },
+        "files": 9,
+        "mode": "2750",
+        "names": [
+          "index.html",
+          "data/blob-00.bin",
+          "data/blob-01.bin",
+          "data/blob-02.bin",
+          "pages/page-1.html",
+          "pages/page-2.html",
+          "pages/page-3.html",
+          "pages/page-4.html",
+          "pages/page-5.html"
+        ],
+        "newest_mtime": 1791534583,
+        "non_regular": [],
+        "owner_uid": 5001,
+        "root": "/var/www/celikpanel/subscriptions/2/sites/1/public_html",
+        "sha256": "40320f90c9d2f53c58fce5dc9c8ae2b7474a05ae2076168fac8ff6b80746c567"
+      },
+      "name": "the owner's site is in the document root",
+      "ok": true
+    },
+    {
+      "detail": {},
+      "name": "request_identities exists and is empty before the first guarded request",
+      "ok": true
+    }
+  ],
+  "database_servers": [
+    {
+      "host": "localhost",
+      "id": 1,
+      "name": "MariaDB",
+      "port": 3306,
+      "status": "active",
+      "type_name": "MariaDB",
+      "version": "11.8.6-MariaDB-0+deb13u1 from Debian"
+    },
+    {
+      "host": "localhost",
+      "id": 2,
+      "name": "PostgreSQL",
+      "port": 5432,
+      "status": "active",
+      "type_name": "PostgreSQL",
+      "version": "17.11 (Debian 17.11-0+deb13u1)"
+    }
+  ],
+  "engine_versions": [
+    {
+      "mariadb_client_version_line": "/usr/bin/mariadb from 11.8.6-MariaDB, client 15.2 for debian-linux-gnu (x86_64) using  EditLine wrapper",
+      "mariadb_select_version": "11.8.6-MariaDB-0+deb13u1 from Debian",
+      "mariadb_shown_is_exactly_select_version": true,
+      "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 11.8.6-MariaDB-0+deb13u1 from Debian for debian-linux-gnu on x86_64 (-- Please help get to 10k stars at https://github.com/MariaDB/Server)",
+      "os": {
+        "ID": "debian",
+        "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+        "VERSION_ID": "13"
+      },
+      "postgresql_show_server_version": "17.11 (Debian 17.11-0+deb13u1)",
+      "shown": {
+        "mariadb": "11.8.6-MariaDB-0+deb13u1 from Debian",
+        "postgresql": "17.11 (Debian 17.11-0+deb13u1)"
+      },
+      "when": "C0, as the engines were registered"
+    }
+  ],
+  "finished_at": "2026-10-09T08:29:44Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/006-panel-state-before.json",
+      "lab_action": false,
+      "label": "panel-state-before",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/007-engine-versions-c0-as-the-engines-were-registered.json",
+      "lab_action": false,
+      "label": "engine-versions-c0-as-the-engines-were-registered",
+      "mode": "read-engine-versions",
+      "owner_action": false
+    },
+    {
+      "file": "native/008-lab-isolate-acme.json",
+      "lab_action": true,
+      "label": "lab-isolate-acme",
+      "mode": "lab-isolate-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/009-owner-seed-site.json",
+      "lab_action": false,
+      "label": "owner-seed-site",
+      "mode": "owner-seed-site",
+      "owner_action": true
+    },
+    {
+      "file": "native/010-identities-before.json",
+      "lab_action": false,
+      "label": "identities-before",
+      "mode": "read-identities",
+      "owner_action": false
+    },
+    {
+      "file": "native/011-units-before.json",
+      "lab_action": false,
+      "label": "units-before",
+      "mode": "read-units",
+      "owner_action": false
+    }
+  ],
+  "node": "debian13",
+  "notes": [],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T08:29:43Z",
+      "label": "seed-site",
+      "mode": "owner-seed-site"
+    }
+  ],
+  "section": "C0-prepare",
+  "started_at": "2026-10-09T08:29:41Z",
+  "substeps": {
+    "O14": "passed",
+    "lab isolation": "passed",
+    "section": "passed"
+  },
+  "title": "the owner's site, the engines and the lab's isolation",
+  "units_before": {
+    "celikpanel-agent.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 08:21:43 UTC",
+      "ActiveState": "active",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 08:21:43 UTC",
+      "MainPID": "5016",
+      "NRestarts": "0",
+      "SubState": "running"
+    },
+    "celikpanel-panel.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 08:21:47 UTC",
+      "ActiveState": "active",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 08:21:47 UTC",
+      "MainPID": "5205",
+      "NRestarts": "0",
+      "SubState": "running"
+    }
+  },
+  "verdict": "passed"
+}

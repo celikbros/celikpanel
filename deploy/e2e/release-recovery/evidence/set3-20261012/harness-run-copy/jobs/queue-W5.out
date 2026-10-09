@@ -1,0 +1,5 @@
+2026-10-09T07:41:27Z W5 waiting for cell-rid3-archb
+2026-10-09T08:19:57Z W5 start cell-rid3-d13b (C: 81.1 GiB)
+2026-10-09T08:34:39Z W5 end cell-rid3-d13b rc=0
+2026-10-09T08:34:46Z W5 staged cell-rid3-d13b rc=0 overall: complete-for-review | native_evidence: False | outcome: request-identity-measured
+2026-10-09T08:34:46Z W5 worker done

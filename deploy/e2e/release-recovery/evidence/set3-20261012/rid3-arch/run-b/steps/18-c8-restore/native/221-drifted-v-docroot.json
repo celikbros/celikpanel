@@ -1,0 +1,81 @@
+{
+  "at": "2026-10-09T08:18:33Z",
+  "docroot": {
+    "bytes": 201330154,
+    "exists": true,
+    "file_list": {
+      "added-after-backup-v.txt": [
+        2,
+        "73324e1ab1db72ee9eb4fdf1c90a586d67e00ab58330d1cbfea26ecd0a77fa4d"
+      ],
+      "data/blob-00.bin": [
+        67108864,
+        "f0cb697dd38d456664c4fc48ae60d3b799f0be78be498703ee1ac90abb35e6dc"
+      ],
+      "data/blob-01.bin": [
+        67108864,
+        "0bbf35c428fa6c8c1848b645f3fdf949cbdf7e3497c029861b29b6d747781f7d"
+      ],
+      "data/blob-02.bin": [
+        67108864,
+        "a0f85b3ee7834b6ad25bb1425f3e2aabd9721c6d396100d0b086d0573fb243cd"
+      ],
+      "index.html": [
+        60,
+        "9cdf366fc8827bc9ae7f34619873119bab31cffb34acf5674cc347d0f8395a83"
+      ],
+      "pages/page-1.html": [
+        700,
+        "a6828c952b0d3efe14055af0ef476998c53047e9b35d7e3a9197cae220b22b7b"
+      ],
+      "pages/page-2.html": [
+        700,
+        "b33768c388e28e3a3345ebdb1fb225eb13a989c470233886a9edcc34e7b66e46"
+      ],
+      "pages/page-3.html": [
+        700,
+        "61f1e5d3a7fe16e9b43fe7cd90ef088d1c442848a1c38ee21e3daf09417d7350"
+      ],
+      "pages/page-4.html": [
+        700,
+        "01aee53780b5920e8cf4a5712f0b4817add2abf205a61f0bab6041b2fc687bfb"
+      ],
+      "pages/page-5.html": [
+        700,
+        "3af3a9969ebcddef290aa2908534b37781363f4ac538d888d57477fe51dacd98"
+      ]
+    },
+    "files": 10,
+    "mode": "0750",
+    "names": [
+      "added-after-backup-v.txt",
+      "index.html",
+      "data/blob-00.bin",
+      "data/blob-01.bin",
+      "data/blob-02.bin",
+      "pages/page-1.html",
+      "pages/page-2.html",
+      "pages/page-3.html",
+      "pages/page-4.html",
+      "pages/page-5.html"
+    ],
+    "newest_mtime": 1791533912,
+    "non_regular": [],
+    "owner_uid": 1002,
+    "root": "/var/www/celikpanel/subscriptions/2/sites/1/public_html",
+    "sha256": "3fe6dfa741aad7bc1862ce98f67a29969b5e2e0cb25273f0420bb535e7c640aa"
+  },
+  "domain": {
+    "id": 1,
+    "name": "set1-owner.test",
+    "status": "active",
+    "subscription_id": 2
+  },
+  "lab_action": false,
+  "mode": "read-docroot",
+  "owner_action": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "site_home_entries": [
+    "public_html"
+  ]
+}

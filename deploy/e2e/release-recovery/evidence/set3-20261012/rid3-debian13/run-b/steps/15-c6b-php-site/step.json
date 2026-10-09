@@ -1,0 +1,20 @@
+{
+  "checks": {
+    "checks": 5,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T08:30:59Z",
+    "notes": [],
+    "started_at": "2026-10-09T08:30:55Z",
+    "substeps": {
+      "P5": "passed"
+    },
+    "title": "a PHP site: created, served by PHP-FPM through the web server, deleted (set3, P5)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T08:30:59Z",
+  "name": "C6b-php-site",
+  "started_at": "2026-10-09T08:30:55Z",
+  "verdict": "passed"
+}

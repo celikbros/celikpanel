@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-u14-ub-def-a
+upd1-ubuntu-defective-20261009t074918z

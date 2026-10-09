@@ -1,0 +1,94 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S2c save a DNSBL zone and a rate limit",
+  "request": {
+    "body": {
+      "dnsbl_zones": [
+        "dnsbl.set1-lab.test"
+      ],
+      "message_size_mb": 9,
+      "outbound_rate_limit": 30,
+      "version": "mp1-6d9a17a0811d42298d05b2225339db4a24348318c60e6265a17dc9e57336b69b"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18461"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18461"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "517cb65ae0fc6670b2abd77425b7f017"
+      ]
+    ],
+    "method": "PUT",
+    "path": "/api/v1/mail/policy"
+  },
+  "response": {
+    "elapsed_seconds": 3.086,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 07:23:18 GMT"
+      ],
+      [
+        "Content-Length",
+        "213"
+      ]
+    ],
+    "json": {
+      "applied": "reloaded",
+      "policy": {
+        "dnsbl_zones": [
+          "dnsbl.set1-lab.test"
+        ],
+        "message_size_mb": 9,
+        "outbound_rate_limit": 30,
+        "version": "mp1-ee44ef262228d425a1a9935a2a9d1a5c321a54bd6c5e04a829c8ede0c3b61b0a"
+      },
+      "success": true
+    },
+    "status": 200,
+    "text": null
+  }
+}

@@ -1,0 +1,11 @@
+2026-10-09T07:09:29Z W3 waiting for cell-rid3-ub
+2026-10-09T07:28:10Z W3 start c2-ub-good (C: 92.2 GiB)
+2026-10-09T07:48:51Z W3 end c2-ub-good rc=0
+2026-10-09T07:48:53Z W3 staged c2-ub-good rc=0 overall: complete-for-review | native_evidence: False | outcome: update-verified
+2026-10-09T07:48:54Z W3 start c2-ub-def (C: 89.9 GiB)
+2026-10-09T08:10:00Z W3 end c2-ub-def rc=0
+2026-10-09T08:10:04Z W3 staged c2-ub-def rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-automatically
+2026-10-09T08:10:04Z W3 start c2-ub-oc (C: 86.6 GiB)
+2026-10-09T08:37:45Z W3 end c2-ub-oc rc=0
+2026-10-09T08:37:49Z W3 staged c2-ub-oc rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-after-owner-continuation
+2026-10-09T08:37:49Z W3 worker done

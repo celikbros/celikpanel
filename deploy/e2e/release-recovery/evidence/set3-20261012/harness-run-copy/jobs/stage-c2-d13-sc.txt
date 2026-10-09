@@ -1,0 +1,6 @@
+driver SHA256SUMS verified on the staged copy (238 files)
+2026-10-09T08:08:04Z removed /var/tmp/cp-release-drill-u14-d13-sc-a/cells/476fdad4e74b9b7a1faf76af/arch/overlay.qcow2 bytes=169803776 (evidence staged at set3-20261012/part2-alpha81/upd1-debian13-startcheck/run-a, checksums verified)
+2026-10-09T08:08:04Z removed /var/tmp/cp-release-drill-u14-d13-sc-a/cells/476fdad4e74b9b7a1faf76af/debian13/overlay.qcow2 bytes=1823539200 (evidence staged at set3-20261012/part2-alpha81/upd1-debian13-startcheck/run-a, checksums verified)
+253
+overall: complete-for-review | native_evidence: False | outcome: recovered-automatically
+  step owner-continuation (required) skipped | None

@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T07:25:01Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791530699",
+      "-n",
+      "400",
+      "-u",
+      "nginx.service"
+    ],
+    "at": "2026-10-09T07:25:01Z",
+    "returncode": 0,
+    "seconds": 0.011,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T07:24:59.472827+00:00 dns-debian13 systemd[1]: nginx.service: Unit cannot be reloaded because it is inactive.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791530699,
+  "units": [
+    "nginx.service"
+  ]
+}

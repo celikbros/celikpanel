@@ -1,0 +1,34 @@
+{
+  "at": "2026-10-09T07:20:45Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791530443",
+      "-n",
+      "400",
+      "-u",
+      "postgresql.service",
+      "-u",
+      "postgresql@16-main.service"
+    ],
+    "at": "2026-10-09T07:20:45Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T07:20:43.223662+00:00 dns-ubuntu systemd[1]: postgresql.service: Unit cannot be reloaded because it is inactive.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791530443,
+  "units": [
+    "postgresql.service",
+    "postgresql@16-main.service"
+  ]
+}

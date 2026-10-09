@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-rid3-d13-b
+rid3-debian13-20261009t082059z

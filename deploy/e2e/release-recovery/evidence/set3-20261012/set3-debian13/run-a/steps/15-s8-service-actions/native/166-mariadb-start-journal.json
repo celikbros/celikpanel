@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T07:25:21Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791530718",
+      "-n",
+      "400",
+      "-u",
+      "mariadb.service"
+    ],
+    "at": "2026-10-09T07:25:21Z",
+    "returncode": 0,
+    "seconds": 0.006,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T07:25:18.478652+00:00 dns-debian13 systemd[1]: Starting mariadb.service - MariaDB 11.8.6 database server...\n2026-10-09T07:25:18.562126+00:00 dns-debian13 (mariadbd)[39135]: mariadb.service: Referenced but unset environment variable evaluates to an empty string: MYSQLD_OPTS, _WSREP_NEW_CLUSTER\n2026-10-09T07:25:18.605840+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] Starting MariaDB 11.8.6-MariaDB-0+deb13u1 from Debian source revision 9bfea48ce1214cc4470f6f6f8a4e30352cef84e7 server_uid ewHC0iXTbxcy4rWctYmifQ9FJtc= as process 39135\n2026-10-09T07:25:18.629357+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: Compressed tables use zlib 1.3.1\n2026-10-09T07:25:18.630884+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: Number of transaction pools: 1\n2026-10-09T07:25:18.631002+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions\n2026-10-09T07:25:18.631380+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: Using io_uring\n2026-10-09T07:25:18.632081+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: innodb_buffer_pool_size_max=128m, innodb_buffer_pool_size=128m\n2026-10-09T07:25:18.638947+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: Initialized memory pressure event listener\n2026-10-09T07:25:18.639076+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: Completed initialization of buffer pool\n2026-10-09T07:25:18.640045+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: File system buffers for log disabled (block size=512 bytes)\n2026-10-09T07:25:18.661076+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: End of log at LSN=45586\n2026-10-09T07:25:18.719737+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: Opened 3 undo tablespaces\n2026-10-09T07:25:18.719737+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.\n2026-10-09T07:25:18.720017+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...\n2026-10-09T07:25:18.720086+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.\n2026-10-09T07:25:18.720693+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: log sequence number 45586; transaction id 14\n2026-10-09T07:25:18.721120+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] Plugin 'FEEDBACK' is disabled.\n2026-10-09T07:25:18.721120+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool\n2026-10-09T07:25:18.721190+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] Plugin 'wsrep-provider' is disabled.\n2026-10-09T07:25:18.724267+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:18 0 [Note] InnoDB: Buffer pool(s) load completed at 261009  7:25:18\n2026-10-09T07:25:19.057280+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:19 0 [Note] Server socket created on IP: '127.0.0.1', port: '3306'.\n2026-10-09T07:25:19.061353+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:19 0 [Note] mariadbd: Event Scheduler: Loaded 0 events\n2026-10-09T07:25:19.062342+00:00 dns-debian13 mariadbd[39135]: 2026-10-09  7:25:19 0 [Note] /usr/sbin/mariadbd: ready for connections.\n2026-10-09T07:25:19.062342+00:00 dns-debian13 mariadbd[39135]: Version: '11.8.6-MariaDB-0+deb13u1 from Debian'  socket: '/run/mysqld/mysqld.sock'  port: 3306  -- Please help get to 10k stars at https://github.com/MariaDB/Server\n2026-10-09T07:25:19.129241+00:00 dns-debian13 systemd[1]: Started mariadb.service - MariaDB 11.8.6 database server.\n2026-10-09T07:25:19.246008+00:00 dns-debian13 /etc/mysql/debian-start[39176]: Triggering myisam-recover for all MyISAM tables and aria-recover for all Aria tables\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791530718,
+  "units": [
+    "mariadb.service"
+  ]
+}
