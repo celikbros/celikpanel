@@ -375,7 +375,20 @@ func postconfExpandedContext(ctx context.Context, key string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("postconf %s failed: %s", key, firstLine(string(out)))
 	}
-	return strings.TrimSpace(string(out)), nil
+	// Both streams are in out. The value is the one line that is not
+	// postconf's own message (postconf_value.go, 2026-10-09): with a warning
+	// in the buffer the trimmed whole used to be taken as "type:path", and the
+	// alias repair that reads it found no file under that name and did
+	// nothing, without a word. A reading that is not one value is an error
+	// the caller returns before it runs anything.
+	// out iki akışı da tutar. Değer, postconf'un kendi iletisi olmayan tek
+	// satırdır; tek bir değer olmayan okuma, çağıranın hiçbir şey
+	// çalıştırmadan döndürdüğü bir hatadır.
+	value, known := postconfOneValue(out)
+	if !known {
+		return "", &postconfUnreadError{setting: key, command: "postconf -x -h " + key}
+	}
+	return value, nil
 }
 
 // applyMilterChain is the SINGLE owner of Postfix's milter settings. Every

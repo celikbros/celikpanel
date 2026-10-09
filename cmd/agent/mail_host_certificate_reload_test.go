@@ -51,12 +51,14 @@ func TestMailHostReloadOnlyCommandBoundary(t *testing.T) {
 					if len(args) != 2 || args[0] != "-h" {
 						t.Fatalf("configuration write: %s %v", name, args)
 					}
+					// As postconf prints them: one line per value, an empty
+					// line for a setting that is not set.
 					if args[1] == "tls_server_sni_maps" {
-						return nil, nil
+						return []byte("\n"), nil
 					}
 					for _, item := range mailtlsconfig.PostfixSettings(plan.Myhostname, cert, key) {
 						if args[1] == item[0] {
-							return []byte(item[1]), nil
+							return []byte(item[1] + "\n"), nil
 						}
 					}
 				case "systemctl":
@@ -164,11 +166,11 @@ func TestMailHostReloadRequiresTheServedCertificateCheck(t *testing.T) {
 			t.Fatalf("reload sent without a listener check: %v", args)
 		case name == "postconf" && len(args) == 2:
 			if args[1] == "tls_server_sni_maps" {
-				return nil, nil
+				return []byte("\n"), nil
 			}
 			for _, item := range mailtlsconfig.PostfixSettings(plan.Myhostname, cert, key) {
 				if args[1] == item[0] {
-					return []byte(item[1]), nil
+					return []byte(item[1] + "\n"), nil
 				}
 			}
 		case name == "dovecot":

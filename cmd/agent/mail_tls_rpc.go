@@ -733,17 +733,11 @@ func (snapshot mailTLSFileSnapshot) restore() error {
 }
 
 func snapshotMailTLSState(run mailTLSCommandRunner) (*mailTLSStateSnapshot, error) {
-	snapshot := &mailTLSStateSnapshot{}
-	for _, name := range postfixTLSManagedSettings {
-		out, err := run("postconf", "-h", name)
-		if err != nil {
-			return nil, mailTLSCommandError("postconf read "+name, out, err)
-		}
-		snapshot.postfixSettings = append(snapshot.postfixSettings, postfixTLSSettingSnapshot{
-			name:  name,
-			value: strings.TrimSpace(string(out)),
-		})
+	settings, err := snapshotPostfixTLSSettings(run)
+	if err != nil {
+		return nil, err
 	}
+	snapshot := &mailTLSStateSnapshot{postfixSettings: settings}
 
 	for _, path := range []string{
 		postfixSNIPath,
@@ -764,6 +758,35 @@ func snapshotMailTLSState(run mailTLSCommandRunner) (*mailTLSStateSnapshot, erro
 	}
 	snapshot.dovecotFile = dovecotSnapshot
 	return snapshot, nil
+}
+
+// snapshotPostfixTLSSettings reads the Postfix settings a mail TLS change
+// writes, each as the one value postconf prints for it. It only reads.
+// snapshotPostfixTLSSettings, posta TLS değişikliğinin yazdığı Postfix
+// ayarlarını, her birini postconf'un yazdığı tek değer olarak okur.
+func snapshotPostfixTLSSettings(run mailTLSCommandRunner) ([]postfixTLSSettingSnapshot, error) {
+	var settings []postfixTLSSettingSnapshot
+	for _, name := range postfixTLSManagedSettings {
+		out, err := run("postconf", "-h", name)
+		if err != nil {
+			return nil, mailTLSCommandError("postconf read "+name, out, err)
+		}
+		// The value that a rollback would write back. It is taken only when it
+		// was read as one value (postconf_value.go, 2026-10-09): the whole
+		// buffer used to be kept, a warning of postconf's included, and for a
+		// setting that is not set the kept "value" was that warning line.
+		// Nothing has been changed when the snapshot is taken, so a setting
+		// that cannot be read ends the operation here.
+		// Geri almanın yazacağı değer. Yalnızca tek bir değer olarak
+		// okunduysa alınır; okunamayan bir ayar işlemi burada, hiçbir şey
+		// değiştirilmeden bitirir.
+		value, known := postconfOneValue(out)
+		if !known {
+			return nil, fmt.Errorf("nothing was changed: %w", &postconfUnreadError{setting: name, command: "postconf -h " + name})
+		}
+		settings = append(settings, postfixTLSSettingSnapshot{name: name, value: value})
+	}
+	return settings, nil
 }
 
 func mailTLSCommandError(label string, output []byte, err error) error {
@@ -812,6 +835,30 @@ func reloadMailTLSService(service string, run mailTLSCommandRunner) error {
 	return nil
 }
 
+// restorePostfixTLSSettings writes each snapshot value back with `postconf -e`.
+// A snapshot holds only values that were read as one value; should it ever
+// hold anything else (a line break, a message of postconf's), that text is not
+// written and the setting is reported as not restored (2026-10-09; measured on
+// a private main.cf: a warning line kept as the "value" of a setting that was
+// not set was written into main.cf by this command).
+// restorePostfixTLSSettings, anlık görüntüdeki her değeri `postconf -e` ile
+// geri yazar. Değer olarak okunmamış bir metin asla geri yazılmaz.
+func restorePostfixTLSSettings(settings []postfixTLSSettingSnapshot, run mailTLSCommandRunner) []error {
+	var restoreErrors []error
+	for _, setting := range settings {
+		if !postconfRestorable(setting.value) {
+			restoreErrors = append(restoreErrors, fmt.Errorf(
+				"restore postconf %s: the snapshot holds no value for it that was read as one value; nothing was written for this setting", setting.name))
+			continue
+		}
+		out, err := run("postconf", "-e", setting.name+"="+setting.value)
+		if err != nil {
+			restoreErrors = append(restoreErrors, mailTLSCommandError("restore postconf "+setting.name, out, err))
+		}
+	}
+	return restoreErrors
+}
+
 func (snapshot *mailTLSStateSnapshot) rollback(run mailTLSCommandRunner) error {
 	var rollbackErrors []error
 	for _, fileSnapshot := range snapshot.files {
@@ -822,12 +869,7 @@ func (snapshot *mailTLSStateSnapshot) rollback(run mailTLSCommandRunner) error {
 	if err := snapshot.dovecotFile.restore(); err != nil {
 		rollbackErrors = append(rollbackErrors, fmt.Errorf("restore %s: %w", snapshot.dovecotFile.path, err))
 	}
-	for _, setting := range snapshot.postfixSettings {
-		out, err := run("postconf", "-e", setting.name+"="+setting.value)
-		if err != nil {
-			rollbackErrors = append(rollbackErrors, mailTLSCommandError("restore postconf "+setting.name, out, err))
-		}
-	}
+	rollbackErrors = append(rollbackErrors, restorePostfixTLSSettings(snapshot.postfixSettings, run)...)
 
 	if err := validatePostfixTLSConfig(run); err != nil {
 		rollbackErrors = append(rollbackErrors, fmt.Errorf("rollback postfix validation: %w", err))

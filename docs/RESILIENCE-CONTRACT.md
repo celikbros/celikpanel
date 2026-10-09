@@ -4111,8 +4111,13 @@ dates 2026-10-10 to 2026-10-12 of the entries above are labels of rounds.
     `systemctl stop postfix` returned 1 to 3 ms after `postfix@-.service` left
     `active`; the Agent's reading of that unit started 82 to 102 ms after it
     left `active`; the master ended 1008 to 1057 ms after, and the unit became
-    `failed` 2 to 4 ms after the master ended. So the answer was given about
-    0.9 seconds before Postfix had stopped. The owner's own `systemctl stop
+    `failed` 2 to 4 ms after the master ended. So the Agent had read the unit,
+    and taken the stop as verified, about 0.9 seconds before Postfix had
+    stopped. (Corrected after intake of the evidence, 2026-10-09: an earlier
+    form of this sentence said the answer "was given" then. The HTTP answer
+    itself took 1.9 to 3.3 seconds, so it reached the caller after Postfix
+    had stopped; what came too early was the reading it rested on.) The
+    owner's own `systemctl stop
     postfix` on the same guest, sampled every 10 ms: it returned after 24 ms;
     the unit showed `deactivating (stop)`, `Result=success`, until its stop
     command (`postmulti -i - -p stop`, which refuses main.cf and exits 1 after
@@ -4268,3 +4273,151 @@ dates 2026-10-10 to 2026-10-12 of the entries above are labels of rounds.
     into a value.
   - No guest held a unit between two states for the whole wait; the two new
     notes have no native record.
+
+### A value read from postconf is one line: Postfix's own warning is never taken as a value, and a setting that cannot be read stops the change before it starts (invariants 2 and 4, 2026-10-09)
+
+D-025 invariants 2 (unknown is not absent, empty or success) and 4 (a mutation
+reads its pre-image and has a tested inverse); D-022, D-024. The path is the
+secure-mail certificate path: the mail TLS change with its snapshot and
+rollback (P0.4 area: snapshot and restore producers that compose) and the
+read-back that gates a mail certificate publication, also on the native renewal
+path (P0.5 area). No P0 item is closed or advanced. Source: the entry before
+this one, which named these readings as seen in the source and not measured;
+and one native reading of the real postconf (evidence
+`deploy/e2e/release-recovery/evidence/set4c-20261009/`). Nothing here was
+observed on an installed server. The defect is in the published alpha.81 as
+well. 2026-10-09 is the calendar date.
+
+- **Confirmed in the source at `1f182a483`.**
+  - Every mail command of the Agent is run with both output streams in one
+    buffer (`cmd/agent/mail_command.go`: `runMailTLSCommand`,
+    `runMailTLSMutationCommand`, `CombinedOutput`).
+  - *The snapshot.* `snapshotMailTLSState` (`cmd/agent/mail_tls_rpc.go`) read
+    nine Postfix settings with `postconf -h <name>` and kept the trimmed buffer
+    of each as the value. It is called at the start of `reconcileMailTLSHost`,
+    before the first change, by both mail TLS entry points. On any failure
+    after that, `rollback` restored the files and then ran `postconf -e
+    <name>=<kept text>` for every setting.
+  - *The read-back.* `verifyMailTLSConfiguration`
+    (`cmd/agent/mail_tls_sync_commit.go`) read the same settings the same way
+    and compared the trimmed buffer with the committed value for equality. It
+    runs after a mail TLS change and before a mail certificate is published, on
+    the native renewal path as well. A warning in the buffer therefore could
+    not make a differing setting match; it made a matching one differ.
+  - *The expanded reading.* `postconfExpandedContext`
+    (`cmd/agent/mail_stack_rpc.go`) feeds only the alias database repair of the
+    mail installation, which splits the text at commas and at the first colon
+    and looks for the file.
+- **Measured** (the real postconf, `postconf -c <private directory>`, exit
+  status 0 in every reading; `reading/`, `reading-2/`).
+  - A line with a comment after other text: the warning is written first, then
+    the value. An unused parameter: the value first, then the warning. A
+    setting that is not set: an empty line, then the warning. Started by its
+    path the message begins `/usr/sbin/postconf: warning: `, by its name
+    `postconf: warning: `. `postconf -d mail_version` printed no warning with
+    either line.
+  - What the old snapshot kept, handed to the rollback's own command on a
+    private main.cf. A setting that is set (two lines): postconf exits 1 with
+    "fatal: -e, -X, or -# accepts no multi-line input" and main.cf is
+    unchanged, so that setting would not have been restored. A setting that is
+    not set, with an unused parameter in main.cf: the kept text is the warning
+    line alone, postconf exits 0, and main.cf gains `tls_server_sni_maps =
+    /usr/sbin/postconf: warning: ...: unused parameter: campaign_note=raised
+    for the campaign`. So the statement "a rollback writes the warning into
+    main.cf" is confirmed for a setting that is not set and refuted for one
+    that is set.
+  - Not measured: a mail TLS change, a rollback or a certificate publication
+    themselves with such a main.cf (they need a certificate); Postfix 3.8.6 of
+    Ubuntu 24.04 for these settings (its warning for `queue_directory` is in
+    set4b); what Postfix does with the line that was written.
+- **What followed from it, before this change** (from the source and the
+  readings together; none of it was run).
+  - With an unused parameter in main.cf, which `postfix check` accepts: a mail
+    TLS change applied its settings and was then not verified (every read-back
+    differed), so it ended as changed and unverified; a mail certificate
+    publication was paused each time with "current Postfix/Dovecot TLS settings
+    could not be verified"; and a change that failed half-way rolled back to a
+    main.cf with the warning line as the value of every setting that had not
+    been set.
+- **Changed.**
+  - *One rule for a value read from postconf* (`cmd/agent/postconf_value.go`,
+    `postconfOneValue`). A line that is postconf's own message (the name it was
+    started under, `: `, then `warning`, `error`, `fatal` or `panic`) is not
+    part of the answer. What remains must be exactly one line ended by its line
+    break; that line is the value, and it may be empty. Anything else is
+    unknown. The queue directory of the entry before this one follows the same
+    function now.
+  - *The snapshot takes values and refuses otherwise*
+    (`snapshotPostfixTLSSettings`). A setting that cannot be read ends the
+    operation there with `postconfUnreadError`: nothing has been changed, the
+    outcome is "untouched", and the reason names the setting, the reading and
+    the two commands the owner runs.
+  - *A restore writes values only* (`restorePostfixTLSSettings`). Text that
+    holds a line break or a message of postconf's is not handed to `postconf
+    -e`; the setting is reported as not restored.
+  - *The read-back compares the value* (`verifyMailTLSConfiguration`). A
+    reading that is not one value is "not verified", which is neither a match
+    nor a difference.
+  - *The expanded reading returns the value or an error*
+    (`postconfExpandedContext`).
+  - *The streams are still read as one buffer.* The three runners and their
+    test doubles share one signature that returns a single buffer for every
+    mail command; reading the streams apart would have changed that seam for
+    every caller. The rule sits at the reading instead, and the doubles of the
+    affected tests now answer as postconf does (a line per value, an empty line
+    for a setting that is not set).
+- **Other places that read the output of postconf or doveconf.**
+  - Fixed here: the three above and `postfixQueueDirectory`.
+  - Not affected, standard output alone (`exec.Command(...).Output()`):
+    `postconfValue`, `postconfExpanded` (`mail_stack_rpc.go`), the mail health
+    reading (`mail_health_rpc.go`), the mail policy reading
+    (`mail_policy_rpc.go`, which already requires a value line), `doveconf -h
+    mail_plugins` (`mail_rpc.go`).
+  - Not affected, the exit status alone is used and the output only as the text
+    of a failure: every `doveconf -n` (`dovecot_dialect.go`,
+    `mail_service_verify.go`, `mail_stack_rpc.go`, `mail_submission_rpc.go`,
+    `mail_tls_rpc.go`, `main.go`), `postfix check`, `postfix status`, and the
+    writes `postconf -e`, `-M`, `-P`.
+  - Reads both streams, not changed: `postconf -d mail_version` in
+    `internal/services/version_detector.go` (the version shown for the service;
+    measured: no warning is printed with `-d` for the two lines; with another
+    message the version would be shown as unknown, nothing is written from it),
+    and `dovecot --version` (`dovecotIs24WithRunner`: the first field must be a
+    version or the dialect is unknown and the operation stops; whether Dovecot
+    can write to its error stream there was not measured).
+  - No place in `cmd/agent` or `internal/` parses the output of `postconf -n`
+    or `postconf -M`.
+- **API changes (for the release notes).** None in shape. A mail TLS change and
+  a mail certificate publication on a server whose main.cf makes postconf warn
+  now run as on any other server. A new reason text exists for a setting that
+  cannot be read (operation guidance, same date).
+- **Schema or version transition.** None: no database schema, no persisted
+  state, no RPC field. The snapshot lives in memory for one operation.
+- **Recovery behaviour.** Before: with a warning from postconf, a rollback
+  wrote the warning line as the value of each setting that had not been set and
+  could not restore any setting that had been set, which it reported as
+  "rollback incomplete" (outcome "ambiguous", which holds the ledger). After:
+  the snapshot holds values, so the same rollback restores them; a setting that
+  cannot be read stops the operation before the first change; a restore never
+  writes text that was not read as a value. Nothing retries by itself, as
+  before.
+- **Evidence.**
+  - Component tests only, with the measured bytes
+    (`cmd/agent/set4c_postconf_value_test.go`): the rule on every measured
+    shape and on shapes that are not one value; the snapshot keeps values with
+    a warning before, after, or after an empty line; the operation stops at the
+    snapshot with nothing but readings sent; the restore writes two values of
+    four and never a warning line; the read-back verifies committed settings
+    behind a warning, refuses a differing one although the warning holds the
+    committed value, and says "not verified" for a reading that is not one
+    value; the expanded reading; and the rule against the real postconf with a
+    private configuration directory where a postconf exists (it ran on the
+    development guest, Postfix 3.10.13).
+  - Native: the two readings of `set4c-20261009/`. They are readings of
+    postconf, not of the Agent.
+- **Open.**
+  - A mail TLS change that fails after its first change, and a mail certificate
+    publication, on a guest whose main.cf makes postconf warn: the rollback
+    restoring every setting and the publication going through have not been
+    measured.
+  - Postfix 3.8.6 (Ubuntu 24.04) for these settings, and Arch's Postfix.

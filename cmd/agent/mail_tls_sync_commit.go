@@ -605,7 +605,19 @@ func verifyMailTLSConfiguration(journal *mailTLSSyncJournal, certPath, keyPath s
 		if err != nil {
 			return mailTLSCommandError("read back postconf "+setting[0], out, err)
 		}
-		observed.Postfix[setting[0]] = string(out)
+		// What is compared is the one value postconf printed
+		// (postconf_value.go, 2026-10-09). The whole buffer used to be
+		// compared: with a warning of postconf's in it a setting that holds
+		// the committed value was read as different. A reading that is not
+		// one value is unknown, which is not a match and not a difference.
+		// Karşılaştırılan, postconf'un yazdığı tek değerdir. Tek bir değer
+		// olmayan okuma bilinmeyendir; ne eşleşmedir ne de fark.
+		value, known := postconfOneValue(out)
+		if !known {
+			return fmt.Errorf("read back postconf %s: the configuration was not verified: %w", setting[0],
+				&postconfUnreadError{setting: setting[0], command: "postconf -h " + setting[0]})
+		}
+		observed.Postfix[setting[0]] = value
 	}
 	if len(journal.SNI) > 0 {
 		observed.PostfixSNI, err = readConfig(postfixSNIPath)

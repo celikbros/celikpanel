@@ -3413,7 +3413,12 @@ kurulu bir sunucuda gözlenmedi. 2026-10-09 takvim tarihidir; üstteki kayıtlar
     çıktıktan 1 ile 3 ms sonra döndü; Agent'ın o birimi okuması, birim `active`
     durumundan çıktıktan 82 ile 102 ms sonra başladı; ana süreç 1008 ile 1057
     ms sonra bitti ve birim, ana süreç bittikten 2 ile 4 ms sonra `failed`
-    oldu. Yani yanıt, Postfix durmadan yaklaşık 0,9 saniye önce verildi. Aynı
+    oldu. Yani Agent birimi, Postfix durmadan yaklaşık 0,9 saniye önce okudu
+    ve durdurmayı doğrulanmış saydı. (Kanıtın giriş denetiminden sonra
+    düzeltildi, 2026-10-09: bu cümlenin önceki hali yanıtın o anda
+    "verildiğini" söylüyordu. HTTP yanıtının kendisi 1,9 ile 3,3 saniye sürdü;
+    yani çağırana Postfix durduktan sonra ulaştı. Erken olan, yanıtın
+    dayandığı okumaydı.) Aynı
     konukta sahibin kendi `systemctl stop postfix` komutu, 10 ms'de bir
     örneklenerek: komut 24 ms sonra döndü; birim, durdurma komutu (`postmulti
     -i - -p stop`; main.cf'i reddeder ve Postfix'in kendi bir saniyelik
@@ -3577,3 +3582,148 @@ kurulu bir sunucuda gözlenmedi. 2026-10-09 takvim tarihidir; üstteki kayıtlar
     düzeltilmelidir.
   - Hiçbir konuk bir birimi beklemenin tamamı boyunca iki durum arasında
     tutmadı; iki yeni notun gerçek sistem kaydı yoktur.
+
+### postconf'tan okunan değer tek bir satırdır: Postfix'in kendi uyarısı asla değer sayılmaz, okunamayan bir ayar da değişikliği başlamadan durdurur (ilke 2 ve 4, 2026-10-09)
+
+D-025 ilke 2 (bilinmeyen; yok, boş ya da başarı değildir) ve 4 (bir değişiklik
+ön görüntüsünü okur ve sınanmış bir tersine sahiptir); D-022, D-024. Yol,
+güvenli posta sertifikası yoludur: anlık görüntüsü ve geri almasıyla posta TLS
+değişikliği (P0.4 alanı: birbirine uyan anlık görüntü ve geri yükleme
+üreticileri) ve yerel yenileme yolunda da bir posta sertifikası yayımının
+önünde duran geri okuma (P0.5 alanı). Hiçbir P0 işi kapanmadı ya da ilerlemedi.
+Kaynak: bu okumaları kaynakta görülmüş ve ölçülmemiş diye adlandıran bir önceki
+kayıt ve gerçek postconf'un bir gerçek sistem okuması (kanıt
+`deploy/e2e/release-recovery/evidence/set4c-20261009/`). Buradaki hiçbir şey
+kurulu bir sunucuda gözlenmedi. Kusur yayımlanmış alpha.81'de de vardır.
+2026-10-09 takvim tarihidir.
+
+- **`1f182a483` kaynağında doğrulanan.**
+  - Agent'ın her posta komutu, iki çıktı akışı tek arabellekte toplanarak
+    çalıştırılır (`cmd/agent/mail_command.go`: `runMailTLSCommand`,
+    `runMailTLSMutationCommand`, `CombinedOutput`).
+  - *Anlık görüntü.* `snapshotMailTLSState` (`cmd/agent/mail_tls_rpc.go`) dokuz
+    Postfix ayarını `postconf -h <ad>` ile okuyor ve her birinin kırpılmış
+    arabelleğini değer olarak tutuyordu. İki posta TLS giriş noktası
+    tarafından, `reconcileMailTLSHost` başında, ilk değişiklikten önce
+    çağrılır. Bundan sonraki herhangi bir hatada `rollback` dosyaları geri
+    yüklüyor, ardından her ayar için `postconf -e <ad>=<tutulan metin>`
+    çalıştırıyordu.
+  - *Geri okuma.* `verifyMailTLSConfiguration`
+    (`cmd/agent/mail_tls_sync_commit.go`) aynı ayarları aynı biçimde okuyor ve
+    kırpılmış arabelleği kabul edilmiş değerle eşitlik için karşılaştırıyordu.
+    Bir posta TLS değişikliğinden sonra ve bir posta sertifikası yayımlanmadan
+    önce, yerel yenileme yolunda da çalışır. Arabellekteki bir uyarı bu yüzden
+    farklı bir ayarı eşleştiremezdi; eşleşen bir ayarı farklı gösterirdi.
+  - *Genişletilmiş okuma.* `postconfExpandedContext`
+    (`cmd/agent/mail_stack_rpc.go`) yalnızca posta kurulumunun alias veritabanı
+    onarımını besler; o da metni virgüllerden ve ilk iki noktadan böler ve
+    dosyayı arar.
+- **Ölçülen** (gerçek postconf, `postconf -c <özel dizin>`, her okumada çıkış
+  durumu 0; `reading/`, `reading-2/`).
+  - Başka bir metinden sonra yorum taşıyan satır: önce uyarı, sonra değer
+    yazılır. Kullanılmayan parametre: önce değer, sonra uyarı. Ayarlanmamış bir
+    ayar: boş bir satır, sonra uyarı. Yoluyla başlatıldığında ileti
+    `/usr/sbin/postconf: warning: ` ile, adıyla başlatıldığında `postconf:
+    warning: ` ile başlar. `postconf -d mail_version` iki satırın hiçbiriyle
+    uyarı yazmadı.
+  - Eski anlık görüntünün tuttuğu metin, geri almanın kendi komutuna özel bir
+    main.cf üzerinde verildi. Ayarlanmış bir ayar (iki satır): postconf "fatal:
+    -e, -X, or -# accepts no multi-line input" ile 1 döndürür ve main.cf
+    değişmez; yani o ayar geri yüklenmezdi. Ayarlanmamış bir ayar, main.cf'te
+    kullanılmayan bir parametre varken: tutulan metin yalnızca uyarı satırıdır,
+    postconf 0 döndürür ve main.cf'e `tls_server_sni_maps = /usr/sbin/postconf:
+    warning: ...: unused parameter: campaign_note=raised for the campaign`
+    satırı eklenir. Demek ki "geri alma uyarıyı main.cf'e yazar" ifadesi
+    ayarlanmamış bir ayar için doğrulandı, ayarlanmış bir ayar için çürütüldü.
+  - Ölçülmeyenler: böyle bir main.cf ile bir posta TLS değişikliğinin, bir geri
+    almanın ya da bir sertifika yayımının kendisi (sertifika gerektirir); bu
+    ayarlar için Ubuntu 24.04'ün Postfix 3.8.6 sürümü (`queue_directory` için
+    uyarısı set4b'dedir); Postfix'in yazılan satırla ne yaptığı.
+- **Bu değişiklikten önce bundan ne çıkıyordu** (kaynak ve okumalar birlikte;
+  hiçbiri çalıştırılmadı).
+  - main.cf'te `postfix check` denetiminin kabul ettiği kullanılmayan bir
+    parametre varken: bir posta TLS değişikliği ayarlarını uyguluyor, sonra
+    doğrulanamıyordu (her geri okuma farklı çıkıyordu) ve değişmiş ama
+    doğrulanmamış olarak bitiyordu; bir posta sertifikası yayımı her seferinde
+    "current Postfix/Dovecot TLS settings could not be verified" ile
+    duraklatılıyordu; yarı yolda başarısız olan bir değişiklik de, ayarlanmamış
+    her ayarın değeri uyarı satırı olan bir main.cf'e geri dönüyordu.
+- **Değişen.**
+  - *postconf'tan okunan değer için tek kural* (`cmd/agent/postconf_value.go`,
+    `postconfOneValue`). postconf'un kendi iletisi olan satır (başlatıldığı ad,
+    `: `, ardından `warning`, `error`, `fatal` ya da `panic`) yanıtın parçası
+    değildir. Geriye, satır sonuyla biten tam olarak bir satır kalmalıdır; o
+    satır değerdir ve boş olabilir. Başka her şey bilinmeyendir. Bir önceki
+    kaydın kuyruk dizini de artık aynı işlevi izler.
+  - *Anlık görüntü değerleri alır, aksi halde reddeder*
+    (`snapshotPostfixTLSSettings`). Okunamayan bir ayar işlemi orada
+    `postconfUnreadError` ile bitirir: hiçbir şey değiştirilmemiştir, sonuç
+    "dokunulmadı"dır ve neden ayarın, okumanın ve sahibin çalıştıracağı iki
+    komutun adını verir.
+  - *Geri yükleme yalnızca değer yazar* (`restorePostfixTLSSettings`). Satır
+    sonu ya da postconf iletisi taşıyan metin `postconf -e` komutuna verilmez;
+    ayar geri yüklenmedi diye bildirilir.
+  - *Geri okuma değeri karşılaştırır* (`verifyMailTLSConfiguration`). Tek bir
+    değer olmayan okuma "doğrulanmadı"dır; ne eşleşmedir ne de fark.
+  - *Genişletilmiş okuma değeri ya da bir hata döndürür*
+    (`postconfExpandedContext`).
+  - *Akışlar yine tek arabellek olarak okunur.* Üç çalıştırıcı ve test
+    ikizleri, her posta komutu için tek bir arabellek döndüren aynı imzayı
+    paylaşır; akışları ayrı okumak bu ek yerini bütün çağıranlar için
+    değiştirirdi. Kural bunun yerine okumanın yapıldığı yerdedir; etkilenen
+    testlerin ikizleri de artık postconf gibi yanıt verir (her değer için bir
+    satır, ayarlanmamış bir ayar için boş bir satır).
+- **postconf ya da doveconf çıktısını okuyan diğer yerler.**
+  - Burada düzeltilenler: yukarıdaki üçü ve `postfixQueueDirectory`.
+  - Etkilenmeyenler, yalnızca standart çıktı (`exec.Command(...).Output()`):
+    `postconfValue`, `postconfExpanded` (`mail_stack_rpc.go`), posta sağlık
+    okuması (`mail_health_rpc.go`), posta politikası okuması
+    (`mail_policy_rpc.go`; zaten bir değer satırı ister), `doveconf -h
+    mail_plugins` (`mail_rpc.go`).
+  - Etkilenmeyenler, yalnızca çıkış durumu kullanılır, çıktı ise ancak bir
+    hatanın metni olur: her `doveconf -n` (`dovecot_dialect.go`,
+    `mail_service_verify.go`, `mail_stack_rpc.go`, `mail_submission_rpc.go`,
+    `mail_tls_rpc.go`, `main.go`), `postfix check`, `postfix status` ve
+    `postconf -e`, `-M`, `-P` yazmaları.
+  - İki akışı birden okuyan, değiştirilmeyenler:
+    `internal/services/version_detector.go` içindeki `postconf -d mail_version`
+    (hizmet için gösterilen sürüm; ölçüldü: `-d` ile iki satır için uyarı
+    yazılmaz; başka bir iletiyle sürüm bilinmiyor diye gösterilirdi, ondan
+    hiçbir şey yazılmaz) ve `dovecot --version` (`dovecotIs24WithRunner`: ilk
+    alan bir sürüm olmalıdır, yoksa lehçe bilinmeyendir ve işlem durur;
+    Dovecot'un orada hata akışına yazıp yazamayacağı ölçülmedi).
+  - `cmd/agent` ya da `internal/` içinde hiçbir yer `postconf -n` ya da
+    `postconf -M` çıktısını ayrıştırmaz.
+- **API değişiklikleri (sürüm notları için).** Biçimde yok. main.cf'i
+  postconf'u uyarı vermeye iten bir sunucuda posta TLS değişikliği ve posta
+  sertifikası yayımı artık başka her sunucudaki gibi çalışır. Okunamayan bir
+  ayar için yeni bir neden metni vardır (işlem yönlendirmesi, aynı tarih).
+- **Şema ya da sürüm geçişi.** Yok: veritabanı şeması yok, kalıcı durum yok,
+  RPC alanı yok. Anlık görüntü tek bir işlem boyunca bellekte yaşar.
+- **Kurtarma davranışı.** Önce: postconf'tan bir uyarı varken geri alma,
+  ayarlanmamış her ayarın değeri olarak uyarı satırını yazıyor ve ayarlanmış
+  hiçbir ayarı geri yükleyemiyordu; bunu "rollback incomplete" diye
+  bildiriyordu (sonuç "belirsiz"; defteri tutar). Sonra: anlık görüntü
+  değerleri tutar, dolayısıyla aynı geri alma onları geri yükler; okunamayan
+  bir ayar işlemi ilk değişiklikten önce durdurur; geri yükleme değer olarak
+  okunmamış bir metni asla yazmaz. Önceki gibi hiçbir şey kendiliğinden yeniden
+  denemez.
+- **Kanıt.**
+  - Yalnızca bileşen testleri, ölçülen baytlarla
+    (`cmd/agent/set4c_postconf_value_test.go`): kural, ölçülen her biçimde ve
+    tek bir değer olmayan biçimlerde; anlık görüntü, uyarı önce, sonra ya da
+    boş bir satırdan sonra geldiğinde değerleri tutar; işlem, okumadan başka
+    hiçbir şey gönderilmeden anlık görüntüde durur; geri yükleme dört değerin
+    ikisini yazar ve asla bir uyarı satırı yazmaz; geri okuma, bir uyarının
+    ardındaki kabul edilmiş ayarları doğrular, uyarı kabul edilmiş değeri
+    taşısa da farklı bir ayarı reddeder ve tek bir değer olmayan okuma için
+    "doğrulanmadı" der; genişletilmiş okuma; ve bir postconf bulunan yerde özel
+    bir yapılandırma diziniyle gerçek postconf'a karşı kural (geliştirme
+    konuğunda çalıştı, Postfix 3.10.13).
+  - Gerçek sistem: `set4c-20261009/` altındaki iki okuma. Bunlar Agent'ın
+    değil, postconf'un okumalarıdır.
+- **Açık.**
+  - main.cf'i postconf'u uyarı vermeye iten bir konukta, ilk değişikliğinden
+    sonra başarısız olan bir posta TLS değişikliği ve bir posta sertifikası
+    yayımı: geri almanın her ayarı geri yüklediği ve yayımın geçtiği ölçülmedi.
+  - Bu ayarlar için Postfix 3.8.6 (Ubuntu 24.04) ve Arch'ın Postfix'i.

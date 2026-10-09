@@ -5227,3 +5227,48 @@ tarihinde denendi" diye taşır ve değişmedi. Düzeltilmiş kaynakla bir konuk
 (her birinde dört Durdur’un dördü) ve her birinde bir içe aktarımın listeleri
 (`left_out: [dns]`); `not_chosen`, `none_in_archive` ve `none_imported`
 durumları, iki yeni not ve bütün ekranlar ölçülmedi.
+
+### postconf'tan okunan değer tek bir satırdır: Postfix'in kendi uyarısı asla değer sayılmaz, okunamayan bir ayar da değişikliği başlamadan durdurur (2026-10-09)
+
+Bileşen testleri ve gerçek postconf'un özel bir yapılandırma dizinine karşı tek
+bir gerçek sistem okumasıyla (Debian 13 geliştirme konuğunda Postfix 3.10.13;
+kanıt `deploy/e2e/release-recovery/evidence/set4c-20261009/`) kaynak durumu.
+Bunun için hiçbir sunucuda ya da konukta posta TLS değişikliği, sertifika ya da
+geri alma çalıştırılmadı. Kurulu bir sunucuda hiçbir şey gözlenmedi. Neyin
+okunduğu ve neyin değiştiği için aynı tarihli ve aynı başlıklı dayanıklılık
+sözleşmesi kaydına bakın. Bu kayıt tek cümleyi tutar.
+
+**Metnin izlediği kural.** Agent'ın değerini tek bir değer olarak okuyamadığı
+ayar bilinmeyendir. Tahmin edilmez, geri yazılmaz, karşılaştırılmaz. Yanıt
+ayarın ve gönderilen okumanın adını verir, sunucu sahibinin sunucuda neyi
+çalıştıracağını ve hiçbir şeyin kendiliğinden yeniden denemediğini söyler.
+postconf'un yazdığını yinelemez.
+
+**Okunamayan bir Postfix ayarı (Agent'ın nedeni, sunucunun İngilizcesiyle).**
+
+Üç yanıtın nedenidir; her biri neyi değiştirdiğini ya da değiştirmediğini
+ekler: anlık görüntüsünde duran posta TLS değişikliği ("mail TLS snapshot:
+nothing was changed: ..."), bir posta TLS değişikliğinden sonraki ya da bir
+posta sertifikası yayımından önceki geri okuma ("read back postconf {setting}:
+the configuration was not verified: ..."; sertifika yolunda sahip yine o yolun
+kendi cümlesini görür: "mail certificate publication paused: ...") ve posta
+kurulumunun alias veritabanı onarımı. Bunlar Panel'e, başarısız olan işlem için
+Agent'ın nedeni olarak döner; bu nedeni hangi ekranın, ne kadarını gösterdiği
+incelenmedi. `{command}`, `postconf -h {setting}` ya da `postconf -x -h
+{setting}` komutudur.
+
+- `postconfUnreadError`
+  API: "the value of the Postfix setting {setting} is not known: `{command}`
+  did not print exactly one value line besides its own messages. The server
+  owner runs `postconf -n` and `postfix check` on the server; they name the
+  line of /etc/postfix/main.cf that Postfix objects to. After it is corrected
+  the same operation can be started again; nothing retries by itself"
+
+**Sınırlar.** postconf'un olağan bir uyarısıyla (başka bir metinden sonra yorum
+taşıyan satır, kullanılmayan parametre, eksik master.cf) bu neden hiç görünmez:
+değer okunur ve işlem sürer; değişiklik de budur. Neden yalnızca, yanıt
+postconf'un kendi iletileri dışında tek bir değer satırı olmadığında görünür;
+hiçbir ölçüm bunu üretmedi, bileşen testleriyle kapsanır. Yol her zaman
+`/etc/postfix/main.cf` olarak verilir; Postfix'i başka bir dizini okuyan
+sunucuya doğru komutlar ve alışılmış yol söylenir. Türkçe cümle yoktur: bir
+ekranın değil, Agent'ın nedenidir. Hiçbir ekran değiştirilmedi.

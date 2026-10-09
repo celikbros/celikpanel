@@ -5287,3 +5287,51 @@ source: the note of a Stop of Postfix on Ubuntu 24.04 and on Debian 13, four
 Stops out of four on each, and one import's lists on each (`left_out: [dns]`);
 the states `not_chosen`, `none_in_archive` and `none_imported`, the two new
 notes and every screen were not.
+
+### A value read from postconf is one line: Postfix's own warning is never taken as a value, and a setting that cannot be read stops the change before it starts (2026-10-09)
+
+Source state with component tests and one native reading of the real postconf
+against a private configuration directory (Postfix 3.10.13 on the Debian 13
+development guest; evidence
+`deploy/e2e/release-recovery/evidence/set4c-20261009/`). No mail TLS change, no
+certificate and no rollback was run on a server or a guest for it. Nothing was
+observed on an installed server. What was read and what changed is in the
+resilience contract entry of the same date and title. This entry keeps the one
+sentence.
+
+**The rule the text follows.** A setting whose value the Agent could not read
+as one value is unknown. It is not guessed, not written back, and not compared.
+The answer names the setting and the reading that was sent, says what the
+server owner runs on the server, and says that nothing retries by itself. It
+does not repeat what postconf printed.
+
+**A Postfix setting that could not be read (the Agent's reason, in the server's
+English).**
+
+It is the cause of three answers, each of which adds what it did or did not
+change: the mail TLS change that stops at its snapshot ("mail TLS snapshot:
+nothing was changed: ..."), the read-back after a mail TLS change or before a
+mail certificate publication ("read back postconf {setting}: the configuration
+was not verified: ..."; on the certificate path the owner still gets that
+path's own sentence, "mail certificate publication paused: ..."), and the alias
+database repair of the mail installation. They are returned to the Panel as the
+Agent's reason for the operation that failed; which screen shows that reason,
+and how much of it, was not examined. `{command}` is `postconf -h {setting}` or
+`postconf -x -h {setting}`.
+
+- `postconfUnreadError`
+  API: "the value of the Postfix setting {setting} is not known: `{command}`
+  did not print exactly one value line besides its own messages. The server
+  owner runs `postconf -n` and `postfix check` on the server; they name the
+  line of /etc/postfix/main.cf that Postfix objects to. After it is corrected
+  the same operation can be started again; nothing retries by itself"
+
+**Limits.** With an ordinary warning of postconf's (a line with a comment after
+other text, an unused parameter, a missing master.cf) this reason does not
+appear at all: the value is read and the operation goes on, which is the
+change. The reason appears only when the answer is not one value line besides
+postconf's own messages, which no measurement produced; it is covered by
+component tests. The path is always given as `/etc/postfix/main.cf`; a server
+whose Postfix reads another directory is told the right commands and the usual
+path. There is no Turkish sentence: it is the Agent's reason, not a screen's.
+No screen was changed.

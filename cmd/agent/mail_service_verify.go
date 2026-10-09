@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -265,24 +264,13 @@ func postfixQueueDirectory(run mailServiceRunner) (directory string, known bool)
 	return postconfOnePath(out)
 }
 
-// A line postconf writes about its own run: "postconf: warning: ...", or the
-// same after the path it was started under.
-var postconfOwnMessage = regexp.MustCompile(`^(?:\S*/)?postconf: (?:warning|error|fatal|panic): `)
-
 // postconfOnePath picks the one absolute path out of what `postconf -h <name>`
-// printed, with postconf's own messages left out.
+// printed, by the rule every reading of a postconf value follows
+// (postconf_value.go): postconf's own messages left out, exactly one line.
 func postconfOnePath(out []byte) (string, bool) {
-	value := ""
-	for _, raw := range strings.Split(string(out), "\n") {
-		line := strings.TrimSpace(raw)
-		if line == "" || postconfOwnMessage.MatchString(line) {
-			continue
-		}
-		if value != "" {
-			// Two lines that are not messages: which one is the value is not known.
-			return "", false
-		}
-		value = line
+	value, known := postconfOneValue(out)
+	if !known {
+		return "", false
 	}
 	// A clean absolute path below the root: nothing that needs joining or
 	// resolving, and never the root itself.
