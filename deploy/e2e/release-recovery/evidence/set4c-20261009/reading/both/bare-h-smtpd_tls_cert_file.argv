@@ -1,0 +1,1 @@
+postconf -c /var/tmp/cp-set4c-run/conf-both -h smtpd_tls_cert_file

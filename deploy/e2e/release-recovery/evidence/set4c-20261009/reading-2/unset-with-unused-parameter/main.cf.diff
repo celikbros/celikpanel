@@ -1,0 +1,7 @@
+--- /var/tmp/cp-set4c-run/reading-2/unset-with-unused-parameter/main.cf.before.txt	2026-10-09 19:14:59.672698351 +0300
++++ /var/tmp/cp-set4c-run/reading-2/unset-with-unused-parameter/main.cf.after.txt	2026-10-09 19:15:01.536770828 +0300
+@@ -5,3 +5,4 @@
+ smtpd_tls_cert_file = /etc/ssl/celikpanel-mail/default.crt
+ smtpd_tls_key_file = /etc/ssl/celikpanel-mail/default.key
+ campaign_note = raised for the campaign
++tls_server_sni_maps = /usr/sbin/postconf: warning: /var/tmp/cp-set4c-run/conf2-unset-with-unused-parameter/main.cf: unused parameter: campaign_note=raised for the campaign

@@ -1,0 +1,1 @@
+/usr/sbin/postconf: warning: /var/tmp/cp-set4c-run/conf2-set-with-unused-parameter/main.cf: unused parameter: campaign_note=raised for the campaign

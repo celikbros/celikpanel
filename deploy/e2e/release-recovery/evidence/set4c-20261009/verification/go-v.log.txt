@@ -1,0 +1,9 @@
+--- PASS: TestPostconfValueIsOneLineOfTheAnswer (0.00s)
+--- PASS: TestMailTLSSnapshotKeepsValuesNotWarnings (0.00s)
+--- PASS: TestMailTLSRefusesAtTheSnapshotBeforeAnyChange (0.00s)
+--- PASS: TestMailTLSRestoreNeverWritesAWarningLine (0.00s)
+--- PASS: TestMailTLSReadBackComparesTheValue (0.00s)
+--- PASS: TestPostconfExpandedReadFollowsTheRule (0.01s)
+--- PASS: TestPostconfValueRuleAgainstTheRealPostconf (2.42s)
+PASS
+ok  	github.com/alicelik/celikpanel/cmd/agent	2.526s

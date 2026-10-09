@@ -1,0 +1,2 @@
+/usr/sbin/postconf: warning: open /var/tmp/cp-set4c-run/conf-restore/master.cf: No such file or directory
+/usr/sbin/postconf: warning: /var/tmp/cp-set4c-run/conf-restore/main.cf: unused parameter: campaign_note=raised for the campaign
