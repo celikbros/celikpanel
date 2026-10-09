@@ -8,8 +8,8 @@
 #       Prepare and start a NEW lab /var/tmp/cp-release-drill-LAB_NAME, run the one cell on its node, then
 #       stop the lab (disks and evidence retained).
 #
-# CELL: set2-debian13 | set2-ubuntu | set2-arch   (settings_writes_trial.py; groups A and B)
-#       rid-debian13  | rid-ubuntu  | rid-arch    (request_identity_trial.py; group C)
+# CELL: set2-debian13 | set2-ubuntu | set2-arch   (settings_writes_trial.py; groups A and B; set3-* likewise)
+#       rid-debian13  | rid-ubuntu  | rid-arch    (request_identity_trial.py; group C; rid3-* likewise)
 # ARTIFACTS_JSON: an upd1-artifacts.json from run-upd1.sh build (the baseline B is the installed candidate).
 # One cell per new lab. Never reuse a lab or a guest. No update is started by either cell kind.
 set -euo pipefail
@@ -20,8 +20,8 @@ LAB=(python3 "$HERE/lab.py")
 usage() { sed -n '2,15p' "${BASH_SOURCE[0]}" >&2; exit 2; }
 driver_for() {
     case $1 in
-        set2-debian13|set2-ubuntu|set2-arch) DRIVER=(python3 "$HERE/settings_writes_trial.py") ;;
-        rid-debian13|rid-ubuntu|rid-arch) DRIVER=(python3 "$HERE/request_identity_trial.py") ;;
+        set2-debian13|set2-ubuntu|set2-arch|set3-debian13|set3-ubuntu|set3-arch) DRIVER=(python3 "$HERE/settings_writes_trial.py") ;;
+        rid-debian13|rid-ubuntu|rid-arch|rid3-debian13|rid3-ubuntu|rid3-arch) DRIVER=(python3 "$HERE/request_identity_trial.py") ;;
         *) usage ;;
     esac
 }

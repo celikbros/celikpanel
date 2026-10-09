@@ -582,13 +582,21 @@ def owner_reload_hook(args: dict) -> dict:
             raise Refused("a reload hook is already applied")
         made_directory = not directory.exists()
         directory.mkdir(mode=0o755, exist_ok=True)
-        HOOK_SCRIPT.write_text("#!/bin/sh\n# owner hook: tell PostgreSQL to re-read its files, then reload the pooler\n"
-                               "kill -HUP \"$MAINPID\" || exit 1\nexec /usr/bin/systemctl reload " + HOOK_POOLER + "\n")
+        if args.get("variant") == "fail-before-signal":
+            # set3: the owner's hook reloads the pooler FIRST and signals the server only when that worked, so a
+            # failing pooler reload leaves the server unsignalled (it does not re-read its files).
+            HOOK_SCRIPT.write_text("#!/bin/sh\n# owner hook: reload the pooler first, then tell PostgreSQL to re-read its files\n"
+                                   "/usr/bin/systemctl reload " + HOOK_POOLER + " || exit 1\nexec kill -HUP \"$MAINPID\"\n")
+        else:
+            HOOK_SCRIPT.write_text("#!/bin/sh\n# owner hook: tell PostgreSQL to re-read its files, then reload the pooler\n"
+                                   "kill -HUP \"$MAINPID\" || exit 1\nexec /usr/bin/systemctl reload " + HOOK_POOLER + "\n")
         os.chmod(HOOK_SCRIPT, 0o755)
         dropin.write_text("[Service]\nExecReload=\nExecReload=" + str(HOOK_SCRIPT) + "\n")
         record.write_text(json.dumps({"unit": unit, "dropin": str(dropin), "made_directory": made_directory}))
         reloaded = run(["systemctl", "daemon-reload"], timeout=60)
-        return {"action": "owner-reload-hook", "applied": {"unit": unit, "dropin": str(dropin), "script": str(HOOK_SCRIPT)},
+        return {"action": "owner-reload-hook", "variant": args.get("variant") or "signal-then-fail",
+                "script_text": HOOK_SCRIPT.read_text(),
+                "applied": {"unit": unit, "dropin": str(dropin), "script": str(HOOK_SCRIPT)},
                 "daemon_reload": reloaded, "exec_reload": run(["systemctl", "show", unit, "-p", "ExecReload"]).get("stdout", ""),
                 "at": utc()}
     done = json.loads(record.read_text())

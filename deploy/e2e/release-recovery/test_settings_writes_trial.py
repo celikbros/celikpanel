@@ -9,6 +9,7 @@ import sys
 import unittest
 
 HERE = Path(__file__).resolve().parent
+REPO = HERE.parents[2]
 
 
 def load(name):
@@ -25,13 +26,56 @@ native = load("guest_settings_native")
 ARTIFACT = {"version": "v0.1.0-alpha.81", "commit": "a" * 40, "sha256": "b" * 64}
 
 
+class Set3Tests(unittest.TestCase):
+    def test_the_answers_of_the_second_round_are_the_products(self):
+        rpc = (REPO / "internal" / "transport" / "rpc.go").read_text(encoding="utf-8")
+        outcome = (REPO / "cmd" / "panel" / "service_action_outcome.go").read_text(encoding="utf-8")
+        for expected in (trial.NOT_RUNNING, trial.RELOAD_REREAD, trial.RELOAD_NOT_REREAD):
+            self.assertIn('"' + expected[2] + '"', rpc)
+            self.assertIn('"' + expected[1] + '"', outcome)
+        self.assertEqual(trial.NOT_RUNNING[0], 409)
+        self.assertIn("status = http.StatusConflict", outcome)
+
+    def test_collection_time_shapes(self):
+        base = trial.base
+        fabricated = "$6$" + "saltsalt" + "$" + "A" * 86
+        for text in (fabricated, "{SHA512-CRYPT}" + fabricated, "{SSHA256}" + "QUJD" * 12, "$2y$10$" + "b" * 53,
+                     "SCRAM-SHA-256$4096:" + "c2FsdA==" + "$" + "QUJD" * 11 + ":" + "QUJD" * 11, "*" + "A1" * 20,
+                     "$argon2id$v=19$m=65536,t=3,p=4$" + "c2FsdHNhbHQ" + "$" + "QUJD" * 10):
+            self.assertEqual(base.hash_shaped_count("x " + text + " y"), 1, text[:12])
+            self.assertNotIn(text, base.shape_text('{"k": "' + text + '"}'))
+        for harmless in ("a 40-digit sha1 da39a3ee5e6b4b0d3255bfef95601890afd80709", "price $5 and $6", "{id}/admin-account",
+                         "echo $1 $2", "2 * 3"):
+            self.assertEqual(base.hash_shaped_count(harmless), 0, harmless)
+            self.assertEqual(base.shape_text(harmless), harmless)
+        key = "A" * 43 + "="
+        self.assertEqual(base.shape_text("PrivateKey = " + key), "PrivateKey = [REDACTED]")
+        self.assertEqual(base.shape_text('"preshared_key": "' + key + '"'), '"preshared_key": "[REDACTED]"')
+        self.assertEqual(base.shape_text("PublicKey = " + key), "PublicKey = " + key)   # peers are named by it
+
+        class Plain:
+            def text(self, value):
+                return value.replace("registered", "[REDACTED]")
+        shaped = base.shape_redactor(Plain())
+        self.assertEqual(shaped.text("registered " + fabricated), "[REDACTED] " + base.HASH_SHAPED_MARK)
+
+    def test_the_hook_that_fails_before_the_signal(self):
+        source = (HERE / "guest_settings_native.py").read_text(encoding="utf-8")
+        self.assertIn('"fail-before-signal"', source)
+        before, after = source.split('"fail-before-signal"', 1)[1].split("else:", 1)
+        self.assertLess(before.index("systemctl reload"), before.index("kill -HUP"))
+        self.assertLess(after.index("kill -HUP"), after.index("systemctl reload"))
+
+
 class CellTests(unittest.TestCase):
     def test_cells_cover_the_three_platforms_and_mail_follows_the_catalogue(self):
         self.assertEqual(sorted(trial.CELLS), ["set1-arch", "set1-debian13", "set1-ubuntu",
-                                               "set2-arch", "set2-debian13", "set2-ubuntu"])
+                                               "set2-arch", "set2-debian13", "set2-ubuntu",
+                                               "set3-arch", "set3-debian13", "set3-ubuntu"])
         for platform in ("arch", "debian13", "ubuntu"):
             first, second = trial.CELLS["set1-" + platform], trial.CELLS["set2-" + platform]
             self.assertEqual(dataclasses.replace(second, name=first.name), first)
+            self.assertEqual(dataclasses.replace(trial.CELLS["set3-" + platform], name=first.name), first)
         for name, cell in trial.CELLS.items():
             self.assertEqual(cell.name, name)
             self.assertIn("postgresql", cell.components)

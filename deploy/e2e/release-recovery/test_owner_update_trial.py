@@ -1464,6 +1464,41 @@ class Upd3CellTests(unittest.TestCase):
         self.assertEqual(t.classify_outcome("real-start", succeeded, False), "real-start-candidate-reported-success")
 
 
+class Set3PublishedBaselineTests(unittest.TestCase):
+    def test_the_ledger_is_judged_against_the_pinned_released_digests(self):
+        pins = t.ledger_pins()
+        self.assertEqual(sorted(pins["migrations"]), [38, 42, 43])
+
+        def reading(version, guarded):
+            return {"schema_version": version, "ledger_rows": version, "ledger_contiguous": True,
+                    "ledger_sha256": pins["migrations"][version], "schema_sha256": "x" * 64,
+                    "schema_sha256_without_statistics": pins["schemas"][version], "statistics_tables": ["sqlite_stat1"],
+                    "request_identities": {"exists": guarded}, "integrity_check": ["ok"], "foreign_key_check_clean": True}
+        self.assertEqual(t.ledger_verdict(reading(43, True), 43, pins)["verdict"], "as-expected")
+        self.assertEqual(t.ledger_verdict(reading(42, False), 42, pins)["verdict"], "as-expected")
+        for wrong in (reading(43, True), reading(42, True)):
+            self.assertEqual(t.ledger_verdict(wrong, 42, pins)["verdict"], "different")
+        self.assertEqual(t.ledger_verdict(reading(42, False), 43, pins)["verdict"], "different")
+        self.assertFalse(t.ledger_verdict(dict(reading(43, True), ledger_sha256="0" * 64), 43, pins)["facts"]["ledger_is_the_released_one"])
+        self.assertEqual(t.ledger_verdict(None, 42, pins)["verdict"], "inconclusive")
+        helper = (HERE / t.SCHEMA_LEDGER_HELPER).read_text(encoding="utf-8")
+        self.assertIn("mode=ro", helper)
+        self.assertIn("query_only=ON", helper)
+        self.assertNotIn("INSERT", helper.upper().replace("INSERTS", ""))
+        self.assertEqual(t.site_account_name("upd1-owner.test"), "upd1_owner_test")
+
+    def test_the_guard_and_the_published_baseline(self):
+        middleware = "".join(path.read_text(encoding="utf-8") for path in (REPO / "cmd" / "panel").glob("request_identity*.go"))
+        self.assertIn(t.REQUEST_ID_HEADER, middleware)
+        self.assertIn("REQUEST_ID_REQUIRED", middleware)
+        self.assertIn(t.RELOAD_SENTENCE, middleware)
+        self.assertTrue((REPO / "internal" / "db" / "migrations").glob("043_*"))
+        self.assertEqual(len(list((REPO / "internal" / "db" / "migrations").glob("043_*.sql"))), 1)
+        profile = t.BASELINE_REFS["v0.1.0-alpha.81"]
+        self.assertEqual((profile["baseline"], profile["candidate"]), (("v0.1.0-alpha.81", 81), ("v0.1.0-alpha.82", 82)))
+        self.assertTrue(profile["unpatched"])
+
+
 class Upd3FixturePatchTests(unittest.TestCase):
     def test_start_check_patch_sits_in_the_function_the_check_and_the_real_start_share(self):
         source = (REPO / t.START_CHECK_FILE).read_text(encoding="utf-8")
@@ -1514,7 +1549,7 @@ class Upd3FixturePatchTests(unittest.TestCase):
         text = (HERE / "build-upd1-artifacts.sh").read_text()
         self.assertIn('startcheck=$(commit_fixture start-check', text)
         self.assertIn('realstart=$(commit_fixture real-start', text)
-        self.assertEqual(text.count('git -C "$clone" checkout --quiet --detach "$good"'), 2)
+        self.assertEqual(text.count('git -C "$clone" checkout --quiet --detach "$good"'), 3)   # set3: once more in the published-alpha.81 mode
         self.assertIn('update-ref "refs/upd1/$kind"', text)
         self.assertIn('s_json=$(build "$startcheck" v0.1.0-alpha.82)', text)
         self.assertIn('r_json=$(build "$realstart" v0.1.0-alpha.82)', text)
@@ -1524,7 +1559,15 @@ class Upd3FixturePatchTests(unittest.TestCase):
         # upd7: the published-baseline mode builds B from the tag (seam only), then G and D over the source.
         self.assertIn("--kind baseline-ref --baseline-ref", text)
         self.assertIn('b_json=$(build "$baseline" "$BASELINE_REF")', text)
-        self.assertIn('g_json=$(build "$good" v0.1.0-alpha.81)', text)
+        self.assertIn('g_json=$(build "$good" "$c_version")', text)
+        self.assertIn("c_version=v0.1.0-alpha.81 b_seq=80 c_seq=81", text)
+        # set3: the published v0.1.0-alpha.81 is built unpatched (the tag commit itself); candidates are alpha.82.
+        self.assertIn("c_version=v0.1.0-alpha.82 b_seq=81 c_seq=82 b_parent=", text)
+        self.assertIn('baseline=$tag_commit', text)
+        self.assertIn('startcheck=$(commit_fixture start-check "test(fixture): set3 start-check candidate', text)
+        self.assertIn('[[ -z $startcheck ]] || s_json=$(build "$startcheck" "$c_version")', text)
+        self.assertEqual(t.baseline_ref_patched("v0.1.0-alpha.81"), ())
+        self.assertEqual(t.baseline_ref_patched("v0.1.0-alpha.80"), t.BASELINE_REF_PATCHED)
         self.assertIn("b_seq=80 c_seq=81 b_parent=$tag_commit", text)
         self.assertIn("grep -q DIFFERENT", text)
         wrapper = (HERE / "run-upd1.sh").read_text().splitlines()

@@ -15,6 +15,11 @@ modes and records it as an owner action.
   S7 owner, group and mode of every file the Panel wrote
   S8 (set2) service actions on the real units: start, stop, restart and reload through the Services page's route
 
+set3 (2026-10-12): S8 follows the second round of corrections: a Reload of a stopped Postfix or Dovecot answers
+409 ``not_running``; the PostgreSQL reload hook answers ``reload_reread`` (and a hook that fails before it signals the
+server ``reload_not_reread``); Stop of Postfix with a refused main.cf answers success when the master is gone; no
+service action is refused ``server_setup_busy`` while the setup waits at ``access_dns``. The cells ``set3-*`` name it.
+
 set2 (2026-10-11): the expectations of S1 f, S2 c/f/g/h, S4 g, S5 c and S6 follow the corrections the product made
 after the first native run (set1), and the cells ``set2-*`` name that run. The ``set1-*`` names stay valid.
 
@@ -98,7 +103,15 @@ CELLS = {
     "set2-debian13": SettingsCell("set2-debian13", "debian13", "web_mail", MAIL_PRESET + ("postgresql",), True),
     "set2-ubuntu": SettingsCell("set2-ubuntu", "ubuntu", "web_mail", MAIL_PRESET + ("postgresql",), True),
     "set2-arch": SettingsCell("set2-arch", "arch", "web", WEB_PRESET + ("postgresql",), False),
+    # set3: the same guests and profiles, measured after the corrections of 2026-10-11 (P3, P3b, O11 in S8).
+    "set3-debian13": SettingsCell("set3-debian13", "debian13", "web_mail", MAIL_PRESET + ("postgresql",), True),
+    "set3-ubuntu": SettingsCell("set3-ubuntu", "ubuntu", "web_mail", MAIL_PRESET + ("postgresql",), True),
+    "set3-arch": SettingsCell("set3-arch", "arch", "web", WEB_PRESET + ("postgresql",), False),
 }
+# set3: what the corrections of 2026-10-11 answer (cmd/panel/service_action_outcome.go, internal/transport/rpc.go).
+NOT_RUNNING = (409, "SERVICE_ACTION_FAILED", "not_running")
+RELOAD_REREAD = (502, "SERVICE_ACTION_FAILED", "reload_reread")
+RELOAD_NOT_REREAD = (502, "SERVICE_ACTION_FAILED", "reload_not_reread")
 
 SECTIONS = (
     ("S1-cron", "scheduled tasks: the owner's crontab", False),
@@ -1780,7 +1793,14 @@ class SettingsTrial(base.Trial):
         for service in order:
             for action, situation in (("start", "already running"), ("reload", ""), ("restart", ""), ("stop", ""),
                                       ("reload", "while stopped"), ("start", "")):
-                self.service_action(service, action, situation)
+                # set3 (P3 b): a Reload of a stopped Postfix or Dovecot is an unmet prerequisite, answered 409.
+                stopped_mail = situation == "while stopped" and service in ("postfix", "dovecot")
+                done = self.service_action(service, action, situation, NOT_RUNNING if stopped_mail else None)
+                if stopped_mail:
+                    self.check(f"{service} (reload while stopped): the daemon was stopped before and is stopped after; nothing was started",
+                               not done["daemon_before"]["running"] and not done["daemon_after"]["running"],
+                               {"before": done["daemon_before"]["running"], "after": done["daemon_after"]["running"],
+                                "vars": done.get("vars")})
             end = self.daemon(service, self.service_state(service + "-healthy-end", service))
             self.check(f"{service}: runs again after the healthy sequence", end["running"], end)
 
@@ -1795,7 +1815,13 @@ class SettingsTrial(base.Trial):
                            True if refused["check"].get("returncode") not in (0, None) else None, refused["check"])
                 self.service_action("postfix", "reload", situation, (502, "SERVICE_ACTION_FAILED", "check"))
                 self.service_action("postfix", "restart", situation, (502, "SERVICE_ACTION_FAILED", "check"))
-                self.service_action("postfix", "stop", situation)
+                stopped = self.service_action("postfix", "stop", situation)
+                # set3 (P3b, was O8): Stop is judged by the master's process, so it is answered as done.
+                self.check("postfix (refused configuration): Stop answers success and the master is gone",
+                           stopped["status"] == 200 and stopped["said"] == "success" and not stopped["daemon_after"]["running"],
+                           {k: stopped[k] for k in ("status", "code", "reason", "answer", "vars")}
+                           | {"master_running_after": stopped["daemon_after"]["running"],
+                              "units_after": stopped["daemon_after"]["units"]})
                 self.service_action("postfix", "start", situation, (502, "SERVICE_ACTION_FAILED", "check"))
             finally:
                 self.owner("postfix-typo-removed", "owner-edit", path=MAIN_CF, content_b64=b64(base_text))
@@ -1809,8 +1835,12 @@ class SettingsTrial(base.Trial):
         hook = self.owner("postgresql-reload-hook", "owner-reload-hook", action="apply", unit=instance)
         self.current["reload_hook"] = {"unit": instance, "exec_reload": hook.get("exec_reload")}
         try:
-            failed = self.service_action("postgresql", "reload", situation)
+            failed = self.service_action("postgresql", "reload", situation, RELOAD_REREAD)
             moved = "pg_conf_load_time() moved" in failed["reload_evidence"]
+            self.check("postgresql (reload hook): the server did re-read its files natively (pg_conf_load_time() moved, "
+                       "same postmaster)", moved and failed["daemon_before"]["pid"] == failed["daemon_after"]["pid"],
+                       {"conf_load_time": [failed["daemon_before"]["conf_load_time"], failed["daemon_after"]["conf_load_time"]],
+                        "pid": [failed["daemon_before"]["pid"], failed["daemon_after"]["pid"]]})
             detail = str((failed.get("vars") or {}).get("detail") or "") + " " + str(failed["answer"].get("error") or "")
             self.current["reload_hook"].update(server_reread_its_files=moved, answer_detail=detail.strip(),
                                                reload_result=failed["daemon_after"]["reload_result"])
@@ -1822,6 +1852,27 @@ class SettingsTrial(base.Trial):
             self.service_action("postgresql", "restart", situation)
         finally:
             self.owner("postgresql-reload-hook-removed", "owner-reload-hook", action="restore", unit=instance)
+        # set3 (P3 a, the other reading): a hook that fails BEFORE it signals the server. The unit reports the reload
+        # as failed and the server was never signalled, so it did not re-read its files.
+        situation = "the owner's reload hook fails before it signals the server"
+        hook = self.owner("postgresql-reload-hook-before-signal", "owner-reload-hook", action="apply", unit=instance,
+                          variant="fail-before-signal")
+        self.current["reload_hook_before_signal"] = {"unit": instance, "exec_reload": hook.get("exec_reload"),
+                                                     "script": hook.get("script_text")}
+        try:
+            unread = self.service_action("postgresql", "reload", situation, RELOAD_NOT_REREAD)
+            still = unread["daemon_before"]["conf_load_time"] == unread["daemon_after"]["conf_load_time"] \
+                and bool(unread["daemon_after"]["conf_load_time"])
+            self.current["reload_hook_before_signal"].update(
+                server_did_not_reread=still, reload_result=unread["daemon_after"]["reload_result"],
+                answer_detail=str((unread.get("vars") or {}).get("detail") or ""))
+            self.check("postgresql (hook fails before the signal): natively the server did not re-read its files "
+                       "(pg_conf_load_time() unchanged, same postmaster)",
+                       still and unread["daemon_before"]["pid"] == unread["daemon_after"]["pid"],
+                       {"conf_load_time": [unread["daemon_before"]["conf_load_time"], unread["daemon_after"]["conf_load_time"]],
+                        "pid": [unread["daemon_before"]["pid"], unread["daemon_after"]["pid"]]})
+        finally:
+            self.owner("postgresql-reload-hook-before-signal-removed", "owner-reload-hook", action="restore", unit=instance)
         self.service_action("postgresql", "reload", "after the hook was removed")
 
         # PostgreSQL with a postgresql.conf the server refuses at start
@@ -1847,6 +1898,17 @@ class SettingsTrial(base.Trial):
                 self.note("PostgreSQL was started by the owner on the server (`systemctl start` of the instance unit): "
                           "neither Start nor Restart on the Services page brought it back", now)
             self.check("postgresql: answers again at the end", now["running"], now)
+
+        # set3 (O11): while the setup waits at access_dns no service action is refused `server_setup_busy`.
+        actions = self.current.get("actions") or []
+        refusals = [dict(item, service=a["service"], action=a["action"], situation=a["situation"])
+                    for a in actions for item in a["refused_while_busy"]]
+        waiting = self.state.get("setup_waiting") or {}
+        self.current["busy_refusals"] = {"actions": len(actions), "refusals": refusals,
+                                         "server_setup_busy": sum(1 for r in refusals if r.get("code") == "server_setup_busy"),
+                                         "setup_waiting": {k: waiting.get(k) for k in ("phase", "code", "status") if k in waiting}}
+        self.check("no service action of this section was refused `server_setup_busy` while the setup waits at access_dns",
+                   self.current["busy_refusals"]["server_setup_busy"] == 0, self.current["busy_refusals"])
 
     # -- collect and result -------------------------------------------------------------
 

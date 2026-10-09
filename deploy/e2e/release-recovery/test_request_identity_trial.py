@@ -1,4 +1,5 @@
 """Offline tests of the set2 ``request-identity`` cell: the pure rules of the driver and of its guest helper."""
+import dataclasses
 import gzip
 import hashlib
 import importlib.util
@@ -67,9 +68,58 @@ class ProductContractTests(unittest.TestCase):
         self.assertEqual(native.site_username("set2-import-seq.test"), "set2_import_seq_test")
 
 
+class Set3Tests(unittest.TestCase):
+    def test_the_guest_helper_searches_the_shapes_the_driver_redacts(self):
+        self.assertEqual(native.HASH_SHAPED, trial.base.HASH_SHAPED.pattern)
+        fabricated = b"$6$" + b"saltsalt" + b"$" + b"A" * 86
+        self.assertEqual(len(native.HASH_SHAPED_BYTES.findall(b'{"crypt_hash": "' + fabricated + b'"}')), 1)
+        self.assertEqual(len(native.HASH_SHAPED_BYTES.findall(b'{"has_password": true, "code": "IMPORT_PARTIAL"}')), 0)
+
+    def test_the_answers_the_corrections_define(self):
+        handlers = (REPO / "cmd" / "panel" / "import_handlers.go").read_text(encoding="utf-8")
+        for key in trial.MAILBOX_KEYS:
+            self.assertIn('json:"' + key + '"', handlers.split("type importPreviewMailbox struct", 1)[1].split("}", 1)[0])
+        for word in ('"partial"', '"IMPORT_PARTIAL"', 'json:"imported"', 'json:"not_imported"', 'json:"domain_status"'):
+            self.assertIn(word, handlers)
+        self.assertIn('"CERTIFICATE_ISSUE_FAILED"', (REPO / "cmd" / "panel" / "certificate_issue_failure.go").read_text(encoding="utf-8"))
+        self.assertIn('"authority_unreachable"', (REPO / "internal" / "transport" / "ssl_contracts.go").read_text(encoding="utf-8"))
+        self.assertIn('"password_set"', (REPO / "cmd" / "panel" / "database_v2_handlers.go").read_text(encoding="utf-8"))
+        self.assertEqual(trial.version_number("10.11.14-MariaDB-0ubuntu0.24.04.1"), "10.11.14")
+        self.assertEqual(trial.version_number("15.1"), "15.1")
+        self.assertIsNone(trial.version_number("VERSION()"))
+        steps = [{"step": "domain", "ok": True}, {"step": "files", "ok": False}, {"step": "mail", "ok": True},
+                 {"step": "finalize", "ok": False}]
+        self.assertEqual(trial.partial_lists(steps), (["domain", "mail"], ["files"]))
+
+    def test_hostile_members_and_the_known_password(self):
+        members = native.cpmove_members("a.test", "u", "d", 0, 0, 3, shadow_hash=b"$6$salt$" + b"h" * 86)
+        relative = {name.split("/", 1)[1]: data for name, data in members}
+        self.assertEqual(relative["homedir/etc/a.test/shadow"], b"info:$6$salt$" + b"h" * 86 + b":19000::::::\n")
+        self.assertEqual(sorted(native.payload_files(members)), ["assets/site.css", "index.html"])
+        self.assertEqual(trial.HOSTILE_KINDS, native.HOSTILE_KINDS)
+        for kind in native.HOSTILE_KINDS:
+            with tarfile.open(fileobj=io.BytesIO(native.cpmove_archive(members, True, kind)), mode="r:gz") as archive:
+                listed = {member.name: member for member in archive.getmembers()}
+            hostile = [name for name in listed if native.ESCAPE_PREFIX in name]
+            self.assertTrue(hostile, kind)
+            if kind == "dotdot":
+                self.assertTrue(any("/../../" in name for name in hostile))
+            if kind == "absolute":
+                self.assertIn("etc/" + native.ESCAPE_PREFIX + "-absolute.txt", [name.lstrip("/") for name in hostile])
+            if kind == "symlink":
+                self.assertTrue(any(listed[name].issym() and listed[name].linkname == "/etc" for name in hostile))
+        self.assertIn("cpmove-u/homedir/public_html", listed)       # every set3 archive holds the directory member
+        self.assertEqual(native.PHP_PROBE_MARK + ":42:", trial.PHP_PROBE_MARK)
+        self.assertEqual("/" + native.PHP_PROBE, trial.PHP_PROBE_PATH)
+
+
 class CellTests(unittest.TestCase):
     def test_cells_and_plan(self):
-        self.assertEqual(sorted(trial.CELLS), ["rid-arch", "rid-debian13", "rid-ubuntu"])
+        self.assertEqual(sorted(trial.CELLS), ["rid-arch", "rid-debian13", "rid-ubuntu",
+                                               "rid3-arch", "rid3-debian13", "rid3-ubuntu"])
+        for platform in ("arch", "debian13", "ubuntu"):
+            self.assertEqual(dataclasses.replace(trial.CELLS["rid3-" + platform], name="rid-" + platform),
+                             trial.CELLS["rid-" + platform])
         self.assertFalse(set(trial.CELLS) & set(trial.base.CELLS))
         self.assertFalse(set(trial.CELLS) & set(trial.sw.CELLS))
         plan = trial.build_plan(trial.CELLS["rid-ubuntu"], {"baseline": ARTIFACT}, "/var/tmp/cp-release-drill-x", 18443)
@@ -184,7 +234,12 @@ class GuestHelperRuleTests(unittest.TestCase):
         self.assertTrue(all(mode.startswith(("read-", "owner-", "lab-")) for mode in native.MODES))
         self.assertEqual(sorted(m for m in native.MODES if not m.startswith("read-")),
                          ["lab-isolate-acme", "lab-kill-panel", "owner-change-site", "owner-cpmove-fixture",
-                          "owner-restart-panel", "owner-seed-rows", "owner-seed-site"])
+                          "owner-nginx-php-snippet", "owner-php-probe", "owner-restart-panel", "owner-seed-rows", "owner-seed-site"])
+        # set3: the snippet an owner may place for a second Arch reading is the one the product's vhost template includes
+        template = (REPO / "internal" / "services" / "templates" / "nginx" / "vhost.conf.tmpl").read_text(encoding="utf-8")
+        self.assertIn("include snippets/" + native.NGINX_PHP_SNIPPET.name + ";", template)
+        self.assertIn("include fastcgi.conf;", native.NGINX_PHP_SNIPPET_TEXT)
+        self.assertIn("fastcgi_split_path_info ^(.+?\\.php)(/.*)$;", native.NGINX_PHP_SNIPPET_TEXT)
         unit = (REPO / "deploy" / "systemd" / "celikpanel-panel.service").read_text(encoding="utf-8")
         self.assertIn("Restart=on-failure", unit)     # what brings the Panel back after lab-kill-panel
         self.assertNotIn("restore", native.lab_isolate_acme.__doc__.lower().split("isolation")[0])
