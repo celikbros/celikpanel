@@ -21,6 +21,35 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-030 · The Panel's secure-connection rule covers the Panel's own host name only
+
+*October 10, 2026 (clock date) · Owner decision; in source with a component test, native reading pending*
+
+Over HTTPS the Panel sent `Strict-Transport-Security: max-age=31536000;
+includeSubDomains`. A browser that had opened the Panel at a name therefore
+refused plain HTTP on every name under that name for a year. Those names are
+not the Panel's: the owner may serve them elsewhere, without a certificate, or
+not through CelikPanel at all (D-022). Hosted sites never carried
+`includeSubDomains` or `preload`; a test already forbade it there. No decision
+record covered the Panel's own header.
+
+The owner decided on 2026-10-10 that the rule is limited to the Panel's own
+host name and that the change enters v0.1.0-alpha.82. The Panel now sends
+`Strict-Transport-Security: max-age=31536000` over HTTPS and nothing over plain
+HTTP. `preload` stays out.
+
+What an owner sees: nothing on the Panel itself. A browser replaces the rule it
+holds for the Panel's host with the one it reads on its next visit to the
+Panel, so the wider rule ends for that browser at that visit; a browser that
+does not open the Panel again keeps the old rule until its year runs out, and
+the owner can clear it in that browser's own settings. This was not measured in
+a browser; it is how the header is specified (RFC 6797, section 8.1).
+
+Not changed: the header's duration, the Panel's other security headers, hosted
+sites' headers.
+
+---
+
 ## D-029 · Every state-changing request carries one identity; a replay never runs twice
 
 *October 10, 2026 · Planner decision on the owner's standing direction (D-024: a lost reply never starts a duplicate mutation; D-025 invariant 4); batch 1 in source with component tests, native cell pending*

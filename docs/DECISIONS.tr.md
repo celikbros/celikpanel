@@ -21,6 +21,35 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-030 · Panelin güvenli bağlantı kuralı yalnız Panelin kendi ana makine adını kapsar
+
+*10 Ekim 2026 (saat tarihi) · Sahip kararı; kaynakta ve bir bileşen testiyle, gerçek sistem okuması bekliyor*
+
+Panel, HTTPS üzerinde `Strict-Transport-Security: max-age=31536000;
+includeSubDomains` gönderiyordu. Paneli bir adda açmış olan tarayıcı bu yüzden
+o adın altındaki her adda bir yıl boyunca düz HTTP'yi reddediyordu. O adlar
+Panelin değildir: sahibi onları başka yerde, sertifikasız ya da hiç CelikPanel
+üzerinden olmadan sunuyor olabilir (D-022). Barındırılan siteler hiçbir zaman
+`includeSubDomains` ya da `preload` taşımadı; bir test bunu orada zaten
+yasaklıyordu. Panelin kendi başlığını kapsayan bir karar kaydı yoktu.
+
+Sahip 10 Ekim 2026'da kuralın Panelin kendi ana makine adıyla sınırlanmasına ve
+değişikliğin v0.1.0-alpha.82'ye girmesine karar verdi. Panel artık HTTPS
+üzerinde `Strict-Transport-Security: max-age=31536000` gönderir, düz HTTP
+üzerinde hiçbir şey göndermez. `preload` eklenmez.
+
+Sahibin gördüğü: Panelin kendisinde hiçbir şey değişmez. Tarayıcı, Panelin ana
+makinesi için tuttuğu kuralı Panele bir sonraki girişinde okuduğuyla
+değiştirir; yani geniş kural o tarayıcı için o girişte sona erer. Paneli bir
+daha açmayan tarayıcı eski kuralı bir yılı dolana kadar tutar; sahibi onu o
+tarayıcının kendi ayarlarından silebilir. Bu bir tarayıcıda ölçülmedi; başlığın
+tanımı böyledir (RFC 6797, bölüm 8.1).
+
+Değişmeyenler: başlığın süresi, Panelin diğer güvenlik başlıkları, barındırılan
+sitelerin başlıkları.
+
+---
+
 ## D-029 · Durum değiştiren her istek tek bir kimlik taşır; yineleme asla iki kez çalışmaz
 
 *10 Ekim 2026 · Sahibin yürürlükteki yönü üzerine planlayıcı kararı (D-024: kaybolan yanıt asla ikinci bir değişiklik başlatmaz; D-025 ilke 4); birinci grup kaynakta ve bileşen testleriyle, gerçek sistem denemesi bekliyor*

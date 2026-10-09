@@ -81,8 +81,10 @@ func TestSecurityHeaders(t *testing.T) {
 	if rec.Header().Get("Content-Security-Policy") == "" {
 		t.Error("missing Content-Security-Policy")
 	}
-	if rec.Header().Get("Strict-Transport-Security") == "" {
-		t.Error("HSTS missing when secure=true")
+	// D-030: the Panel's own host only. Sub-domains and preload lists are not
+	// the Panel's to decide for the owner.
+	if got := rec.Header().Get("Strict-Transport-Security"); got != "max-age=31536000" {
+		t.Errorf("Strict-Transport-Security = %q, want the Panel's own host for one year and nothing else", got)
 	}
 }
 
