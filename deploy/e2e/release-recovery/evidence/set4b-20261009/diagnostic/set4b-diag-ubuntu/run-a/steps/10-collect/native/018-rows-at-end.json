@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-09T13:56:28Z",
+  "domain_id": 1,
+  "mode": "read-panel-rows",
+  "owner_action": false,
+  "rows": {
+    "backup_schedules": [],
+    "mail_catch_all": []
+  },
+  "schema": "celikpanel/set1-native/v1"
+}

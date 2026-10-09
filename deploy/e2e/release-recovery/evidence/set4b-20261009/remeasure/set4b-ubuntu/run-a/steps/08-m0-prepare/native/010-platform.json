@@ -1,0 +1,111 @@
+{
+  "at": "2026-10-09T15:39:36Z",
+  "etc_php_directories": [
+    "/etc/php/8.3"
+  ],
+  "kernel": "6.8.0-138-generic",
+  "mode": "read-platform",
+  "nginx_directory": [
+    "conf.d",
+    "fastcgi.conf",
+    "fastcgi_params",
+    "koi-utf",
+    "koi-win",
+    "mime.types",
+    "modules-available",
+    "modules-enabled",
+    "nginx.conf",
+    "proxy_params",
+    "scgi_params",
+    "sites-available",
+    "sites-enabled",
+    "snippets",
+    "uwsgi_params",
+    "win-utf"
+  ],
+  "nginx_fastcgi_conf": {
+    "exists": true,
+    "group": "root",
+    "kind": "file",
+    "mode": "0644",
+    "owner": "root",
+    "owner_package": {
+      "answer": "nginx-common: /etc/nginx/fastcgi.conf",
+      "asked": "dpkg -S /etc/nginx/fastcgi.conf",
+      "exists": true,
+      "path": "/etc/nginx/fastcgi.conf",
+      "returncode": 0
+    },
+    "path": "/etc/nginx/fastcgi.conf",
+    "sha256": "dc4a3e6f16eb08000fb4a4ba6aaf9faeb50d55a3eaf152907938632f5b85b3aa"
+  },
+  "nginx_fastcgi_params": {
+    "exists": true,
+    "group": "root",
+    "kind": "file",
+    "mode": "0644",
+    "owner": "root",
+    "path": "/etc/nginx/fastcgi_params",
+    "sha256": "4e0945432e68d9d7cac62356766fbea8652790c15a7332a42af1a78877225c32"
+  },
+  "nginx_php_snippet": {
+    "bytes": 423,
+    "exists": true,
+    "group": "root",
+    "kind": "file",
+    "mode": "0644",
+    "owner": "root",
+    "owner_package": {
+      "answer": "nginx-common: /etc/nginx/snippets/fastcgi-php.conf",
+      "asked": "dpkg -S /etc/nginx/snippets/fastcgi-php.conf",
+      "exists": true,
+      "path": "/etc/nginx/snippets/fastcgi-php.conf",
+      "returncode": 0
+    },
+    "path": "/etc/nginx/snippets/fastcgi-php.conf",
+    "sha256": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "text": "# regex to split $uri to $fastcgi_script_name and $fastcgi_path\nfastcgi_split_path_info ^(.+?\\.php)(/.*)$;\n\n# Check that the PHP script exists before passing it\ntry_files $fastcgi_script_name =404;\n\n# Bypass the fact that try_files resets $fastcgi_path_info\n# see: http://trac.nginx.org/nginx/ticket/321\nset $path_info $fastcgi_path_info;\nfastcgi_param PATH_INFO $path_info;\n\nfastcgi_index index.php;\ninclude fastcgi.conf;\n"
+  },
+  "nginx_snippets_directory": {
+    "exists": true,
+    "group": "root",
+    "kind": "directory",
+    "mode": "0755",
+    "owner": "root",
+    "path": "/etc/nginx/snippets"
+  },
+  "nginx_test": {
+    "at": "2026-10-09T15:39:36Z",
+    "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "nginx_version": "nginx version: nginx/1.24.0 (Ubuntu)",
+  "os_release": {
+    "ID": "ubuntu",
+    "PRETTY_NAME": "Ubuntu 24.04.4 LTS",
+    "VERSION_CODENAME": "noble",
+    "VERSION_ID": "24.04"
+  },
+  "owner_action": false,
+  "package_manager": "dpkg",
+  "packages": {
+    "certbot": "2.9.0-1",
+    "dovecot-core": "1:2.3.21+dfsg1-2ubuntu6.5",
+    "mariadb-server": "1:10.11.14-0ubuntu0.24.04.1",
+    "nginx": "1.24.0-2ubuntu7.18",
+    "nginx-common": "1.24.0-2ubuntu7.18",
+    "php-fpm": "2:8.3+93ubuntu2",
+    "php8.3-fpm": "8.3.6-0ubuntu0.24.04.11",
+    "postfix": "3.8.6-1ubuntu0.1",
+    "postgresql": "16+257build1.1",
+    "postgresql-16": "16.15-0ubuntu0.24.04.1",
+    "systemd": "255.4-1ubuntu8.17"
+  },
+  "php_fpm_programs": {
+    "php-fpm8.3": [
+      "PHP 8.3.6 (fpm-fcgi) (built: Sep  2 2026 12:56:02)"
+    ]
+  },
+  "schema": "celikpanel/set4-native/v1"
+}

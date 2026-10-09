@@ -1,0 +1,5 @@
+2026-10-09T13:59:30Z removed /var/tmp/cp-release-drill-s4b-diag-ub/cells/d56105bfc57184889ce845cd/ubuntu/overlay.qcow2 bytes=1684209664 (evidence staged at set4b-20261009/diagnostic/set4b-diag-ubuntu/run-a, checksums verified)
+2026-10-09T14:19:42Z removed /var/tmp/cp-release-drill-s4b-diag-ub-b/cells/233ef994ff35c63f5dc20ce7/ubuntu/overlay.qcow2 bytes=1657077760 (evidence staged at set4b-20261009/diagnostic/set4b-diag-ubuntu/run-b, checksums verified)
+2026-10-09T15:41:57Z removed /var/tmp/cp-release-drill-s4b-ub-a/cells/30bf7b95263f936b5db7f0e9/ubuntu/overlay.qcow2 bytes=1690304512 (evidence staged at set4b-20261009/remeasure/set4b-ubuntu/run-a, checksums verified)
+2026-10-09T15:55:12Z removed /var/tmp/cp-release-drill-s4b-d13-a/cells/7e750a3b4b01329399a91110/arch/overlay.qcow2 bytes=142868480 (evidence staged at set4b-20261009/remeasure/set4b-debian13/run-a, checksums verified)
+2026-10-09T15:55:12Z removed /var/tmp/cp-release-drill-s4b-d13-a/cells/7e750a3b4b01329399a91110/debian13/overlay.qcow2 bytes=1730805760 (evidence staged at set4b-20261009/remeasure/set4b-debian13/run-a, checksums verified)

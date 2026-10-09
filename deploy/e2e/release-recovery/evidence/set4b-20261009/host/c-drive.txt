@@ -1,0 +1,4 @@
+﻿2026-10-09T13:34:17Z before set4b-diag-ubuntu free_bytes=77775593472 free_GiB=72.4
+2026-10-09T13:59:51Z before set4b-diag-ubuntu run-b free_bytes=74015141888 free_GiB=68.9
+2026-10-09T14:38:12Z before set4b-ubuntu run-a free_bytes=59447205888 free_GiB=55.4
+2026-10-09T15:41:59Z before set4b-debian13 run-a free_bytes=54416138240 free_GiB=50.7

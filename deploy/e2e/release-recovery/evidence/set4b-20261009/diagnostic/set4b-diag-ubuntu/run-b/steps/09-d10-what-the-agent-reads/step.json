@@ -1,0 +1,23 @@
+{
+  "checks": {
+    "checks": 17,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T14:19:26Z",
+    "notes": [],
+    "started_at": "2026-10-09T14:17:04Z",
+    "substeps": {
+      "S8 postfix start": "passed",
+      "S8 postfix stop": "passed",
+      "measured": "passed",
+      "section": "passed"
+    },
+    "title": "what the Agent reads around a Stop of Postfix whose unit ends failed (measurement only)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T14:19:26Z",
+  "name": "D10-what-the-agent-reads",
+  "started_at": "2026-10-09T14:17:04Z",
+  "verdict": "passed"
+}

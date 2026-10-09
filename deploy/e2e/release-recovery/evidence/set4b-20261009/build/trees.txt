@@ -1,0 +1,3 @@
+candidate de34e44859d49039972ae2e1f9f42ba12d9e1595 tree f46b90a341f524f3cbd31d11b244f2c8eecea9b0; baseline 9180c6f879a7b41f1b4b20b8023434116f3d92e2 tree f46b90a341f524f3cbd31d11b244f2c8eecea9b0
+### git diff --stat: the candidate source against this build's baseline (the installed archive)
+(no difference: the baseline fixture commit is an empty commit over the candidate)

@@ -1,0 +1,35 @@
+- **Kanıt.**
+
+  - Bileşen testleri. Agent: `set4_corrections_test.go` (postconf'un yazdığı
+    baytlar, `strace` kaydındaki haliyle, dizini verir; ana süreci durdurmadan
+    1009 ms sonrasına dek yaşayan ve birimi 1013 ms'ye dek `deactivating` olan
+    bir sunucuda ölçülen sıra: Durdur ana süreç bittikten sonra, notla
+    yanıtlanır; daha geç durulan bir birim, temiz biten bir birim, sınır içinde
+    hiç durulmayan bir birim (`unit_not_settled` notu, 29 okuma, durdurmadan
+    sonra okumadan başka hiçbir şey), okunamayan bir birim; tek bir yol
+    olmayan postconf yanıtı bilinmeyen sonuç olarak kalır; Debian düzeni notu
+    beklemeden ilk okumada verir). Panel: `set4_corrections_test.go` (iki not,
+    içe aktarımın üç listesi, işleyicinin adımları),
+    `set2_corrections_test.go`, `set3_corrections_test.go`. Ekranlar:
+    `web/tests/set4-corrections.test.mjs`, `set3-corrections.test.mjs` ve
+    yerel taklit sunucuya karşı gerçek bir Chrome
+    (`web/tools/browser-inspect`; `stopnote`, `updaterolledback`,
+    `importentries`, `importleftout` senaryoları; masaüstü ve telefon,
+    İngilizce ve Türkçe).
+
+  - Gerçek sistem, düzeltmeden önce: `set4b-20261009/diagnostic/` (yukarıdaki
+    kayıt; `run-a` koşusu ilk Durdur'dan önce sürücünün bir kusurunda durdu ve
+    yalnızca ondan önceki okumaları tutar).
+
+  - {{CONTRACT_EVIDENCE_TR}}
+
+- **Açık.**
+
+  - {{CONTRACT_OPEN_TR}}
+
+  - Yukarıda adı geçen diğer postconf değeri okumaları, postconf'u uyarı
+    vermeye iten bir main.cf ile ölçülmeli ve uyarıyı değere katıyorlarsa
+    düzeltilmelidir.
+
+  - Hiçbir konuk bir birimi beklemenin tamamı boyunca iki durum arasında
+    tutmadı; iki yeni notun gerçek sistem kaydı yoktur.

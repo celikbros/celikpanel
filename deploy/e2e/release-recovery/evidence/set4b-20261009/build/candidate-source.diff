@@ -1,0 +1,1759 @@
+diff --git a/cmd/agent/mail_service_verify.go b/cmd/agent/mail_service_verify.go
+index 33c1ab304..ad86be390 100644
+--- a/cmd/agent/mail_service_verify.go
++++ b/cmd/agent/mail_service_verify.go
+@@ -8,6 +8,7 @@ import (
+ 	"os"
+ 	"os/exec"
+ 	"path"
++	"regexp"
+ 	"strconv"
+ 	"strings"
+ 	"syscall"
+@@ -135,6 +136,13 @@ func (e *mailServiceError) Error() string {
+ var (
+ 	mailServiceSleep    = time.Sleep
+ 	mailServiceReadFile = os.ReadFile
++	// mailServiceIsDirectory reports that path is an existing directory. An
++	// error, a missing entry and anything that is not a directory are all
++	// "not known to be one".
++	mailServiceIsDirectory = func(path string) bool {
++		info, err := os.Stat(path)
++		return err == nil && info.IsDir()
++	}
+ 	// mailServiceExited reports whether err is the command's own exit status.
+ 	// Anything else (not found, killed at a deadline, a lost lease) says
+ 	// nothing about the service.
+@@ -211,17 +219,79 @@ func postfixMaster(run mailServiceRunner) (postfixMasterState, *mailServiceError
+ 		return postfixMasterState{}, mailServiceFailure("Postfix", mailServiceStageVerify, out, err)
+ 	}
+ 	state := postfixMasterState{running: true}
+-	if queue, err := run("postconf", "-h", "queue_directory"); err == nil {
+-		directory := strings.TrimSpace(string(queue))
+-		if path.IsAbs(directory) {
+-			if data, err := mailServiceReadFile(path.Join(directory, "pid", "master.pid")); err == nil {
+-				state.pid, _ = strconv.Atoi(strings.TrimSpace(string(data)))
+-			}
++	if directory, known := postfixQueueDirectory(run); known {
++		if data, err := mailServiceReadFile(path.Join(directory, "pid", "master.pid")); err == nil {
++			state.pid, _ = strconv.Atoi(strings.TrimSpace(string(data)))
+ 		}
+ 	}
+ 	return state, nil
+ }
+ 
++// postfixQueueDirectory asks Postfix for its queue directory. known is false
++// when the answer is not exactly one absolute path.
++//
++// Measured on Ubuntu 24.04 (set4b, 2026-10-09; strace on the Agent): with the
++// owner's line `default_process_limit = 200 # raised for the campaign` in
++// main.cf, `postconf -h queue_directory` exits 0 and writes
++//
++//	/usr/sbin/postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...
++//
++// to its error stream before `/var/spool/postfix` on its output. The command
++// is run with both streams in one buffer, the buffer was taken whole as the
++// directory, and because the program's own name is an absolute path the two
++// lines passed as one. The Agent then opened
++// `<warning line>\n/var/spool/postfix/pid/master.pid`, the kernel answered
++// "no such file", and that was read as "no master ever started here": the
++// master was taken as gone at the first look, 29 to 82 ms after `systemctl
++// stop postfix` had returned, and the Stop was answered `verified: stopped`
++// while the master lived for another second.
++//
++// So the directory is the one line that is not postconf's own message, and
++// nothing else: a message line begins with the name postconf was started
++// under, `: `, and the kind of message. Any other shape (no line, two lines,
++// a relative path) is not a directory, and the caller claims nothing.
++//
++// postfixQueueDirectory, Postfix'e kuyruk dizinini sorar. Yanıt tam olarak tek
++// bir mutlak yol değilse known false olur. Ubuntu 24.04'te ölçüldü: main.cf'te
++// Postfix'in uyardığı bir satır varken `postconf` uyarısını hata akışına,
++// dizini çıktısına yazar; ikisi tek arabellekte okunuyor ve bütünü dizin
++// sayılıyordu. Agent böylece var olmayan bir yolu açtı, "dosya yok" yanıtını
++// "ana süreç hiç başlamadı" diye okudu ve ana süreç yaşarken durduruldu dedi.
++func postfixQueueDirectory(run mailServiceRunner) (directory string, known bool) {
++	out, err := run("postconf", "-h", "queue_directory")
++	if err != nil {
++		return "", false
++	}
++	return postconfOnePath(out)
++}
++
++// A line postconf writes about its own run: "postconf: warning: ...", or the
++// same after the path it was started under.
++var postconfOwnMessage = regexp.MustCompile(`^(?:\S*/)?postconf: (?:warning|error|fatal|panic): `)
++
++// postconfOnePath picks the one absolute path out of what `postconf -h <name>`
++// printed, with postconf's own messages left out.
++func postconfOnePath(out []byte) (string, bool) {
++	value := ""
++	for _, raw := range strings.Split(string(out), "\n") {
++		line := strings.TrimSpace(raw)
++		if line == "" || postconfOwnMessage.MatchString(line) {
++			continue
++		}
++		if value != "" {
++			// Two lines that are not messages: which one is the value is not known.
++			return "", false
++		}
++		value = line
++	}
++	// A clean absolute path below the root: nothing that needs joining or
++	// resolving, and never the root itself.
++	if !path.IsAbs(value) || path.Clean(value) != strings.TrimRight(value, "/") {
++		return "", false
++	}
++	return value, true
++}
++
+ // applyPostfixVerified makes the running Postfix take up the configuration that
+ // is on disk and returns what happened (a mailService* state). A nil error
+ // means the answer is verified; a *mailServiceError says whether it is a
+@@ -387,19 +457,22 @@ func applyDovecotVerified(run mailServiceRunner, mode mailServiceMode) (string,
+ // another program.
+ //
+ // known is false when one of these could not be read: the queue directory was
+-// not answered, or a file could not be read for a reason other than "it does
+-// not exist". Then nothing is claimed.
++// not answered as one path (postfixQueueDirectory), or a file could not be
++// read for a reason other than "it does not exist". Then nothing is claimed.
++//
++// A missing master.pid is "no master ever started with this queue directory"
++// only where the directory that would hold it exists (2026-10-09): a path that
++// does not exist at all has no file in it either, and that says nothing about
++// a master. Measured on Ubuntu 24.04: a path made of two lines was opened, the
++// kernel answered "no such file", and a running master was reported as gone.
+ //
+ // postfixMasterProcess, Postfix ana sürecinin yaşayıp yaşamadığını Postfix'in
+ // kendi programlarına sormadan çekirdekten okur. Okunamayan bir şey varsa
+-// known false olur ve hiçbir şey ileri sürülmez.
++// known false olur ve hiçbir şey ileri sürülmez. master.pid dosyasının
++// olmaması, ancak onu tutacak dizin varsa "ana süreç hiç başlamadı" demektir.
+ func postfixMasterProcess(run mailServiceRunner) (alive bool, pid int, known bool) {
+-	queue, err := run("postconf", "-h", "queue_directory")
+-	if err != nil {
+-		return false, 0, false
+-	}
+-	directory := strings.TrimSpace(string(queue))
+-	if !path.IsAbs(directory) {
++	directory, answered := postfixQueueDirectory(run)
++	if !answered {
+ 		return false, 0, false
+ 	}
+ 	gone := func(err error) bool {
+@@ -407,8 +480,12 @@ func postfixMasterProcess(run mailServiceRunner) (alive bool, pid int, known boo
+ 	}
+ 	data, err := mailServiceReadFile(path.Join(directory, "pid", "master.pid"))
+ 	if err != nil {
+-		// No file: no master ever started with this queue directory.
+-		return false, 0, gone(err)
++		if !gone(err) {
++			return false, 0, false
++		}
++		// No file. That is "no master ever started with this queue
++		// directory" only when the directory that holds the file is there.
++		return false, 0, mailServiceIsDirectory(path.Join(directory, "pid"))
+ 	}
+ 	pid, err = strconv.Atoi(strings.TrimSpace(string(data)))
+ 	if err != nil || pid <= 0 {
+diff --git a/cmd/agent/mail_service_verify_test.go b/cmd/agent/mail_service_verify_test.go
+index 52ac86272..3f23be24c 100644
+--- a/cmd/agent/mail_service_verify_test.go
++++ b/cmd/agent/mail_service_verify_test.go
+@@ -142,9 +142,13 @@ func itoa(n int) string {
+ func installFakeMailHost(t *testing.T) *fakeMailHost {
+ 	t.Helper()
+ 	host := &fakeMailHost{masterPID: 36110, systemctlStarts: true, dovecotPID: 7000}
+-	oldSleep, oldRead, oldExited := mailServiceSleep, mailServiceReadFile, mailServiceExited
+-	t.Cleanup(func() { mailServiceSleep, mailServiceReadFile, mailServiceExited = oldSleep, oldRead, oldExited })
++	oldSleep, oldRead, oldExited, oldIsDirectory := mailServiceSleep, mailServiceReadFile, mailServiceExited, mailServiceIsDirectory
++	t.Cleanup(func() {
++		mailServiceSleep, mailServiceReadFile, mailServiceExited, mailServiceIsDirectory = oldSleep, oldRead, oldExited, oldIsDirectory
++	})
+ 	mailServiceSleep = func(time.Duration) {}
++	// The one directory of this host that holds a master.pid.
++	mailServiceIsDirectory = func(path string) bool { return path == "/var/spool/postfix/pid" }
+ 	host.pidFile = host.masterPID
+ 	mailServiceReadFile = func(path string) ([]byte, error) {
+ 		if host.masterPID != 0 {
+diff --git a/cmd/agent/service_action_verify.go b/cmd/agent/service_action_verify.go
+index bf31aef23..9bd26fc9c 100644
+--- a/cmd/agent/service_action_verify.go
++++ b/cmd/agent/service_action_verify.go
+@@ -126,7 +126,9 @@ func verifiedServiceAction(run mailServiceRunner, serviceID, unit, action string
+ // and, for Postfix, the line its own check prints now.
+ //
+ // Only a unit that was read as not failed before the stop and is failed after
+-// it is reported: a mark that was already there is not this action's.
++// it is reported: a mark that was already there is not this action's. When
++// the unit is read, and what is said when it has not settled, is with
++// noteStopLeftUnitFailed below.
+ //
+ // Başarılı olan ve birimi `failed` işaretli bırakan durdurma. İşaret
+ // systemd'nin, birimin kendi durdurma komutunun ne yaptığına dair kaydıdır;
+@@ -162,24 +164,73 @@ func readUnitFailure(run mailServiceRunner, name string) (state memberUnitState,
+ 	return memberUnitState{active: first("ActiveState"), result: first("Result")}, true
+ }
+ 
++// The unit is read once it has settled, and a unit that does not settle is
++// said as that (9 Oct 2026).
++//
++// Measured on Ubuntu 24.04 (set4b; kernel trace and strace on the Agent, five
++// Stops out of five): the answer carried no note although `postfix@-.service`
++// ended `failed`. `systemctl stop postfix` returns when the wrapper's job ends,
++// 1 to 4 ms after the instance unit left `active`; the instance then stays
++// `deactivating` for about a second, because its stop command
++// (`postmulti -p stop`) refuses main.cf and exits 1 only after Postfix's own
++// one-second pause, and systemd marks it `failed` 2 to 7 ms after it has ended
++// the master. The Agent read the unit once, 82 to 225 ms after it had left
++// `active`, and systemd's answer was `ActiveState=deactivating`: not failed,
++// so nothing was said. (That it looked so early was the master lookup's own error:
++// postfixQueueDirectory.) On Debian 13 the unit that is stopped is the one
++// that runs the daemon, `systemctl stop` returns after its whole stop, and the
++// single reading saw `failed`.
++//
++// So a unit that systemd shows between two states is read again, at the
++// interval and within the bound every other verification of this file uses
++// (mailServiceStartPolls readings, mailServicePollInterval apart, for all the
++// units of one stop together). Only `systemctl show` is sent while waiting;
++// nothing is sent to the unit. When the bound ends and the unit is still
++// between two states, or when it cannot be read any more, the answer does not
++// stay silent, which would read as "the unit was looked at and is clean": it
++// carries transport.ServiceActionNoticeUnitNotSettled with the unit and the
++// last state read. A unit that ended `failed` is reported in preference to
++// one that did not settle.
++//
++// Birim, durulduğunda okunur; durulmayan birim de öyle söylenir. Ubuntu
++// 24.04'te ölçüldü: `systemctl stop postfix`, sarmalayıcının işi bitince döner;
++// örnek birim ise yaklaşık bir saniye `deactivating` kalır ve ancak sonra
++// `failed` olarak işaretlenir. Agent birimi bir kez, çok erken okuyordu.
++// Beklerken yalnızca `systemctl show` gönderilir; birime hiçbir şey gönderilmez.
++// Süre dolduğunda birim hâlâ iki durum arasındaysa yanıt susmaz: birimin
++// durulmadığını ve okunan son durumu taşır.
+ func noteStopLeftUnitFailed(run mailServiceRunner, serviceID string, watched []string, notFailedBefore map[string]bool, result *transport.ServiceActionResult) {
++	readings := 0
++	unsettled, unsettledState := "", ""
+ 	for _, name := range watched {
+ 		if !notFailedBefore[name] {
+ 			continue
+ 		}
++		readings++
+ 		state, known := readUnitFailure(run, name)
+-		if !known || state.active != "failed" {
+-			continue
+-		}
+-		result.Notice, result.NoticeUnit, result.NoticeResult = transport.ServiceActionNoticeUnitFailed, name, state.result
+-		if serviceID == "postfix" {
+-			// What Postfix's own check prints now; the unit's stop command
+-			// reads the same main.cf. Empty when the check passes.
+-			if out, err := run("postfix", "check"); err != nil && mailServiceExited(err) {
+-				result.NoticeDetail = mailServiceLine(out)
++		for known && state.settling() && readings < mailServiceStartPolls {
++			mailServiceSleep(mailServicePollInterval)
++			readings++
++			state, known = readUnitFailure(run, name)
++		}
++		if known && state.active == "failed" {
++			result.Notice, result.NoticeUnit, result.NoticeResult = transport.ServiceActionNoticeUnitFailed, name, state.result
++			if serviceID == "postfix" {
++				// What Postfix's own check prints now; the unit's stop command
++				// reads the same main.cf. Empty when the check passes.
++				if out, err := run("postfix", "check"); err != nil && mailServiceExited(err) {
++					result.NoticeDetail = mailServiceLine(out)
++				}
+ 			}
++			return
+ 		}
+-		return
++		if unsettled == "" && (!known || state.settling()) {
++			// Read before the stop and not read as settled after it.
++			unsettled, unsettledState = name, state.active
++		}
++	}
++	if unsettled != "" {
++		result.Notice, result.NoticeUnit, result.NoticeResult = transport.ServiceActionNoticeUnitNotSettled, unsettled, unsettledState
+ 	}
+ }
+ 
+diff --git a/cmd/agent/set4_corrections_test.go b/cmd/agent/set4_corrections_test.go
+new file mode 100644
+index 000000000..5b963e277
+--- /dev/null
++++ b/cmd/agent/set4_corrections_test.go
+@@ -0,0 +1,369 @@
++package main
++
++import (
++	"errors"
++	"io/fs"
++	"path"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/alicelik/celikpanel/internal/transport"
++)
++
++// Corrections after the set4 native measurement (2026-10-09; the measurement
++// of what the Agent reads is in
++// deploy/e2e/release-recovery/evidence/set4b-20261009, diagnostic/).
++
++// What `postconf -h queue_directory` printed to the Agent on Ubuntu 24.04 with
++// the owner's line in main.cf, as strace recorded it: the warning on the error
++// stream first, then the directory on the output, both in the one buffer the
++// Agent reads; exit status 0.
++const measuredPostconfWithWarning = "/usr/sbin/postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\n" +
++	"/var/spool/postfix\n"
++
++// ubuntuPostfix is Postfix on Ubuntu 24.04 as it was measured around a Stop
++// with a main.cf that `postfix check` refuses. Time is the test's own: every
++// command takes 30 ms (the Agent's commands were 30 to 35 ms apart), a sleep
++// takes what it was asked for.
++//
++//   - `postfix.service` is a wrapper; `systemctl stop postfix` returns when
++//     its job ends, 1 to 4 ms after `postfix@-.service` left `active`.
++//   - `postfix@-.service` then shows `deactivating` (its stop command refuses
++//     main.cf and exits 1 only after Postfix's one-second pause). The master
++//     ended 1009 ms after the unit left `active`, and systemd marked the unit
++//     `failed`, `Result=exit-code`, 4 ms later.
++//   - Any path that does not exist is answered "no such file" by the kernel.
++type ubuntuPostfix struct {
++	now, stopAt              time.Duration
++	masterLives, unitSettles time.Duration
++	neverSettles             bool
++	endsClean                bool
++	unreadableAfterStop      bool
++	postconf                 string
++	checkOutput              string
++	calls                    []string
++	// What the unit showed at each reading after the stop, with the time.
++	readings []string
++}
++
++const ubuntuMasterPID = "39747"
++
++func installUbuntuPostfix(t *testing.T) *ubuntuPostfix {
++	t.Helper()
++	host := &ubuntuPostfix{stopAt: -1, masterLives: 1009 * time.Millisecond, unitSettles: 1013 * time.Millisecond,
++		postconf: measuredPostconfWithWarning, checkOutput: refusedMainCf}
++	oldSleep, oldRead, oldExited, oldIsDirectory := mailServiceSleep, mailServiceReadFile, mailServiceExited, mailServiceIsDirectory
++	t.Cleanup(func() {
++		mailServiceSleep, mailServiceReadFile, mailServiceExited, mailServiceIsDirectory = oldSleep, oldRead, oldExited, oldIsDirectory
++	})
++	mailServiceSleep = func(d time.Duration) { host.now += d }
++	mailServiceReadFile = func(name string) ([]byte, error) {
++		switch name {
++		case "/var/spool/postfix/pid/master.pid":
++			// Postfix leaves the file when the master exits.
++			return []byte("                           " + ubuntuMasterPID + "\n"), nil
++		case "/proc/" + ubuntuMasterPID + "/comm":
++			if host.masterAlive() {
++				return []byte("master\n"), nil
++			}
++		}
++		return nil, fs.ErrNotExist
++	}
++	mailServiceIsDirectory = func(name string) bool { return name == "/var/spool/postfix/pid" }
++	mailServiceExited = func(err error) bool {
++		var exit fakeExit
++		return errors.As(err, &exit)
++	}
++	return host
++}
++
++func (h *ubuntuPostfix) masterAlive() bool {
++	return h.stopAt < 0 || h.now-h.stopAt < h.masterLives
++}
++
++func (h *ubuntuPostfix) run(name string, args ...string) ([]byte, error) {
++	call := name + " " + strings.Join(args, " ")
++	h.calls = append(h.calls, call)
++	h.now += 30 * time.Millisecond
++	show := func(active, result string) ([]byte, error) {
++		// The order systemd printed them in.
++		return []byte("Result=" + result + "\nLoadState=loaded\nActiveState=" + active + "\n"), nil
++	}
++	switch call {
++	case "systemctl show postfix.service --property=LoadState --property=ActiveState --property=Result":
++		if h.stopAt < 0 {
++			return show("active", "success")
++		}
++		return show("inactive", "success")
++	case "systemctl show postfix@-.service --property=LoadState --property=ActiveState --property=Result":
++		if h.stopAt < 0 {
++			return show("active", "success")
++		}
++		if h.unreadableAfterStop {
++			return []byte("Failed to get properties: Connection timed out\n"), fakeExit{"exit status 1"}
++		}
++		state, result := "deactivating", "success"
++		if !h.neverSettles && h.now-h.stopAt >= h.unitSettles {
++			state, result = "failed", "exit-code"
++			if h.endsClean {
++				state, result = "inactive", "success"
++			}
++		}
++		h.readings = append(h.readings, state)
++		return show(state, result)
++	case "systemctl stop postfix":
++		h.stopAt = h.now
++		return nil, nil
++	case "postconf -h queue_directory":
++		return []byte(h.postconf), nil
++	case "postfix check":
++		if h.checkOutput != "" {
++			return []byte(h.checkOutput), fakeExit{"exit status 1"}
++		}
++		return nil, nil
++	}
++	return nil, errors.New("unexpected command: " + call)
++}
++
++// after returns the commands sent after `systemctl stop postfix`.
++func (h *ubuntuPostfix) after(t *testing.T) []string {
++	t.Helper()
++	for index, call := range h.calls {
++		if call == "systemctl stop postfix" {
++			return h.calls[index+1:]
++		}
++	}
++	t.Fatalf("no stop was sent: %v", h.calls)
++	return nil
++}
++
++// Nothing but readings may follow the stop: the wait sends no mutation.
++func (h *ubuntuPostfix) onlyReadAfterTheStop(t *testing.T) {
++	t.Helper()
++	for _, call := range h.after(t) {
++		reading := call == "postconf -h queue_directory" || call == "postfix check" || strings.HasPrefix(call, "systemctl show ")
++		if !reading || strings.Contains(call, "reset-failed") {
++			t.Fatalf("after the stop the Agent sent %q", call)
++		}
++	}
++}
++
++// The queue directory is the one line of postconf's answer that is not
++// postconf's own message. Measured: the two lines were taken as one path.
++func TestPostfixQueueDirectoryIsOneLineNotTheWholeAnswer(t *testing.T) {
++	// Why the measured answer went wrong: the whole buffer is "absolute",
++	// because the program's own name is, and names nothing that exists.
++	whole := strings.TrimSpace(measuredPostconfWithWarning)
++	if !path.IsAbs(whole) || !strings.Contains(path.Join(whole, "pid", "master.pid"), "\n") {
++		t.Fatalf("the measured answer is not the shape that was misread: %q", whole)
++	}
++	for _, c := range []struct {
++		name, out, want string
++		known           bool
++	}{
++		{"measured on Ubuntu 24.04", measuredPostconfWithWarning, "/var/spool/postfix", true},
++		{"the same started by its bare name", "postconf: warning: /etc/postfix/main.cf: unused parameter: campaign=1\n/var/spool/postfix\n", "/var/spool/postfix", true},
++		{"the message after the value", "/var/spool/postfix\n/usr/sbin/postconf: warning: /etc/postfix/main.cf: unused parameter: campaign=1\n", "/var/spool/postfix", true},
++		{"two messages", "postconf: warning: a\npostconf: warning: b\n/var/spool/postfix\n", "/var/spool/postfix", true},
++		{"no message", "/var/spool/postfix\n", "/var/spool/postfix", true},
++		{"a trailing slash", "/var/spool/postfix/\n", "/var/spool/postfix/", true},
++		{"only a message", "/usr/sbin/postconf: fatal: open /etc/postfix/main.cf: No such file or directory\n", "", false},
++		{"nothing", "", "", false},
++		{"two lines that are not messages", "/var/spool/postfix\n/var/spool/postfix-2\n", "", false},
++		{"a line of another program", "some wrapper said something\n/var/spool/postfix\n", "", false},
++		{"a relative path", "var/spool/postfix\n", "", false},
++		{"a path that needs resolving", "/var/spool/../spool/postfix\n", "", false},
++		{"the root", "/\n", "", false},
++	} {
++		got, known := postconfOnePath([]byte(c.out))
++		if got != c.want || known != c.known {
++			t.Errorf("%s: got %q, %v; want %q, %v", c.name, got, known, c.want, c.known)
++		}
++	}
++}
++
++// The master is looked for in the queue directory Postfix names, also when
++// postconf warns about main.cf, and "no master.pid" is a statement only where
++// the directory that would hold it exists.
++func TestPostfixMasterIsNotGoneBecauseAPathDoesNotExist(t *testing.T) {
++	host := installUbuntuPostfix(t)
++	alive, pid, known := postfixMasterProcess(host.run)
++	if !alive || !known || itoa(pid) != ubuntuMasterPID {
++		t.Fatalf("a running master behind a postconf warning: alive=%v pid=%d known=%v", alive, pid, known)
++	}
++	// An answer that is not one path: nothing is claimed.
++	host.postconf = "/var/spool/postfix\n/var/spool/postfix-2\n"
++	if alive, _, known = postfixMasterProcess(host.run); alive || known {
++		t.Fatalf("an answer of two paths: alive=%v known=%v", alive, known)
++	}
++	// A queue directory that is not on this server: no file there, and that
++	// says nothing about a master.
++	host.postconf = "/srv/another-queue\n"
++	if alive, _, known = postfixMasterProcess(host.run); alive || known {
++		t.Fatalf("a directory that does not exist: alive=%v known=%v", alive, known)
++	}
++	// The directory is there and holds no master.pid: no master ever started.
++	oldRead := mailServiceReadFile
++	mailServiceReadFile = func(string) ([]byte, error) { return nil, fs.ErrNotExist }
++	host.postconf = measuredPostconfWithWarning
++	if alive, _, known = postfixMasterProcess(host.run); alive || !known {
++		t.Fatalf("no master.pid in an existing directory: alive=%v known=%v", alive, known)
++	}
++	mailServiceReadFile = oldRead
++}
++
++// Item 10 of set4, Ubuntu 24.04: the Stop is answered once the master has
++// ended, the unit is read once it has settled, and the note names it.
++func TestServicesPageStopOnUbuntuReadsTheUnitOnceItHasSettled(t *testing.T) {
++	host := installUbuntuPostfix(t)
++	got := verifiedServiceAction(host.run, "postfix", "postfix", "stop")
++	wantServiceAction(t, got, transport.ServiceActionVerified, "")
++	if got.Applied != mailServiceStopped {
++		t.Fatalf("answer = %+v", got)
++	}
++	// The answer is not given while the master lives (measured: it was given
++	// about 100 ms after the stop, 900 ms before the master ended).
++	if host.masterAlive() || host.now-host.stopAt < host.masterLives {
++		t.Fatalf("answered %s after the stop, while the master lives for %s", host.now-host.stopAt, host.masterLives)
++	}
++	if got.Notice != transport.ServiceActionNoticeUnitFailed || got.NoticeUnit != "postfix@-.service" ||
++		got.NoticeResult != "exit-code" || !strings.Contains(got.NoticeDetail, "bad numerical configuration") {
++		t.Fatalf("the note of the failed unit is missing: %+v (readings of the unit after the stop: %v)", got, host.readings)
++	}
++	// The master was looked for more than once, and the unit was read as
++	// failed, never taken from a reading between two states.
++	lookups := 0
++	for _, call := range host.after(t) {
++		if call == "postconf -h queue_directory" {
++			lookups++
++		}
++	}
++	if lookups < 2 || len(host.readings) == 0 || host.readings[len(host.readings)-1] != "failed" {
++		t.Fatalf("master lookups = %d, readings of the unit = %v", lookups, host.readings)
++	}
++	host.onlyReadAfterTheStop(t)
++
++	// The unit is still between two states when the master is already seen as
++	// gone (the 2 to 7 ms that were measured, here made long): it is read
++	// again, not taken as clean.
++	host = installUbuntuPostfix(t)
++	host.unitSettles = host.masterLives + 1200*time.Millisecond
++	got = verifiedServiceAction(host.run, "postfix", "postfix", "stop")
++	wantServiceAction(t, got, transport.ServiceActionVerified, "")
++	if got.Notice != transport.ServiceActionNoticeUnitFailed || got.NoticeUnit != "postfix@-.service" {
++		t.Fatalf("answer = %+v, readings = %v", got, host.readings)
++	}
++	if len(host.readings) < 2 || host.readings[0] != "deactivating" {
++		t.Fatalf("the unit was not read while it was between two states: %v", host.readings)
++	}
++	host.onlyReadAfterTheStop(t)
++
++	// A stop that ends cleanly after the same wait says nothing more.
++	host = installUbuntuPostfix(t)
++	host.checkOutput, host.endsClean = "", true
++	host.unitSettles = host.masterLives + 700*time.Millisecond
++	got = verifiedServiceAction(host.run, "postfix", "postfix", "stop")
++	wantServiceAction(t, got, transport.ServiceActionVerified, "")
++	if got.Notice != "" || got.NoticeUnit != "" || got.NoticeResult != "" || got.NoticeDetail != "" {
++		t.Fatalf("a clean stop carries a notice: %+v", got)
++	}
++	if host.readings[len(host.readings)-1] != "inactive" {
++		t.Fatalf("readings = %v", host.readings)
++	}
++}
++
++// A unit that does not settle within the bound is not passed over in silence:
++// the answer says that its stop was not read. Nothing is sent to the unit
++// while waiting, and the wait ends.
++func TestServicesPageStopSaysWhenTheUnitDidNotSettle(t *testing.T) {
++	host := installUbuntuPostfix(t)
++	host.neverSettles = true
++	got := verifiedServiceAction(host.run, "postfix", "postfix", "stop")
++	// The stop itself is verified: the master is gone.
++	wantServiceAction(t, got, transport.ServiceActionVerified, "")
++	if host.masterAlive() {
++		t.Fatal("answered while the master lives")
++	}
++	if got.Notice != transport.ServiceActionNoticeUnitNotSettled || got.NoticeUnit != "postfix@-.service" ||
++		got.NoticeResult != "deactivating" || got.NoticeDetail != "" {
++		t.Fatalf("answer = %+v", got)
++	}
++	// Bounded: the units of one stop share the readings every other
++	// verification of this file is given.
++	if len(host.readings) != mailServiceStartPolls-1 {
++		t.Fatalf("the unit was read %d times; the bound is %d readings for both units together", len(host.readings), mailServiceStartPolls)
++	}
++	for _, state := range host.readings {
++		if state != "deactivating" {
++			t.Fatalf("readings = %v", host.readings)
++		}
++	}
++	host.onlyReadAfterTheStop(t)
++	for _, call := range host.after(t) {
++		if call == "postfix check" {
++			t.Fatal("Postfix's check was run for a unit that was not read as failed")
++		}
++	}
++
++	// The unit cannot be read after the stop although it was read before it.
++	host = installUbuntuPostfix(t)
++	host.unreadableAfterStop = true
++	got = verifiedServiceAction(host.run, "postfix", "postfix", "stop")
++	wantServiceAction(t, got, transport.ServiceActionVerified, "")
++	if got.Notice != transport.ServiceActionNoticeUnitNotSettled || got.NoticeUnit != "postfix@-.service" || got.NoticeResult != "" {
++		t.Fatalf("answer = %+v", got)
++	}
++	host.onlyReadAfterTheStop(t)
++
++	// A unit that was not read before the stop (it is not on this server) is
++	// still not this stop's to report, settled or not.
++	units := &postfixUnits{host: installFakeMailHost(t),
++		now:   map[string][2]string{"postfix.service": {"active", "success"}},
++		after: map[string][2]string{"postfix.service": {"inactive", "success"}}}
++	got = verifiedServiceAction(units.run, "postfix", "postfix", "stop")
++	wantServiceAction(t, got, transport.ServiceActionVerified, "")
++	if got.Notice != "" {
++		t.Fatalf("answer = %+v", got)
++	}
++}
++
++// With an answer of postconf that names no single directory, the master
++// cannot be looked for, and with a refused main.cf Postfix cannot be asked
++// either: the Stop is unknown, as before, never a success.
++func TestServicesPageStopStaysUnknownWhenTheMasterCannotBeLookedFor(t *testing.T) {
++	host := installUbuntuPostfix(t)
++	host.postconf = "/var/spool/postfix\n/var/spool/postfix-2\n"
++	got := verifiedServiceAction(host.run, "postfix", "postfix", "stop")
++	wantServiceAction(t, got, transport.ServiceActionUnknown, mailServiceStageVerify)
++	if got.Notice != "" || !strings.Contains(got.Error, "could not be looked for") {
++		t.Fatalf("answer = %+v", got)
++	}
++}
++
++// Debian 13: the unit that is stopped runs the daemon, so `systemctl stop`
++// returns after its whole stop and the first reading is `failed`. The note is
++// given as before, with no wait.
++func TestServicesPageStopOnDebianStillGivesTheNoteAtTheFirstReading(t *testing.T) {
++	host := installFakeMailHost(t)
++	host.checkOutput = refusedMainCf
++	slept := 0
++	mailServiceSleep = func(time.Duration) { slept++ }
++	units := &postfixUnits{host: host,
++		now:   map[string][2]string{"postfix.service": {"active", "success"}},
++		after: map[string][2]string{"postfix.service": {"failed", "exit-code"}}}
++	got := verifiedServiceAction(units.run, "postfix", "postfix", "stop")
++	wantServiceAction(t, got, transport.ServiceActionVerified, "")
++	if got.Notice != transport.ServiceActionNoticeUnitFailed || got.NoticeUnit != "postfix.service" || got.NoticeResult != "exit-code" ||
++		!strings.Contains(got.NoticeDetail, "bad numerical configuration") {
++		t.Fatalf("answer = %+v", got)
++	}
++	if slept != 0 {
++		t.Fatalf("a settled unit was waited for %d times", slept)
++	}
++	for _, call := range units.calls {
++		if strings.Contains(call, "reset-failed") {
++			t.Fatalf("the unit's mark was cleared: %q", call)
++		}
++	}
++}
+diff --git a/cmd/panel/import_handlers.go b/cmd/panel/import_handlers.go
+index 633a3c806..32310b22d 100644
+--- a/cmd/panel/import_handlers.go
++++ b/cmd/panel/import_handlers.go
+@@ -136,6 +136,54 @@ type importStep struct {
+ 	OK     bool   `json:"ok"`
+ 	Detail string `json:"detail"`
+ 	Code   string `json:"code,omitempty"`
++	// State is set on a step that ended without an error and imported nothing
++	// (one of the importState* values). Such a step is neither imported nor
++	// failed: it is listed under `left_out`, never under `imported`.
++	// State, hatasız biten ve hiçbir şey içe aktarmayan adımda doludur. Böyle
++	// bir adım ne içe aktarılmıştır ne de başarısızdır.
++	State string `json:"state,omitempty"`
++}
++
++// A step that ended without an error and imported nothing (2026-10-09).
++//
++// Measured in set4 on Arch, Debian 13 and Ubuntu 24.04: an import that asked
++// for no DNS (`do_dns: false`) on a server whose DNS is the owner's external
++// provider answered `imported: [domain, files, dns, ...]`. The `dns` step had
++// ended `ok` with "external DNS ownership preserved", and every `ok` step was
++// listed as imported. The same held for a part that was chosen while the
++// archive holds nothing of it ("0 forwarders").
++//
++// Such a step keeps `ok: true`, because nothing failed and it must not make
++// the import partial, and says in `state` why nothing was imported:
++//
++//   - left_to_owner: the part belongs to the owner's external provider and is
++//     left there on purpose (DNS of a server in external DNS mode);
++//   - not_chosen: the part was not chosen for this import (the archive's DNS
++//     records; the panel's own records for the domain were still created);
++//   - none_in_archive: the part was chosen and the archive holds nothing of it
++//     for this domain;
++//   - none_imported: the part was chosen, the archive holds some of it and
++//     none was imported; each one is listed on its own step.
++//
++// Hatasız biten ve hiçbir şey içe aktarmayan adım. set4'te ölçüldü: DNS
++// istenmeyen (`do_dns: false`), DNS'i sahibinin dış sağlayıcısında olan bir
++// sunucuda içe aktarım `dns` parçasını içe aktarılmış diye listeliyordu. Böyle
++// bir adım `ok: true` kalır (hiçbir şey başarısız olmadı; içe aktarımı kısmi
++// yapmaz) ve neden hiçbir şey aktarılmadığını `state` alanında söyler.
++const (
++	importStateLeftToOwner   = "left_to_owner"
++	importStateNotChosen     = "not_chosen"
++	importStateNoneInArchive = "none_in_archive"
++	importStateNoneImported  = "none_imported"
++)
++
++// importNothingState is the state of a chosen part of which nothing was
++// imported: the archive holds none of it, or it holds some and none came in.
++func importNothingState(inArchive int) string {
++	if inArchive > 0 {
++		return importStateNoneImported
++	}
++	return importStateNoneInArchive
+ }
+ 
+ func safeImportDNSFailure(err error) (code, detail string) {
+@@ -203,6 +251,11 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
+ 	ok := func(step, detail string) {
+ 		steps = append(steps, importStep{Step: step, OK: true, Detail: detail})
+ 	}
++	// A step that ended without an error and imported nothing; state says why.
++	// Hatasız biten ve hiçbir şey içe aktarmayan adım; nedenini state söyler.
++	nothing := func(step, state, detail string) {
++		steps = append(steps, importStep{Step: step, OK: true, Detail: detail, State: state})
++	}
+ 
+ 	// 1. Domain + site under the chosen subscription (quota enforced).
+ 	// 1. Seçilen abonelik altında domain + site (kota uygulanır).
+@@ -362,7 +415,12 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
+ 		case !ext.Complete:
+ 			fail("files", fmt.Errorf("agent did not confirm complete atomic extraction"))
+ 		default:
+-			ok("files", fmt.Sprintf("%d files, %d bytes", ext.Files, ext.Bytes)+importOutsideSiteFolder(&ext))
++			filesDetail := fmt.Sprintf("%d files, %d bytes", ext.Files, ext.Bytes) + importOutsideSiteFolder(&ext)
++			if ext.Files > 0 {
++				ok("files", filesDetail)
++			} else {
++				nothing("files", importNothingState(ext.RefusedCount), filesDetail)
++			}
+ 			// A member the files step refused by its name was left out while
+ 			// the rest was imported. It is a part of the archive that was not
+ 			// imported, and is listed as one (12 Oct 2026; it used to be left
+@@ -380,11 +438,12 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
+ 	// 3. Mail accounts (passwords preserved via {CRYPT}) + forwarders.
+ 	// 3. Posta hesapları (parolalar {CRYPT} ile korunur) + yönlendirmeler.
+ 	if req.DoMail {
+-		imported := 0
++		imported, mailboxesInArchive := 0, 0
+ 		for _, acc := range preview.MailAccounts {
+ 			if !strings.EqualFold(acc.Domain, req.Domain) {
+ 				continue
+ 			}
++			mailboxesInArchive++
+ 			email, err := transport.CanonicalMailboxForDomain(acc.User, req.Domain)
+ 			if err != nil {
+ 				fail("mail:"+acc.User, err)
+@@ -453,7 +512,12 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
+ 			p.mailMutationMu.Unlock()
+ 			imported++
+ 		}
+-		ok("mail", fmt.Sprintf("%d accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)", imported))
++		mailDetail := fmt.Sprintf("%d accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)", imported)
++		if imported > 0 {
++			ok("mail", mailDetail)
++		} else {
++			nothing("mail", importNothingState(mailboxesInArchive), mailDetail)
++		}
+ 
+ 		forwardings := make([]transport.MailForwarding, 0, len(preview.Forwarders))
+ 		for _, f := range preview.Forwarders {
+@@ -472,7 +536,7 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
+ 			})
+ 		}
+ 		if len(forwardings) == 0 {
+-			ok("forwarders", "0 forwarders")
++			nothing("forwarders", importNothingState(len(preview.Forwarders)), "0 forwarders")
+ 		} else {
+ 			p.mailMutationMu.Lock()
+ 			err := p.mutateForwardings(ctx, domainID, func(tx *sql.Tx) error {
+@@ -500,8 +564,20 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
+ 
+ 	// 4. DNS records into our zone (NS/SOA excluded — ours are generated).
+ 	// 4. DNS kayıtları zone'umuza (NS/SOA hariç — bizimkiler üretilir).
++	// The archive's DNS records count as imported only when they were chosen,
++	// the archive holds a zone for this domain and that zone was written.
++	// Otherwise the step says what was done instead (nothing, or the panel's
++	// own records for the domain) and why nothing of the archive came in.
++	// Arşivin DNS kayıtları yalnızca seçildiyse, arşivde bu alan adının bölgesi
++	// varsa ve o bölge yazıldıysa içe aktarılmış sayılır.
++	dnsNotImported := importStateNotChosen
++	if req.DoDNS {
++		dnsNotImported = importStateNoneInArchive
++	}
+ 	if caps.DNSManagementMode == setupDNSModeExternal {
+-		ok("dns", "external DNS ownership preserved; verify provider records before publishing the site")
++		// DNS import is refused above for this mode, so nothing was chosen:
++		// the records stay with the owner's provider.
++		nothing("dns", importStateLeftToOwner, "external DNS ownership preserved; verify provider records before publishing the site")
+ 	} else if caps.DNSManagementMode == setupDNSModeExisting {
+ 		source, hasImportedZone := cpmoveDNSRecordsForDomain(preview, req.Domain)
+ 		publishCtx, cancelPublish := context.WithTimeout(context.WithoutCancel(ctx), domainDNSPublicationTimeout)
+@@ -524,8 +600,10 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
+ 		if publishErr != nil {
+ 			log.Printf("remote import DNS publication pending for %s: %v", req.Domain, publishErr)
+ 			failCoded("dns", errCodeDNSPublicationPending, "The domain was imported; remote DNS publication remains pending. Retry publication from the domain DNS page.")
+-		} else {
++		} else if req.DoDNS && hasImportedZone {
+ 			ok("dns", "DNS records published through the domain's connected authority")
++		} else {
++			nothing("dns", dnsNotImported, "DNS records published through the domain's connected authority")
+ 		}
+ 	} else {
+ 		records, hasImportedZone := cpmoveDNSRecordsForDomain(preview, req.Domain)
+@@ -557,8 +635,10 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
+ 			)
+ 			code, detail := safeImportDNSFailure(dnsErr)
+ 			failCoded("dns", code, detail)
+-		} else {
++		} else if req.DoDNS && hasImportedZone {
+ 			ok("dns", dnsDetail)
++		} else {
++			nothing("dns", dnsNotImported, dnsDetail)
+ 		}
+ 
+ 	}
+@@ -724,7 +804,10 @@ const (
+ //     and what the owner can do, `domain_status` is the state the domain was
+ //     left in ("pending": created and kept, not marked as finished).
+ //
+-// `steps` is unchanged: one entry per step with its own line.
++// `steps` is unchanged: one entry per step with its own line. A step that
++// ended without an error and imported nothing carries a `state` and is listed
++// under `left_out`, in either result; it never makes an import partial
++// (2026-10-09). A part is in exactly one of the three lists.
+ //
+ // Her adımı bitmiş bir içe aktarımın yanıtı. Bir parçasını bitiremeyen içe
+ // aktarım eskiden `202` ve `status: pending` ile, yani süren bir işin
+@@ -742,6 +825,7 @@ type importApplyAnswer struct {
+ 	Message      string       `json:"message,omitempty"`
+ 	Imported     []string     `json:"imported"`
+ 	NotImported  []string     `json:"not_imported"`
++	LeftOut      []string     `json:"left_out"`
+ 	Steps        []importStep `json:"steps"`
+ }
+ 
+@@ -755,7 +839,7 @@ func importApplyAnswerFor(domain string, domainID, siteID int, steps []importSte
+ 	answer := importApplyAnswer{
+ 		DomainID: domainID, SiteID: siteID, Domain: domain,
+ 		Status: importStatusComplete, DomainStatus: "active",
+-		Imported: []string{}, NotImported: []string{}, Steps: steps,
++		Imported: []string{}, NotImported: []string{}, LeftOut: []string{}, Steps: steps,
+ 	}
+ 	for _, step := range steps {
+ 		if step.Step == "finalize" {
+@@ -763,10 +847,16 @@ func importApplyAnswerFor(domain string, domainID, siteID int, steps []importSte
+ 			// finished. It is said in the message, not listed as a part.
+ 			continue
+ 		}
+-		if step.OK {
+-			answer.Imported = append(answer.Imported, step.Step)
+-		} else {
++		switch {
++		case !step.OK:
+ 			answer.NotImported = append(answer.NotImported, step.Step)
++		case step.State != "":
++			// Nothing failed and nothing was imported: not chosen, left to
++			// the owner's provider, or nothing of it to import. It does not
++			// make the import partial and is not said to be imported.
++			answer.LeftOut = append(answer.LeftOut, step.Step)
++		default:
++			answer.Imported = append(answer.Imported, step.Step)
+ 		}
+ 	}
+ 	complete := true
+diff --git a/cmd/panel/service_action_outcome.go b/cmd/panel/service_action_outcome.go
+index fec169a42..47b493875 100644
+--- a/cmd/panel/service_action_outcome.go
++++ b/cmd/panel/service_action_outcome.go
+@@ -159,19 +159,49 @@ func writeServiceActionOutcome(w http.ResponseWriter, unit, action string, reply
+ // the line it prints). `vars`: `unit`, `failed_unit`, `result` (systemd's
+ // `Result`), `command` (what clears the mark, for the owner to run).
+ //
++// A Stop after which the unit's own stop had not ended (9 Oct 2026). Measured
++// on Ubuntu 24.04: the unit that runs Postfix stays `deactivating` for about
++// a second after `systemctl stop postfix` has returned, and only then is it
++// marked `failed`. The Agent now reads the unit again until it has settled,
++// within a bound. When the bound ends first, or the unit cannot be read after
++// the stop, the answer does not stay silent, which would read as "the unit was
++// looked at and is clean". It carries a note of its own:
++//
++// `reason`: `unit_not_settled` (systemd still shows the unit between two
++// states; `vars.state` is the last one read, e.g. `deactivating`) or
++// `unit_state_not_read` (the unit could not be read after the stop). `vars`:
++// `unit`, `pending_unit`, `command` (`systemctl status <pending_unit>`, which
++// only shows the unit). Nothing more is sent to the unit by the Panel.
++//
+ // Başarılı olan ve birimi `failed` işaretli bırakan Durdur. Agent işareti
+ // silmez: o, systemd'nin birimin kendi komutunun ne yaptığına dair kaydıdır.
+ // Yanıt bunu bir `note` ile söyler; ekran onu hata olarak değil, dikkat
+-// yüzeyinde gösterir.
++// yüzeyinde gösterir. Birimin durdurulması beklenen sürede bitmediyse ya da
++// birim durdurmadan sonra okunamadıysa yanıt susmaz; bunu ayrı bir `note` ile
++// söyler ve birim hakkında başka hiçbir şey ileri sürmez.
+ const (
+ 	errCodeServiceActionNote          = "SERVICE_ACTION_NOTE"
+ 	serviceActionNoteUnitFailed       = "unit_marked_failed"
+ 	serviceActionNoteUnitFailedConfig = "unit_marked_failed_config"
++	serviceActionNoteUnitNotSettled   = "unit_not_settled"
++	serviceActionNoteUnitNotRead      = "unit_state_not_read"
+ )
+ 
+ var serviceActionSystemdResult = regexp.MustCompile(`^[a-z-]{1,40}$`)
+ 
+ func serviceActionNoteMessage(reason string) string {
++	switch reason {
++	case serviceActionNoteUnitNotSettled:
++		return "The service was stopped and is not running. systemd had not finished stopping its unit when CelikPanel stopped waiting for it: " +
++			"the unit was still between two states, so how its stop ended was not read, and it may end marked as failed. " +
++			"The server owner runs the command shown to see the unit as systemd shows it now. " +
++			"CelikPanel sends nothing more to the unit and does not look again by itself."
++	case serviceActionNoteUnitNotRead:
++		return "The service was stopped and is not running. The state of its unit could not be read from systemd after the stop, " +
++			"so whether the unit ended marked as failed is not known. " +
++			"The server owner runs the command shown to see the unit as systemd shows it now. " +
++			"CelikPanel sends nothing more to the unit and does not look again by itself."
++	}
+ 	message := "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. " +
+ 		"That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. "
+ 	if reason == serviceActionNoteUnitFailedConfig {
+@@ -183,8 +213,21 @@ func serviceActionNoteMessage(reason string) string {
+ // serviceActionNote builds the note of a successful action, or nil. Anything
+ // the Agent sent that is not a unit name or a systemd result is not repeated.
+ func serviceActionNote(unit, action string, reply *transport.ServiceActionResult) *apiErrorBody {
+-	if reply == nil || !reply.Success || action != "stop" || reply.Notice != transport.ServiceActionNoticeUnitFailed ||
+-		!serviceActionUnitName.MatchString(reply.NoticeUnit) {
++	if reply == nil || !reply.Success || action != "stop" || !serviceActionUnitName.MatchString(reply.NoticeUnit) {
++		return nil
++	}
++	if reply.Notice == transport.ServiceActionNoticeUnitNotSettled {
++		// The last state read is repeated only when it is one of systemd's
++		// own words; with none, the unit was not read at all.
++		reason := serviceActionNoteUnitNotRead
++		vars := map[string]string{"unit": unit, "pending_unit": reply.NoticeUnit, "command": "systemctl status " + reply.NoticeUnit}
++		if serviceActionSystemdResult.MatchString(reply.NoticeResult) {
++			reason = serviceActionNoteUnitNotSettled
++			vars["state"] = reply.NoticeResult
++		}
++		return &apiErrorBody{Error: serviceActionNoteMessage(reason), Code: errCodeServiceActionNote, Reason: reason, Vars: vars}
++	}
++	if reply.Notice != transport.ServiceActionNoticeUnitFailed {
+ 		return nil
+ 	}
+ 	result := reply.NoticeResult
+@@ -211,7 +254,7 @@ func serviceActionSuccessAnswer(unit, action string, reply transport.ServiceActi
+ 	if note == nil {
+ 		return reply
+ 	}
+-	log.Printf("[200][service action] %s %s: %s %s: %s", action, unit, errCodeServiceActionNote, note.Reason, note.Vars["failed_unit"])
++	log.Printf("[200][service action] %s %s: %s %s: %s", action, unit, errCodeServiceActionNote, note.Reason, note.Vars["failed_unit"]+note.Vars["pending_unit"])
+ 	return struct {
+ 		transport.ServiceActionResult
+ 		Note *apiErrorBody `json:"note"`
+diff --git a/cmd/panel/set2_corrections_test.go b/cmd/panel/set2_corrections_test.go
+index a71797d58..05138ea7f 100644
+--- a/cmd/panel/set2_corrections_test.go
++++ b/cmd/panel/set2_corrections_test.go
+@@ -227,7 +227,7 @@ func TestImportAnswerNamesWhatWasImportedAndWhatWasNot(t *testing.T) {
+ 		{Step: "mail", OK: true, Detail: "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)"},
+ 		{Step: "mail:suspended@imported.example", OK: false, Detail: importMailboxWithoutPassword},
+ 		{Step: "forwarders", OK: true, Detail: "1 forwarders"},
+-		{Step: "dns", OK: true, Detail: "external DNS ownership preserved; verify provider records before publishing the site"},
++		{Step: "dns", OK: true, State: importStateLeftToOwner, Detail: "external DNS ownership preserved; verify provider records before publishing the site"},
+ 		{Step: "database:olduser_shop", OK: true, Detail: "created exclusively and dump imported (db USERS are not migrated; repoint app configs)"},
+ 	}
+ 	answer := importApplyAnswerFor("imported.example", 7, 3, steps)
+@@ -237,13 +237,18 @@ func TestImportAnswerNamesWhatWasImportedAndWhatWasNot(t *testing.T) {
+ 	if got := strings.Join(answer.NotImported, ","); got != "files,mail:suspended@imported.example" {
+ 		t.Fatalf("not imported = %s", got)
+ 	}
+-	if got := strings.Join(answer.Imported, ","); got != "domain,mail,forwarders,dns,database:olduser_shop" {
++	// DNS was left to the owner's external provider: it is not said to be
++	// imported (set4, 2026-10-09), and it is not a part that is missing.
++	if got := strings.Join(answer.Imported, ","); got != "domain,mail,forwarders,database:olduser_shop" {
+ 		t.Fatalf("imported = %s", got)
+ 	}
++	if got := strings.Join(answer.LeftOut, ","); got != "dns" {
++		t.Fatalf("left out = %s", got)
++	}
+ 	// D-024: what happened, what is in place, who acts, the concrete next
+ 	// actions, and that nothing resumes by itself.
+ 	for _, fragment := range []string{
+-		"does not continue by itself", "Imported: domain, mail, forwarders, dns, database:olduser_shop.",
++		"does not continue by itself", "Imported: domain, mail, forwarders, database:olduser_shop.",
+ 		"Not imported: files, mail:suspended@imported.example.", "imported.example was created and is kept",
+ 		"server owner", "by hand", "removes imported.example on the Domains page", "imports the archive again", "nothing is imported twice",
+ 	} {
+@@ -269,7 +274,7 @@ func TestImportAnswerNamesWhatWasImportedAndWhatWasNot(t *testing.T) {
+ 		t.Fatalf("complete answer = %+v", complete)
+ 	}
+ 	encoded, _ = json.Marshal(complete)
+-	if !strings.Contains(string(encoded), `"not_imported":[]`) {
++	if !strings.Contains(string(encoded), `"not_imported":[]`) || !strings.Contains(string(encoded), `"left_out":[]`) {
+ 		t.Fatalf("an empty list is not encoded as a list: %s", encoded)
+ 	}
+ 
+diff --git a/cmd/panel/set3_corrections_test.go b/cmd/panel/set3_corrections_test.go
+index 491b0292d..d640f5ce3 100644
+--- a/cmd/panel/set3_corrections_test.go
++++ b/cmd/panel/set3_corrections_test.go
+@@ -304,7 +304,7 @@ func TestImportListsEveryMemberTheFilesStepLeftOut(t *testing.T) {
+ 		{Step: "files", OK: true, Detail: "2 files, 59 bytes" + importOutsideSiteFolder(ext)},
+ 	}
+ 	steps = append(steps, importRefusedMemberSteps(ext)...)
+-	steps = append(steps, importStep{Step: "dns", OK: true, Detail: "panel DNS template created"})
++	steps = append(steps, importStep{Step: "dns", OK: true, State: importStateNotChosen, Detail: "panel DNS template created; archive DNS import was not selected"})
+ 	answer := importApplyAnswerFor("set3-hostile-absolute.test", 9, 4, steps)
+ 	if answer.Status != importStatusPartial || answer.Code != errCodeImportPartial || answer.DomainStatus != "active" {
+ 		t.Fatalf("answer = %+v", answer)
+@@ -312,12 +312,15 @@ func TestImportListsEveryMemberTheFilesStepLeftOut(t *testing.T) {
+ 	if got := strings.Join(answer.NotImported, ","); got != "member:/etc/set3-escape-absolute.txt" {
+ 		t.Fatalf("not imported = %s", got)
+ 	}
+-	if got := strings.Join(answer.Imported, ","); got != "domain,files,dns" {
++	if got := strings.Join(answer.Imported, ","); got != "domain,files" {
+ 		t.Fatalf("imported = %s", got)
+ 	}
++	if got := strings.Join(answer.LeftOut, ","); got != "dns" {
++		t.Fatalf("left out = %s", got)
++	}
+ 	for _, fragment := range []string{
+ 		"every part that was chosen was imported; set3-hostile-absolute.test is in service",
+-		"Imported: domain, files, dns.", "Not imported: member:/etc/set3-escape-absolute.txt.",
++		"Imported: domain, files.", "Not imported: member:/etc/set3-escape-absolute.txt.",
+ 		"refused by their names, and nothing was written for them", "file manager of set3-hostile-absolute.test",
+ 		"Importing the archive again refuses the same entries; nothing continues by itself.",
+ 	} {
+diff --git a/cmd/panel/set4_corrections_test.go b/cmd/panel/set4_corrections_test.go
+new file mode 100644
+index 000000000..c3f29eb76
+--- /dev/null
++++ b/cmd/panel/set4_corrections_test.go
+@@ -0,0 +1,238 @@
++package main
++
++import (
++	"encoding/json"
++	"os"
++	"strings"
++	"testing"
++
++	"github.com/alicelik/celikpanel/internal/transport"
++)
++
++// Corrections after the set4 native measurement (2026-10-09).
++
++// A part whose step ended without an error and imported nothing is neither
++// imported nor failed. Measured in set4 on three platforms: an import that
++// asked for no DNS on a server in external DNS mode answered
++// `imported: [domain, files, dns, ...]`.
++func TestImportDoesNotListAPartItDidNotImportAsImported(t *testing.T) {
++	// The answer of set4's import (Debian 13 and Ubuntu 24.04), with the
++	// steps as the handler records them now.
++	steps := []importStep{
++		{Step: "domain", OK: true, Detail: "set4-import.test (id 6, site 6) → /var/www/celikpanel/subscriptions/2/sites/6/public_html"},
++		{Step: "files", OK: true, Detail: "2 files, 59 bytes"},
++		{Step: "mail", OK: true, Detail: "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)"},
++		{Step: "forwarders", OK: true, State: importStateNoneInArchive, Detail: "0 forwarders"},
++		{Step: "dns", OK: true, State: importStateLeftToOwner, Detail: "external DNS ownership preserved; verify provider records before publishing the site"},
++		{Step: "database:s4imp_app", OK: true, Detail: "created exclusively and dump imported (db USERS are not migrated; repoint app configs)"},
++	}
++	answer := importApplyAnswerFor("set4-import.test", 6, 6, steps)
++	if got := strings.Join(answer.Imported, ","); got != "domain,files,mail,database:s4imp_app" {
++		t.Fatalf("imported = %s", got)
++	}
++	if got := strings.Join(answer.LeftOut, ","); got != "forwarders,dns" {
++		t.Fatalf("left out = %s", got)
++	}
++	// A part left to the owner on purpose does not make the import partial.
++	if answer.Status != importStatusComplete || answer.DomainStatus != "active" || answer.Code != "" || answer.Message != "" ||
++		len(answer.NotImported) != 0 {
++		t.Fatalf("answer = %+v", answer)
++	}
++	encoded, err := json.Marshal(answer)
++	if err != nil {
++		t.Fatal(err)
++	}
++	for _, fragment := range []string{
++		`"imported":["domain","files","mail","database:s4imp_app"]`, `"not_imported":[]`, `"left_out":["forwarders","dns"]`,
++		`{"step":"dns","ok":true,"detail":"external DNS ownership preserved; verify provider records before publishing the site","state":"left_to_owner"}`,
++		`{"step":"files","ok":true,"detail":"2 files, 59 bytes"}`,
++	} {
++		if !strings.Contains(string(encoded), fragment) {
++			t.Fatalf("answer lacks %s: %s", fragment, encoded)
++		}
++	}
++
++	// A failed step is not imported whatever its state, and only a failed
++	// step makes the import partial; the message lists what was imported
++	// without the parts that were left out.
++	partial := importApplyAnswerFor("set4-import.test", 6, 6, append(append([]importStep{}, steps...),
++		importStep{Step: "database:s4imp_shop", OK: false, State: importStateNoneImported, Detail: "engine import failed"}))
++	if partial.Status != importStatusPartial || partial.Code != errCodeImportPartial ||
++		strings.Join(partial.NotImported, ",") != "database:s4imp_shop" || strings.Join(partial.LeftOut, ",") != "forwarders,dns" {
++		t.Fatalf("partial answer = %+v", partial)
++	}
++	if !strings.Contains(partial.Message, "Imported: domain, files, mail, database:s4imp_app. Not imported: database:s4imp_shop.") {
++		t.Fatalf("message = %s", partial.Message)
++	}
++
++	// Every list is a list, and a part is in exactly one of them.
++	for _, answer := range []importApplyAnswer{answer, partial, importApplyAnswerFor("x.test", 1, 1, nil)} {
++		seen := map[string]int{}
++		for _, list := range [][]string{answer.Imported, answer.NotImported, answer.LeftOut} {
++			if list == nil {
++				t.Fatalf("a list is null: %+v", answer)
++			}
++			for _, part := range list {
++				seen[part]++
++			}
++		}
++		for _, step := range answer.Steps {
++			if step.Step != "finalize" && seen[step.Step] != 1 {
++				t.Fatalf("%s is in %d lists: %+v", step.Step, seen[step.Step], answer)
++			}
++		}
++	}
++
++	if importNothingState(0) != importStateNoneInArchive || importNothingState(3) != importStateNoneImported {
++		t.Fatal("importNothingState does not tell an empty archive part from one of which nothing came in")
++	}
++}
++
++// The handler records every step that imports nothing with its reason, and no
++// such step with the plain `ok` that lists a part as imported.
++func TestImportHandlerMarksEveryStepThatImportedNothing(t *testing.T) {
++	source := readPanelSource(t, "import_handlers.go")
++	for _, needed := range []string{
++		// DNS of a server in external DNS mode: left to the owner's provider.
++		`nothing("dns", importStateLeftToOwner, "external DNS ownership preserved; verify provider records before publishing the site")`,
++		// The archive's DNS records are imported only when chosen and present.
++		"} else if req.DoDNS && hasImportedZone {\n\t\t\tok(\"dns\", \"DNS records published through the domain's connected authority\")\n\t\t} else {\n\t\t\tnothing(\"dns\", dnsNotImported, \"DNS records published through the domain's connected authority\")",
++		"} else if req.DoDNS && hasImportedZone {\n\t\t\tok(\"dns\", dnsDetail)\n\t\t} else {\n\t\t\tnothing(\"dns\", dnsNotImported, dnsDetail)",
++		"dnsNotImported := importStateNotChosen\n\tif req.DoDNS {\n\t\tdnsNotImported = importStateNoneInArchive\n\t}",
++		// Chosen parts of which nothing came in.
++		`nothing("forwarders", importNothingState(len(preview.Forwarders)), "0 forwarders")`,
++		"if imported > 0 {\n\t\t\tok(\"mail\", mailDetail)\n\t\t} else {\n\t\t\tnothing(\"mail\", importNothingState(mailboxesInArchive), mailDetail)",
++		"if ext.Files > 0 {\n\t\t\t\tok(\"files\", filesDetail)\n\t\t\t} else {\n\t\t\t\tnothing(\"files\", importNothingState(ext.RefusedCount), filesDetail)",
++	} {
++		if !strings.Contains(source, needed) {
++			t.Fatalf("import_handlers.go no longer contains %s", needed)
++		}
++	}
++	for _, never := range []string{
++		`ok("dns", "external DNS ownership preserved`, `ok("forwarders", "0 forwarders")`,
++		`ok("mail", fmt.Sprintf(`, `ok("files", fmt.Sprintf(`,
++	} {
++		if strings.Contains(source, never) {
++			t.Fatalf("import_handlers.go lists a part that imported nothing as imported: %s", never)
++		}
++	}
++	// A step with a state never changes whether the import is complete: only
++	// fail and failCoded do.
++	body := source[strings.Index(source, "nothing := func(step, state, detail string) {"):]
++	body = body[:strings.Index(body, "}\n")+1]
++	if strings.Contains(body, "complete") || !strings.Contains(body, "OK: true") {
++		t.Fatalf("a step that imported nothing changes the import's result: %s", body)
++	}
++}
++
++// A Stop after which the unit's own stop was not read is not answered as if
++// the unit had been looked at and found clean: it carries a note of its own.
++func TestSuccessfulStopSaysWhenTheUnitsStopWasNotRead(t *testing.T) {
++	note := func(unit, action string, reply transport.ServiceActionResult) (map[string]json.RawMessage, *apiErrorBody) {
++		raw, err := json.Marshal(serviceActionSuccessAnswer(unit, action, reply))
++		if err != nil {
++			t.Fatal(err)
++		}
++		fields := map[string]json.RawMessage{}
++		if err := json.Unmarshal(raw, &fields); err != nil {
++			t.Fatal(err)
++		}
++		for _, internal := range []string{"notice", "notice_unit", "notice_result", "notice_detail"} {
++			if _, present := fields[internal]; present {
++				t.Fatalf("the Agent's raw field %s was answered: %s", internal, raw)
++			}
++		}
++		if _, present := fields["note"]; !present {
++			return fields, nil
++		}
++		var body apiErrorBody
++		if err := json.Unmarshal(fields["note"], &body); err != nil {
++			t.Fatal(err)
++		}
++		return fields, &body
++	}
++	// systemd still showed the unit between two states when the wait ended.
++	pending := transport.ServiceActionResult{
++		Success: true, Outcome: transport.ServiceActionVerified, Applied: "stopped",
++		Notice: transport.ServiceActionNoticeUnitNotSettled, NoticeUnit: "postfix@-.service", NoticeResult: "deactivating",
++	}
++	fields, got := note("postfix", "stop", pending)
++	if string(fields["success"]) != "true" || string(fields["applied"]) != `"stopped"` || string(fields["outcome"]) != `"verified"` || got == nil {
++		t.Fatalf("answer = %v", fields)
++	}
++	if got.Code != errCodeServiceActionNote || got.Reason != serviceActionNoteUnitNotSettled ||
++		got.Vars["unit"] != "postfix" || got.Vars["pending_unit"] != "postfix@-.service" || got.Vars["state"] != "deactivating" ||
++		got.Vars["command"] != "systemctl status postfix@-.service" || len(got.Vars) != 4 {
++		t.Fatalf("note = %+v", got)
++	}
++	for _, fragment := range []string{
++		"The service was stopped and is not running", "systemd had not finished stopping its unit when CelikPanel stopped waiting",
++		"how its stop ended was not read", "it may end marked as failed", "The server owner runs the command shown",
++		"sends nothing more to the unit", "does not look again by itself",
++	} {
++		if !strings.Contains(got.Error, fragment) {
++			t.Fatalf("the note lacks %q: %s", fragment, got.Error)
++		}
++	}
++	// It claims neither state of the unit, and offers nothing that changes it.
++	for _, never := range []string{"is failed", "now shows its unit as failed", "is clean", "was not marked", "reset-failed"} {
++		if strings.Contains(got.Error, never) || strings.Contains(got.Vars["command"], never) {
++			t.Fatalf("the note says %q: %+v", never, got)
++		}
++	}
++
++	// The unit could not be read after the stop: no state is repeated.
++	unread := pending
++	unread.NoticeResult = ""
++	if _, got = note("postfix", "stop", unread); got == nil || got.Reason != serviceActionNoteUnitNotRead ||
++		got.Vars["pending_unit"] != "postfix@-.service" || got.Vars["command"] != "systemctl status postfix@-.service" {
++		t.Fatalf("note = %+v", got)
++	} else if _, has := got.Vars["state"]; has || !strings.Contains(got.Error, "could not be read from systemd after the stop") ||
++		!strings.Contains(got.Error, "is not known") {
++		t.Fatalf("note = %+v", got)
++	}
++	// A state that is not one of systemd's words is not repeated either.
++	odd := pending
++	odd.NoticeResult = "deactivating; $(x)"
++	if _, got = note("postfix", "stop", odd); got == nil || got.Reason != serviceActionNoteUnitNotRead {
++		t.Fatalf("note = %+v", got)
++	} else if _, has := got.Vars["state"]; has {
++		t.Fatalf("a state that is not systemd's was repeated: %+v", got)
++	}
++
++	// No note: another action, a failure, a unit name that is not one.
++	if _, got = note("postfix", "restart", pending); got != nil {
++		t.Fatal("a restart carries the stop's note")
++	}
++	failed := pending
++	failed.Success = false
++	if _, got = note("postfix", "stop", failed); got != nil {
++		t.Fatal("a failure carries a note")
++	}
++	hostile := pending
++	hostile.NoticeUnit = "postfix@-.service; rm -rf /"
++	if _, got = note("postfix", "stop", hostile); got != nil {
++		t.Fatal("a unit name that is not one was repeated")
++	}
++}
++
++// The operation guidance records, word for word, the sentences this entry
++// added to an answer, in its English and its Turkish edition.
++func TestTheGuidanceRecordsTheSentencesAfterSet4(t *testing.T) {
++	sentences := map[string]string{
++		"stop, the unit had not settled":   serviceActionNoteMessage(serviceActionNoteUnitNotSettled),
++		"stop, the unit could not be read": serviceActionNoteMessage(serviceActionNoteUnitNotRead),
++	}
++	for _, name := range []string{"OPERATION-GUIDANCE.md", "OPERATION-GUIDANCE.tr.md"} {
++		raw, err := os.ReadFile("../../docs/" + name)
++		if err != nil {
++			t.Fatal(err)
++		}
++		document := strings.Join(strings.Fields(string(raw)), " ")
++		for what, sentence := range sentences {
++			if !strings.Contains(document, `"`+sentence+`"`) {
++				t.Fatalf("%s does not record the sentence of %s: %s", name, what, sentence)
++			}
++		}
++	}
++}
+diff --git a/internal/transport/rpc.go b/internal/transport/rpc.go
+index f0829c65a..8f4fb3a9b 100644
+--- a/internal/transport/rpc.go
++++ b/internal/transport/rpc.go
+@@ -367,10 +367,13 @@ type ServiceActionResult struct {
+ 	// Unit names the unit that owns the daemon when it is not the one acted on.
+ 	Unit string `json:"unit,omitempty"`
+ 	// Notice is a fact about native state that a successful action left and
+-	// that its success does not say (12 Oct 2026). One value:
+-	// ServiceActionNoticeUnitFailed. NoticeUnit is the unit, NoticeResult
+-	// systemd's `Result` for it, NoticeDetail one bounded line of the
+-	// service's own words when it has any. Additive; never set on a failure.
++	// that its success does not say (12 Oct 2026):
++	// ServiceActionNoticeUnitFailed, or (9 Oct 2026)
++	// ServiceActionNoticeUnitNotSettled. NoticeUnit is the unit, NoticeResult
++	// systemd's `Result` for a failed unit or the last `ActiveState` read of
++	// one that had not settled (empty when it could not be read), NoticeDetail
++	// one bounded line of the service's own words when it has any. Additive;
++	// never set on a failure.
+ 	// Notice, başarılı bir işlemin geride bıraktığı ve başarının söylemediği
+ 	// yerel durum bilgisidir. Eklemelidir; hata yanıtında hiç doldurulmaz.
+ 	Notice       string `json:"notice,omitempty"`
+@@ -390,6 +393,23 @@ type ServiceActionResult struct {
+ // İşaret systemd'nin kendi kaydıdır ve olduğu gibi bırakılır.
+ const ServiceActionNoticeUnitFailed = "unit_marked_failed"
+ 
++// ServiceActionNoticeUnitNotSettled: the service was stopped as asked and is
++// not running, and how its unit's stop ended was not read: within the bound
++// the Agent waits, systemd still showed the unit between two states
++// (`deactivating`), or the unit could not be read after the stop although it
++// was read before it. The unit may still end marked as failed; nothing is
++// claimed about it either way (9 Oct 2026).
++//
++// Measured on Ubuntu 24.04: `systemctl stop postfix` returns when the wrapper
++// unit's job ends, 1 to 4 ms after `postfix@-.service` left `active`; that
++// unit then stays `deactivating` for about one second (its stop command
++// `postmulti -p stop` refuses main.cf and exits 1 after Postfix's own
++// one-second pause) and is marked `failed` 2 to 7 ms after the master ends.
++// ServiceActionNoticeUnitNotSettled: hizmet istendiği gibi durduruldu ve
++// çalışmıyor; biriminin durdurulmasının nasıl bittiği ise okunamadı. Birim
++// yine de `failed` olarak işaretlenebilir; bu konuda hiçbir şey ileri sürülmez.
++const ServiceActionNoticeUnitNotSettled = "unit_not_settled"
++
+ const (
+ 	ServiceActionVerified = "verified"
+ 	ServiceActionFailed   = "failed"
+diff --git a/web/src/components/ImportPage.tsx b/web/src/components/ImportPage.tsx
+index 3e2260bbc..d899c88b3 100644
+--- a/web/src/components/ImportPage.tsx
++++ b/web/src/components/ImportPage.tsx
+@@ -1,5 +1,5 @@
+ import { useEffect, useRef, useState } from 'react';
+-import { AlertTriangle, DownloadCloud, FolderInput, Eye, Mail, ArrowRight, Network, Database, FileText, CheckCircle2, XCircle, Info } from 'lucide-react';
++import { AlertTriangle, DownloadCloud, FolderInput, Eye, Mail, ArrowRight, Network, Database, FileText, CheckCircle2, XCircle, MinusCircle, Info } from 'lucide-react';
+ import { showToast } from './Toast';
+ import { useI18n } from '../i18n';
+ import { readApiError, type ApiError } from '../lib/apiError';
+@@ -72,6 +72,12 @@ interface StepResult {
+     step: string;
+     ok: boolean;
+     detail: string;
++    // Set on a step that ended without an error and imported nothing (not
++    // chosen, left to the owner's DNS provider, or nothing of it in the
++    // archive; 9 Oct 2026). Such a part is neither imported nor missing.
++    // Hatasız biten ve hiçbir şey içe aktarmayan adımda doludur. Böyle bir
++    // parça ne içe aktarılmıştır ne de eksiktir.
++    state: string;
+ }
+ 
+ // The result of an import whose every step has ended (11 Oct 2026). It is
+@@ -97,6 +103,7 @@ function readImportResult(raw: unknown, domain: string): ImportResult | null {
+         step: String((s as StepResult)?.step ?? ''),
+         ok: (s as StepResult)?.ok === true,
+         detail: String((s as StepResult)?.detail ?? ''),
++        state: typeof (s as StepResult)?.state === 'string' ? (s as StepResult).state : '',
+     }));
+     // The lists are the steps', so a part is listed exactly as its own step
+     // ended. Marking the domain as finished is not a part of the archive.
+@@ -105,7 +112,7 @@ function readImportResult(raw: unknown, domain: string): ImportResult | null {
+     return {
+         domain: typeof data.domain === 'string' && data.domain ? data.domain : domain,
+         partial: data.status === 'partial' || steps.some((s) => !s.ok),
+-        imported: parts.filter((s) => s.ok).map((s) => s.step),
++        imported: parts.filter((s) => s.ok && !s.state).map((s) => s.step),
+         notImported: parts.filter((s) => !s.ok).map((s) => s.step),
+         steps,
+     };
+@@ -592,15 +599,17 @@ export function ImportPage() {
+                     <ul className="space-y-2">
+                         {result.steps.map((s, i) => (
+                             <li key={i} className="flex items-start gap-2.5 rounded-lg border border-border bg-surface-2/40 px-3 py-2">
+-                                {s.ok ? (
+-                                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+-                                ) : (
++                                {!s.ok ? (
+                                     <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden="true" />
++                                ) : s.state ? (
++                                    <MinusCircle className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" />
++                                ) : (
++                                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+                                 )}
+                                 <div className="min-w-0">
+                                     <div className="break-words text-sm font-medium text-fg">
+                                         {partLabel(s.step, t)}
+-                                        <span className="sr-only">: {t(s.ok ? 'import.step.done' : 'import.step.notDone')}</span>
++                                        <span className="sr-only">: {t(!s.ok ? 'import.step.notDone' : s.state ? 'import.step.nothing' : 'import.step.done')}</span>
+                                     </div>
+                                     <div className="break-words text-xs text-fg-muted">{detailKeys[s.detail] ? t(detailKeys[s.detail]) : s.detail}</div>
+                                 </div>
+diff --git a/web/src/components/ServiceActionNotice.tsx b/web/src/components/ServiceActionNotice.tsx
+index 76b6425cd..f2b58f507 100644
+--- a/web/src/components/ServiceActionNotice.tsx
++++ b/web/src/components/ServiceActionNotice.tsx
+@@ -44,6 +44,10 @@ export function isServiceActionOutcome(error: ApiError): boolean {
+ const noteSentences: Record<string, TranslationKey> = {
+     unit_marked_failed: 'services.action.note.unit_marked_failed',
+     unit_marked_failed_config: 'services.action.note.unit_marked_failed_config',
++    // 9 Oct 2026: the unit's own stop was not read (systemd was still
++    // stopping it when the wait ended, or it could not be read at all).
++    unit_not_settled: 'services.action.note.unit_not_settled',
++    unit_state_not_read: 'services.action.note.unit_state_not_read',
+ };
+ 
+ export function ServiceActionNotice({
+diff --git a/web/src/i18n/screens/en.ts b/web/src/i18n/screens/en.ts
+index dac3da401..256a62123 100644
+--- a/web/src/i18n/screens/en.ts
++++ b/web/src/i18n/screens/en.ts
+@@ -1315,6 +1315,10 @@ export const enScreens = {
+     'import.stepsTitle': "Each step",
+     'import.step.done': "Imported",
+     'import.step.notDone': "Not imported",
++    // A step that ended without an error and imported nothing: the part was
++    // not chosen, was left to the owner's DNS provider, or the archive holds
++    // nothing of it. The step's own line says which.
++    'import.step.nothing': "Nothing imported, nothing failed",
+     'import.part.domain': "Domain and site",
+     'import.part.files': "Website files",
+     'import.part.mail': "Mail accounts",
+diff --git a/web/src/i18n/screens/server/en.ts b/web/src/i18n/screens/server/en.ts
+index cb92ae8fe..392e935c2 100644
+--- a/web/src/i18n/screens/server/en.ts
++++ b/web/src/i18n/screens/server/en.ts
+@@ -263,7 +263,9 @@ export const enServerScreens = {
+     // what happened and what runs now, the recorded cause or that none was
+     // recorded, and what starting it again does. Start is never blocked.
+     'panelUpdate.previousAttempt.rolledBackTitle': 'This version was already tried on this server and rolled back',
+-    'panelUpdate.previousAttempt.recovered': '{version} was started here on {time}. The update did not complete, and the server was returned to {current}, which it runs now.',
++    // {time} is the moment the attempt ended (the API's finished_at); the
++    // server records no start time for it, so the sentence names none.
++    'panelUpdate.previousAttempt.recovered': '{version} was started here, and that attempt ended on {time}. The update did not complete, and the server was returned to {current}, which it runs now.',
+     'panelUpdate.previousAttempt.noCause': 'The server recorded no more specific cause for that attempt.',
+     'panelUpdate.previousAttempt.again': 'Starting it again runs the same update. If the cause was on this server and has been corrected, the result can differ; otherwise expect the same one. A corrected version, when it is published, is offered here as a newer version. The button below still starts {version}.',
+     'panelUpdate.previousAttempt.failed': '{version} was tried on this server on {time} and did not complete; this server runs {current} now. Starting it again repeats the same update unless the cause has been fixed.',
+@@ -317,6 +319,11 @@ export const enServerScreens = {
+     // said, not cleared. The mark is systemd's own record.
+     'services.action.note.unit_marked_failed': "{unit} was stopped and is not running. systemd now shows {failed_unit} as failed (result: {result}), which it was not before the stop. That mark is systemd’s own record of how the unit’s stop went (with the result exit-code, a command of the unit exited with an error), and CelikPanel leaves it as it is. Start can be used from this state. To clear the mark without starting, run {command} on the server.",
+     'services.action.note.unit_marked_failed_config': "{unit} was stopped and is not running. systemd now shows {failed_unit} as failed (result: {result}), which it was not before the stop. That mark is systemd’s own record of how the unit’s stop went, and CelikPanel leaves it as it is. {unit} refuses its own configuration at present (its line is below), and the unit’s stop command reads the same file; it will not start until that is corrected. To clear the mark without starting, run {command} on the server.",
++    // A Stop after which the unit's own stop was not read (9 Oct 2026): systemd
++    // was still stopping the unit when the wait ended, or the unit could not
++    // be read. Said, so that silence is not taken for "the unit is clean".
++    'services.action.note.unit_not_settled': "{unit} was stopped and is not running. systemd had not finished stopping {pending_unit} when CelikPanel stopped waiting for it (its state was still {state}), so how that stop ended was not read; the unit may end marked as failed. To see it as systemd shows it now, run {command} on the server. Nothing more is sent to the unit, and nothing looks again by itself.",
++    'services.action.note.unit_state_not_read': "{unit} was stopped and is not running. The state of {pending_unit} could not be read from systemd after the stop, so it is not known whether the unit ended marked as failed. To see it as systemd shows it now, run {command} on the server. Nothing more is sent to the unit, and nothing looks again by itself.",
+     'services.scanNow': 'Scan services',
+     'services.rescan': 'Rescan',
+     'services.scanning': 'Scanning\u2026',
+diff --git a/web/src/i18n/screens/server/tr.ts b/web/src/i18n/screens/server/tr.ts
+index 774c54325..576dafe86 100644
+--- a/web/src/i18n/screens/server/tr.ts
++++ b/web/src/i18n/screens/server/tr.ts
+@@ -266,6 +266,11 @@ export const trServerScreens: Record<ServerScreenKey, string> = {
+     'services.action.ownerUnit': "Hizmetin kendisi {owner_unit} olarak çalışır; {unit} yalnız onu gruplar.",
+     'services.action.note.unit_marked_failed': "{unit} durduruldu ve çalışmıyor. systemd şimdi {failed_unit} birimini failed (sonuç: {result}) olarak gösteriyor; durdurmadan önce öyle değildi. Bu işaret, systemd’nin birimin durdurulmasının nasıl geçtiğine dair kendi kaydıdır (sonuç exit-code ise birimin bir komutu hatayla çıkmıştır) ve CelikPanel onu olduğu gibi bırakır. Bu durumdan Başlat kullanılabilir. İşareti başlatmadan temizlemek için sunucuda {command} komutunu çalıştırın.",
+     'services.action.note.unit_marked_failed_config': "{unit} durduruldu ve çalışmıyor. systemd şimdi {failed_unit} birimini failed (sonuç: {result}) olarak gösteriyor; durdurmadan önce öyle değildi. Bu işaret, systemd’nin birimin durdurulmasının nasıl geçtiğine dair kendi kaydıdır ve CelikPanel onu olduğu gibi bırakır. {unit} şu an kendi yapılandırmasını reddediyor (satırı aşağıda) ve birimin durdurma komutu da aynı dosyayı okur; bu düzeltilene dek başlamaz. İşareti başlatmadan temizlemek için sunucuda {command} komutunu çalıştırın.",
++    // Birimin kendi durdurulmasının okunamadığı Durdur (9 Eki 2026): bekleme
++    // bittiğinde systemd birimi hâlâ durduruyordu ya da birim okunamadı.
++    // Söylenir; sessizlik "birim temiz" diye anlaşılmasın.
++    'services.action.note.unit_not_settled': "{unit} durduruldu ve çalışmıyor. CelikPanel beklemeyi bıraktığında systemd {pending_unit} birimini durdurmayı bitirmemişti (durumu hâlâ {state} idi); bu yüzden durdurmanın nasıl bittiği okunmadı ve birim failed olarak işaretlenmiş olabilir. systemd’nin şu an ne gösterdiğini görmek için sunucuda {command} komutunu çalıştırın. Birime başka bir şey gönderilmez ve hiçbir şey kendiliğinden yeniden bakmaz.",
++    'services.action.note.unit_state_not_read': "{unit} durduruldu ve çalışmıyor. Durdurmadan sonra {pending_unit} biriminin durumu systemd’den okunamadı; bu yüzden birimin failed olarak işaretlenip işaretlenmediği bilinmiyor. systemd’nin şu an ne gösterdiğini görmek için sunucuda {command} komutunu çalıştırın. Birime başka bir şey gönderilmez ve hiçbir şey kendiliğinden yeniden bakmaz.",
+     'services.scanNow': 'Servisleri tara',
+     'services.rescan': 'Yeniden tara',
+     'services.scanning': 'Taranıyor\u2026',
+@@ -970,7 +975,9 @@ export const trServerScreens: Record<ServerScreenKey, string> = {
+     'panelUpdate.none': 'Bu kanal için yeni güncelleme yok.',
+     'panelUpdate.previousAttempt.title': 'Bu sürüm bu sunucuda daha önce başarısız oldu',
+     'panelUpdate.previousAttempt.rolledBackTitle': 'Bu sürüm bu sunucuda daha önce denendi ve geri alındı',
+-    'panelUpdate.previousAttempt.recovered': '{version} burada {time} tarihinde başlatıldı. Güncelleme tamamlanmadı ve sunucu {current} sürümüne döndürüldü; şu an onu çalıştırıyor.',
++    // {time}, denemenin bittiği andır (API'deki finished_at); sunucu deneme
++    // için bir başlangıç zamanı kaydetmez, cümle de bir başlangıç zamanı söylemez.
++    'panelUpdate.previousAttempt.recovered': '{version} burada başlatıldı ve o deneme {time} tarihinde sona erdi. Güncelleme tamamlanmadı ve sunucu {current} sürümüne döndürüldü; şu an onu çalıştırıyor.',
+     'panelUpdate.previousAttempt.noCause': 'Sunucu o deneme için daha belirli bir neden kaydetmedi.',
+     'panelUpdate.previousAttempt.again': 'Yeniden başlatmak aynı güncellemeyi çalıştırır. Neden bu sunucudaysa ve giderildiyse sonuç değişebilir; değilse aynı sonucu bekleyin. Düzeltilmiş bir sürüm yayımlandığında burada daha yeni bir sürüm olarak sunulur. Aşağıdaki düğme {version} sürümünü yine başlatır.',
+     'panelUpdate.previousAttempt.failed': '{version} bu sunucuda {time} tarihinde denendi ve tamamlanmadı; bu sunucu şu an {current} sürümünü çalıştırıyor. Neden giderilmediyse yeniden başlatmak aynı güncellemeyi tekrarlar.',
+diff --git a/web/src/i18n/screens/tr.ts b/web/src/i18n/screens/tr.ts
+index 2a40a43a2..e022984cf 100644
+--- a/web/src/i18n/screens/tr.ts
++++ b/web/src/i18n/screens/tr.ts
+@@ -1300,6 +1300,10 @@ export const trScreens: Record<ScreenKey, string> = {
+     'import.stepsTitle': "Adım adım",
+     'import.step.done': "İçe aktarıldı",
+     'import.step.notDone': "İçe aktarılmadı",
++    // Hatasız biten ve hiçbir şey içe aktarmayan adım: parça seçilmedi, DNS
++    // sağlayıcısına bırakıldı ya da arşivde ona ait bir şey yok. Hangisi
++    // olduğunu adımın kendi satırı söyler.
++    'import.step.nothing': "İçe aktarılan yok, hata da yok",
+     'import.part.domain': "Alan adı ve site",
+     'import.part.files': "Site dosyaları",
+     'import.part.mail': "Posta hesapları",
+diff --git a/web/tests/set3-corrections.test.mjs b/web/tests/set3-corrections.test.mjs
+index e3313a2bb..147e2c37e 100644
+--- a/web/tests/set3-corrections.test.mjs
++++ b/web/tests/set3-corrections.test.mjs
+@@ -178,6 +178,9 @@ test('the update card says before Start that the offered version was already tri
+   assert.match(card, /previousAttempt\.phase === 'recovered' \? 'panelUpdate\.previousAttempt\.rolledBackTitle'/);
+   assert.match(card, /\{!previousStopped && \(\s*<p className="mt-1 text-fg-muted">\s*\{previousAttempt\.failure_code\s*\? t\('panelUpdate\.previousAttempt\.cause', \{ cause: t\(`recovery\.reason\.\$\{previousAttempt\.failure_code\}`\) \}\)\s*: t\('panelUpdate\.previousAttempt\.noCause'\)\}/);
+   assert.match(card, /\{previousAttempt\.phase === 'recovered' && \(\s*<p className="mt-1 text-fg-muted">\{t\('panelUpdate\.previousAttempt\.again', \{ version: target\.version \}\)\}<\/p>/);
++  // {time} of the notice is the attempt's finished_at, the only time the API gives.
++  assert.match(card, /time: new Date\(previousAttempt\.finished_at\)\.toLocaleString\(/);
++  assert.doesNotMatch(card, /previousAttempt\.started_at/);
+   // The notice is guidance: nothing in it disables Start or hides the version.
+   const start = card.slice(card.indexOf('id="panel-update-start-button"'));
+   assert.match(start, /disabled=\{starting \|\| readinessChecking \|\| readiness\?\.ready !== true\}/);
+@@ -187,6 +190,12 @@ test('the update card says before Start that the offered version was already tri
+     assert.equal(placeholders(value('panelUpdate.previousAttempt.recovered')), 'current,time,version');
+     assert.match(value('panelUpdate.previousAttempt.rolledBackTitle'), language === 'en' ? /already tried on this server and rolled back/ : /daha önce denendi ve geri alındı/);
+     assert.match(value('panelUpdate.previousAttempt.recovered'), language === 'en' ? /did not complete, and the server was returned to \{current\}, which it runs now\.$/ : /tamamlanmadı ve sunucu \{current\} sürümüne döndürüldü; şu an onu çalıştırıyor\.$/);
++    // The one time the API gives for a returned attempt is its end
++    // (finished_at). The sentence says the time is when the attempt ended and
++    // never puts it beside "started" (set4, 2026-10-09: the sentence read
++    // "was started here on {time}" and was filled with the end time).
++    assert.match(value('panelUpdate.previousAttempt.recovered'), language === 'en' ? /^\{version\} was started here, and that attempt ended on \{time\}\. / : /^\{version\} burada başlatıldı ve o deneme \{time\} tarihinde sona erdi\. /);
++    assert.doesNotMatch(value('panelUpdate.previousAttempt.recovered'), /started (here |on this server )?on \{time\}|\{time\} tarihinde başlatıldı/);
+     assert.match(value('panelUpdate.previousAttempt.again'), language === 'en' ? /The button below still starts \{version\}\.$/ : /Aşağıdaki düğme \{version\} sürümünü yine başlatır\.$/);
+     assert.doesNotMatch(value('panelUpdate.previousAttempt.again'), /cannot|blocked|disabled|engellen|kapalı/);
+   }
+diff --git a/web/tests/set4-corrections.test.mjs b/web/tests/set4-corrections.test.mjs
+new file mode 100644
+index 000000000..0e11afe56
+--- /dev/null
++++ b/web/tests/set4-corrections.test.mjs
+@@ -0,0 +1,55 @@
++import assert from 'node:assert/strict';
++import { readFileSync } from 'node:fs';
++import test from 'node:test';
++
++// 9 Oct 2026, corrections after the set4 native measurement that have a screen:
++//
++//   - an import listed `dns` as imported although DNS was not chosen and the
++//     server's DNS is the owner's external provider. A step that ended
++//     without an error and imported nothing is now neither imported nor
++//     missing, on the page as in the answer;
++//   - the update card's sentence put the attempt's end time beside "started"
++//     (pinned with the card's other sentences in set3-corrections.test.mjs).
++//
++// 9 Eki 2026, set4 yerel ölçümünden sonra ekranı olan düzeltmeler.
++
++const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
++const flat = (text) => text.replace(/\s+/g, ' ');
++const screens = { en: read('../src/i18n/screens/en.ts'), tr: read('../src/i18n/screens/tr.ts') };
++const server = { en: read('../src/i18n/screens/server/en.ts'), tr: read('../src/i18n/screens/server/tr.ts') };
++const guidance = { en: flat(read('../../docs/OPERATION-GUIDANCE.md')), tr: flat(read('../../docs/OPERATION-GUIDANCE.tr.md')) };
++const importPage = read('../src/components/ImportPage.tsx');
++const valueOf = (source, key) => {
++  const match = source.match(new RegExp(`^ {4}'${key.replace(/\./g, '\\.')}': ("(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*'),$`, 'm'));
++  assert.ok(match, `${key} is not in the catalogue`);
++  return match[1].startsWith('"') ? JSON.parse(match[1]) : match[1].slice(1, -1).replace(/\\'/g, "'");
++};
++
++test('a step that imported nothing is neither listed as imported nor as missing', () => {
++  // The answer's `state` is kept per step; anything that is not a string is no state.
++  assert.match(importPage, /state: typeof \(s as StepResult\)\?\.state === 'string' \? \(s as StepResult\)\.state : '',/);
++  // Imported: ended without an error and has no state. Missing: did not end well.
++  assert.match(importPage, /imported: parts\.filter\(\(s\) => s\.ok && !s\.state\)\.map\(\(s\) => s\.step\),/);
++  assert.match(importPage, /notImported: parts\.filter\(\(s\) => !s\.ok\)\.map\(\(s\) => s\.step\),/);
++  // Such a step does not make the result partial: only a step that did not end well does.
++  assert.match(importPage, /partial: data\.status === 'partial' \|\| steps\.some\(\(s\) => !s\.ok\),/);
++  // In the list of steps it has its own mark and its own words for a screen
++  // reader; a failure is decided first, so a failed step is never shown as this.
++  const list = importPage.slice(importPage.indexOf('{result.steps.map((s, i) => ('));
++  assert.match(list, /\{!s\.ok \? \(\s*<XCircle [^>]*text-danger[^>]*\/>\s*\) : s\.state \? \(\s*<MinusCircle [^>]*text-fg-muted[^>]*aria-hidden="true" \/>\s*\) : \(\s*<CheckCircle2 [^>]*text-success[^>]*\/>\s*\)\}/);
++  assert.match(list, /<span className="sr-only">: \{t\(!s\.ok \? 'import\.step\.notDone' : s\.state \? 'import\.step\.nothing' : 'import\.step\.done'\)\}<\/span>/);
++});
++
++test('the new sentences exist in English and Turkish, and the guidance records them', () => {
++  for (const [catalogue, key] of [[screens, 'import.step.nothing'], [server, 'panelUpdate.previousAttempt.recovered']]) {
++    const [english, turkish] = [valueOf(catalogue.en, key), valueOf(catalogue.tr, key)];
++    assert.ok(english && turkish && english !== turkish, `${key}: one language repeats the other`);
++    for (const [language, document] of Object.entries(guidance)) {
++      assert.ok(document.includes(`"${english}"`), `${language}: the English sentence of ${key} is not recorded`);
++      assert.ok(document.includes(`"${turkish}"`), `${language}: the Turkish sentence of ${key} is not recorded`);
++    }
++  }
++  // The words say both facts: nothing came in, and nothing went wrong.
++  assert.equal(valueOf(screens.en, 'import.step.nothing'), 'Nothing imported, nothing failed');
++  assert.equal(valueOf(screens.tr, 'import.step.nothing'), 'İçe aktarılan yok, hata da yok');
++});
+diff --git a/web/tools/browser-inspect/README.md b/web/tools/browser-inspect/README.md
+index c070a7e95..0196796c0 100644
+--- a/web/tools/browser-inspect/README.md
++++ b/web/tools/browser-inspect/README.md
+@@ -300,7 +300,8 @@ and the import's answers through the plan of the fifth batch.
+ | `siterefused` | a site the web server refused, in the Add Domain dialog and on the import page, each with the removal confirmed and not confirmed (140a-140d). Fails when the sentence says more or less than its reason, when nginx's own line is not under it in the face of program output, or when it leaves with a toast |
+ | `importentries` | an import whose only missing entries are archive entries refused by their names: the summary and the steps (141a, 141b). Fails when the result reads as an unfinished domain or shows a step by its internal name |
+ | `stopnote` | a Stop that succeeded and left the unit marked as failed, with and without a line of the service's own (142a, 142b). Fails when it stands on the failure surface or is not announced as a status |
+-| `updaterolledback` | the update card when the offered version was already tried here and rolled back, with a recorded cause and without one, and with no earlier attempt (143a-143c). Fails when Start is disabled, when the version is hidden, or when the notice is not above Start |
++| `updaterolledback` | the update card when the offered version was already tried here and rolled back, with a recorded cause and without one, and with no earlier attempt (143a-143c). Fails when Start is disabled, when the version is hidden, or when the notice is not above Start. Since 2026-10-09 it also fails when the sentence does not say its time as the end of that attempt, or puts it beside "started" |
++| `importleftout` | (2026-10-09) an import that ended complete while its DNS was left to the owner's external provider and the archive held no forwarders: the result and the steps (144a, 144b). Fails when the result is drawn as partial, when such a step carries the mark of an imported or a failed step, or is read out as either. `importentries` checks the same two steps in a partial result, and that neither is in a list of the summary |
+ 
+ Every record of this batch fails when the page scrolls sideways, when a text
+ is cut inside its box, or when a placeholder is on screen.
+diff --git a/web/tools/browser-inspect/run.mjs b/web/tools/browser-inspect/run.mjs
+index 8027537c8..cac01d05d 100644
+--- a/web/tools/browser-inspect/run.mjs
++++ b/web/tools/browser-inspect/run.mjs
+@@ -1720,7 +1720,8 @@ const scenarios = {
+ // --- end of batch 6 ---
+ 
+ // --- batch 7 (12 Oct 2026): corrections from the final native round ---
+-// `siterefused`, `importentries`, `stopnote` and `updaterolledback` live in
++// `siterefused`, `importentries`, `importleftout` (9 Oct 2026), `stopnote` and
++// `updaterolledback` live in
+ // their own file, like the batches before.
+ (await import('./scenarios-batch7.mjs')).default(scenarios, { base, vp, locale, theme, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
+ // --- end of batch 7 ---
+diff --git a/web/tools/browser-inspect/scenarios-batch7.mjs b/web/tools/browser-inspect/scenarios-batch7.mjs
+index 01b339a47..fd80866ff 100644
+--- a/web/tools/browser-inspect/scenarios-batch7.mjs
++++ b/web/tools/browser-inspect/scenarios-batch7.mjs
+@@ -13,7 +13,11 @@
+ //   updaterolledback  the update card says, above Start, that the offered
+ //                     version was already tried here and rolled back, with the
+ //                     recorded cause or that none was recorded; Start stays
+-//                     enabled.
++//                     enabled. Since 9 Oct 2026 the sentence says its time as
++//                     the end of that attempt.
++//   importleftout     (9 Oct 2026) an import whose DNS was left to the owner's
++//                     provider is complete, and the step is neither marked as
++//                     imported nor as failed.
+ //
+ // Like the batches before: the mock on 127.0.0.1 answers everything, nothing
+ // else is contacted. The answers of this batch are given through the mock's
+@@ -55,8 +59,9 @@ const LONG_ENTRY = '/var/lib/another-application/releases/2026-10-09/shared/stor
+ const ENTRIES = {
+     domain_id: 9, site_id: 4, domain: 'old.example', status: 'partial', domain_status: 'active', code: 'IMPORT_PARTIAL',
+     message: 'The import ended and every part that was chosen was imported; old.example is in service.',
+-    imported: ['domain', 'files', 'mail', 'forwarders', 'dns', 'database:olduser_shop'],
++    imported: ['domain', 'files', 'mail', 'database:olduser_shop'],
+     not_imported: ['member:/etc/set3-escape-absolute.txt', `member:${LONG_ENTRY}`, 'members:44'],
++    left_out: ['forwarders', 'dns'],
+     steps: [
+         { step: 'domain', ok: true, detail: 'old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html' },
+         { step: 'files', ok: true, detail: '412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported' },
+@@ -64,8 +69,25 @@ const ENTRIES = {
+         { step: `member:${LONG_ENTRY}`, ok: false, detail: ABSOLUTE },
+         { step: 'members:44', ok: false, detail: 'not imported: 44 more entries of the archive were refused by their names in the same way; 46 in all' },
+         { step: 'mail', ok: true, detail: '1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)' },
+-        { step: 'forwarders', ok: true, detail: '0 forwarders' },
+-        { step: 'dns', ok: true, detail: 'panel DNS template created; archive DNS import was not selected' },
++        { step: 'forwarders', ok: true, state: 'none_in_archive', detail: '0 forwarders' },
++        { step: 'dns', ok: true, state: 'not_chosen', detail: 'panel DNS template created; archive DNS import was not selected' },
++        { step: 'database:olduser_shop', ok: true, detail: 'created exclusively and dump imported (db USERS are not migrated; repoint app configs)' },
++    ],
++};
++// 9 Oct 2026: an import that ended complete on a server whose DNS is the
++// owner's external provider. The `dns` step ended without an error and
++// imported nothing (`state: left_to_owner`); so did `forwarders`, of which the
++// archive holds none.
++const EXTERNAL_DNS_DETAIL = 'external DNS ownership preserved; verify provider records before publishing the site';
++const LEFT_OUT = {
++    domain_id: 9, site_id: 4, domain: 'old.example', status: 'active', domain_status: 'active',
++    imported: ['domain', 'files', 'mail', 'database:olduser_shop'], not_imported: [], left_out: ['forwarders', 'dns'],
++    steps: [
++        { step: 'domain', ok: true, detail: 'old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html' },
++        { step: 'files', ok: true, detail: '412 files, 48234496 bytes' },
++        { step: 'mail', ok: true, detail: '1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)' },
++        { step: 'forwarders', ok: true, state: 'none_in_archive', detail: '0 forwarders' },
++        { step: 'dns', ok: true, state: 'left_to_owner', detail: EXTERNAL_DNS_DETAIL },
+         { step: 'database:olduser_shop', ok: true, detail: 'created exclusively and dump imported (db USERS are not migrated; repoint app configs)' },
+     ],
+ };
+@@ -81,7 +103,7 @@ const TARGET = { version: 'v0.1.0-alpha.82', commit: 'b'.repeat(40), sequence: '
+ const check = (attempt) => ({ supported: true, available: true, current_version: 'v0.1.0-alpha.81', current_commit: 'a'.repeat(40), target: TARGET, ...(attempt ? { previous_attempt: attempt } : {}) });
+ 
+ export default function register(scenarios, tools) {
+-    const { base, ctl, reset, drainLog, newPage, closePage, shot, clickByText, waitFor, pause, quiet } = tools;
++    const { base, ctl, reset, drainLog, newPage, closePage, shot, clickByText, waitFor, pause, quiet, locale } = tools;
+     const must = (condition, message) => { if (!condition) throw new Error(message); };
+     const fresh = async (plan = {}, override = {}) => {
+         await reset();
+@@ -185,6 +207,37 @@ export default function register(scenarios, tools) {
+         return page;
+     };
+     const START = ['Start import', 'İçe aktarmayı başlat'];
++    // Each row of the result's step list: its label, the words a screen reader
++    // gets after it, its own line, and which of the three marks is drawn.
++    const stepRows = (page) => page.evaluate(() => Array.from(document.querySelectorAll('[data-import-result] ul.space-y-2 > li')).map((row) => {
++        const icon = row.querySelector('svg');
++        const tone = icon ? ['text-success', 'text-danger', 'text-fg-muted'].find((name) => icon.classList.contains(name)) || null : null;
++        const said = row.querySelector('.sr-only');
++        const label = said ? said.parentElement.cloneNode(true) : null;
++        if (label) label.querySelector('.sr-only')?.remove();
++        return {
++            label: label ? label.textContent.trim() : null, said: said ? said.textContent.replace(/^:\s*/, '').trim() : null,
++            detail: row.querySelector('.text-xs')?.textContent.trim() || null, tone, iconColor: icon ? getComputedStyle(icon).color : null,
++            iconVisible: Boolean(icon && icon.getClientRects().length > 0),
++        };
++    }));
++    const NOTHING = ['Nothing imported, nothing failed', 'İçe aktarılan yok, hata da yok'];
++    const DNS = ['DNS records', 'DNS kayıtları'];
++    const FORWARDERS = ['Forwarders', 'Yönlendirmeler'];
++    const leftOutRows = (name, rows) => {
++        for (const labels of [DNS, FORWARDERS]) {
++            const row = rows.find((item) => labels.includes(item.label));
++            must(row, `${name}: the step ${labels[0]} is not in the list: ${JSON.stringify(rows.map((item) => item.label))}`);
++            must(row.tone === 'text-fg-muted' && row.iconVisible, `${name}: ${labels[0]} is drawn with the mark "${row.tone}", not the neutral one`);
++            must(NOTHING.includes(row.said), `${name}: ${labels[0]} is read out as "${row.said}"`);
++        }
++        const imported = rows.filter((item) => item.tone === 'text-success');
++        must(imported.length > 0 && imported.every((item) => ['Imported', 'İçe aktarıldı'].includes(item.said)), `${name}: an imported step is not read out as imported`);
++        must(rows.filter((item) => item.tone === 'text-danger').every((item) => ['Not imported', 'İçe aktarılmadı'].includes(item.said)), `${name}: a step that was not imported is not read out as that`);
++        const tones = new Set(rows.map((item) => item.tone));
++        const colours = new Set(rows.map((item) => item.iconColor));
++        must(!tones.has(null) && colours.size === tones.size, `${name}: two marks share a colour: ${JSON.stringify(rows.map((item) => [item.tone, item.iconColor]))}`);
++    };
+     const DIALOG = '[aria-labelledby="add-domain-title"]';
+     const refusedBanner = (name, banner, domain, removed) => {
+         must(banner, `${name}: the refusal is not on the page`);
+@@ -277,7 +330,42 @@ export default function register(scenarios, tools) {
+             must(/1530 other entries of the archive are outside the site folder/.test(result.text), '141a: the files line does not say what was outside the site folder');
+             must(seen.toasts.length === 0, `141a: the result is also a toast: ${JSON.stringify(seen.toasts)}`);
+             must(seen.enabledButtons.some((label) => /Open old\.example|old\.example alan adını aç/.test(label)), '141a: the domain cannot be opened from the result');
+-            await record(page, '141b-import-refused-archive-entries-steps', '[data-import-result] ul.space-y-2');
++            // 9 Oct 2026: a part that imported nothing without failing (DNS that
++            // was not chosen, forwarders the archive does not hold) is in
++            // neither list of the summary.
++            const lists = await page.evaluate(() => (document.querySelector('[data-import-result] [role="alert"] dl')?.innerText || '').replace(/\s+/g, ' ').trim());
++            must(/Website files|Site dosyaları/.test(lists) && /Archive entry|Arşiv girdisi/.test(lists), `141a: the two lists were not read: ${lists.slice(0, 200)}`);
++            must(!DNS.some((label) => lists.includes(label)) && !FORWARDERS.some((label) => lists.includes(label)), `141a: a part that imported nothing is in a list of the summary: ${lists.slice(0, 400)}`);
++            const entryRows = await stepRows(page);
++            await record(page, '141b-import-refused-archive-entries-steps', '[data-import-result] ul.space-y-2', { stepRows: entryRows });
++            leftOutRows('141b', entryRows);
++            await closePage(page);
++        } finally {
++            await done();
++        }
++    };
++
++    // 9 Oct 2026 (set4): an import that asked for no DNS on a server whose DNS
++    // is the owner's external provider listed `dns` as imported.
++    scenarios.importleftout = async () => {
++        try {
++            await fresh({ [GUARDED.importApply]: { fail: { status: 200, body: LEFT_OUT } } });
++            const page = await inspect();
++            await clickExact(page, START);
++            await waitFor(page, () => Boolean(document.querySelector('[data-import-result]')), 20000);
++            await quiet(page);
++            const seen = await record(page, '144a-import-complete-dns-left-to-the-owner', '[data-import-result]');
++            const result = seen.importResult;
++            must(result && result.kind === 'complete' && !result.alert, `144a: the result is drawn as "${result?.kind}"${result?.alert ? ' with an alert' : ''}`);
++            must(/Every part you chose was imported, and old\.example is in service|Seçtiğiniz her parça içe aktarıldı ve old\.example hizmette/.test(result.text), `144a: a complete import does not say so: ${result.text.slice(0, 200)}`);
++            must(result.text.includes(EXTERNAL_DNS_DETAIL), '144a: the DNS step does not say that the records stay with the provider');
++            const rows = await stepRows(page);
++            must(rows.length === LEFT_OUT.steps.length, `144a: ${rows.length} step rows for ${LEFT_OUT.steps.length} steps`);
++            leftOutRows('144a', rows);
++            must(rows.filter((item) => item.tone === 'text-danger').length === 0, '144a: a step is drawn as failed');
++            must(rows.find((item) => DNS.includes(item.label)).detail === EXTERNAL_DNS_DETAIL, '144a: the DNS row does not carry its own line');
++            must(seen.toasts.length === 0, `144a: the result is also a toast: ${JSON.stringify(seen.toasts)}`);
++            await record(page, '144b-import-complete-dns-left-to-the-owner-steps', '[data-import-result] ul.space-y-2', { stepRows: rows });
+             await closePage(page);
+         } finally {
+             await done();
+@@ -352,6 +440,11 @@ export default function register(scenarios, tools) {
+                 must(/already tried on this server and rolled back|daha önce denendi ve geri alındı/.test(previous.heading || ''), `${name}: the heading does not say it was rolled back: ${previous.heading}`);
+                 must(previous.lines[1].includes('v0.1.0-alpha.82') && previous.lines[1].includes('v0.1.0-alpha.81'), `${name}: the two versions are not named: ${previous.lines[1]}`);
+                 must(/which it runs now|şu an onu çalıştırıyor/.test(previous.lines[1]), `${name}: it is not said what the server runs now`);
++                // 9 Oct 2026 (set4): the one time the server gives is when the
++                // attempt ended. It is said as that and never beside "started".
++                const ended = await page.evaluate((at, language) => new Date(at).toLocaleString(language === 'tr' ? 'tr-TR' : 'en-US'), attempt.finished_at, locale);
++                must(previous.lines[1].includes(`that attempt ended on ${ended}.`) || previous.lines[1].includes(`o deneme ${ended} tarihinde sona erdi.`), `${name}: the time is not said as the end of the attempt (${ended}): ${previous.lines[1]}`);
++                must(!/started (here |on this server )?on \d|tarihinde başlatıldı/.test(previous.lines[1]), `${name}: the end time stands beside "started": ${previous.lines[1]}`);
+                 must(expected === 'cause'
+                     ? /Recorded cause:|Kaydedilen neden:/.test(previous.lines[2]) && !/no more specific cause|daha belirli bir neden kaydetmedi/.test(previous.text)
+                     : /recorded no more specific cause|daha belirli bir neden kaydetmedi/.test(previous.lines[2]),

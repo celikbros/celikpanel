@@ -1,0 +1,258 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "9180c6f879a7b41f1b4b20b8023434116f3d92e2",
+      "sha256": "39c06bcc259a5d6a732c6d7c9fa08b78b3b69e424b8a57576bbc800907fb4a32",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "cell": {
+    "components": [
+      "nginx",
+      "php-fpm",
+      "mariadb",
+      "postfix",
+      "dovecot",
+      "roundcube",
+      "rspamd",
+      "postgresql"
+    ],
+    "mail": true,
+    "name": "set4b-debian13",
+    "node": "debian13",
+    "purpose": "web_mail"
+  },
+  "cell_kind": "set4b-postfix-stop",
+  "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['12-panel_certificate', '13-access_dns', '14-mail_certificate', '15-mail_enrollment', '16-verify']"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__d18c926dc9be833b",
+    "node": "debian13",
+    "vm_uuid": "ba65a2e2-8a97-56f4-8afb-1e162c492895"
+  },
+  "native_evidence": false,
+  "note": "set4b: observations for the owner's review; no update is started and no P0 row is judged.",
+  "outcome": {
+    "classification": "set4b-measured",
+    "final_status": null
+  },
+  "overall": "complete-for-review",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "sections": {
+    "M0-prepare": {
+      "checks": 5,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T15:53:14Z",
+      "notes": [],
+      "started_at": "2026-10-09T15:53:12Z",
+      "substeps": {
+        "item 7": "passed",
+        "lab isolation": "passed",
+        "section": "passed"
+      },
+      "title": "the platform and the lab's isolation",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "M10-postfix-stop": {
+      "checks": 11,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T15:53:42Z",
+      "notes": [],
+      "started_at": "2026-10-09T15:53:14Z",
+      "substeps": {
+        "S8 postfix start": "passed",
+        "S8 postfix stop": "passed",
+        "item 10": "passed"
+      },
+      "title": "Postfix stopped through the Panel while `postfix check` refuses main.cf (set4's section)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "M2-import": {
+      "checks": 18,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T15:55:01Z",
+      "notes": [
+        "imported-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 404"
+      ],
+      "started_at": "2026-10-09T15:54:54Z",
+      "substeps": {
+        "S1": "passed",
+        "imported-site": "passed",
+        "item 2": "passed",
+        "item 3": "passed",
+        "item 5": "passed",
+        "section": "passed"
+      },
+      "title": "the cPanel-archive import of set3's fixture, DNS left to the owner's provider: what the answer lists",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "R10-postfix-stop-repeated": {
+      "checks": 12,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T15:54:54Z",
+      "notes": [],
+      "started_at": "2026-10-09T15:53:42Z",
+      "substeps": {
+        "S8 postfix start": "passed",
+        "S8 postfix stop": "passed",
+        "r1": "passed",
+        "r2": "passed",
+        "r3": "passed"
+      },
+      "title": "the same Stop three more times, each beside when the unit settled",
+      "unknown": [],
+      "verdict": "passed"
+    }
+  },
+  "setup": {
+    "components": [
+      "dovecot",
+      "mariadb",
+      "nginx",
+      "php-fpm",
+      "postfix",
+      "postgresql",
+      "roundcube",
+      "rspamd"
+    ],
+    "purpose": "web_mail",
+    "waiting": {
+      "code": "server_setup_access_dns_required",
+      "mail_steps_reached": true,
+      "not_run": [
+        "12-panel_certificate",
+        "13-access_dns",
+        "14-mail_certificate",
+        "15-mail_enrollment",
+        "16-verify"
+      ],
+      "phase": "access_dns",
+      "polls": 25,
+      "stable_wait_seconds": 122.9,
+      "steps": {
+        "01-dns": "succeeded",
+        "02-service": "succeeded",
+        "03-service": "succeeded",
+        "04-service": "succeeded",
+        "05-service": "succeeded",
+        "06-mail_profile": "succeeded",
+        "07-mail_profile": "succeeded",
+        "08-service": "succeeded",
+        "09-service": "succeeded",
+        "10-firewall": "succeeded",
+        "11-access_dns": "running",
+        "12-panel_certificate": "pending",
+        "13-access_dns": "pending",
+        "14-mail_certificate": "pending",
+        "15-mail_enrollment": "pending",
+        "16-verify": "pending"
+      }
+    }
+  },
+  "site": {
+    "domain_id": 1,
+    "mailbox": "owner@set1-owner.test",
+    "site_user": "set1_owner_test",
+    "subscription_id": 2
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-09T15:43:18Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-09T15:43:13Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T15:43:29Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-09T15:43:18Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T15:44:50Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-09T15:43:29Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T15:44:51Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-09T15:44:50Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T15:44:52Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-09T15:44:51Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T15:53:09Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-09T15:44:52Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-09T15:53:12Z",
+      "name": "site",
+      "reason": null,
+      "started_at": "2026-10-09T15:53:09Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T15:53:14Z",
+      "name": "M0-prepare",
+      "reason": null,
+      "started_at": "2026-10-09T15:53:12Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T15:53:42Z",
+      "name": "M10-postfix-stop",
+      "reason": null,
+      "started_at": "2026-10-09T15:53:14Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T15:54:54Z",
+      "name": "R10-postfix-stop-repeated",
+      "reason": null,
+      "started_at": "2026-10-09T15:53:42Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T15:55:01Z",
+      "name": "M2-import",
+      "reason": null,
+      "started_at": "2026-10-09T15:54:54Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T15:55:02Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-09T15:55:01Z",
+      "verdict": "passed"
+    }
+  ]
+}

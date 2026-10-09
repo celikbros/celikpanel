@@ -1,0 +1,58 @@
+{
+  "at": "2026-10-09T15:40:32Z",
+  "is_active": {
+    "postfix.service": "inactive",
+    "postfix@-.service": "failed"
+  },
+  "is_failed": {
+    "postfix.service": "inactive",
+    "postfix@-.service": "failed"
+  },
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "units": {
+    "postfix.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 15:40:07 UTC",
+      "ActiveExitTimestamp": "Fri 2026-10-09 15:40:17 UTC",
+      "ActiveState": "inactive",
+      "ExecMainPID": "45401",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 15:40:07 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "InactiveEnterTimestamp": "Fri 2026-10-09 15:40:17 UTC",
+      "InactiveExitTimestamp": "Fri 2026-10-09 15:40:07 UTC",
+      "InvocationID": "2dbb1f33e6c140d2bac3630f5723c236",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 15:40:17 UTC",
+      "SubState": "dead",
+      "Type": "oneshot"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 15:40:06 UTC",
+      "ActiveExitTimestamp": "Fri 2026-10-09 15:40:17 UTC",
+      "ActiveState": "failed",
+      "ExecMainPID": "0",
+      "ExecMainStartTimestamp": "",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/sbin/postmulti ; argv[]=/usr/sbin/postmulti -i - -p reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "InactiveEnterTimestamp": "Fri 2026-10-09 15:40:18 UTC",
+      "InactiveExitTimestamp": "Fri 2026-10-09 15:40:06 UTC",
+      "InvocationID": "7112748ae40c4a479c2748056004d307",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "exit-code",
+      "StateChangeTimestamp": "Fri 2026-10-09 15:40:18 UTC",
+      "SubState": "failed",
+      "Type": "forking"
+    }
+  }
+}

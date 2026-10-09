@@ -1,0 +1,34 @@
+{
+  "at": "2026-10-09T14:17:51Z",
+  "identifiers": [
+    "postfix/master",
+    "postfix/postfix-script"
+  ],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791555466",
+      "-n",
+      "400",
+      "-t",
+      "postfix/master",
+      "-t",
+      "postfix/postfix-script"
+    ],
+    "at": "2026-10-09T14:17:51Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T14:17:46.519738+00:00 dns-ubuntu postfix/postfix-script[46863]: the Postfix mail system is not running\n2026-10-09T14:17:47.274478+00:00 dns-ubuntu postfix/postfix-script[47148]: the Postfix mail system is not running\n2026-10-09T14:17:48.060250+00:00 dns-ubuntu postfix/postfix-script[47436]: starting the Postfix mail system\n2026-10-09T14:17:48.069355+00:00 dns-ubuntu postfix/master[47438]: daemon started -- version 3.8.6, configuration /etc/postfix\n2026-10-09T14:17:48.158025+00:00 dns-ubuntu postfix/postfix-script[47456]: the Postfix mail system is running: PID: 47438\n2026-10-09T14:17:50.313626+00:00 dns-ubuntu postfix/postfix-script[47563]: the Postfix mail system is running: PID: 47438\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791555466,
+  "units": []
+}

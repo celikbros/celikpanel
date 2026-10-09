@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 3,
+    "error": "TypeError: Set4bTrial.snap4b() got multiple values for argument 'label'",
+    "failed": [],
+    "finished_at": "2026-10-09T13:56:26Z",
+    "notes": [],
+    "started_at": "2026-10-09T13:56:19Z",
+    "substeps": {
+      "measured": "passed",
+      "section": "passed"
+    },
+    "title": "what the Agent reads around a Stop of Postfix whose unit ends failed (measurement only)",
+    "unknown": [],
+    "verdict": "inconclusive"
+  },
+  "finished_at": "2026-10-09T13:56:26Z",
+  "name": "D10-what-the-agent-reads",
+  "reason": "TypeError: Set4bTrial.snap4b() got multiple values for argument 'label'",
+  "started_at": "2026-10-09T13:56:19Z",
+  "verdict": "inconclusive"
+}

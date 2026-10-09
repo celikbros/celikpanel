@@ -1,0 +1,111 @@
+### set4 gerçek sistem ölçümünden sonra: Durdur, hizmet durduğunda yanıtlanır ve birimi hakkında ne okunduğunu söyler, güncelleme kartı gösterdiği zamanın ne olduğunu söyler, içe aktarım aktarmadığını aktarılmış diye listelemez (2026-10-09)
+
+Bileşen testleri, yerel taklit sunucuya karşı gerçek bir Chrome ve ilk işin tek
+kullanımlık konuklarda (Ubuntu 24.04 ve Debian 13; kanıt
+`deploy/e2e/release-recovery/evidence/set4b-20261009/`) gerçek sistem ölçümüyle
+kaynak durumu. Kurulu bir sunucuda hiçbir şey gözlenmedi. 2026-10-09 bu kaydın
+takvim tarihidir; üstündeki başlıklarda yer alan 2026-10-10 ile 2026-10-12
+arasındaki tarihler tur etiketleridir. Neyin ölçüldüğü ve neyin değiştiği için
+aynı tarihli dayanıklılık sözleşmesi kaydına bakın. Bu kayıt cümleleri tutar.
+
+**Metinlerin izlediği kural.** Durdur, hizmetin kendi sürecinin gittiği
+görüldüğünde durduruldu diye yanıtlanır; daha önce değil. Yanıtın birim
+hakkında söylediği, birim durulduktan sonra systemd’nin gösterdiğidir; bu
+okunamadıysa yanıt okunamadığını söyler, bir işaret olduğunu da olmadığını da
+ileri sürmez. Ekrandaki bir zaman, ne ise o adla anılır. İçe aktarılmayan bir
+parça, ister başarısız olsun, ister seçilmemiş olsun, ister sahibin
+sağlayıcısına bırakılmış olsun, ister arşivde ona ait hiçbir şey bulunmasın,
+içe aktarılmış diye listelenmez.
+
+**Yerini alan.** 2026-10-12 kaydında yazılı
+`panelUpdate.previousAttempt.recovered` cümlesi ("{version} burada {time}
+tarihinde başlatıldı. ...") artık gösterilmez: `{time}` denemenin bittiği
+andır ve aşağıdaki cümle bunu söyler. Bir içe aktarımın `imported` listesi,
+adımı hiçbir şey aktarmamış bir parçayı artık adlandırmaz. Ubuntu 24.04
+üzerinde, Postfix’in reddettiği bir main.cf ile Postfix’in durdurulması eskiden
+2026-10-12 tarihli `note` olmadan yanıtlanıyordu; artık onu taşır.
+
+**Biriminin kendi durdurulması okunamayan Durdur (`POST /api/v1/service/action`).**
+
+2026-10-12 tarihli notların (`unit_marked_failed`,
+`unit_marked_failed_config`) sözleri değişmedi. Artık birim durulduktan sonra
+alınan bir okumadan verilirler: systemd birimi iki durum arasında
+(`deactivating`) gösterdiği sürece Agent onu yeniden okur; bir durdurmanın
+bütün birimleri için toplam en çok 30 okuma, 500 ms arayla (yaklaşık 15
+saniye); bu sırada `systemctl show` dışında hiçbir şey göndermez. Bu bekleme
+birim hâlâ iki durum arasındayken biterse ya da birim durdurmadan önce
+okunduğu halde sonra okunamazsa, başarı kendi notunu taşır: `code`
+`SERVICE_ACTION_NOTE`, `reason` `unit_not_settled` ya da
+`unit_state_not_read`, `vars`: `unit`, `pending_unit`, `command` (`systemctl
+status <pending_unit>`; yalnızca birimi gösterir, CelikPanel onu çalıştırmaz)
+ve `unit_not_settled` için `state` (okunan son durum, örneğin `deactivating`).
+İki not da birimin failed olarak işaretlendiğini söylemez; işaretlenmediğini
+de söylemez.
+
+~ `200`, `note.code` `SERVICE_ACTION_NOTE`, `note.reason` `unit_not_settled`
+API=api_not_settled
+~ `services.action.note.unit_not_settled`
+EN=settled_en
+TR=settled_tr
+~ `200`, `note.code` `SERVICE_ACTION_NOTE`, `note.reason` `unit_state_not_read`
+API=api_not_read
+~ `services.action.note.unit_state_not_read`
+EN=unread_en
+TR=unread_tr
+
+**Geri döndürülmüş bir deneme için güncelleme kartının cümlesi (`GET /api/v1/panel/update/check`, `previous_attempt`).**
+
+`{time}`, yanıtın taşıdığı tek zaman olan `previous_attempt.finished_at`
+değeridir: denemenin bitişinin kaydedildiği an. Sunucu bir deneme için
+başlangıç zamanı kaydetmez; cümle de bir başlangıç zamanı söylemez. Başlık,
+neden satırı ve yeniden başlatmaya dair cümle 2026-10-12 tarihindekilerdir.
+
+~ `panelUpdate.previousAttempt.recovered`
+EN=recovered_en
+TR=recovered_tr
+
+**cPanel içe aktarımı: içe aktarılmayan ve başarısız da olmayan parça (`POST /api/v1/import/cpanel/apply`).**
+
+Hatasız biten ve hiçbir şey içe aktarmayan adım `ok: true` kalır ve `state`
+taşır: `left_to_owner` (DNS’i sahibinin dış sağlayıcısında olan bir sunucunun
+DNS’i: kayıtlar orada kalır), `not_chosen` (arşivin DNS kayıtları seçilmedi;
+panelin alan adı için kendi kayıtları yine de oluşturuldu ya da yayımlandı),
+`none_in_archive` (parça seçildi ve arşivde bu alan adı için ona ait hiçbir
+şey yok: yönlendirme yok, posta kutusu yok, bölge yok, site klasöründe dosya
+yok), `none_imported` (parça seçildi, arşivde ona ait bir şeyler var ve
+hiçbiri aktarılmadı; her biri kendi adımındadır). Yanıtta `imported` ve
+`not_imported` yanında üçüncü bir liste vardır: `left_out`; bir parça üçünden
+yalnızca birindedir. Böyle bir adım içe aktarımı hiçbir zaman `partial`
+yapmaz. Her adımın `detail` satırı değişmedi ve sunucunun İngilizcesidir
+("external DNS ownership preserved; verify provider records before publishing
+the site", "0 forwarders", "panel DNS template created; archive DNS import was
+not selected"). Dış DNS kipindeki bir sunucuda DNS istemeyen bir içe aktarım
+eskiden `imported: [domain, files, dns, ...]` yanıtını veriyordu; artık
+`imported: [domain, files, ...]`, `left_out: [dns]` yanıtını verir (posta
+seçildiyse ve arşivde yönlendirme yoksa `forwarders` da `left_out`
+listesindedir).
+
+Sayfada adım, adımlar listesindeki yerini kendi satırıyla korur; işareti ne içe
+aktarılmış bir adımın ne de başarısız bir adımın işareti olan yansız bir
+işarettir; ekran okuyucuya adımın adından sonra aşağıdaki sözler verilir.
+Parça, kısmi bir sonucun özetindeki iki listenin hiçbirinde yer almaz.
+
+~ `import.step.nothing`
+EN=nothing_en
+TR=nothing_tr
+
+**Her birinin çizildiği yer.** İki not: bir bileşenin sayfasındaki ve
+bileşenler listesindeki bildirim (`ServiceActionNotice`); `role="status"` ile
+dikkat yüzeyinde, hiçbir zaman hata yüzeyinde değil; komut ayrı gösterilir.
+Güncelleme kartı: `PanelUpdateCard`. İçe aktarım: sonucun listeleri ve
+adımları (`ImportPage`).
+
+**Sınırlar.** Hiçbir ölçüm bir birimi beklemenin tamamı boyunca iki durum
+arasında tutmadı, hiçbiri de bir birimi okunamaz kılmadı: iki yeni not gerçek
+bir sunucuyla değil, bileşen testleriyle ve yerel taklit sunucuya karşı gerçek
+bir Chrome ile kapsanır. Sayfada dışarıda bırakılan parçaların bir listesi
+yoktur; onlar adımların arasındadır. Bir adımın satırı sunucunun
+İngilizcesidir. Geri döndürülmeden başarısız olan ya da hiçbir şeyi
+değiştirmeden duran bir denemenin cümleleri
+(`panelUpdate.previousAttempt.failed`, `.stopped`) aynı zamanı "{time}
+tarihinde denendi" diye taşır ve değişmedi. {{GUIDANCE_LIMITS_TR}}

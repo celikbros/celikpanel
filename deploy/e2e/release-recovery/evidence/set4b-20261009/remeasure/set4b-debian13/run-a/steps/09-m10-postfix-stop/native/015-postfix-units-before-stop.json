@@ -1,0 +1,58 @@
+{
+  "at": "2026-10-09T15:53:20Z",
+  "is_active": {
+    "postfix.service": "active",
+    "postfix@-.service": "inactive"
+  },
+  "is_failed": {
+    "postfix.service": "active",
+    "postfix@-.service": "inactive"
+  },
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "units": {
+    "postfix.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 15:50:31 UTC",
+      "ActiveExitTimestamp": "Fri 2026-10-09 15:50:30 UTC",
+      "ActiveState": "active",
+      "ExecMainPID": "28529",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 15:50:31 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "InactiveEnterTimestamp": "Fri 2026-10-09 15:50:30 UTC",
+      "InactiveExitTimestamp": "Fri 2026-10-09 15:50:30 UTC",
+      "InvocationID": "50d3f98ba54a40f4ae666c83d71c831c",
+      "LoadState": "loaded",
+      "MainPID": "28529",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 15:50:31 UTC",
+      "SubState": "running",
+      "Type": "forking"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestamp": "",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "inactive",
+      "ExecMainPID": "0",
+      "ExecMainStartTimestamp": "",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "",
+      "InvocationID": "",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 15:47:54 UTC",
+      "SubState": "dead",
+      "Type": "forking"
+    }
+  }
+}

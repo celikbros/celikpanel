@@ -1,0 +1,3045 @@
+{
+  "agent_pid": 7346,
+  "agent_pid_at_collect": 7346,
+  "armed": {
+    "monotonic_ns": 1109404558880,
+    "realtime_ns": 1791555514088066395,
+    "utc": "2026-10-09T14:18:34Z"
+  },
+  "at": "2026-10-09T14:18:56Z",
+  "collected": {
+    "monotonic_ns": 1131448326388,
+    "realtime_ns": 1791555536131834113,
+    "utc": "2026-10-09T14:18:56Z"
+  },
+  "label": "p3",
+  "master_at_arm": {
+    "comm": "master\n",
+    "pid": 50577,
+    "pid_file": {
+      "path": "/var/spool/postfix/pid/master.pid",
+      "text": "                           50577\n"
+    },
+    "postconf": {
+      "argv": [
+        "postconf",
+        "-h",
+        "queue_directory"
+      ],
+      "returncode": 0,
+      "seconds": 1.513,
+      "stderr": "postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\n",
+      "stdout": "/var/spool/postfix\n"
+    }
+  },
+  "master_at_collect": {
+    "comm_error": "FileNotFoundError",
+    "pid": 50577,
+    "pid_file": {
+      "path": "/var/spool/postfix/pid/master.pid",
+      "text": "                           50577\n"
+    },
+    "postconf": {
+      "argv": [
+        "postconf",
+        "-h",
+        "queue_directory"
+      ],
+      "returncode": 0,
+      "seconds": 0.007,
+      "stderr": "postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\n",
+      "stdout": "/var/spool/postfix\n"
+    }
+  },
+  "mode": "diag-collect",
+  "owner_action": false,
+  "samples": {
+    "columns": [
+      "read_started_monotonic_ns",
+      "master_comm_before",
+      "read_answered_monotonic_ns",
+      "master_comm_after",
+      "units: [LoadState, ActiveState, SubState, Result]"
+    ],
+    "kept_rule": "every sample at which anything differs from the one before, the sample before it, and one in twenty",
+    "master_pid": 50577,
+    "median_read_ms": 7.326733,
+    "pause_seconds": 0.004,
+    "samples": [
+      [
+        1112020295514,
+        "master",
+        1112030727634,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "active",
+            "exited",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "active",
+            "running",
+            "success"
+          ]
+        }
+      ],
+      [
+        1112292672753,
+        "master",
+        1112300868407,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "active",
+            "exited",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "active",
+            "running",
+            "success"
+          ]
+        }
+      ],
+      [
+        1112549326696,
+        "master",
+        1112557382743,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "active",
+            "exited",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "active",
+            "running",
+            "success"
+          ]
+        }
+      ],
+      [
+        1112803665176,
+        "master",
+        1112811282794,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "active",
+            "exited",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "active",
+            "running",
+            "success"
+          ]
+        }
+      ],
+      [
+        1113305638506,
+        "master",
+        1113312712888,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "active",
+            "exited",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "active",
+            "running",
+            "success"
+          ]
+        }
+      ],
+      [
+        1113538749716,
+        "master",
+        1113545910184,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "active",
+            "exited",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "active",
+            "running",
+            "success"
+          ]
+        }
+      ],
+      [
+        1113780522871,
+        "master",
+        1113791683232,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "active",
+            "exited",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "active",
+            "running",
+            "success"
+          ]
+        }
+      ],
+      [
+        1114068464509,
+        "master",
+        1114079326390,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "active",
+            "exited",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "active",
+            "running",
+            "success"
+          ]
+        }
+      ],
+      [
+        1114333501600,
+        "master",
+        1114343395662,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "active",
+            "exited",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "active",
+            "running",
+            "success"
+          ]
+        }
+      ],
+      [
+        1114433309991,
+        "master",
+        1114440813842,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "active",
+            "exited",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "active",
+            "running",
+            "success"
+          ]
+        }
+      ],
+      [
+        1114445101580,
+        "master",
+        1114460303092,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "active",
+            "exited",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "deactivating",
+            "stop",
+            "success"
+          ]
+        }
+      ],
+      [
+        1114464539050,
+        "master",
+        1114472478011,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "deactivating",
+            "stop",
+            "success"
+          ]
+        }
+      ],
+      [
+        1114609770549,
+        "master",
+        1114617374446,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "deactivating",
+            "stop",
+            "success"
+          ]
+        }
+      ],
+      [
+        1114874881205,
+        "master",
+        1114886052843,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "deactivating",
+            "stop",
+            "success"
+          ]
+        }
+      ],
+      [
+        1115156982633,
+        "master",
+        1115168493364,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "deactivating",
+            "stop",
+            "success"
+          ]
+        }
+      ],
+      [
+        1115303794423,
+        "master",
+        1115311686628,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "deactivating",
+            "stop",
+            "success"
+          ]
+        }
+      ],
+      [
+        1115315913537,
+        "master",
+        1116054640267,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1116058829588,
+        "!FileNotFoundError",
+        1116068112982,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1116157240489,
+        "!FileNotFoundError",
+        1116169082156,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1116420410511,
+        "!FileNotFoundError",
+        1116427178091,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1117363374326,
+        "!FileNotFoundError",
+        1117369937863,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1117607776542,
+        "!FileNotFoundError",
+        1117617995344,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1117843448530,
+        "!FileNotFoundError",
+        1117850420639,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1118071382055,
+        "!FileNotFoundError",
+        1118077857154,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1118294025147,
+        "!FileNotFoundError",
+        1118300802589,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1118528236021,
+        "!FileNotFoundError",
+        1118535848491,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1118769113869,
+        "!FileNotFoundError",
+        1118776998531,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1119007942054,
+        "!FileNotFoundError",
+        1119016483268,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1119241026269,
+        "!FileNotFoundError",
+        1119248183493,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1119467245236,
+        "!FileNotFoundError",
+        1119473795398,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1119690466864,
+        "!FileNotFoundError",
+        1119697215025,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1119922852828,
+        "!FileNotFoundError",
+        1119929702043,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1120148475814,
+        "!FileNotFoundError",
+        1120155576995,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1120387928154,
+        "!FileNotFoundError",
+        1120395117068,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1120642434954,
+        "!FileNotFoundError",
+        1120649877235,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1120893892815,
+        "!FileNotFoundError",
+        1120902408397,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1121123315702,
+        "!FileNotFoundError",
+        1121130501995,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1121350927251,
+        "!FileNotFoundError",
+        1121357911129,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1121577872662,
+        "!FileNotFoundError",
+        1121585156773,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1121811530210,
+        "!FileNotFoundError",
+        1121818432739,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1122040101456,
+        "!FileNotFoundError",
+        1122047701029,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1122276044876,
+        "!FileNotFoundError",
+        1122283415854,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1122513395121,
+        "!FileNotFoundError",
+        1122520589681,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1122745780768,
+        "!FileNotFoundError",
+        1122757250390,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1122980040954,
+        "!FileNotFoundError",
+        1122987617641,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1123210817851,
+        "!FileNotFoundError",
+        1123219567100,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1123448032297,
+        "!FileNotFoundError",
+        1123454964028,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1123673674812,
+        "!FileNotFoundError",
+        1123680978031,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1123908665961,
+        "!FileNotFoundError",
+        1123915738479,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1124135377895,
+        "!FileNotFoundError",
+        1124142204888,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1124361663140,
+        "!FileNotFoundError",
+        1124368377585,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1124585648198,
+        "!FileNotFoundError",
+        1124592584772,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1124816615487,
+        "!FileNotFoundError",
+        1124823823086,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1125044876192,
+        "!FileNotFoundError",
+        1125052069389,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1125267230485,
+        "!FileNotFoundError",
+        1125274104488,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1125490873798,
+        "!FileNotFoundError",
+        1125497869252,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1125717717414,
+        "!FileNotFoundError",
+        1125725063245,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1125944063320,
+        "!FileNotFoundError",
+        1125950718028,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1126165317550,
+        "!FileNotFoundError",
+        1126172584824,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1126388762342,
+        "!FileNotFoundError",
+        1126396170293,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1126615848001,
+        "!FileNotFoundError",
+        1126623459467,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1126854575746,
+        "!FileNotFoundError",
+        1126861495415,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1127129556900,
+        "!FileNotFoundError",
+        1127139575275,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1127387192945,
+        "!FileNotFoundError",
+        1127393883167,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1127616850976,
+        "!FileNotFoundError",
+        1127624722612,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1127853058325,
+        "!FileNotFoundError",
+        1127860832707,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1128019433125,
+        "!FileNotFoundError",
+        1128026466977,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ]
+    ],
+    "samples_total": 1195,
+    "seconds": 16.0
+  },
+  "schema": "celikpanel/set4b-native/v1",
+  "strace": {
+    "kept": 573,
+    "kept_rule": "execve of the fixed programs with argv, any other execve by path only, openat and the following read of master.pid and /proc/<pid>/comm, write to stdout or stderr and exit of the fixed programs",
+    "lines": [
+      "10629 1791555518.735703 openat(AT_FDCWD, \"/proc/1/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000029>",
+      "10629 1791555518.736028 read(10, \"systemd\\n\", 512) = 8 <0.000024>",
+      "10629 1791555518.736088 read(10, \"\", 888) = 0 <0.000020>",
+      "10629 1791555518.736183 openat(AT_FDCWD, \"/proc/10/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000024>",
+      "10629 1791555518.736484 read(10, \"kworker/0:0H-events_highpri\\n\", 512) = 28 <0.000049>",
+      "10629 1791555518.736570 read(10, \"\", 868) = 0 <0.000020>",
+      "10629 1791555518.736666 openat(AT_FDCWD, \"/proc/10127/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000025>",
+      "10629 1791555518.737007 read(10, \"kworker/u4:2-events_power_efficient\\n\", 512) = 36 <0.000025>",
+      "10629 1791555518.737067 read(10, \"\", 860) = 0 <0.000074>",
+      "10629 1791555518.737257 openat(AT_FDCWD, \"/proc/10871/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000030>",
+      "10629 1791555518.737691 read(10, \"kworker/R-dio/v\\n\", 512) = 16 <0.000026>",
+      "10629 1791555518.737762 read(10, \"\", 880) = 0 <0.000025>",
+      "10629 1791555518.737874 openat(AT_FDCWD, \"/proc/10893/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000028>",
+      "10629 1791555518.740890 read(10, \"kworker/0:19-cgroup_free\\n\", 512) = 25 <0.000096>",
+      "10629 1791555518.741073 read(10, \"\", 871) = 0 <0.000113>",
+      "10629 1791555518.741349 openat(AT_FDCWD, \"/proc/10894/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000040>",
+      "10629 1791555518.741902 read(10, \"kworker/0:20-cgroup_free\\n\", 512) = 25 <0.000050>",
+      "10629 1791555518.742019 read(10, \"\", 871) = 0 <0.000031>",
+      "10629 1791555518.742182 openat(AT_FDCWD, \"/proc/10895/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000037>",
+      "10629 1791555518.745714 read(10, \"kworker/0:21-cgroup_free\\n\", 512) = 25 <0.000017>",
+      "10629 1791555518.745765 read(10, \"\", 871) = 0 <0.000020>",
+      "10629 1791555518.746597 openat(AT_FDCWD, \"/proc/11/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000078>",
+      "10629 1791555518.747144 read(10, \"kworker/u4:0-ext4-rsv-conversion\\n\", 512) = 33 <0.000012>",
+      "10629 1791555518.747187 read(10, \"\", 863) = 0 <0.000046>",
+      "10629 1791555518.747443 openat(AT_FDCWD, \"/proc/11046/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000062>",
+      "10629 1791555518.747998 read(10, \"mariadbd\\n\", 512) = 9 <0.000043>",
+      "10629 1791555518.748075 read(10, \"\", 887) = 0 <0.000013>",
+      "10629 1791555518.748151 openat(AT_FDCWD, \"/proc/11991/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000044>",
+      "10629 1791555518.748404 read(10, \"nginx\\n\", 512) = 6 <0.000025>",
+      "10629 1791555518.748457 read(10, \"\", 890) = 0 <0.000009>",
+      "10629 1791555518.748558 openat(AT_FDCWD, \"/proc/12/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000016>",
+      "10629 1791555518.748800 read(10, \"kworker/R-mm_pe\\n\", 512) = 16 <0.000021>",
+      "10629 1791555518.748878 read(10, \"\", 880) = 0 <0.000033>",
+      "10629 1791555518.748960 openat(AT_FDCWD, \"/proc/1237/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000017>",
+      "10629 1791555518.749257 read(10, \"kworker/R-tls-s\\n\", 512) = 16 <0.000014>",
+      "10629 1791555518.749322 read(10, \"\", 880) = 0 <0.000012>",
+      "10629 1791555518.749398 openat(AT_FDCWD, \"/proc/13/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "10629 1791555518.749903 read(10, \"rcu_tasks_kthread\\n\", 512) = 18 <0.000057>",
+      "10629 1791555518.750006 read(10, \"\", 878) = 0 <0.000018>",
+      "10629 1791555518.750146 openat(AT_FDCWD, \"/proc/14/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000060>",
+      "10629 1791555518.750630 read(10, \"rcu_tasks_rude_kthread\\n\", 512) = 23 <0.000025>",
+      "10629 1791555518.750696 read(10, \"\", 873) = 0 <0.000020>",
+      "10629 1791555518.750835 openat(AT_FDCWD, \"/proc/15/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000027>",
+      "10629 1791555518.751266 read(10, \"rcu_tasks_trace_kthread\\n\", 512) = 24 <0.000027>",
+      "10629 1791555518.751332 read(10, \"\", 872) = 0 <0.000021>",
+      "10629 1791555518.751479 openat(AT_FDCWD, \"/proc/16/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000054>",
+      "10629 1791555518.751943 read(10, \"ksoftirqd/0\\n\", 512) = 12 <0.000233>",
+      "10629 1791555518.752293 read(10, \"\", 884) = 0 <0.000100>",
+      "10629 1791555518.752570 openat(AT_FDCWD, \"/proc/160/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.001971>",
+      "10629 1791555518.754991 read(10, \"kworker/1:3-cgroup_free\\n\", 512) = 24 <0.000041>",
+      "10629 1791555518.755085 read(10, \"\", 872) = 0 <0.000025>",
+      "10629 1791555518.755221 openat(AT_FDCWD, \"/proc/17/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000039>",
+      "10629 1791555518.755754 read(10, \"rcu_preempt\\n\", 512) = 12 <0.000033>",
+      "10629 1791555518.755846 read(10, \"\", 884) = 0 <0.000028>",
+      "10629 1791555518.755986 openat(AT_FDCWD, \"/proc/18/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000041>",
+      "10629 1791555518.758308 read(10, \"migration/0\\n\", 512) = 12 <0.000042>",
+      "10629 1791555518.758420 read(10, \"\", 884) = 0 <0.000033>",
+      "10629 1791555518.758619 openat(AT_FDCWD, \"/proc/188/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000043>",
+      "10629 1791555518.759101 read(10, \"kworker/R-raid5\\n\", 512) = 16 <0.000038>",
+      "10629 1791555518.759193 read(10, \"\", 880) = 0 <0.000030>",
+      "10629 1791555518.759330 openat(AT_FDCWD, \"/proc/19/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000037>",
+      "10629 1791555518.759812 read(10, \"idle_inject/0\\n\", 512) = 14 <0.000031>",
+      "10629 1791555518.759889 read(10, \"\", 882) = 0 <0.000074>",
+      "10629 1791555518.760070 openat(AT_FDCWD, \"/proc/2/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000046>",
+      "10629 1791555518.762754 read(10, \"kthreadd\\n\", 512) = 9 <0.000035>",
+      "10629 1791555518.762855 read(10, \"\", 887) = 0 <0.000028>",
+      "10629 1791555518.762997 openat(AT_FDCWD, \"/proc/20/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000090>",
+      "10629 1791555518.763490 read(10, \"cpuhp/0\\n\", 512) = 8 <0.000060>",
+      "10629 1791555518.763599 read(10, \"\", 888) = 0 <0.000021>",
+      "10629 1791555518.763703 openat(AT_FDCWD, \"/proc/21/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000028>",
+      "10629 1791555518.764019 read(10, \"cpuhp/1\\n\", 512) = 8 <0.000023>",
+      "10629 1791555518.764077 read(10, \"\", 888) = 0 <0.000020>",
+      "10629 1791555518.764174 openat(AT_FDCWD, \"/proc/21640/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000027>",
+      "10629 1791555518.764484 read(10, \"postgres\\n\", 512) = 9 <0.000055>",
+      "10629 1791555518.764579 read(10, \"\", 887) = 0 <0.000021>",
+      "10629 1791555518.764677 openat(AT_FDCWD, \"/proc/21641/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000027>",
+      "10629 1791555518.765071 read(10, \"postgres\\n\", 512) = 9 <0.000070>",
+      "10629 1791555518.765191 read(10, \"\", 887) = 0 <0.000056>",
+      "10629 1791555518.765350 openat(AT_FDCWD, \"/proc/21642/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000026>",
+      "7346 1791555518.766048 openat(AT_FDCWD, \"/proc/21644/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000042>",
+      "7346 1791555518.766477 read(10, \"postgres\\n\", 512) = 9 <0.000060>",
+      "7346 1791555518.766568 read(10, \"\", 887) = 0 <0.000022>",
+      "7346 1791555518.766768 openat(AT_FDCWD, \"/proc/21645/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000023>",
+      "7346 1791555518.767553 read(10, \"postgres\\n\", 512) = 9 <0.000044>",
+      "7346 1791555518.767695 read(10, \"\", 887) = 0 <0.000035>",
+      "7346 1791555518.767866 openat(AT_FDCWD, \"/proc/21646/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000040>",
+      "7346 1791555518.769929 read(10, \"postgres\\n\", 512) = 9 <0.000084>",
+      "7346 1791555518.770090 read(10, \"\", 887) = 0 <0.000039>",
+      "7346 1791555518.770302 openat(AT_FDCWD, \"/proc/22/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000044>",
+      "7346 1791555518.770953 read(10, \"idle_inject/1\\n\", 512) = 14 <0.000039>",
+      "7346 1791555518.771063 read(10, \"\", 882) = 0 <0.000036>",
+      "7346 1791555518.771220 openat(AT_FDCWD, \"/proc/225/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000067>",
+      "7346 1791555518.771984 read(10, \"jbd2/vda1-8\\n\", 512) = 12 <0.000036>",
+      "7346 1791555518.772085 read(10, \"\", 884) = 0 <0.000500>",
+      "7346 1791555518.772762 openat(AT_FDCWD, \"/proc/226/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000041>",
+      "7346 1791555518.773752 read(10, \"kworker/R-ext4-\\n\", 512) = 16 <0.000033>",
+      "7346 1791555518.773836 read(10, \"\", 880) = 0 <0.000026>",
+      "7346 1791555518.773988 openat(AT_FDCWD, \"/proc/23/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000944>",
+      "7346 1791555518.775765 read(10, \"migration/1\\n\", 512) = 12 <0.000033>",
+      "7346 1791555518.775848 read(10, \"\", 884) = 0 <0.000026>",
+      "7346 1791555518.775973 openat(AT_FDCWD, \"/proc/23153/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000036>",
+      "7346 1791555518.777346 read(10, \"rsyslogd\\n\", 512) = 9 <0.000031>",
+      "7346 1791555518.777427 read(10, \"\", 887) = 0 <0.000026>",
+      "7346 1791555518.777580 openat(AT_FDCWD, \"/proc/24/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000033>",
+      "7346 1791555518.778146 read(10, \"ksoftirqd/1\\n\", 512) = 12 <0.000025>",
+      "7346 1791555518.778227 read(10, \"\", 884) = 0 <0.000021>",
+      "7346 1791555518.778327 openat(AT_FDCWD, \"/proc/24266/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000028>",
+      "7346 1791555518.778777 read(10, \"kworker/1:0-events\\n\", 512) = 19 <0.000033>",
+      "7346 1791555518.778863 read(10, \"\", 877) = 0 <0.000032>",
+      "7346 1791555518.779007 openat(AT_FDCWD, \"/proc/26/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000039>",
+      "7346 1791555518.779450 read(10, \"kworker/1:0H-kblockd\\n\", 512) = 21 <0.000024>",
+      "7346 1791555518.779537 read(10, \"\", 875) = 0 <0.000037>",
+      "7346 1791555518.779686 openat(AT_FDCWD, \"/proc/27/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000027>",
+      "7346 1791555518.780030 read(10, \"kdevtmpfs\\n\", 512) = 10 <0.000024>",
+      "7346 1791555518.780089 read(10, \"\", 886) = 0 <0.000021>",
+      "7346 1791555518.780188 openat(AT_FDCWD, \"/proc/28/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000029>",
+      "7346 1791555518.780556 read(10, \"kworker/R-inet_\\n\", 512) = 16 <0.000029>",
+      "7346 1791555518.780626 read(10, \"\", 880) = 0 <0.000021>",
+      "7346 1791555518.780751 openat(AT_FDCWD, \"/proc/289/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000029>",
+      "7346 1791555518.781069 read(10, \"kworker/1:2H-kblockd\\n\", 512) = 21 <0.000056>",
+      "7346 1791555518.781164 read(10, \"\", 875) = 0 <0.000021>",
+      "7346 1791555518.781292 openat(AT_FDCWD, \"/proc/29/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000341>",
+      "7346 1791555518.782715 read(10, \"kauditd\\n\", 512) = 8 <0.000015>",
+      "7346 1791555518.782764 read(10, \"\", 888) = 0 <0.000009>",
+      "7346 1791555518.782819 openat(AT_FDCWD, \"/proc/299/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000016>",
+      "7346 1791555518.782971 read(10, \"systemd-journal\\n\", 512) = 16 <0.000011>",
+      "7346 1791555518.783005 read(10, \"\", 880) = 0 <0.000009>",
+      "7346 1791555518.783056 openat(AT_FDCWD, \"/proc/3/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "7346 1791555518.783203 read(10, \"pool_workqueue_release\\n\", 512) = 23 <0.000011>",
+      "7346 1791555518.783238 read(10, \"\", 873) = 0 <0.000007>",
+      "7346 1791555518.783338 openat(AT_FDCWD, \"/proc/30/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "7346 1791555518.783489 read(10, \"khungtaskd\\n\", 512) = 11 <0.000051>",
+      "7346 1791555518.783571 read(10, \"\", 885) = 0 <0.000008>",
+      "7346 1791555518.783623 openat(AT_FDCWD, \"/proc/31/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "7346 1791555518.783774 read(10, \"kworker/u4:1-events_power_efficient\\n\", 512) = 36 <0.000010>",
+      "7346 1791555518.783808 read(10, \"\", 860) = 0 <0.000009>",
+      "7346 1791555518.783859 openat(AT_FDCWD, \"/proc/319/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000012>",
+      "7346 1791555518.784005 read(10, \"kworker/R-kmpat\\n\", 512) = 16 <0.000011>",
+      "7346 1791555518.784040 read(10, \"\", 880) = 0 <0.000007>",
+      "7346 1791555518.784088 openat(AT_FDCWD, \"/proc/32/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "7346 1791555518.784234 read(10, \"oom_reaper\\n\", 512) = 11 <0.000009>",
+      "7346 1791555518.784297 read(10, \"\", 885) = 0 <0.000018>",
+      "7346 1791555518.784369 openat(AT_FDCWD, \"/proc/320/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000016>",
+      "7346 1791555518.784568 read(10, \"kworker/R-kmpat\\n\", 512) = 16 <0.000011>",
+      "7346 1791555518.784607 read(10, \"\", 880) = 0 <0.000009>",
+      "7346 1791555518.784659 openat(AT_FDCWD, \"/proc/32335/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000015>",
+      "7346 1791555518.784808 read(10, \"php-fpm8.3\\n\", 512) = 11 <0.000011>",
+      "7346 1791555518.784843 read(10, \"\", 885) = 0 <0.000007>",
+      "7346 1791555518.784891 openat(AT_FDCWD, \"/proc/32337/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "7346 1791555518.785038 read(10, \"kworker/1:4-cgroup_free\\n\", 512) = 24 <0.000010>",
+      "7346 1791555518.785071 read(10, \"\", 872) = 0 <0.000033>",
+      "7346 1791555518.785149 openat(AT_FDCWD, \"/proc/32413/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000015>",
+      "7346 1791555518.785298 read(10, \"php-fpm8.3\\n\", 512) = 11 <0.000011>",
+      "7346 1791555518.785333 read(10, \"\", 885) = 0 <0.000007>",
+      "7346 1791555518.785381 openat(AT_FDCWD, \"/proc/32414/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "7346 1791555518.785565 read(10, \"php-fpm8.3\\n\", 512) = 11 <0.000011>",
+      "7346 1791555518.785604 read(10, \"\", 885) = 0 <0.000007>",
+      "7346 1791555518.785653 openat(AT_FDCWD, \"/proc/34/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "7346 1791555518.785799 read(10, \"kworker/R-write\\n\", 512) = 16 <0.000010>",
+      "7346 1791555518.785844 read(10, \"\", 880) = 0 <0.000009>",
+      "7346 1791555518.785894 openat(AT_FDCWD, \"/proc/35/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000011>",
+      "7346 1791555518.786059 read(10, \"kcompactd0\\n\", 512) = 11 <0.000011>",
+      "7346 1791555518.786097 read(10, \"\", 885) = 0 <0.000007>",
+      "7346 1791555518.786145 openat(AT_FDCWD, \"/proc/355/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "7346 1791555518.786290 read(10, \"multipathd\\n\", 512) = 11 <0.000010>",
+      "7346 1791555518.786323 read(10, \"\", 885) = 0 <0.000007>",
+      "7346 1791555518.786370 openat(AT_FDCWD, \"/proc/36/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "7346 1791555518.786553 read(10, \"ksmd\\n\", 512) = 5 <0.000010>",
+      "7346 1791555518.786592 read(10, \"\", 891) = 0 <0.000007>",
+      "7346 1791555518.786638 openat(AT_FDCWD, \"/proc/370/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000012>",
+      "7346 1791555518.786776 read(10, \"systemd-udevd\\n\", 512) = 14 <0.000011>",
+      "7346 1791555518.786810 read(10, \"\", 882) = 0 <0.000007>",
+      "7346 1791555518.786857 openat(AT_FDCWD, \"/proc/37450/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "7346 1791555518.787002 read(10, \"rspamd\\n\", 512) = 7 <0.000009>",
+      "7346 1791555518.787034 read(10, \"\", 889) = 0 <0.000009>",
+      "7346 1791555518.787083 openat(AT_FDCWD, \"/proc/377/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "7346 1791555518.787224 read(10, \"psimon\\n\", 512) = 7 <0.000011>",
+      "7346 1791555518.787257 read(10, \"\", 889) = 0 <0.000007>",
+      "7346 1791555518.787304 openat(AT_FDCWD, \"/proc/38/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "7346 1791555518.787504 read(10, \"khugepaged\\n\", 512) = 11 <0.000015>",
+      "7346 1791555518.787595 read(10, \"\", 885) = 0 <0.000009>",
+      "7346 1791555518.787648 openat(AT_FDCWD, \"/proc/38123/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000015>",
+      "7346 1791555518.787797 read(10, \"rspamd\\n\", 512) = 7 <0.000011>",
+      "7346 1791555518.787829 read(10, \"\", 889) = 0 <0.000009>",
+      "7346 1791555518.787893 openat(AT_FDCWD, \"/proc/38124/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000015>",
+      "7346 1791555518.788064 read(10, \"rspamd\\n\", 512) = 7 <0.000011>",
+      "7346 1791555518.788104 read(10, \"\", 889) = 0 <0.000009>",
+      "7346 1791555518.788155 openat(AT_FDCWD, \"/proc/38125/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000012>",
+      "7346 1791555518.788302 read(10, \"rspamd\\n\", 512) = 7 <0.000009>",
+      "7346 1791555518.788334 read(10, \"\", 889) = 0 <0.000009>",
+      "7346 1791555518.788383 openat(AT_FDCWD, \"/proc/38126/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "7346 1791555518.788601 read(10, \"rspamd\\n\", 512) = 7 <0.000010>",
+      "7346 1791555518.788640 read(10, \"\", 889) = 0 <0.000007>",
+      "7346 1791555518.788693 openat(AT_FDCWD, \"/proc/38716/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "7346 1791555518.788895 read(10, \"dovecot\\n\", 512) = 8 <0.000013>",
+      "7346 1791555518.788941 read(10, \"\", 888) = 0 <0.000007>",
+      "7346 1791555518.788994 openat(AT_FDCWD, \"/proc/38717/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000016>",
+      "7346 1791555518.789207 read(10, \"anvil\\n\", 512) = 6 <0.000012>",
+      "7346 1791555518.789245 read(10, \"\", 890) = 0 <0.000009>",
+      "7346 1791555518.789296 openat(AT_FDCWD, \"/proc/39/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "7346 1791555518.789444 read(10, \"kworker/R-kinte\\n\", 512) = 16 <0.000010>",
+      "7346 1791555518.789478 read(10, \"\", 880) = 0 <0.000009>",
+      "7346 1791555518.789583 openat(AT_FDCWD, \"/proc/4/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000033>",
+      "7346 1791555518.789914 read(10, \"kworker/R-rcu_g\\n\", 512) = 16 <0.000023>",
+      "7346 1791555518.789975 read(10, \"\", 880) = 0 <0.000026>",
+      "7346 1791555518.790080 openat(AT_FDCWD, \"/proc/40/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000026>",
+      "7346 1791555518.790392 read(10, \"kworker/R-kbloc\\n\", 512) = 16 <0.000022>",
+      "7346 1791555518.790450 read(10, \"\", 880) = 0 <0.000021>",
+      "7346 1791555518.790593 openat(AT_FDCWD, \"/proc/40091/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000028>",
+      "7346 1791555518.790909 read(10, \"log\\n\", 512) = 4 <0.000023>",
+      "7346 1791555518.790967 read(10, \"\", 892) = 0 <0.000021>",
+      "7346 1791555518.791068 openat(AT_FDCWD, \"/proc/4014/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000027>",
+      "7346 1791555518.791399 read(10, \"python3\\n\", 512) = 8 <0.000023>",
+      "7346 1791555518.791460 read(10, \"\", 888) = 0 <0.000021>",
+      "7346 1791555518.791612 openat(AT_FDCWD, \"/proc/41/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000027>",
+      "7346 1791555518.791935 read(10, \"kworker/R-blkcg\\n\", 512) = 16 <0.000023>",
+      "7346 1791555518.791993 read(10, \"\", 880) = 0 <0.000023>",
+      "7346 1791555518.792096 openat(AT_FDCWD, \"/proc/41214/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000027>",
+      "7346 1791555518.792408 read(10, \"psimon\\n\", 512) = 7 <0.000024>",
+      "7346 1791555518.792476 read(10, \"\", 889) = 0 <0.000021>",
+      "7346 1791555518.792668 openat(AT_FDCWD, \"/proc/42/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000029>",
+      "7346 1791555518.795766 read(10, \"irq/9-acpi\\n\", 512) = 11 <0.000054>",
+      "7346 1791555518.795881 read(10, \"\", 885) = 0 <0.000031>",
+      "7346 1791555518.796075 openat(AT_FDCWD, \"/proc/42952/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000040>",
+      "7346 1791555518.798317 read(10, \"nginx\\n\", 512) = 6 <0.000121>",
+      "7346 1791555518.798916 read(10, \"\", 890) = 0 <0.000569>",
+      "7346 1791555518.799604 openat(AT_FDCWD, \"/proc/42953/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000576>",
+      "7346 1791555518.801779 read(10, \"nginx\\n\", 512) = 6 <0.000055>",
+      "7346 1791555518.801916 read(10, \"\", 890) = 0 <0.000046>",
+      "7346 1791555518.802051 openat(AT_FDCWD, \"/proc/43/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000035>",
+      "7346 1791555518.802454 read(10, \"kworker/R-tpm_d\\n\", 512) = 16 <0.000039>",
+      "7346 1791555518.802602 read(10, \"\", 880) = 0 <0.000041>",
+      "7346 1791555518.802794 openat(AT_FDCWD, \"/proc/43009/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000087>",
+      "7346 1791555518.803263 read(10, \"config\\n\", 512) = 7 <0.000036>",
+      "7346 1791555518.803330 read(10, \"\", 889) = 0 <0.000023>",
+      "7346 1791555518.803449 openat(AT_FDCWD, \"/proc/43010/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000028>",
+      "7346 1791555518.803935 read(10, \"stats\\n\", 512) = 6 <0.000025>",
+      "7346 1791555518.804025 read(10, \"\", 890) = 0 <0.000013>",
+      "7346 1791555518.804115 openat(AT_FDCWD, \"/proc/43654/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000020>",
+      "7346 1791555518.804569 read(10, \"kworker/0:0-events\\n\", 512) = 19 <0.000044>",
+      "7346 1791555518.804657 read(10, \"\", 877) = 0 <0.000022>",
+      "7346 1791555518.804779 openat(AT_FDCWD, \"/proc/43883/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000027>",
+      "7346 1791555518.805262 read(10, \"kworker/1:1-events\\n\", 512) = 19 <0.000025>",
+      "7346 1791555518.805327 read(10, \"\", 877) = 0 <0.000075>",
+      "7346 1791555518.805481 openat(AT_FDCWD, \"/proc/44/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000069>",
+      "7346 1791555518.806244 read(10, \"kworker/R-ata_s\\n\", 512) = 16 <0.000102>",
+      "7346 1791555518.806397 read(10, \"\", 880) = 0 <0.000028>",
+      "7346 1791555518.808598 openat(AT_FDCWD, \"/proc/440/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000043>",
+      "7346 1791555518.809119 read(10, \"jbd2/vda16-8\\n\", 512) = 13 <0.000041>",
+      "7346 1791555518.809216 read(10, \"\", 883) = 0 <0.000030>",
+      "7346 1791555518.809362 openat(AT_FDCWD, \"/proc/441/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000050>",
+      "7346 1791555518.810786 read(10, \"kworker/R-ext4-\\n\", 512) = 16 <0.000014>",
+      "7346 1791555518.810834 read(10, \"\", 880) = 0 <0.000009>",
+      "7346 1791555518.810889 openat(AT_FDCWD, \"/proc/45/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000015>",
+      "7346 1791555518.811047 read(10, \"kworker/R-md\\n\", 512) = 13 <0.000011>",
+      "7346 1791555518.811083 read(10, \"\", 883) = 0 <0.000009>",
+      "7346 1791555518.811135 openat(AT_FDCWD, \"/proc/46/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "7346 1791555518.811885 read(10, \"kworker/R-md_bi\\n\", 512) = 16 <0.000011>",
+      "7346 1791555518.811926 read(10, \"\", 880) = 0 <0.000007>",
+      "7346 1791555518.811974 openat(AT_FDCWD, \"/proc/46254/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "7346 1791555518.812107 read(10, \"kworker/u4:3\\n\", 512) = 13 <0.000009>",
+      "7346 1791555518.812138 read(10, \"\", 883) = 0 <0.000007>",
+      "7346 1791555518.812183 openat(AT_FDCWD, \"/proc/47/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000011>",
+      "7346 1791555518.813397 read(10, \"kworker/R-edac-\\n\", 512) = 16 <0.000012>",
+      "7346 1791555518.813453 read(10, \"\", 880) = 0 <0.000008>",
+      "7346 1791555518.813503 openat(AT_FDCWD, \"/proc/48/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000015>",
+      "7346 1791555518.813676 read(10, \"kworker/R-devfr\\n\", 512) = 16 <0.000010>",
+      "7346 1791555518.813718 read(10, \"\", 880) = 0 <0.000007>",
+      "7346 1791555518.813764 openat(AT_FDCWD, \"/proc/49/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000011>",
+      "7346 1791555518.813893 read(10, \"watchdogd\\n\", 512) = 10 <0.000009>",
+      "7346 1791555518.813923 read(10, \"\", 886) = 0 <0.000007>",
+      "7346 1791555518.813971 openat(AT_FDCWD, \"/proc/5/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "7346 1791555518.814138 read(10, \"kworker/R-rcu_p\\n\", 512) = 16 <0.000012>",
+      "7346 1791555518.814176 read(10, \"\", 880) = 0 <0.000009>",
+      "7346 1791555518.814227 openat(AT_FDCWD, \"/proc/50/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "7346 1791555518.814379 read(10, \"kworker/R-quota\\n\", 512) = 16 <0.000011>",
+      "7346 1791555518.814412 read(10, \"\", 880) = 0 <0.000009>",
+      "7346 1791555518.814463 openat(AT_FDCWD, \"/proc/50577/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "7346 1791555518.814868 read(10, \"master\\n\", 512) = 7 <0.000026>",
+      "7346 1791555518.814937 read(10, \"\", 889) = 0 <0.000021>",
+      "7346 1791555518.815046 openat(AT_FDCWD, \"/proc/50578/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000069>",
+      "7346 1791555518.815406 read(10, \"pickup\\n\", 512) = 7 <0.000023>",
+      "7346 1791555518.815467 read(10, \"\", 889) = 0 <0.000021>",
+      "7346 1791555518.815603 openat(AT_FDCWD, \"/proc/50579/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000031>",
+      "7346 1791555518.815920 read(10, \"qmgr\\n\", 512) = 5 <0.000022>",
+      "7346 1791555518.815978 read(10, \"\", 891) = 0 <0.000020>",
+      "7346 1791555518.816093 openat(AT_FDCWD, \"/proc/50917/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000029>",
+      "7346 1791555518.816408 read(10, \"strace\\n\", 512) = 7 <0.000022>",
+      "7346 1791555518.816465 read(10, \"\", 889) = 0 <0.000021>",
+      "7346 1791555518.816599 openat(AT_FDCWD, \"/proc/50920/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000030>",
+      "7346 1791555518.816960 read(10, \"python3\\n\", 512) = 8 <0.000025>",
+      "7346 1791555518.817021 read(10, \"\", 888) = 0 <0.000021>",
+      "7346 1791555518.817151 openat(AT_FDCWD, \"/proc/51/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000028>",
+      "7346 1791555518.817469 read(10, \"kworker/0:1H-kblockd\\n\", 512) = 21 <0.000227>",
+      "7346 1791555518.818079 read(10, \"\", 875) = 0 <0.001477>",
+      "7346 1791555518.819786 openat(AT_FDCWD, \"/proc/52/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000045>",
+      "10629 1791555518.820492 read(10, \"kswapd0\\n\", 512) = 8 <0.000069>",
+      "10629 1791555518.820614 read(10, \"\", 888) = 0 <0.000031>",
+      "10629 1791555518.820759 openat(AT_FDCWD, \"/proc/53/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000053>",
+      "10629 1791555518.821366 read(10, \"ecryptfs-kthread\\n\", 512) = 17 <0.000045>",
+      "10629 1791555518.821536 read(10, \"\", 879) = 0 <0.000039>",
+      "10629 1791555518.821707 openat(AT_FDCWD, \"/proc/54/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000041>",
+      "10629 1791555518.822258 read(10, \"kworker/R-kthro\\n\", 512) = 16 <0.000036>",
+      "10629 1791555518.822347 read(10, \"\", 880) = 0 <0.001291>",
+      "10629 1791555518.823789 openat(AT_FDCWD, \"/proc/55/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000055>",
+      "10629 1791555518.825791 read(10, \"kworker/R-acpi_\\n\", 512) = 16 <0.000045>",
+      "10629 1791555518.825929 read(10, \"\", 880) = 0 <0.000063>",
+      "10629 1791555518.826101 openat(AT_FDCWD, \"/proc/5558/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000027>",
+      "10629 1791555518.826459 read(10, \"kworker/u4:5-events_unbound\\n\", 512) = 28 <0.000037>",
+      "10629 1791555518.827504 read(10, \"\", 868) = 0 <0.000026>",
+      "10629 1791555518.827713 openat(AT_FDCWD, \"/proc/56/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000035>",
+      "10629 1791555518.828317 read(10, \"scsi_eh_0\\n\", 512) = 10 <0.000030>",
+      "10629 1791555518.828383 read(10, \"\", 886) = 0 <0.000017>",
+      "10629 1791555518.828482 openat(AT_FDCWD, \"/proc/57/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000036>",
+      "10629 1791555518.828879 read(10, \"kworker/R-scsi_\\n\", 512) = 16 <0.000016>",
+      "10629 1791555518.828930 read(10, \"\", 880) = 0 <0.000021>",
+      "10629 1791555518.829030 openat(AT_FDCWD, \"/proc/571/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000027>",
+      "10629 1791555518.829414 read(10, \"systemd-resolve\\n\", 512) = 16 <0.000023>",
+      "10629 1791555518.829477 read(10, \"\", 880) = 0 <0.000021>",
+      "10629 1791555518.829686 openat(AT_FDCWD, \"/proc/572/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000028>",
+      "10629 1791555518.830039 read(10, \"systemd-timesyn\\n\", 512) = 16 <0.000024>",
+      "10629 1791555518.830101 read(10, \"\", 880) = 0 <0.000021>",
+      "10629 1791555518.830199 openat(AT_FDCWD, \"/proc/58/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000026>",
+      "10629 1791555518.830574 read(10, \"scsi_eh_1\\n\", 512) = 10 <0.000028>",
+      "10629 1791555518.830643 read(10, \"\", 886) = 0 <0.000021>",
+      "10629 1791555518.830742 openat(AT_FDCWD, \"/proc/59/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000027>",
+      "10629 1791555518.831056 read(10, \"kworker/R-scsi_\\n\", 512) = 16 <0.000023>",
+      "10629 1791555518.831114 read(10, \"\", 880) = 0 <0.000021>",
+      "10629 1791555518.831211 openat(AT_FDCWD, \"/proc/6/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000026>",
+      "10629 1791555518.831557 read(10, \"kworker/R-slub_\\n\", 512) = 16 <0.000023>",
+      "10629 1791555518.831619 read(10, \"\", 880) = 0 <0.000021>",
+      "10629 1791555518.831717 openat(AT_FDCWD, \"/proc/61/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000025>",
+      "10629 1791555518.832091 read(10, \"kworker/R-mld\\n\", 512) = 14 <0.000037>",
+      "10629 1791555518.832626 read(10, \"\", 882) = 0 <0.000947>",
+      "10629 1791555518.833641 openat(AT_FDCWD, \"/proc/62/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000016>",
+      "10629 1791555518.834007 read(10, \"kworker/R-ipv6_\\n\", 512) = 16 <0.000018>",
+      "10629 1791555518.834080 read(10, \"\", 880) = 0 <0.000013>",
+      "10629 1791555518.834157 openat(AT_FDCWD, \"/proc/675/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000020>",
+      "10629 1791555518.834317 read(10, \"systemd-network\\n\", 512) = 16 <0.000011>",
+      "10629 1791555518.834355 read(10, \"\", 880) = 0 <0.000007>",
+      "10629 1791555518.834402 openat(AT_FDCWD, \"/proc/69/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000012>",
+      "10629 1791555518.834631 read(10, \"kworker/R-kstrp\\n\", 512) = 16 <0.000023>",
+      "10629 1791555518.834684 read(10, \"\", 880) = 0 <0.000010>",
+      "10629 1791555518.834739 openat(AT_FDCWD, \"/proc/7/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000015>",
+      "10629 1791555518.834891 read(10, \"kworker/R-netns\\n\", 512) = 16 <0.000011>",
+      "10629 1791555518.834925 read(10, \"\", 880) = 0 <0.000009>",
+      "10629 1791555518.834975 openat(AT_FDCWD, \"/proc/71/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "10629 1791555518.835122 read(10, \"kworker/u5:0\\n\", 512) = 13 <0.000012>",
+      "10629 1791555518.835157 read(10, \"\", 883) = 0 <0.000009>",
+      "10629 1791555518.835207 openat(AT_FDCWD, \"/proc/7346/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "10629 1791555518.835354 read(10, \"agent\\n\", 512) = 6 <0.000011>",
+      "10629 1791555518.835386 read(10, \"\", 890) = 0 <0.000009>",
+      "10629 1791555518.835436 openat(AT_FDCWD, \"/proc/7544/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "10629 1791555518.835628 read(10, \"panel\\n\", 512) = 6 <0.000012>",
+      "10629 1791555518.835667 read(10, \"\", 890) = 0 <0.000009>",
+      "10629 1791555518.835719 openat(AT_FDCWD, \"/proc/76/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "10629 1791555518.835874 read(10, \"kworker/R-crypt\\n\", 512) = 16 <0.000010>",
+      "10629 1791555518.835909 read(10, \"\", 880) = 0 <0.000009>",
+      "10629 1791555518.835977 openat(AT_FDCWD, \"/proc/7791/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000015>",
+      "10629 1791555518.836129 read(10, \"systemd\\n\", 512) = 8 <0.000011>",
+      "10629 1791555518.836165 read(10, \"\", 888) = 0 <0.000010>",
+      "10629 1791555518.836216 openat(AT_FDCWD, \"/proc/7792/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "10629 1791555518.836364 read(10, \"(sd-pam)\\n\", 512) = 9 <0.000011>",
+      "10629 1791555518.836400 read(10, \"\", 887) = 0 <0.000007>",
+      "10629 1791555518.836449 openat(AT_FDCWD, \"/proc/797/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "10629 1791555518.836631 read(10, \"cron\\n\", 512) = 5 <0.000010>",
+      "10629 1791555518.836667 read(10, \"\", 891) = 0 <0.000009>",
+      "10629 1791555518.836718 openat(AT_FDCWD, \"/proc/798/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "10629 1791555518.836867 read(10, \"dbus-daemon\\n\", 512) = 12 <0.000011>",
+      "10629 1791555518.836902 read(10, \"\", 884) = 0 <0.000009>",
+      "10629 1791555518.836951 openat(AT_FDCWD, \"/proc/803/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "10629 1791555518.837125 read(10, \"polkitd\\n\", 512) = 8 <0.000011>",
+      "10629 1791555518.837162 read(10, \"\", 888) = 0 <0.000009>",
+      "10629 1791555518.837213 openat(AT_FDCWD, \"/proc/8072/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000015>",
+      "10629 1791555518.837363 read(10, \"sshd\\n\", 512) = 5 <0.000011>",
+      "10629 1791555518.837397 read(10, \"\", 891) = 0 <0.000008>",
+      "10629 1791555518.837454 openat(AT_FDCWD, \"/proc/8119/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000012>",
+      "10629 1791555518.837642 read(10, \"sshd\\n\", 512) = 5 <0.000011>",
+      "10629 1791555518.837681 read(10, \"\", 891) = 0 <0.000007>",
+      "10629 1791555518.837732 openat(AT_FDCWD, \"/proc/812/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "10629 1791555518.837879 read(10, \"systemd-logind\\n\", 512) = 15 <0.000011>",
+      "10629 1791555518.837911 read(10, \"\", 881) = 0 <0.000009>",
+      "10629 1791555518.837976 openat(AT_FDCWD, \"/proc/815/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000015>",
+      "10629 1791555518.838130 read(10, \"udisksd\\n\", 512) = 8 <0.000011>",
+      "10629 1791555518.838164 read(10, \"\", 888) = 0 <0.000009>",
+      "10629 1791555518.838213 openat(AT_FDCWD, \"/proc/87/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "10629 1791555518.838359 read(10, \"kworker/R-charg\\n\", 512) = 16 <0.000011>",
+      "10629 1791555518.838392 read(10, \"\", 880) = 0 <0.000009>",
+      "10629 1791555518.838441 openat(AT_FDCWD, \"/proc/897/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000014>",
+      "10629 1791555518.838624 read(10, \"agetty\\n\", 512) = 7 <0.000011>",
+      "10629 1791555518.838664 read(10, \"\", 889) = 0 <0.000009>",
+      "10629 1791555518.838715 openat(AT_FDCWD, \"/proc/900/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "10629 1791555518.838862 read(10, \"unattended-upgr\\n\", 512) = 16 <0.000011>",
+      "10629 1791555518.838896 read(10, \"\", 880) = 0 <0.000007>",
+      "10629 1791555518.838945 openat(AT_FDCWD, \"/proc/908/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000011>",
+      "10629 1791555518.839092 read(10, \"ModemManager\\n\", 512) = 13 <0.000010>",
+      "10629 1791555518.839125 read(10, \"\", 883) = 0 <0.000007>",
+      "10629 1791555518.839172 openat(AT_FDCWD, \"/proc/909/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000013>",
+      "10629 1791555518.839359 read(10, \"agetty\\n\", 512) = 7 <0.000009>",
+      "10629 1791555518.839392 read(10, \"\", 889) = 0 <0.000007>",
+      "10629 1791555518.839437 openat(AT_FDCWD, \"/proc/991/comm\", O_RDONLY|O_CLOEXEC) = 10 <0.000012>",
+      "10629 1791555518.839643 read(10, \"sshd\\n\", 512) = 5 <0.000193>",
+      "10629 1791555518.839867 read(10, \"\", 891) = 0 <0.000008>",
+      "7346 1791555518.866479 read(10, \"PRETTY_NAME=\\\"Ubuntu 24.04.4 LTS\\\"\\nNAME=\\\"Ubuntu\\\"\\nVERSION_ID=\\\"24.04\\\"\\nVERSION=\\\"24.04.4 LTS (Noble Numbat)\\\"\\nVERSION_CODENAME=noble\\nID=ubuntu\\nID_LIKE=debian\\nHOME_URL=\\\"https://www.ubuntu.com/\\\"\\nSUPPORT_URL=\\\"https://help.ubuntu.com/\\\"\\nBUG_REPORT_URL=\\\"https://bugs.launchpad.net/",
+      "7346 1791555518.866612 read(10, \"\", 112) = 0 <0.000036>",
+      "51237 1791555518.874419 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"is-system-running\"], 0x8fa390a40a0 /* 19 vars */) = 0 <0.000344>",
+      "51237 1791555518.893329 write(1, \"running\\n\", 8) = 8 <0.000026>",
+      "51237 1791555518.893401 exit_group(0)   = ?",
+      "51237 1791555518.894257 +++ exited with 0 +++",
+      "51240 1791555518.911494 execve(\"/opt/celikpanel/bin/agent\", [argv not kept]) 0 <0.000236>",
+      "51247 1791555518.931280 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"show\", \"postfix.service\", \"--property=LoadState\", \"--property=ActiveState\", \"--property=Result\"], 0x291363ca0000 /* 19 vars */ <unfinished ...>",
+      "51247 1791555518.931886 <... execve resumed>) = 0 <0.000576>",
+      "51247 1791555518.946569 write(1, \"Result=success\\nLoadState=loaded\\nActiveState=active\\n\", 51) = 51 <0.000042>",
+      "51247 1791555518.946650 exit_group(0)   = ?",
+      "51247 1791555518.947025 +++ exited with 0 +++",
+      "51251 1791555518.974592 execve(\"/opt/celikpanel/bin/agent\", [argv not kept]) 0 <0.001969>",
+      "51261 1791555519.030102 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"show\", \"postfix@-.service\", \"--property=LoadState\", \"--property=ActiveState\", \"--property=Result\"], 0x2d72479c3180 /* 19 vars */ <unfinished ...>",
+      "51261 1791555519.030477 <... execve resumed>) = 0 <0.000324>",
+      "51261 1791555519.054806 write(1, \"Result=success\\nLoadState=loaded\\nActiveState=active\\n\", 51) = 51 <0.000016>",
+      "51261 1791555519.054878 exit_group(0)   = ?",
+      "51261 1791555519.055295 +++ exited with 0 +++",
+      "51266 1791555519.087443 execve(\"/opt/celikpanel/bin/agent\", [argv not kept]) 0 <0.000271>",
+      "51274 1791555519.119794 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"stop\", \"postfix\"], 0x11ef31d1cd20 /* 19 vars */ <unfinished ...>",
+      "51274 1791555519.120139 <... execve resumed>) = 0 <0.000291>",
+      "51274 1791555519.142964 exit_group(0)   = ?",
+      "51274 1791555519.143324 +++ exited with 0 +++",
+      "51279 1791555519.174101 execve(\"/opt/celikpanel/bin/agent\", [argv not kept]) execve(\"/opt/celikpanel/bin/agent\", [\"/opt/celikpanel/bin/ag",
+      "51287 1791555519.199276 execve(\"/usr/sbin/postconf\", [\"/usr/sbin/postconf\", \"-h\", \"queue_directory\"], 0x3e8d5cac6000 /* 19 vars */) = 0 <0.000365>",
+      "51287 1791555519.217133 write(2, \"/usr/sbin/postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\\n\", 119) = 119 <0.000019>",
+      "51287 1791555519.217216 write(1, \"/var/spool/postfix\\n\", 19) = 19 <0.000024>",
+      "51287 1791555519.217346 exit_group(0)   = ?",
+      "51287 1791555519.217902 +++ exited with 0 +++",
+      "7349 1791555519.235710 openat(AT_FDCWD, \"/usr/sbin/postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\\n/var/spool/postfix/pid/master.pid\", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory) <0.000092>",
+      "51292 1791555519.247775 execve(\"/opt/celikpanel/bin/agent\", [argv not kept]) execve(\"/opt/celikpanel/bin/agent\", [\"/opt/celikpanel/bin/ag",
+      "51300 1791555519.293145 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"show\", \"postfix.service\", \"--property=LoadState\", \"--property=ActiveState\", \"--property=Result\"], 0xd9a7d24c140 /* 19 vars */) = 0 <0.000373>",
+      "51300 1791555519.310640 write(1, \"Result=success\\nLoadState=loaded\\nActiveState=inactive\\n\", 53) = 53 <0.000021>",
+      "51300 1791555519.311700 exit_group(0)   = ?",
+      "51300 1791555519.312056 +++ exited with 0 +++",
+      "51305 1791555519.339867 execve(\"/opt/celikpanel/bin/agent\", [argv not kept]) 0 <0.000238>",
+      "51313 1791555519.365616 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"show\", \"postfix@-.service\", \"--property=LoadState\", \"--property=ActiveState\", \"--property=Result\"], 0x3bac4faa7680 /* 19 vars */ <unfinished ...>",
+      "51313 1791555519.366094 <... execve resumed>) = 0 <0.000445>",
+      "51313 1791555519.380413 write(1, \"Result=success\\nLoadState=loaded\\nActiveState=deactivating\\n\", 57) = 57 <0.000018>",
+      "51313 1791555519.380499 exit_group(0)   = ?",
+      "51313 1791555519.380915 +++ exited with 0 +++",
+      "51320 1791555519.450594 execve(\"/usr/bin/systemctl\", [\"systemctl\", \"list-units\", \"--type=service\", \"--all\", \"--no-legend\", \"--no-pager\", \"php-fpm*\", \"php*\", \"nginx*\", \"apache2*\", \"httpd*\", \"postgresql*\", \"mariadb*\", \"mysql*\", \"postfix*\", \"exim4*\", \"exim*\", \"rspamd*\", \"dovecot*\", \"spamd*\", \"spamassassin*\", \"wg-quick*\", \"fail2ban*\", \"clamav-daemon*\", \"bind9*\", \"named*\", \"pdns*\", \"vsftpd*\", \"redis-server*\", \"redis*\", \"valkey-server*\", \"valkey*\", \"memcached*\", \"netdata*\", \"cron*\", \"cronie*\"], 0x8fa3913e8c0 /* 19 vars */ <unfinished ...>",
+      "51320 1791555519.450957 <... execve resumed>) = 0 <0.000296>",
+      "51320 1791555519.474865 write(1, \"  cron.service               loaded    active       running      Regular background program processing daemon\\n  dovecot.service            loaded    active       running      Dovecot IMAP/POP3 email server\\n\\342\\227\\217 exim4.service              not-found inactive     dead         exim4.service\\n  mariadb.service            loaded    active       running      MariaDB 10.11.14 database server\\n  nginx.service\"..., 1165) = 1165 <0.000016>",
+      "51320 1791555519.475064 exit_group(0)   = ?",
+      "51320 1791555519.475484 +++ exited with 0 +++",
+      "51323 1791555519.482243 execve(\"/usr/sbin/cron\", [argv not kept]) 0 <0.000513>",
+      "51325 1791555519.502960 execve(\"/usr/sbin/cron\", [argv not kept]) 0 <0.000329>",
+      "51328 1791555519.512497 execve(\"/usr/sbin/cron\", [argv not kept]) 0 <0.000196>",
+      "51329 1791555519.520727 execve(\"/usr/sbin/cron\", [argv not kept]) execve(\"/usr/sbin/cron\", [\"cron\", \"version\"], 0x8fa390a4aa0 ",
+      "51331 1791555519.534086 execve(\"/usr/bin/systemctl\", [\"systemctl\", \"show\", \"cron\", \"--property=ExecStart\"], 0x8fa390a4be0 /* 19 vars */) = 0 <0.000298>",
+      "51331 1791555519.562364 write(1, \"ExecStart={ path=/usr/sbin/cron ; argv[]=/usr/sbin/cron -f -P $EXTRA_OPTS ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\\n\", 167) = 167 <0.000037>",
+      "51331 1791555519.562463 exit_group(0)   = ?",
+      "51331 1791555519.562958 +++ exited with 0 +++",
+      "51335 1791555519.570756 execve(\"/usr/sbin/dovecot\", [argv not kept]) 0 <0.000335>",
+      "51338 1791555519.601003 execve(\"/usr/bin/systemctl\", [\"systemctl\", \"show\", \"dovecot\", \"--property=ExecStart\"], 0x8fa39ca0460 /* 19 vars */ <unfinished ...>",
+      "51338 1791555519.601476 <... execve resumed>) = 0 <0.000425>",
+      "51338 1791555519.620937 write(1, \"ExecStart={ path=/usr/sbin/dovecot ; argv[]=/usr/sbin/dovecot -F ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\\n\", 158) = 158 <0.000016>",
+      "51338 1791555519.620999 exit_group(0)   = ?",
+      "51338 1791555519.621481 +++ exited with 0 +++",
+      "51341 1791555519.624067 execve(\"/usr/sbin/mariadbd\", [argv not kept]) execve(\"/usr/sbin/mariadbd\", [\"mariadbd\", \"--version\"], 0x8f",
+      "51346 1791555519.678777 execve(\"/usr/bin/systemctl\", [\"systemctl\", \"show\", \"mariadb\", \"--property=ExecStart\"], 0x8fa3913e0a0 /* 19 vars */) = 0 <0.000317>",
+      "51346 1791555519.698602 write(1, \"ExecStart={ path=/usr/sbin/mariadbd ; argv[]=/usr/sbin/mariadbd $MYSQLD_OPTS $_WSREP_NEW_CLUSTER $_WSREP_START_POSITION ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\\n\", 213) = 213 <0.000075>",
+      "51346 1791555519.698746 exit_group(0)   = ?",
+      "51346 1791555519.699239 +++ exited with 0 +++",
+      "51349 1791555519.711157 execve(\"/usr/sbin/nginx\", [argv not kept]) 0 <0.000276>",
+      "51351 1791555519.720164 execve(\"/usr/sbin/nginx\", [argv not kept]) execve(\"/usr/sbin/nginx\", [\"nginx\", \"-v\"], 0x8fa39ca0500 /* ",
+      "51352 1791555519.733658 execve(\"/usr/bin/systemctl\", [\"systemctl\", \"show\", \"nginx\", \"--property=ExecStart\"], 0x8fa3913f220 /* 19 vars */) = 0 <0.000355>",
+      "51352 1791555519.751087 write(1, \"ExecStart={ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; master_process on; ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\\n\", 184) = 184 <0.000019>",
+      "51352 1791555519.751162 exit_group(0)   = ?",
+      "51352 1791555519.751656 +++ exited with 0 +++",
+      "51355 1791555519.756072 execve(\"/usr/bin/systemctl\", [\"systemctl\", \"show\", \"php8.3-fpm\", \"--property=ExecStart\"], 0x8fa39ca0820 /* 19 vars */) = 0 <0.000383>",
+      "51355 1791555519.782990 write(1, \"ExecStart={ path=/usr/sbin/php-fpm8.3 ; argv[]=/usr/sbin/php-fpm8.3 --nodaemonize --fpm-config /etc/php/8.3/fpm/php-fpm.conf ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\\n\", 218) = 218 <0.000071>",
+      "51355 1791555519.783134 exit_group(0)   = ?",
+      "51355 1791555519.783604 +++ exited with 0 +++",
+      "51359 1791555519.792212 execve(\"/usr/sbin/postconf\", [\"postconf\", \"-d\", \"mail_version\"], 0x8fa39ca08c0 /* 19 vars */ <unfinished ...>",
+      "51359 1791555519.792624 <... execve resumed>) = 0 <0.000349>",
+      "51359 1791555519.806305 write(1, \"mail_version = 3.8.6\\n\", 21) = 21 <0.000015>",
+      "51359 1791555519.806467 exit_group(0 <unfinished ...>",
+      "51359 1791555519.807066 +++ exited with 0 +++",
+      "51361 1791555519.811484 execve(\"/usr/bin/systemctl\", [\"systemctl\", \"show\", \"postfix\", \"--property=ExecStart\"], 0x8fa3913f2c0 /* 19 vars */ <unfinished ...>",
+      "51361 1791555519.812240 <... execve resumed>) = 0 <0.000666>",
+      "51361 1791555519.832141 write(1, \"ExecStart={ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[Fri 2026-10-09 14:18:30 UTC] ; stop_time=[Fri 2026-10-09 14:18:30 UTC] ; pid=50581 ; code=exited ; status=0 }\\n\", 189) = 189 <0.000048>",
+      "51361 1791555519.832249 exit_group(0)   = ?",
+      "51361 1791555519.832752 +++ exited with 0 +++",
+      "51364 1791555519.838107 execve(\"/usr/bin/systemctl\", [\"systemctl\", \"show\", \"postgresql\", \"--property=ExecStart\"], 0x8fa39ca0960 /* 19 vars */) = 0 <0.000258>",
+      "51364 1791555519.855536 write(1, \"ExecStart={ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\\n\", 139) = 139 <0.000023>",
+      "51364 1791555519.855604 exit_group(0)   = ?",
+      "51364 1791555519.856044 +++ exited with 0 +++",
+      "51367 1791555519.859673 execve(\"/usr/bin/systemctl\", [\"systemctl\", \"show\", \"postgresql@16-main\", \"--property=ExecStart\"], 0x8fa39ca0a00 /* 19 vars */) = 0 <0.000295>",
+      "51367 1791555519.875246 write(1, \"ExecStart={ path=/usr/bin/pg_ctlcluster ; argv[]=/usr/bin/pg_ctlcluster --skip-systemctl-redirect 16-main start ; ignore_errors=yes ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\\n\", 206) = 206 <0.000017>",
+      "51367 1791555519.875325 exit_group(0)   = ?",
+      "51367 1791555519.875774 +++ exited with 0 +++",
+      "51369 1791555519.881385 execve(\"/usr/bin/rspamd\", [argv not kept]) execve(\"/usr/bin/rspamd\", [\"rspamd\", \"--version\"], 0x8fa3913",
+      "51373 1791555519.915824 execve(\"/usr/bin/systemctl\", [\"systemctl\", \"show\", \"rspamd\", \"--property=ExecStart\"], 0x8fa3913fcc0 /* 19 vars */) = 0 <0.000324>",
+      "51373 1791555519.933229 write(1, \"ExecStart={ path=/usr/bin/rspamd ; argv[]=/usr/bin/rspamd -c /etc/rspamd/rspamd.conf -f ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\\n\", 181) = 181 <0.000016>",
+      "51373 1791555519.933305 exit_group(0)   = ?",
+      "51373 1791555519.933828 +++ exited with 0 +++",
+      "51376 1791555519.941225 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"is-system-running\"], 0x8fa39ca0b40 /* 19 vars */) = 0 <0.000317>",
+      "51376 1791555519.955284 write(1, \"running\\n\", 8) = 8 <0.000015>",
+      "51376 1791555519.955354 exit_group(0)   = ?",
+      "51376 1791555519.955798 +++ exited with 0 +++",
+      "51379 1791555519.969331 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"list-unit-files\", \"--type=service\", \"--no-legend\", \"--no-pager\"], 0x8fa39ca0be0 /* 19 vars */ <unfinished ...>",
+      "51379 1791555519.969648 <... execve resumed>) = 0 <0.000276>",
+      "51379 1791555520.738261 write(1, \"apparmor.service                             enabled         enabled\\napport-autoreport.service                    static          -\\napport-coredump-hook@.service                static          -\\napport-forward@.service                      static          -\\napport.service                               enabled         enabled\\napt-daily-upgrade.service                    static          -\\napt-daily.\"..., 4096) = 4096 <0.000077>",
+      "51379 1791555520.738457 write(1, \"             disabled        enabled\\nkeyboard-setup.service                       enabled         enabled\\nkmod-static-nodes.service                    static          -\\nkmod.service                                 alias           -\\nldconfig.service                             static          -\\nlogrotate.service                            static          -\\nlvm2-lvmpolld.service                     \"..., 4096) = 4096 <0.000194>",
+      "51379 1791555520.738763 write(1, \"                  static          -\\nrc-local.service                             static          -\\nrescue.service                               static          -\\nrspamd.service                               enabled         enabled\\nrsync.service                                disabled        enabled\\nrsyslog.service                              enabled         enabled\\nscreen-cleanup.service         \"..., 4096) = 4096 <0.000031>",
+      "51379 1791555520.738906 write(1, \"etworkd.service                     enabled         enabled\\nsystemd-pcrextend@.service                   static          -\\nsystemd-pcrfs-root.service                   static          -\\nsystemd-pcrfs@.service                       static          -\\nsystemd-pcrlock-file-system.service          disabled        enabled\\nsystemd-pcrlock-firmware-code.service        disabled        enabled\\nsystemd-pcrlo\"..., 4096 <unfinished ...>",
+      "51379 1791555520.739260 write(1, \"vice                                static          -\\nuuidd.service                                indirect        enabled\\nvgauth.service                               enabled         enabled\\nvmtoolsd.service                             alias           -\\nx11-common.service                           masked          enabled\\nxfs_scrub@.service                           static          -\\nxfs_scrub_all\"..., 513 <unfinished ...>",
+      "51379 1791555520.739679 exit_group(0)   = ?",
+      "51379 1791555520.740232 +++ exited with 0 +++",
+      "51385 1791555520.753491 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"show\", \"nginx.service\", \"-p\", \"Id\", \"--value\"], 0x8fa390a40a0 /* 19 vars */) = 0 <0.000392>",
+      "51385 1791555520.783582 write(1, \"nginx.service\\n\", 14) = 14 <0.000073>",
+      "51385 1791555520.783717 exit_group(0)   = ?",
+      "51385 1791555520.784192 +++ exited with 0 +++",
+      "51389 1791555520.794206 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"show\", \"postgresql.service\", \"-p\", \"Id\", \"--value\"], 0x8fa39ca0c80 /* 19 vars */) = 0 <0.000817>",
+      "51389 1791555520.810185 write(1, \"postgresql.service\\n\", 19) = 19 <0.000023>",
+      "51389 1791555520.810254 exit_group(0)   = ?",
+      "51389 1791555520.810713 +++ exited with 0 +++",
+      "51391 1791555520.813741 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"show\", \"mariadb.service\", \"-p\", \"Id\", \"--value\"], 0x8fa390a4320 /* 19 vars */) = 0 <0.000199>",
+      "51391 1791555520.833942 write(1, \"mariadb.service\\n\", 16) = 16 <0.000016>",
+      "51391 1791555520.834007 exit_group(0)   = ?",
+      "51391 1791555520.835767 +++ exited with 0 +++",
+      "51394 1791555520.844846 execve(\"/usr/bin/dpkg-query\", [argv not kept]) execve(\"/usr/bin/dpkg-query\", [\"/usr/bin/dpkg-query\", \"-W\", ",
+      "51398 1791555520.879419 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"show\", \"postfix.service\", \"-p\", \"Id\", \"--value\"], 0x8fa390a4460 /* 19 vars */ <unfinished ...>",
+      "51398 1791555520.879713 <... execve resumed>) = 0 <0.000254>",
+      "51398 1791555520.905442 write(1, \"postfix.service\\n\", 16) = 16 <0.000983>",
+      "51398 1791555520.906494 exit_group(0)   = ?",
+      "51398 1791555520.906951 +++ exited with 0 +++",
+      "51401 1791555520.917889 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"show\", \"rspamd.service\", \"-p\", \"Id\", \"--value\"], 0x8fa39ca0dc0 /* 19 vars */) = 0 <0.000623>",
+      "51401 1791555520.949539 write(1, \"rspamd.service\\n\", 15) = 15 <0.000026>",
+      "51401 1791555520.949617 exit_group(0)   = ?",
+      "51401 1791555520.950003 +++ exited with 0 +++",
+      "51406 1791555520.953392 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"show\", \"dovecot.service\", \"-p\", \"Id\", \"--value\"], 0x8fa39ca0e60 /* 19 vars */ <unfinished ...>",
+      "51406 1791555520.953774 <... execve resumed>) = 0 <0.000333>",
+      "51406 1791555520.985854 write(1, \"dovecot.service\\n\", 16) = 16 <0.000071>",
+      "51406 1791555520.986022 exit_group(0)   = ?",
+      "51406 1791555520.986493 +++ exited with 0 +++",
+      "51410 1791555521.001950 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"show\", \"cron.service\", \"-p\", \"Id\", \"--value\"], 0x8fa39ca0f00 /* 19 vars */) = 0 <0.000291>",
+      "51410 1791555521.025581 write(1, \"cron.service\\n\", 13) = 13 <0.000029>",
+      "51410 1791555521.025657 exit_group(0)   = ?",
+      "51410 1791555521.026060 +++ exited with 0 +++",
+      "51414 1791555521.031798 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"is-system-running\"], 0x8fa390a4320 /* 19 vars */ <unfinished ...>",
+      "51414 1791555521.032184 <... execve resumed>) = 0 <0.000356>",
+      "51414 1791555521.046378 write(1, \"degraded\\n\", 9) = 9 <0.000015>",
+      "51414 1791555521.046438 exit_group(1)   = ?",
+      "51414 1791555521.046862 +++ exited with 1 +++",
+      "51417 1791555521.060629 execve(\"/usr/bin/dpkg-query\", [argv not kept]) execve(\"/usr/bin/dpkg-query\", [\"/usr/bin/dpkg-query\", \"-W\", ",
+      "51421 1791555521.098427 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"is-system-running\"], 0x8fa39ca01e0 /* 19 vars */ <unfinished ...>",
+      "51421 1791555521.098846 <... execve resumed>) = 0 <0.000380>",
+      "51421 1791555521.111402 write(1, \"degraded\\n\", 9) = 9 <0.000427>",
+      "51421 1791555521.112029 exit_group(1 <unfinished ...>",
+      "51421 1791555521.112621 +++ exited with 1 +++",
+      "51424 1791555521.126911 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"list-unit-files\", \"--type=service\", \"--no-legend\", \"--no-pager\"], 0x8fa390a4960 /* 19 vars */) = 0 <0.000453>",
+      "51424 1791555521.846268 write(1, \"apparmor.service                             enabled         enabled\\napport-autoreport.service                    static          -\\napport-coredump-hook@.service                static          -\\napport-forward@.service                      static          -\\napport.service                               enabled         enabled\\napt-daily-upgrade.service                    static          -\\napt-daily.\"..., 4096) = 4096 <0.000041>",
+      "51424 1791555521.846597 write(1, \"             disabled        enabled\\nkeyboard-setup.service                       enabled         enabled\\nkmod-static-nodes.service                    static          -\\nkmod.service                                 alias           -\\nldconfig.service                             static          -\\nlogrotate.service                            static          -\\nlvm2-lvmpolld.service                     \"..., 4096) = 4096 <0.000024>",
+      "51424 1791555521.846721 write(1, \"                  static          -\\nrc-local.service                             static          -\\nrescue.service                               static          -\\nrspamd.service                               enabled         enabled\\nrsync.service                                disabled        enabled\\nrsyslog.service                              enabled         enabled\\nscreen-cleanup.service         \"..., 4096) = 4096 <0.000021>",
+      "51424 1791555521.846840 write(1, \"etworkd.service                     enabled         enabled\\nsystemd-pcrextend@.service                   static          -\\nsystemd-pcrfs-root.service                   static          -\\nsystemd-pcrfs@.service                       static          -\\nsystemd-pcrlock-file-system.service          disabled        enabled\\nsystemd-pcrlock-firmware-code.service        disabled        enabled\\nsystemd-pcrlo\"..., 4096) = 4096 <0.000033>",
+      "51424 1791555521.846914 write(1, \"vice                                static          -\\nuuidd.service                                indirect        enabled\\nvgauth.service                               enabled         enabled\\nvmtoolsd.service                             alias           -\\nx11-common.service                           masked          enabled\\nxfs_scrub@.service                           static          -\\nxfs_scrub_all\"..., 513) = 513 <0.000287>",
+      "51424 1791555521.850414 exit_group(0)   = ?",
+      "51424 1791555521.850988 +++ exited with 0 +++",
+      "51428 1791555521.859896 execve(\"/usr/bin/systemctl\", [\"systemctl\", \"show\", \"php8.3-fpm.service\", \"--property=ActiveState,SubState\"], 0x8fa39ca0280 /* 19 vars */) = 0 <0.000336>",
+      "51428 1791555521.890245 write(1, \"ActiveState=active\\nSubState=running\\n\", 36) = 36 <0.000025>",
+      "51428 1791555521.890328 exit_group(0)   = ?",
+      "51428 1791555521.890744 +++ exited with 0 +++",
+      "51433 1791555521.914711 execve(\"/usr/bin/systemctl\", [\"/usr/bin/systemctl\", \"is-system-running\"], 0x8fa390a4be0 /* 19 vars */) = 0 <0.000191>",
+      "51433 1791555521.929623 write(1, \"degraded\\n\", 9) = 9 <0.000046>",
+      "51433 1791555521.929719 exit_group(1)   = ?",
+      "51433 1791555521.930241 +++ exited with 1 +++",
+      "51436 1791555521.937050 execve(\"/usr/bin/dpkg-query\", [argv not kept]) execve(\"/usr/bin/dpkg-query\", [\"/usr/bin/dpkg-query\", \"-W\", "
+    ],
+    "lines_total": 4538,
+    "stderr": "/usr/bin/strace: Process 7346 attached with 6 threads\n/usr/bin/strace: Process 51237 attached\n/usr/bin/strace: Process 51240 attached\n/usr/bin/strace: Process 51242 attached\n/usr/bin/strace: Process 51243 attached\n/usr/bin/strace: Process 51244 attached\n/usr/bin/strace: Process 51246 attached\n/usr/bin/strace: Process 51247 attached\n/usr/bin/strace: Process 51251 attached\n/usr/bin/strace: Process 51254 attached\n/usr/bin/strace: Process 51255 attached\n/usr/bin/strace: Process 51256 attached\n/usr/bin/strace: Process 51257 attached\n/usr/bin/strace: Process 51260 attached\n/usr/bin/strace: Process 5"
+  },
+  "trace": {
+    "buffer_notes": [
+      "# entries-in-buffer/entries-written: 5063/5063   #P:2"
+    ],
+    "events": [
+      {
+        "event": "exec",
+        "mono": 1112.303252,
+        "pid": 50994,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1112.308861,
+        "pid": 50994,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1112.310302,
+        "pid": 50996,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1112.317565,
+        "pid": 50996,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1112.318238,
+        "pid": 50997,
+        "program": "postconf",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1112.325788,
+        "pid": 50997,
+        "program": "postconf",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1112.327395,
+        "pid": 50999,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1112.333865,
+        "pid": 50999,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1112.334567,
+        "pid": 51001,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1112.341133,
+        "pid": 51001,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1112.63226,
+        "pid": 51077,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1112.63865,
+        "pid": 51077,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1112.640246,
+        "pid": 51079,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1112.647313,
+        "pid": 51079,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1112.648069,
+        "pid": 51080,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1112.653814,
+        "pid": 51080,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1112.656927,
+        "pid": 51082,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1112.662867,
+        "pid": 51082,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1112.663661,
+        "pid": 51083,
+        "program": "postfix",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1113.668508,
+        "pid": 51083,
+        "program": "postfix",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.191318,
+        "pid": 51237,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.21068,
+        "pid": 51237,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.228259,
+        "pid": 51240,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.248268,
+        "pid": 51247,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.263448,
+        "pid": 51247,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.26526,
+        "pid": 51240,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.291486,
+        "pid": 51251,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.346933,
+        "pid": 51261,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.371716,
+        "pid": 51261,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.372293,
+        "pid": 51251,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.404168,
+        "pid": 51266,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.436521,
+        "pid": 51274,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.453254,
+        "pid": 51276,
+        "program": "9",
+        "started_by": "systemd"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.457896,
+        "pid": 51276,
+        "program": "postmulti",
+        "started_by": "systemd"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.45976,
+        "pid": 51274,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.462366,
+        "pid": 51266,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.490732,
+        "pid": 51279,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.516149,
+        "pid": 51287,
+        "program": "postconf",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.534345,
+        "pid": 51287,
+        "program": "postconf",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.534804,
+        "pid": 51279,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.564493,
+        "pid": 51292,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.609954,
+        "pid": 51300,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.628503,
+        "pid": 51300,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.628808,
+        "pid": 51292,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.656617,
+        "pid": 51305,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.682346,
+        "pid": 51313,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.697356,
+        "pid": 51313,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.697846,
+        "pid": 51305,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.767402,
+        "pid": 51320,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.79191,
+        "pid": 51320,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.799254,
+        "pid": 51323,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.807888,
+        "pid": 51323,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.819726,
+        "pid": 51325,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.826783,
+        "pid": 51325,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.829219,
+        "pid": 51328,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.833579,
+        "pid": 51328,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.837423,
+        "pid": 51329,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.842246,
+        "pid": 51329,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.850853,
+        "pid": 51331,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.879346,
+        "pid": 51331,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.887577,
+        "pid": 51335,
+        "program": "dovecot",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.903693,
+        "pid": 51335,
+        "program": "dovecot",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.917875,
+        "pid": 51338,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.937886,
+        "pid": 51338,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.940861,
+        "pid": 51341,
+        "program": "mariadbd",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1114.992601,
+        "pid": 51341,
+        "program": "mariadbd",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1114.995502,
+        "pid": 51346,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1115.015644,
+        "pid": 51346,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1115.02792,
+        "pid": 51349,
+        "program": "nginx",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1115.033528,
+        "pid": 51349,
+        "program": "nginx",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1115.036959,
+        "pid": 51351,
+        "program": "nginx",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1115.042611,
+        "pid": 51351,
+        "program": "nginx",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1115.050542,
+        "pid": 51352,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1115.068066,
+        "pid": 51352,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1115.072958,
+        "pid": 51355,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1115.100035,
+        "pid": 51355,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1115.108966,
+        "pid": 51359,
+        "program": "postconf",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1115.1235,
+        "pid": 51359,
+        "program": "postconf",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1115.128374,
+        "pid": 51361,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1115.14916,
+        "pid": 51361,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1115.15487,
+        "pid": 51364,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1115.172454,
+        "pid": 51364,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1115.176398,
+        "pid": 51367,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1115.192212,
+        "pid": 51367,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1115.198288,
+        "pid": 51369,
+        "program": "rspamd",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1115.228465,
+        "pid": 51369,
+        "program": "rspamd",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1115.232572,
+        "pid": 51373,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1115.250236,
+        "pid": 51373,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1115.257993,
+        "pid": 51376,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1115.272226,
+        "pid": 51376,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1115.286116,
+        "pid": 51379,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1115.463853,
+        "pid": 51276,
+        "program": "postmulti",
+        "started_by": "systemd"
+      },
+      {
+        "event": "exit",
+        "mono": 1116.04168,
+        "pid": 50577,
+        "program": "master",
+        "started_by": "master"
+      },
+      {
+        "event": "exit",
+        "mono": 1116.044778,
+        "pid": 51383,
+        "program": "(sd-close)",
+        "started_by": "systemd"
+      },
+      {
+        "event": "exit",
+        "mono": 1116.056597,
+        "pid": 51379,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1116.070437,
+        "pid": 51385,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1116.1006,
+        "pid": 51385,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1116.111085,
+        "pid": 51389,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1116.12715,
+        "pid": 51389,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1116.130443,
+        "pid": 51391,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1116.152173,
+        "pid": 51391,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1116.161741,
+        "pid": 51394,
+        "program": "dpkg-query",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1116.184908,
+        "pid": 51394,
+        "program": "dpkg-query",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1116.196175,
+        "pid": 51398,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1116.223366,
+        "pid": 51398,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1116.234691,
+        "pid": 51401,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1116.266438,
+        "pid": 51401,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1116.270132,
+        "pid": 51406,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1116.302888,
+        "pid": 51406,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1116.318682,
+        "pid": 51410,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1116.342485,
+        "pid": 51410,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1116.348524,
+        "pid": 51414,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1116.363289,
+        "pid": 51414,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1116.37741,
+        "pid": 51417,
+        "program": "dpkg-query",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1116.40358,
+        "pid": 51417,
+        "program": "dpkg-query",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1116.41522,
+        "pid": 51421,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1116.428974,
+        "pid": 51421,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1116.443768,
+        "pid": 51424,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1117.167387,
+        "pid": 51424,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1117.176715,
+        "pid": 51428,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1117.207157,
+        "pid": 51428,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1117.231405,
+        "pid": 51433,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1117.246638,
+        "pid": 51433,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1117.253873,
+        "pid": 51436,
+        "program": "dpkg-query",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1117.268299,
+        "pid": 51436,
+        "program": "dpkg-query",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1117.570059,
+        "pid": 51515,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1117.575326,
+        "pid": 51515,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1117.576328,
+        "pid": 51517,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1117.581984,
+        "pid": 51517,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1117.582608,
+        "pid": 51518,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1117.588347,
+        "pid": 51518,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1117.588845,
+        "pid": 51520,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1117.59454,
+        "pid": 51520,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1117.595173,
+        "pid": 51521,
+        "program": "postfix",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1118.598727,
+        "pid": 51521,
+        "program": "postfix",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1120.580508,
+        "pid": 51917,
+        "program": "(sd-close)",
+        "started_by": "systemd"
+      }
+    ],
+    "events_total": 3371
+  },
+  "units_at_arm": {
+    "postfix.service": {
+      "ActiveEnterTimestampMonotonic": "1106202397",
+      "ActiveExitTimestampMonotonic": "1091975903",
+      "ActiveState": "active",
+      "After": "system.slice basic.target systemd-journald.socket postfix@-.service sysinit.target",
+      "Before": "multi-user.target shutdown.target",
+      "ConsistsOf": "postfix@-.service",
+      "ControlPID": "0",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "GuessMainPID": "yes",
+      "InactiveEnterTimestampMonotonic": "1091975903",
+      "InactiveExitTimestampMonotonic": "1106198317",
+      "KillMode": "control-group",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "PartOf": "",
+      "Result": "success",
+      "StateChangeTimestampMonotonic": "1106202397",
+      "SubState": "exited",
+      "Type": "oneshot"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestampMonotonic": "1106194340",
+      "ActiveExitTimestampMonotonic": "1091981389",
+      "ActiveState": "active",
+      "After": "system-postfix.slice network-online.target sysinit.target basic.target nss-lookup.target systemd-journald.socket",
+      "Before": "shutdown.target postfix.service",
+      "ConsistsOf": "",
+      "ControlPID": "0",
+      "ExecStop": "{ path=/usr/sbin/postmulti ; argv[]=/usr/sbin/postmulti -i - -p stop ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "GuessMainPID": "no",
+      "InactiveEnterTimestampMonotonic": "1092990733",
+      "InactiveExitTimestampMonotonic": "1105617415",
+      "KillMode": "control-group",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "PartOf": "postfix.service",
+      "Result": "success",
+      "StateChangeTimestampMonotonic": "1106194340",
+      "SubState": "running",
+      "Type": "forking"
+    }
+  },
+  "units_at_collect": {
+    "postfix.service": {
+      "ActiveEnterTimestampMonotonic": "1106202397",
+      "ActiveExitTimestampMonotonic": "1114451766",
+      "ActiveState": "inactive",
+      "After": "system.slice basic.target systemd-journald.socket postfix@-.service sysinit.target",
+      "Before": "multi-user.target shutdown.target",
+      "ConsistsOf": "postfix@-.service",
+      "ControlPID": "0",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "GuessMainPID": "yes",
+      "InactiveEnterTimestampMonotonic": "1114451766",
+      "InactiveExitTimestampMonotonic": "1106198317",
+      "KillMode": "control-group",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "PartOf": "",
+      "Result": "success",
+      "StateChangeTimestampMonotonic": "1114451766",
+      "SubState": "dead",
+      "Type": "oneshot"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestampMonotonic": "1106194340",
+      "ActiveExitTimestampMonotonic": "1114457430",
+      "ActiveState": "failed",
+      "After": "system-postfix.slice network-online.target sysinit.target basic.target nss-lookup.target systemd-journald.socket",
+      "Before": "shutdown.target postfix.service",
+      "ConsistsOf": "",
+      "ControlPID": "0",
+      "ExecStop": "{ path=/usr/sbin/postmulti ; argv[]=/usr/sbin/postmulti -i - -p stop ; ignore_errors=no ; start_time=[Fri 2026-10-09 14:18:39 UTC] ; stop_time=[Fri 2026-10-09 14:18:40 UTC] ; pid=51276 ; code=exited ; status=1 }",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "GuessMainPID": "no",
+      "InactiveEnterTimestampMonotonic": "1116048618",
+      "InactiveExitTimestampMonotonic": "1105617415",
+      "KillMode": "control-group",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "PartOf": "postfix.service",
+      "Result": "exit-code",
+      "StateChangeTimestampMonotonic": "1116048618",
+      "SubState": "failed",
+      "Type": "forking"
+    }
+  }
+}

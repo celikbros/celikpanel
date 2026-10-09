@@ -1,0 +1,78 @@
+2026-10-09T13:28:08Z
+--- memory
+               total        used        free      shared  buff/cache   available
+Mem:           15697         681       14809           3         401       15016
+Swap:           4096           0        4096
+--- cpus
+16
+--- qemu
+--- kvm
+crw-rw-rw- 1 root kvm 10, 232 Oct  9 16:28 /dev/kvm
+--- go
+go version go1.26.5 linux/amd64
+--- node
+v26.8.1
+12.0.2
+--- python
+Python 3.14.7
+--- images
+total 1486060
+drwx------ 2 root root      4096 Oct  1 15:57 .
+drwx------ 5 root root      4096 Sep 28 21:06 ..
+-r--r--r-- 5 root root 556609024 Sep 27 02:09 Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+-r--r--r-- 5 root root 340262912 Sep 27 02:09 debian-13-genericcloud-amd64-20260826-2582.qcow2
+-r--r--r-- 2 root root 624829952 Sep  8 20:39 ubuntu-24.04-server-cloudimg-amd64-20260826.img
+--- existing cp-set4b*
+none
+--- other jobs
+--- repo head
+e2be8af30a9b9553d2c4aee1223681b1b6ce6e65
+80796525448b17e5e2f15d4de9114b7c225a1bd7
+--- set4 builds
+20261009t030455z
+20261009t061555z
+20261009t064831z
+20261009t070418z
+20261009t101529z
+20261009t102025z
+-rw-r--r-- 1 root root 4494 Oct  9 13:20 /var/tmp/cp-upd1-build/20261009t101529z/upd1-artifacts.json
+--- var/tmp count
+557
+--- var/tmp disk
+/dev/sdd       1007G  212G  745G  23% /
+--- listening ports 4xxx / 18xxx
+none
+--- labs
+128
+--- set4 run dir
+build
+c-drive-cells.txt
+harness-b
+harness-c
+harness-d
+harness-e
+harness-f
+job-build.sh
+job-cell-arch-a.sh
+job-cell-arch-b.sh
+job-cell-d13-a.sh
+job-cell-d13-b.sh
+job-cell-u12-archb.sh
+job-cell-u12-arch.sh
+job-cell-u12c-arch.sh
+job-cell-u9-d13b.sh
+job-cell-u9-d13.sh
+job-cell-u9-ub.sh
+job-cell-ub-a.sh
+job-cell-ub-b.sh
+job-prove.sh
+logs
+overlay-b
+overlay-c
+overlay-d
+overlay-e
+overlay-f
+progress.txt
+runcopy-557b554eb-files.sha256
+--- whoami
+root

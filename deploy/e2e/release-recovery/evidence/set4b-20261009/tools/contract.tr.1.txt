@@ -1,0 +1,76 @@
+### set4 gerçek sistem ölçümünden sonraki düzeltmeler (ilke 2, 3 ve 6, 2026-10-09)
+
+D-025 ilke 2 (bilinmeyen; yok, boş ya da başarı değildir), 3 (güvensiz işlem
+kendi sınırında durdurulur) ve 6 (ekran yetkili durumu çizer); D-022, D-024.
+Hiçbir P0 işi kapanmadı ya da ilerlemedi. Kaynak: tek kullanımlık QEMU/KVM
+konuklarında 2026-10-09 (UTC) tarihli `set4` koşusu (kanıt
+`deploy/e2e/release-recovery/evidence/set4-20261009/`); bir ürün hatası
+(Ubuntu 24.04 üzerinde 10. işi) ve iki yanlış ifade (5. ve 6. gözlemleri)
+buldu. Ayrıca aynı günün `set4b` ölçümü (kanıt
+`deploy/e2e/release-recovery/evidence/set4b-20261009/`); önce o Durdur
+sırasında Agent'ın ne okuduğunu, sonra düzeltmeyi ölçtü. Buradaki hiçbir şey
+kurulu bir sunucuda gözlenmedi. 2026-10-09 takvim tarihidir; üstteki kayıtların
+2026-10-10 ile 2026-10-12 arasındaki tarihleri tur etiketleridir.
+
+- **Ölçülen.**
+
+  - *10. iş, Ubuntu 24.04: Durdur, Postfix durmadan yanıtlandı ve birim,
+    systemd onu hâlâ durdururken okundu.* Ürünün set4'ün ölçtüğü haliyle
+    kurulu olduğu bir konukta, `postfix check` denetiminin reddettiği bir
+    main.cf ile Panel üzerinden yapılan beş Durdur'un beşi de `note` olmadan
+    `200 {"applied":"stopped","outcome":"verified","success":true}` yanıtını
+    verdi; `postfix@-.service` her seferinde `failed` (`Result=exit-code`)
+    olarak bitti. Agent üzerindeki `strace` (beşin ikisi) onun ne okuduğunu
+    gösterir. Durdurmadan önce iki birim de `LoadState=loaded`,
+    `ActiveState=active`, `Result=success` yanıtını verdi; yani örnek birim
+    "failed değil" diye sayıldı. `systemctl stop postfix` komutundan sonra
+    `postconf -h queue_directory` 0 ile çıktı; hata akışına
+    "/usr/sbin/postconf: warning: /etc/postfix/main.cf: #comment after other
+    text is not allowed: # raised for the campa..." satırını, ardından
+    çıktısına `/var/spool/postfix` yazdı. Agent iki akışı tek arabellek olarak
+    okur ve arabelleğin tümünü dizin saydı: uyarı satırı, bir satır sonu ve
+    `/var/spool/postfix/pid/master.pid` parçalarından oluşan bir yolu açtı,
+    çekirdek "böyle bir dosya yok" dedi ve bu "burada hiç ana süreç
+    başlamadı" diye okundu. Ana sürece bir kez bakıldı ve durdurma komutu
+    döndükten 29 ile 82 ms sonra gitmiş sayıldı. Agent ardından iki birimi
+    birer kez okudu: `postfix.service` `inactive`, `postfix@-.service`
+    `ActiveState=deactivating`, `Result=success`. Failed değil; dolayısıyla
+    not yok.
+
+  - *Anlar, tek bir saat üzerinde.* Agent'ın başlattığı programların çekirdek
+    izi ve systemd'nin kendi durum zaman damgaları (`strace` olmadan üç
+    Durdur): `systemctl stop postfix`, `postfix@-.service` `active` durumundan
+    çıktıktan 1 ile 3 ms sonra döndü; Agent'ın o birimi okuması, birim
+    `active` durumundan çıktıktan 82 ile 102 ms sonra başladı; ana süreç 1008
+    ile 1057 ms sonra bitti ve birim, ana süreç bittikten 2 ile 4 ms sonra
+    `failed` oldu. Yani yanıt, Postfix durmadan yaklaşık 0,9 saniye önce
+    verildi. Aynı konukta sahibin kendi `systemctl stop postfix` komutu, 10
+    ms'de bir örneklenerek: komut 24 ms sonra döndü; birim, durdurma komutu
+    (`postmulti -i - -p stop`; main.cf'i reddeder ve Postfix'in kendi bir
+    saniyelik beklemesinden sonra 1 ile çıkar) komutun gönderilmesinden 1028
+    ms sonra bitene dek `deactivating (stop)`, `Result=success` gösterdi; ana
+    süreç 3 ms sonra bitti ve birim ondan 3 ms sonra `failed (failed)`,
+    `Result=exit-code` oldu.
+
+  - *set4 kaydının çıkarımı ve onun yerine ölçülen.* set4'ün README dosyası
+    günlüğün zaman damgalarını "birim, systemd onu failed olarak işaretlemeden
+    önce bir kez okundu (işaret, ana süreç bittikten 4 ms sonra gelir)" diye
+    okumuş ve bunun bir çıkarım olduğunu söylemişti. Tek okuma doğrudur; neden
+    ise 4 ms'lik bir aralık değildir. Birim işaretten yaklaşık 0,9 saniye önce
+    okundu, çünkü ana süreç ilk bakışta gitmiş sayılmıştı.
+
+  - *Debian 13.* Aynı Durdur set4'te notu iki kez verdi. Orada
+    `postfix.service` hizmeti kendisi çalıştırır ve `systemctl stop postfix` o
+    birimin bütün durdurulması bittikten sonra döner; bu yüzden tek okuma
+    `failed` gördü. Ana süreç aramasının postconf yanıtını orada da yanlış
+    okuyup okumadığı düzeltmeden önce ölçülmedi; kod ve uyarı aynıdır.
+
+  - *set4'ün 5. gözlemi.* Otomatik geri dönüşten sonra güncelleme denetimi tek
+    bir zaman taşır: `previous_attempt.finished_at`. Kart onu "{time} tarihinde
+    başlatıldı" diyen bir cümleye koyuyordu. İkisinin de bilindiği hücrede
+    sahibin başlatması 12:06:13Z, `finished_at` ise 12:07:43Z idi.
+
+  - *set4'ün 6. gözlemi.* Dış DNS kipindeki bir sunucuda `do_dns: false` ile
+    yapılan içe aktarım üç platformda da `imported: [domain, files, dns, ...]`
+    yanıtını verdi: `dns` adımı "external DNS ownership preserved; ..." ile
+    `ok` bitmişti ve her `ok` adım içe aktarılmış diye listeleniyordu.

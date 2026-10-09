@@ -1,0 +1,12 @@
+2026-10-09T15:54:03.412442+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-09T15:54:03.736193+00:00 dns-debian13 postfix[32193]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T15:54:03.736168+00:00 dns-debian13 postfix/postfix-script[32193]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T15:54:03.836077+00:00 dns-debian13 postfix/master[32219]: daemon started -- version 3.10.13, configuration /etc/postfix
+2026-10-09T15:54:03.844135+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-09T15:54:02.534000+00:00 dns-debian13 postfix/postfix-script[31957]: the Postfix mail system is not running
+2026-10-09T15:54:03.278819+00:00 dns-debian13 postfix/postfix-script[32069]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T15:54:03.370784+00:00 dns-debian13 postfix/postfix-script[32098]: the Postfix mail system is not running
+2026-10-09T15:54:03.736168+00:00 dns-debian13 postfix/postfix-script[32193]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T15:54:03.836077+00:00 dns-debian13 postfix/master[32219]: daemon started -- version 3.10.13, configuration /etc/postfix
+2026-10-09T15:54:03.909303+00:00 dns-debian13 postfix/postfix-script[32237]: the Postfix mail system is running: PID: 32219
+2026-10-09T15:54:05.628368+00:00 dns-debian13 postfix/postfix-script[32307]: the Postfix mail system is running: PID: 32219

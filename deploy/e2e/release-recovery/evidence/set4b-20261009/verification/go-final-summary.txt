@@ -1,0 +1,3 @@
+go-baseline-agent.json: packages 1 (ok 0, failed 1, no tests/skip 0); tests passed 4467, failed 94, skipped 29
+go-final-agent.json: packages 1 (ok 0, failed 1, no tests/skip 0); tests passed 4473, failed 94, skipped 29
+go-final-other.json: packages 66 (ok 64, failed 0, no tests/skip 2); tests passed 6829, failed 0, skipped 44

@@ -1,0 +1,26 @@
+{
+  "action": "owner-stop-by-hand",
+  "argv": [
+    "systemctl",
+    "stop",
+    "postfix"
+  ],
+  "at": "2026-10-09T14:17:12Z",
+  "mode": "owner-stop-by-hand",
+  "owner_action": true,
+  "returncode": 0,
+  "returned": {
+    "monotonic_ns": 1027868447137,
+    "realtime_ns": 1791555432551954702,
+    "utc": "2026-10-09T14:17:12Z"
+  },
+  "schema": "celikpanel/set4b-native/v1",
+  "seconds": 0.024152,
+  "sent": {
+    "monotonic_ns": 1027844295348,
+    "realtime_ns": 1791555432527803133,
+    "utc": "2026-10-09T14:17:12Z"
+  },
+  "stderr": "",
+  "stdout": ""
+}

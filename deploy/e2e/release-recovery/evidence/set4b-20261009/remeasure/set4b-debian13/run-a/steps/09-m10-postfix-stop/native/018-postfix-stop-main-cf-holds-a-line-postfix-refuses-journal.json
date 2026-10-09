@@ -1,0 +1,34 @@
+{
+  "at": "2026-10-09T15:53:28Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791561203",
+      "-n",
+      "400",
+      "-u",
+      "postfix.service",
+      "-u",
+      "postfix@-.service"
+    ],
+    "at": "2026-10-09T15:53:28Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T15:53:23.796980+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...\n2026-10-09T15:53:23.892339+00:00 dns-debian13 postfix[30969]: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n2026-10-09T15:53:23.892304+00:00 dns-debian13 postfix[30969]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n2026-10-09T15:53:24.897190+00:00 dns-debian13 systemd[1]: postfix.service: Control process exited, code=exited, status=1/FAILURE\n2026-10-09T15:53:24.897711+00:00 dns-debian13 postfix/master[28529]: terminating on signal 15\n2026-10-09T15:53:24.901943+00:00 dns-debian13 systemd[1]: postfix.service: Failed with result 'exit-code'.\n2026-10-09T15:53:24.902631+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance).\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791561203,
+  "units": [
+    "postfix.service",
+    "postfix@-.service"
+  ]
+}

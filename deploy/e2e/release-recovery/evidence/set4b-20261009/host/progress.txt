@@ -1,0 +1,14 @@
+2026-10-09T13:34:02Z made run copy a
+2026-10-09T13:34:32Z start cell-diag
+2026-10-09T13:56:29Z end cell-diag rc=0
+2026-10-09T13:59:42Z made run copy b
+2026-10-09T13:59:57Z start cell-diag-b
+2026-10-09T14:19:28Z end cell-diag-b rc=0
+2026-10-09T14:31:22Z made run copy c
+2026-10-09T14:31:43Z made candidate source c1 de34e44859d49039972ae2e1f9f42ba12d9e1595
+2026-10-09T14:32:02Z start build
+2026-10-09T14:36:59Z end build rc=0
+2026-10-09T14:38:27Z start cell-ub
+2026-10-09T15:41:42Z end cell-ub rc=0
+2026-10-09T15:42:04Z start cell-d13
+2026-10-09T15:55:03Z end cell-d13 rc=0

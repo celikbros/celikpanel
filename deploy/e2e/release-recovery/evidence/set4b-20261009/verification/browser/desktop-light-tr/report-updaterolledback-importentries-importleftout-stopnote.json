@@ -1,0 +1,722 @@
+{
+  "config": {
+    "vp": "desktop",
+    "locale": "tr",
+    "theme": "light"
+  },
+  "states": {
+    "141a-import-only-refused-archive-entries": {
+      "path": "/import",
+      "visibility": "visible",
+      "main": "1\nKaynak\n2\nÖnizleme\n3\nSonuç\nold.example kısmen içe aktarıldı\nİçe aktarma sona erdi. Seçtiğiniz her şey içe aktarıldı ve old.example yayında. İçe aktarılmadı diye listelenen arşiv girdileri adları yüzünden reddedildi; onlar için hiçbir şey yazılmadı.\nİçe aktarılmadı\nArşiv girdisi /etc/set3-escape-absolute.txt\nArşiv girdisi /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache\n44 arşiv girdisi daha\nİçe aktarıldı\nAlan adı ve site\nSite dosyaları\nPosta hesapları\nolduser_shop veritabanı\nold.example için başka bir şey gerekmiyor. Bu girdilerden biri sitenin ihtiyaç duyduğu bir dosyaysa onu sitenin dosya yöneticisiyle ekleyin. Arşivi yeniden içe aktarmak aynı girdileri yine reddeder.\nold.example alan adını aç\nAlan adlarını aç\nAdım adım\nAlan adı ve site\n: İçe aktarıldı\nold.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html\nSite dosyaları\n: İçe aktarıldı\n412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported\nArşiv girdisi /etc/set3-escape-absolute.txt\n: İçe aktarılmadı\nİçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir şey yazılmadı.\nArşiv girdisi /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache\n: İçe aktarılmadı\nİçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir şey yazılmadı.\n44 arşiv girdisi daha\n: İçe aktarılmadı\nnot imported: 44 more entries of the archive were refused by their names in the same way; 46 in all\nPosta hesapları\n: İçe aktarıldı\n1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)\nYönlendirmeler\n: İçe aktarılan yok, hata da yok\n0 forwarders\nDNS kayıtları\n: İçe aktarılan yok, hata da yok\npanel DNS template created; archive DNS import was not selected\nolduser_shop veritabanı\n: İçe aktarıldı\ncreated exclusively and dump imported (db USERS are not migrated; repoint app configs)\nBaşka bir arşiv aktar",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"CelikPanel\nPanel\n\nBARINDIRMA\n\nAlan Adlar\" inHold=false",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "importResult": {
+        "kind": "partial",
+        "text": "old.example kısmen içe aktarıldı İçe aktarma sona erdi. Seçtiğiniz her şey içe aktarıldı ve old.example yayında. İçe aktarılmadı diye listelenen arşiv girdileri adları yüzünden reddedildi; onlar için hiçbir şey yazılmadı. İçe aktarılmadı Arşiv girdisi /etc/set3-escape-absolute.txt Arşiv girdisi /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache 44 arşiv girdisi daha İçe aktarıldı Alan adı ve site Site dosyaları Posta hesapları olduser_shop veritabanı old.example için başka bir şey gerekmiyor. Bu girdilerden biri sitenin ihtiyaç duyduğu bir dosyaysa onu sitenin dosya yöneticisiyle ekleyin. Arşivi yeniden içe aktarmak aynı girdileri yine reddeder. old.example alan adını aç Alan adlarını aç Adım adım Alan adı ve site : İçe aktarıldı old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Site dosyaları : İçe aktarıldı 412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported Arşiv girdisi /etc/set3-escape-absolute.txt : İçe aktarılmadı İçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir şey yazılmadı. Arşiv girdisi /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache : İçe aktarılmadı İçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir şey yazılmadı. 44 arşiv girdisi daha : İçe aktarılmadı not imported: 44 more entries of the archive were refused by their names in the same way; 46 in all Posta hesapları : İçe aktarıldı 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Yönlendirmeler : İçe aktarılan yok, hata da yok 0 forwarders DNS kayıtları : İçe aktarılan yok, hata da yok panel DNS template created; archive DNS import was not selected olduser_shop veritabanı : İçe aktarıldı created exclusively and dump imported (db USERS are not migrated; repoint app configs) Başka bir arşiv aktar",
+        "alert": "old.example kısmen içe aktarıldı İçe aktarma sona erdi. Seçtiğiniz her şey içe aktarıldı ve old.example yayında. İçe aktarılmadı diye listelenen arşiv girdileri adları yüzünden reddedildi; onlar için hiçbir şey yazılmadı. İçe aktarılmadı Arşiv girdisi /etc/set3-escape-absolute.txt Arşiv girdisi /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache 44 arşiv girdisi daha İçe aktarıldı Alan adı ve site Site dosyaları Posta hesapları olduser_shop veritabanı old.example için başka bir şey gerekmiyor. Bu girdilerden biri sitenin ihtiyaç duyduğu bir dosyaysa onu sitenin dosya yöneticisiyle ekleyin. Arşivi yeniden içe aktarmak aynı girdileri yine reddeder. old.example alan adını aç Alan adlarını aç",
+        "alertSurface": {
+          "background": "rgba(245, 179, 1, 0.2)",
+          "redder": false
+        }
+      },
+      "serviceAction": null,
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": null,
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "old.example alan adını aç",
+        "Alan adlarını aç",
+        "Başka bir arşiv aktar"
+      ],
+      "mainText": "1 Kaynak 2 Önizleme 3 Sonuç old.example kısmen içe aktarıldı İçe aktarma sona erdi. Seçtiğiniz her şey içe aktarıldı ve old.example yayında. İçe aktarılmadı diye listelenen arşiv girdileri adları yüzünden reddedildi; onlar için hiçbir şey yazılmadı. İçe aktarılmadı Arşiv girdisi /etc/set3-escape-absolute.txt Arşiv girdisi /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache 44 arşiv girdisi daha İçe aktarıldı Alan adı ve site Site dosyaları Posta hesapları olduser_shop veritabanı old.example için başka bir şey gerekmiyor. Bu girdilerden biri sitenin ihtiyaç duyduğu bir dosyaysa onu sitenin dosya yöneticisiyle ekleyin. Arşivi yeniden içe aktarmak aynı girdileri yine reddeder. old.example alan adını aç Alan adlarını aç Adım adım Alan adı ve site : İçe aktarıldı old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Site dosyaları : İçe aktarıldı 412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported Arşiv girdisi /etc/set3-escape-absolute.txt : İçe aktarılmadı İçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir şey yazılmadı. Arşiv girdisi /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache : İçe aktarılmadı İçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir şey yazılmadı. 44 arşiv girdisi daha : İçe aktarılmadı not imported: 44 more entries of the archive were refused by their names in the same way; 46 in all Posta hesapları : İçe aktarıldı 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Yönlendirmeler : İçe aktarılan yok, hata da yok 0 forwarders DNS kayıtları : İçe aktarılan yok, hata da yok panel DNS template created; archive DNS import was not selected olduser_shop veritabanı : İçe aktarıldı created exclusively and dump imported (db USERS are not migrated; repoint app configs) Başka bir arşiv aktar",
+      "pageOverflowsSideways": false
+    },
+    "141b-import-refused-archive-entries-steps": {
+      "path": "/import",
+      "visibility": "visible",
+      "main": "1\nKaynak\n2\nÖnizleme\n3\nSonuç\nold.example kısmen içe aktarıldı\nİçe aktarma sona erdi. Seçtiğiniz her şey içe aktarıldı ve old.example yayında. İçe aktarılmadı diye listelenen arşiv girdileri adları yüzünden reddedildi; onlar için hiçbir şey yazılmadı.\nİçe aktarılmadı\nArşiv girdisi /etc/set3-escape-absolute.txt\nArşiv girdisi /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache\n44 arşiv girdisi daha\nİçe aktarıldı\nAlan adı ve site\nSite dosyaları\nPosta hesapları\nolduser_shop veritabanı\nold.example için başka bir şey gerekmiyor. Bu girdilerden biri sitenin ihtiyaç duyduğu bir dosyaysa onu sitenin dosya yöneticisiyle ekleyin. Arşivi yeniden içe aktarmak aynı girdileri yine reddeder.\nold.example alan adını aç\nAlan adlarını aç\nAdım adım\nAlan adı ve site\n: İçe aktarıldı\nold.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html\nSite dosyaları\n: İçe aktarıldı\n412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported\nArşiv girdisi /etc/set3-escape-absolute.txt\n: İçe aktarılmadı\nİçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir şey yazılmadı.\nArşiv girdisi /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache\n: İçe aktarılmadı\nİçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir şey yazılmadı.\n44 arşiv girdisi daha\n: İçe aktarılmadı\nnot imported: 44 more entries of the archive were refused by their names in the same way; 46 in all\nPosta hesapları\n: İçe aktarıldı\n1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)\nYönlendirmeler\n: İçe aktarılan yok, hata da yok\n0 forwarders\nDNS kayıtları\n: İçe aktarılan yok, hata da yok\npanel DNS template created; archive DNS import was not selected\nolduser_shop veritabanı\n: İçe aktarıldı\ncreated exclusively and dump imported (db USERS are not migrated; repoint app configs)\nBaşka bir arşiv aktar",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"CelikPanel\nPanel\n\nBARINDIRMA\n\nAlan Adlar\" inHold=false",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "importResult": {
+        "kind": "partial",
+        "text": "old.example kısmen içe aktarıldı İçe aktarma sona erdi. Seçtiğiniz her şey içe aktarıldı ve old.example yayında. İçe aktarılmadı diye listelenen arşiv girdileri adları yüzünden reddedildi; onlar için hiçbir şey yazılmadı. İçe aktarılmadı Arşiv girdisi /etc/set3-escape-absolute.txt Arşiv girdisi /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache 44 arşiv girdisi daha İçe aktarıldı Alan adı ve site Site dosyaları Posta hesapları olduser_shop veritabanı old.example için başka bir şey gerekmiyor. Bu girdilerden biri sitenin ihtiyaç duyduğu bir dosyaysa onu sitenin dosya yöneticisiyle ekleyin. Arşivi yeniden içe aktarmak aynı girdileri yine reddeder. old.example alan adını aç Alan adlarını aç Adım adım Alan adı ve site : İçe aktarıldı old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Site dosyaları : İçe aktarıldı 412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported Arşiv girdisi /etc/set3-escape-absolute.txt : İçe aktarılmadı İçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir şey yazılmadı. Arşiv girdisi /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache : İçe aktarılmadı İçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir şey yazılmadı. 44 arşiv girdisi daha : İçe aktarılmadı not imported: 44 more entries of the archive were refused by their names in the same way; 46 in all Posta hesapları : İçe aktarıldı 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Yönlendirmeler : İçe aktarılan yok, hata da yok 0 forwarders DNS kayıtları : İçe aktarılan yok, hata da yok panel DNS template created; archive DNS import was not selected olduser_shop veritabanı : İçe aktarıldı created exclusively and dump imported (db USERS are not migrated; repoint app configs) Başka bir arşiv aktar",
+        "alert": "old.example kısmen içe aktarıldı İçe aktarma sona erdi. Seçtiğiniz her şey içe aktarıldı ve old.example yayında. İçe aktarılmadı diye listelenen arşiv girdileri adları yüzünden reddedildi; onlar için hiçbir şey yazılmadı. İçe aktarılmadı Arşiv girdisi /etc/set3-escape-absolute.txt Arşiv girdisi /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache 44 arşiv girdisi daha İçe aktarıldı Alan adı ve site Site dosyaları Posta hesapları olduser_shop veritabanı old.example için başka bir şey gerekmiyor. Bu girdilerden biri sitenin ihtiyaç duyduğu bir dosyaysa onu sitenin dosya yöneticisiyle ekleyin. Arşivi yeniden içe aktarmak aynı girdileri yine reddeder. old.example alan adını aç Alan adlarını aç",
+        "alertSurface": {
+          "background": "rgba(245, 179, 1, 0.2)",
+          "redder": false
+        }
+      },
+      "serviceAction": null,
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": null,
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "old.example alan adını aç",
+        "Alan adlarını aç",
+        "Başka bir arşiv aktar"
+      ],
+      "mainText": "1 Kaynak 2 Önizleme 3 Sonuç old.example kısmen içe aktarıldı İçe aktarma sona erdi. Seçtiğiniz her şey içe aktarıldı ve old.example yayında. İçe aktarılmadı diye listelenen arşiv girdileri adları yüzünden reddedildi; onlar için hiçbir şey yazılmadı. İçe aktarılmadı Arşiv girdisi /etc/set3-escape-absolute.txt Arşiv girdisi /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache 44 arşiv girdisi daha İçe aktarıldı Alan adı ve site Site dosyaları Posta hesapları olduser_shop veritabanı old.example için başka bir şey gerekmiyor. Bu girdilerden biri sitenin ihtiyaç duyduğu bir dosyaysa onu sitenin dosya yöneticisiyle ekleyin. Arşivi yeniden içe aktarmak aynı girdileri yine reddeder. old.example alan adını aç Alan adlarını aç Adım adım Alan adı ve site : İçe aktarıldı old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Site dosyaları : İçe aktarıldı 412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported Arşiv girdisi /etc/set3-escape-absolute.txt : İçe aktarılmadı İçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir şey yazılmadı. Arşiv girdisi /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache : İçe aktarılmadı İçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir şey yazılmadı. 44 arşiv girdisi daha : İçe aktarılmadı not imported: 44 more entries of the archive were refused by their names in the same way; 46 in all Posta hesapları : İçe aktarıldı 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Yönlendirmeler : İçe aktarılan yok, hata da yok 0 forwarders DNS kayıtları : İçe aktarılan yok, hata da yok panel DNS template created; archive DNS import was not selected olduser_shop veritabanı : İçe aktarıldı created exclusively and dump imported (db USERS are not migrated; repoint app configs) Başka bir arşiv aktar",
+      "pageOverflowsSideways": false,
+      "stepRows": [
+        {
+          "label": "Alan adı ve site",
+          "said": "İçe aktarıldı",
+          "detail": "old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html",
+          "tone": "text-success",
+          "iconColor": "rgb(28, 122, 69)",
+          "iconVisible": true
+        },
+        {
+          "label": "Site dosyaları",
+          "said": "İçe aktarıldı",
+          "detail": "412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+          "tone": "text-success",
+          "iconColor": "rgb(28, 122, 69)",
+          "iconVisible": true
+        },
+        {
+          "label": "Arşiv girdisi /etc/set3-escape-absolute.txt",
+          "said": "İçe aktarılmadı",
+          "detail": "İçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir şey yazılmadı.",
+          "tone": "text-danger",
+          "iconColor": "rgb(179, 38, 30)",
+          "iconVisible": true
+        },
+        {
+          "label": "Arşiv girdisi /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache",
+          "said": "İçe aktarılmadı",
+          "detail": "İçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir şey yazılmadı.",
+          "tone": "text-danger",
+          "iconColor": "rgb(179, 38, 30)",
+          "iconVisible": true
+        },
+        {
+          "label": "44 arşiv girdisi daha",
+          "said": "İçe aktarılmadı",
+          "detail": "not imported: 44 more entries of the archive were refused by their names in the same way; 46 in all",
+          "tone": "text-danger",
+          "iconColor": "rgb(179, 38, 30)",
+          "iconVisible": true
+        },
+        {
+          "label": "Posta hesapları",
+          "said": "İçe aktarıldı",
+          "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+          "tone": "text-success",
+          "iconColor": "rgb(28, 122, 69)",
+          "iconVisible": true
+        },
+        {
+          "label": "Yönlendirmeler",
+          "said": "İçe aktarılan yok, hata da yok",
+          "detail": "0 forwarders",
+          "tone": "text-fg-muted",
+          "iconColor": "rgb(47, 66, 105)",
+          "iconVisible": true
+        },
+        {
+          "label": "DNS kayıtları",
+          "said": "İçe aktarılan yok, hata da yok",
+          "detail": "panel DNS template created; archive DNS import was not selected",
+          "tone": "text-fg-muted",
+          "iconColor": "rgb(47, 66, 105)",
+          "iconVisible": true
+        },
+        {
+          "label": "olduser_shop veritabanı",
+          "said": "İçe aktarıldı",
+          "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+          "tone": "text-success",
+          "iconColor": "rgb(28, 122, 69)",
+          "iconVisible": true
+        }
+      ]
+    },
+    "144a-import-complete-dns-left-to-the-owner": {
+      "path": "/import",
+      "visibility": "visible",
+      "main": "1\nKaynak\n2\nÖnizleme\n3\nSonuç\nİçe aktarma tamamlandı\nSeçtiğiniz her parça içe aktarıldı ve old.example hizmette.\nAdım adım\nAlan adı ve site\n: İçe aktarıldı\nold.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html\nSite dosyaları\n: İçe aktarıldı\n412 files, 48234496 bytes\nPosta hesapları\n: İçe aktarıldı\n1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)\nYönlendirmeler\n: İçe aktarılan yok, hata da yok\n0 forwarders\nDNS kayıtları\n: İçe aktarılan yok, hata da yok\nexternal DNS ownership preserved; verify provider records before publishing the site\nolduser_shop veritabanı\n: İçe aktarıldı\ncreated exclusively and dump imported (db USERS are not migrated; repoint app configs)\nBaşka bir arşiv aktar",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"CelikPanel\nPanel\n\nBARINDIRMA\n\nAlan Adlar\" inHold=false",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "importResult": {
+        "kind": "complete",
+        "text": "İçe aktarma tamamlandı Seçtiğiniz her parça içe aktarıldı ve old.example hizmette. Adım adım Alan adı ve site : İçe aktarıldı old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Site dosyaları : İçe aktarıldı 412 files, 48234496 bytes Posta hesapları : İçe aktarıldı 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Yönlendirmeler : İçe aktarılan yok, hata da yok 0 forwarders DNS kayıtları : İçe aktarılan yok, hata da yok external DNS ownership preserved; verify provider records before publishing the site olduser_shop veritabanı : İçe aktarıldı created exclusively and dump imported (db USERS are not migrated; repoint app configs) Başka bir arşiv aktar",
+        "alert": null,
+        "alertSurface": null
+      },
+      "serviceAction": null,
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": null,
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "Başka bir arşiv aktar"
+      ],
+      "mainText": "1 Kaynak 2 Önizleme 3 Sonuç İçe aktarma tamamlandı Seçtiğiniz her parça içe aktarıldı ve old.example hizmette. Adım adım Alan adı ve site : İçe aktarıldı old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Site dosyaları : İçe aktarıldı 412 files, 48234496 bytes Posta hesapları : İçe aktarıldı 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Yönlendirmeler : İçe aktarılan yok, hata da yok 0 forwarders DNS kayıtları : İçe aktarılan yok, hata da yok external DNS ownership preserved; verify provider records before publishing the site olduser_shop veritabanı : İçe aktarıldı created exclusively and dump imported (db USERS are not migrated; repoint app configs) Başka bir arşiv aktar",
+      "pageOverflowsSideways": false
+    },
+    "144b-import-complete-dns-left-to-the-owner-steps": {
+      "path": "/import",
+      "visibility": "visible",
+      "main": "1\nKaynak\n2\nÖnizleme\n3\nSonuç\nİçe aktarma tamamlandı\nSeçtiğiniz her parça içe aktarıldı ve old.example hizmette.\nAdım adım\nAlan adı ve site\n: İçe aktarıldı\nold.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html\nSite dosyaları\n: İçe aktarıldı\n412 files, 48234496 bytes\nPosta hesapları\n: İçe aktarıldı\n1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)\nYönlendirmeler\n: İçe aktarılan yok, hata da yok\n0 forwarders\nDNS kayıtları\n: İçe aktarılan yok, hata da yok\nexternal DNS ownership preserved; verify provider records before publishing the site\nolduser_shop veritabanı\n: İçe aktarıldı\ncreated exclusively and dump imported (db USERS are not migrated; repoint app configs)\nBaşka bir arşiv aktar",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"CelikPanel\nPanel\n\nBARINDIRMA\n\nAlan Adlar\" inHold=false",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "importResult": {
+        "kind": "complete",
+        "text": "İçe aktarma tamamlandı Seçtiğiniz her parça içe aktarıldı ve old.example hizmette. Adım adım Alan adı ve site : İçe aktarıldı old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Site dosyaları : İçe aktarıldı 412 files, 48234496 bytes Posta hesapları : İçe aktarıldı 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Yönlendirmeler : İçe aktarılan yok, hata da yok 0 forwarders DNS kayıtları : İçe aktarılan yok, hata da yok external DNS ownership preserved; verify provider records before publishing the site olduser_shop veritabanı : İçe aktarıldı created exclusively and dump imported (db USERS are not migrated; repoint app configs) Başka bir arşiv aktar",
+        "alert": null,
+        "alertSurface": null
+      },
+      "serviceAction": null,
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": null,
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "Başka bir arşiv aktar"
+      ],
+      "mainText": "1 Kaynak 2 Önizleme 3 Sonuç İçe aktarma tamamlandı Seçtiğiniz her parça içe aktarıldı ve old.example hizmette. Adım adım Alan adı ve site : İçe aktarıldı old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Site dosyaları : İçe aktarıldı 412 files, 48234496 bytes Posta hesapları : İçe aktarıldı 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Yönlendirmeler : İçe aktarılan yok, hata da yok 0 forwarders DNS kayıtları : İçe aktarılan yok, hata da yok external DNS ownership preserved; verify provider records before publishing the site olduser_shop veritabanı : İçe aktarıldı created exclusively and dump imported (db USERS are not migrated; repoint app configs) Başka bir arşiv aktar",
+      "pageOverflowsSideways": false,
+      "stepRows": [
+        {
+          "label": "Alan adı ve site",
+          "said": "İçe aktarıldı",
+          "detail": "old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html",
+          "tone": "text-success",
+          "iconColor": "rgb(28, 122, 69)",
+          "iconVisible": true
+        },
+        {
+          "label": "Site dosyaları",
+          "said": "İçe aktarıldı",
+          "detail": "412 files, 48234496 bytes",
+          "tone": "text-success",
+          "iconColor": "rgb(28, 122, 69)",
+          "iconVisible": true
+        },
+        {
+          "label": "Posta hesapları",
+          "said": "İçe aktarıldı",
+          "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+          "tone": "text-success",
+          "iconColor": "rgb(28, 122, 69)",
+          "iconVisible": true
+        },
+        {
+          "label": "Yönlendirmeler",
+          "said": "İçe aktarılan yok, hata da yok",
+          "detail": "0 forwarders",
+          "tone": "text-fg-muted",
+          "iconColor": "rgb(47, 66, 105)",
+          "iconVisible": true
+        },
+        {
+          "label": "DNS kayıtları",
+          "said": "İçe aktarılan yok, hata da yok",
+          "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+          "tone": "text-fg-muted",
+          "iconColor": "rgb(47, 66, 105)",
+          "iconVisible": true
+        },
+        {
+          "label": "olduser_shop veritabanı",
+          "said": "İçe aktarıldı",
+          "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+          "tone": "text-success",
+          "iconColor": "rgb(28, 122, 69)",
+          "iconVisible": true
+        }
+      ]
+    },
+    "142a-postfix-stop-left-the-unit-marked-failed": {
+      "path": "/services/postfix",
+      "visibility": "visible",
+      "main": "Bileşenler\nPostfix\nÇalışıyor\nYardım\nBaşlat\nDurdur\nYeniden başlat\npostfix durduruldu ve çalışmıyor. systemd şimdi postfix@-.service birimini failed (sonuç: exit-code) olarak gösteriyor; durdurmadan önce öyle değildi. Bu işaret, systemd’nin birimin durdurulmasının nasıl geçtiğine dair kendi kaydıdır ve CelikPanel onu olduğu gibi bırakır. postfix şu an kendi yapılandırmasını reddediyor (satırı aşağıda) ve birimin durdurma komutu da aynı dosyayı okur; bu düzeltilene dek başlamaz. İşareti başlatmadan temizlemek için sunucuda sudo systemctl reset-failed postfix@-.service komutunu çalıştırın.\nHizmetin yanıtı: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\nKapat\nMail kuyruğu\nMail logları\nAKTIF\n1\nERTELENMIŞ\n1\nBEKLEMEDE\n0\nBOZUK\n0\nYenile\nKuyruğu boşalt\nTümünü sil\nID\tGönderen\tBoyut\tVarış\tDurum\n4F2C1A0B7D\tshop@example.com\t2.0 KB\t2026-10-09 10:00\ndeferred\n9D3E7C11A2\tinfo@example.com\t512 B\t2026-10-09 10:02\nactive\nSunucu posta politikası\nBu sunucudaki tüm gelen postaya uygulanır.\nEn büyük ileti boyutu (MB)\nDNSBL bölgeleri (virgülle ayrılmış)\nDNS kara listelerinde kayıtlı göndericileri reddet\nYerel ve kimlik doğrulamış göndericiler asla engellenmez; denetim yalnız dış bağlantılara uygulanır.\nGiden posta hızını sınırla\nBir hesabın ne kadar hızlı gönderebileceğini sınırlar; ele geçirilmiş bir posta kutusu spam patlatıp sunucuyu (ve domain’lerini) askıya aldıramaz.\nGönderici başına dakikada en fazla mesaj\nPolitikayı kaydet",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"CelikPanel\nPanel\n\nBARINDIRMA\n\nAlan Adlar\" inHold=false",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "importResult": null,
+      "serviceAction": {
+        "tone": "note",
+        "role": "status",
+        "text": "postfix durduruldu ve çalışmıyor. systemd şimdi postfix@-.service birimini failed (sonuç: exit-code) olarak gösteriyor; durdurmadan önce öyle değildi. Bu işaret, systemd’nin birimin durdurulmasının nasıl geçtiğine dair kendi kaydıdır ve CelikPanel onu olduğu gibi bırakır. postfix şu an kendi yapılandırmasını reddediyor (satırı aşağıda) ve birimin durdurma komutu da aynı dosyayı okur; bu düzeltilene dek başlamaz. İşareti başlatmadan temizlemek için sunucuda sudo systemctl reset-failed postfix@-.service komutunu çalıştırın. Hizmetin yanıtı: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign Kapat",
+        "inView": true,
+        "surface": {
+          "background": "rgba(245, 179, 1, 0.2)",
+          "redder": false
+        },
+        "code": "sudo systemctl reset-failed postfix@-.service"
+      },
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": {
+        "text": "Durdur",
+        "sentence": null,
+        "line": null,
+        "lineFace": null,
+        "surface": {
+          "background": "rgb(255, 255, 255)",
+          "redder": false
+        },
+        "inView": false,
+        "box": {
+          "top": -11,
+          "bottom": 23,
+          "width": 93
+        },
+        "measure": 0
+      },
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "Bileşenler",
+        "Yardım",
+        "Durdur",
+        "Yeniden başlat",
+        "Kapat",
+        "Mail kuyruğu",
+        "Mail logları",
+        "Yenile",
+        "Kuyruğu boşalt",
+        "Tümünü sil",
+        "Politikayı kaydet"
+      ],
+      "mainText": "Bileşenler Postfix Çalışıyor Yardım Başlat Durdur Yeniden başlat postfix durduruldu ve çalışmıyor. systemd şimdi postfix@-.service birimini failed (sonuç: exit-code) olarak gösteriyor; durdurmadan önce öyle değildi. Bu işaret, systemd’nin birimin durdurulmasının nasıl geçtiğine dair kendi kaydıdır ve CelikPanel onu olduğu gibi bırakır. postfix şu an kendi yapılandırmasını reddediyor (satırı aşağıda) ve birimin durdurma komutu da aynı dosyayı okur; bu düzeltilene dek başlamaz. İşareti başlatmadan temizlemek için sunucuda sudo systemctl reset-failed postfix@-.service komutunu çalıştırın. Hizmetin yanıtı: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign Kapat Mail kuyruğu Mail logları AKTIF 1 ERTELENMIŞ 1 BEKLEMEDE 0 BOZUK 0 Yenile Kuyruğu boşalt Tümünü sil ID Gönderen Boyut Varış Durum 4F2C1A0B7D shop@example.com 2.0 KB 2026-10-09 10:00 deferred 9D3E7C11A2 info@example.com 512 B 2026-10-09 10:02 active Sunucu posta politikası Bu sunucudaki tüm gelen postaya uygulanır. En büyük ileti boyutu (MB) DNSBL bölgeleri (virgülle ayrılmış) DNS kara listelerinde kayıtlı göndericileri reddet Yerel ve kimlik doğrulamış göndericiler asla engellenmez; denetim yalnız dış bağlantılara uygulanır. Giden posta hızını sınırla Bir hesabın ne kadar hızlı gönderebileceğini sınırlar; ele geçirilmiş bir posta kutusu spam patlatıp sunucuyu (ve domain’lerini) askıya aldıramaz. Gönderici başına dakikada en fazla mesaj Politikayı kaydet",
+      "pageOverflowsSideways": false
+    },
+    "142b-stop-left-the-unit-marked-failed-without-a-line": {
+      "path": "/services/redis",
+      "visibility": "visible",
+      "main": "Bileşenler\nRedis\nÇalışıyor\nYardım\nBaşlat\nDurdur\nYeniden başlat\nredis-server durduruldu ve çalışmıyor. systemd şimdi redis-server.service birimini failed (sonuç: timeout) olarak gösteriyor; durdurmadan önce öyle değildi. Bu işaret, systemd’nin birimin durdurulmasının nasıl geçtiğine dair kendi kaydıdır (sonuç exit-code ise birimin bir komutu hatayla çıkmıştır) ve CelikPanel onu olduğu gibi bırakır. Bu durumdan Başlat kullanılabilir. İşareti başlatmadan temizlemek için sunucuda sudo systemctl reset-failed redis-server.service komutunu çalıştırın.\nKapat\nGenel bakış\nTÜR\nServis (kendi arka plan süreci var)\nSYSTEMD BIRIMI\nredis-server\nPAKETLER\nredis\nAÇIK PORTLAR\nYok — yalnız yerel, internete hiçbir şey açılmıyor\nAyar dosyaları\n/etc/redis/redis.conf\nGünlük\nYenile\nGünlük kaydı yok\nsystemd, redis-server için henüz hiçbir şey kaydetmemiş.",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"CelikPanel\nPanel\n\nBARINDIRMA\n\nAlan Adlar\" inHold=false",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "importResult": null,
+      "serviceAction": {
+        "tone": "note",
+        "role": "status",
+        "text": "redis-server durduruldu ve çalışmıyor. systemd şimdi redis-server.service birimini failed (sonuç: timeout) olarak gösteriyor; durdurmadan önce öyle değildi. Bu işaret, systemd’nin birimin durdurulmasının nasıl geçtiğine dair kendi kaydıdır (sonuç exit-code ise birimin bir komutu hatayla çıkmıştır) ve CelikPanel onu olduğu gibi bırakır. Bu durumdan Başlat kullanılabilir. İşareti başlatmadan temizlemek için sunucuda sudo systemctl reset-failed redis-server.service komutunu çalıştırın. Kapat",
+        "inView": true,
+        "surface": {
+          "background": "rgba(245, 179, 1, 0.2)",
+          "redder": false
+        },
+        "code": "sudo systemctl reset-failed redis-server.service"
+      },
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": {
+        "text": "Durdur",
+        "sentence": null,
+        "line": null,
+        "lineFace": null,
+        "surface": {
+          "background": "rgb(255, 255, 255)",
+          "redder": false
+        },
+        "inView": false,
+        "box": {
+          "top": -11,
+          "bottom": 23,
+          "width": 93
+        },
+        "measure": 0
+      },
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "Bileşenler",
+        "Yardım",
+        "Durdur",
+        "Yeniden başlat",
+        "Kapat",
+        "/etc/redis/redis.conf",
+        "Yenile"
+      ],
+      "mainText": "Bileşenler Redis Çalışıyor Yardım Başlat Durdur Yeniden başlat redis-server durduruldu ve çalışmıyor. systemd şimdi redis-server.service birimini failed (sonuç: timeout) olarak gösteriyor; durdurmadan önce öyle değildi. Bu işaret, systemd’nin birimin durdurulmasının nasıl geçtiğine dair kendi kaydıdır (sonuç exit-code ise birimin bir komutu hatayla çıkmıştır) ve CelikPanel onu olduğu gibi bırakır. Bu durumdan Başlat kullanılabilir. İşareti başlatmadan temizlemek için sunucuda sudo systemctl reset-failed redis-server.service komutunu çalıştırın. Kapat Genel bakış TÜR Servis (kendi arka plan süreci var) SYSTEMD BIRIMI redis-server PAKETLER redis AÇIK PORTLAR Yok — yalnız yerel, internete hiçbir şey açılmıyor Ayar dosyaları /etc/redis/redis.conf Günlük Yenile Günlük kaydı yok systemd, redis-server için henüz hiçbir şey kaydetmemiş.",
+      "pageOverflowsSideways": false
+    },
+    "142c-postfix-stop-the-unit-had-not-settled": {
+      "path": "/services/postfix",
+      "visibility": "visible",
+      "main": "Bileşenler\nPostfix\nÇalışıyor\nYardım\nBaşlat\nDurdur\nYeniden başlat\npostfix durduruldu ve çalışmıyor. CelikPanel beklemeyi bıraktığında systemd postfix@-.service birimini durdurmayı bitirmemişti (durumu hâlâ deactivating idi); bu yüzden durdurmanın nasıl bittiği okunmadı ve birim failed olarak işaretlenmiş olabilir. systemd’nin şu an ne gösterdiğini görmek için sunucuda systemctl status postfix@-.service komutunu çalıştırın. Birime başka bir şey gönderilmez ve hiçbir şey kendiliğinden yeniden bakmaz.\nKapat\nMail kuyruğu\nMail logları\nAKTIF\n1\nERTELENMIŞ\n1\nBEKLEMEDE\n0\nBOZUK\n0\nYenile\nKuyruğu boşalt\nTümünü sil\nID\tGönderen\tBoyut\tVarış\tDurum\n4F2C1A0B7D\tshop@example.com\t2.0 KB\t2026-10-09 10:00\ndeferred\n9D3E7C11A2\tinfo@example.com\t512 B\t2026-10-09 10:02\nactive\nSunucu posta politikası\nBu sunucudaki tüm gelen postaya uygulanır.\nEn büyük ileti boyutu (MB)\nDNSBL bölgeleri (virgülle ayrılmış)\nDNS kara listelerinde kayıtlı göndericileri reddet\nYerel ve kimlik doğrulamış göndericiler asla engellenmez; denetim yalnız dış bağlantılara uygulanır.\nGiden posta hızını sınırla\nBir hesabın ne kadar hızlı gönderebileceğini sınırlar; ele geçirilmiş bir posta kutusu spam patlatıp sunucuyu (ve domain’lerini) askıya aldıramaz.\nGönderici başına dakikada en fazla mesaj\nPolitikayı kaydet",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"CelikPanel\nPanel\n\nBARINDIRMA\n\nAlan Adlar\" inHold=false",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "importResult": null,
+      "serviceAction": {
+        "tone": "note",
+        "role": "status",
+        "text": "postfix durduruldu ve çalışmıyor. CelikPanel beklemeyi bıraktığında systemd postfix@-.service birimini durdurmayı bitirmemişti (durumu hâlâ deactivating idi); bu yüzden durdurmanın nasıl bittiği okunmadı ve birim failed olarak işaretlenmiş olabilir. systemd’nin şu an ne gösterdiğini görmek için sunucuda systemctl status postfix@-.service komutunu çalıştırın. Birime başka bir şey gönderilmez ve hiçbir şey kendiliğinden yeniden bakmaz. Kapat",
+        "inView": true,
+        "surface": {
+          "background": "rgba(245, 179, 1, 0.2)",
+          "redder": false
+        },
+        "code": "systemctl status postfix@-.service"
+      },
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": {
+        "text": "Durdur",
+        "sentence": null,
+        "line": null,
+        "lineFace": null,
+        "surface": {
+          "background": "rgb(255, 255, 255)",
+          "redder": false
+        },
+        "inView": false,
+        "box": {
+          "top": -11,
+          "bottom": 23,
+          "width": 93
+        },
+        "measure": 0
+      },
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "Bileşenler",
+        "Yardım",
+        "Durdur",
+        "Yeniden başlat",
+        "Kapat",
+        "Mail kuyruğu",
+        "Mail logları",
+        "Yenile",
+        "Kuyruğu boşalt",
+        "Tümünü sil",
+        "Politikayı kaydet"
+      ],
+      "mainText": "Bileşenler Postfix Çalışıyor Yardım Başlat Durdur Yeniden başlat postfix durduruldu ve çalışmıyor. CelikPanel beklemeyi bıraktığında systemd postfix@-.service birimini durdurmayı bitirmemişti (durumu hâlâ deactivating idi); bu yüzden durdurmanın nasıl bittiği okunmadı ve birim failed olarak işaretlenmiş olabilir. systemd’nin şu an ne gösterdiğini görmek için sunucuda systemctl status postfix@-.service komutunu çalıştırın. Birime başka bir şey gönderilmez ve hiçbir şey kendiliğinden yeniden bakmaz. Kapat Mail kuyruğu Mail logları AKTIF 1 ERTELENMIŞ 1 BEKLEMEDE 0 BOZUK 0 Yenile Kuyruğu boşalt Tümünü sil ID Gönderen Boyut Varış Durum 4F2C1A0B7D shop@example.com 2.0 KB 2026-10-09 10:00 deferred 9D3E7C11A2 info@example.com 512 B 2026-10-09 10:02 active Sunucu posta politikası Bu sunucudaki tüm gelen postaya uygulanır. En büyük ileti boyutu (MB) DNSBL bölgeleri (virgülle ayrılmış) DNS kara listelerinde kayıtlı göndericileri reddet Yerel ve kimlik doğrulamış göndericiler asla engellenmez; denetim yalnız dış bağlantılara uygulanır. Giden posta hızını sınırla Bir hesabın ne kadar hızlı gönderebileceğini sınırlar; ele geçirilmiş bir posta kutusu spam patlatıp sunucuyu (ve domain’lerini) askıya aldıramaz. Gönderici başına dakikada en fazla mesaj Politikayı kaydet",
+      "pageOverflowsSideways": false
+    },
+    "142d-postfix-stop-the-unit-could-not-be-read": {
+      "path": "/services/postfix",
+      "visibility": "visible",
+      "main": "Bileşenler\nPostfix\nÇalışıyor\nYardım\nBaşlat\nDurdur\nYeniden başlat\npostfix durduruldu ve çalışmıyor. Durdurmadan sonra postfix@-.service biriminin durumu systemd’den okunamadı; bu yüzden birimin failed olarak işaretlenip işaretlenmediği bilinmiyor. systemd’nin şu an ne gösterdiğini görmek için sunucuda systemctl status postfix@-.service komutunu çalıştırın. Birime başka bir şey gönderilmez ve hiçbir şey kendiliğinden yeniden bakmaz.\nKapat\nMail kuyruğu\nMail logları\nAKTIF\n1\nERTELENMIŞ\n1\nBEKLEMEDE\n0\nBOZUK\n0\nYenile\nKuyruğu boşalt\nTümünü sil\nID\tGönderen\tBoyut\tVarış\tDurum\n4F2C1A0B7D\tshop@example.com\t2.0 KB\t2026-10-09 10:00\ndeferred\n9D3E7C11A2\tinfo@example.com\t512 B\t2026-10-09 10:02\nactive\nSunucu posta politikası\nBu sunucudaki tüm gelen postaya uygulanır.\nEn büyük ileti boyutu (MB)\nDNSBL bölgeleri (virgülle ayrılmış)\nDNS kara listelerinde kayıtlı göndericileri reddet\nYerel ve kimlik doğrulamış göndericiler asla engellenmez; denetim yalnız dış bağlantılara uygulanır.\nGiden posta hızını sınırla\nBir hesabın ne kadar hızlı gönderebileceğini sınırlar; ele geçirilmiş bir posta kutusu spam patlatıp sunucuyu (ve domain’lerini) askıya aldıramaz.\nGönderici başına dakikada en fazla mesaj\nPolitikayı kaydet",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"CelikPanel\nPanel\n\nBARINDIRMA\n\nAlan Adlar\" inHold=false",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "importResult": null,
+      "serviceAction": {
+        "tone": "note",
+        "role": "status",
+        "text": "postfix durduruldu ve çalışmıyor. Durdurmadan sonra postfix@-.service biriminin durumu systemd’den okunamadı; bu yüzden birimin failed olarak işaretlenip işaretlenmediği bilinmiyor. systemd’nin şu an ne gösterdiğini görmek için sunucuda systemctl status postfix@-.service komutunu çalıştırın. Birime başka bir şey gönderilmez ve hiçbir şey kendiliğinden yeniden bakmaz. Kapat",
+        "inView": true,
+        "surface": {
+          "background": "rgba(245, 179, 1, 0.2)",
+          "redder": false
+        },
+        "code": "systemctl status postfix@-.service"
+      },
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": {
+        "text": "Durdur",
+        "sentence": null,
+        "line": null,
+        "lineFace": null,
+        "surface": {
+          "background": "rgb(255, 255, 255)",
+          "redder": false
+        },
+        "inView": false,
+        "box": {
+          "top": -11,
+          "bottom": 23,
+          "width": 93
+        },
+        "measure": 0
+      },
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "Bileşenler",
+        "Yardım",
+        "Durdur",
+        "Yeniden başlat",
+        "Kapat",
+        "Mail kuyruğu",
+        "Mail logları",
+        "Yenile",
+        "Kuyruğu boşalt",
+        "Tümünü sil",
+        "Politikayı kaydet"
+      ],
+      "mainText": "Bileşenler Postfix Çalışıyor Yardım Başlat Durdur Yeniden başlat postfix durduruldu ve çalışmıyor. Durdurmadan sonra postfix@-.service biriminin durumu systemd’den okunamadı; bu yüzden birimin failed olarak işaretlenip işaretlenmediği bilinmiyor. systemd’nin şu an ne gösterdiğini görmek için sunucuda systemctl status postfix@-.service komutunu çalıştırın. Birime başka bir şey gönderilmez ve hiçbir şey kendiliğinden yeniden bakmaz. Kapat Mail kuyruğu Mail logları AKTIF 1 ERTELENMIŞ 1 BEKLEMEDE 0 BOZUK 0 Yenile Kuyruğu boşalt Tümünü sil ID Gönderen Boyut Varış Durum 4F2C1A0B7D shop@example.com 2.0 KB 2026-10-09 10:00 deferred 9D3E7C11A2 info@example.com 512 B 2026-10-09 10:02 active Sunucu posta politikası Bu sunucudaki tüm gelen postaya uygulanır. En büyük ileti boyutu (MB) DNSBL bölgeleri (virgülle ayrılmış) DNS kara listelerinde kayıtlı göndericileri reddet Yerel ve kimlik doğrulamış göndericiler asla engellenmez; denetim yalnız dış bağlantılara uygulanır. Giden posta hızını sınırla Bir hesabın ne kadar hızlı gönderebileceğini sınırlar; ele geçirilmiş bir posta kutusu spam patlatıp sunucuyu (ve domain’lerini) askıya aldıramaz. Gönderici başına dakikada en fazla mesaj Politikayı kaydet",
+      "pageOverflowsSideways": false
+    },
+    "143a-update-card-version-rolled-back-with-a-recorded-cause": {
+      "path": "/settings?section=updates",
+      "visibility": "visible",
+      "main": "Hesap güvenliği\nOturum açma koruması ve yönetici güvenliği.\nSunucu kurulumu\nKurulum sihirbazı ve yapılandırma tercihiniz.\nPanel HTTPS\nPanel alan adı ve HTTPS sertifikası.\nLisans\nSunucu lisansı, aktivasyon ve yıllık yenileme.\nCelikPanel güncellemeleri\nİmzalı sürümleri denetleyin ve yalnızca açık onaydan sonra kurun.\nSunucu güvenliği\nDışa açık servisleri ve erişim denetimlerini salt okunur olarak tarayın.\nDNS altyapısı\nOrtak ad sunucuları, düğüm kimliği ve çoğaltma düzeni.\nSistem veritabanları\nCelikPanel'in ve kurulu servislerin tuttuğu SQLite dosyalarını incele ve güvenle bakımını yap.\nCelikPanel güncellemeleri\nPanel ve agent yalnızca doğrulanmış işletim sistemi ve mimariyle eşleşen imzalı paketi birlikte uygular.\nGüncellemeyi kontrol et\nAlpha sürüm: Önce güncel yedek aldığınızdan emin olun. İşlem paneli ve agent’ı yeniden başlatır; kısa bir kesinti olabilir. Güncelleme hiçbir zaman otomatik başlamaz.\nMevcut sürüm\nv0.1.0-alpha.81\nMevcut commit\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nHedef sürüm\nv0.1.0-alpha.82\nHedef platform\nlinux/amd64\nSıra\n82\nPaket boyutu\n65870672 bayt\nSHA-256\ncccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\nBu sürüm bu sunucuda daha önce denendi ve geri alındı\nv0.1.0-alpha.82 burada başlatıldı ve o deneme 09.10.2026 11:06:32 tarihinde sona erdi. Güncelleme tamamlanmadı ve sunucu v0.1.0-alpha.81 sürümüne döndürüldü; şu an onu çalıştırıyor.\nKaydedilen neden: Yeni sürümün paneli başlangıç denetiminden geçemedi.\nYeniden başlatmak aynı güncellemeyi çalıştırır. Neden bu sunucudaysa ve giderildiyse sonuç değişebilir; değilse aynı sonucu bekleyin. Düzeltilmiş bir sürüm yayımlandığında burada daha yeni bir sürüm olarak sunulur. Aşağıdaki düğme v0.1.0-alpha.82 sürümünü yine başlatır.\nİmzalı bir güncelleme bulundu.\nv0.1.0-alpha.82 imzalı güncellemesini başlat\nİmzalı bir güncelleme bulundu.",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"CelikPanel\nPanel\n\nBARINDIRMA\n\nAlan Adlar\" inHold=false",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "importResult": null,
+      "serviceAction": null,
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": null,
+      "updateCard": {
+        "previous": {
+          "text": "Bu sürüm bu sunucuda daha önce denendi ve geri alındı v0.1.0-alpha.82 burada başlatıldı ve o deneme 09.10.2026 11:06:32 tarihinde sona erdi. Güncelleme tamamlanmadı ve sunucu v0.1.0-alpha.81 sürümüne döndürüldü; şu an onu çalıştırıyor. Kaydedilen neden: Yeni sürümün paneli başlangıç denetiminden geçemedi. Yeniden başlatmak aynı güncellemeyi çalıştırır. Neden bu sunucudaysa ve giderildiyse sonuç değişebilir; değilse aynı sonucu bekleyin. Düzeltilmiş bir sürüm yayımlandığında burada daha yeni bir sürüm olarak sunulur. Aşağıdaki düğme v0.1.0-alpha.82 sürümünü yine başlatır.",
+          "heading": "Bu sürüm bu sunucuda daha önce denendi ve geri alındı",
+          "lines": [
+            "Bu sürüm bu sunucuda daha önce denendi ve geri alındı",
+            "v0.1.0-alpha.82 burada başlatıldı ve o deneme 09.10.2026 11:06:32 tarihinde sona erdi. Güncelleme tamamlanmadı ve sunucu v0.1.0-alpha.81 sürümüne döndürüldü; şu an onu çalıştırıyor.",
+            "Kaydedilen neden: Yeni sürümün paneli başlangıç denetiminden geçemedi.",
+            "Yeniden başlatmak aynı güncellemeyi çalıştırır. Neden bu sunucudaysa ve giderildiyse sonuç değişebilir; değilse aynı sonucu bekleyin. Düzeltilmiş bir sürüm yayımlandığında burada daha yeni bir sürüm olarak sunulur. Aşağıdaki düğme v0.1.0-alpha.82 sürümünü yine başlatır."
+          ],
+          "surface": {
+            "background": "rgba(245, 179, 1, 0.2)",
+            "redder": false
+          },
+          "box": {
+            "top": 503,
+            "bottom": 681,
+            "width": 786
+          }
+        },
+        "start": {
+          "label": "v0.1.0-alpha.82 imzalı güncellemesini başlat",
+          "disabled": false,
+          "box": {
+            "top": 751,
+            "bottom": 785,
+            "width": 329
+          }
+        },
+        "target": "Mevcut sürüm v0.1.0-alpha.81 Mevcut commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa Hedef sürüm v0.1.0-alpha.82 Hedef platform linux/amd64 Sıra 82 Paket boyutu 65870672 bayt SHA-256 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "toasts": [],
+      "enabledButtons": [
+        "Hesap güvenliği\nOturum açma koruması ve yönetici güvenliği.",
+        "Sunucu kurulumu\nKurulum sihirbazı ve yapılandırma tercihiniz.",
+        "Panel HTTPS\nPanel alan adı ve HTTPS sertifikası.",
+        "Lisans\nSunucu lisansı, aktivasyon ve yıllık yenileme.",
+        "CelikPanel güncellemeleri\nİmzalı sürümleri denetleyin ve yalnızca açık onaydan sonra kurun.",
+        "Sunucu güvenliği\nDışa açık servisleri ve erişim denetimlerini salt okunur olarak tarayın.",
+        "DNS altyapısı\nOrtak ad sunucuları, düğüm kimliği ve çoğaltma düzeni.",
+        "Sistem veritabanları\nCelikPanel'in ve kurulu servislerin tuttuğu SQLite dosyalarını incele ve güvenle bakımını yap.",
+        "Güncellemeyi kontrol et",
+        "v0.1.0-alpha.82 imzalı güncellemesini başlat"
+      ],
+      "mainText": "Hesap güvenliği Oturum açma koruması ve yönetici güvenliği. Sunucu kurulumu Kurulum sihirbazı ve yapılandırma tercihiniz. Panel HTTPS Panel alan adı ve HTTPS sertifikası. Lisans Sunucu lisansı, aktivasyon ve yıllık yenileme. CelikPanel güncellemeleri İmzalı sürümleri denetleyin ve yalnızca açık onaydan sonra kurun. Sunucu güvenliği Dışa açık servisleri ve erişim denetimlerini salt okunur olarak tarayın. DNS altyapısı Ortak ad sunucuları, düğüm kimliği ve çoğaltma düzeni. Sistem veritabanları CelikPanel'in ve kurulu servislerin tuttuğu SQLite dosyalarını incele ve güvenle bakımını yap. CelikPanel güncellemeleri Panel ve agent yalnızca doğrulanmış işletim sistemi ve mimariyle eşleşen imzalı paketi birlikte uygular. Güncellemeyi kontrol et Alpha sürüm: Önce güncel yedek aldığınızdan emin olun. İşlem paneli ve agent’ı yeniden başlatır; kısa bir kesinti olabilir. Güncelleme hiçbir zaman otomatik başlamaz. Mevcut sürüm v0.1.0-alpha.81 Mevcut commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa Hedef sürüm v0.1.0-alpha.82 Hedef platform linux/amd64 Sıra 82 Paket boyutu 65870672 bayt SHA-256 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc Bu sürüm bu sunucuda daha önce denendi ve geri alındı v0.1.0-alpha.82 burada başlatıldı ve o deneme 09.10.2026 11:06:32 tarihinde sona erdi. Güncelleme tamamlanmadı ve sunucu v0.1.0-alpha.81 sürümüne döndürüldü; şu an onu çalıştırıyor. Kaydedilen neden: Yeni sürümün paneli başlangıç denetiminden geçemedi. Yeniden başlatmak aynı güncellemeyi çalıştırır. Neden bu sunucudaysa ve giderildiyse sonuç değişebilir; değilse aynı sonucu bekleyin. Düzeltilmiş bir sürüm yayımlandığında burada daha yeni bir sürüm olarak sunulur. Aşağıdaki düğme v0.1.0-alpha.82 sürümünü yine başlatır. İmzalı bir güncelleme bulundu. v0.1.0-alpha.82 imzalı güncellemesini başlat İmzalı bir güncelleme bulundu.",
+      "pageOverflowsSideways": false
+    },
+    "143b-update-card-version-rolled-back-no-cause-recorded": {
+      "path": "/settings?section=updates",
+      "visibility": "visible",
+      "main": "Hesap güvenliği\nOturum açma koruması ve yönetici güvenliği.\nSunucu kurulumu\nKurulum sihirbazı ve yapılandırma tercihiniz.\nPanel HTTPS\nPanel alan adı ve HTTPS sertifikası.\nLisans\nSunucu lisansı, aktivasyon ve yıllık yenileme.\nCelikPanel güncellemeleri\nİmzalı sürümleri denetleyin ve yalnızca açık onaydan sonra kurun.\nSunucu güvenliği\nDışa açık servisleri ve erişim denetimlerini salt okunur olarak tarayın.\nDNS altyapısı\nOrtak ad sunucuları, düğüm kimliği ve çoğaltma düzeni.\nSistem veritabanları\nCelikPanel'in ve kurulu servislerin tuttuğu SQLite dosyalarını incele ve güvenle bakımını yap.\nCelikPanel güncellemeleri\nPanel ve agent yalnızca doğrulanmış işletim sistemi ve mimariyle eşleşen imzalı paketi birlikte uygular.\nGüncellemeyi kontrol et\nAlpha sürüm: Önce güncel yedek aldığınızdan emin olun. İşlem paneli ve agent’ı yeniden başlatır; kısa bir kesinti olabilir. Güncelleme hiçbir zaman otomatik başlamaz.\nMevcut sürüm\nv0.1.0-alpha.81\nMevcut commit\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nHedef sürüm\nv0.1.0-alpha.82\nHedef platform\nlinux/amd64\nSıra\n82\nPaket boyutu\n65870672 bayt\nSHA-256\ncccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\nBu sürüm bu sunucuda daha önce denendi ve geri alındı\nv0.1.0-alpha.82 burada başlatıldı ve o deneme 09.10.2026 10:52:52 tarihinde sona erdi. Güncelleme tamamlanmadı ve sunucu v0.1.0-alpha.81 sürümüne döndürüldü; şu an onu çalıştırıyor.\nSunucu o deneme için daha belirli bir neden kaydetmedi.\nYeniden başlatmak aynı güncellemeyi çalıştırır. Neden bu sunucudaysa ve giderildiyse sonuç değişebilir; değilse aynı sonucu bekleyin. Düzeltilmiş bir sürüm yayımlandığında burada daha yeni bir sürüm olarak sunulur. Aşağıdaki düğme v0.1.0-alpha.82 sürümünü yine başlatır.\nİmzalı bir güncelleme bulundu.\nv0.1.0-alpha.82 imzalı güncellemesini başlat\nİmzalı bir güncelleme bulundu.",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"CelikPanel\nPanel\n\nBARINDIRMA\n\nAlan Adlar\" inHold=false",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "importResult": null,
+      "serviceAction": null,
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": null,
+      "updateCard": {
+        "previous": {
+          "text": "Bu sürüm bu sunucuda daha önce denendi ve geri alındı v0.1.0-alpha.82 burada başlatıldı ve o deneme 09.10.2026 10:52:52 tarihinde sona erdi. Güncelleme tamamlanmadı ve sunucu v0.1.0-alpha.81 sürümüne döndürüldü; şu an onu çalıştırıyor. Sunucu o deneme için daha belirli bir neden kaydetmedi. Yeniden başlatmak aynı güncellemeyi çalıştırır. Neden bu sunucudaysa ve giderildiyse sonuç değişebilir; değilse aynı sonucu bekleyin. Düzeltilmiş bir sürüm yayımlandığında burada daha yeni bir sürüm olarak sunulur. Aşağıdaki düğme v0.1.0-alpha.82 sürümünü yine başlatır.",
+          "heading": "Bu sürüm bu sunucuda daha önce denendi ve geri alındı",
+          "lines": [
+            "Bu sürüm bu sunucuda daha önce denendi ve geri alındı",
+            "v0.1.0-alpha.82 burada başlatıldı ve o deneme 09.10.2026 10:52:52 tarihinde sona erdi. Güncelleme tamamlanmadı ve sunucu v0.1.0-alpha.81 sürümüne döndürüldü; şu an onu çalıştırıyor.",
+            "Sunucu o deneme için daha belirli bir neden kaydetmedi.",
+            "Yeniden başlatmak aynı güncellemeyi çalıştırır. Neden bu sunucudaysa ve giderildiyse sonuç değişebilir; değilse aynı sonucu bekleyin. Düzeltilmiş bir sürüm yayımlandığında burada daha yeni bir sürüm olarak sunulur. Aşağıdaki düğme v0.1.0-alpha.82 sürümünü yine başlatır."
+          ],
+          "surface": {
+            "background": "rgba(245, 179, 1, 0.2)",
+            "redder": false
+          },
+          "box": {
+            "top": 503,
+            "bottom": 681,
+            "width": 786
+          }
+        },
+        "start": {
+          "label": "v0.1.0-alpha.82 imzalı güncellemesini başlat",
+          "disabled": false,
+          "box": {
+            "top": 751,
+            "bottom": 785,
+            "width": 329
+          }
+        },
+        "target": "Mevcut sürüm v0.1.0-alpha.81 Mevcut commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa Hedef sürüm v0.1.0-alpha.82 Hedef platform linux/amd64 Sıra 82 Paket boyutu 65870672 bayt SHA-256 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "toasts": [],
+      "enabledButtons": [
+        "Hesap güvenliği\nOturum açma koruması ve yönetici güvenliği.",
+        "Sunucu kurulumu\nKurulum sihirbazı ve yapılandırma tercihiniz.",
+        "Panel HTTPS\nPanel alan adı ve HTTPS sertifikası.",
+        "Lisans\nSunucu lisansı, aktivasyon ve yıllık yenileme.",
+        "CelikPanel güncellemeleri\nİmzalı sürümleri denetleyin ve yalnızca açık onaydan sonra kurun.",
+        "Sunucu güvenliği\nDışa açık servisleri ve erişim denetimlerini salt okunur olarak tarayın.",
+        "DNS altyapısı\nOrtak ad sunucuları, düğüm kimliği ve çoğaltma düzeni.",
+        "Sistem veritabanları\nCelikPanel'in ve kurulu servislerin tuttuğu SQLite dosyalarını incele ve güvenle bakımını yap.",
+        "Güncellemeyi kontrol et",
+        "v0.1.0-alpha.82 imzalı güncellemesini başlat"
+      ],
+      "mainText": "Hesap güvenliği Oturum açma koruması ve yönetici güvenliği. Sunucu kurulumu Kurulum sihirbazı ve yapılandırma tercihiniz. Panel HTTPS Panel alan adı ve HTTPS sertifikası. Lisans Sunucu lisansı, aktivasyon ve yıllık yenileme. CelikPanel güncellemeleri İmzalı sürümleri denetleyin ve yalnızca açık onaydan sonra kurun. Sunucu güvenliği Dışa açık servisleri ve erişim denetimlerini salt okunur olarak tarayın. DNS altyapısı Ortak ad sunucuları, düğüm kimliği ve çoğaltma düzeni. Sistem veritabanları CelikPanel'in ve kurulu servislerin tuttuğu SQLite dosyalarını incele ve güvenle bakımını yap. CelikPanel güncellemeleri Panel ve agent yalnızca doğrulanmış işletim sistemi ve mimariyle eşleşen imzalı paketi birlikte uygular. Güncellemeyi kontrol et Alpha sürüm: Önce güncel yedek aldığınızdan emin olun. İşlem paneli ve agent’ı yeniden başlatır; kısa bir kesinti olabilir. Güncelleme hiçbir zaman otomatik başlamaz. Mevcut sürüm v0.1.0-alpha.81 Mevcut commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa Hedef sürüm v0.1.0-alpha.82 Hedef platform linux/amd64 Sıra 82 Paket boyutu 65870672 bayt SHA-256 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc Bu sürüm bu sunucuda daha önce denendi ve geri alındı v0.1.0-alpha.82 burada başlatıldı ve o deneme 09.10.2026 10:52:52 tarihinde sona erdi. Güncelleme tamamlanmadı ve sunucu v0.1.0-alpha.81 sürümüne döndürüldü; şu an onu çalıştırıyor. Sunucu o deneme için daha belirli bir neden kaydetmedi. Yeniden başlatmak aynı güncellemeyi çalıştırır. Neden bu sunucudaysa ve giderildiyse sonuç değişebilir; değilse aynı sonucu bekleyin. Düzeltilmiş bir sürüm yayımlandığında burada daha yeni bir sürüm olarak sunulur. Aşağıdaki düğme v0.1.0-alpha.82 sürümünü yine başlatır. İmzalı bir güncelleme bulundu. v0.1.0-alpha.82 imzalı güncellemesini başlat İmzalı bir güncelleme bulundu.",
+      "pageOverflowsSideways": false
+    },
+    "143c-update-card-no-earlier-attempt": {
+      "path": "/settings?section=updates",
+      "visibility": "visible",
+      "main": "Hesap güvenliği\nOturum açma koruması ve yönetici güvenliği.\nSunucu kurulumu\nKurulum sihirbazı ve yapılandırma tercihiniz.\nPanel HTTPS\nPanel alan adı ve HTTPS sertifikası.\nLisans\nSunucu lisansı, aktivasyon ve yıllık yenileme.\nCelikPanel güncellemeleri\nİmzalı sürümleri denetleyin ve yalnızca açık onaydan sonra kurun.\nSunucu güvenliği\nDışa açık servisleri ve erişim denetimlerini salt okunur olarak tarayın.\nDNS altyapısı\nOrtak ad sunucuları, düğüm kimliği ve çoğaltma düzeni.\nSistem veritabanları\nCelikPanel'in ve kurulu servislerin tuttuğu SQLite dosyalarını incele ve güvenle bakımını yap.\nCelikPanel güncellemeleri\nPanel ve agent yalnızca doğrulanmış işletim sistemi ve mimariyle eşleşen imzalı paketi birlikte uygular.\nGüncellemeyi kontrol et\nAlpha sürüm: Önce güncel yedek aldığınızdan emin olun. İşlem paneli ve agent’ı yeniden başlatır; kısa bir kesinti olabilir. Güncelleme hiçbir zaman otomatik başlamaz.\nMevcut sürüm\nv0.1.0-alpha.81\nMevcut commit\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nHedef sürüm\nv0.1.0-alpha.82\nHedef platform\nlinux/amd64\nSıra\n82\nPaket boyutu\n65870672 bayt\nSHA-256\ncccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\nİmzalı bir güncelleme bulundu.\nv0.1.0-alpha.82 imzalı güncellemesini başlat\nİmzalı bir güncelleme bulundu.",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"CelikPanel\nPanel\n\nBARINDIRMA\n\nAlan Adlar\" inHold=false",
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "importResult": null,
+      "serviceAction": null,
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": null,
+      "updateCard": {
+        "previous": null,
+        "start": {
+          "label": "v0.1.0-alpha.82 imzalı güncellemesini başlat",
+          "disabled": false,
+          "box": {
+            "top": 573,
+            "bottom": 607,
+            "width": 329
+          }
+        },
+        "target": "Mevcut sürüm v0.1.0-alpha.81 Mevcut commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa Hedef sürüm v0.1.0-alpha.82 Hedef platform linux/amd64 Sıra 82 Paket boyutu 65870672 bayt SHA-256 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "toasts": [],
+      "enabledButtons": [
+        "Hesap güvenliği\nOturum açma koruması ve yönetici güvenliği.",
+        "Sunucu kurulumu\nKurulum sihirbazı ve yapılandırma tercihiniz.",
+        "Panel HTTPS\nPanel alan adı ve HTTPS sertifikası.",
+        "Lisans\nSunucu lisansı, aktivasyon ve yıllık yenileme.",
+        "CelikPanel güncellemeleri\nİmzalı sürümleri denetleyin ve yalnızca açık onaydan sonra kurun.",
+        "Sunucu güvenliği\nDışa açık servisleri ve erişim denetimlerini salt okunur olarak tarayın.",
+        "DNS altyapısı\nOrtak ad sunucuları, düğüm kimliği ve çoğaltma düzeni.",
+        "Sistem veritabanları\nCelikPanel'in ve kurulu servislerin tuttuğu SQLite dosyalarını incele ve güvenle bakımını yap.",
+        "Güncellemeyi kontrol et",
+        "v0.1.0-alpha.82 imzalı güncellemesini başlat"
+      ],
+      "mainText": "Hesap güvenliği Oturum açma koruması ve yönetici güvenliği. Sunucu kurulumu Kurulum sihirbazı ve yapılandırma tercihiniz. Panel HTTPS Panel alan adı ve HTTPS sertifikası. Lisans Sunucu lisansı, aktivasyon ve yıllık yenileme. CelikPanel güncellemeleri İmzalı sürümleri denetleyin ve yalnızca açık onaydan sonra kurun. Sunucu güvenliği Dışa açık servisleri ve erişim denetimlerini salt okunur olarak tarayın. DNS altyapısı Ortak ad sunucuları, düğüm kimliği ve çoğaltma düzeni. Sistem veritabanları CelikPanel'in ve kurulu servislerin tuttuğu SQLite dosyalarını incele ve güvenle bakımını yap. CelikPanel güncellemeleri Panel ve agent yalnızca doğrulanmış işletim sistemi ve mimariyle eşleşen imzalı paketi birlikte uygular. Güncellemeyi kontrol et Alpha sürüm: Önce güncel yedek aldığınızdan emin olun. İşlem paneli ve agent’ı yeniden başlatır; kısa bir kesinti olabilir. Güncelleme hiçbir zaman otomatik başlamaz. Mevcut sürüm v0.1.0-alpha.81 Mevcut commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa Hedef sürüm v0.1.0-alpha.82 Hedef platform linux/amd64 Sıra 82 Paket boyutu 65870672 bayt SHA-256 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc İmzalı bir güncelleme bulundu. v0.1.0-alpha.82 imzalı güncellemesini başlat İmzalı bir güncelleme bulundu.",
+      "pageOverflowsSideways": false
+    }
+  },
+  "errors": []
+}

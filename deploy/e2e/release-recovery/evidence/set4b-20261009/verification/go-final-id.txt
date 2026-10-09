@@ -1,0 +1,9 @@
+2026-10-09T15:56:27Z
+go version go1.26.5 linux/amd64
+gofmt rc=0 files=1
+vet rc=0
+build amd64 rc=0
+build arm64 rc=0
+test agent rc=1
+test panel+internal rc=0
+2026-10-09T16:04:50Z

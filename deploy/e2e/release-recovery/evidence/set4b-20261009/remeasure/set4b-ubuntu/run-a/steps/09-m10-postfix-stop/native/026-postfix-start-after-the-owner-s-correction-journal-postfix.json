@@ -1,0 +1,34 @@
+{
+  "at": "2026-10-09T15:40:10Z",
+  "identifiers": [
+    "postfix/master",
+    "postfix/postfix-script"
+  ],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791560405",
+      "-n",
+      "400",
+      "-t",
+      "postfix/master",
+      "-t",
+      "postfix/postfix-script"
+    ],
+    "at": "2026-10-09T15:40:10Z",
+    "returncode": 0,
+    "seconds": 0.012,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T15:40:05.526389+00:00 dns-ubuntu postfix/postfix-script[44820]: the Postfix mail system is not running\n2026-10-09T15:40:06.254067+00:00 dns-ubuntu postfix/postfix-script[45075]: warning: /var/spool/postfix/etc/hosts and /etc/hosts differ\n2026-10-09T15:40:06.343832+00:00 dns-ubuntu postfix/postfix-script[45107]: the Postfix mail system is not running\n2026-10-09T15:40:06.986047+00:00 dns-ubuntu postfix/postfix-script[45395]: starting the Postfix mail system\n2026-10-09T15:40:06.993439+00:00 dns-ubuntu postfix/master[45397]: daemon started -- version 3.8.6, configuration /etc/postfix\n2026-10-09T15:40:07.066566+00:00 dns-ubuntu postfix/postfix-script[45415]: the Postfix mail system is running: PID: 45397\n2026-10-09T15:40:10.007740+00:00 dns-ubuntu postfix/postfix-script[45533]: the Postfix mail system is running: PID: 45397\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791560405,
+  "units": []
+}

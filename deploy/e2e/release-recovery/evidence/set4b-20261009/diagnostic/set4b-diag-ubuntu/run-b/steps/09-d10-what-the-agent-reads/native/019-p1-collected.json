@@ -1,0 +1,1329 @@
+{
+  "agent_pid": 7346,
+  "agent_pid_at_collect": 7346,
+  "armed": {
+    "monotonic_ns": 1027409980323,
+    "realtime_ns": 1791555432093487929,
+    "utc": "2026-10-09T14:17:12Z"
+  },
+  "at": "2026-10-09T14:17:23Z",
+  "collected": {
+    "monotonic_ns": 1039166655729,
+    "realtime_ns": 1791555443850163395,
+    "utc": "2026-10-09T14:17:23Z"
+  },
+  "label": "p1",
+  "master_at_arm": {
+    "comm": "master\n",
+    "pid": 39271,
+    "pid_file": {
+      "path": "/var/spool/postfix/pid/master.pid",
+      "text": "                           39271\n"
+    },
+    "postconf": {
+      "argv": [
+        "postconf",
+        "-h",
+        "queue_directory"
+      ],
+      "returncode": 0,
+      "seconds": 0.006,
+      "stderr": "postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\n",
+      "stdout": "/var/spool/postfix\n"
+    }
+  },
+  "master_at_collect": {
+    "comm_error": "FileNotFoundError",
+    "pid": 39271,
+    "pid_file": {
+      "path": "/var/spool/postfix/pid/master.pid",
+      "text": "                           39271\n"
+    },
+    "postconf": {
+      "argv": [
+        "postconf",
+        "-h",
+        "queue_directory"
+      ],
+      "returncode": 0,
+      "seconds": 0.006,
+      "stderr": "postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\n",
+      "stdout": "/var/spool/postfix\n"
+    }
+  },
+  "mode": "diag-collect",
+  "owner_action": false,
+  "samples": {
+    "columns": [
+      "read_started_monotonic_ns",
+      "master_comm_before",
+      "read_answered_monotonic_ns",
+      "master_comm_after",
+      "units: [LoadState, ActiveState, SubState, Result]"
+    ],
+    "kept_rule": "every sample at which anything differs from the one before, the sample before it, and one in twenty",
+    "master_pid": 39271,
+    "median_read_ms": 7.412405,
+    "pause_seconds": 0.002,
+    "samples": [
+      [
+        1027517938199,
+        "master",
+        1027527490840,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "active",
+            "exited",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "active",
+            "running",
+            "success"
+          ]
+        }
+      ],
+      [
+        1027769950071,
+        "master",
+        1027780393859,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "active",
+            "exited",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "active",
+            "running",
+            "success"
+          ]
+        }
+      ],
+      [
+        1027837172518,
+        "master",
+        1027845570983,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "active",
+            "exited",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "active",
+            "running",
+            "success"
+          ]
+        }
+      ],
+      [
+        1027848098637,
+        "master",
+        1027869959630,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "deactivating",
+            "stop",
+            "success"
+          ]
+        }
+      ],
+      [
+        1028007431811,
+        "master",
+        1028015036390,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "deactivating",
+            "stop",
+            "success"
+          ]
+        }
+      ],
+      [
+        1028203276835,
+        "master",
+        1028210833511,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "deactivating",
+            "stop",
+            "success"
+          ]
+        }
+      ],
+      [
+        1028400713867,
+        "master",
+        1028408076729,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "deactivating",
+            "stop",
+            "success"
+          ]
+        }
+      ],
+      [
+        1028596489607,
+        "master",
+        1028603727085,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "deactivating",
+            "stop",
+            "success"
+          ]
+        }
+      ],
+      [
+        1028853666639,
+        "master",
+        1028861288034,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "deactivating",
+            "stop",
+            "success"
+          ]
+        }
+      ],
+      [
+        1028863595219,
+        "master",
+        1028871359837,
+        "master",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "deactivating",
+            "stop",
+            "success"
+          ]
+        }
+      ],
+      [
+        1028874327061,
+        "master",
+        1028888071050,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1028890260236,
+        "!FileNotFoundError",
+        1028898853715,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1029074852441,
+        "!FileNotFoundError",
+        1029082903845,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1029268448270,
+        "!FileNotFoundError",
+        1029275654421,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1029458208905,
+        "!FileNotFoundError",
+        1029465626330,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1029658427926,
+        "!FileNotFoundError",
+        1029666270147,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1029876262612,
+        "!FileNotFoundError",
+        1029884919329,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1030088104985,
+        "!FileNotFoundError",
+        1030095479836,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1030294602653,
+        "!FileNotFoundError",
+        1030301967404,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1030491904829,
+        "!FileNotFoundError",
+        1030499626629,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1030693603103,
+        "!FileNotFoundError",
+        1030705178546,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1030900876655,
+        "!FileNotFoundError",
+        1030908132449,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1031096775834,
+        "!FileNotFoundError",
+        1031104377623,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1031377638181,
+        "!FileNotFoundError",
+        1031392329694,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1031651046804,
+        "!FileNotFoundError",
+        1031663255281,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1031923715300,
+        "!FileNotFoundError",
+        1031931124079,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1032131924046,
+        "!FileNotFoundError",
+        1032139949150,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1032442694209,
+        "!FileNotFoundError",
+        1032455290822,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1032721095450,
+        "!FileNotFoundError",
+        1032728619599,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1032919501389,
+        "!FileNotFoundError",
+        1032926598757,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1033113319184,
+        "!FileNotFoundError",
+        1033121026730,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1033308888858,
+        "!FileNotFoundError",
+        1033316419374,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1033494680991,
+        "!FileNotFoundError",
+        1033502134981,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1033683330546,
+        "!FileNotFoundError",
+        1033691193834,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1033893753420,
+        "!FileNotFoundError",
+        1033902104936,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1034091445471,
+        "!FileNotFoundError",
+        1034099189159,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1034301856731,
+        "!FileNotFoundError",
+        1034309079645,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1034486066569,
+        "!FileNotFoundError",
+        1034492689383,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1034667306031,
+        "!FileNotFoundError",
+        1034673995967,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1034861831353,
+        "!FileNotFoundError",
+        1034869200223,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1035044667680,
+        "!FileNotFoundError",
+        1035051807497,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1035235381234,
+        "!FileNotFoundError",
+        1035243140395,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1035417460726,
+        "!FileNotFoundError",
+        1035424211659,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1035597191852,
+        "!FileNotFoundError",
+        1035604369610,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1035791190430,
+        "!FileNotFoundError",
+        1035798599534,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1035976171131,
+        "!FileNotFoundError",
+        1035983400430,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1036164055513,
+        "!FileNotFoundError",
+        1036170857035,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1036355983081,
+        "!FileNotFoundError",
+        1036363293436,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1036546339022,
+        "!FileNotFoundError",
+        1036553364806,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1036735962517,
+        "!FileNotFoundError",
+        1036743376636,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1036929463029,
+        "!FileNotFoundError",
+        1036936810003,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1037113526972,
+        "!FileNotFoundError",
+        1037120583745,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1037299863120,
+        "!FileNotFoundError",
+        1037307158843,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1037482834098,
+        "!FileNotFoundError",
+        1037489392582,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ],
+      [
+        1037509532430,
+        "!FileNotFoundError",
+        1037516283191,
+        "!FileNotFoundError",
+        {
+          "postfix.service": [
+            "loaded",
+            "inactive",
+            "dead",
+            "success"
+          ],
+          "postfix@-.service": [
+            "loaded",
+            "failed",
+            "failed",
+            "exit-code"
+          ]
+        }
+      ]
+    ],
+    "samples_total": 964,
+    "seconds": 10.0
+  },
+  "schema": "celikpanel/set4b-native/v1",
+  "strace": {},
+  "trace": {
+    "buffer_notes": [
+      "# entries-in-buffer/entries-written: 3321/3321   #P:2"
+    ],
+    "events": [
+      {
+        "event": "exec",
+        "mono": 1027.84476,
+        "pid": 44138,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1027.855592,
+        "pid": 44140,
+        "program": "9",
+        "started_by": "systemd"
+      },
+      {
+        "event": "exec",
+        "mono": 1027.863074,
+        "pid": 44140,
+        "program": "postmulti",
+        "started_by": "systemd"
+      },
+      {
+        "event": "exit",
+        "mono": 1027.866316,
+        "pid": 44138,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1028.872257,
+        "pid": 44140,
+        "program": "postmulti",
+        "started_by": "systemd"
+      },
+      {
+        "event": "exit",
+        "mono": 1028.874655,
+        "pid": 44239,
+        "program": "(sd-close)",
+        "started_by": "systemd"
+      },
+      {
+        "event": "exit",
+        "mono": 1028.875634,
+        "pid": 39271,
+        "program": "master",
+        "started_by": "master"
+      },
+      {
+        "event": "exit",
+        "mono": 1029.001453,
+        "pid": 44280,
+        "program": "(sd-close)",
+        "started_by": "systemd"
+      }
+    ],
+    "events_total": 2216
+  },
+  "units_at_arm": {
+    "postfix.service": {
+      "ActiveEnterTimestampMonotonic": "677013859",
+      "ActiveExitTimestampMonotonic": "676396338",
+      "ActiveState": "active",
+      "After": "system.slice basic.target systemd-journald.socket postfix@-.service sysinit.target",
+      "Before": "multi-user.target shutdown.target",
+      "ConsistsOf": "postfix@-.service",
+      "ControlPID": "0",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "GuessMainPID": "yes",
+      "InactiveEnterTimestampMonotonic": "676396338",
+      "InactiveExitTimestampMonotonic": "677011430",
+      "KillMode": "control-group",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "PartOf": "",
+      "Result": "success",
+      "StateChangeTimestampMonotonic": "677013859",
+      "SubState": "exited",
+      "Type": "oneshot"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestampMonotonic": "677003348",
+      "ActiveExitTimestampMonotonic": "676408308",
+      "ActiveState": "active",
+      "After": "system-postfix.slice network-online.target sysinit.target basic.target nss-lookup.target systemd-journald.socket",
+      "Before": "shutdown.target postfix.service",
+      "ConsistsOf": "",
+      "ControlPID": "0",
+      "ExecStop": "{ path=/usr/sbin/postmulti ; argv[]=/usr/sbin/postmulti -i - -p stop ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "GuessMainPID": "no",
+      "InactiveEnterTimestampMonotonic": "676448828",
+      "InactiveExitTimestampMonotonic": "676454445",
+      "KillMode": "control-group",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "PartOf": "postfix.service",
+      "Result": "success",
+      "StateChangeTimestampMonotonic": "677003348",
+      "SubState": "running",
+      "Type": "forking"
+    }
+  },
+  "units_at_collect": {
+    "postfix.service": {
+      "ActiveEnterTimestampMonotonic": "677013859",
+      "ActiveExitTimestampMonotonic": "1027851976",
+      "ActiveState": "inactive",
+      "After": "system.slice basic.target systemd-journald.socket postfix@-.service sysinit.target",
+      "Before": "multi-user.target shutdown.target",
+      "ConsistsOf": "postfix@-.service",
+      "ControlPID": "0",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "GuessMainPID": "yes",
+      "InactiveEnterTimestampMonotonic": "1027851976",
+      "InactiveExitTimestampMonotonic": "677011430",
+      "KillMode": "control-group",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "PartOf": "",
+      "Result": "success",
+      "StateChangeTimestampMonotonic": "1027851976",
+      "SubState": "dead",
+      "Type": "oneshot"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestampMonotonic": "677003348",
+      "ActiveExitTimestampMonotonic": "1027860408",
+      "ActiveState": "failed",
+      "After": "system-postfix.slice network-online.target sysinit.target basic.target nss-lookup.target systemd-journald.socket",
+      "Before": "shutdown.target postfix.service",
+      "ConsistsOf": "",
+      "ControlPID": "0",
+      "ExecStop": "{ path=/usr/sbin/postmulti ; argv[]=/usr/sbin/postmulti -i - -p stop ; ignore_errors=no ; start_time=[Fri 2026-10-09 14:17:12 UTC] ; stop_time=[Fri 2026-10-09 14:17:13 UTC] ; pid=44140 ; code=exited ; status=1 }",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "GuessMainPID": "no",
+      "InactiveEnterTimestampMonotonic": "1028878440",
+      "InactiveExitTimestampMonotonic": "676454445",
+      "KillMode": "control-group",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "PartOf": "postfix.service",
+      "Result": "exit-code",
+      "StateChangeTimestampMonotonic": "1028878440",
+      "SubState": "failed",
+      "Type": "forking"
+    }
+  }
+}

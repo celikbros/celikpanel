@@ -1,0 +1,94 @@
+{
+  "agent_pid": 7346,
+  "agent_tids_at_arm": [
+    7346,
+    7348,
+    7349,
+    7350,
+    8990,
+    10629
+  ],
+  "armed": {
+    "monotonic_ns": 1066986711547,
+    "realtime_ns": 1791555471670219163,
+    "utc": "2026-10-09T14:17:51Z"
+  },
+  "at": "2026-10-09T14:17:53Z",
+  "label": "p2b",
+  "master": {
+    "comm": "master\n",
+    "pid": 47438,
+    "pid_file": {
+      "path": "/var/spool/postfix/pid/master.pid",
+      "text": "                           47438\n"
+    },
+    "postconf": {
+      "argv": [
+        "postconf",
+        "-h",
+        "queue_directory"
+      ],
+      "returncode": 0,
+      "seconds": 1.813,
+      "stderr": "postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\n",
+      "stdout": "/var/spool/postfix\n"
+    }
+  },
+  "mode": "diag-arm",
+  "owner_action": false,
+  "schema": "celikpanel/set4b-native/v1",
+  "trace": {
+    "clock": "local global counter uptime perf [mono] mono_raw boot tai x86-tsc",
+    "events": [
+      "sched/sched_process_fork",
+      "sched/sched_process_exec",
+      "sched/sched_process_exit"
+    ],
+    "instance": "/sys/kernel/tracing/instances/set4b"
+  },
+  "units_at_arm": {
+    "postfix.service": {
+      "ActiveEnterTimestampMonotonic": "1063400785",
+      "ActiveExitTimestampMonotonic": "1049740127",
+      "ActiveState": "active",
+      "After": "system.slice basic.target systemd-journald.socket postfix@-.service sysinit.target",
+      "Before": "multi-user.target shutdown.target",
+      "ConsistsOf": "postfix@-.service",
+      "ControlPID": "0",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "GuessMainPID": "yes",
+      "InactiveEnterTimestampMonotonic": "1049740127",
+      "InactiveExitTimestampMonotonic": "1063397290",
+      "KillMode": "control-group",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "PartOf": "",
+      "Result": "success",
+      "StateChangeTimestampMonotonic": "1063400785",
+      "SubState": "exited",
+      "Type": "oneshot"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestampMonotonic": "1063389776",
+      "ActiveExitTimestampMonotonic": "1049754369",
+      "ActiveState": "active",
+      "After": "system-postfix.slice network-online.target sysinit.target basic.target nss-lookup.target systemd-journald.socket",
+      "Before": "shutdown.target postfix.service",
+      "ConsistsOf": "",
+      "ControlPID": "0",
+      "ExecStop": "{ path=/usr/sbin/postmulti ; argv[]=/usr/sbin/postmulti -i - -p stop ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "GuessMainPID": "no",
+      "InactiveEnterTimestampMonotonic": "1050767751",
+      "InactiveExitTimestampMonotonic": "1062632376",
+      "KillMode": "control-group",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "PartOf": "postfix.service",
+      "Result": "success",
+      "StateChangeTimestampMonotonic": "1063389776",
+      "SubState": "running",
+      "Type": "forking"
+    }
+  }
+}

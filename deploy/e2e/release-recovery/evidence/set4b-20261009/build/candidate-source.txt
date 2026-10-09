@@ -1,0 +1,7 @@
+base=2e796418de87e15b53baeb0b875ce66bca5c5f01
+base_tree=d8d7a81feb4012956445ec87ade1b8abae54244e
+candidate=de34e44859d49039972ae2e1f9f42ba12d9e1595
+candidate_tree=f46b90a341f524f3cbd31d11b244f2c8eecea9b0
+clone=/var/tmp/cp-set4b-run/src-c1
+files=21
+ 21 files changed, 1167 insertions(+), 73 deletions(-)
