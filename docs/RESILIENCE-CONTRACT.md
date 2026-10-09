@@ -4017,10 +4017,18 @@ source; none of the corrections has been measured on real services.
     `NoticeUnit`, `NoticeResult`, `NoticeDetail`;
     `CpmoveExtractResponse.Refused`, `RefusedCount`, `OutsideCount`,
     `OutsideGroups`. A Panel that meets an Agent without them answers as
-    before. Vhost files on disk are not rewritten by an update: a site's vhost
-    takes the new text when it is next rendered (a certificate, a setting, a
-    hosting change), and that render is the same configuration. Sites and
-    sockets already recorded with a version keep it.
+    before. (Corrected 2026-10-09 from the fourth native run; an earlier form
+    of this sentence said vhost files on disk are not rewritten by an update.
+    They are: measured on Debian 13 and Ubuntu 24.04, the updated Panel's own
+    start renders the hosted sites again — its journal line is "certificate
+    startup reconcile: restored 2 hosted vhosts with one nginx validation and
+    reload" — so a site created by v0.1.0-alpha.81 had the new text, without
+    the snippet include, before any owner action; ten requests were answered
+    the same before the update, after it and after a later save. The Panel
+    start of earlier releases does the same render; what an owner's own edit
+    of a generated vhost file meets at that start was not measured.) A later
+    render (a certificate, a setting, a hosting change) is the same
+    configuration. Sites and sockets already recorded with a version keep it.
 - **Recovery behaviour.**
   - Nothing retries by itself. A site nginx refused is removed again by the
     Agent's own inverse and by the Panel's compensation; when that is not

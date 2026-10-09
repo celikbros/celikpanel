@@ -3314,10 +3314,20 @@ düzeltir; düzeltmelerin hiçbiri gerçek hizmetlerde ölçülmedi.
     `NoticeUnit`, `NoticeResult`, `NoticeDetail`;
     `CpmoveExtractResponse.Refused`, `RefusedCount`, `OutsideCount`,
     `OutsideGroups`. Bunlar olmayan bir Agent ile karşılaşan Panel eskisi gibi
-    yanıtlar. Diskteki sanal konak dosyaları bir güncellemeyle yeniden
-    yazılmaz: bir sitenin sanal konağı yeni metni bir sonraki üretiminde alır
-    (sertifika, ayar, barındırma değişikliği) ve o üretim aynı yapılandırmadır.
-    Bir sürümle zaten kaydedilmiş siteler ve soketler onu korur.
+    yanıtlar. (Dördüncü gerçek sistem koşusuna göre 2026-10-09'da düzeltildi;
+    bu cümlenin önceki hali, diskteki sanal konak dosyalarının bir
+    güncellemeyle yeniden yazılmadığını söylüyordu. Yazılıyor: Debian 13 ve
+    Ubuntu 24.04'te ölçüldü, güncellenen Panel kendi açılışında barındırılan
+    siteleri yeniden üretiyor — günlük satırı "certificate startup reconcile:
+    restored 2 hosted vhosts with one nginx validation and reload" — bu yüzden
+    v0.1.0-alpha.81'in oluşturduğu bir site, sahibin hiçbir işlemi olmadan,
+    snippet içermeyen yeni metni almıştı; on istek güncellemeden önce, sonra
+    ve daha sonraki bir kayıttan sonra aynı yanıtlandı. Önceki sürümlerin Panel
+    açılışı da aynı üretimi yapar; sahibin üretilmiş bir sanal konak dosyasında
+    kendi yaptığı düzenlemenin o açılışta neyle karşılaştığı ölçülmedi.)
+    Sonraki bir üretim (sertifika, ayar, barındırma değişikliği) aynı
+    yapılandırmadır. Bir sürümle zaten kaydedilmiş siteler ve soketler onu
+    korur.
 - **Kurtarma davranışı.**
   - Hiçbir şey kendiliğinden yeniden denemez. nginx'in reddettiği site,
     Agent'ın kendi tersi ve Panel'in telafisiyle yeniden kaldırılır; bu
