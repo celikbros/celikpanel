@@ -1,6 +1,6 @@
 # CelikPanel Yol Haritası
 
-*Son güncelleme: 28 Eylül 2026 · [English](ROADMAP.md)*
+*Son güncelleme: 9 Ekim 2026 · [English](ROADMAP.md)*
 
 ---
 
@@ -88,6 +88,120 @@ Ayrıntılı [kabul kaydı](docs/RESILIENCE-CONTRACT.tr.md), başarısız deneme
 kesin sınırları korur. Yeni kanıt mevcut P0 maddesini günceller;
 yeni bir mimari plan başlatmaz.
 
+### Sürüm durumu — 9 Ekim 2026
+
+Bu alt bölüm sürümlerin nerede durduğunu kaydeder. Hiçbir P0 durumunu
+değiştirmez: P0.1–P0.5'in tamamı hâlâ **kısmi**; yukarıdaki ve aşağıdaki her açık
+kabul işi açık kalır.
+
+- **v0.1.0-alpha.81 yayımlandı.** `v0.1.0-alpha.81` etiketi `a0beb726`
+  üzerindedir (4 Ekim 2026); bu, yayımlanmış `main` dalının ucudur. Sunucu
+  sahibinin bildirdiği ve burada bir dosyada kayıtlı olmayanlar: yayımlama
+  adımları (#204 numaralı çekme isteğinin birleştirilmesi, etiket, portal
+  yayını), altı imzalı dosyanın doğrulanması ve sahibin kurulu iki paneli (biri
+  Ubuntu 24.04, biri Debian 13) 8 Ekim 2026'da panelin kendi güncelleme
+  ekranından güncellemesi. Depoda bu kurulu sunuculara ait bir kanıt dosyası
+  yoktur; bu yüzden bu bir ölçüm değil, sahibin bildirimidir ve buradaki hiçbir
+  iş için kabul kanıtı olarak kullanılmaz.
+- **v0.1.0-alpha.82 bir adaydır, sürüm değildir.** Numara sahibin kararıdır.
+  Aday `fix/setup-handover-guidance` dalıdır (#205 numaralı taslak çekme
+  isteği): `a0beb726`'dan sonra `f07cbcb5d`'ye kadar 32 commit, ardından yalnız
+  kanıt ya da belge ekleyen başka commit'ler (ilki kapanış koşusunun kanıtıydı
+  ve sayıyı 33 yaptı); ürün kodunu değiştiren son commit `67b62cc0f`
+  ([sürüm notu taslağı](docs/RELEASE-NOTES-v0.1.0-alpha.82.tr.md)).
+  İçeriği: bilmediği olumsuz bir durumu söylemek yerine "denetleniyor" ya da
+  "denetlenemedi" gösteren ekranlar; hangi durumdan kurulduğunu sürümüyle
+  taşıyan ve durum eskimişse reddedilen ayar kayıtları (posta politikası, yedek
+  zamanlaması, zamanlanmış görevler, yapılandırma dosyaları, catch-all);
+  hizmetin sonradan gösterdiğine göre yanıtlanan yeniden yüklemeler ve hizmet
+  işlemleri; sekiz rotada durum değiştiren her isteğin tek bir kimlik taşıması,
+  böylece yinelenen isteğin yeniden çalıştırılmadan yanıtlanması
+  ([D-029](docs/DECISIONS.tr.md)); cPanel içe aktarımı, sertifika istekleri ve
+  Arch'ta PHP siteleri için düzeltmeler; `postconf`'tan okunan değerler için
+  tek kural. Bu kural, yayımlanmış v0.1.0-alpha.81'de de bulunan bir posta
+  sertifikası kusurunu düzeltir.
+  - *Geçici konuklarda, 8 ve 9 Ekim 2026'da ölçülenler (Debian 13,
+    Ubuntu 24.04, Arch; kayıt bir sayı vermedikçe hücre başına tek sıra):*
+    gerçek cron, Postfix, PostgreSQL ve MariaDB üzerinde ayar kayıtları
+    ([birinci koşu](deploy/e2e/release-recovery/evidence/set1-20261010/README.md));
+    o koşunun yol açtığı düzeltmeler, hizmet işlemleri ve istek kimliği
+    ([ikinci koşu](deploy/e2e/release-recovery/evidence/set2-20261011/README.md));
+    ikinci tur düzeltmeler ve yayımlanmış v0.1.0-alpha.81'den sahibin başlattığı
+    güncelleme; on hücrenin tamamı beklenen sonuca ulaştı
+    ([üçüncü koşu](deploy/e2e/release-recovery/evidence/set3-20261012/README.md));
+    son düzeltmeler, `557b554eb` hâliyle yeni kurulmuş konuklarda: Arch dahil
+    üç platformda PHP sitesi oluşturuldu, çalıştı ve silindi; yayımlanmış
+    v0.1.0-alpha.81'in oluşturduğu site Debian 13 ve Ubuntu 24.04'te güncelleme
+    boyunca on isteği aynı biçimde yanıtladı; tek bir denetim geçmedi:
+    Ubuntu 24.04'te Postfix durdurulduktan sonraki not
+    ([dördüncü koşu](deploy/e2e/release-recovery/evidence/set4-20261009/README.md));
+    o hatanın nedeni ve düzeltmesi, yeni kurulmuş Ubuntu 24.04 ve Debian 13
+    konuklarında dörder durdurma
+    ([ek ölçüm](deploy/e2e/release-recovery/evidence/set4b-20261009/README.md)).
+    İlk üç dizinin adı, koşuların yapıldığı günlerden daha ileri tarihler
+    taşır. Konuklar ağdan yalıtılmış değildir: dışarıya erişimleri vardır.
+    Saptanan şudur: sürüm kaynağının her hücrede, Let's Encrypt adlarının bazı
+    hücrelerde (hangilerinde ve hücrenin hangi anında olduğunu sürüm notları
+    söyler) konuğun kendi loopback adresine sabitlenmesi, lisans adımının test
+    derlemesince yanıtlanması ve ham dosyalarda kurulu hiçbir sunucunun adının
+    ya da adresinin bulunmaması. Konukların trafiği kaydedilmedi.
+  - *Yalnız bir okuma olarak ölçülen:* `main.cf` uyarı verdirdiğinde gerçek
+    `postconf`'un ne yazdırdığı ve eski kodun sakladığı metinle eski geri alma
+    komutunun ne yaptığı
+    ([okuma](deploy/e2e/release-recovery/evidence/set4c-20261009/README.md);
+    Postfix 3.10.13, bir geliştirme konuğunda özel bir yapılandırma dizini).
+    Buna dayanan düzeltmenin (`67b62cc0f`) yalnız bileşen testleri var: böyle
+    bir dosyayla posta TLS değişikliği, geri alınması ve sertifika yayımı
+    çalıştırılmadı.
+  - *Son kodda (`67b62cc0f`) ölçülen, 9 Ekim 2026:* güncelleme matrisi bir kez
+    daha, üçüncü koşunun aynı on hücresi, her biri bir kez
+    ([kapanış koşusu](deploy/e2e/release-recovery/evidence/set5-20261009/README.md)).
+    On hücrenin tamamı üçüncü koşunun `cfa329676` hâlinde ölçtüğü sonuca ulaştı;
+    her adımın kararı, sonuç ve karşılaştırılan olgular aynıydı: Debian 13, Ubuntu 24.04
+    ve Arch'ta doğrulanan güncelleme; üçünde de yayımlanmış v0.1.0-alpha.81'e
+    otomatik dönüş; başarısız başlangıç denetiminden sonra dönüş (Debian 13);
+    sahibin devam ettirmesi (Debian 13, Ubuntu 24.04); yeniden açılış boyunca
+    yönetimin kapalı olması (Debian 13). v0.1.0-alpha.81'in oluşturduğu site
+    güncelleme boyunca on isteği aynı biçimde yanıtladı (Debian 13,
+    Ubuntu 24.04); güncellenmiş sunucuda platform başına bir Postfix durdurma
+    notla yanıtlandı. Bu koşuda konukların diskleri bellekteydi; bu yüzden
+    süreleri önceki koşularla karşılaştırılamaz. Ana makine koşunun büyük
+    bölümünde "modern bekleme" kaydetti; örnekleyiciler duraklama göstermiyor.
+  - *Hangi denetim hangi koda dayanıyor:* ayar kayıtları `c4cf7fd9d`;
+    düzeltilmiş ayar kayıtları, hizmet işlemleri ve istek kimliği `faa5ef085`;
+    ikinci düzeltmeler ve ilk güncelleme matrisi `cfa329676`; Arch'ta PHP
+    dahil yeni kurulmuş sunucu denetimleri `557b554eb`; yeni kurulmuş
+    sunucularda Postfix durdurma notu `1f182a483` ile aynı dosyalar; kapanış
+    güncelleme matrisi `67b62cc0f`. Son kodda çalıştırılmayanlar: yeni kurulum
+    ve gerçek bir sistemde düzeltilmiş posta sertifikası yolu (anlık görüntü,
+    geri yükleme, geri okuma).
+  - *Sonraki sürüme açık iş ve bitiş ölçütü:* Panel'in kendi başlangıcı,
+    barındırılan sitelerin web sunucusu yapılandırmasını yeniden yazar; bu
+    adayda da önceki sürümlerde de. Sahibin böyle bir dosyadaki el
+    düzenlemesinin o başlangıçta neyle karşılaştığı ölçülmedi ve anayasanın 1.
+    bölümündeki kurala (sahip değişikliklerini algıla, asla sessizce ezme)
+    göre denetlenmedi. Bitiş: sahibin düzenlediği bir site yapılandırma
+    dosyasının bir Panel başlangıcı ve bir güncelleme boyunca gerçek sistemde
+    okunması; ürün düzenlemeyi ya algılayıp bildirir ya da ezme, açıkça
+    yazılmış ve belgelenmiş bir sınırdır.
+  - *Yalnız bileşen testleri olanlar:* `e2be8af30` (MariaDB olmayan bir
+    `mysqld`, MariaDB dosyasının denetimi olarak kabul edilmez), durdurmadan
+    sonra durumu oturmayan ya da okunamayan birim için iki yeni not ve posta
+    sertifikası yenilemesinin sunulan sertifikayı denetlemesi.
+  - *Açık ve sürüm notlarında adıyla yazılı:* arayüzün 31 kaynak dosyası
+    sunucuyu hâlâ eski biçimde okuyor (erişim kapıları, kurulum sihirbazı,
+    güncelleme ve işlem katmanları, Hizmetler sayfaları ve başkaları); sekiz
+    rotanın dışındaki durum değiştiren rotalarda istek kimliği yok; bağımsız
+    posta yenileme yardımcısı zaten kurulu olan sunucu kurulu yardımcısını
+    korur; gerçek sistem koşularında gerçek bir Panel'e karşı hiçbir ekran
+    çizilmedi; yayımlanmış sürümden güncelleme imzalı arşivden değil, etiketin
+    kaynağının deneme lisansıyla derlenmesinden ölçüldü; 58 karakterlik bir
+    site adını olağan nginx reddeder; sertifika doğrulama dizini, reddedilen
+    bir oluşturmadan ve bir silmeden sonra yerinde kalır.
+  - Bu aday hiçbir P0 işini kapatmaz ve ilerletmez. Yayımlanması kurulu hiçbir
+    paneli güncellemez; güncellemeyi yalnız sahip, panelin kendi güncelleme
+    ekranından başlatır.
+
 ### Son DNS sonuçları ve sınırları
 
 - [Güncel kaynakla BIND/PowerDNS gerçek sunucu denemesi](deploy/e2e/dns-kill-matrix/NATIVE-BIND-PDNS-CURRENT-SOURCE-SMOKE-20260927.md), Debian üzerinde yönetilen BIND'den Arch üzerinde panelsiz PowerDNS'e ilk aktarımı doğruladı. SOA, NS ve seçili A yanıtları UDP/TCP üzerinden iki konuk yeniden açılmadan önce ve sonra eşleşti; gerçek Panel ve Agent birimleri kapalı kaldı. Paket yerel ve imzasızdı. Sonraki kayıt değişiklikleri, ters topoloji, kurulu sunucular ve güncelleme kurtarması bu denemede doğrulanmadı; P0.4/P0.5 açık.
@@ -119,7 +233,8 @@ yeni bir mimari plan başlatmaz.
 | 1 | P0.4: [DNS kurtarma kabul kütüğü](docs/DNS-RECOVERY-ACCEPTANCE.tr.md) (29 Eylül 2026), ürünün başlatabildiği her DNS motoru değişikliğini geçti / adı belli eksik / desteklenmiyor durumlarından birine bağlar. [D-026](docs/DECISIONS.tr.md) ile çalışan BIND→PowerDNS geçişi artık Panel, kurulum ve Agent'ta her topolojide reddediliyor (`bind_source_pdns_switch_unsupported`; bileşen testleri geçti); ilk kurulumlarda Agent'ın aynı işlemle kurtarması kabul edilen sözleşme. Debian'da korumalı sahip CLI kurtarması için dört sınırlı gerçek sistem kanıtı var: harici PowerDNS devralması, PowerDNS-BIND geçişi geri alması, çalışan-BIND devralması geri alması ve yeni PowerDNS V3 başlangıç öncesi ters işlemi. 29 Eylül 2026'da dört boş kurulum hücresi gerçek sistemde koştu ([kanıt](deploy/e2e/dns-kill-matrix/evidence/fresh-install-20260929/README.md)): boş PowerDNS hedef başladıktan sonra ve boş BIND hedef başladıktan sonra (Debian ve Arch) aynı istekle kurtarıldı; boş PowerDNS hedef başlamadan önce kesilince **düştü** — geri almanın durmuş hedef kanıtı hiç başlamamış, kurulumun maskelediği birimi reddediyordu. `1c336f6d` ile düzeltildi; `target-staged` ve `intent` hücrelerinin düzeltilmiş kaynakla [yeniden koşusu](deploy/e2e/dns-kill-matrix/evidence/fresh-install-rerun-20260929/README.md) açılışta geri aldı ve aynı isteğin yeniden denemesiyle tamamlandı. Sahip komutu yönlendirmesi (D-024) kaynakta kapandı: durum komutu ve Agent ret metinleri tam sahip komutunu ve istek kimliğini söylüyor ya da hiçbirinin uygulanmadığını açıkça belirtiyor. Bu iş açık bir kod eksiğini ortaya çıkardı: yeniden açılan Agent kirasını bıraktıktan sonra (`released-undecided`) `recover-dns-bind-switch`, `recover-dns-bind-adoption` ve `recover-dns-pdns-adoption` günlüğü reddediyor; yani Agent çalışırken yarıda kesilen PowerDNS→BIND geçişinin veya devralmanın kabul edilen sahip komutu yok. Önceki gerçek sistem kanıtları Agent kapalıyken alınmıştı. Kabul kuralı (yalnız Agent'ın bilerek bıraktığı iş; şema değişikliği yok, defter yeniden yazılmıyor; doğru metin okuma anında hesaplanıyor) ve denetleyicinin `--owner-inverse-after-restart` akışı kaynakta. Gerçek sistem sonucu: `7ad24282` üzerindeki ilk koşu güvenlik denetimleri geçerek düştü (sahip komutu hiç başlamamış, koruma maskeli BIND hedefini reddetti), `411398d9` ile düzeltildi ve `target-staged` ile `intent` hücrelerinin [yeniden koşusu](deploy/e2e/dns-kill-matrix/evidence/owner-inverse-after-restart-rerun-20260929/README.md) Agent yeniden başlamış ve çalışırken geçti — PowerDNS baştan sona aynı süreçle hizmet verdi, BIND hiç başlamadı. Ardından kaynak durdurulduktan sonraki kesintiler (`source-stopped`, `target-started`) akışın kritik çeşidinde [geçti](deploy/e2e/dns-kill-matrix/evidence/owner-inverse-critical-20260929/README.md): PowerDNS tek yetkili olarak yeniden hizmet verdi, bölge seri numarası değişmedi; ölçülen PowerDNS kesintisinin üst sınırı 21,6 sn ve 9,4 sn oldu, bu hücrelerde DNS yapısı gereği kesintisiz değildir. **1. madde 29 Eylül 2026 itibarıyla adı belli sınırlarla kapandı** (aynı günkü sahip kararı): tek sunucuda boş BIND, boş PowerDNS, PowerDNS→BIND ve harici PowerDNS devralması, hedef başlamadan önce ve sonra aynı işlemle kurtarma için gerçek sistem kanıtına sahip; kurtarma sözleşmesi olmayan yollar kodda reddediliyor. [Kütükte](docs/DNS-RECOVERY-ACCEPTANCE.tr.md) adlarıyla 2. maddeye taşınanlar: bütün çiftli topolojiler, Agent çalışırken BIND ve PowerDNS devralması (yalnız bileşen testi), durmuş BIND devralma ve BIND yeniden kurulumu (gerçek sistem denemesi yok), V2 before-write ve rolled-back hücreleri, yeniden açılış hücreleri, yeniden çalıştırma çıkış kodu ve diskte kalan artıklar. 1. maddenin kapanması P0.4'ü kapatmaz. Boş çift ikincil hücreleri, düzenekte olmayan panelsiz yerel birincil eşi gerektiriyor; 2. maddeye taşındı ve açık kalıyor. 1. madde/P0.4 tamamlanmamıştır. | [Kabul kütüğü](docs/DNS-RECOVERY-ACCEPTANCE.tr.md); [Çalışan-BIND devralması](deploy/e2e/dns-kill-matrix/NATIVE-BIND-ADOPTION-OWNER-CLI-20260927.md), [PowerDNS-BIND geçişi geri alması](deploy/e2e/dns-kill-matrix/NATIVE-BIND-PROTECTED-OWNER-CLI-20260927.md), [PowerDNS devralması](deploy/e2e/dns-kill-matrix/NATIVE-PDNS-PROTECTED-OWNER-CLI-20260926.md) ve [yeni PowerDNS V3 başlangıç öncesi ters işlem](deploy/e2e/dns-kill-matrix/evidence/pdns-v3-prestart-20260928/README.md). Deneme sınırları ilgili raporlarda yer alır. |
 | 2 | P0.4/P0.5: eksik kaynak/ikincil deney ortamlarını ve üst bölge ya da uzak panel gerektirmeyen uygulanabilir silme doğrulamasını tamamla. 1. maddeden taşınanlar (29 Eylül 2026, [kütükte](docs/DNS-RECOVERY-ACCEPTANCE.tr.md) adlarıyla): boş çift ikincil hücreleri için panelsiz yerel birincil eş, Agent çalışırken devralma geri almaları, durmuş BIND devralma ve BIND yeniden kurulum hücreleri, V2 before-write ve rolled-back hücreleri, yeniden açılış hücreleri. **2. madde 1 Ekim 2026 itibarıyla adı belli sınırlarla kapandı** ([kütük bölümü](docs/DNS-RECOVERY-ACCEPTANCE.tr.md)). Kesinti matrisi 4–12. grupları koştu (panelsiz BIND ve PowerDNS birincil eşler; başlamadan önce ve sonra kesilen boş BIND ve PowerDNS ikincilleri, yönetim kapalıyken yeniden açılışlar; durmuş BIND devralma; V2 before-write ve rolled-back hücreleri; genel RPC üzerinden tek bölgeli ve sıfır bölgeli boş çift PowerDNS birincili, tutulan sahip düzenlemeleri, Agent'ın bıraktığı işin sahip komutuyla bitirilmesi, sahip kaydından sonra sürdürülen ebeveynsiz silme) ve ürün akışı çift sürücüsü iki geçici CelikPanel sunucusunda yedi kez koştu; [7. çift](deploy/e2e/dns-pair-acceptance/evidence/pair7-20261001/README.md) BIND/BIND, BIND/PowerDNS ve PowerDNS/BIND düzenlerinde her adımı geçti: kurulum, bölge ekleme, kayıt düzenleme, sahip kaydından sonra ürünün kanıtıyla bölge silme (`dns-peer-enroll`, BIND ve PowerDNS ikincilleri), yeniden ekleme, panel ve Agent kapalıyken DNS yanıtlamaya devam ederken yeniden açılış ve yönetimin dönüşü. Yalnızca gerçek sistem koşularının bulduğu on bir ürün kusuru yol boyunca kaynakta kapatıldı (sıfır bölgeli katalog denetimi, sihirbaz durumları ve lisans yenileme, müşteri arşivindeki kanıt, Arch'ta rndc anahtarı, PowerDNS bildirim bağlantı noktası, yönetilen ikincilde yerel katalog aktarımı ve denetleyici nedenleri, yalnızca DNS'li alan adında posta aşaması, yönetilen PowerDNS ikincilinde sahip denetleyicisi, BIND birincil planının kaynak durumu, sahip değişikliği sanılan daemon damgası, dalga sınırında atılan olumlu kanıt). Bu kanıtla boş çift PowerDNS birincili kapısı ölçülen kapsam içinde ana hatta açık ([D-028](docs/DECISIONS.tr.md)). Kütük satırları 3, 5, 6, 12 ve 17 sınırlarıyla GEÇTİ; 8 ve 14 EKSİK kalıyor; adı belli sınırlar (hücre başına tek çalıştırma, dizüstü ana makine, yalnızca test amaçlı lisans, bölge eşitleme içinde SIGKILL yok, damga kabulü ve kanıt süre aşımı gerçek sistemde görülmedi, güncelleme tetikleyicisi olmayan sürüm-1 BIND ikincili, müşteri arşivindeki düzenek) kütükte. 2. maddenin kapanması P0.4 ya da P0.5'i kapatmaz ve kurulu panel güncellemesine yetki vermez. | Desteklenen gerçek birincil/ikincil birleşimleri ekleme/düzenleme/silme, yüklenen yerel bölge durumu ve yeniden açılışı kanıtlar; belirsizlikte aynı işleme yönelik uygulanabilir kurtarma yolu sunulur. Deney altyapısı açığı kapsam dışı sayılamaz. |
 | 3 | P0.1–P0.5: kalan uçtan uca güncelleme, erişim, şema, TLS/devreye alma ve hizmet matrisini kapat. **3. madde 1 Ekim 2026 itibarıyla adı belli sınırlarla kapandı** ([sözleşme bölümü](docs/RESILIENCE-CONTRACT.tr.md#yol-haritası-3-madde-durumu-2026-10-01-itibarıyla-adı-belli-sınırlarla-kapandı-p01p02p03p05)). Geçici Debian 13 ve Arch konuklarında sahibin başlattığı güncelleme koşuları upd2–upd6 (upd1 hiçbir güncellemeye ulaşmadı) şunları ölçtü: oturum açmış sahip olarak Panel'in güncelleme başlatma API'siyle kurulan iyi aday; tamamlanmadan önce başarısız olan adayın, ikinci bir arızadan sonra da (Debian'da VM sıfırlama, Arch'ta SIGKILL) otomatik olarak önceki sürüme dönmesi; tamamlandıktan sonra başarısız olan adayın üç kez yeniden denenmesi, nedeni korunarak duraklaması ve sahibin yazdırılmış yeniden denemesinden sonra bitmesi; cron'un hiç kesilmemesi ve sitenin yalnız enjekte edilen VM sıfırlaması çevresinde kesilmesi (en çok yaklaşık 22 sn); Panel ve Agent kapalıyken yeniden açılış boyunca site, veritabanı, cron ve güvenlik duvarının hizmet vermeye devam etmesi (SMTP Debian'da) ve yenileme zamanlayıcısının durumunu koruması. Bu koşuların bulduğu ürün kusurları kaynakta kapatıldı. 3. maddenin kapanması hiçbir P0 işini kapatmaz: deney imzası ve loopback kaynağı, az tekrar ve tarayıcı yok, Ubuntu yok, güç kaybı yok, tamamlandıktan sonra geri alma yok, Panel durmuşken Panel'in adresinde canlı durum yok ve gerçek sistemde tetiklenmeyen yollar sözleşme bölümünde adlarıyla kalır. | Kullanıcının arayüzden güncelleme başlatması, başarısız aday, otomatik geri alma, kurtarmadaki ikinci arıza, kimlik doğrulamalı yönlendirme ve korunan hizmetler tek işlemde doğrulanır. İddia edilen her platform/sürüm birleşiminin kanıtı saklanır. |
-| 4 | Kesin adayın sürüm incelemesi ve kısa kullanıcı test yolu. **Aday incelemesi tamamlandı; adayın kesin kodu (`f6cdd5a0`) 2–3 Ekim 2026'da güncelleme matrisinin bir tam koşusundan geçti ve yayımlama sahibi bekliyor** ([sürüm notları](docs/RELEASE-NOTES-v0.1.0-alpha.81.tr.md)). Müşteri arşivi artık düzeneği, test betiklerini ve kanıtı taşımıyor; imzalama adımı bunları taşıyan arşivi reddediyor. Güncelleme yolunun salt-okur incelemesi yedi kusur buldu, yedisi de kaynakta düzeltildi (bileşen testleri; kalan açıklar sözleşme bölümünde listelenir); en önemlisi, v0.1.0-alpha.80'in başlattığı işçinin durum kaydı yazmamasıydı, bu yüzden yeni yönlendirme ilk yükseltmede hiç görünmüyordu. Bu ilk yükseltme sonra, durum başına tek çalıştırmayla, test lisansıyla yeniden derlenen alpha.80 kaynağından (imzalı arşivden değil) Debian 13 ve Ubuntu 24.04'te ölçüldü (iyi aday, sahibin devam ettirmesi, alpha.80'e dönen kusurlu aday); Arch'ta alpha.80'den ölçülmedi. Ubuntu, boştaki bir paket yardımcısının kurulumu engellediğini ve güncelleme başlatmayı reddettirebildiğini ortaya çıkardı; ilk düzeltme gerçek sistemde tutmadı, düzeltilmişi ölçüldü. Sahip için açık olanlar: sürüm numarası; yalnız root ile çalışan paketleme testleri (18), geçici bir makinede veya CI'da; üretim imzalaması ve uyum denetimi; satıcıya ait yayımlama araçlarının arşivde kalıp kalmayacağı; sahip testi; kurulu panellerin her güncellemesi. İnceleme düzeltmelerinden sonra Panel'in posta başlangıç adımlarını ertelenmiş yeniden denemesi eklendi ve ölçüldü, ardından tüm matris son kodda bir kez daha koşuldu (upd13: 20 hücre, aday kusuru yok). Adı belli sınırlar sürüm notlarında; hiçbir P0 işi kapanmadı. | Gerekli kabul işleri kapanır veya bilinçli olarak dar kapsamlı sürümün açık sınırları belirtilir. İmzalı dosyalar ve kurtarma uyumu doğrulanır; kurulu panel güncellemesini yalnız kullanıcı başlatır. |
+| 4 | Kesin adayın sürüm incelemesi ve kısa kullanıcı test yolu. **Aday incelemesi tamamlandı; adayın kesin kodu (`f6cdd5a0`) 2–3 Ekim 2026'da güncelleme matrisinin bir tam koşusundan geçti ve yayımlama sahibi bekliyor** ([sürüm notları](docs/RELEASE-NOTES-v0.1.0-alpha.81.tr.md)). Müşteri arşivi artık düzeneği, test betiklerini ve kanıtı taşımıyor; imzalama adımı bunları taşıyan arşivi reddediyor. Güncelleme yolunun salt-okur incelemesi yedi kusur buldu, yedisi de kaynakta düzeltildi (bileşen testleri; kalan açıklar sözleşme bölümünde listelenir); en önemlisi, v0.1.0-alpha.80'in başlattığı işçinin durum kaydı yazmamasıydı, bu yüzden yeni yönlendirme ilk yükseltmede hiç görünmüyordu. Bu ilk yükseltme sonra, durum başına tek çalıştırmayla, test lisansıyla yeniden derlenen alpha.80 kaynağından (imzalı arşivden değil) Debian 13 ve Ubuntu 24.04'te ölçüldü (iyi aday, sahibin devam ettirmesi, alpha.80'e dönen kusurlu aday); Arch'ta alpha.80'den ölçülmedi. Ubuntu, boştaki bir paket yardımcısının kurulumu engellediğini ve güncelleme başlatmayı reddettirebildiğini ortaya çıkardı; ilk düzeltme gerçek sistemde tutmadı, düzeltilmişi ölçüldü. Sahip için açık olanlar: sürüm numarası; yalnız root ile çalışan paketleme testleri (18), geçici bir makinede veya CI'da; üretim imzalaması ve uyum denetimi; satıcıya ait yayımlama araçlarının arşivde kalıp kalmayacağı; sahip testi; kurulu panellerin her güncellemesi. İnceleme düzeltmelerinden sonra Panel'in posta başlangıç adımlarını ertelenmiş yeniden denemesi eklendi ve ölçüldü, ardından tüm matris son kodda bir kez daha koşuldu (upd13: 20 hücre, aday kusuru yok). Adı belli sınırlar sürüm notlarında; hiçbir P0 işi kapanmadı. **9 Ekim 2026 durumu:** sürüm `v0.1.0-alpha.81` olarak yayımlandı (etiket `a0beb726` üzerinde, 4 Ekim 2026). Sahibin bildirdiği ve burada bir dosyada kayıtlı olmayanlar: yayımlama adımları (#204 numaralı çekme isteğinin birleştirilmesi, etiket, portal yayını), altı imzalı dosyanın doğrulanması ve kurulu iki panelin (biri Ubuntu 24.04, biri Debian 13) 8 Ekim 2026'da panelin kendi güncelleme ekranından güncellenmesi. | Gerekli kabul işleri kapanır veya bilinçli olarak dar kapsamlı sürümün açık sınırları belirtilir. İmzalı dosyalar ve kurtarma uyumu doğrulanır; kurulu panel güncellemesini yalnız kullanıcı başlatır. |
+| 5 | `v0.1.0-alpha.82` adayının sürüm incelemesi (yukarıdaki "Sürüm durumu — 9 Ekim 2026" bölümüne bakın). **Aday; yayımlanmadı; numara sahibin kararı.** 8 ve 9 Ekim 2026'daki dört gerçek sistem koşusu, bir ek ölçüm ve `postconf`'un bir okuması; ayar kayıtlarını, hizmet işlemlerini, istek kimliğini, yayımlanmış v0.1.0-alpha.81'den güncellemeyi (`cfa329676` hâliyle) ve yeni kurulmuş konuklarda son düzeltmeleri (`557b554eb` hâliyle, Arch'ta PHP siteleri dahil) ölçtü; geçmeyen tek denetim, Ubuntu 24.04'te Postfix durdurulduktan sonraki not, düzeltildi ve yeniden ölçüldü. Son koddaki `postconf` düzeltmesi (`67b62cc0f`) gerçek programın bir okumasına ve bileşen testlerine dayanır. Güncelleme matrisi 9 Ekim 2026'da bu son kodda, beşinci bir koşuda yinelendi: on hücrenin tamamı, her biri bir kez ve konuk diskleri bellekteyken, üçüncü koşunun ölçtüğü sonuca ulaştı. Son kodda çalıştırılmayanlar: yeni kurulum ve gerçek bir sistemde düzeltilmiş posta sertifikası yolu. Sahip için açık olanlar: sürüm numarası; bu ikisinin yayımlamadan önce ölçülmesi ya da adı belli sınırlar olarak çıkması kararı; üretim imzalaması ve doğrulaması; geçici bir sunucuda sahip testi; kurulu panellerin her güncellemesi. Sonraki sürüme taşınan: sahibin üretilmiş bir site yapılandırma dosyasındaki düzenlemesinin bir Panel başlangıcında neyle karşılaştığının denetimi. Hiçbir P0 işi kapanmadı ve ilerlemedi. | Kapanış güncelleme matrisi saklanır ([kanıt](deploy/e2e/release-recovery/evidence/set5-20261009/README.md)) ve [sürüm notları](docs/RELEASE-NOTES-v0.1.0-alpha.82.tr.md) hangi denetimin hangi koda dayandığını söyler. Sürüm, açık kalan sınırlarını belirtir. İmzalı dosyalar ve kurtarma uyumu doğrulanır; kurulu panel güncellemesini yalnız kullanıcı başlatır. |
 
 Yeni test eklemeden önce hangi açık kabulün kapanacağı belirtilir.
 Geçen deney, ancak ilgili değişiklik veya adı konmuş belirsizlik nedeniyle tekrarlanır.
