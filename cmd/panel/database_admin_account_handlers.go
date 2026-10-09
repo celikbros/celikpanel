@@ -340,10 +340,14 @@ func (p *Panel) handleRemoveDatabaseAdminAccount(w http.ResponseWriter, r *http.
 // oldugunu sorar. Bilerek en-iyi-caba ve bilerek susledigi seyi dusurmesine
 // izin verilmez.
 func (p *Panel) recordEngineVersion(server *core.DatabaseServer) {
-	current := strings.ToLower(strings.TrimSpace(server.Version))
-	if current != "" && current != "unknown" {
-		return
-	}
+	// The running engine is asked whenever the Panel can ask it, whatever the
+	// service scan had recorded (11 Oct 2026): one method on every platform.
+	// The scan's value came from a program on disk, and on two platforms it
+	// was not the server's version (Ubuntu 24.04: the client's "15.1"; Arch:
+	// the column name "VERSION()"). A version that cannot be read stays as it
+	// was.
+	// Panel sorabildigi her durumda calisan motora sorar; her platformda tek
+	// yontem. Okunamayan surum oldugu gibi kalir.
 	driver, err := p.dbDriverFor(server)
 	if err != nil {
 		return

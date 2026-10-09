@@ -234,10 +234,11 @@ func (a *Agent) validatedCreateSiteRequest(
 		if err := services.ValidatePHPVersion(req.PHPVersion); err != nil {
 			return transport.CreateSiteRequest{}, nil, services.RenderedVhost{}, err
 		}
-		phpSocket = fmt.Sprintf(
-			"/var/run/php/php%s-fpm-site%d.sock",
+		// The socket is the one the pool is written with, on this host's
+		// own PHP-FPM layout (services.PHPFPMSocketPath).
+		phpSocket = services.PHPFPMSocketPath(
 			req.PHPVersion,
-			req.SiteID,
+			fmt.Sprintf("site%d", req.SiteID),
 		)
 	}
 	vhostReq := &ApplyVhostRequest{

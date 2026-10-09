@@ -27,16 +27,82 @@ import (
 
 type cpmovePreview = transport.CpmoveInspectResponse
 
-func (p *Panel) inspectCpmove(ctx context.Context, archivePath string) (*cpmovePreview, error) {
+// inspectCpmove reads the archive on the server. Only the apply of an import
+// asks for the mailboxes' password hashes (withMailHashes); a preview never
+// does, so a preview never holds one.
+// inspectCpmove arşivi sunucuda okur. Posta kutularının parola özetlerini
+// yalnızca içe aktarımın uygulanması ister; önizleme asla istemez.
+func (p *Panel) inspectCpmove(ctx context.Context, archivePath string, withMailHashes bool) (*cpmovePreview, error) {
 	var preview cpmovePreview
 	err := p.callAgent("Agent.InspectCpmove", &transport.CpmoveInspectRequest{
 		ExpectedBuildCommit: strings.TrimSpace(buildCommit),
 		Path:                archivePath,
+		IncludeMailHashes:   withMailHashes,
 	}, &preview)
 	if err != nil {
 		return nil, err
 	}
 	return &preview, nil
+}
+
+// importPreviewAnswer is everything the browser is told about an archive
+// before an import. It is its own type, with every field named here, so that a
+// field added to the Agent's answer does not reach the browser by itself
+// (11 Oct 2026: the preview was the Agent's answer encoded as it came, and it
+// carried each mailbox's password hash).
+//
+// A mailbox is its address, its quota and one fact about its password:
+// whether the archive holds one that the import will keep. Nothing else.
+//
+// importPreviewAnswer, içe aktarımdan önce tarayıcıya arşiv hakkında söylenen
+// her şeydir. Kendi türüdür: Agent yanıtına eklenen bir alan tarayıcıya
+// kendiliğinden ulaşmaz. Bir posta kutusu adresi, kotası ve parolası hakkında
+// tek bir bilgidir: arşivde içe aktarımın koruyacağı bir parola var mı.
+type importPreviewAnswer struct {
+	Username     string                                 `json:"username"`
+	MainDomain   string                                 `json:"main_domain"`
+	Domains      []string                               `json:"domains"`
+	PublicHTML   bool                                   `json:"public_html"`
+	SiteBytes    int64                                  `json:"site_bytes"`
+	MailAccounts []importPreviewMailbox                 `json:"mail_accounts"`
+	Forwarders   []transport.CpmoveForwarder            `json:"forwarders"`
+	DNSZones     map[string][]transport.CpmoveDNSRecord `json:"dns_zones"`
+	Databases    []transport.CpmoveDatabase             `json:"databases"`
+}
+
+type importPreviewMailbox struct {
+	Domain      string `json:"domain"`
+	User        string `json:"user"`
+	QuotaMB     int    `json:"quota_mb"`
+	HasPassword bool   `json:"has_password"`
+}
+
+func importPreviewFor(preview *cpmovePreview) importPreviewAnswer {
+	answer := importPreviewAnswer{
+		Username: preview.Username, MainDomain: preview.MainDomain,
+		Domains: preview.Domains, PublicHTML: preview.PublicHTML, SiteBytes: preview.SiteBytes,
+		MailAccounts: make([]importPreviewMailbox, 0, len(preview.MailAccounts)),
+		Forwarders:   preview.Forwarders, DNSZones: preview.DNSZones, Databases: preview.Databases,
+	}
+	for _, account := range preview.MailAccounts {
+		answer.MailAccounts = append(answer.MailAccounts, importPreviewMailbox{
+			Domain: account.Domain, User: account.User, QuotaMB: account.QuotaMB,
+			HasPassword: account.HasPassword || account.CryptHash != "",
+		})
+	}
+	if answer.Domains == nil {
+		answer.Domains = []string{}
+	}
+	if answer.Forwarders == nil {
+		answer.Forwarders = []transport.CpmoveForwarder{}
+	}
+	if answer.DNSZones == nil {
+		answer.DNSZones = map[string][]transport.CpmoveDNSRecord{}
+	}
+	if answer.Databases == nil {
+		answer.Databases = []transport.CpmoveDatabase{}
+	}
+	return answer
 }
 
 func (p *Panel) handleImportInspect(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +119,7 @@ func (p *Panel) handleImportInspect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	preview, err := p.inspectCpmove(r.Context(), req.Path)
+	preview, err := p.inspectCpmove(r.Context(), req.Path, false)
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -62,7 +128,7 @@ func (p *Panel) handleImportInspect(w http.ResponseWriter, r *http.Request) {
 		writeClientError(w, http.StatusBadRequest, preview.Error)
 		return
 	}
-	json.NewEncoder(w).Encode(preview)
+	json.NewEncoder(w).Encode(importPreviewFor(preview))
 }
 
 type importStep struct {
@@ -101,7 +167,12 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	preview, err := p.inspectCpmove(r.Context(), req.Path)
+	// The archive is read again on the server for the apply: the browser sends
+	// the archive's path and the owner's choices, never what the preview held.
+	// The mailboxes' password hashes are asked for only when mail is imported.
+	// Arşiv, uygulama için sunucuda yeniden okunur: tarayıcı arşivin yolunu ve
+	// sahibin seçimlerini gönderir, önizlemenin içeriğini asla göndermez.
+	preview, err := p.inspectCpmove(r.Context(), req.Path, req.DoMail)
 	if err != nil {
 		writeServerError(w, err)
 		return
@@ -247,7 +318,23 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 			writeClientError(w, http.StatusConflict, "domain already exists on this server")
 			return
 		}
-		writeServerError(w, err)
+		if refusal, ok := hostingRootNotTraversable(err); ok {
+			writeHostingRootNotTraversable(w, refusal)
+			return
+		}
+		if _, stable := classifyStableAgentError(err); stable {
+			writeServerError(w, err)
+			return
+		}
+		// The site is the import's first step, and every other step comes
+		// after it: when it fails, nothing of the archive was imported. That
+		// much is verified and is said, instead of a bare 500 (measured on
+		// Arch, 11 Oct 2026: every import answered "internal server error").
+		// Site, içe aktarımın ilk adımıdır; başarısız olursa arşivden hiçbir
+		// şey içe aktarılmamıştır. Çıplak bir 500 yerine bu söylenir.
+		log.Printf("[502] cPanel import: the site for %s could not be created: %s",
+			req.Domain, boundedAgentDiagnostic(err.Error()))
+		writeCodedError(w, http.StatusBadGateway, errCodeImportSiteNotCreated, importSiteNotCreatedMessage, "")
 		return
 	}
 	domainID, siteID := created.DomainID, created.SiteID
@@ -288,7 +375,16 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 				fail("mail:"+acc.User, err)
 				continue
 			}
-			if len(acc.CryptHash) == 0 || len(acc.CryptHash) > 4096 ||
+			if len(acc.CryptHash) == 0 {
+				// The archive names the mailbox and holds no password for it
+				// (a suspended mailbox, for one). It is not created with a
+				// password nobody chose.
+				// Arşiv posta kutusunun adını verir, parolasını tutmaz.
+				// Kimsenin seçmediği bir parolayla oluşturulmaz.
+				fail("mail:"+email, errors.New(importMailboxWithoutPassword))
+				continue
+			}
+			if len(acc.CryptHash) > 4096 ||
 				strings.ContainsAny(acc.CryptHash, ":\r\n\x00") {
 				fail("mail:"+email, fmt.Errorf("invalid imported password hash"))
 				continue
@@ -509,28 +605,127 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	status := "pending"
 	finalCtx, cancelFinalize := context.WithTimeout(context.WithoutCancel(ctx), domainDNSPublicationTimeout)
 	defer cancelFinalize()
 	if complete {
 		if err := setCpmoveImportStatus(finalCtx, p.db.GetDB(), domainID, siteID, "active"); err != nil {
 			fail("finalize", err)
-		} else {
-			status = "active"
 		}
 	}
 	if !complete {
-		w.WriteHeader(http.StatusAccepted)
 		p.audit(r, "import.cpanel.incomplete", "domain", domainID)
 	} else {
 		p.audit(r, "import.cpanel.complete", "domain", domainID)
 	}
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"domain_id": domainID,
-		"site_id":   siteID,
-		"status":    status,
-		"steps":     steps,
-	})
+	_ = json.NewEncoder(w).Encode(importApplyAnswerFor(req.Domain, domainID, siteID, steps))
+}
+
+const importMailboxWithoutPassword = "not imported: the archive holds no password for this mailbox"
+
+const (
+	errCodeImportSiteNotCreated = "IMPORT_SITE_NOT_CREATED"
+	importSiteNotCreatedMessage = "The import did not start: the site for this domain could not be created on this server, " +
+		"so no file, mailbox, DNS record or database of the archive was imported. " +
+		"Whether a part of the new site itself was left behind is not known from this answer: open Domains to see whether the domain is listed. " +
+		"The server owner reads the step that failed on the server with sudo journalctl -u celikpanel-agent, corrects it, " +
+		"and starts the import again; nothing starts it again automatically."
+)
+
+// The answer to an import whose every step ended (11 Oct 2026; D-024).
+//
+// An import that could not finish one of its parts used to answer `202` with
+// `status: pending`, the words of work that is still going on. Nothing is
+// going on: every step has ended, each with a verified result, and nothing
+// runs a failed step again. Measured on Debian 13 and Ubuntu 24.04: the files
+// step failed, the domain, the mailbox and the database were imported, and the
+// answer read as if the site files were still on their way.
+//
+// So the answer is `200` with one of two results:
+//
+//   - `status: "active"`: every chosen part was imported and the domain is in
+//     service;
+//   - `status: "partial"`, `code: IMPORT_PARTIAL`: a verified partial result.
+//     `imported` and `not_imported` name the parts, `message` says what stays
+//     and what the owner can do, `domain_status` is the state the domain was
+//     left in ("pending": created and kept, not marked as finished).
+//
+// `steps` is unchanged: one entry per step with its own line.
+//
+// Her adımı bitmiş bir içe aktarımın yanıtı. Bir parçasını bitiremeyen içe
+// aktarım eskiden `202` ve `status: pending` ile, yani süren bir işin
+// sözleriyle yanıtlanıyordu. Süren bir şey yoktur: her adım doğrulanmış bir
+// sonuçla bitmiştir ve başarısız adımı hiçbir şey yeniden çalıştırmaz. Yanıt
+// artık `200`'dür: ya `active` ya da hangi parçaların aktarıldığını ve
+// hangilerinin aktarılmadığını adlarıyla söyleyen `partial`.
+type importApplyAnswer struct {
+	DomainID     int          `json:"domain_id"`
+	SiteID       int          `json:"site_id"`
+	Domain       string       `json:"domain"`
+	Status       string       `json:"status"`
+	DomainStatus string       `json:"domain_status"`
+	Code         string       `json:"code,omitempty"`
+	Message      string       `json:"message,omitempty"`
+	Imported     []string     `json:"imported"`
+	NotImported  []string     `json:"not_imported"`
+	Steps        []importStep `json:"steps"`
+}
+
+const (
+	importStatusComplete = "active"
+	importStatusPartial  = "partial"
+	errCodeImportPartial = "IMPORT_PARTIAL"
+)
+
+func importApplyAnswerFor(domain string, domainID, siteID int, steps []importStep) importApplyAnswer {
+	answer := importApplyAnswer{
+		DomainID: domainID, SiteID: siteID, Domain: domain,
+		Status: importStatusComplete, DomainStatus: "active",
+		Imported: []string{}, NotImported: []string{}, Steps: steps,
+	}
+	for _, step := range steps {
+		if step.Step == "finalize" {
+			// Not a part of the archive: the domain could not be marked as
+			// finished. It is said in the message, not listed as a part.
+			continue
+		}
+		if step.OK {
+			answer.Imported = append(answer.Imported, step.Step)
+		} else {
+			answer.NotImported = append(answer.NotImported, step.Step)
+		}
+	}
+	complete := true
+	for _, step := range steps {
+		if !step.OK {
+			complete = false
+		}
+	}
+	if complete {
+		return answer
+	}
+	answer.Status, answer.DomainStatus, answer.Code = importStatusPartial, "pending", errCodeImportPartial
+	answer.Message = importPartialMessage(domain, answer.Imported, answer.NotImported)
+	return answer
+}
+
+func importPartialMessage(domain string, imported, notImported []string) string {
+	list := func(parts []string) string {
+		if len(parts) == 0 {
+			return "none"
+		}
+		return strings.Join(parts, ", ")
+	}
+	missing := "Not imported: " + list(notImported) + ". "
+	if len(notImported) == 0 {
+		missing = "Every part was imported, but the domain could not be marked as finished. "
+	}
+	return "The import ended with a part of the archive not imported, and it does not continue by itself. " +
+		"Imported: " + list(imported) + ". " + missing +
+		"The domain " + domain + " was created and is kept; it is left marked as not finished. " +
+		"The reason of each part that was not imported is in its step below. " +
+		"The server owner either adds the missing parts by hand on the domain's own pages, " +
+		"or removes " + domain + " on the Domains page, corrects what the step names and imports the archive again; " +
+		"an import into a domain that already exists is refused, so nothing is imported twice."
 }
 
 // pushForwardingsToAgent syncs the full forwarding map to postfix (the map

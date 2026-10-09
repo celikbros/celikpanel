@@ -335,7 +335,12 @@ type ServiceActionResult struct {
 	Error   string `json:"error,omitempty"`
 	Outcome string `json:"outcome,omitempty"`
 	// Stage: "check", "reload", "start", "stop", "verify", or "command" when
-	// systemd itself refused or failed the action.
+	// systemd itself refused or failed the action. Since 11 Oct 2026 a reload
+	// has three more: "not_running" (the daemon is stopped, so there was
+	// nothing to reload), and for PostgreSQL, whose running server can be
+	// asked, "reload_reread" (the unit reported a failed reload but the server
+	// did re-read its files) and "reload_not_reread" (it did not). "reload"
+	// alone claims neither.
 	Stage string `json:"stage,omitempty"`
 	// Applied: what a verified action came to ("reloaded", "started",
 	// "restarted", "stopped", "running" when it was already running).
@@ -353,6 +358,14 @@ const (
 	ServiceActionUnknown  = "unknown"
 	// ServiceActionStageCommand: systemd refused or failed the action itself.
 	ServiceActionStageCommand = "command"
+	// ServiceActionStageNotRunning: a reload of a daemon that is stopped.
+	// Nothing was reloaded and nothing was started.
+	ServiceActionStageNotRunning = "not_running"
+	// The unit reported a failed reload; the running server was asked and
+	// answered that it re-read its configuration files after the action.
+	ServiceActionStageReloadReread = "reload_reread"
+	// The same, and the server answered that it did not re-read them.
+	ServiceActionStageReloadNotReread = "reload_not_reread"
 )
 
 // ApplyVhostRequest is the complete, explicit nginx vhost input shared by the

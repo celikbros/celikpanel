@@ -4359,3 +4359,349 @@ ret, kodunun girdisi varsa katalogdan, yoksa sunucunun cümlesiyle gösterilir.
 Korumanın sözleşmesini tutan yerel bir sahte sunucuya karşı gerçek bir
 Chrome'da incelendi (dayanıklılık sözleşmesi, bu tarihli kayıt); gerçek bir
 Panel'de değil.
+
+### İkinci gerçek sistem ölçümünden sonra: başarısız yeniden yükleme yalnızca doğrulananı söyler, içe aktarım neyi aktardığını söyler, sertifika hatası türünü söyler (2026-10-11)
+
+Bileşen testleriyle kaynak durumu; gerçek hizmetlerde yeniden koşu bekliyor ve
+kurulu bir sunucuda hiçbir şey gözlenmedi. Neyin ölçüldüğü ve neyin değiştiği
+için aynı tarihli dayanıklılık sözleşmesi kaydına bakın. Bu kayıt cümleleri
+tutar.
+
+**Metinlerin izlediği kural.** Bir cümle, bir hizmetin hangi ayarlarla
+çalıştığını yalnızca hizmete sorulduğunda söyler. Birimin başarısız diye
+bildirdiği bir yeniden yükleme bu konuda tek başına hiçbir şey söylemez: komut
+başarısız olmadan önce hizmete sinyal göndermiş olabilir. Çalışmayan bir hizmet
+başarısız bir yeniden yükleme değil, eksik bir önkoşuldur. Her adımı bitmiş bir
+içe aktarım ya tamdır ya da doğrulanmış kısmi bir sonuçtur; asla "beklemede"
+değildir. Sertifika çıkarmayan bir istek, hatanın türünü yalnızca certbot'un
+kendi çıktısı onu söylediğinde adlandırır.
+
+**Yerini alan.** 2026-10-10 kaydında yazılı `err.SERVICE_ACTION_FAILED.reload`
+cümlesi ve API'nin `reload` gerekçesinin cümlesi ("... önceki ayarlarıyla
+çalışmayı sürdürüyor") artık gösterilmez. Aşağıdakiler gösterilir.
+
+**Başarısız bir yeniden yükleme (`POST /api/v1/service/action`).**
+
+- `502 SERVICE_ACTION_FAILED`, reason `reload`
+  API: "The service reported that the reload failed. CelikPanel cannot read
+  from this service which settings it is running with now, so it says neither
+  that it kept the settings it had nor that it took the files on disk. The
+  server owner runs the command shown to read the service's own answer,
+  corrects what it names, and then repeats this action here; nothing repeats it
+  automatically."
+- `err.SERVICE_ACTION_FAILED.reload`
+  EN: "{unit} reported that the reload failed. CelikPanel cannot read from
+  {unit} which settings it is running with now, so this page says neither that
+  it kept the settings it had nor that it took the files on disk. On the
+  server, run {command} to see why, correct it, then repeat the action here."
+  TR: "{unit} yeniden yüklemenin başarısız olduğunu bildirdi. CelikPanel,
+  {unit} hizmetinin şu an hangi ayarlarla çalıştığını ondan okuyamıyor; bu
+  yüzden bu sayfa ne önceki ayarlarını koruduğunu ne de diskteki dosyaları
+  aldığını söylüyor. Sunucuda {command} komutunu çalıştırıp nedenini görün,
+  düzeltin, sonra işlemi burada yineleyin."
+- `502 SERVICE_ACTION_FAILED`, reason `reload_reread` (PostgreSQL)
+  API: "The unit reported the reload as failed, but PostgreSQL itself re-read
+  its configuration files after it: the settings in the files on disk are in
+  effect now, except those that need a restart. A step of the unit's own reload
+  command failed after the server had been signalled. The server owner runs the
+  command shown to see which step, and corrects it so that the next reload is
+  reported as it went; the reload does not need to be repeated for these
+  settings."
+- `err.SERVICE_ACTION_FAILED.reload_reread`
+  EN: "The reload of {unit} was reported as failed, but PostgreSQL itself
+  re-read its configuration files after it: the settings in the files on disk
+  are in effect now, except those that need a restart. A step of the unit’s own
+  reload command failed after the server had been signalled. On the server, run
+  {command} to see which step, and correct it so that the next reload is
+  reported as it went. The reload does not need to be repeated for these
+  settings."
+  TR: "{unit} için yeniden yükleme başarısız diye bildirildi, ancak PostgreSQL
+  yapılandırma dosyalarını bundan sonra kendisi yeniden okudu: diskteki
+  dosyalardaki ayarlar, yeniden başlatma gerektirenler dışında, şu an
+  yürürlükte. Birimin kendi yeniden yükleme komutunun bir adımı, sunucuya
+  sinyal gönderildikten sonra başarısız oldu. Sunucuda {command} komutunu
+  çalıştırıp hangi adım olduğunu görün ve sonraki yeniden yüklemenin olduğu
+  gibi bildirilmesi için düzeltin. Bu ayarlar için yeniden yüklemeyi
+  yinelemeniz gerekmez."
+- `502 SERVICE_ACTION_FAILED`, reason `reload_not_reread` (PostgreSQL)
+  API: "The reload failed and PostgreSQL did not re-read its configuration
+  files: it is running with the settings it had before. The server owner runs
+  the command shown to read the service's own answer, corrects what it names,
+  and then repeats this action here; nothing repeats it automatically."
+- `err.SERVICE_ACTION_FAILED.reload_not_reread`
+  EN: "The reload of {unit} failed and PostgreSQL did not re-read its
+  configuration files: it is running with the settings it had before. On the
+  server, run {command} to see why, correct it, then repeat the action here."
+  TR: "{unit} için yeniden yükleme başarısız oldu ve PostgreSQL yapılandırma
+  dosyalarını yeniden okumadı: önceki ayarlarıyla çalışıyor. Sunucuda {command}
+  komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin."
+- `409 SERVICE_ACTION_FAILED`, reason `not_running`
+  API: "The service is not running, so there was nothing to reload and nothing
+  was changed. If it should run, the server owner starts it with Start on this
+  page; it reads its configuration files when it starts."
+- `err.SERVICE_ACTION_FAILED.not_running`
+  EN: "{unit} is not running, so there was nothing to reload and nothing was
+  changed. If it should run, use Start here; it reads its configuration files
+  when it starts. To see its state on the server, run {command}."
+  TR: "{unit} çalışmıyor; bu yüzden yeniden yüklenecek bir şey yoktu ve hiçbir
+  şey değiştirilmedi. Çalışması gerekiyorsa burada Başlat’ı kullanın; başlarken
+  yapılandırma dosyalarını okur. Sunucudaki durumunu görmek için {command}
+  komutunu çalıştırın."
+
+**cPanel içe aktarımı (`POST /api/v1/import/cpanel/inspect`, `.../apply`).**
+
+- `200`, `status: partial`, `code: IMPORT_PARTIAL`, field `message`
+  API: "The import ended with a part of the archive not imported, and it does
+  not continue by itself. Imported: {imported}. Not imported: {not imported}.
+  The domain {domain} was created and is kept; it is left marked as not
+  finished. The reason of each part that was not imported is in its step below.
+  The server owner either adds the missing parts by hand on the domain's own
+  pages, or removes {domain} on the Domains page, corrects what the step names
+  and imports the archive again; an import into a domain that already exists is
+  refused, so nothing is imported twice."
+- `502 IMPORT_SITE_NOT_CREATED`
+  API: "The import did not start: the site for this domain could not be created
+  on this server, so no file, mailbox, DNS record or database of the archive
+  was imported. Whether a part of the new site itself was left behind is not
+  known from this answer: open Domains to see whether the domain is listed. The
+  server owner reads the step that failed on the server with sudo journalctl -u
+  celikpanel-agent, corrects it, and starts the import again; nothing starts it
+  again automatically."
+- step `mail:<address>`, field `detail`
+  API: "not imported: the archive holds no password for this mailbox"
+- `import.mailPasswords.all`
+  EN: "Each of these mailboxes has a password in the archive, and the import
+  keeps it. The password itself is never shown."
+  TR: "Bu posta kutularının her birinin arşivde bir parolası var ve içe aktarım
+  onu korur. Parolanın kendisi hiçbir zaman gösterilmez."
+- `import.mailPasswords.some`
+  EN: "{kept} of {total} mailboxes have a password in the archive, and the
+  import keeps it. The password itself is never shown. The archive holds no
+  password for {missing}, so the import does not create them: create them on
+  the domain’s mail page afterwards, with a new password."
+  TR: "{total} posta kutusundan {kept} tanesinin arşivde parolası var ve içe
+  aktarım onu korur. Parolanın kendisi hiçbir zaman gösterilmez. Arşivde
+  şunların parolası yok, bu yüzden içe aktarım onları oluşturmaz: {missing}.
+  Bunları sonradan alan adının posta sayfasında yeni bir parolayla oluşturun."
+- `import.inspectUnreadable`
+  EN: "The server’s answer about the archive could not be read, so there is no
+  preview. Inspecting only reads the archive; nothing was changed. Try again."
+  TR: "Sunucunun arşivle ilgili yanıtı okunamadı; bu yüzden önizleme yok.
+  İnceleme arşivi yalnız okur; hiçbir şey değiştirilmedi. Tekrar deneyin."
+- `import.result.complete`
+  EN: "Every part you chose was imported, and {domain} is in service."
+  TR: "Seçtiğiniz her parça içe aktarıldı ve {domain} hizmette."
+- `import.partial.title`
+  EN: "{domain} was imported in part"
+  TR: "{domain} kısmen içe aktarıldı"
+- `import.partial.body`
+  EN: "The import has ended and does not continue by itself. The parts listed
+  as not imported are missing; the others are on this server. {domain} was
+  created and is kept, marked as not finished."
+  TR: "İçe aktarım bitti ve kendiliğinden sürmez. İçe aktarılmadı diye
+  listelenen parçalar eksik; diğerleri bu sunucuda. {domain} oluşturuldu ve
+  korunuyor; tamamlanmadı olarak işaretli."
+- `import.partial.unfinished`
+  EN: "Every part was imported, but {domain} could not be marked as finished.
+  The import has ended and does not continue by itself."
+  TR: "Her parça içe aktarıldı, ancak {domain} tamamlandı olarak
+  işaretlenemedi. İçe aktarım bitti ve kendiliğinden sürmez."
+- `import.partial.imported`
+  EN: "Imported"
+  TR: "İçe aktarıldı"
+- `import.partial.notImported`
+  EN: "Not imported"
+  TR: "İçe aktarılmadı"
+- `import.partial.next`
+  EN: "To finish, either add the missing parts by hand on the pages of
+  {domain}, or remove {domain} on the Domains page, correct what each step
+  below names, and import the archive again. An import into a domain that
+  already exists is refused, so nothing is imported twice."
+  TR: "Tamamlamak için ya eksik parçaları {domain} alan adının sayfalarında
+  elle ekleyin ya da {domain} alan adını Alan Adları sayfasında kaldırın,
+  aşağıdaki her adımın adını verdiği şeyi düzeltin ve arşivi yeniden içe
+  aktarın. Zaten var olan bir alan adına içe aktarım reddedilir; bu yüzden
+  hiçbir şey iki kez içe aktarılmaz."
+- `import.partial.domains`
+  EN: "Open Domains"
+  TR: "Alan adlarını aç"
+- `import.stepsTitle`
+  EN: "Each step"
+  TR: "Adım adım"
+- `import.step.done`
+  EN: "Imported"
+  TR: "İçe aktarıldı"
+- `import.step.notDone`
+  EN: "Not imported"
+  TR: "İçe aktarılmadı"
+- `import.part.domain`
+  EN: "Domain and site"
+  TR: "Alan adı ve site"
+- `import.part.files`
+  EN: "Website files"
+  TR: "Site dosyaları"
+- `import.part.mail`
+  EN: "Mail accounts"
+  TR: "Posta hesapları"
+- `import.part.mailbox`
+  EN: "Mailbox {name}"
+  TR: "{name} posta kutusu"
+- `import.part.forwarders`
+  EN: "Forwarders"
+  TR: "Yönlendirmeler"
+- `import.part.forwarder`
+  EN: "Forwarder {name}"
+  TR: "{name} yönlendirmesi"
+- `import.part.dns`
+  EN: "DNS records"
+  TR: "DNS kayıtları"
+- `import.part.databases`
+  EN: "Databases"
+  TR: "Veritabanları"
+- `import.part.database`
+  EN: "Database {name}"
+  TR: "{name} veritabanı"
+- `import.part.finalize`
+  EN: "Marking the domain as finished"
+  TR: "Alan adını tamamlandı olarak işaretleme"
+- `import.detail.noPassword`
+  EN: "Not imported: the archive holds no password for this mailbox. Create it
+  on the domain’s mail page with a new password."
+  TR: "İçe aktarılmadı: arşivde bu posta kutusunun parolası yok. Onu alan
+  adının posta sayfasında yeni bir parolayla oluşturun."
+- `import.siteNotCreated`
+  EN: "The import did not start: the site for this domain could not be created
+  on this server, so no file, mailbox, DNS record or database of the archive
+  was imported. Whether a part of the new site itself was left behind is not
+  known here: open Domains to see whether the domain is listed. On the server,
+  sudo journalctl -u celikpanel-agent shows the step that failed; correct it,
+  then start the import again. Nothing starts it again automatically."
+  TR: "İçe aktarım başlamadı: bu alan adının sitesi bu sunucuda oluşturulamadı;
+  bu yüzden arşivden hiçbir dosya, posta kutusu, DNS kaydı ya da veritabanı içe
+  aktarılmadı. Yeni sitenin kendisinden bir parçanın geride kalıp kalmadığı
+  burada bilinmiyor: alan adının listede olup olmadığını görmek için Alan
+  Adları sayfasını açın. Sunucuda sudo journalctl -u celikpanel-agent komutu
+  başarısız olan adımı gösterir; onu düzeltin, sonra içe aktarımı yeniden
+  başlatın. Hiçbir şey onu kendiliğinden yeniden başlatmaz."
+
+**certbot'un yerine getirmediği sertifika isteği (`POST /api/v1/domains/{id}/ssl/letsencrypt`).**
+
+- `502 CERTIFICATE_ISSUE_FAILED`, reason `authority_unreachable`
+  API: "No certificate was issued: this server could not reach the certificate
+  authority, so no request was placed with it. The server owner checks that
+  this server can open HTTPS connections to the internet (DNS resolution,
+  outbound port 443, the system clock), then requests the certificate here
+  again."
+- `502 CERTIFICATE_ISSUE_FAILED`, reason `validation`
+  API: "No certificate was issued: the certificate authority could not validate
+  one of the names. Each name of the site must resolve publicly to this server
+  and answer on port 80 from the internet. The domain's owner corrects the DNS
+  records (or the firewall in front of this server), waits until public DNS
+  shows them, then requests the certificate here again."
+- `502 CERTIFICATE_ISSUE_FAILED`, reason `rate_limited`
+  API: "No certificate was issued: the certificate authority refused the
+  request because one of its limits was reached. A new request before the limit
+  resets is refused the same way and counts against it. The line from certbot
+  names the limit and, when the authority says so, when it resets; request the
+  certificate here again after that time."
+- `502 CERTIFICATE_ISSUE_FAILED`, reason `timeout`
+  API: "No certificate was issued: certbot did not finish within the time
+  allowed and was stopped. Why it took that long is not known from this answer.
+  The server owner reads /var/log/celikpanel/certbot/letsencrypt.log on the
+  server, then requests the certificate here again."
+- `502 CERTIFICATE_ISSUE_FAILED`, reason `tool`
+  API: "No certificate was issued: certbot ended with an error. Which step
+  failed is not classified here; the line from certbot says what it reported.
+  The server owner reads /var/log/celikpanel/certbot/letsencrypt.log on the
+  server, corrects what it names, then requests the certificate here again."
+- ardından, sitenin önceden sertifikası varsa
+  API: "The certificate this site already had is still in place and keeps
+  serving."
+- ya da yoksa
+  API: "The site has no certificate from this request and is served as before."
+- ve her zaman en sonda
+  API: "Nothing asks again automatically."
+- `ssl.issueFailure.authority_unreachable`
+  EN: "No certificate was issued for {domain}: this server could not reach the
+  certificate authority, so no request was placed with it. The site is served
+  as before, with the certificate it already had if it had one. Check that this
+  server can open HTTPS connections to the internet (DNS resolution, outbound
+  port 443, the system clock), then request the certificate here again. Nothing
+  asks again automatically."
+  TR: "{domain} için sertifika çıkarılmadı: bu sunucu sertifika otoritesine
+  ulaşamadı; bu yüzden otoriteye bir istek iletilmedi. Site eskisi gibi
+  sunuluyor; önceden bir sertifikası varsa o yerinde duruyor. Bu sunucunun
+  internete HTTPS bağlantısı açabildiğini denetleyin (DNS çözümleme, giden 443
+  numaralı port, sistem saati), sonra sertifikayı buradan yeniden isteyin.
+  Hiçbir şey kendiliğinden yeniden istemez."
+- `ssl.issueFailure.validation`
+  EN: "No certificate was issued for {domain}: the certificate authority could
+  not validate one of the names. The site is served as before, with the
+  certificate it already had if it had one. Each name must resolve publicly to
+  this server and answer on port 80 from the internet. Correct the DNS records
+  (or the firewall in front of this server), wait until public DNS shows them,
+  then request the certificate here again. Nothing asks again automatically."
+  TR: "{domain} için sertifika çıkarılmadı: sertifika otoritesi adlardan birini
+  doğrulayamadı. Site eskisi gibi sunuluyor; önceden bir sertifikası varsa o
+  yerinde duruyor. Her ad genel DNS’te bu sunucuya çözülmeli ve internetten 80
+  numaralı portta yanıt vermelidir. DNS kayıtlarını (ya da bu sunucunun
+  önündeki güvenlik duvarını) düzeltin, genel DNS onları gösterene dek
+  bekleyin, sonra sertifikayı buradan yeniden isteyin. Hiçbir şey kendiliğinden
+  yeniden istemez."
+- `ssl.issueFailure.rate_limited`
+  EN: "No certificate was issued for {domain}: the certificate authority
+  refused the request because one of its limits was reached. The site is served
+  as before, with the certificate it already had if it had one. A new request
+  before the limit resets is refused the same way and counts against it.
+  Request the certificate here again after the limit resets; nothing asks again
+  automatically."
+  TR: "{domain} için sertifika çıkarılmadı: sertifika otoritesi, sınırlarından
+  birine ulaşıldığı için isteği reddetti. Site eskisi gibi sunuluyor; önceden
+  bir sertifikası varsa o yerinde duruyor. Sınır sıfırlanmadan yapılan yeni bir
+  istek aynı biçimde reddedilir ve sınıra sayılır. Sertifikayı sınır
+  sıfırlandıktan sonra buradan yeniden isteyin; hiçbir şey kendiliğinden
+  yeniden istemez."
+- `ssl.issueFailure.timeout`
+  EN: "No certificate was issued for {domain}: certbot did not finish within
+  the time allowed and was stopped. Why it took that long is not known here.
+  The site is served as before, with the certificate it already had if it had
+  one. On the server, read /var/log/celikpanel/certbot/letsencrypt.log, then
+  request the certificate here again. Nothing asks again automatically."
+  TR: "{domain} için sertifika çıkarılmadı: certbot tanınan sürede bitmedi ve
+  durduruldu. Neden o kadar sürdüğü burada bilinmiyor. Site eskisi gibi
+  sunuluyor; önceden bir sertifikası varsa o yerinde duruyor. Sunucuda
+  /var/log/celikpanel/certbot/letsencrypt.log dosyasını okuyun, sonra
+  sertifikayı buradan yeniden isteyin. Hiçbir şey kendiliğinden yeniden
+  istemez."
+- `ssl.issueFailure.tool`
+  EN: "No certificate was issued for {domain}: certbot ended with an error. The
+  site is served as before, with the certificate it already had if it had one.
+  On the server, read /var/log/celikpanel/certbot/letsencrypt.log, correct what
+  it names, then request the certificate here again. Nothing asks again
+  automatically."
+  TR: "{domain} için sertifika çıkarılmadı: certbot hata ile sonlandı. Site
+  eskisi gibi sunuluyor; önceden bir sertifikası varsa o yerinde duruyor.
+  Sunucuda /var/log/celikpanel/certbot/letsencrypt.log dosyasını okuyun, adını
+  verdiği şeyi düzeltin, sonra sertifikayı buradan yeniden isteyin. Hiçbir şey
+  kendiliğinden yeniden istemez."
+- `ssl.issueFailure.said`
+  EN: "certbot reported: {detail}"
+  TR: "certbot’un bildirdiği: {detail}"
+
+**Her biri nerede çizilir.** Hizmet işlemi cümleleri: bir bileşenin sayfasının
+ve bileşenler listesinin bildirimi (`ServiceActionNotice`). O ekranlar Başlat,
+Durdur ve Yeniden başlat gönderir; Yeniden yükle Panel'e API üzerinden ulaşır,
+bu yüzden dört yeniden yükleme cümlesi orada yalnızca bir API istemcisinin
+kullanıcısına, tarayıcı kaydında ise taklit bir yanıtla gösterilir. İçe
+aktarım: önizlemede posta hesaplarının altındaki satır, sonuç (`ImportPage`) ve
+Panel'in bir reddi; ret artık bir bildirimle kaybolmak yerine sayfada kalır
+(`ErrorBanner`). Bir adımın kendi satırı (`detail`), parolası olmayan posta
+kutusununki dışında, sunucunun İngilizce metnidir. Sertifika: SSL/TLS
+sekmesinde, kapatılana ya da sertifika yeniden istenene dek kalan bir bildirim
+(`CertificateIssueNotice`); certbot'un satırı yalnızca yöneticiye gösterilir.
+
+**Sınırlar.** Veritabanı ve veritabanı kullanıcısı pencereleri, sunucu parolayı
+kendisi ürettiğinde onu hâlâ İngilizce bir bildirimde gösterir; çağıran
+yazdıysa hiçbir şey gösterilmez, çünkü sunucu onu artık geri göndermez. Yerel
+döngü taklidine karşı gerçek bir Chrome'da incelendi; gerçek bir Panel'de
+değil.

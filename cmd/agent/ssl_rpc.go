@@ -459,10 +459,15 @@ func (a *Agent) IssueLetsEncryptCertificate(req IssueLetsEncryptRequest, resp *I
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		resp.Success = false
+		// What the run came to, for the answer the owner reads. The full
+		// output stays in resp.Error, which reaches the Panel's log only.
+		resp.FailureDetail = certbotFailureLine(string(output))
 		if ctx.Err() == context.DeadlineExceeded {
+			resp.Failure = transport.CertificateFailureTimeout
 			resp.Error = fmt.Sprintf("certbot issue timed out after %s\nOutput: %s", certbotRenewTimeout, string(output))
 			return nil
 		}
+		resp.Failure = certbotFailureKind(string(output))
 		resp.Error = fmt.Sprintf("certbot failed: %v\nOutput: %s", err, string(output))
 		return nil
 	}

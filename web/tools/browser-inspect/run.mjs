@@ -1713,6 +1713,12 @@ const scenarios = {
 (await import('./scenarios-batch5.mjs')).default(scenarios, { base, vp, locale, theme, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
 // --- end of batch 5 ---
 
+// --- batch 6 (11 Oct 2026): corrections from the second native measurement ---
+// `importpreview`, `importresult`, `reloadwording` and `certfailure` live in
+// their own file, like the batches before.
+(await import('./scenarios-batch6.mjs')).default(scenarios, { base, vp, locale, theme, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
+// --- end of batch 6 ---
+
 for (const [name, run] of Object.entries(scenarios)) {
     if (wanted && !wanted.includes(name)) continue;
     const started = Date.now();

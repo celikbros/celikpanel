@@ -270,3 +270,20 @@ address: the request and one second asking under one identity, and a notice
 that says so. `dbconfig` also measures the surface of the two configuration
 reload answers (failure for settings verified unchanged, attention for
 settings that could not be established) and the label of the line under them.
+
+## Scenarios of the sixth batch (corrections from the second native measurement)
+
+These live in `scenarios-batch6.mjs`. They use the mock routes of the fifth
+batch; a service action's answer may now name its own status (`status`, 502
+when it does not), because a reload of a stopped service is answered 409.
+
+| Name | States |
+| --- | --- |
+| `importpreview` | the archive preview with two mailboxes that have no password in the archive, with every mailbox having one, and an answer that is not a preview (130a-130c). Fails when a hash-shaped value is on the page or in an answer the page received |
+| `importresult` | an import that ended with a part not imported (the summary, then the steps), a complete one, and a site that could not be created (131a-131d) |
+| `reloadwording` | the four sentences of a reload that failed: not running, PostgreSQL re-read its files, PostgreSQL did not, and the plain one (132a-132d). The Services screens send Start, Stop and Restart only, so the answers are given to a Restart press: the scenario shows the sentences in the notice, not a Reload control |
+| `certfailure` | a certificate request certbot did not fulfil: the authority could not be reached, a validation was refused, a limit was reached without a line of certbot's (133a-133c) |
+
+Every record of this batch fails when the page scrolls sideways, when a text
+is cut inside its box, when a placeholder is on screen, or when a value shaped
+like a password hash is on screen.

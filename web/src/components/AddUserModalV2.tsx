@@ -44,7 +44,10 @@ export function AddUserModalV2({ serverId, serverName, onClose, onSuccess }: Add
 
             const data = await res.json();
             showToast('success', `User created: ${data.username}`);
-            showToast('info', `Password: ${data.password}`);
+            // The server answers a password only when it made one up; the
+            // one typed here is not sent back.
+            // Sunucu parolayı yalnız kendisi ürettiğinde yanıtlar.
+            if (typeof data.password === 'string') showToast('info', `Password: ${data.password}`);
 
             onSuccess();
             onClose();

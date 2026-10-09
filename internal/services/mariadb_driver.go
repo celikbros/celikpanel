@@ -166,25 +166,41 @@ func (d *MariaDBDriver) TestConnection() error {
 	return nil
 }
 
-// ServerVersion asks MariaDB what it is. The client prints a header line
-// before the value in batch mode, which is why the answer is the first
-// non-empty line after it rather than the first line.
-// ServerVersion, MariaDB'ye ne oldugunu sorar.
+// ServerVersion asks the MariaDB server what it is.
+//
+// The answer is marked by the statement itself (`version=...`) and looked for
+// by that mark, because what else the client prints differs by platform
+// (11 Oct 2026). It used to be "the first non-empty line after the first
+// line", which assumed the first line is the column name. On Arch the client
+// invoked as `mysql` first prints that the name is deprecated, so the column
+// name `VERSION()` became the second line and was recorded as the version.
+//
+// ServerVersion, MariaDB sunucusuna ne oldugunu sorar. Yanit, ifadenin kendi
+// koydugu isaretle (`version=...`) aranir; istemcinin baska ne yazdigi
+// platforma gore degisir.
 func (d *MariaDBDriver) ServerVersion() (string, error) {
-	output, err := d.runSQL(`SELECT VERSION();`)
+	output, err := d.runSQL(`SELECT CONCAT('version=', VERSION());`)
 	if err != nil {
 		return ``, err
 	}
-	lines := strings.Split(string(output), "\n")
-	for i, line := range lines {
-		if i == 0 {
-			continue // the column name
-		}
-		if trimmed := strings.TrimSpace(line); trimmed != `` {
-			return trimmed, nil
-		}
+	if version := mariaDBMarkedVersion(string(output)); version != `` {
+		return version, nil
 	}
 	return ``, fmt.Errorf(`MariaDB reported no version`)
+}
+
+// mariaDBMarkedVersion finds the one line that is the server's answer to
+// `SELECT CONCAT('version=', VERSION())`. The column name, which repeats the
+// expression, does not start with the mark; neither does a client warning.
+func mariaDBMarkedVersion(output string) string {
+	for _, line := range strings.Split(output, "\n") {
+		if version, marked := strings.CutPrefix(strings.TrimSpace(line), `version=`); marked {
+			if version = strings.TrimSpace(version); version != `` {
+				return version
+			}
+		}
+	}
+	return ``
 }
 
 // CreateDatabase creates a MariaDB database

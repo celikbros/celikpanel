@@ -59,13 +59,61 @@ func TestServicesPageReloadOfPostfixIsAnsweredByPostfixItself(t *testing.T) {
 	}
 
 	// A stopped Postfix cannot be reloaded, and is not started by a reload.
+	// The answer is "it is not running", its own stage: it is not the answer
+	// of a reload that failed on a running Postfix (measured 2026-10-09: a
+	// stopped Postfix was said to "keep running with the settings it had").
 	host = installFakeMailHost(t)
 	host.masterPID = 0
 	got = verifiedServiceAction(host.run, "postfix", "postfix", "reload")
-	wantServiceAction(t, got, transport.ServiceActionFailed, mailServiceStageReload)
-	if !strings.Contains(got.Detail, "not running") || calledWith(host.calls, "systemctl start postfix") {
+	wantServiceAction(t, got, transport.ServiceActionFailed, transport.ServiceActionStageNotRunning)
+	if !strings.Contains(got.Detail, "not running") || calledWith(host.calls, "systemctl start postfix") ||
+		strings.Contains(got.Detail, "keeps running") || strings.Contains(got.Error, "keeps running") {
 		t.Fatalf("answer = %+v, calls = %v", got, host.calls)
 	}
+}
+
+// The measured defect (Debian 13 and Ubuntu 24.04, 2026-10-09): main.cf holds
+// a line Postfix refuses, the owner presses Stop, the master is gone, and the
+// answer was "unknown" because `postfix status` cannot answer with a refused
+// main.cf. A stop does not depend on Postfix's check: the master's process is
+// looked for, and a master that is gone is "stopped".
+func TestServicesPageStopOfPostfixIsJudgedByTheMasterProcessWhateverMainCfHolds(t *testing.T) {
+	host := installFakeMailHost(t)
+	host.checkOutput = "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n"
+	got := verifiedServiceAction(host.run, "postfix", "postfix", "stop")
+	wantServiceAction(t, got, transport.ServiceActionVerified, "")
+	if got.Applied != mailServiceStopped || !calledWith(host.calls, "systemctl stop postfix") {
+		t.Fatalf("answer = %+v, calls = %v", got, host.calls)
+	}
+	for _, call := range host.calls {
+		if call == "postfix check" || call == "postfix status" {
+			t.Fatalf("the stop asked %q although the master process could be looked for: %v", call, host.calls)
+		}
+	}
+
+	// With the same refused main.cf, a master that is still there is a
+	// verified failure of the stop, with its process ID.
+	host = installFakeMailHost(t)
+	host.checkOutput = "postfix: fatal: bad numerical configuration: default_process_limit = 200\n"
+	host.stopLeavesMaster = true
+	got = verifiedServiceAction(host.run, "postfix", "postfix", "stop")
+	wantServiceAction(t, got, transport.ServiceActionFailed, mailServiceStageStop)
+	if !strings.Contains(got.Detail, "36110") || !strings.Contains(got.Detail, "still running") {
+		t.Fatalf("answer = %+v", got)
+	}
+
+	// The process ID of the last master now belongs to another program: the
+	// master is gone.
+	host = installFakeMailHost(t)
+	host.pidReusedBy = "bash"
+	got = verifiedServiceAction(host.run, "postfix", "postfix", "stop")
+	wantServiceAction(t, got, transport.ServiceActionVerified, "")
+
+	// No master.pid at all: no master ever ran from this queue directory.
+	host = installFakeMailHost(t)
+	host.masterPID, host.pidFile = 0, 0
+	got = verifiedServiceAction(host.run, "postfix", "postfix", "stop")
+	wantServiceAction(t, got, transport.ServiceActionVerified, "")
 }
 
 // "Restart", "Start" and "Stop" on a wrapper unit: systemctl exits 0 and the
@@ -129,13 +177,26 @@ func TestServicesPageActionOnPostfixIsUnknownWhenItCannotBeChecked(t *testing.T)
 	got := verifiedServiceAction(host.run, "postfix", "postfix", "restart")
 	wantServiceAction(t, got, transport.ServiceActionUnknown, mailServiceStageVerify)
 
-	// A stop is never held back by a refused configuration, but then Postfix
-	// cannot say whether its master stopped.
+	// A stop is never held back by a refused configuration. Only when the
+	// master's process cannot be looked for either (master.pid is unreadable)
+	// is the outcome unknown: Postfix cannot say whether its master stopped.
 	host = installFakeMailHost(t)
 	host.checkOutput = "postfix: fatal: /etc/postfix/main.cf, line 12: missing '=' after attribute name\n"
+	host.pidFileUnreadable = true
 	got = verifiedServiceAction(host.run, "postfix", "postfix", "stop")
 	wantServiceAction(t, got, transport.ServiceActionUnknown, mailServiceStageVerify)
-	if !calledWith(host.calls, "systemctl stop postfix") || !strings.Contains(got.Detail, "line 12") {
+	if !calledWith(host.calls, "systemctl stop postfix") || !strings.Contains(got.Detail, "line 12") ||
+		!strings.Contains(got.Detail, "could not be looked for") {
+		t.Fatalf("answer = %+v, calls = %v", got, host.calls)
+	}
+
+	// The process cannot be looked for and Postfix accepts its configuration:
+	// Postfix is asked itself, as before.
+	host = installFakeMailHost(t)
+	host.pidFileUnreadable = true
+	got = verifiedServiceAction(host.run, "postfix", "postfix", "stop")
+	wantServiceAction(t, got, transport.ServiceActionVerified, "")
+	if got.Applied != mailServiceStopped || !calledWith(host.calls, "postfix status") {
 		t.Fatalf("answer = %+v, calls = %v", got, host.calls)
 	}
 }
@@ -150,11 +211,15 @@ func TestServicesPageActionsOnDovecotAreVerified(t *testing.T) {
 		t.Fatalf("answer = %+v, calls = %v", got, host.calls)
 	}
 
-	// A stopped Dovecot is not started by a reload.
+	// A stopped Dovecot is not started by a reload, and the answer is "it is
+	// not running", not that of a reload that failed on a running Dovecot.
 	host = installFakeMailHost(t)
 	host.dovecotPID = 0
 	got = verifiedServiceAction(host.run, "dovecot", "dovecot", "reload")
-	wantServiceAction(t, got, transport.ServiceActionFailed, mailServiceStageReload)
+	wantServiceAction(t, got, transport.ServiceActionFailed, transport.ServiceActionStageNotRunning)
+	if !strings.Contains(got.Detail, "not running") || claimsSettings(got) {
+		t.Fatalf("answer = %+v", got)
+	}
 	for _, call := range host.calls {
 		if strings.HasPrefix(call, "systemctl re") || strings.HasPrefix(call, "systemctl start") {
 			t.Fatalf("a stopped Dovecot was sent %q", call)
@@ -257,6 +322,9 @@ const (
 func debianPostgreSQL(t *testing.T) *fakeSystemd {
 	t.Helper()
 	installFakeMailHost(t) // the seams: no sleeping, fakeExit is an exit status
+	// By default the server cannot be asked; a test that needs its answer
+	// installs one with answerPostgreSQL.
+	answerPostgreSQL(t, func(int) (string, error) { return "", errors.New("psql: could not connect") })
 	s := &fakeSystemd{units: map[string]map[string][]string{}, showFails: map[string]bool{}}
 	s.set("postgresql.service", "Type", "oneshot")
 	s.set("postgresql.service", "ExecStart", "{ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }")
@@ -270,6 +338,161 @@ func debianPostgreSQL(t *testing.T) *fakeSystemd {
 	s.set(pgCluster, "ReloadResult", "success")
 	s.set(pgCluster, "ExecReload", pgReloadNeverRan)
 	return s
+}
+
+// answerPostgreSQL installs what the running PostgreSQL answers to the Agent's
+// statements; reading counts the batches asked so far.
+func answerPostgreSQL(t *testing.T, answer func(reading int) (string, error)) *[]string {
+	t.Helper()
+	old := dbConfigPostgreSQLQuery
+	t.Cleanup(func() { dbConfigPostgreSQLQuery = old })
+	asked := &[]string{}
+	dbConfigPostgreSQLQuery = func(statement string) (string, error) {
+		*asked = append(*asked, statement)
+		return answer(len(*asked))
+	}
+	return asked
+}
+
+func postgresAnswer(postmaster, started, loaded string) string {
+	return "postmaster=" + postmaster + "\nstarted=" + started + "\nloaded=" + loaded + "\n"
+}
+
+// claimsSettings reports whether an answer says which settings the service
+// runs with. Only an answer the server itself gave may.
+func claimsSettings(got transport.ServiceActionResult) bool {
+	for _, text := range []string{got.Detail, got.Error} {
+		lower := strings.ToLower(text)
+		if strings.Contains(lower, "previous settings") || strings.Contains(lower, "keeps running") ||
+			strings.Contains(lower, "settings it had") {
+			return true
+		}
+	}
+	return false
+}
+
+// The measured defect (Debian 13 and Ubuntu 24.04, 2026-10-09): the owner's
+// drop-in makes the cluster's ExecReload signal the server and then fail. The
+// unit reports `ReloadResult=exit-code`, and the answer said "it keeps running
+// with its previous settings" while pg_conf_load_time() had moved: the server
+// had re-read its files. The server is asked now, before and after, and only
+// what it answers is said.
+func TestServicesPageFailedReloadOfPostgreSQLSaysOnlyWhatTheServerAnswers(t *testing.T) {
+	failingHook := func(s *fakeSystemd, action, unit string) ([]byte, error) {
+		s.set(pgCluster, "ExecReload", pgReloadRan)
+		s.set(pgCluster, "ReloadResult", "exit-code")
+		return nil, nil
+	}
+
+	// The server re-read its files: the load time moved, same postmaster.
+	s := debianPostgreSQL(t)
+	s.act = failingHook
+	asked := answerPostgreSQL(t, func(reading int) (string, error) {
+		if reading == 1 {
+			return postgresAnswer("5120", "1791518000.120000", "1791518552.863723"), nil
+		}
+		return postgresAnswer("5120", "1791518000.120000", "1791518552.865815"), nil
+	})
+	got := verifiedServiceAction(s.run, "postgresql", "postgresql", "reload")
+	wantServiceAction(t, got, transport.ServiceActionFailed, transport.ServiceActionStageReloadReread)
+	if got.Unit != pgCluster || !strings.Contains(got.Detail, "re-read its configuration files") ||
+		!strings.Contains(got.Detail, "exit-code") || claimsSettings(got) {
+		t.Fatalf("answer = %+v", got)
+	}
+	// The server is read, never signalled, to learn this.
+	for _, statement := range *asked {
+		if strings.Contains(statement, "pg_reload_conf") || strings.Contains(strings.ToUpper(statement), "ALTER") {
+			t.Fatalf("the check sent PostgreSQL something that changes it: %s", statement)
+		}
+		for _, fact := range []string{"pg_conf_load_time()", "pg_postmaster_start_time()", "postmaster.pid"} {
+			if !strings.Contains(statement, fact) {
+				t.Fatalf("the statement batch does not read %s: %s", fact, statement)
+			}
+		}
+	}
+	if len(*asked) != 2 {
+		t.Fatalf("PostgreSQL was asked %d times, want once before and once after", len(*asked))
+	}
+
+	// The server did not re-read: the load time is where it was, on both
+	// readings after the action.
+	s = debianPostgreSQL(t)
+	s.act = failingHook
+	asked = answerPostgreSQL(t, func(int) (string, error) {
+		return postgresAnswer("5120", "1791518000.120000", "1791518552.863723"), nil
+	})
+	got = verifiedServiceAction(s.run, "postgresql", "postgresql", "reload")
+	wantServiceAction(t, got, transport.ServiceActionFailed, transport.ServiceActionStageReloadNotReread)
+	if !strings.Contains(got.Detail, "did not re-read") || len(*asked) != 3 {
+		t.Fatalf("answer = %+v, asked %d times", got, len(*asked))
+	}
+
+	// What cannot be tied to this unit's server is not said at all: another
+	// cluster answered (its postmaster is not the unit's main process), the
+	// server was restarted between the readings, the server could not be
+	// asked afterwards, or it could not be asked before.
+	for name, answer := range map[string]func(int) (string, error){
+		"another cluster answers": func(reading int) (string, error) {
+			return postgresAnswer("7777", "1791518000.120000", "179151855"+itoa(reading)+".000000"), nil
+		},
+		"another server process afterwards": func(reading int) (string, error) {
+			if reading == 1 {
+				return postgresAnswer("5120", "1791518000.120000", "1791518552.863723"), nil
+			}
+			return postgresAnswer("5120", "1791518600.000000", "1791518600.100000"), nil
+		},
+		"not answered afterwards": func(reading int) (string, error) {
+			if reading == 1 {
+				return postgresAnswer("5120", "1791518000.120000", "1791518552.863723"), nil
+			}
+			return "", errors.New("psql: connection refused")
+		},
+		"not answered before": func(reading int) (string, error) {
+			if reading == 1 {
+				return "", errors.New("psql: connection refused")
+			}
+			return postgresAnswer("5120", "1791518000.120000", "1791518552.865815"), nil
+		},
+		"an answer without the load time": func(int) (string, error) {
+			return "postmaster=5120\nstarted=1791518000.120000\n", nil
+		},
+	} {
+		s = debianPostgreSQL(t)
+		s.act = failingHook
+		answerPostgreSQL(t, answer)
+		got = verifiedServiceAction(s.run, "postgresql", "postgresql", "reload")
+		wantServiceAction(t, got, transport.ServiceActionFailed, mailServiceStageReload)
+		if claimsSettings(got) || strings.Contains(got.Detail, "re-read") {
+			t.Fatalf("%s: the answer claims what was not read: %+v", name, got)
+		}
+	}
+
+	// A unit that is not PostgreSQL is never asked through PostgreSQL.
+	s = debianPostgreSQL(t)
+	s.act = failingHook
+	asked = answerPostgreSQL(t, func(int) (string, error) {
+		return postgresAnswer("5120", "1791518000.120000", "1791518552.865815"), nil
+	})
+	got = unitServiceAction(s.run, "some-other-service", "postgresql", "reload")
+	wantServiceAction(t, got, transport.ServiceActionFailed, mailServiceStageReload)
+	if len(*asked) != 0 || claimsSettings(got) {
+		t.Fatalf("answer = %+v, asked = %v", got, *asked)
+	}
+
+	// A healthy reload stays a success, and the server is read once, before.
+	s = debianPostgreSQL(t)
+	s.act = func(s *fakeSystemd, action, unit string) ([]byte, error) {
+		s.set(pgCluster, "ExecReload", pgReloadRan)
+		return nil, nil
+	}
+	asked = answerPostgreSQL(t, func(int) (string, error) {
+		return postgresAnswer("5120", "1791518000.120000", "1791518552.863723"), nil
+	})
+	got = verifiedServiceAction(s.run, "postgresql", "postgresql", "reload")
+	wantServiceAction(t, got, transport.ServiceActionVerified, "")
+	if got.Applied != mailServiceReloaded || len(*asked) != 1 {
+		t.Fatalf("answer = %+v, asked %d times", got, len(*asked))
+	}
 }
 
 // The wrapper's job succeeds; the cluster behind it is what is judged.
@@ -364,7 +587,9 @@ func TestServicesPageReloadOfAWrapperUnitNeedsTheReloadBehindIt(t *testing.T) {
 	}
 	got = verifiedServiceAction(s.run, "postgresql", "postgresql", "reload")
 	wantServiceAction(t, got, transport.ServiceActionFailed, mailServiceStageReload)
-	if !strings.Contains(got.Detail, "exit-code") || !strings.Contains(got.Detail, "previous settings") {
+	// The server could not be asked here, so nothing is said about the
+	// settings it runs with: neither "previous" nor "new".
+	if !strings.Contains(got.Detail, "exit-code") || !strings.Contains(got.Detail, "was not read") || claimsSettings(got) {
 		t.Fatalf("answer = %+v", got)
 	}
 
@@ -394,8 +619,8 @@ func TestServicesPageReloadOfAWrapperUnitNeedsTheReloadBehindIt(t *testing.T) {
 	s = debianPostgreSQL(t)
 	s.set(pgCluster, "ActiveState", "inactive")
 	got = verifiedServiceAction(s.run, "postgresql", "postgresql", "reload")
-	wantServiceAction(t, got, transport.ServiceActionFailed, mailServiceStageReload)
-	if !strings.Contains(got.Detail, "nothing was reloaded") {
+	wantServiceAction(t, got, transport.ServiceActionFailed, transport.ServiceActionStageNotRunning)
+	if !strings.Contains(got.Detail, "nothing was reloaded") || claimsSettings(got) {
 		t.Fatalf("answer = %+v", got)
 	}
 }

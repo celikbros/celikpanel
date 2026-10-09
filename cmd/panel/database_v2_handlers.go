@@ -581,6 +581,10 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 
 	var selectedUser databaseUserReference
 	var newUserSecret string
+	// newUserSecretMinted: this request made the password up. Only then does
+	// the answer carry it; a password the caller sent is not sent back.
+	// Parolayı bu istek üretti. Yanıt onu yalnızca o zaman taşır.
+	var newUserSecretMinted bool
 	var sealedNewUserSecret string
 	switch {
 	case req.UserID != 0:
@@ -602,6 +606,7 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 		}
 		newUserSecret = req.NewPassword
 		if newUserSecret == `` {
+			newUserSecretMinted = true
 			newUserSecret, err = services.GeneratePassword(16)
 			if err != nil {
 				writeServerError(w, err)
@@ -758,8 +763,19 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 		"created_at": database.CreatedAt.Format("2006-01-02T15:04:05Z"),
 	}
 	// Only a credential minted by this request is returned, exactly once.
-	// Stored credentials are never loaded into an API response.
+	// Stored credentials are never loaded into an API response, and neither
+	// is a password the caller sent (11 Oct 2026): the caller has it, and an
+	// answer that repeats it would be a secret-bearing answer for no reason.
+	// `password_set` says that the new user has the password that was sent.
+	// Measured: with a sent password the answer was not kept either, so a
+	// replay of the same request got the status-only refusal.
+	// Yalnızca bu isteğin ürettiği kimlik bilgisi, tam bir kez döndürülür.
+	// Çağıranın gönderdiği parola geri gönderilmez; `password_set` yeni
+	// kullanıcının gönderilen parolayı taşıdığını söyler.
 	if newUserSecret != "" {
+		response["password_set"] = true
+	}
+	if newUserSecretMinted {
 		response["password"] = newUserSecret
 		// "Exactly once" also binds the request-identity row (D-029): this
 		// answer is not stored, so a replay is told the database was created
@@ -956,7 +972,9 @@ func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Reques
 	}
 
 	password := req.Password
-	if password == "" {
+	// minted: this request made the password up; only then is it answered.
+	minted := password == ""
+	if minted {
 		password, err = services.GeneratePassword(16)
 		if err != nil {
 			writeServerError(w, err)
@@ -999,13 +1017,21 @@ func (p *Panel) handleCreateDatabaseV2User(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// A password the caller sent is not sent back (11 Oct 2026); one this
+	// request minted is returned, exactly once.
+	// Çağıranın gönderdiği parola geri gönderilmez; bu isteğin ürettiği
+	// parola tam bir kez döndürülür.
+	answer := map[string]interface{}{
+		"id":           user.ID,
+		"username":     user.Username,
+		"password_set": true,
+		"created_at":   user.CreatedAt.Format("2006-01-02T15:04:05Z"),
+	}
+	if minted {
+		answer["password"] = password
+	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"id":         user.ID,
-		"username":   user.Username,
-		"password":   password,
-		"created_at": user.CreatedAt.Format("2006-01-02T15:04:05Z"),
-	})
+	json.NewEncoder(w).Encode(answer)
 }
 
 // handleDeleteDatabaseUser deletes a database user

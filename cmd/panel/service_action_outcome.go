@@ -19,7 +19,8 @@ import (
 // answers that are not success:
 //
 //   - SERVICE_ACTION_FAILED: a verified failure. `reason` is the stage
-//     ("check", "reload", "start", "stop", "verify", "command").
+//     ("check", "reload", "start", "stop", "verify", "command", and since
+//     11 Oct 2026 "not_running", "reload_reread", "reload_not_reread").
 //   - SERVICE_ACTION_UNKNOWN: the action was sent and what came of it could
 //     not be established. Never shown as done, never as a verified failure.
 //
@@ -38,9 +39,32 @@ const (
 
 const serviceActionResume = " The server owner runs the command shown to read the service's own answer, corrects what it names, and then repeats this action here; nothing repeats it automatically."
 
+// A failed reload says only what was verified (11 Oct 2026). The sentence used
+// to end "and keeps running with the settings it had" for every failed reload.
+// Measured on Debian 13 and Ubuntu 24.04: PostgreSQL had re-read its files
+// although its unit reported the reload as failed, and a Postfix and a Dovecot
+// that were not running at all got the same sentence. So:
+//
+//   - "reload": the reload was reported as failed, and which settings the
+//     service runs with was not read. Neither is claimed.
+//   - "reload_reread" / "reload_not_reread": PostgreSQL only, whose running
+//     server was asked before and after (pg_conf_load_time()).
+//   - "not_running": an unmet prerequisite, answered 409: there was nothing to
+//     reload, nothing was changed, and Start is the action that applies.
+//
+// Başarısız bir yeniden yükleme yalnızca doğrulananı söyler. Cümle eskiden her
+// başarısız yeniden yükleme için "önceki ayarlarıyla çalışmayı sürdürüyor" diye
+// bitiyordu; bu ölçümde iki durumda doğru değildi.
 var serviceActionFailedMessages = map[string]string{
-	"check":   "Nothing was changed: the service's own check refuses its configuration, so the action was not carried out." + serviceActionResume,
-	"reload":  "The service was not reloaded and keeps running with the settings it had." + serviceActionResume,
+	"check": "Nothing was changed: the service's own check refuses its configuration, so the action was not carried out." + serviceActionResume,
+	"reload": "The service reported that the reload failed. CelikPanel cannot read from this service which settings it is running with now, so it says neither that it kept the settings it had nor that it took the files on disk." +
+		serviceActionResume,
+	transport.ServiceActionStageReloadReread: "The unit reported the reload as failed, but PostgreSQL itself re-read its configuration files after it: the settings in the files on disk are in effect now, except those that need a restart. " +
+		"A step of the unit's own reload command failed after the server had been signalled. " +
+		"The server owner runs the command shown to see which step, and corrects it so that the next reload is reported as it went; the reload does not need to be repeated for these settings.",
+	transport.ServiceActionStageReloadNotReread: "The reload failed and PostgreSQL did not re-read its configuration files: it is running with the settings it had before." + serviceActionResume,
+	transport.ServiceActionStageNotRunning: "The service is not running, so there was nothing to reload and nothing was changed. " +
+		"If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts.",
 	"start":   "The service did not start, or did not stay running." + serviceActionResume,
 	"stop":    "The service did not stop: its daemon is still running." + serviceActionResume,
 	"verify":  "The action was sent, but afterwards the service's daemon is not in the state that was asked for." + serviceActionResume,
@@ -63,7 +87,7 @@ func serviceActionCommand(unit, action string, reply *transport.ServiceActionRes
 		switch {
 		case reply.Stage == "check":
 			return "sudo postfix check"
-		case action == "reload":
+		case action == "reload" && reply.Stage != transport.ServiceActionStageNotRunning:
 			// Prints what Postfix objects to, and reloads when it objects to nothing.
 			return "sudo postfix reload"
 		}
@@ -102,9 +126,15 @@ func writeServiceActionOutcome(w http.ResponseWriter, unit, action string, reply
 	if reply.Unit != "" && serviceActionUnitName.MatchString(reply.Unit) {
 		vars["owner_unit"] = reply.Unit
 	}
-	log.Printf("[502][service action] %s %s: %s %s: %s", action, unit, code, reason, boundedAgentDiagnostic(reply.Error))
+	// A stopped service that was asked to reload is an unmet prerequisite, not
+	// a failure of something that was attempted.
+	status := http.StatusBadGateway
+	if reason == transport.ServiceActionStageNotRunning {
+		status = http.StatusConflict
+	}
+	log.Printf("[%d][service action] %s %s: %s %s: %s", status, action, unit, code, reason, boundedAgentDiagnostic(reply.Error))
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusBadGateway)
+	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(apiErrorBody{Error: message, Code: code, Reason: reason, Vars: vars})
 	return true
 }

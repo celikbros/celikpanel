@@ -4,7 +4,8 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { Button, Checking, CouldNotCheck, Field, FormActions, FormSection, ResultUnknown, inputClass } from './ui';
 import type { TranslationKey } from '../i18n/en';
-import { apiErrorText, readApiError } from '../lib/apiError';
+import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
+import { CertificateIssueNotice, isCertificateIssueFailure } from './CertificateIssueNotice';
 import { decodeListIn, lastKnown, useRemote } from '../lib/remote';
 import { sslTier, sslTierLabel } from '../lib/sslTier';
 import { useLostAnswer } from '../lib/lostAnswer';
@@ -195,6 +196,9 @@ export function DomainSSLSettings({
         return ssl.retry();
     });
     const dismissIssueAnswer = issueAnswer.dismiss;
+    // A certificate request certbot ran and did not fulfil, with its kind.
+    // certbot'un çalışıp yerine getirmediği sertifika isteği, türüyle.
+    const [issueFailure, setIssueFailure] = useState<ApiError | null>(null);
     const locked = ssl.remote.state !== 'known' || ssl.reading || issueAnswer.holding;
 
     useEffect(() => {
@@ -303,6 +307,7 @@ export function DomainSSLSettings({
         const authority = providers.find((candidate) => candidate.id === provider)?.name ?? provider;
         if (!confirm(t(confirmationKey, { name: domainName, mailName: `mail.${normaliseDNSName(domainName)}`, authority }))) return;
         setIssuing(true);
+        setIssueFailure(null);
         try {
             const res = await issueAnswer.send(`/api/v1/domains/${domainId}/ssl/letsencrypt`, {
                 method: 'POST',
@@ -338,6 +343,14 @@ export function DomainSSLSettings({
                     );
                     setShowReissue(false);
                     await loadSSLData();
+                    return;
+                }
+                // What certbot's run came to is a sentence with something
+                // to correct: it stays on the page.
+                // certbot çalışmasının sonucu düzeltilecek bir şey taşır:
+                // sayfada kalır.
+                if (isCertificateIssueFailure(apiError)) {
+                    setIssueFailure(apiError);
                     return;
                 }
                 showToast('error', apiErrorText(apiError, t, isReissue ? 'ssl.reissueFailed' : 'ssl.issueFailed'));
@@ -635,6 +648,7 @@ export function DomainSSLSettings({
                 <Checking label={t('ssl.rereading')} className="mb-4" />
             ) : null}
             <ResultUnknown answer={issueAnswer} className="mb-4" />
+            <CertificateIssueNotice failure={issueFailure} onClose={() => setIssueFailure(null)} className="mb-4" />
             {/* Certificate status */}
             <FormSection title="SSL/TLS">
                 <div className="flex items-start gap-3">

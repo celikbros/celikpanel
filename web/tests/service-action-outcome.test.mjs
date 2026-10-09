@@ -35,7 +35,10 @@ const valueOf = (source, key) => {
   return JSON.parse(match[1]);
 };
 
-const reasons = ['check', 'reload', 'start', 'stop', 'verify', 'command'];
+// Since 11 Oct 2026 a reload has three more answers: the service is not
+// running, and for PostgreSQL, whose server can be asked, whether it re-read
+// its files although its unit reported the reload as failed.
+const reasons = ['check', 'reload', 'reload_reread', 'reload_not_reread', 'not_running', 'start', 'stop', 'verify', 'command'];
 const vars = { unit: 'postfix', action: 'reload', command: 'sudo postfix check', detail: 'postfix: fatal: bad value', owner_unit: 'postfix@-.service' };
 
 test('every service-action answer has its sentence in English and Turkish, with the unit and the command', () => {

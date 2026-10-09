@@ -83,6 +83,8 @@ const own = {
 // ended with, and a change whose one-time result is not kept.
 own['/ServiceActionNotice'] = shared.compile('components/ServiceActionNotice.tsx', own);
 own['/OnceOnlyNotice'] = shared.compile('components/OnceOnlyNotice.tsx', own);
+// So is the notice of a certificate request certbot did not fulfil (11 Oct 2026).
+own['/CertificateIssueNotice'] = shared.compile('components/CertificateIssueNotice.tsx', own);
 const modalURL = shared.compile('components/AddDomainModal.tsx', own);
 const stripURL = shared.compile('components/DatabaseAccountStrip.tsx', own);
 const load = async (name, more = {}) => (await import(shared.compile(`components/${name}.tsx`, { ...own, ...more })))[name];

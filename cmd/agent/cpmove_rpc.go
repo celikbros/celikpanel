@@ -179,13 +179,25 @@ func (a *Agent) InspectCpmove(req *CpmoveInspectRequest, resp *CpmoveInspectResp
 			}
 			for _, line := range strings.Split(content, "\n") {
 				fields := strings.Split(strings.TrimSpace(line), ":")
-				if len(fields) >= 2 && fields[0] != "" && strings.HasPrefix(fields[1], "$") {
-					resp.MailAccounts = append(resp.MailAccounts, CpmoveMailAccount{
-						Domain:    domain,
-						User:      fields[0],
-						CryptHash: fields[1],
-					})
+				if len(fields) < 2 || fields[0] == "" || strings.HasPrefix(fields[0], "#") {
+					continue
 				}
+				// A mailbox whose password field is not a crypt hash (cPanel
+				// writes "!!" or "*LOCKED*" in front of a suspended one) is
+				// listed without a password: it cannot be imported as it is,
+				// and the preview and the result say so instead of leaving it
+				// out silently. The hash itself is handed over only to an apply.
+				// Parola alanı bir crypt özeti olmayan posta kutusu parolasız
+				// listelenir; özet yalnızca uygulamaya verilir.
+				account := CpmoveMailAccount{
+					Domain:      domain,
+					User:        fields[0],
+					HasPassword: strings.HasPrefix(fields[1], "$"),
+				}
+				if account.HasPassword && req.IncludeMailHashes {
+					account.CryptHash = fields[1]
+				}
+				resp.MailAccounts = append(resp.MailAccounts, account)
 			}
 
 		case strings.HasPrefix(rel, "va/") && hdr.Typeflag == tar.TypeReg:

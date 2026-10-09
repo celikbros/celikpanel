@@ -2867,3 +2867,229 @@ veritabanı parolası yeniden belirlenir" (D-029) motorda yapılır; ekran bunu
 söyler. Kapsanmayan: dökümün diğer zararlı rotaları (hizmet ve uygulama yeniden
 başlatma, planlar, kayıtlar), yinelemeden sonra yanlış bildiren yaklaşık 38
 rota, sınıflandırılamayan 7 rota ve sürüm belirteci taşıyan rotalar.
+
+### İkinci gerçek sistem ölçümünden çıkan düzeltmeler (ilkeler 1-4 ve 6, 2026-10-11)
+
+D-025 ilkeleri 1 (sahibin yerel yapılandırması algılanır, değiştirilmez), 2
+(bilinmeyen; yok, boş ya da başarı değildir), 3 (güvensiz yazı kendi sınırında
+durdurulur), 4 (bir değişiklik ön görüntüsünü okur, doğrular ve sınanmış bir
+geri alması vardır) ve 6 (ekran yetkili durumu gösterir); D-022, D-024, D-029.
+Hiçbir P0 işi kapanmadı ya da ilerlemedi. Kaynak: tek kullanımlık QEMU/KVM
+konuklarında (Debian 13, Ubuntu 24.04, Arch; kanıt
+`deploy/e2e/release-recovery/evidence/set2-20261011/`) 2026-10-09 (UTC) tarihli
+`set2` koşusu. O koşu bundan önceki kaydın düzeltmelerini doğruladı ve üç aday
+hata (P3, P4, P5) ile O6-O15 gözlemlerini ölçtü. Buradaki hiçbir şey kurulu bir
+sunucuda gözlenmedi. Bu kayıt onları kaynakta düzeltir; düzeltmelerin hiçbiri
+gerçek hizmetlerde ölçülmedi.
+
+- **Ölçülen.**
+  - *O15, tarayıcıya yanıtlanan bir gizli bilgi.* `POST
+    /api/v1/import/cpanel/inspect` her posta kutusunun parola özetini
+    yanıtlıyordu (`mail_accounts[].crypt_hash`): işleyici Agent'ın yanıtını
+    geldiği gibi kodluyordu. Uygulama rotası arşivi zaten sunucuda yeniden
+    okuyordu; sayfa arşivin yolunu ve sahibin seçimlerini gönderiyordu,
+    özetleri asla göndermiyordu.
+  - *P3, başarısız bir Yeniden yükle, kimsenin okumadığı "önceki ayarlarıyla
+    çalışmayı sürdürüyor" sözüyle yanıtlandı.* (a) Sahibin, `ExecReload` komutu
+    sunucuya sinyal gönderip sonra başarısız olan bir ek dosyasıyla PostgreSQL:
+    örneğin `ReloadResult` değeri `exit-code` idi ve `pg_conf_load_time()`
+    ilerlemişti; sunucu dosyalarını yeniden okumuştu. (b) Durmuş bir Postfix ya
+    da Dovecot için Yeniden yükle aynı cümleyi aldı.
+  - *O8, `main.cf` reddedilirken Postfix'i Durdur, ana süreç gitmiş olduğu
+    hâlde `502 SERVICE_ACTION_UNKNOWN` ile yanıtlandı.* `postfix status` yanıt
+    vermeden önce `main.cf` dosyasını okur; bu durumda yanıt veremez.
+  - *P4, bir içe aktarımın dosya adımı, `homedir/public_html/` dizin üyesini
+    taşıyan arşivi reddetti* ("unsafe cpmove member path"), rota `202` ve
+    `status: pending` ile yanıtladı; alan adı, posta kutusu ve veritabanı içe
+    aktarıldı, site dosyaları aktarılmadı. Bekleyen bir şey yoktu: her adım
+    bitmişti.
+  - *P5, Arch: PHP sitesi oluşturulamadı, bu yüzden her içe aktarım `500`
+    yanıtladı.* Havuz dosyası Debian düzeni olan `/etc/php/8.5/fpm/pool.d/`
+    altına yazılıyordu ve yeniden yükleme `php8.5-fpm` adlı bir birimi
+    adlandırıyordu.
+  - *O9.* Sertifika çıkarmayan bir certbot çalışması `500 INTERNAL` "internal
+    server error" ile yanıtlandı.
+  - *O10.* `database-servers/{id}/databases`, yeni kullanıcının parolasını
+    çağıran göndermiş olsa da yanıtlıyordu; bu yüzden yanıt saklanmıyor ve
+    yineleme yalnız-durum reddini alıyordu.
+  - *O11.* Kurulum yalnızca genel bir DNS kaydını beklerken, yürütücüsünün
+    çözümleyicilere yeniden sorduğu anlarda bir hizmet işlemi `409
+    server_setup_busy` ile reddedildi.
+  - *O14.* Veritabanları sayfası bir MariaDB 10.11.14 için `15.1` (Ubuntu
+    24.04: istemcinin sürümü), Arch'ta ise `VERSION()` yazısının kendisini
+    gösterdi.
+- **Değişen.**
+  - *İçe aktarım önizlemesi ve özetler*
+    (`internal/transport/cpmove_contracts.go`, `cmd/agent/cpmove_rpc.go`,
+    `cmd/panel/import_handlers.go`). Tarayıcıya, her alanı adıyla yazılmış
+    kendi türü yanıtlanır: bir posta kutusu adresi, kotası ve `has_password`
+    değeridir. `CpmoveMailAccount.CryptHash` hiçbir zaman JSON olarak kodlanmaz
+    (`json:"-"`); Agent'tan Panel'e yerel RPC üzerinden ve yalnızca Panel
+    istediğinde (`CpmoveInspectRequest.IncludeMailHashes`) gider; bunu yalnızca
+    postalı bir içe aktarımın uygulanması ister. Uygulama, eskisi gibi, arşivi
+    sunucuda yeniden okur. Parola alanı bir crypt özeti olmayan (askıya
+    alınmış) posta kutusu artık atlanmak yerine `has_password: false` ile
+    listelenir ve uygulama onu sessizce geçmek yerine içe aktarılmamış bir adım
+    olarak bildirir.
+  - *Başarısız bir yeniden yükleme yalnızca doğrulananı söyler*
+    (`cmd/agent/service_action_verify.go`,
+    `cmd/panel/service_action_outcome.go`, `internal/transport/rpc.go`). Üç
+    yeni aşama. `not_running`: durmuş bir Postfix ya da Dovecot'un, ya da
+    arkasında çalışan birim olmayan bir sarmalayıcının yeniden yüklenmesi;
+    `409` ile yanıtlanır, hizmete hiçbir şey gönderilmemiştir. `reload_reread`
+    ve `reload_not_reread`: yalnız PostgreSQL. Agent, yeniden yüklemeden önce
+    yerel soket üzerinden ve sinyal göndermeden postmaster'ın süreç kimliğini
+    (`postmaster.pid`), `pg_postmaster_start_time()` ve `pg_conf_load_time()`
+    değerlerini okur; birimin başarısız diye bildirdiği bir yeniden yüklemeden
+    sonra onları yeniden okur. Yalnızca iki okuma da aynı sunucu sürecine ve o
+    süreç birimin ana sürecine aitse, daha geç bir yükleme zamanı "dosyalarını
+    yeniden okudu", iki kez okunan değişmemiş bir zaman "okumadı" demektir.
+    Başka her durumda ve sorulamayan her hizmette aşama yalın `reload` olur;
+    cümlesi iki durumdan hiçbirini ileri sürmez.
+  - *Postfix'i Durdur, ana sürece bakılarak değerlendirilir*
+    (`cmd/agent/mail_service_verify.go`). Agent `systemctl stop postfix`
+    komutundan sonra `<queue_directory>/pid/master.pid` içindeki süreç
+    kimliğini ve `/proc/<pid>/comm` dosyasını okur: o kayıt yoksa ya da başka
+    bir programa aitse ana süreç gitmiştir. Durdurma için artık `postfix check`
+    sorulmaz. Yalnızca sürece bakılamıyorsa, eskisi gibi, Postfix'in kendisine
+    sorulur ve yalnızca o zaman reddedilen bir yapılandırma sonucu bilinmez
+    kılabilir.
+  - *Bir arşivin dizin üyeleri* (`cmd/agent/cpmove_extract_linux.go`). Dizin
+    olan bir üyenin adından, tar'ın onu sakladığı biçimdeki tek sondaki eğik
+    çizgi atılır. Dayanak: tar biçimi (POSIX ustar tür bayrağı `5`; GNU tar,
+    Python'un `tarfile` modülü ve Go'nun `tar.FileInfoHeader` işlevi çizgiyi
+    yazar) ve içe aktarımın adı zaten temizleyen kendi incelemesi; depoda
+    gerçek bir cPanel arşivi yok ve koşuda da yoktu. Diğer her ret yerinde ve
+    sınanıyor: herhangi bir yerdeki `..` bileşeni, ters eğik çizgi, NUL,
+    sondaki çift eğik çizgi, hiçbir şeye temizlenen yük yolu, sonda eğik
+    çizgili dosya adı, sembolik bağlar, sabit bağlar, aygıtlar.
+  - *İçe aktarım neye vardığını yanıtlar* (`cmd/panel/import_handlers.go`).
+    Seçilen her parça aktarıldığında `200` ve `status: "active"`; yoksa
+    `status: "partial"`, `code: IMPORT_PARTIAL`, `imported` ve `not_imported`
+    listeleri, `domain_status` ve bir `message` (D-024). Hiçbir zaman `202` ya
+    da `status: "pending"` yanıtlamaz. Oluşturulamayan bir site, çıplak bir
+    `500` yerine `502 IMPORT_SITE_NOT_CREATED` olur.
+  - *Tek birimli bir sunucuda PHP-FPM* (`internal/services/php_layout.go` ve
+    Debian yollarını kuran beş dosya; `cmd/agent/site_rpc.go`,
+    `cmd/agent/vhost_rpc.go`). Karar: Arch'ta PHP siteleri desteklenmek üzere
+    tasarlanmıştır. Kaynaktaki dayanak: katalog `php-fpm` paketini pacman için
+    eşler ve Arch'ın tek birimini adlandırır, kopya listesi o düzende sürümü
+    programa sorar ve yetenek okuması, Alan adı ekle orada PHP sunsun diye
+    değiştirilmiştir (B3b). Düzen, kopya listesinin okuduğu gibi sunucudan
+    okunur: `/etc/php` altında kendi ağacı olan bir sürüm sürümlü düzendir; o
+    ağacı olmayan ama `/etc/php/php-fpm.d` dizini olan sunucu tek birimli
+    düzendir (havuzlar `/etc/php/php-fpm.d/` altında, birim `php-fpm`, program
+    `php-fpm`, `/etc/php/php.ini`, soketler `/run/php-fpm/` altında). Soketin
+    sahibi, var olan web sunucusu hesabıdır (`www-data`, `nginx`, `http`).
+  - *certbot hatası türlenir* (`cmd/agent/certbot_failure.go`,
+    `cmd/panel/certificate_issue_failure.go`). Agent, certbot'un kendi
+    çıktısını üç tür için okur (otoriteye ulaşılamadı, otorite bir doğrulamayı
+    reddetti, otoritenin bir sınırına ulaşıldı), `timeout` ve `tool` türlerini
+    ve sınırlı tek bir satırı ekler. Yanıt, türü `reason` olarak taşıyan `502
+    CERTIFICATE_ISSUE_FAILED` olur; certbot'un satırı yalnızca yöneticiye
+    gider.
+  - *Bekleyen bir kurulum hizmet işlemlerini reddetmez*
+    (`cmd/panel/server_setup_operations.go`). Kural: satırı `running` iken bir
+    yürütme değişiklik yapıyor sayılır; bulunduğu adım yalnızca genel
+    çözümleyicilere soran genel adres denetimi (`access_dns`) ise sayılmaz.
+    Yürütme olarak okunamayan satır değişiklik yapıyor sayılır.
+  - *Çağıranın gönderdiği parola geri gönderilmez*
+    (`cmd/panel/database_v2_handlers.go`). Veritabanı ve veritabanı kullanıcısı
+    rotaları `password_set: true` yanıtlar; `password` yalnızca isteğin kendisi
+    ürettiğinde gelir. Böylece ilk yanıt saklanır ve diğerleri gibi yinelenir.
+    Gönderilen bir parolayı geri yansıtan başka bir rota bulunmadı.
+  - *MariaDB sürümü sunucunundur* (`internal/services/mariadb_driver.go`,
+    `version_detector.go`, `cmd/panel/database_admin_account_handlers.go`).
+    Panel'in üzerinde hesabı olduğu her durumda çalışan motora, kendi yanıtını
+    işaretleyen bir ifadeyle (`version=...`) sorulur; hizmet taraması istemciye
+    değil sunucu programına sorar (`mariadbd --version`).
+- **API değişiklikleri (sürüm notları için).**
+  - `POST /api/v1/import/cpanel/inspect`: `mail_accounts[].crypt_hash` kalktı;
+    `mail_accounts[].has_password` (mantıksal) yeni. Arşivde parolası olmayan
+    posta kutusu artık listelenir.
+  - `POST /api/v1/import/cpanel/apply`: bir parçası aktarılmadan biten içe
+    aktarım için `202` yerine `200`; `status` değeri `active` ya da `partial`
+    (eskiden `active` ya da `pending`); yeni alanlar `domain`, `domain_status`,
+    `code`, `message`, `imported`, `not_imported`. Yeni ret `502
+    IMPORT_SITE_NOT_CREATED`.
+  - `POST /api/v1/service/action`: yeni gerekçeler `not_running` (`409` ile
+    yanıtlanır), `reload_reread`, `reload_not_reread`; `main.cf` reddedilirken
+    Postfix'i Durdur, ana süreç gittiyse `200` yanıtlar.
+  - `POST /api/v1/domains/{id}/ssl/letsencrypt`: sertifika çıkarmayan bir
+    certbot çalışması için `500 INTERNAL` yerine `reason` taşıyan `502
+    CERTIFICATE_ISSUE_FAILED`.
+  - `POST /api/v1/database-servers/{id}/databases` ve `.../users`: `password`
+    yalnızca istek onu ürettiğinde; `password_set` yeni.
+- **Değişmeyen ve nedeni.**
+  - O6 ve O7 (yeniden başlatılan Panel süren bir geri yüklemeyi kesmez;
+    öldürülen bir Panel'den sonra Agent onu bitirmişken satır sonucun
+    bilinmediğini söyler) D-029'un tarif ettiği şeydir; satırı Agent ile
+    uzlaştırmak bu kaydın parçası değildir.
+  - O12: MariaDB için Yeniden yükle, systemd'nin kendi satırıyla yanıtlanır.
+    Hizmetler ekranları yalnızca Başlat, Durdur ve Yeniden başlat gönderir; bu
+    yüzden hiçbir ekran o Yeniden yükle'yi sunmaz, ona API üzerinden ulaşılır.
+    O13 ve O2 değişmedi.
+  - Bir kurulumun diğer DNS beklemeleri (`primary_dns`, `infrastructure_dns`)
+    yeniden denetlenirken hizmet işlemlerini reddetmeyi sürdürür: yeniden
+    denetimleri yerel DNS kayıtları yayımlayabilir. Son doğrulamanın (ters DNS
+    denetimini de taşıyan) beklemesi satırı hiçbir zaman `running` yapmaz; bu
+    yüzden hiç reddetmedi.
+  - Tek birimli bir sunucuda eklenti dizinleri (`mods-available`, `conf.d`)
+    hâlâ Debian'ınkilerdir ve PHP sürüm değişimi soket yolunu hâlâ Panel'de
+    kurar; böyle bir sunucuda geçilecek tek bir sürüm vardır.
+  - Bir motor için kaydedilmiş sürüm, Panel'in o motordaki hesabı yeniden
+    oluşturulana dek kalır.
+  - Alan Adları sayfası, bir alan adının `pending` durumunu bekliyor olabilecek
+    bir silme sayar ve işaretini sorar; kısmi bir içe aktarımın bıraktığı alan
+    adının işareti yoktur ve sıradan bir satır olarak çizilir.
+- **Şema ya da sürüm geçişi.** Veritabanı şeması ve kalıcı durum yok. Agent'ın
+  RPC'si adla aktarılan alanlar kazanır: `CpmoveMailAccount.HasPassword`,
+  `CpmoveInspectRequest.IncludeMailHashes`, `IssueLetsEncryptResponse.Failure`
+  ve `FailureDetail`, ve üç `ServiceActionResult.Stage` değeri. Arşiv çağrıları
+  Panel ile Agent'ın aynı derleme olmasını zaten şart koşar. Yeni alanları
+  olmayan bir Agent ile karşılaşan Panel, bir özet geldiyse posta kutusunu
+  parolalı gösterir, certbot hatasını eskisi gibi yanıtlar ve kendisine
+  gönderilmeyen bir aşama için seçecek cümlesi olmaz. Güncellemeden önce
+  yazılmış bir `request_identities` satırı, süresi dolana dek sakladığı yanıtı
+  eski biçimiyle yineler.
+- **Kurtarma davranışı.** Hiçbir şey kendiliğinden yeniden denenmez. Kısmi bir
+  içe aktarım alan adını ve aktarılanları yerinde bırakır; sahip eksik
+  parçaları elle ekler ya da alan adını kaldırıp arşivi yeniden içe aktarır;
+  var olan bir alan adına içe aktarım reddedilir. Başarısız bir sertifika
+  isteği hiçbir şey eklememiştir: certbot'un ondan bıraktığı, yanıttan önce
+  kaldırılır ve sitenin sahip olduğu sertifika hizmet vermeyi sürdürür.
+  Başarısız diye bildirilen bir yeniden yüklemeyi Panel yinelemez ve
+  PostgreSQL'e ne yaptığını öğrenmek için sinyal gönderilmez.
+- **Kanıt.** Yalnız bileşen testleri; gerçek sistemde yeniden koşu bekliyor.
+  Agent: `cpmove_set2_linux_test.go` (tar'ın yazdığı biçimde bir arşiv, her
+  ret, özetlerin yalnızca uygulamaya verilmesi),
+  `service_action_verify_test.go` ve `mail_service_verify_test.go` (her
+  PostgreSQL okuması, durmuş bir hizmet, ana sürece bakılarak değerlendirilen
+  Durdur), `certbot_failure_test.go`. Panel: `set2_corrections_test.go` (hiçbir
+  yanıt, saklanan yanıt ya da günlük satırı özet biçimli bir değer taşımaz;
+  kısmi yanıt; sertifika yanıtı; gönderilen parola yansıtılmaz ve yanıtı
+  yinelenir; motora sürümü sorulur), `server_setup_busy_rule_test.go`,
+  `service_action_outcome_test.go`. Hizmetler: `php_layout_test.go`. Ekranlar:
+  `web/tests/set2-corrections.test.mjs` ve yerel döngü taklidine karşı gerçek
+  bir Chrome (`web/tools/browser-inspect`, `importpreview`, `importresult`,
+  `reloadwording`, `certfailure` senaryoları; masaüstü ve telefon, İngilizce ve
+  Türkçe, açık ve koyu). Gerçek bir cPanel arşivi, bir sertifika otoritesi ya
+  da bir Arch sunucusu kullanılmadı.
+- **Açık.**
+  - Buradaki hiçbir düzeltme gerçek hizmetlerde ölçülmedi. Gerçek sistemdeki
+    yeniden koşu şunları göstermelidir: önizleme ve saklanan her yanıt özetsiz,
+    posta kutusu parolasıyla içe aktarılmış; dizin üyeli bir arşiv tümüyle içe
+    aktarılmış ve başarısız bir dosya adımı `200` / `partial` ile yanıtlanmış;
+    PostgreSQL kanca dizisi `reload_reread`, durmuş bir Postfix ve Dovecot
+    `409` / `not_running`, `main.cf` reddedilirken Postfix'i Durdur `200` /
+    `stopped` ile yanıtlanmış; Arch'ta bir PHP sitesi oluşturulmuş, sunulmuş ve
+    silinmiş, bir içe aktarım tamamlanmış; bir certbot hatası `502
+    CERTIFICATE_ISSUE_FAILED` ile yanıtlanmış; kurulum `access_dns` adımında
+    beklerken hiç `server_setup_busy` yok; gönderilen veritabanı parolası
+    yansıtılmamış ve yinelemesi satırdan yanıtlanmış; üç platformda da
+    sunucunun MariaDB sürümü.
+  - Arch'ta paketlenmiş birimin sıkılaştırması altında bir PHP sayfasının
+    çalışıp çalışmadığı ve bir sitenin soketinin orada `/run/php-fpm` altında
+    durup duramayacağı yalnızca o koşuyla saptanır.
+  - Gerçek cPanel arşivleri (iç içe `homedir.tar` olarak ev dizini, askıya
+    alınmış posta kutuları, büyük siteler) içe aktarılmadı.

@@ -137,3 +137,84 @@ func TestServiceActionCommandNamesOnlyAUnit(t *testing.T) {
 		}
 	}
 }
+
+// A failed reload says only what was verified (11 Oct 2026). Measured on
+// Debian 13 and Ubuntu 24.04: "keeps running with the settings it had" was
+// answered for a PostgreSQL that had re-read its files and for a Postfix and a
+// Dovecot that were not running. The plain "reload" sentence claims neither
+// state; the PostgreSQL stages repeat what the server answered; a stopped
+// service is an unmet prerequisite with its own status and no command to
+// "see why".
+func TestFailedReloadSaysOnlyWhatWasVerified(t *testing.T) {
+	answer := func(unit, stage string) (int, apiErrorBody) {
+		recorder := httptest.NewRecorder()
+		if !writeServiceActionOutcome(recorder, unit, "reload", &transport.ServiceActionResult{
+			Error: "x", Outcome: transport.ServiceActionFailed, Stage: stage, Detail: "one line",
+		}) {
+			t.Fatalf("%s %s was not answered", unit, stage)
+		}
+		return recorder.Code, decodeServiceActionAnswer(t, recorder)
+	}
+
+	status, body := answer("dovecot", "reload")
+	if status != http.StatusBadGateway || body.Reason != "reload" {
+		t.Fatalf("status %d, body %+v", status, body)
+	}
+	lower := strings.ToLower(body.Error)
+	for _, claim := range []string{"keeps running", "is running with the settings it had", "are in effect"} {
+		if strings.Contains(lower, claim) {
+			t.Fatalf("the plain reload sentence claims a state nobody read (%q): %s", claim, body.Error)
+		}
+	}
+	for _, fragment := range []string{"reported that the reload failed", "cannot read", "says neither", "server owner"} {
+		if !strings.Contains(body.Error, fragment) {
+			t.Fatalf("sentence lacks %q: %s", fragment, body.Error)
+		}
+	}
+
+	status, body = answer("postgresql", transport.ServiceActionStageReloadReread)
+	if status != http.StatusBadGateway || body.Code != errCodeServiceActionFailed || body.Reason != "reload_reread" {
+		t.Fatalf("status %d, body %+v", status, body)
+	}
+	for _, fragment := range []string{"reported the reload as failed", "PostgreSQL itself re-read", "in effect now", "need a restart", "does not need to be repeated"} {
+		if !strings.Contains(body.Error, fragment) {
+			t.Fatalf("sentence lacks %q: %s", fragment, body.Error)
+		}
+	}
+	if strings.Contains(body.Error, "settings it had") {
+		t.Fatalf("a server that re-read its files is said to keep its settings: %s", body.Error)
+	}
+
+	status, body = answer("postgresql", transport.ServiceActionStageReloadNotReread)
+	if status != http.StatusBadGateway || body.Reason != "reload_not_reread" ||
+		!strings.Contains(body.Error, "did not re-read") || !strings.Contains(body.Error, "settings it had before") {
+		t.Fatalf("status %d, body %+v", status, body)
+	}
+
+	// Not running: 409, nothing to look up, Start is the action that applies.
+	for unit, command := range map[string]string{"postfix": "sudo postfix status", "dovecot": "sudo systemctl status dovecot"} {
+		status, body = answer(unit, transport.ServiceActionStageNotRunning)
+		if status != http.StatusConflict || body.Code != errCodeServiceActionFailed || body.Reason != "not_running" {
+			t.Fatalf("%s: status %d, body %+v", unit, status, body)
+		}
+		if body.Vars["command"] != command {
+			t.Fatalf("%s: command %q, want %q", unit, body.Vars["command"], command)
+		}
+		for _, fragment := range []string{"is not running", "nothing to reload", "nothing was changed", "Start"} {
+			if !strings.Contains(body.Error, fragment) {
+				t.Fatalf("%s: sentence lacks %q: %s", unit, fragment, body.Error)
+			}
+		}
+		if strings.Contains(strings.ToLower(body.Error), "keeps running") || body.MutationApplied {
+			t.Fatalf("%s: %+v", unit, body)
+		}
+	}
+
+	// No sentence of a service action says "keeps running with the settings
+	// it had" any more.
+	for stage, sentence := range serviceActionFailedMessages {
+		if strings.Contains(sentence, "keeps running with the settings it had") {
+			t.Fatalf("stage %s still claims it: %s", stage, sentence)
+		}
+	}
+}

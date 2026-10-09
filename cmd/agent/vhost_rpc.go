@@ -230,8 +230,11 @@ const (
 )
 
 var (
+	// The per-site socket in the packaged PHP-FPM's own runtime directory:
+	// `/run/php` (Debian, Sury) or `/run/php-fpm` (Arch's single PHP-FPM;
+	// services.PHPFPMSocketPath). Nothing else is a managed socket.
 	phpSocketPattern = regexp.MustCompile(
-		`^/(?:var/)?run/php/php[0-9]{1,2}\.[0-9]{1,2}-fpm-site([1-9][0-9]*)\.sock$`,
+		`^/(?:var/)?run/php(?:-fpm)?/php[0-9]{1,2}\.[0-9]{1,2}-fpm-site([1-9][0-9]*)\.sock$`,
 	)
 	certificateVersionPattern = regexp.MustCompile(`^sha256-[0-9a-f]{64}$`)
 )

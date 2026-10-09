@@ -190,7 +190,9 @@ export async function batch5(req, res, path, query, { state, send }) {
         const outcome = b5.serviceAction;
         if (!outcome) { send(res, 200, { success: true }); return true; }
         if (outcome.drop) { req.socket.end('connection lost\r\n\r\n'); return true; }
-        res.writeHead(502, { 'Content-Type': 'application/json' });
+        // 502 unless the outcome names its own status (a reload of a stopped
+        // service is answered 409).
+        res.writeHead(outcome.status || 502, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: outcome.error, code: outcome.code, ...(outcome.reason ? { reason: outcome.reason } : {}), vars: { unit: body.name, action: body.action, ...outcome.vars } }));
         return true;
     }

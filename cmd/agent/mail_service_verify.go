@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/hostcmd"
@@ -372,25 +374,96 @@ func applyDovecotVerified(run mailServiceRunner, mode mailServiceMode) (string, 
 		detail: "systemctl " + action + " dovecot reported success, but dovecot.service is not running afterwards"}
 }
 
-// stopPostfixVerified stops Postfix through its unit and returns only once
-// Postfix itself says its master is not running. `postfix status` can be
-// believed only when Postfix accepts its configuration (a refused main.cf makes
-// it exit non-zero too), so that is established first; a stop is never held
-// back by it. With a refused configuration the stop is still sent and the
-// outcome is unknown.
+// postfixMasterProcess reads from the kernel whether the Postfix master is
+// alive, without asking Postfix's own programs (11 Oct 2026).
 //
-// stopPostfixVerified, Postfix'i unit'i üzerinden durdurur ve ancak Postfix
-// ana sürecinin çalışmadığını kendisi söylediğinde döner.
+// `postfix status` reads main.cf before it answers, so with a main.cf Postfix
+// refuses it exits non-zero whatever the master does (measured on Debian 13 and
+// Ubuntu 24.04: a Stop that had ended the master was answered as unknown). The
+// master writes its process ID to `<queue_directory>/pid/master.pid` when it
+// starts and leaves the file there when it exits, so the file alone says
+// nothing; the process it names does: it is the master while `/proc/<pid>/comm`
+// reads `master`, and it is gone when that entry does not exist or belongs to
+// another program.
+//
+// known is false when one of these could not be read: the queue directory was
+// not answered, or a file could not be read for a reason other than "it does
+// not exist". Then nothing is claimed.
+//
+// postfixMasterProcess, Postfix ana sürecinin yaşayıp yaşamadığını Postfix'in
+// kendi programlarına sormadan çekirdekten okur. Okunamayan bir şey varsa
+// known false olur ve hiçbir şey ileri sürülmez.
+func postfixMasterProcess(run mailServiceRunner) (alive bool, pid int, known bool) {
+	queue, err := run("postconf", "-h", "queue_directory")
+	if err != nil {
+		return false, 0, false
+	}
+	directory := strings.TrimSpace(string(queue))
+	if !path.IsAbs(directory) {
+		return false, 0, false
+	}
+	gone := func(err error) bool {
+		return errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ESRCH)
+	}
+	data, err := mailServiceReadFile(path.Join(directory, "pid", "master.pid"))
+	if err != nil {
+		// No file: no master ever started with this queue directory.
+		return false, 0, gone(err)
+	}
+	pid, err = strconv.Atoi(strings.TrimSpace(string(data)))
+	if err != nil || pid <= 0 {
+		return false, 0, false
+	}
+	name, err := mailServiceReadFile("/proc/" + strconv.Itoa(pid) + "/comm")
+	if err != nil {
+		return false, pid, gone(err)
+	}
+	return strings.TrimSpace(string(name)) == "master", pid, true
+}
+
+// stopPostfixVerified stops Postfix through its unit and returns only once
+// the master process is seen to be gone.
+//
+// A stop never depends on `postfix check` (11 Oct 2026): the master's own
+// process is looked for (postfixMasterProcess), and a master that is gone is
+// "stopped" whatever main.cf holds. Only when the process cannot be looked for
+// is Postfix asked itself, as before: `postfix status` can be believed only
+// when Postfix accepts its configuration, so with a refused configuration and
+// no way to see the process the outcome is unknown.
+//
+// stopPostfixVerified, Postfix'i unit'i üzerinden durdurur ve ancak ana sürecin
+// gittiği görüldüğünde döner. Durdurma hiçbir zaman `postfix check` sonucuna
+// bağlı değildir; yalnızca süreç görülemiyorsa Postfix'in kendisine sorulur.
 func stopPostfixVerified(run mailServiceRunner) (string, error) {
 	const service = "Postfix"
-	checkOutput, checkErr := run("postfix", "check")
 	if out, err := run("systemctl", "stop", "postfix"); err != nil {
 		return "", mailServiceFailure(service, mailServiceStageStop, out, err)
 	}
+	seen := 0
+	for attempt := 0; attempt < mailServiceStartPolls; attempt++ {
+		if attempt > 0 {
+			mailServiceSleep(mailServicePollInterval)
+		}
+		alive, pid, known := postfixMasterProcess(run)
+		if !known {
+			seen = -1
+			break
+		}
+		if !alive {
+			return mailServiceStopped, nil
+		}
+		seen = pid
+	}
+	if seen > 0 {
+		return "", &mailServiceError{service: service, stage: mailServiceStageStop,
+			detail: fmt.Sprintf("systemctl stop postfix reported success, but the Postfix master process (%d) is still running", seen)}
+	}
+	// The process could not be looked for; Postfix is asked itself.
+	checkOutput, checkErr := run("postfix", "check")
 	if checkErr != nil {
 		unknown := mailServiceFailure(service, mailServiceStageVerify, checkOutput, checkErr)
 		unknown.unknown = true
-		unknown.detail = strings.TrimSuffix("systemctl stop postfix reported success, but `postfix check` did not pass, so `postfix status` cannot say whether the master stopped: "+unknown.detail, ": ")
+		unknown.detail = strings.TrimSuffix("systemctl stop postfix reported success, but the master process could not be looked for and `postfix check` did not pass, so `postfix status` cannot say whether the master stopped: "+unknown.detail, ": ")
 		return "", unknown
 	}
 	var after postfixMasterState

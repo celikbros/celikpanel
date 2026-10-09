@@ -3581,3 +3581,226 @@ engine; the screen says so. Not covered: the other harmful routes of the
 inventory (service and application restart, plans, enrollments), the about 38
 routes that report wrongly after a replay, the 7 unclassified routes and the
 version-token routes.
+
+### Corrections from the second native measurement (invariants 1-4 and 6, 2026-10-11)
+
+D-025 invariants 1 (the owner's native configuration is detected, not
+replaced), 2 (unknown is not absent, empty or success), 3 (the unsafe write is
+stopped at its own boundary), 4 (a mutation reads its pre-image, validates and
+has a tested inverse) and 6 (the screen renders the authoritative state);
+D-022, D-024, D-029. No P0 item is closed or advanced. Source: the `set2` run
+of 2026-10-09 (UTC) on disposable QEMU/KVM guests (Debian 13, Ubuntu 24.04,
+Arch; evidence `deploy/e2e/release-recovery/evidence/set2-20261011/`), which
+confirmed the corrections of the entry before this one and measured three
+candidate defects (P3, P4, P5) and the observations O6-O15. Nothing here was
+observed on an installed server. This entry corrects them in source; none of
+the corrections has been measured on real services.
+
+- **Measured.**
+  - *O15, a secret answered to the browser.* `POST
+    /api/v1/import/cpanel/inspect` answered each mailbox's password hash
+    (`mail_accounts[].crypt_hash`): the handler encoded the Agent's answer as
+    it came. The apply route already read the archive again on the server; the
+    page sent the archive's path and the owner's choices, never the hashes.
+  - *P3, a failed Reload answered "keeps running with the settings it had",
+    which nobody had read.* (a) PostgreSQL with an owner's drop-in whose
+    `ExecReload` signals the server and then fails: the instance's
+    `ReloadResult` is `exit-code` and `pg_conf_load_time()` had moved; the
+    server had re-read its files. (b) A Reload of a stopped Postfix or Dovecot
+    got the same sentence.
+  - *O8, Stop of Postfix with a refused `main.cf` answered `502
+    SERVICE_ACTION_UNKNOWN` although the master was gone.* `postfix status`
+    reads `main.cf` before it answers, so it cannot answer in that state.
+  - *P4, the files step of an import refused an archive that holds the
+    directory member `homedir/public_html/`* ("unsafe cpmove member path"), the
+    route answered `202` with `status: pending`, and the domain, the mailbox
+    and the database were imported while the site files were not. Nothing was
+    pending: every step had ended.
+  - *P5, Arch: a PHP site could not be created, so every import answered
+    `500`.* The pool file was written to `/etc/php/8.5/fpm/pool.d/`, the Debian
+    layout, and the reload named a unit `php8.5-fpm`.
+  - *O9.* A certbot run that did not issue answered `500 INTERNAL` "internal
+    server error".
+  - *O10.* `database-servers/{id}/databases` answered the new user's password
+    also when the caller had sent it, so the answer was not kept and a replay
+    got the status-only refusal.
+  - *O11.* A service action was refused `409 server_setup_busy` while the setup
+    only waited for a public DNS record, for the moments in which its runner
+    asked the resolvers again.
+  - *O14.* The Databases page showed `15.1` for a MariaDB 10.11.14 (Ubuntu
+    24.04: the client's version) and the literal `VERSION()` on Arch.
+- **Changed.**
+  - *The import preview and the hashes*
+    (`internal/transport/cpmove_contracts.go`, `cmd/agent/cpmove_rpc.go`,
+    `cmd/panel/import_handlers.go`). The browser is answered a type of its own,
+    with every field named: a mailbox is its address, its quota and
+    `has_password`. `CpmoveMailAccount.CryptHash` is never encoded as JSON
+    (`json:"-"`); it travels from the Agent to the Panel over their local RPC,
+    and only when the Panel asks for it
+    (`CpmoveInspectRequest.IncludeMailHashes`), which only the apply of an
+    import with mail does. The apply reads the archive again on the server, as
+    before. A mailbox whose password field is not a crypt hash (a suspended
+    one) is now listed with `has_password: false` instead of being left out,
+    and an apply reports it as a step that was not imported instead of skipping
+    it silently.
+  - *A failed reload says only what was verified*
+    (`cmd/agent/service_action_verify.go`,
+    `cmd/panel/service_action_outcome.go`, `internal/transport/rpc.go`). Three
+    new stages. `not_running`: a reload of a stopped Postfix or Dovecot, or of
+    a wrapper with no running unit behind it; answered `409`, nothing was sent
+    to the daemon. `reload_reread` and `reload_not_reread`: PostgreSQL only.
+    Before a reload the Agent reads, over the local socket and without sending
+    a signal, the postmaster's process ID (`postmaster.pid`),
+    `pg_postmaster_start_time()` and `pg_conf_load_time()`; after a reload that
+    the unit reported as failed it reads them again. Only when both readings
+    are of the same server process and that process is the unit's main process
+    is a later load time "it re-read its files" and an unchanged one, read
+    twice, "it did not". In every other case, and for every service that cannot
+    be asked, the stage is the plain `reload`, whose sentence claims neither
+    state.
+  - *Stop of Postfix is judged by the master's process*
+    (`cmd/agent/mail_service_verify.go`). After `systemctl stop postfix` the
+    Agent reads the process ID in `<queue_directory>/pid/master.pid` and
+    `/proc/<pid>/comm`: the master is gone when that entry does not exist or
+    belongs to another program. `postfix check` is no longer asked for a stop.
+    Only when the process cannot be looked for is Postfix asked itself, as
+    before, and only then can a refused configuration make the outcome unknown.
+  - *Directory members of an archive* (`cmd/agent/cpmove_extract_linux.go`).
+    One trailing slash is taken off the name of a member that is a directory,
+    the way tar stores it. Basis: the tar format (POSIX ustar typeflag `5`; GNU
+    tar, Python's `tarfile` and Go's `tar.FileInfoHeader` all write the slash)
+    and the import's own inspection, which already cleaned the name; the
+    repository holds no real cPanel archive, and none was available to the run.
+    Every other refusal stands and is tested: a `..` component anywhere, a
+    backslash, a NUL, a doubled trailing slash, a payload path that cleans to
+    nothing, a file's name with a trailing slash, symbolic links, hard links,
+    devices.
+  - *An import answers what it came to* (`cmd/panel/import_handlers.go`). `200`
+    with `status: "active"` when every chosen part was imported, or `status:
+    "partial"`, `code: IMPORT_PARTIAL`, the lists `imported` and
+    `not_imported`, `domain_status` and a `message` (D-024). It never answers
+    `202` or `status: "pending"`. A site that could not be created is `502
+    IMPORT_SITE_NOT_CREATED` instead of a bare `500`.
+  - *PHP-FPM on a single-unit host* (`internal/services/php_layout.go` and the
+    five files that built the Debian paths; `cmd/agent/site_rpc.go`,
+    `cmd/agent/vhost_rpc.go`). Decision: PHP sites on Arch are meant to be
+    supported. Basis in the source: the catalogue maps `php-fpm` for pacman and
+    names Arch's single unit, the instance listing asks the program for the
+    version on that layout, and the capability read was changed (B3b) so that
+    Add Domain offers PHP there. The layout is read from the host, as the
+    instance listing reads it: a version with its own tree under `/etc/php` is
+    the versioned layout; a host without it but with `/etc/php/php-fpm.d` is
+    the single-unit layout (pools in `/etc/php/php-fpm.d/`, unit `php-fpm`,
+    program `php-fpm`, `/etc/php/php.ini`, sockets under `/run/php-fpm/`). The
+    socket's owner is the web server account that exists (`www-data`, `nginx`,
+    `http`).
+  - *A certbot failure is typed* (`cmd/agent/certbot_failure.go`,
+    `cmd/panel/certificate_issue_failure.go`). The Agent reads certbot's own
+    output for three kinds (the authority could not be reached, it refused a
+    validation, one of its limits was reached), adds `timeout` and `tool`, and
+    one bounded line. The answer is `502 CERTIFICATE_ISSUE_FAILED` with the
+    kind as `reason`; certbot's line goes to an administrator only.
+  - *A waiting setup does not refuse service actions*
+    (`cmd/panel/server_setup_operations.go`). The rule: an execution is
+    mutating while its row is `running`, except when the step it is at is the
+    public address check (`access_dns`), which only asks public resolvers. A
+    row that cannot be read as an execution counts as mutating.
+  - *A password the caller sent is not sent back*
+    (`cmd/panel/database_v2_handlers.go`). The database and the database-user
+    routes answer `password_set: true`, and `password` only when the request
+    minted it. The first answer is therefore kept and replayed like any other.
+    No other route was found that echoes a sent password.
+  - *The MariaDB version is the server's*
+    (`internal/services/mariadb_driver.go`, `version_detector.go`,
+    `cmd/panel/database_admin_account_handlers.go`). The running engine is
+    asked whenever the Panel has an account on it, with a statement that marks
+    its own answer (`version=...`); the service scan asks the server program
+    (`mariadbd --version`), never the client.
+- **API changes (for the release notes).**
+  - `POST /api/v1/import/cpanel/inspect`: `mail_accounts[].crypt_hash` is gone;
+    `mail_accounts[].has_password` (boolean) is new. A mailbox without a
+    password in the archive is now listed.
+  - `POST /api/v1/import/cpanel/apply`: `200` in place of `202` for an import
+    that ended with a part not imported; `status` is `active` or `partial` (it
+    was `active` or `pending`); new fields `domain`, `domain_status`, `code`,
+    `message`, `imported`, `not_imported`. New refusal `502
+    IMPORT_SITE_NOT_CREATED`.
+  - `POST /api/v1/service/action`: new reasons `not_running` (answered `409`),
+    `reload_reread`, `reload_not_reread`; a Stop of Postfix with a refused
+    `main.cf` answers `200` when the master is gone.
+  - `POST /api/v1/domains/{id}/ssl/letsencrypt`: `502 CERTIFICATE_ISSUE_FAILED`
+    with a `reason` in place of `500 INTERNAL` for a certbot run that did not
+    issue.
+  - `POST /api/v1/database-servers/{id}/databases` and `.../users`: `password`
+    only when the request minted it; `password_set` is new.
+- **Not changed, and why.**
+  - O6 and O7 (a restarted Panel does not cut a running restore; after a killed
+    Panel the Agent finished it while the row says the outcome is unknown) are
+    what D-029 describes; reconciling the row with the Agent is not part of
+    this entry.
+  - O12: a Reload of MariaDB is answered with systemd's own line. The Services
+    screens send Start, Stop and Restart only, so no screen offers that Reload;
+    it is reachable through the API. O13 and O2 are unchanged.
+  - The other DNS waits of a setup (`primary_dns`, `infrastructure_dns`) still
+    refuse service actions while they are re-checked: their re-check can
+    publish native DNS records. The wait for the final verification (which
+    holds the reverse-DNS check) never sets the row to `running`, so it never
+    refused.
+  - On a single-unit host the extension directories (`mods-available`,
+    `conf.d`) are still the Debian ones, and a PHP version switch still builds
+    its socket path on the Panel; such a host has one version to switch to.
+  - A version already recorded for an engine stays until the Panel's account on
+    it is provisioned again.
+  - The Domains page treats a domain's `pending` status as a deletion that may
+    be waiting and asks for its marker; a domain left by a partial import has
+    none and is drawn as an ordinary row.
+- **Schema or version transition.** No database schema and no persisted state.
+  The Agent's RPC gains fields that are transferred by name:
+  `CpmoveMailAccount.HasPassword`, `CpmoveInspectRequest.IncludeMailHashes`,
+  `IssueLetsEncryptResponse.Failure` and `FailureDetail`, and three
+  `ServiceActionResult.Stage` values. The archive calls already require the
+  Panel and the Agent to be the same build. A Panel that meets an Agent without
+  the new fields shows a mailbox as having a password when a hash arrived,
+  answers a certbot failure as before, and has no sentence to choose for a
+  stage it is not sent. A `request_identities` row written before the update
+  replays the answer it stored, in its old shape, until it expires.
+- **Recovery behaviour.** Nothing retries by itself. A partial import leaves
+  the domain and what was imported in place; the owner adds the missing parts
+  by hand, or removes the domain and imports the archive again, and an import
+  into an existing domain is refused. A certificate request that failed added
+  nothing: what certbot left of it is removed before the answer, and a
+  certificate the site had keeps serving. A reload that was reported as failed
+  is not repeated by the Panel, and no signal is sent to PostgreSQL to learn
+  what it did.
+- **Evidence.** Component tests only; the native re-run is pending. Agent:
+  `cpmove_set2_linux_test.go` (an archive as tar writes it, every refusal, the
+  hashes handed over only to an apply), `service_action_verify_test.go` and
+  `mail_service_verify_test.go` (each PostgreSQL reading, a stopped daemon,
+  Stop judged by the master's process), `certbot_failure_test.go`. Panel:
+  `set2_corrections_test.go` (no answer, stored answer or log line holds a
+  hash-shaped value; the partial answer; the certificate answer; a sent
+  password is not echoed and its answer is replayed; the engine is asked for
+  its version), `server_setup_busy_rule_test.go`,
+  `service_action_outcome_test.go`. Services: `php_layout_test.go`. Screens:
+  `web/tests/set2-corrections.test.mjs`, and a real Chrome against the loopback
+  mock (`web/tools/browser-inspect`, scenarios `importpreview`, `importresult`,
+  `reloadwording`, `certfailure`; desktop and phone, English and Turkish, light
+  and dark). No real cPanel archive, no certificate authority and no Arch host
+  was used.
+- **Open.**
+  - No correction here has been measured on real services. The native re-run
+    must show: the preview and every stored answer without a hash and the
+    mailbox imported with its password; an archive with directory members
+    imported completely, and a failed files step answered `200` / `partial`;
+    the PostgreSQL hook sequence answered `reload_reread`, a stopped Postfix
+    and Dovecot answered `409` / `not_running`, and Stop of Postfix with a
+    refused `main.cf` answered `200` / `stopped`; on Arch a PHP site created,
+    served and deleted, and an import completed; a certbot failure answered
+    `502 CERTIFICATE_ISSUE_FAILED`; no `server_setup_busy` while the setup
+    waits at `access_dns`; a sent database password not echoed and its replay
+    answered from the row; the server's MariaDB version on all three platforms.
+  - Whether a PHP page executes on Arch under the packaged unit's hardening,
+    and whether `/run/php-fpm` is where a site's socket may live there, is
+    established only by that run.
+  - Real cPanel archives (the home directory as a nested `homedir.tar`,
+    suspended mailboxes, large sites) have not been imported.

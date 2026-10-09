@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"io/fs"
 	"reflect"
 	"strings"
 	"testing"
@@ -29,6 +30,13 @@ type fakeMailHost struct {
 	// `systemctl stop postfix` exits 0 and the master keeps running (the
 	// wrapper unit's job succeeds whatever the daemon does).
 	stopLeavesMaster bool
+	// The process ID in master.pid. Postfix leaves the file when the master
+	// exits, so it names the last master that ran.
+	pidFile int
+	// master.pid cannot be read (not "does not exist": an I/O error).
+	pidFileUnreadable bool
+	// The process ID in master.pid now belongs to another program.
+	pidReusedBy string
 
 	// Dovecot
 	doveconfOutput  string
@@ -137,11 +145,30 @@ func installFakeMailHost(t *testing.T) *fakeMailHost {
 	oldSleep, oldRead, oldExited := mailServiceSleep, mailServiceReadFile, mailServiceExited
 	t.Cleanup(func() { mailServiceSleep, mailServiceReadFile, mailServiceExited = oldSleep, oldRead, oldExited })
 	mailServiceSleep = func(time.Duration) {}
+	host.pidFile = host.masterPID
 	mailServiceReadFile = func(path string) ([]byte, error) {
-		if path != "/var/spool/postfix/pid/master.pid" {
-			return nil, errors.New("unexpected file: " + path)
+		if host.masterPID != 0 {
+			host.pidFile = host.masterPID
 		}
-		return []byte("  " + itoa(host.masterPID) + "\n"), nil
+		switch path {
+		case "/var/spool/postfix/pid/master.pid":
+			if host.pidFileUnreadable {
+				return nil, errors.New("read /var/spool/postfix/pid/master.pid: input/output error")
+			}
+			if host.pidFile == 0 {
+				return nil, fs.ErrNotExist
+			}
+			return []byte("  " + itoa(host.pidFile) + "\n"), nil
+		case "/proc/" + itoa(host.pidFile) + "/comm":
+			if host.pidReusedBy != "" {
+				return []byte(host.pidReusedBy + "\n"), nil
+			}
+			if host.masterPID == 0 || host.masterPID != host.pidFile {
+				return nil, fs.ErrNotExist
+			}
+			return []byte("master\n"), nil
+		}
+		return nil, errors.New("unexpected file: " + path)
 	}
 	mailServiceExited = func(err error) bool {
 		var exit fakeExit

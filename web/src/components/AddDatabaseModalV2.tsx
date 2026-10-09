@@ -134,7 +134,10 @@ export function AddDatabaseModalV2({ serverId, serverName, onClose, onSuccess, e
             showToast('success', `Database created: ${data.name}`);
 
             if (userMode === 'new') {
-                showToast('info', `User: ${data.user}, Password: ${data.password}`);
+                // The server answers a password only when it made one up; the
+                // one typed here is not sent back.
+                // Sunucu parolayı yalnız kendisi ürettiğinde yanıtlar.
+                showToast('info', typeof data.password === 'string' ? `User: ${data.user}, Password: ${data.password}` : `User: ${data.user}`);
             }
 
             onSuccess();

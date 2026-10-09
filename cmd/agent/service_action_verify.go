@@ -80,7 +80,7 @@ func verifiedServiceAction(run mailServiceRunner, serviceID, unit, action string
 	case serviceID == "dovecot" && unit == "dovecot":
 		result = dovecotServiceAction(run, action)
 	default:
-		result = unitServiceAction(run, unit, action)
+		result = unitServiceAction(run, serviceID, unit, action)
 	}
 	if !result.Success {
 		log.Printf("ERROR service %s %s: %s %s: %s", action, unit, result.Outcome, result.Stage, result.Error)
@@ -135,10 +135,13 @@ func mailServiceActionResult(service, action, state string, err error) transport
 		return result
 	}
 	if state == mailServiceNotRunning {
-		// Only a reload ends here: a stopped daemon was left stopped.
+		// Only a reload ends here: a stopped daemon was left stopped. It is
+		// said as that, not as a reload that failed on a running service
+		// (measured 2026-10-09: the answer read "keeps running with the
+		// settings it had" for a Postfix and a Dovecot that were not running).
 		detail := service + " is not running; nothing was reloaded"
 		return transport.ServiceActionResult{
-			Error: detail, Outcome: transport.ServiceActionFailed, Stage: mailServiceStageReload, Detail: detail,
+			Error: detail, Outcome: transport.ServiceActionFailed, Stage: transport.ServiceActionStageNotRunning, Detail: detail,
 		}
 	}
 	if state == "" {
@@ -277,8 +280,109 @@ func unionOfUnits(lists ...[]string) []string {
 	return out
 }
 
+// postgresConfigReading is what the running PostgreSQL says about itself and
+// about the last time it re-read its configuration files. It is read, never
+// caused: no signal is sent to get it.
+type postgresConfigReading struct {
+	// postmaster is the first line of the data directory's postmaster.pid;
+	// started is pg_postmaster_start_time(). Together they say that two
+	// readings are of the same server process.
+	postmaster int
+	started    string
+	// loaded is pg_conf_load_time(): PostgreSQL moves it only when a re-read
+	// of its configuration files got to the end without an error.
+	loaded string
+}
+
+// readPostgresConfigReading asks the running PostgreSQL over the local socket,
+// the way the configuration writer does (db_config.go). nil when it could not
+// be asked or did not answer all three facts.
+func readPostgresConfigReading() *postgresConfigReading {
+	out, err := dbConfigPostgreSQLQuery(
+		"SELECT 'postmaster=' || split_part(pg_read_file('postmaster.pid'), chr(10), 1);\n" +
+			"SELECT 'started=' || extract(epoch from pg_postmaster_start_time());\n" +
+			"SELECT 'loaded=' || extract(epoch from pg_conf_load_time());")
+	if err != nil {
+		return nil
+	}
+	values := map[string]string{}
+	for _, raw := range strings.Split(out, "\n") {
+		if name, value, ok := strings.Cut(strings.TrimSpace(raw), "="); ok {
+			if _, seen := values[name]; !seen {
+				values[name] = strings.TrimSpace(value)
+			}
+		}
+	}
+	reading := &postgresConfigReading{started: values["started"], loaded: values["loaded"]}
+	reading.postmaster, _ = strconv.Atoi(values["postmaster"])
+	if reading.postmaster <= 0 || reading.started == "" {
+		return nil
+	}
+	if _, err := strconv.ParseFloat(reading.loaded, 64); err != nil {
+		return nil
+	}
+	return reading
+}
+
+// postgresReloadOutcome says what a reload that the unit reported as failed
+// came to on the server itself (11 Oct 2026).
+//
+// Measured on Debian 13 and Ubuntu 24.04 with an owner's drop-in whose
+// ExecReload signals the server and then fails: the unit's ReloadResult is
+// `exit-code`, and PostgreSQL had re-read its files. The answer used to say
+// "it keeps running with its previous settings", which nobody had read.
+//
+// before was read before the action. The answer is a stage only when both
+// readings are of the same server process and that process is the unit's main
+// process (unitPID, from systemd): then a later pg_conf_load_time() is "it
+// re-read its files" and an unchanged one is "it did not". In every other
+// case the answer is "" and nothing is claimed about the settings in effect.
+//
+// postgresReloadOutcome, birimin başarısız diye bildirdiği bir yeniden
+// yüklemenin sunucunun kendisinde neye vardığını söyler. Yalnızca iki okuma da
+// aynı sunucu sürecine ve o süreç birimin ana sürecine aitse bir yanıt verir;
+// başka her durumda yürürlükteki ayarlar hakkında hiçbir şey ileri sürülmez.
+func postgresReloadOutcome(before *postgresConfigReading, unitPID int) string {
+	if before == nil || unitPID <= 0 || before.postmaster != unitPID {
+		return ""
+	}
+	earlier, _ := strconv.ParseFloat(before.loaded, 64)
+	// The postmaster takes up the signal a moment after it was sent; one more
+	// reading after a short wait before "it did not re-read" is said.
+	for attempt := 0; attempt < 2; attempt++ {
+		if attempt > 0 {
+			mailServiceSleep(mailServiceSettle)
+		}
+		after := readPostgresConfigReading()
+		if after == nil || after.postmaster != before.postmaster || after.started != before.started {
+			return ""
+		}
+		if later, _ := strconv.ParseFloat(after.loaded, 64); after.loaded != before.loaded && later > earlier {
+			return transport.ServiceActionStageReloadReread
+		}
+	}
+	return transport.ServiceActionStageReloadNotReread
+}
+
+func postgresReloadDetail(stage, member, reported string) string {
+	switch stage {
+	case transport.ServiceActionStageReloadReread:
+		return "the reload of " + member + " was reported as failed (" + reported + "), but PostgreSQL re-read its configuration files after it: pg_conf_load_time() moved"
+	case transport.ServiceActionStageReloadNotReread:
+		return "the reload of " + member + " failed (" + reported + ") and PostgreSQL did not re-read its configuration files: pg_conf_load_time() did not move"
+	}
+	return "the reload of " + member + " failed (" + reported + "); which settings it runs with now was not read"
+}
+
 // unitServiceAction acts on a unit that is neither Postfix nor Dovecot.
-func unitServiceAction(run mailServiceRunner, unit, action string) transport.ServiceActionResult {
+func unitServiceAction(run mailServiceRunner, serviceID, unit, action string) transport.ServiceActionResult {
+	// PostgreSQL can be asked when it last re-read its files. That is read
+	// before a reload, so that a reload reported as failed can be answered
+	// with what the server did rather than with a guess.
+	var postgresBefore *postgresConfigReading
+	if serviceID == "postgresql" && action == "reload" {
+		postgresBefore = readPostgresConfigReading()
+	}
 	wrapper := inspectWrapperUnit(run, unit)
 	before := map[string]memberUnitState{}
 	var members []string
@@ -314,6 +418,21 @@ func unitServiceAction(run mailServiceRunner, unit, action string) transport.Ser
 		if !mailServiceExited(err) {
 			// Not the command's own exit status: it may or may not have acted.
 			result.Outcome = transport.ServiceActionUnknown
+			return result
+		}
+		if wrapper == nil && postgresBefore != nil {
+			// A real PostgreSQL unit (Arch) whose reload command failed: the
+			// server is asked what it did.
+			if state, readErr := readMemberUnit(run, unit+".service"); readErr == nil && state.running() {
+				if stage := postgresReloadOutcome(postgresBefore, state.pid); stage != "" {
+					reported := state.reloadResult
+					if reported == "" || reported == "success" {
+						reported = "its reload command exited with an error"
+					}
+					result.Stage, result.Detail = stage, postgresReloadDetail(stage, unit+".service", reported)
+					result.Error = result.Detail
+				}
+			}
 		}
 		return result
 	}
@@ -336,12 +455,12 @@ func unitServiceAction(run mailServiceRunner, unit, action string) transport.Ser
 		}
 		members = expected
 	}
-	return verifyWrapperAction(run, unit, action, members, before)
+	return verifyWrapperAction(run, unit, action, members, before, postgresBefore)
 }
 
 // verifyWrapperAction judges an action on a wrapper unit by the units behind
 // it. systemctl has already reported success for the wrapper.
-func verifyWrapperAction(run mailServiceRunner, unit, action string, members []string, before map[string]memberUnitState) transport.ServiceActionResult {
+func verifyWrapperAction(run mailServiceRunner, unit, action string, members []string, before map[string]memberUnitState, postgresBefore *postgresConfigReading) transport.ServiceActionResult {
 	wrapperName := unit + ".service"
 	unknown := func(member, detail string) transport.ServiceActionResult {
 		return transport.ServiceActionResult{
@@ -364,7 +483,7 @@ func verifyWrapperAction(run mailServiceRunner, unit, action string, members []s
 			}
 		}
 		if len(members) > 0 && len(running) == 0 {
-			return failed(mailServiceStageReload, members[0], "none of the units behind it is running; nothing was reloaded")
+			return failed(transport.ServiceActionStageNotRunning, members[0], "none of the units behind it is running; nothing was reloaded")
 		}
 		members = running
 	}
@@ -411,7 +530,15 @@ func verifyWrapperAction(run mailServiceRunner, unit, action string, members []s
 				return failed(mailServiceStageReload, member, "the reload did not reach "+member+": its reload command was not run")
 			}
 			if now.reloadResult != "success" {
-				return failed(mailServiceStageReload, member, "the reload of "+member+" failed ("+now.reloadResult+"); it keeps running with its previous settings")
+				// The unit's reload command failed. That says nothing about
+				// which settings the daemon runs with: a command that fails
+				// part-way may have signalled it first. Only PostgreSQL can be
+				// asked, and only its answer is repeated.
+				stage := mailServiceStageReload
+				if answered := postgresReloadOutcome(postgresBefore, now.pid); answered != "" {
+					stage = answered
+				}
+				return failed(stage, member, postgresReloadDetail(stage, member, now.reloadResult))
 			}
 		}
 	}

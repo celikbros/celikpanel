@@ -213,7 +213,8 @@ func validatePoolIdentity(name, value string) error {
 }
 
 var phpFPMConfigTest = func(version string) error {
-	binary, err := exec.LookPath("php-fpm" + version)
+	program := phpLayoutFor(version).program()
+	binary, err := exec.LookPath(program)
 	if err != nil {
 		// Some supported package layouts do not expose an FPM binary in PATH.
 		// Validation is therefore best-effort here; activation remains mandatory.
@@ -221,7 +222,7 @@ var phpFPMConfigTest = func(version string) error {
 	}
 	output, err := exec.Command(binary, "-t").CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("php-fpm%s -t: %s: %w", version, strings.TrimSpace(string(output)), err)
+		return fmt.Errorf("%s -t: %s: %w", program, strings.TrimSpace(string(output)), err)
 	}
 	return nil
 }

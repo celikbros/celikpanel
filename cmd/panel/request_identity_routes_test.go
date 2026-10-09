@@ -77,6 +77,7 @@ type requestIdentityRoutesAgent struct {
 
 	mu                  sync.Mutex
 	preview             transport.CpmoveInspectResponse
+	inspectRequests     []transport.CpmoveInspectRequest
 	inspectCalls        int
 	installedCalls      int
 	createDatabaseCalls int
@@ -86,9 +87,10 @@ type requestIdentityRoutesAgent struct {
 }
 
 func (a *requestIdentityRoutesAgent) InspectCpmove(
-	_ *transport.CpmoveInspectRequest, resp *transport.CpmoveInspectResponse,
+	req *transport.CpmoveInspectRequest, resp *transport.CpmoveInspectResponse,
 ) error {
 	a.mu.Lock()
+	a.inspectRequests = append(a.inspectRequests, *req)
 	a.inspectCalls++
 	first := a.inspectCalls == 1
 	entered, release := a.inspectEntered, a.inspectRelease
