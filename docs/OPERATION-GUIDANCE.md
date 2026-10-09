@@ -7,6 +7,33 @@ The current source change covers setup progress with accepted-plan DNS role
 context, existing panel-license states, and generic service-operation errors. It
 does not certify every operation or provide third-party product-license adapters.
 
+> **Erratum on dates (recorded 2026-10-09).** Entries below, and some code comments,
+> carry the labels 2026-10-10, 2026-10-11 and 2026-10-12 (also "10 Oct 2026" and so on).
+> They are not calendar dates. The text was committed on 2026-10-08 and 2026-10-09
+> (local time, UTC+3); the label was raised by one per round of work instead of being
+> read from the clock. The labels stay, because entries cite each other by them
+> ("entry of 2026-10-10"). Read each as the name of a round:
+>
+> - 2026-10-10: the first native measurement of settings writes and the work after it
+>   (mail renewal, service actions, request identity). Committed 2026-10-09, 00:45-05:57:
+>   `6746142ae`, `15818740a`, `874d12e43`, `faa5ef085`.
+> - 2026-10-11: the second native measurement and its corrections. Committed 2026-10-09,
+>   08:05-09:12: `76bef04b8`, `c523bbfd2`, `cfa329676`.
+> - 2026-10-12: the final native round. Committed 2026-10-09, 09:12-13:06: `cfa329676`,
+>   `47a28dad0`, `dd1710256`, `557b554eb`.
+> - 2026-10-09 was used the same way earlier: the sections headed with it, except "Fourth
+>   batch", were committed on 2026-10-08 (`020a98ca1`, `51c969c61`, `545b26337`, `c4cf7fd9d`).
+>
+> The evidence directories `set1-20261010`, `set2-20261011` and `set3-20261012` carry the
+> same labels. They ran on 2026-10-08 21:18-22:15 UTC, 2026-10-09 03:29-04:49 UTC and
+> 2026-10-09 07:00-08:46 UTC. Their names stay, because their checksum lists are sealed.
+>
+> Entries written after this note use the clock date. A section dated 10, 11 or 12 October
+> 2026 that is not listed here is genuine. Sections of this document that carry or mention
+> a round label: "Second batch", "Fourth batch", "Settings writes after the first native
+> measurement", "Service actions and mail certificate renewal", "A change is sent once and
+> answered once", "After the second native measurement", "After the final native round".
+
 ## Requirement
 
 Every program, service, runtime and integration managed by CelikPanel must explain

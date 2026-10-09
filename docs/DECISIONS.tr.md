@@ -6,6 +6,19 @@ Büyük yön kararlarının **neden**inin kalıcı kaydı — soru her yeniden
 gündeme geldiğinde sıfırdan türetmek istemediğimiz gerekçeler. Kod kararları
 git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
+> **Tarihler üzerine düzeltme notu (9 Ekim 2026'da kaydedildi).** D-029'un tarih satırı
+> ("10 Ekim 2026") ve içindeki "2026-10-10 kaydı" atfı takvim tarihi değildir. D-029,
+> 2026-10-09 günü saat 05:57'de işlendi (`faa5ef085`, yerel saat, UTC+3). İş turları,
+> saatten okunmadan her turda bir artırılarak 2026-10-10, 2026-10-11 ve 2026-10-12
+> diye etiketlendi; turların hepsi 2026-10-09 günü işlendi (2026-10-10: 00:45-05:57;
+> 2026-10-11: 08:05-09:12; 2026-10-12: 09:12-13:06). Kayıtlar birbirine bu etiketlerle
+> atıf yaptığı için etiketler kalır. Eşleşme, işlemler ve aynı etiketleri taşıyan üç kanıt
+> dizini (`set1-20261010`, `set2-20261011`, `set3-20261012`; 2026-10-08 ve 2026-10-09
+> günlerinde çalıştılar) [OPERATION-GUIDANCE.tr.md](OPERATION-GUIDANCE.tr.md) başındaki
+> düzeltme notundadır. Bu dosyada etkilenen tek kayıt D-029'dur. Bu nottan sonra yazılan
+> kayıtlar saat tarihini kullanır; D-029 dışında 10, 11 veya 12 Ekim 2026 tarihli bir
+> kayıt gerçektir.
+
 ---
 
 ## D-029 · Durum değiştiren her istek tek bir kimlik taşır; yineleme asla iki kez çalışmaz

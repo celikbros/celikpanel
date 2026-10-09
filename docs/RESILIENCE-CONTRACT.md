@@ -8,6 +8,35 @@ repeated Frankfurt failures. Alpha80 corrects the observed BIND and rollback
 faults; it does not complete this contract. No installed server is changed by
 this document. Installed-panel updates remain user-initiated in CelikPanel.
 
+> **Erratum on dates (recorded 2026-10-09).** Headings below, and some code comments,
+> carry the labels 2026-10-10, 2026-10-11 and 2026-10-12 (also "10 Oct 2026" and so on).
+> They are not calendar dates. The text was committed on 2026-10-08 and 2026-10-09
+> (local time, UTC+3); the label was raised by one per round of work instead of being
+> read from the clock. The labels stay, because entries cite each other by them
+> ("merge of 2026-10-10"). Read each as the name of a round:
+>
+> - 2026-10-10: the first native measurement of settings writes and the work after it
+>   (mail renewal, service actions, request identity). Committed 2026-10-09, 00:45-05:57:
+>   `6746142ae`, `15818740a`, `874d12e43`, `faa5ef085`.
+> - 2026-10-11: the second native measurement and its corrections. Committed 2026-10-09,
+>   08:05-09:12: `76bef04b8`, `c523bbfd2`, `cfa329676`.
+> - 2026-10-12: the final native round. Committed 2026-10-09, 09:12-13:06: `cfa329676`,
+>   `47a28dad0`, `dd1710256`, `557b554eb`.
+> - 2026-10-09 was used the same way earlier: the section "Database and mail
+>   configuration: a file that could not be read is never an editor..." was committed on
+>   2026-10-08 (`545b26337`).
+>
+> The evidence directories `set1-20261010`, `set2-20261011` and `set3-20261012` carry the
+> same labels. They ran on 2026-10-08 21:18-22:15 UTC, 2026-10-09 03:29-04:49 UTC and
+> 2026-10-09 07:00-08:46 UTC. Their names stay, because their checksum lists are sealed.
+>
+> Entries written after this note use the clock date. A section dated 10, 11 or 12 October
+> 2026 that is not listed here is genuine. Sections of this document that carry a round
+> label: "Corrections from the first native measurement of settings writes", "Mail
+> certificate renewal and the Services page", "A state-changing request carries one
+> identity", "Corrections from the second native measurement", "Corrections from the final
+> native round".
+
 ## Finding
 
 The privilege split between the unprivileged panel and root agent remains useful.

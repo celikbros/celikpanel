@@ -4,6 +4,19 @@ P0.4/P0.5, constitution invariants 1 (owner authority), 2 (evidence meaning),
 and 4 (mutation preconditions). This closes a pre-publication observation gap;
 it does not establish independent renewal or complete owner-safe recovery.
 
+> **Erratum on dates (recorded 2026-10-09).** The section "The listeners are asked which
+> certificate they present (2026-10-10)" and its reference to the "entries of 2026-10-10"
+> use a round label, not a calendar date. That text was committed on 2026-10-09 at 04:07
+> (`874d12e43`, local time, UTC+3). Work rounds were labelled 2026-10-10, 2026-10-11 and
+> 2026-10-12 by raising the label once per round instead of reading the clock; all of them
+> were committed on 2026-10-09 (2026-10-10: 00:45-05:57; 2026-10-11: 08:05-09:12;
+> 2026-10-12: 09:12-13:06). The labels stay, because entries cite each other by them. The
+> mapping, the commits and the three evidence directories named with the same labels
+> (`set1-20261010`, `set2-20261011`, `set3-20261012`, run on 2026-10-08 and 2026-10-09)
+> are in the erratum at the top of [OPERATION-GUIDANCE.md](OPERATION-GUIDANCE.md). This
+> file has one affected section, the one named above. Entries written after this note use
+> the clock date; any other section dated 10, 11 or 12 October 2026 is genuine.
+
 The committed mail TLS v1 plan is historical accepted intent. Previously the
 host certificate preflight compared only its hostname, so a later native owner
 edit could be overwritten by configuration convergence during renewal. Initial

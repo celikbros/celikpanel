@@ -8,6 +8,35 @@ ilerlemesini, mevcut panel lisans durumlarını ve genel hizmet işlem hataları
 kapsar. Her işlemin doğrulandığını veya üçüncü taraf ürün lisansı adaptörlerinin
 uygulandığını göstermez.
 
+> **Tarihler üzerine düzeltme notu (9 Ekim 2026'da kaydedildi).** Aşağıdaki kayıtlar ve bazı
+> kod yorumları 2026-10-10, 2026-10-11 ve 2026-10-12 etiketlerini (ayrıca "10 Ekim 2026"
+> gibi yazımları) taşır. Bunlar takvim tarihi değildir. Metin 2026-10-08 ve 2026-10-09
+> günlerinde (yerel saat, UTC+3) işlendi; etiket saatten okunmadı, her iş turunda bir
+> artırıldı. Kayıtlar birbirine bu etiketlerle atıf yaptığı için ("2026-10-10 kaydı")
+> etiketler olduğu gibi kalır. Her birini bir turun adı olarak okuyun:
+>
+> - 2026-10-10: ayar yazılarının ilk gerçek sistem ölçümü ve sonrasındaki iş (posta
+>   yenilemesi, hizmet eylemleri, istek kimliği). 2026-10-09, 00:45-05:57 arasında
+>   işlendi: `6746142ae`, `15818740a`, `874d12e43`, `faa5ef085`.
+> - 2026-10-11: ikinci gerçek sistem ölçümü ve düzeltmeleri. 2026-10-09, 08:05-09:12
+>   arasında işlendi: `76bef04b8`, `c523bbfd2`, `cfa329676`.
+> - 2026-10-12: son gerçek sistem turu. 2026-10-09, 09:12-13:06 arasında işlendi:
+>   `cfa329676`, `47a28dad0`, `dd1710256`, `557b554eb`.
+> - 2026-10-09 etiketi daha önce aynı biçimde kullanıldı: bu etiketli bölümler ("Dördüncü
+>   parti" hariç) 2026-10-08'de işlendi (`020a98ca1`, `51c969c61`, `545b26337`, `c4cf7fd9d`).
+>
+> `set1-20261010`, `set2-20261011` ve `set3-20261012` kanıt dizinlerinin adları aynı
+> etiketleri taşır. Gerçekte 2026-10-08 21:18-22:15 UTC, 2026-10-09 03:29-04:49 UTC ve
+> 2026-10-09 07:00-08:46 UTC aralıklarında çalıştılar. Sağlama toplamı listeleri mühürlü
+> olduğu için adları değişmez.
+>
+> Bu nottan sonra yazılan kayıtlar saat tarihini kullanır. 10, 11 veya 12 Ekim 2026
+> tarihli olup burada listelenmeyen bir bölüm gerçektir. Bu belgede tur etiketi taşıyan
+> veya anan bölümler: "İkinci parti", "Dördüncü parti", "İlk gerçek sistem ölçümünden
+> sonra ayar yazıları", "Hizmet eylemleri ve posta sertifikası yenilemesi", "Bir değişiklik
+> bir kez gönderilir ve bir kez yanıtlanır", "İkinci gerçek sistem ölçümünden sonra",
+> "Son gerçek sistem turundan sonra".
+
 ## Gereksinim
 
 CelikPanel'in yönettiği her program, hizmet, çalışma ortamı ve entegrasyon,

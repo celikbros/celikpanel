@@ -9,6 +9,36 @@ düzeltir; bu sözleşmeyi bütünüyle hayata geçirmez. Bu belge hiçbir kurul
 değiştirmez. Kurulu panel güncellemelerini kullanıcı CelikPanel içinden başlatmaya
 devam eder.
 
+> **Tarihler üzerine düzeltme notu (9 Ekim 2026'da kaydedildi).** Aşağıdaki başlıklar ve bazı
+> kod yorumları 2026-10-10, 2026-10-11 ve 2026-10-12 etiketlerini (ayrıca "10 Ekim 2026"
+> gibi yazımları) taşır. Bunlar takvim tarihi değildir. Metin 2026-10-08 ve 2026-10-09
+> günlerinde (yerel saat, UTC+3) işlendi; etiket saatten okunmadı, her iş turunda bir
+> artırıldı. Kayıtlar birbirine bu etiketlerle atıf yaptığı için ("2026-10-10 birleştirmesi")
+> etiketler olduğu gibi kalır. Her birini bir turun adı olarak okuyun:
+>
+> - 2026-10-10: ayar yazılarının ilk gerçek sistem ölçümü ve sonrasındaki iş (posta
+>   yenilemesi, hizmet eylemleri, istek kimliği). 2026-10-09, 00:45-05:57 arasında
+>   işlendi: `6746142ae`, `15818740a`, `874d12e43`, `faa5ef085`.
+> - 2026-10-11: ikinci gerçek sistem ölçümü ve düzeltmeleri. 2026-10-09, 08:05-09:12
+>   arasında işlendi: `76bef04b8`, `c523bbfd2`, `cfa329676`.
+> - 2026-10-12: son gerçek sistem turu. 2026-10-09, 09:12-13:06 arasında işlendi:
+>   `cfa329676`, `47a28dad0`, `dd1710256`, `557b554eb`.
+> - 2026-10-09 etiketi daha önce aynı biçimde kullanıldı: "Veritabanı ve posta
+>   yapılandırması: okunamayan dosya asla düzenleyici olmaz..." bölümü 2026-10-08'de
+>   işlendi (`545b26337`).
+>
+> `set1-20261010`, `set2-20261011` ve `set3-20261012` kanıt dizinlerinin adları aynı
+> etiketleri taşır. Gerçekte 2026-10-08 21:18-22:15 UTC, 2026-10-09 03:29-04:49 UTC ve
+> 2026-10-09 07:00-08:46 UTC aralıklarında çalıştılar. Sağlama toplamı listeleri mühürlü
+> olduğu için adları değişmez.
+>
+> Bu nottan sonra yazılan kayıtlar saat tarihini kullanır. 10, 11 veya 12 Ekim 2026
+> tarihli olup burada listelenmeyen bir bölüm gerçektir. Bu belgede tur etiketi taşıyan
+> bölümler: "Ayar yazılarının ilk gerçek sistem ölçümünden çıkan düzeltmeler", "Posta
+> sertifikası yenilemesi ve Hizmetler sayfası", "Durum değiştiren istek tek bir kimlik
+> taşır", "İkinci gerçek sistem ölçümünden çıkan düzeltmeler", "Son gerçek sistem turunun
+> düzeltmeleri".
+
 ## Bulgu
 
 Root yetkisi olmayan panel ile root yetkili agent arasındaki yetki ayrımı yararlılığını koruyor.
