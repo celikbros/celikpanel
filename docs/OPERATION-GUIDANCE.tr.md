@@ -2020,7 +2020,8 @@ kataloğunda, kalanı `screens` ve `screens/server` içinde).
   listesinden çıkarsanabilir. Tarayıcı çalıştırmasında sayfanın tek gönderimi
   sahte sunucuya altı ya da yedi bağlantıyla ulaştı (tarayıcı, altında kapanan
   bağlantıdaki isteği yineler); bu sahte sunucuya karşı zararsızdır ve tam da
-  yinelenmezlik anahtarının var olma nedenidir.
+  yinelenmezlik anahtarının var olma nedenidir. 2026-10-10'dan beri uygulama bir
+  istek kimliği taşır (D-029; aşağıdaki o tarihli kayıt).
 - Yanıtı kaybolan değişikliğin (hesaplar, planlar, dosyalar) de kimliği yoktur;
   ekran yalnız durumu yeniden okuyabilir.
 
@@ -2903,8 +2904,10 @@ kataloğunda, kalanı `screens` içinde).
 
 **Sunucu gerektirir (burada yapılmadı; Go değişmedi).**
 
-- Bu değişikliklerin hiçbirinin istek kimliği yoktur. Sunucu bir kimlik
-  saklayana dek, yiten yanıt sonucu yukarıdaki gibi kişiye bırakır:
+- Bu değişikliklerin hiçbirinin 2026-10-09'da istek kimliği yoktu.
+  2026-10-10'dan beri elle alınan yedek ve geri yükleme bir kimlik taşır
+  (D-029; aşağıdaki o tarihli kayıt). Ötekilerde, sunucu bir kimlik saklayana
+  dek, yiten yanıt sonucu yukarıdaki gibi kişiye bırakır:
   `POST /api/v1/domains/{id}/dns/records`,
   `DELETE /api/v1/domains/{id}/dns/records?id=`,
   `POST /api/v1/domains/{id}/dns/zone`, `POST /api/v1/domains/{id}/dnssec` (DNS
@@ -2924,7 +2927,8 @@ kataloğunda, kalanı `screens` içinde).
   yalnız balon ve yeniden okumayla: `POST`/`PUT`/`DELETE /api/v1/users…`,
   `POST /api/v1/users/{id}/impersonate`, `/api/v1/plans…` (Hesaplar) ve bir alan
   adının Dosyalar değişiklikleri. Henüz taşınmadı ve burada bakılmadı: eklentiler,
-  VPN eşleri ve ekip üyeleri.
+  VPN eşleri ve ekip üyeleri (VPN cihazı ekleme 2026-10-10'dan beri bir kimlik
+  taşır).
 - Tarayıcı bir değişikliği kendiliğinden yeniden gönderebilir. Tarayıcı
   çalıştırmasında, sahte sunucu daha önce bir istek taşımış bağlantıyı yalnızca
   sıfırladığında Chrome `POST`'u sayfa istemeden yeniden gönderdi: tek tık, üç
@@ -2963,7 +2967,8 @@ kataloğunda, kalanı `screens` içinde).
   sunucunun bir nedeni doğruladığı yerler dışında: zamanlanmış görevler ve posta
   kuyruğu (aşağıdaki 2026-10-10 kaydı).
 - Yeniden okunan duruma soru sormayan değişiklikler (yukarıda sayıldı) sonucu
-  hâlâ kişiye bırakır. Bu panellerdeki hiçbir değişikliğin istek kimliği yoktur.
+  hâlâ kişiye bırakır. O tarihte bu panellerdeki hiçbir değişikliğin istek
+  kimliği yoktu; yedek ve geri yüklemenin 2026-10-10'dan beri vardır.
 - Gerçek sunucuda doğrulanmadı; sahte sunucuya karşı tek bir Chrome.
 
 **Bu partinin tarayıcı incelemesi (2026-10-09).** Kurulu, gerçek bir Chrome'da,
@@ -3864,13 +3869,18 @@ genel cümlesini bir balonla yanıtlar. 2026-10-10'un iki değişikliği de ger�
 bir hizmette ölçülmedi; o tarihli tarayıcı çalıştırmasında (dördüncü parti,
 yukarıda) posta politikası yanıtları, iki yapılandırma yeniden yükleme yanıtı ve
 dört crontab yanıtı sahte sunucuya karşı fotoğraflandı. Orada görüldü ve
-değiştirilmedi: çalışan ayarları bilinmeyen yapılandırma yeniden yükleme yanıtı
-(`restored_running_unknown`) hata yüzeyindedir, çünkü birimin yeniden yüklemesi
-doğrulanmış biçimde başarısız oldu; iki yapılandırma yeniden yükleme yanıtının
-altındaki satır, onu systemd biriminin yeniden yüklemesi yazdığı halde hizmetin
-söylediği diye sunulur; ve aşama adı vermeyen (eski bir Agent'ın) yeniden
-yüklenmedi yanıtının cümlesi, bu kaydın başındaki kuralın tersine, hâlâ `sudo
-systemctl reload postfix` komutunu adlandırır.
+2026-10-10 birleştirmesiyle değiştirildi: çalışan ayarları bilinmeyen
+yapılandırma yeniden yükleme yanıtı (`restored_running_unknown`) hata
+yüzeyindeydi; o bir bilinmeyendir, doğrulanmış hata değildir ve artık dikkat
+yüzeyinde durur (sunucunun önceki ayarlarını doğruladığı
+`restored_unit_reload_failed` hata yüzeyinde kalır). İki yanıtın altındaki
+satır, onu birimin günlüğü ya da yeniden yükleme komutu yazdığı halde hizmetin
+söylediği diye ("PostgreSQL yanıtı:") sunuluyordu; artık `dbconf.reloadSaid`
+ile sunulur (EN: "Reported when {unit} was reloaded:" TR:
+"{unit} yeniden yüklenirken bildirilen:"). Orada görüldü ve
+değiştirilmedi: aşama adı vermeyen (eski bir Agent'ın) yeniden yüklenmedi
+yanıtının cümlesi, bu kaydın başındaki kuralın tersine, hâlâ `sudo systemctl
+reload postfix` komutunu adlandırır.
 
 **Henüz gösterilmeyen.** Zamanlanmış görevler ekranı hâlâ tek yansız cümlesini
 gösterir (`cron.unknown`); yukarıdaki `cron.unknown.*` girdileri katalogdadır ve
@@ -3911,9 +3921,11 @@ Yeniden başlat ve Yeniden yükle eylemlerini bir şey gönderilmeden durdurur;
 Durdur her zaman gönderilir.
 
 **Metinler, Hizmetler sayfası (`POST /api/v1/service/action`).** API cümleleri
-`error` alanıdır, yalnız İngilizce. Aşağıdaki katalog girdileri önerilen
-metinlerdir: henüz `web/src/i18n` içinde değiller; bu yüzden ekran API
-cümlesini, hizmetin satırı olmadan gösterir. `{unit}` eylemin uygulandığı
+`error` alanıdır, yalnız İngilizce. Aşağıdaki katalog girdileri 2026-10-10
+birleştirmesinden beri `web/src/i18n` içindedir (`err.*` olanlar kabuk
+kataloğunda, iki `services.action.*` girdisi `screens/server` içinde) ve
+ekranların gösterdiği metinlerdir; `web/tests/service-action-outcome.test.mjs`
+onları bu kayıtla karşılaştırır. `{unit}` eylemin uygulandığı
 birim, `{command}` komut, `{detail}` hizmetin kendi satırı, `{owner_unit}`
 hizmeti çalıştıran birim başka bir birimse o birimdir. Bilinmeyen dışındaki her
 API cümlesi şununla biter: "The server owner runs the command shown to read the
@@ -3923,7 +3935,7 @@ here; nothing repeats it automatically."
 - `502 SERVICE_ACTION_FAILED`, reason `check`
   API: "Nothing was changed: the service's own check refuses its configuration,
   so the action was not carried out."
-- `err.SERVICE_ACTION_FAILED.check` (öneri)
+- `err.SERVICE_ACTION_FAILED.check`
   EN: "Nothing was changed: {unit} refuses its own configuration, so the action
   was not carried out. On the server, run {command} to see what it objects to,
   correct it, then repeat the action here."
@@ -3933,7 +3945,7 @@ here; nothing repeats it automatically."
 - `502 SERVICE_ACTION_FAILED`, reason `reload`
   API: "The service was not reloaded and keeps running with the settings it
   had."
-- `err.SERVICE_ACTION_FAILED.reload` (öneri)
+- `err.SERVICE_ACTION_FAILED.reload`
   EN: "{unit} was not reloaded and keeps running with the settings it had. On
   the server, run {command} to see why, correct it, then repeat the action
   here."
@@ -3942,14 +3954,14 @@ here; nothing repeats it automatically."
   burada yineleyin."
 - `502 SERVICE_ACTION_FAILED`, reason `start`
   API: "The service did not start, or did not stay running."
-- `err.SERVICE_ACTION_FAILED.start` (öneri)
+- `err.SERVICE_ACTION_FAILED.start`
   EN: "{unit} did not start, or did not stay running. On the server, run
   {command} to see why, correct it, then repeat the action here."
   TR: "{unit} başlamadı ya da çalışır durumda kalmadı. Sunucuda {command}
   komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin."
 - `502 SERVICE_ACTION_FAILED`, reason `stop`
   API: "The service did not stop: its daemon is still running."
-- `err.SERVICE_ACTION_FAILED.stop` (öneri)
+- `err.SERVICE_ACTION_FAILED.stop`
   EN: "{unit} did not stop: it is still running. On the server, run {command}
   to see its state, then repeat the action here."
   TR: "{unit} durmadı: hâlâ çalışıyor. Sunucuda {command} komutuyla durumunu
@@ -3957,7 +3969,7 @@ here; nothing repeats it automatically."
 - `502 SERVICE_ACTION_FAILED`, reason `verify`
   API: "The action was sent, but afterwards the service's daemon is not in the
   state that was asked for."
-- `err.SERVICE_ACTION_FAILED.verify` (öneri)
+- `err.SERVICE_ACTION_FAILED.verify`
   EN: "The action was sent, but {unit} is not in the state that was asked for.
   On the server, run {command} to see its state, correct the cause, then repeat
   the action here."
@@ -3965,7 +3977,7 @@ here; nothing repeats it automatically."
   komutuyla durumunu görün, nedeni düzeltin, sonra işlemi burada yineleyin."
 - `502 SERVICE_ACTION_FAILED`, reason `command`
   API: "The server's service manager did not carry out the action."
-- `err.SERVICE_ACTION_FAILED.command` (öneri)
+- `err.SERVICE_ACTION_FAILED.command`
   EN: "The server's service manager did not carry out the action on {unit}. On
   the server, run {command} to see why, correct it, then repeat the action
   here."
@@ -3974,7 +3986,7 @@ here; nothing repeats it automatically."
   yineleyin."
 - `502 SERVICE_ACTION_FAILED`, reason yok (bu Panelin bilmediği bir aşama)
   API: "The action did not take effect."
-- `err.SERVICE_ACTION_FAILED` (öneri)
+- `err.SERVICE_ACTION_FAILED`
   EN: "The action on {unit} did not take effect. On the server, run {command}
   to see why, correct it, then repeat the action here."
   TR: "{unit} üzerindeki işlem etkili olmadı. Sunucuda {command} komutunu
@@ -3985,7 +3997,7 @@ here; nothing repeats it automatically."
   already be in the state that was asked for. The server owner runs the command
   shown to see the service's state, and repeats this action here only if it is
   still needed; nothing repeats it automatically."
-- `err.SERVICE_ACTION_UNKNOWN` (öneri)
+- `err.SERVICE_ACTION_UNKNOWN`
   EN: "The action was sent, but what came of it could not be verified, so it is
   not shown as done. This is not a verified failure: {unit} may already be in
   the state you asked for. On the server, run {command} to see its state, and
@@ -3994,11 +4006,11 @@ here; nothing repeats it automatically."
   gösterilmiyor. Bu doğrulanmış bir hata değildir: {unit} istediğiniz duruma
   zaten gelmiş olabilir. Sunucuda {command} komutuyla durumunu görün; işlemi
   yalnız hâlâ gerekiyorsa burada yineleyin."
-- `services.action.said` (öneri; `vars.detail` varsa iki yanıtın da altında
+- `services.action.said` (`vars.detail` varsa iki yanıtın da altında
   gösterilir)
   EN: "The service said: {detail}"
   TR: "Hizmetin yanıtı: {detail}"
-- `services.action.ownerUnit` (öneri; `vars.owner_unit` varsa)
+- `services.action.ownerUnit` (`vars.owner_unit` varsa)
   EN: "The service itself runs as {owner_unit}; {unit} only groups it."
   TR: "Hizmetin kendisi {owner_unit} olarak çalışır; {unit} yalnız onu
   gruplar."
@@ -4044,6 +4056,306 @@ sözleşmesi) sahip bir yenilemeden sonra sunucuda şunu karşılaştırır:
 `sudo postfix reload` Postfix'in onu almasını sağlar; alamıyorsa Postfix'in
 neye itiraz ettiğini yazar. İki satır da yalnız okur.
 
-**Henüz gösterilmeyen.** Yukarıdaki önerilen girdiler; Hizmetler sayfası API
-cümlesini gösterir. Paneldeki posta sertifikası durumu açık bir yenilemenin
-nedenini göstermez; neden yardımcının günlüğünde ve Agent'ın kaydındadır.
+**Ekranda (2026-10-10).** Her bileşenin sayfası (`ServiceShell`;
+`ComponentDetail` genel sayfası dahil) ve bileşen listesi (`ServiceList`)
+yanıtı, kapatılana ya da başka bir işlem yapılana dek içeriğin üstünde, sayfada
+tutar: komutu ayrı gösterilen cümle, `services.action.said` altında hizmetin
+satırı, hizmeti başka bir birim çalıştırıyorsa `services.action.ownerUnit` ve
+Kapat. Doğrulanmış hata hata yüzeyinde, bilinmeyen sonuç dikkat yüzeyinde
+durur. İşlem durumu değiştirmiş olabileceği için durum altında yeniden okunur.
+Önceden ikisi de beş saniyede kaybolan balonlardı. Hiç yanıt almayan işlem de
+artık kırmızı bir balon değildir.
+
+**Henüz gösterilmeyen.** Paneldeki posta sertifikası durumu açık bir
+yenilemenin nedenini göstermez; neden yardımcının günlüğünde ve Agent'ın
+kaydındadır.
+
+### Bir değişiklik bir kez gönderilir ve bir kez yanıtlanır: istek kimliği retleri (2026-10-10)
+
+Bileşen testleriyle kaynak durumu; kurulu sunucu ve gerçek sistem denemesi yok.
+Bkz. D-029 ve aynı tarihli dayanıklılık sözleşmesi kaydı. Durum değiştiren sekiz
+rota artık bir isteği, kaç kez gelirse gelsin, bir kez çalıştırır; bunlar, yanıt
+değişikliğin kendi sonucu olmadığında ekranın gösterdiği cümlelerdir.
+
+**Aşağıdaki her durumda kim işlem yapar.** Ekrandaki kişi. Hiçbir şey
+kendiliğinden yeniden gönderilmez ya da çalıştırılmaz; hiçbir şeyi iki kez
+değiştirmeyen tek istisna: kaybolan bir yanıttan sonra sayfa aynı yanıtı aynı
+kimlikle bir kez daha ister ve sunucu onu ilk çalışmadan yanıtlar.
+
+**İş nasıl sürer.** Sayfayı yeniden yüklemek yalnızca okur. Yeniden yüklemeden
+sonra yeniden yapılan değişiklik, yeni kimlikli yeni bir istektir.
+
+**Metinler.** Anahtarlar kabuk kataloğundadır (`web/src/i18n/en.ts`,
+`web/src/i18n/tr.ts`), çünkü her ekran bunları alabilir. Sunucunun her kod için
+kendi İngilizce mesajı, API'yi doğrudan okuyanlar için aynı cümledir.
+
+- *Sayfa Panel'den eski (herhangi bir değişiklikten önce reddedilir; `428`).*
+  - `err.REQUEST_ID_REQUIRED`:
+    - EN: "This page was opened before CelikPanel was updated, so the server
+      did not accept the change and nothing was changed. Reload the page, then
+      make the change again."
+    - TR: "Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu
+      değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden
+      yükleyin, sonra değişikliği yeniden yapın."
+  - Sunucunun mesajı, sayfa olmayan bir istemci için şunu ekler: "(A client
+    that is not the CelikPanel page sends the header X-CelikPanel-Request-Id:
+    32 lowercase hexadecimal characters, a new value for each action.)"
+- *Kimlik başka bir şey için zaten kullanılmış (herhangi bir değişiklikten önce
+  reddedilir; `409`).*
+  - `err.REQUEST_ID_REUSED`:
+    - EN: "This change was sent with an identifier the server already used for
+      a different change, so it was not carried out. Reload the page, then make
+      the change again."
+    - TR: "Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı
+      bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin,
+      sonra değişikliği yeniden yapın."
+- *İlk geliş hâlâ sürüyor (bekleme; `409`).*
+  - `err.REQUEST_IN_PROGRESS`:
+    - EN: "This change is still running on the server. It was not started a
+      second time. Wait a little, then reload the page to see the result; do
+      not send it again."
+    - TR: "Bu değişiklik sunucuda hâlâ sürüyor. İkinci kez başlatılmadı. Biraz
+      bekleyin, sonra sonucu görmek için sayfayı yeniden yükleyin; değişikliği
+      yeniden göndermeyin."
+- *Değişiklik sürerken Panel durdu (bilinmeyen sonuç; `409`).*
+  - `err.REQUEST_OUTCOME_UNKNOWN`:
+    - EN: "CelikPanel restarted or failed while this change was running, so it
+      is not known whether the change was completed. It will not be run again
+      by itself. Reload the page and check the current state; make the change
+      again only if it is missing."
+    - TR: "CelikPanel bu değişiklik sürerken yeniden başladı ya da hata verdi;
+      bu yüzden değişikliğin tamamlanıp tamamlanmadığı bilinmiyor.
+      Kendiliğinden yeniden çalıştırılmayacak. Sayfayı yeniden yükleyip mevcut
+      durumu kontrol edin; değişikliği yalnızca eksikse yeniden yapın."
+- *Değişiklik yapıldı; tek seferlik sonucu saklanmıyor (bilinen sonuç; `409`).*
+  - `err.REQUEST_COMPLETED_RESULT_NOT_RETAINED`:
+    - EN: "This change was already made; it was not made a second time. Its
+      result was shown only once and is not kept. Reload the page to see the
+      current state; if you still need what was shown once (a password or a
+      configuration file), create a new one."
+    - TR: "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca
+      bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı
+      yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası)
+      hâlâ ihtiyacınız varsa yenisini oluşturun."
+  - `err.REQUEST_COMPLETED_RESULT_NOT_RETAINED.failed` (ilk deneme hatayla bitti
+    ve o yanıt saklanmıyor; ayrıntısı kalmamış doğrulanmış bir hata):
+    - EN: "This change already ended with an error, and that answer is not
+      kept; it was not tried a second time. Reload the page and check the
+      current state; make the change again only if it is missing."
+    - TR: "Bu değişiklik daha önce hatayla sonuçlandı ve o yanıt saklanmıyor;
+      ikinci kez denenmedi. Sayfayı yeniden yükleyip mevcut durumu kontrol
+      edin; değişikliği yalnızca eksikse yeniden yapın."
+  - Bir veritabanı sunucusunun kendi hesabında ekran, bu ikisinden ilkini olduğu
+    gibi, başarı olarak ele alır: o yanıt parola taşımaz (parola "Parolayı
+    göster" ile okunur); yani eksik bir şey yoktur.
+- *Aynı alan adının başka bir geri yüklemesi sürüyor (herhangi bir değişiklikten
+  önce reddedilir; `409`).*
+  - `err.BACKUP_RESTORE_IN_PROGRESS`:
+    - EN: "Another restore of this domain is still running, so this one was not
+      started and changed nothing. Wait for it to finish and check the site;
+      restore again only if it is still needed."
+    - TR: "Bu alan adının başka bir geri yüklemesi hâlâ sürüyor; bu yüzden bu
+      geri yükleme başlatılmadı ve hiçbir şeyi değiştirmedi. Bitmesini bekleyip
+      siteyi kontrol edin; yalnızca hâlâ gerekiyorsa yeniden geri yükleyin."
+- *cPanel içe aktarımı: sonuç, ikinci sormadan sonra da bilinmiyor (bilinmeyen
+  sonuç). Değişen metin; anahtar `web/src/i18n/screens` içinde.*
+  - `import.unknown.body`:
+    - EN: "This page did not get the result of the import: the answer from the
+      server did not arrive, and asking once more for it did not bring the
+      result either. The import may have run completely, in part or not at
+      all, or may still be running. Asking again never starts it a second
+      time, and starting it again is not offered until you have checked.
+      Check whether {domain} is on this server now; checking only reads."
+    - TR: "Bu sayfa içe aktarımın sonucunu alamadı: sunucunun yanıtı ulaşmadı ve
+      yanıt bir kez daha istendiğinde de sonuç gelmedi. İçe aktarım tamamen,
+      kısmen çalışmış ya da hiç çalışmamış olabilir; hâlâ sürüyor da olabilir.
+      Yeniden sormak onu ikinci kez başlatmaz; siz kontrol edene dek yeniden
+      başlatma da sunulmaz. {domain} alan adının şu an bu sunucuda olup
+      olmadığını kontrol edin; kontrol yalnız okur."
+  - Yalnızca kontrol alan adını bulamadığında sunulan "İçe aktarımı yeniden
+    başlat", artık aynı isteği aynı kimlikle gönderir: sunucu onu, varsa ilk
+    çalışmadan yanıtlar; yalnızca hiç ulaşmadıysa çalıştırır.
+
+**Sonucu bilinmeyen değişiklik için tek davranış (dördüncü partiyle
+birleştirildi, 2026-10-10).** İstek kimliği ile dördüncü partinin yiten yanıt
+ele alışı (yukarıdaki 2026-10-09 kaydı) yan yana yazılmıştı. Birlikte
+şöyledirler.
+
+- *Yiten yanıtın ne olduğu* tek yerde tanımlıdır
+  (`web/src/lib/requestIdentity.ts` içindeki `answerWasLost`): hiç yanıt yok,
+  ya da durum kodu 408, 429, 502, 503 ya da 504 olan ve JSON olmayan bir yanıt;
+  bu, Panel'in yerine konuşan bir geçittir. Panel'in kendi reddi, durum kodu
+  bunlardan biri olsa da JSON'dur (ulaşılamayan Agent, cümlesi olan bir
+  502'dir); o yanıtın kendisidir ve gösterilir. Birleştirmeden önce yakalayıcı
+  onu da yeniden soruyordu; yanıtı hiç saklanmayan iki rotada ekran o zaman
+  Panel'in cümlesi yerine "daha önce hatayla sonuçlandı ve o yanıt saklanmıyor"
+  cümlesini gösteriyordu.
+- *Sekiz rotada* yakalayıcı 1,5 saniye sonra aynı kimlikle bir kez daha sorar.
+  O yanıtlanırsa ekran değişikliğin kendi sonucunu gösterir, başka bir şey
+  göstermez.
+- *O da yanıtlanmazsa*, ya da Panel `REQUEST_OUTCOME_UNKNOWN` ya da
+  `REQUEST_IN_PROGRESS` yanıtlarsa sonuç bilinmiyordur ve sekiz ekranın hepsi,
+  dördüncü partinin kimliksiz bir değişiklik için yaptığını yapar: dikkat
+  yüzeyinde yerinde duran bir bildirim, değişikliğin etkilediği şeyin yeniden
+  okunması (yalnız okuma) ve o okuma yanıtlanana dek değiştiren ya da kaldıran
+  her denetimin kapalı kalması. Bunun hiçbiri balon değildir ve hiçbiri hata
+  olarak çizilmez.
+- *Bildirim hangisinin olduğunu söyler.* Kimliksiz bir değişiklikte hâlâ hiçbir
+  şeyin ikinci kez gönderilmediğini söyler (`common.resultUnknown*`,
+  değişmedi). Sekizden biri için bunu asla söylemez. İki cümlesi vardır: ne
+  olduğu, sonra yeniden okunan durumun ne gösterdiği. O durum değişikliği
+  gösterdiğinde tek cümle kalır ve onu gönderen form kapatılır.
+- *O okumayla yapıldığı görülen, ama sonucu kimseye gösterilmemiş değişiklik*
+  (bir VPN cihazı; yeni kullanıcılı bir veritabanı) yalnız "yapıldı" diye
+  değil, aşağıdaki yalnız-durum yanıtının cümlesiyle söylenir.
+
+**O bildirimin metinleri.** Kabuk kataloğu.
+
+- *Ne oldu.*
+  - `common.lostAsked`:
+    - EN: "No answer arrived for this change, and asking the server once more
+      for the same answer brought none either, so it is not known whether the
+      change was made. Asking again never makes the change a second time."
+    - TR: "Bu değişikliğin yanıtı ulaşmadı; sunucudan aynı yanıt bir kez daha
+      istendiğinde de gelmedi. Bu yüzden değişikliğin yapılıp yapılmadığı
+      bilinmiyor. Yeniden sormak değişikliği asla ikinci kez yapmaz."
+  - `common.lostInterrupted`:
+    - EN: "CelikPanel restarted or failed while this change was running, so it
+      is not known whether the change was completed. It will not be run again
+      by itself."
+    - TR: "CelikPanel bu değişiklik sürerken yeniden başladı ya da hata verdi;
+      bu yüzden değişikliğin tamamlanıp tamamlanmadığı bilinmiyor.
+      Kendiliğinden yeniden çalıştırılmayacak."
+  - `common.lostRunning`:
+    - EN: "This change is still running on the server, so its result is not
+      known yet. It was not started a second time."
+    - TR: "Bu değişiklik sunucuda hâlâ sürüyor; bu yüzden sonucu henüz
+      bilinmiyor. İkinci kez başlatılmadı."
+
+- *Yeniden okunan durum ne gösteriyor.*
+  - `common.lostStateReading`:
+    - EN: "What is shown here is being read again. Controls that change or
+      remove something stay off until it has been read."
+    - TR: "Burada gösterilen yeniden okunuyor. Bir şeyi değiştiren ya da
+      kaldıran denetimler, okuma bitene dek kapalı kalır."
+  - `common.lostStateRead`:
+    - EN: "What is shown here was read again at {time}. Check it before making
+      the change again; if the change may still be running, check again in a
+      little while."
+    - TR: "Burada gösterilen, saat {time} itibarıyla yeniden okundu.
+      Değişikliği yeniden yapmadan önce ona bakın; değişiklik hâlâ sürüyor
+      olabilirse biraz sonra tekrar kontrol edin."
+  - `common.lostStateUnread`:
+    - EN: "The current state could not be read again, so controls that change
+      or remove something stay off. Check again."
+    - TR: "Güncel durum yeniden okunamadı; bu yüzden bir şeyi değiştiren ya da
+      kaldıran denetimler kapalı kalıyor. Tekrar kontrol edin."
+  - `common.lostStateNotMade`:
+    - EN: "What was read again at {time} does not show the change, so it is not
+      known to have been made. What you entered is still here. If the server is
+      still working on it, the change can appear later: check again before
+      sending it a second time."
+    - TR: "Saat {time} itibarıyla yeniden okunan durum değişikliği göstermiyor;
+      bu yüzden yapıldığı bilinmiyor. Girdikleriniz hâlâ burada. Sunucu hâlâ
+      üzerinde çalışıyorsa değişiklik sonradan görünebilir: ikinci kez
+      göndermeden önce tekrar kontrol edin."
+  - `common.lostStateMade`:
+    - EN: "The answer to this change did not reach this page, but what was read
+      again at {time} shows the change, so it was made. Nothing needs to be
+      sent again."
+    - TR: "Bu değişikliğin yanıtı bu sayfaya ulaşmadı; ancak saat {time}
+      itibarıyla yeniden okunan durum değişikliği gösteriyor, yani yapıldı.
+      Hiçbir şeyin yeniden gönderilmesi gerekmiyor."
+
+**Yapılmış, ama tek seferlik sonucu saklanmayan değişiklik (gerekçesiz `409
+REQUEST_COMPLETED_RESULT_NOT_RETAINED`).** Kişi kapatana dek dikkat yüzeyinde,
+yerinde söylenir; yapılan şey orada olsun diye liste yeniden okunur.
+
+- *VPN cihazı.*
+  - `vpn.configNotShown`:
+    - EN: "The device {name} was added; it was not added a second time. Its
+      configuration did not reach this page, and a configuration is shown only
+      once and is not stored, so it cannot be shown again. If {name} is in the
+      list below, remove it; then add the device again to get a new
+      configuration."
+    - TR: "{name} cihazı eklendi; ikinci kez eklenmedi. Yapılandırması bu
+      sayfaya ulaşmadı; yapılandırma yalnızca bir kez gösterilir ve saklanmaz,
+      bu yüzden yeniden gösterilemez. {name} aşağıdaki listedeyse onu kaldırın;
+      sonra yeni bir yapılandırma almak için cihazı yeniden ekleyin."
+
+- *Veritabanı sunucusunda, yeni kullanıcılı veritabanı.*
+  - `databases.passwordNotShown`:
+    - EN: "The database {name} was created; it was not created a second time.
+      The answer that carried the password of its user {user} did not reach
+      this page and is not kept, so the password cannot be shown again. It is
+      the password you entered in the form. If you no longer have it, set a new
+      password for {user} on the database server itself; this page has no
+      control for that yet."
+    - TR: "{name} veritabanı oluşturuldu; ikinci kez oluşturulmadı. {user}
+      kullanıcısının parolasını taşıyan yanıt bu sayfaya ulaşmadı ve
+      saklanmıyor; bu yüzden parola yeniden gösterilemez. Parola, formda
+      girdiğiniz paroladır. Artık elinizde değilse {user} için veritabanı
+      sunucusunun kendisinde yeni bir parola belirleyin; bu sayfada bunun için
+      henüz bir denetim yok."
+  - Panel'de bir veritabanı kullanıcısının parolasını belirleyen bir denetim
+    yoktur; cümle bunu söyler. D-029 "üretilen veritabanı parolası yeniden
+    belirlenir" sonucunu sayar; bunun denetimi yapılmadı.
+
+- *Panel'in bir veritabanı motorundaki kendi hesabı:* yukarıdaki gibi, olduğu
+  başarı.
+- *`failed` gerekçesiyle:* yukarıdaki gibi
+  `err.REQUEST_COMPLETED_RESULT_NOT_RETAINED.failed`.
+
+**İçe aktarım sayfası** alan adı kontrolüyle birlikte kendi bildirimini korur.
+Gövdesi hangisinin olduğunu söyler: ikinci soru da yanıtsız kaldığında
+`import.unknown.body` (yukarıda), ayrıca
+
+- `import.unknown.bodyRunning`:
+  - EN: "The import is still running on the server, so this page does not have
+    its result yet. It was not started a second time. Asking again never starts
+    it a second time, and starting it again is not offered until you have
+    checked. Wait a little, then check whether {domain} is on this server now;
+    checking only reads."
+  - TR: "İçe aktarım sunucuda hâlâ sürüyor; bu yüzden bu sayfa sonucunu henüz
+    alamadı. İkinci kez başlatılmadı. Yeniden sormak onu ikinci kez başlatmaz;
+    siz kontrol edene dek yeniden başlatma da sunulmaz. Biraz bekleyin, sonra
+    {domain} alan adının şu an bu sunucuda olup olmadığını kontrol edin;
+    kontrol yalnız okur."
+- `import.unknown.bodyInterrupted`:
+  - EN: "CelikPanel restarted or failed while the import was running, so it is
+    not known whether it ran completely, in part or not at all. It will not be
+    run again by itself, and starting it again is not offered until you have
+    checked. Check whether {domain} is on this server now; checking only
+    reads."
+  - TR: "CelikPanel içe aktarım sürerken yeniden başladı ya da hata verdi; bu
+    yüzden içe aktarımın tamamen mi, kısmen mi çalıştığı, yoksa hiç çalışmadığı
+    bilinmiyor. Kendiliğinden yeniden çalıştırılmayacak; siz kontrol edene dek
+    yeniden başlatma da sunulmaz. {domain} alan adının şu an bu sunucuda olup
+    olmadığını kontrol edin; kontrol yalnız okur."
+
+`REQUEST_OUTCOME_UNKNOWN` yanıtından sonraki başlatma yeni bir istektir; öteki
+iki durumda aynı istek yeniden sorulur.
+
+**Sekizinin her biri nerede çizilir.** Yedek ve geri yükleme: alan adının
+Yedekler paneli (`DomainBackupManager`). Sertifika: SSL/TLS sekmesi
+(`DomainSSLSettings`); sertifika yeniden okunur ve o sırada sekmenin
+denetimleri kapalıdır. Alan adının veritabanı: listeye veritabanını adlandırıp
+adlandırmadığını soran `DomainDatabaseManager`. Sunucudaki veritabanı: açıkken
+pencere (`AddDatabaseModalV2`), sonrasında Veritabanları sayfası; iki listeye
+de sorar. Motor hesabı: şeridi (`DatabaseAccountStrip`). VPN cihazı: cihazlara
+onu adlandırıp adlandırmadıklarını soran Cihazlar sekmesi (`VPNPage`). İçe
+aktarım: `ImportPage`.
+
+**Güncellemeden önce açılmış sayfa (`428`).** Eski kodu çalıştırır: başlık
+göndermez ve kod için girdisi yoktur; bu yüzden sunucunun yeniden yüklemeyle
+biten İngilizce cümlesini gösterir. `err.REQUEST_ID_REQUIRED` girdisi, güncel
+sayfanın bu kodu alırsa göstereceği metindir. Yanıt bir rettir, bilinmeyen
+sonuç değildir; hiçbir şey değiştirilmemiştir. Sayfayı yeniden yükleyen bir
+düğme yoktur; bunu cümle ister.
+
+**Sınırlar.** Sunucudaki veritabanı penceresi ve alan adının veritabanı formu,
+bu bildirimler dışında, eskisi gibi yalnız İngilizcedir. Kendi sözü olmayan bir
+ret, kodunun girdisi varsa katalogdan, yoksa sunucunun cümlesiyle gösterilir.
+Korumanın sözleşmesini tutan yerel bir sahte sunucuya karşı gerçek bir
+Chrome'da incelendi (dayanıklılık sözleşmesi, bu tarihli kayıt); gerçek bir
+Panel'de değil.

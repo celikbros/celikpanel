@@ -2653,11 +2653,217 @@ sunucuda gözlenmedi ve hiçbiri gerçek hizmetlerde ölçülmedi.
     `openssl x509 -noout -fingerprint -sha256 -in
     /etc/ssl/celikpanel/_mail/host/current/fullchain.pem`; farklıysa `sudo
     postfix reload` çalıştırır.
-  - *Henüz ekran metni yok.* Katalogda `err.SERVICE_ACTION_FAILED.*` ya da
-    `err.SERVICE_ACTION_UNKNOWN` girdisi yok; ekran API cümlesini İngilizce
-    olarak, hizmetin satırı olmadan gösterir. Metinler bu tarihli işlem
-    yönlendirmesi kaydındadır.
+  - *Ekran metni (2026-10-10 birleştirmesi).* Katalogda
+    `err.SERVICE_ACTION_FAILED.*` ve `err.SERVICE_ACTION_UNKNOWN` girdileri
+    İngilizce ve Türkçe vardır; Hizmetler ekranları onları hizmetin satırı,
+    komut ve hizmeti çalıştıran birimle birlikte yerinde gösterir (bu tarihli
+    işlem yönlendirmesi kaydı). Doğrulanmış hata hata yüzeyinde, bilinmeyen
+    sonuç dikkat yüzeyinde durur. Sahte sunucuya karşı tarayıcıda incelendi;
+    gerçek bir hizmette değil.
   - *Sarmalayıcı yalnız olumlu kanıtla tanınır.* `systemctl show` eylemden önce
     okunamıyorsa birim kendi iş sonucunu korur.
   - `StartServiceMutation` RPC'si (Postfix ve Dovecot; bir posta hizmeti
     kurulduğunda kullanılır) artık aynı doğrulanmış yoldan başlatır.
+
+### Durum değiştiren istek tek bir kimlik taşır; yineleme yanıtlanır, bir daha çalıştırılmaz (ilkeler 2, 4 ve 6, 2026-10-10)
+
+D-025 ilkeleri 2 (zaman aşımı; başarısızlığın, başarının ya da yeniden başlatma
+izninin kanıtı değildir; bilinmeyen ayrı bir durumdur), 4 (tarayıcı gözlemcidir;
+yeniden deneme sınırlı, yinelenebilir ve tek bir işleme bağlıdır) ve 6 (bir
+işlemin kimliği yeniden yükleme ya da yeniden bağlanmadan sonra erişilebilir
+kalır); anayasanın 3. kuralı ("yenileme, yeniden bağlanma ve zaman aşımı asla
+yinelenen işe yetki vermez"); D-024, D-029. Hiçbir P0 işi kapanmadı ya da
+ilerlemedi. Gerçek tarayıcı incelemesiyle ve `7a64bda91` kaynağının salt-okur
+dökümüyle bulundu; kurulu bir sunucuda gözlenmedi.
+
+- **`7a64bda91` kaynağında doğrulandı.**
+  - *Tarayıcı isteği kendiliğinden yineler.* Bir POST gönderilirken bağlantı
+    sıfırlanırsa Chrome onu yeniden gönderir: tek tıklama Panel'e üç kez
+    ulaştı. Durum değiştiren yaklaşık 115 rotadan 12'si iki kez çalıştığında
+    zararlıdır.
+  - *Sıfırlama ilk denemeyi yarıda bırakıyordu.* İşleyiciler bağlantının
+    bağlamını Agent çağrısına ve sonrasındaki veritabanı yazımlarına veriyordu.
+    İptal edilen Panel dönerken Agent sürdürüyor, yineleme de bu duruma karşı
+    çalışıyordu.
+  - *Bu kaydın sekiz rotası; her biri kodda okundu ve
+    `TestRequestIdentityEightRoutesRepeatTheirEffectWithoutTheGuard` ile
+    yeniden üretildi:*
+    - alan adı yedeğinin geri yüklenmesi: Agent'ta kilit yoktu; her geliş bir
+      güvenlik yedeği yazıyor, belge kökünü değiştiriyor ve veritabanlarını
+      yan yana içe aktarıyordu;
+    - cPanel içe aktarımı: iki Agent çağrısı arasında, site yarı aktarılmış
+      hâlde duruyordu
+      (`TestImportApplyWithoutTheGuardStopsWhenTheConnectionGoesAway`);
+      yineleme sonra "alan adı zaten var" diye reddediliyordu;
+    - Let's Encrypt yeniden düzenleme: her geliş bir düzenleme daha zorluyordu
+      (üç geliş, üç düzenleme);
+    - elle yedek: iş anahtarı yoktu; iş kilidi alınmıyor ve her geliş için bir
+      arşiv üretiliyordu;
+    - Panel'in veritabanı motorundaki kendi hesabı: her gelişte yeni parola;
+      iki gelişi ayıran bir şey yoktu ve kayıt bağlantının bağlamında
+      yazılıyordu;
+    - VPN eşi: her gelişte yeni anahtarlar ve yeni adres (üç eş);
+    - veritabanı sunucusunda veritabanı: MariaDB ikinci `CREATE DATABASE IF NOT
+      EXISTS` komutunu kabul eder, yineleme mevcut kayıtta başarısız olur ve
+      telafisi ilk isteğin oluşturup kaydettiği veritabanını siler;
+    - alan adının veritabanı: motorda oluşturuluyor, Panel'de kaydedilmiyordu.
+- **Değişen.**
+  - *Koruma* (`cmd/panel/request_identity.go`), kimlik doğrulamanın içinde ve
+    yönlendiricinin önünde. Sekiz rotadan birine gelen istek
+    `X-CelikPanel-Request-Id` (32 küçük harfli onaltılık karakter) taşımalıdır;
+    taşımıyorsa yanıt `428 REQUEST_ID_REQUIRED` olur ve işleyiciye ulaşılmaz.
+    İlk geliş bir `running` satırı yazar ve işleyiciyi, bağlantının iptal
+    edemeyeceği, rotanın süre sınırıyla sınırlı bir bağlamda çalıştırır (geri
+    yükleme 40 dk, içe aktarım 2 sa, sertifika 25 dk, yedek 35 dk,
+    veritabanları 15 dk, motor hesabı 12 dk, VPN eşi 10 dk). Yanıt önce
+    saklanır, sonra gönderilir. Satırı yazılamayan işleyici hiç başlamaz.
+  - *Yineleme* (aynı kimlik, kullanıcı ve yöntem + yol + sorgu + gövdenin
+    SHA-256'sı) satırdan yanıtlanır. İlki sürerken en çok 20 saniye bekler,
+    sonra aynı kimlikle `409 REQUEST_IN_PROGRESS` alır. Aynı kimlik başka bir
+    şey için gelirse `409 REQUEST_ID_REUSED`.
+  - *Bilinmeyen bilinmeyen kalır.* Önceki sürecin ya da beklenmedik biçimde
+    duran bir işleyicinin `running` bıraktığı satır `interrupted` olur;
+    yinelemesi `409 REQUEST_OUTCOME_UNKNOWN` alır ve istek o kimlikle bir daha
+    asla çalıştırılmaz.
+  - *Gizli bilgiler saklanmaz.* Motor hesabı ve VPN eşi rotaları, o isteğin
+    ürettiği parolayı taşıyan veritabanı yanıtı ve 64 KiB'ı aşan her yanıt
+    yalnızca durum kodunu saklar; yineleme `409
+    REQUEST_COMPLETED_RESULT_NOT_RETAINED` alır (ilk deneme hatayla bittiyse
+    `failed` gerekçesiyle). İstek gövdesi hiçbir zaman saklanmaz.
+  - *Agent'ta.* Bir alan adının geri yüklemesi sürerken ikincisi, hiçbir şey
+    okunmadan ve yazılmadan reddedilir (Panel'de `409
+    BACKUP_RESTORE_IN_PROGRESS`). Elle alınan yedek istek kimliğini iş anahtarı
+    olarak gönderir (`request:<kimlik>`); böylece Agent'ın iş kilidi ve bu işin
+    daha önce yayımladığı arşivi araması geçerli olur.
+  - *Panel'de.* Bir veritabanı sunucusunun kendi hesabının açılması, yeniden
+    anahtarlanması ve kaldırılması sırayla çalışır; her biri satırı kilit
+    altında yeniden okur.
+  - *Tarayıcıda.* Tek fetch yakalayıcısı başlığı, gövdesinde `request_id`
+    taşımayan, GET olmayan her `/api/` çağrısına ekler; eylem başına tek
+    kimlik, başka kökene asla. Sekiz rotada kaybolan yanıt (bağlantı hatası ya
+    da JSON olmayan bir 408, 429, 502, 503, 504; Panel'in bu durum kodlarından
+    biriyle gelen kendi reddi yanıtın kendisidir ve gösterilir) 1,5 saniye
+    sonra aynı kimlikle bir kez daha istenir ve o yanıt kullanılır. O da yanıt
+    getirmezse, ya da Panel `REQUEST_OUTCOME_UNKNOWN` ya da
+    `REQUEST_IN_PROGRESS` yanıtlarsa, sekiz ekranın her biri sonucu, uzak durum
+    kuralının dördüncü partisinin kimliksiz bir değişiklik için yaptığı gibi
+    bilinmiyor diye gösterir: hangisinin olduğunu söyleyen, yerinde duran bir
+    bildirim, salt-okur bir yeniden okuma ve o okuma yanıtlanana dek kapalı
+    kalan değiştiren ya da kaldıran denetimler. Tek seferlik sonucu kimseye
+    ulaşmadan yapılmış değişiklik, neyin yapıldığını ve ne yapılacağını
+    söyler. İçe aktarım sayfası isteğinin kimliğini ve
+    tam gövdesini tutar: salt-okur kontrolden sonra yeniden başlatmak aynı
+    istektir; sunucu onu ilk çalışmadan yanıtlar ve iki kez içe aktaramaz.
+  - Diğer her rota, başlık olsun olmasın, eskisi gibi davranır.
+- **Şema ya da sürüm geçişi.** Göç 43 (`043_request_identities.sql`),
+  `request_identities` tablosunu ve bitiş dizinini olağan defter üzerinden
+  oluşturur; mevcut hiçbir tablo değişmez. Eski bir Panel, 43. girdiyi taşıyan
+  defterde açılmayı reddeder
+  (`TestOlderReleaseRefusesALedgerWithTheRequestIdentitiesEntry`); geri dönüş,
+  önceki her göçte olduğu gibi güncelleme öncesi anlık görüntünün geri
+  yüklenmesidir. Tablo sahibin verisini tutmaz: onu kaybeden bir geri
+  yüklemeden sonra yineleme bir ilk geliştir; bu değişiklikten önce de öyleydi.
+  **Artık zorunlu:** sekiz rotada başlık. Eklemeli: durum değiştiren diğer her
+  çağrıdaki başlık (yok sayılır), korunan yanıtlardaki
+  `X-CelikPanel-Request-Id` ve `X-CelikPanel-Request-Replayed`, korumanın
+  retlerindeki `vars.request_id`, elle yedeklerde `CreateRequest.JobKey` (eski
+  Agent'ın zaten okuduğu bir alan), Agent yanıtı `RESTORE_IN_PROGRESS`. Yeni ret
+  kodları: `REQUEST_ID_REQUIRED`, `REQUEST_ID_REUSED`, `REQUEST_IN_PROGRESS`,
+  `REQUEST_OUTCOME_UNKNOWN`, `REQUEST_COMPLETED_RESULT_NOT_RETAINED`,
+  `BACKUP_RESTORE_IN_PROGRESS`. Güncellemeden önce açılmış sayfa, yeniden
+  yüklenene dek sekiz rotada reddedilir.
+- **Kurtarma davranışı.** Hiçbir şey kendiliğinden yeniden denenmez ya da
+  onarılmaz. Panel açılışta, herhangi bir uygulama isteğine hizmet vermeden
+  önce her `running` satırını `interrupted` yapar; bu sürecin çalıştırmadığı
+  bir `running` satırı, yinelemesi geldiğinde de aynı biçimde ele alınır;
+  böylece başarısız bir açılış geçişi ya da sonucun yazılamaması, kimsenin
+  yürütmediği bir işi beklemeye dönüşemez. Yarıda kalan isteğin sonucu
+  bilinmez: sahip sayfadaki mevcut durumu kontrol eder ve değişikliği yalnızca
+  eksikse yeniden yapar. Agent'ın işi, Panel'in süre sınırıyla ya da Panel'in
+  yeniden başlamasıyla iptal edilmez; yerel hizmetler Panel olmadan eskisi
+  gibi çalışmayı sürdürür ve satırlar 24 saat sonra silinir.
+- **Kanıt.** Bileşen testleri; gerçek sistem denemesi yok.
+  - Panel, koruma: `TestRequestIdentityFirstArrivalRunsAndReplayIsAnsweredFromTheRow`,
+    `TestRequestIdentityNeverStoresTheRequestBody`,
+    `TestRequestIdentityIsRequiredOnProtectedRoutesAndIgnoredElsewhere`,
+    `TestRequestIdentityReusedForADifferentRequestIsRefused`,
+    `TestRequestIdentityReplayWhileRunningWaitsThenSaysInProgress`,
+    `TestRequestIdentityRunningRowsAreInterruptedAtStartAndNeverReExecuted`,
+    `TestRequestIdentityOversizeAnswerKeepsOnlyItsStatus`,
+    `TestRequestIdentitySecretAnswersAreNeverStored`,
+    `TestRequestIdentityExpirySweep`,
+    `TestRequestIdentityHandlerPanicLeavesATruthfulRow`,
+    `TestRequestIdentityHandlerOutlivesTheConnection`,
+    `TestRequestIdentityConcurrentArrivalsRunOnce`,
+    `TestRequestIdentityHandlerDoesNotRunWithoutItsRow`,
+    `TestKeyedLocksSerialisePerKeyAndForgetIdleKeys`.
+  - Panel, sekiz rota; ürünün yönlendiricisi üzerinden, sahte bir Agent ya da
+    veritabanı sürücüsüyle: `TestRequestIdentityEightRoutesSentThreeTimesInARow`,
+    `TestRequestIdentityEightRoutesSentThreeTimesAtOnce` (tek etki, aynı yanıt;
+    tek seferlik yanıtı tam olarak bir geliş alır),
+    `TestRequestIdentityEightRoutesRepeatTheirEffectWithoutTheGuard`,
+    `TestRequestIdentityRoutesMuxMirrorsMain`,
+    `TestImportApplyIsNotCutWhenTheConnectionGoesAway`,
+    `TestImportApplyWithoutTheGuardStopsWhenTheConnectionGoesAway`,
+    `TestDatabaseAdminAccountChangesAreSerialisedPerServer`,
+    `TestRestoreRefusedByTheAgentWhileAnotherRunsIsANamedRefusal`. İçe aktarım
+    durumu, içe aktarımın ikinci Agent çağrısında biter; bütün bir içe aktarım
+    çalıştırılmadı.
+  - Agent: `TestOnlyOneRestoreOfADomainHoldsTheLock`,
+    `TestConcurrentRestoreClaimsNeverOverlap`,
+    `TestRestoreBackupIsRefusedWhileAnotherRestoreOfTheDomainRuns`,
+    `TestSecondRestoreOfADomainIsRefusedWhileTheFirstRuns`,
+    `TestManualBackupWithTheRequestJobKeyPublishesOnce`.
+  - Göç: `TestRequestIdentitiesMigrationContracts`,
+    `TestRequestIdentitiesMigrationAppliesToAnExistingDatabase`,
+    `TestOlderReleaseRefusesALedgerWithTheRequestIdentitiesEntry`.
+  - Web: `web/tests/request-identity-runtime.test.mjs` (ayrıca: Panel'in kendi
+    reddi asla yeniden sorulmaz; sekiz ekran için sonucu bilinmeyen değişikliğin
+    tek tanımı); `web/tests/remote-state-mounted-batch4.test.mjs` içindeki yedek
+    durumları; `web/tests/service-action-outcome.test.mjs` (yalnız-durum
+    yanıtları); `web/tests/remote-state-mounted.test.mjs` içindeki içe aktarım
+    durumu. Düzenek: `deploy/e2e/dns-pair-acceptance/test_panel_api.py` (sürücü,
+    güvenli olmayan isteklerini web arayüzünün yaptığı gibi adlandırır);
+    `test_populated_database.py`, `test_database_exchange_rows.py` ve
+    `test_guest_populated_baseline.py` (43 şeması sabiti).
+
+Açık: gerçek, kurulu bir Chrome, bu korumanın sözleşmesini tutan yerel bir
+sahte sunucuya karşı çalıştırıldı (`web/tools/browser-inspect`; `idbackup`,
+`idrestore`, `idcertificate`, `iddomaindb`, `idserverdb`, `idaccount`,
+`idpeer`, `idimport`, `idrefusal`, `serviceaction` senaryoları; sekiz
+yapılandırmanın her birinde 53 durum: 1440x900 ve 390x844, İngilizce ve Türkçe,
+açık ve koyu). Bağlantı gerçekten sıfırlandığında tek tıklama sahte sunucuya en
+çok 10 kez ulaştı (Chrome'un kendiliğinden yinelediği istekler ve sayfanın tek
+ikinci sorusu), her varış tek kimlikle; sekiz değişikliğin her biri bir kez
+yapıldı. Bu, tarayıcının bu korumaya değil, bir sahte sunucuya karşı ölçümüdür.
+Sekizden birinin ortasında hiçbir Panel yeniden başlatılmadı; gerçek bir geri
+yükleme, içe aktarım, sertifika düzenleme, yedek ya da veritabanı motoru
+çalıştırılmadı. Rota süre sınırları ve
+20 saniyelik bekleme seçilmiştir, ölçülmemiştir. Süre sınırı Panel'in
+işleyicisini sınırlar; Agent RPC'sinin iptal edemediği Agent işini sınırlamaz.
+Korunan bir istek sürerken duran Panel, Agent'ın işini uzlaştırılmamış bırakır:
+satır "bilinmiyor" der ve sahip kontrol eder. Sahibin başlattığı panel
+güncellemesi, Panel'i durdurmadan önce henüz `running` istek kimliklerine
+bakmıyor. Koruma aynı isteğin yinelemesini yanıtlar; iki ayrı tıklama iki
+istektir ve ikisi de çalışır; yalnızca rotanın kendi kilidinin reddettiği ya da
+sıraya koyduğu yerler ayrıdır (geri yükleme, motor hesabı, sertifika). Motor
+hesabı yanıtı parola taşımaz, yine de yalnızca durum kodu olarak saklanır;
+ekran bu yinelemeyi olduğu gibi, başarı olarak ele alır. Elle alınan yedek
+artık, zamanlanmış yedeğin zaten yaptığı gibi, alan adının yedek dizinindeki
+okunamayan bir `.cpbak` dosyasında durur. Güncelleme düzeneğinin dolu
+veritabanı kanıtı (`deploy/e2e/release-recovery/populated_database.py`),
+2026-10-10 birleştirmesinden beri 38 ve 42'nin yanında 43 şemasını da sabitler:
+göç defteri özeti `a0b5c4247f83...` ve şema özeti `48cbd3b47573...`; 43 göç
+dosyasından, çevrimdışı testlerinin girdisini kurduğu yolla hesaplandı (aynı
+hesap mevcut iki sabiti de üretir); 66 tablo: 42 şemasının 65 tablosu ve
+`request_identities`. `verify_copy` ve `guest_populated_baseline.py verify
+--expected-version` 43'ü kabul eder; `database_exchange_rows.verify_pair`
+adayın hangi sabitlenmiş şemaya ulaştığını kendi defterinden okur, onu o sabite
+bağlar ve yalnız göç içeren bir değişimden sonra `request_identities`
+tablosunun boş olmasını ister. Bu adayı doğrulayan bir deneme, 42 verdiği yerde
+43 verir. Onunla hiçbir deneme çalıştırılmadı. Panel'de bir veritabanı
+kullanıcısının parolasını belirleyen bir denetim yoktur; bu yüzden "üretilmiş
+veritabanı parolası yeniden belirlenir" (D-029) motorda yapılır; ekran bunu
+söyler. Kapsanmayan: dökümün diğer zararlı rotaları (hizmet ve uygulama yeniden
+başlatma, planlar, kayıtlar), yinelemeden sonra yanlış bildiren yaklaşık 38
+rota, sınıflandırılamayan 7 rota ve sürüm belirteci taşıyan rotalar.

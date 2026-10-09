@@ -5,7 +5,8 @@ import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import { Button, Checking, CouldNotCheck, Dialog, EmptyState, StatusDot } from './ui';
 import { HelpButton } from './HelpDrawer';
-import { readApiError, apiErrorText } from '../lib/apiError';
+import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
+import { ServiceActionNotice, isServiceActionOutcome } from './ServiceActionNotice';
 import { decodeManagedServicesSnapshot, useComponentOperation } from './ComponentOperation';
 import { publishComponentCensus } from '../lib/componentCensus';
 
@@ -142,6 +143,7 @@ export function ServiceShell({
     const [rereading, setRereading] = useState(false);
     const loading = recordRead === 'reading';
     const [busy, setBusy] = useState(false);
+    const [actionOutcome, setActionOutcome] = useState<ApiError | null>(null);
     const [checking, setChecking] = useState(false);
     const [installConfirmationOpen, setInstallConfirmationOpen] = useState(false);
     const [installReadiness, setInstallReadiness] = useState<HostMutationReadiness | null>(null);
@@ -187,6 +189,10 @@ export function ServiceShell({
     };
 
     useEffect(() => {
+        // Another component: the outcome of an action on the previous one is
+        // not about this one.
+        // Başka bir bileşen: öncekinin işlem sonucu bununla ilgili değildir.
+        setActionOutcome(null);
         void load();
     }, [serviceId]);
 
@@ -327,6 +333,7 @@ export function ServiceShell({
         if (!unit || stale) return;
         const key = action === 'start' ? 'svc.confirmStart' : action === 'stop' ? 'svc.confirmStop' : 'svc.confirmRestart';
         if (!confirm(t(key, { name }))) return;
+        setActionOutcome(null);
         setBusy(true);
         try {
             let r: Response;
@@ -338,15 +345,31 @@ export function ServiceShell({
                 });
             } catch {
                 // No answer: whether the unit was started or stopped is not
-                // known. The state is read again; nothing is sent twice.
+                // known. The state is read again; nothing is sent twice. An
+                // unknown result is not a failure and is not coloured as one.
                 // Yanıt yok: birimin başlatılıp durdurulduğu bilinmiyor. Durum
-                // yeniden okunur; hiçbir şey iki kez gönderilmez.
-                showToast('error', t('common.resultUnknown'));
+                // yeniden okunur; hiçbir şey iki kez gönderilmez. Bilinmeyen
+                // sonuç hata değildir ve hata rengiyle gösterilmez.
+                showToast('warning', t('common.resultUnknown'));
                 await load();
                 return;
             }
             if (!r.ok) {
-                showToast('error', apiErrorText(await readApiError(r), t, 'svc.actionFailed'));
+                const refusal = await readApiError(r);
+                if (isServiceActionOutcome(refusal)) {
+                    // What the service showed after the action: a verified
+                    // failure or an unknown result, with the service's own
+                    // line and the command to run. It stays on the page, and
+                    // the state is read again because the action may have
+                    // changed it.
+                    // Hizmetin işlemden sonra gösterdiği: doğrulanmış hata ya
+                    // da bilinmeyen sonuç. Sayfada kalır; işlem durumu
+                    // değiştirmiş olabileceği için durum yeniden okunur.
+                    setActionOutcome(refusal);
+                    await load();
+                    return;
+                }
+                showToast('error', apiErrorText(refusal, t, 'svc.actionFailed'));
                 return;
             }
             await new Promise((res) => setTimeout(res, 1500));
@@ -422,6 +445,7 @@ export function ServiceShell({
                 </div>
             </div>
 
+            <ServiceActionNotice outcome={actionOutcome} onClose={() => setActionOutcome(null)} className="mb-4" />
             {stale && (
                 <CouldNotCheck
                     className="mb-4"

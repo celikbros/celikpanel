@@ -56,7 +56,7 @@ export async function batch4(req, res, path, query, { state, send, coded, readBo
     if (!state.b4) return false;
     const b4 = state.b4;
     const key = `${req.method} ${path}`;
-    if (key === 'GET /api/v1/__b4') { send(res, 200, { sent: b4.sent }); return true; }
+    if (key === 'GET /api/v1/__b4') { send(res, 200, { sent: b4.sent, ids: b4.ids || {} }); return true; }
     const of = path.match(/^\/api\/v1\/domains\/1\/(.+)$/);
     const sub = of ? of[1] : null;
     const reads = {
@@ -97,6 +97,10 @@ export async function batch4(req, res, path, query, { state, send, coded, readBo
     // `loseApplied` is off) and then answered, or not answered.
     const body = await readBody(req);
     b4.sent[key] = (b4.sent[key] || 0) + 1;
+    // The identity each arrival carried (D-029): a change the page asks for
+    // once more must carry the same one.
+    b4.ids = b4.ids || {};
+    b4.ids[key] = [...(b4.ids[key] || []), String(req.headers['x-celikpanel-request-id'] || '')];
     const lost = b4.lose === key;
     const make = !lost || b4.loseApplied;
     const changes = {

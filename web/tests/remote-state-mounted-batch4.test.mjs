@@ -311,8 +311,8 @@ const lost = [
   { name: 'Applications, installing', element: el(DomainAppsPanel), change: `POST ${D}/apps/install`, path: `${D}/apps/install`, start: () => press('apps.install'), reread: '/api/v1/apps', held: ['apps.install'], where: 'apps.resultUnknownWhere' },
   { name: 'Mail authentication, publishing a record', element: el(MailAuthPanel), change: `POST ${D}/mail/auth/apply`, path: `${D}/mail/auth/apply`, start: () => press('mailauth.apply'), reread: `${D}/mail/auth`, held: ['mailauth.apply'] },
   { name: 'Logs, clearing', element: el(DomainLogsViewer), change: `DELETE ${D}/logs/access`, path: `${D}/logs/access`, start: () => press('logs.clear'), reread: `${D}/logs/access`, held: ['logs.clear'] },
-  { name: 'Backups, creating', element: el(DomainBackupManager), change: `POST ${D}/backups`, path: `${D}/backups`, start: () => press('backup.files'), reread: `${D}/backups`, held: ['backup.files', 'backup.create', 'backup.full', 'backup.restore', 'backup.delete'] },
-  { name: 'Backups, restoring', element: el(DomainBackupManager), change: `POST ${D}/backups/restore`, path: `${D}/backups/restore`, start: () => press('backup.restore'), reread: `${D}/backups`, held: ['backup.files', 'backup.create', 'backup.full', 'backup.restore', 'backup.delete'] },
+  { name: 'Backups, creating', element: el(DomainBackupManager), change: `POST ${D}/backups`, path: `${D}/backups`, start: () => press('backup.files'), reread: `${D}/backups`, held: ['backup.files', 'backup.create', 'backup.full', 'backup.restore', 'backup.delete'], asked: true },
+  { name: 'Backups, restoring', element: el(DomainBackupManager), change: `POST ${D}/backups/restore`, path: `${D}/backups/restore`, start: () => press('backup.restore'), reread: `${D}/backups`, held: ['backup.files', 'backup.create', 'backup.full', 'backup.restore', 'backup.delete'], asked: true },
   { name: 'Backups, deleting', element: el(DomainBackupManager), change: `DELETE ${D}/backups`, path: `${D}/backups`, start: () => press('backup.delete'), reread: `${D}/backups`, held: ['backup.files', 'backup.create', 'backup.full', 'backup.restore', 'backup.delete'] },
 ];
 globalThis.FormData ??= class {};
@@ -347,7 +347,17 @@ for (const row of lost) {
         await row.start();
         const sent = () => requests.filter((line) => line === row.change).length;
         assert.equal(sent(), 1, `the change was sent ${sent()} times: ${requests.join(', ')}`);
-        assert.ok(text().includes('common.resultUnknown'), `no result-unknown notice: ${text().slice(0, 400)}`);
+        // A route that carries an identity (D-029) was asked once more by
+        // the fetch interceptor before the screen heard of it; its notice says
+        // so and never says "nothing is sent a second time".
+        if (row.asked) {
+          assert.ok(text().includes('common.lostAsked') && text().includes('common.lostStateReading'), `no "asked again" notice: ${text().slice(0, 400)}`);
+          assert.ok(!text().includes('common.resultUnknown'), 'a change that was asked for again is told as "nothing is sent a second time"');
+        } else {
+          assert.ok(text().includes('common.resultUnknown'), `no result-unknown notice: ${text().slice(0, 400)}`);
+          assert.ok(!text().includes('common.lost'), 'a change without an identity is told as asked for again');
+        }
+        assert.equal(tree.root.findAll((node) => node.props['data-lost-cause'] === (row.asked ? 'asked' : 'dropped')).length, 1, 'the notice does not carry its cause');
         if (row.where) assert.ok(text().includes(row.where), 'the notice does not say where to look');
         assert.ok(tree.root.findAll((node) => node.props['data-result-unknown'] === 'holding').length === 1, 'the notice is not in its holding state');
         assert.deepEqual(enabled(row.held), [], 'a changing control is enabled while the result is unknown and unread');
@@ -363,7 +373,9 @@ for (const row of lost) {
         // these rows the server sends back the state from before the change
         // (Apply sent what was already saved, so there the state shows it).
         const after = row.after ?? 'read';
-        const sentence = { read: 'common.resultUnknownRead', made: 'common.resultUnknownMade', 'not-made': 'common.resultUnknownNotMade' }[after];
+        const sentence = (row.asked
+          ? { read: 'common.lostStateRead', made: 'common.lostStateMade', 'not-made': 'common.lostStateNotMade' }
+          : { read: 'common.resultUnknownRead', made: 'common.resultUnknownMade', 'not-made': 'common.resultUnknownNotMade' })[after];
         assert.ok(text().includes(sentence), `the notice left by itself or does not say ${sentence}: ${text().slice(0, 400)}`);
         assert.equal(tree.root.findAll((node) => node.props['data-result-unknown'] === after).length, 1, `the notice is not in its "${after}" state`);
         assert.ok(requests.slice(before).every((line) => line.startsWith('GET ')), 'something other than a read followed');
@@ -379,7 +391,7 @@ for (const row of lost) {
           assert.ok(requests.length > 0 && requests.every((line) => line.startsWith('GET ')), `Check again sent: ${requests.join(', ')}`);
         }
         await press('common.close');
-        assert.ok(!text().includes('common.resultUnknown'), 'the notice stayed after Close');
+        assert.ok(!text().includes('common.resultUnknown') && !text().includes('common.lost'), 'the notice stayed after Close');
       } finally {
         globalThis.FormData = realFormData;
         await unmount();
@@ -409,7 +421,7 @@ test('the read after a lost answer fails too: the controls stay off and the noti
   try {
     await press('backup.files');
     await settle();
-    assert.ok(text().includes('common.resultUnknownUnread'), text().slice(0, 400));
+    assert.ok(text().includes('common.lostAsked') && text().includes('common.lostStateUnread'), text().slice(0, 400));
     assert.deepEqual(enabled(['backup.files', 'backup.create', 'backup.full', 'backup.restore', 'backup.delete']), []);
     assert.equal(enabled(['common.close']).length, 0, 'the notice can be closed before anything was read');
     assert.equal(requests.filter((line) => line === `POST ${D}/backups`).length, 1);
@@ -426,10 +438,10 @@ test('a later change that is answered settles the earlier question', async () =>
   try {
     await press('backup.files');
     await settle();
-    assert.ok(text().includes('common.resultUnknownRead'));
+    assert.ok(text().includes('common.lostStateRead'));
     await press('backup.files');
     assert.equal(posts, 2, 'the person’s own second request was not sent');
-    assert.ok(!text().includes('common.resultUnknown'), 'the notice stays after a change that was answered');
+    assert.ok(!text().includes('common.resultUnknown') && !text().includes('common.lost'), 'the notice stays after a change that was answered');
   } finally { await unmount(); }
 });
 
@@ -913,7 +925,47 @@ test('a change with no form to ask keeps the notice of the fourth batch: the per
     await press('backup.files');
     await settle();
     assert.deepEqual(noticeState(), ['read']);
-    assert.ok(text().includes('common.resultUnknownRead'));
+    assert.ok(text().includes('common.lostAsked') && text().includes('common.lostStateRead'));
+  } finally { await unmount(); }
+});
+
+// D-029 with the fourth batch. On a route that carries an identity the Panel
+// can say itself that the result is not known: it restarted while the change
+// ran, or the first arrival is still running. Both are the unknown result, said
+// in place with the state read again; neither is a red refusal.
+for (const [code, cause, sentence] of [
+  ['REQUEST_OUTCOME_UNKNOWN', 'interrupted', 'common.lostInterrupted'],
+  ['REQUEST_IN_PROGRESS', 'running', 'common.lostRunning'],
+]) {
+  test(`Backups: the Panel answers ${code} → an unknown result in place, read again, not a failure`, async () => {
+    let posts = 0;
+    serve({ [`${D}/backups`]: (init) => {
+      if (init.method === 'POST') { posts += 1; return answer({ error: 'server English', code, vars: { request_id: 'c'.repeat(32) } }, 409); }
+      return answer(good[`${D}/backups`]);
+    } });
+    await mount(el(DomainBackupManager)());
+    try {
+      await press('backup.files');
+      await settle();
+      assert.equal(posts, 1);
+      assert.equal(tree.root.findAll((node) => node.props['data-lost-cause'] === cause).length, 1, text().slice(0, 300));
+      assert.ok(text().includes(sentence) && text().includes('common.lostStateRead'), text().slice(0, 400));
+      assert.ok(!text().includes('server English') && !text().includes('common.resultUnknown'));
+      assert.deepEqual(globalThis.currentTest.toasts, [], 'an unknown result was also shown as a refusal');
+      assert.ok(requests.filter((line) => line === `GET ${D}/backups`).length >= 2, 'the list was not read again');
+    } finally { await unmount(); }
+  });
+}
+
+test('Backups: any other 409 on an identified route is the Panel’s own refusal, shown as one', async () => {
+  serve({ [`${D}/backups/restore`]: () => answer({ error: 'server English', code: 'BACKUP_RESTORE_IN_PROGRESS' }, 409) });
+  globalThis.confirm = () => true;
+  await mount(el(DomainBackupManager)());
+  try {
+    await press('backup.restore');
+    await settle();
+    assert.equal(noticeState().length, 0, 'a refusal was drawn as an unknown result');
+    assert.deepEqual(globalThis.currentTest.toasts.map(([tone]) => tone), ['error']);
   } finally { await unmount(); }
 });
 

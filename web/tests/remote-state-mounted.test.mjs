@@ -28,7 +28,7 @@ const screenFiles = [
   'Settings', 'UsersPage', 'DomainFileManager', 'DomainSSLSettings', 'ImportPage', 'LicenseNotice', 'MonitoringPage',
   'ComponentDetail', 'ServiceRecordLookup', 'ServiceShell', 'DomainDetail',
 ];
-const icons = new Set(['AlertTriangle']);
+const icons = new Set(['AlertTriangle', 'XCircle']);
 // Children of the screens under test that are not under test themselves.
 const stubbedComponents = [
   'Link', 'TeamMembersPage', 'DNSServerSettings', 'SecurityAuditCard', 'ServerSetupSettings',
@@ -72,10 +72,17 @@ const subscriptionsURL = compileSource('lib/subscriptions.ts', besideRemote);
 const accountsURL = compileSource('lib/accounts.ts', besideRemote);
 const managedServicesURL = compileSource('lib/managedServices.ts', besideRemote);
 const sslTierURL = compileSource('lib/sslTier.ts', () => stub);
+// The identity a state-changing request carries is the real one (D-029).
+const requestIdentityURL = compileSource('lib/requestIdentity.ts', () => stub);
 const own = {
   '/auth/domainAccess': domainAccessURL, '/lib/domainDeletionPending': deletionURL, '/lib/subscriptions': subscriptionsURL,
   '/lib/accounts': accountsURL, '/lib/managedServices': managedServicesURL, '/lib/sslTier': sslTierURL,
+  '/lib/requestIdentity': requestIdentityURL,
 };
+// The two notices of 10 Oct 2026 are the shipped ones: what a service action
+// ended with, and a change whose one-time result is not kept.
+own['/ServiceActionNotice'] = shared.compile('components/ServiceActionNotice.tsx', own);
+own['/OnceOnlyNotice'] = shared.compile('components/OnceOnlyNotice.tsx', own);
 const modalURL = shared.compile('components/AddDomainModal.tsx', own);
 const stripURL = shared.compile('components/DatabaseAccountStrip.tsx', own);
 const load = async (name, more = {}) => (await import(shared.compile(`components/${name}.tsx`, { ...own, ...more })))[name];
@@ -1050,9 +1057,15 @@ test('Domain certificate: after a successful request the screen shows the new an
 test('Import: an apply whose answer is lost says the result is unknown, starts nothing again and offers a check that only reads', async () => {
   const preview = { username: 'old', main_domain: 'old.example', domains: ['old.example'], public_html: true, site_bytes: 10, mail_accounts: [], forwarders: [], dns_zones: {}, databases: [] };
   for (const [listed, expected] of [[[{ id: 9, domain_name: 'old.example' }], 'import.unknown.present'], [[], 'import.unknown.absent']]) {
+    // The identity each apply request carried (D-029). The third arrival is
+    // answered: the server found the first one's result under that identity.
+    const identities = [];
     serve({ '/api/v1/domains': json(listed), '/api/v1/subscriptions': json({ subscriptions: [{ id: 3, name: 'Main', owner: 'admin' }] }) }, 'admin', {
       '/api/v1/import/cpanel/inspect': () => Response.json(preview),
-      '/api/v1/import/cpanel/apply': () => Promise.reject(new TypeError('fetch failed')),
+      '/api/v1/import/cpanel/apply': (options) => {
+        identities.push(new Headers(options.headers).get('X-CelikPanel-Request-Id'));
+        return identities.length < 2 ? Promise.reject(new TypeError('fetch failed')) : Response.json({ steps: [{ step: 'domain', ok: true, detail: 'created' }] });
+      },
     });
     try {
       await mount(ImportPage);
@@ -1071,6 +1084,19 @@ test('Import: an apply whose answer is lost says the result is unknown, starts n
       assert.ok(has(expected));
       assert.equal(applies(), 1, 'the import was sent again');
       assert.equal(buttons('import.runAgain').filter((node) => !node.props.disabled).length, expected === 'import.unknown.absent' ? 1 : 0);
+      assert.match(identities[0], /^[0-9a-f]{32}$/, 'the apply request carried no identity');
+      if (expected === 'import.unknown.absent') {
+        // Starting again after the check is the same request under the same
+        // identity, so the server answers it from the first run and cannot
+        // import twice. Its answer is the result that is shown.
+        await press(buttons('import.runAgain')[0]);
+        const sent = calls.filter((call) => call.url === '/api/v1/import/cpanel/apply');
+        assert.equal(sent.length, 2);
+        assert.equal(identities[1], identities[0], 'the start after a lost answer was sent as a new request');
+        assert.equal(sent[1].body, sent[0].body, 'the start after a lost answer sent a different request under the same identity');
+        assert.ok(has('import.resultTitle'), 'the answer to the same request was not shown as the result');
+        assert.ok(!has('import.unknown.title'));
+      }
     } finally {
       await cleanup();
     }
@@ -1296,6 +1322,54 @@ test('A component page: start and stop go to the unit the record names, and to n
     await mount(ServiceShell, shell);
     assert.ok(has('component-panels'));
     assert.equal(buttons('services.start').length + buttons('services.stop').length + buttons('services.restart').length, 0, 'start or stop is offered without a unit');
+  } finally {
+    await cleanup();
+  }
+});
+
+// 10 Oct 2026. Start, Stop and Restart are answered with what the service
+// showed. A verified failure and an unknown result both stay on the page with
+// the unit, the command and the service's own line; only the first is drawn as
+// a failure. They were toasts that left after five seconds.
+test('A component page: a service action that failed or whose result is unknown is said in place, with the service’s line', async () => {
+  const outcome = (code, reason, vars) => () => Response.json({ error: 'server English', code, reason, vars }, { status: 502 });
+  for (const [code, reason, tone, vars] of [
+    ['SERVICE_ACTION_FAILED', 'check', 'failed', { unit: 'postfix', action: 'restart', command: 'sudo postfix check', detail: 'postfix: fatal: bad numerical configuration: message_size_limit = x' }],
+    ['SERVICE_ACTION_FAILED', 'verify', 'failed', { unit: 'postfix', action: 'restart', command: 'sudo postfix status', detail: 'the mail system is not running', owner_unit: 'postfix@-.service' }],
+    ['SERVICE_ACTION_UNKNOWN', undefined, 'unknown', { unit: 'postgresql', action: 'restart', command: 'sudo systemctl status postgresql@17-main.service', detail: 'state could not be read in time', owner_unit: 'postgresql@17-main.service' }],
+  ]) {
+    serve({ '/api/v1/managed-services': json({ services: [record()] }) }, 'admin', { '/api/v1/service/action': outcome(code, reason, vars) });
+    try {
+      await mount(ServiceShell, shell);
+      const before = reads('/api/v1/managed-services');
+      await press(buttons('services.restart')[0]);
+      const notices = tree.root.findAll((node) => node.props['data-service-action'] !== undefined);
+      assert.equal(notices.length, 1, `${code} ${reason}: no notice on the page`);
+      assert.equal(notices[0].props['data-service-action'], tone, `${code} is drawn as "${notices[0].props['data-service-action']}"`);
+      // The unknown result is on the attention surface, never the failure one.
+      assert.equal(/bg-danger/.test(notices[0].props.className), tone === 'failed');
+      assert.equal(/bg-warning-mark/.test(notices[0].props.className), tone === 'unknown');
+      // The sentence is the catalogue's (tests/service-action-outcome.test.mjs); this
+      // catalogue-less mount shows the server's, in the notice and nowhere else.
+      assert.ok(has('server English'));
+      assert.ok(has(vars.detail), 'the service’s own line is not shown');
+      assert.equal(has('services.action.ownerUnit'), Boolean(vars.owner_unit), 'the unit that runs the service');
+      assert.deepEqual(globalThis.currentTest.toasts, [], 'the outcome was also a toast');
+      assert.equal(calls.filter((call) => call.url === '/api/v1/service/action').length, 1, 'the action was sent again');
+      assert.equal(reads('/api/v1/managed-services'), before + 1, 'the state was not read again after the action');
+      await press(buttons('common.close')[0]);
+      assert.equal(tree.root.findAll((node) => node.props['data-service-action'] !== undefined).length, 0);
+    } finally {
+      await cleanup();
+    }
+  }
+  // Any other refusal stays what it was.
+  serve({ '/api/v1/managed-services': json({ services: [record()] }) }, 'admin', { '/api/v1/service/action': () => Response.json({ error: 'no', code: 'FORBIDDEN' }, { status: 403 }) });
+  try {
+    await mount(ServiceShell, shell);
+    await press(buttons('services.restart')[0]);
+    assert.equal(tree.root.findAll((node) => node.props['data-service-action'] !== undefined).length, 0);
+    assert.deepEqual(globalThis.currentTest.toasts.map(([tone]) => tone), ['error']);
   } finally {
     await cleanup();
   }

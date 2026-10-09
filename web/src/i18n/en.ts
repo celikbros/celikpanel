@@ -418,6 +418,40 @@ export const en = {
     'err.MAIL_POLICY_NOT_RELOADED.verify': "Saved to /etc/postfix/main.cf, but Postfix was no longer running after the reload, so it is not handling mail. Nothing was rolled back. On the server, run sudo postfix check, start Postfix (sudo systemctl start postfix) and confirm with sudo postfix status. The values shown below are the saved ones.",
     'err.MAIL_POLICY_RELOAD_UNKNOWN': "Saved to /etc/postfix/main.cf, but CelikPanel could not establish whether Postfix took the saved values: a command that checks or reloads Postfix could not be run or did not answer in time. This is not a verified failure; Postfix may already be running with them. Nothing was rolled back. On the server, run sudo postfix status, then sudo postfix reload. The values shown below are the saved ones.",
     // --- end of set1 corrections ---
+
+    // A change is sent once and answered once (D-029). Order: what happened,
+    // what was and was not changed, the next action.
+    'err.REQUEST_ID_REQUIRED': 'This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again.',
+    'err.REQUEST_ID_REUSED': 'This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.',
+    'err.REQUEST_IN_PROGRESS': 'This change is still running on the server. It was not started a second time. Wait a little, then reload the page to see the result; do not send it again.',
+    'err.REQUEST_OUTCOME_UNKNOWN': 'CelikPanel restarted or failed while this change was running, so it is not known whether the change was completed. It will not be run again by itself. Reload the page and check the current state; make the change again only if it is missing.',
+    'err.REQUEST_COMPLETED_RESULT_NOT_RETAINED': 'This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.',
+    'err.REQUEST_COMPLETED_RESULT_NOT_RETAINED.failed': 'This change already ended with an error, and that answer is not kept; it was not tried a second time. Reload the page and check the current state; make the change again only if it is missing.',
+    'err.BACKUP_RESTORE_IN_PROGRESS': 'Another restore of this domain is still running, so this one was not started and changed nothing. Wait for it to finish and check the site; restore again only if it is still needed.',
+
+    // A change on a route that carries an identity whose result is not known
+    // (D-029 with lib/lostAnswer.ts): the first sentence says what happened, the
+    // second what the state that was read again shows.
+    'common.lostAsked': "No answer arrived for this change, and asking the server once more for the same answer brought none either, so it is not known whether the change was made. Asking again never makes the change a second time.",
+    'common.lostInterrupted': "CelikPanel restarted or failed while this change was running, so it is not known whether the change was completed. It will not be run again by itself.",
+    'common.lostRunning': "This change is still running on the server, so its result is not known yet. It was not started a second time.",
+    'common.lostStateReading': "What is shown here is being read again. Controls that change or remove something stay off until it has been read.",
+    'common.lostStateRead': "What is shown here was read again at {time}. Check it before making the change again; if the change may still be running, check again in a little while.",
+    'common.lostStateUnread': "The current state could not be read again, so controls that change or remove something stay off. Check again.",
+    'common.lostStateMade': "The answer to this change did not reach this page, but what was read again at {time} shows the change, so it was made. Nothing needs to be sent again.",
+    'common.lostStateNotMade': "What was read again at {time} does not show the change, so it is not known to have been made. What you entered is still here. If the server is still working on it, the change can appear later: check again before sending it a second time.",
+
+    // Start, Stop, Restart and Reload on the Services page (10 Oct 2026): what the
+    // service showed, the one command the server owner runs, how the work resumes.
+    // An unknown result is not a failure.
+    'err.SERVICE_ACTION_FAILED': "The action on {unit} did not take effect. On the server, run {command} to see why, correct it, then repeat the action here.",
+    'err.SERVICE_ACTION_FAILED.check': "Nothing was changed: {unit} refuses its own configuration, so the action was not carried out. On the server, run {command} to see what it objects to, correct it, then repeat the action here.",
+    'err.SERVICE_ACTION_FAILED.reload': "{unit} was not reloaded and keeps running with the settings it had. On the server, run {command} to see why, correct it, then repeat the action here.",
+    'err.SERVICE_ACTION_FAILED.start': "{unit} did not start, or did not stay running. On the server, run {command} to see why, correct it, then repeat the action here.",
+    'err.SERVICE_ACTION_FAILED.stop': "{unit} did not stop: it is still running. On the server, run {command} to see its state, then repeat the action here.",
+    'err.SERVICE_ACTION_FAILED.verify': "The action was sent, but {unit} is not in the state that was asked for. On the server, run {command} to see its state, correct the cause, then repeat the action here.",
+    'err.SERVICE_ACTION_FAILED.command': "The server's service manager did not carry out the action on {unit}. On the server, run {command} to see why, correct it, then repeat the action here.",
+    'err.SERVICE_ACTION_UNKNOWN': "The action was sent, but what came of it could not be verified, so it is not shown as done. This is not a verified failure: {unit} may already be in the state you asked for. On the server, run {command} to see its state, and repeat the action here only if it is still needed.",
 } as const;
 
 export type ShellKey = keyof typeof en;

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Known, Remote } from './remote';
+import { answerWasLost, isReaskRoute } from './requestIdentity';
 
 // A change whose answer did not arrive (D-024: an unknown result is neither a
 // failure nor a success). Most changes the panel sends carry no identity the
-// server keeps: adding a DNS record, a team member, a VPN peer or a backup a
-// second time makes a second one. So when the connection drops, or a gateway
+// server keeps: adding a DNS record, an alias or a team member a second time
+// makes a second one. So when the connection drops, or a gateway
 // answers in place of the Panel, the screen does not know what happened and
 // must not behave as if it did:
 //
@@ -38,9 +39,35 @@ import type { Known, Remote } from './remote';
 // Bir form buna bir `Question` ekleyebilir: yalnız yeniden okunan duruma bakar.
 // O durum değişikliği gösteriyorsa form kapatılır ya da temizlenir ve bildirim
 // kaydedildiğini söyler; göstermiyorsa yazılan kalır ve bildirim bunu söyler.
+//
+// Eight routes do carry an identity the server keeps (D-029, 10 Oct 2026; see
+// lib/requestIdentity.ts). On those the one fetch interceptor has already asked
+// once more for the same answer, under the same identity, before this hook
+// hears that none arrived. The change still ran at most once, and the notice
+// says what happened: the cause is `asked`, not `dropped`. On those routes the
+// Panel itself can also answer that the result is not known: it restarted
+// while the change ran (`interrupted`), or the first arrival is still running
+// (`running`). Each is the same unknown result with another first sentence;
+// what follows is the same: read again, hold the controls, let the person look.
+//
+// Sekiz rota sunucunun sakladığı bir kimlik taşır (D-029). Onlarda yanıt, bu
+// kanca haberdar olmadan önce aynı kimlikle bir kez daha sorulmuştur; bildirim
+// bunu söyler (`asked`). Panel sonucun bilinmediğini kendisi de söyleyebilir:
+// değişiklik sürerken yeniden başlamıştır (`interrupted`) ya da ilk geliş hâlâ
+// sürüyordur (`running`). Sonrası aynıdır: yeniden oku, denetimleri tut.
+/** Why a change has no result of its own. */
+export type LostCause = 'dropped' | 'asked' | 'interrupted' | 'running';
+
 export interface LostAnswer {
     /** When the answer was lost. */
     at: number;
+    /**
+     * `dropped`: no answer, and nothing was sent again. `asked`: no answer, and
+     * asking once more under the same identity brought none either.
+     * `interrupted`: the Panel says it restarted or failed while the change
+     * ran. `running`: the Panel says the first arrival is still running.
+     */
+    cause: LostCause;
     /** When the state was read again after it; null until that read answers. */
     readAt: number | null;
     /**
@@ -70,14 +97,37 @@ export interface Question {
 /** What `send` hands back: the Panel's own answer, or null when none arrived. */
 export type Sent = Response | null;
 
-// A gateway in front of the Panel answers 408, 502, 503 or 504 with its own
-// page when it lost the Panel's answer. The Panel's own refusals are JSON, so a
-// refusal with one of these codes and no JSON body is not the Panel speaking.
-// Panelin önündeki geçit, Panelin yanıtını yitirdiğinde kendi sayfasıyla 408,
-// 502, 503 ya da 504 yanıtlar; Panelin kendi retleri JSON'dur.
-function answeredByGateway(res: Response): boolean {
-    if (![408, 502, 503, 504].includes(res.status)) return false;
-    return !(res.headers.get('Content-Type') ?? '').toLowerCase().includes('json');
+// What the Panel answers on the eight identified routes when the change has no
+// result to give: its own word that the result is not known (yet). Any other
+// 409 is a result and is the caller's to show.
+// Panel'in kimlikli sekiz rotada, verecek sonucu olmadığında yanıtladığı
+// kodlar. Başka her 409 bir sonuçtur.
+const OPEN_OUTCOMES: Record<string, LostCause> = {
+    REQUEST_OUTCOME_UNKNOWN: 'interrupted',
+    REQUEST_IN_PROGRESS: 'running',
+};
+
+async function openOutcome(res: Response): Promise<LostCause | null> {
+    if (res.status !== 409) return null;
+    try {
+        const body: unknown = await res.clone().json();
+        const code = body && typeof body === 'object' ? (body as { code?: unknown }).code : null;
+        return typeof code === 'string' ? OPEN_OUTCOMES[code] ?? null : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * How one sent change ended without a result of its own, or null when the
+ * answer is one (a success or a refusal). `res` is null when no answer
+ * arrived. What counts as a lost answer is defined once, in
+ * lib/requestIdentity.ts. It only looks at the answer.
+ */
+export async function unansweredCause(method: string, url: string, res: Response | null): Promise<LostCause | null> {
+    const identified = isReaskRoute(method, url);
+    if (res === null || answerWasLost(res)) return identified ? 'asked' : 'dropped';
+    return identified ? openOutcome(res) : null;
 }
 
 export interface LostAnswerHandle {
@@ -94,7 +144,7 @@ export interface LostAnswerHandle {
      */
     send: (url: string, init: RequestInit, question?: Question) => Promise<Sent>;
     /** The answer arrived but could not be read as an answer: the result is as unknown. */
-    lose: (question?: Question) => void;
+    lose: (question?: Question, cause?: LostCause) => void;
     /** Reads the state again. It only reads. */
     check: () => Promise<void>;
     /** The person has looked; the notice leaves. */
@@ -150,24 +200,30 @@ export function useLostAnswer(reread: () => Promise<Remote<unknown> | Remote<unk
         }
     }, []);
 
-    const raise = useCallback((asked?: Question) => {
+    const raise = useCallback((asked?: Question, cause: LostCause = 'dropped') => {
         if (!mounted.current) return;
         question.current = asked;
         closed.current = false;
-        setLost({ at: Date.now(), readAt: null, shows: null });
+        setLost({ at: Date.now(), cause, readAt: null, shows: null });
         void check();
     }, [check]);
 
     const send = useCallback(async (url: string, init: RequestInit, asked?: Question): Promise<Sent> => {
-        let res: Response;
+        // `fetch` is the one intercepted fetch: on the eight identified routes
+        // it has already asked once more before it fails here or hands back a
+        // gateway's answer.
+        // `fetch`, araya girilen tek fetch'tir: kimlikli sekiz rotada, burada
+        // başarısız olmadan ya da geçidin yanıtını vermeden önce bir kez daha
+        // sormuştur.
+        let res: Response | null = null;
         try {
             res = await fetch(url, init);
         } catch {
-            raise(asked);
-            return null;
+            res = null;
         }
-        if (answeredByGateway(res)) {
-            raise(asked);
+        const cause = await unansweredCause(init.method ?? 'GET', url, res);
+        if (cause) {
+            raise(asked, cause);
             return null;
         }
         return res;

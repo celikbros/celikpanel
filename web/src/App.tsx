@@ -25,6 +25,7 @@ import { Layout } from './components/Layout';
 import { ComponentOperationProvider } from './components/ComponentOperation';
 import { useI18n } from './i18n';
 import { Spinner } from './components/ui';
+import { sendIdentified } from './lib/requestIdentity';
 import {
   publishSystemUpdateAuthentication,
   shouldApplyUnauthorizedResponse,
@@ -429,7 +430,9 @@ function AuthGate() {
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
       const requestGeneration = authGenerationRef.current;
-      const res = await originalFetch(...args);
+      // One identity per user action on every state-changing call (D-029).
+      // Durum değiştiren her çağrıda kullanıcı eylemi başına tek kimlik.
+      const res = await sendIdentified(originalFetch, args[0], args[1]);
       const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;
       if (res.status === 401
         && url.includes('/api/')

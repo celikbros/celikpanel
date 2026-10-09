@@ -390,4 +390,35 @@ export const tr: Record<ShellKey, string> = {
     'err.MAIL_POLICY_NOT_RELOADED.verify': "/etc/postfix/main.cf dosyasına kaydedildi ancak yeniden yüklemeden sonra Postfix artık çalışmıyordu; bu yüzden posta işlemiyor. Hiçbir şey geri alınmadı. Sunucuda sudo postfix check komutunu çalıştırın, Postfix’i başlatın (sudo systemctl start postfix) ve sudo postfix status ile doğrulayın. Aşağıda gösterilen değerler kaydedilen değerlerdir.",
     'err.MAIL_POLICY_RELOAD_UNKNOWN': "/etc/postfix/main.cf dosyasına kaydedildi ancak CelikPanel, Postfix’in kaydedilen değerleri alıp almadığını belirleyemedi: Postfix’i denetleyen ya da yeniden yükleyen bir komut çalıştırılamadı ya da zamanında yanıt vermedi. Bu doğrulanmış bir hata değildir; Postfix bu değerlerle çalışıyor olabilir. Hiçbir şey geri alınmadı. Sunucuda önce sudo postfix status, sonra sudo postfix reload komutunu çalıştırın. Aşağıda gösterilen değerler kaydedilen değerlerdir.",
     // --- end of set1 corrections ---
+
+    // Bir değişiklik bir kez gönderilir ve bir kez yanıtlanır (D-029).
+    'err.REQUEST_ID_REQUIRED': 'Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın.',
+    'err.REQUEST_ID_REUSED': 'Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın.',
+    'err.REQUEST_IN_PROGRESS': 'Bu değişiklik sunucuda hâlâ sürüyor. İkinci kez başlatılmadı. Biraz bekleyin, sonra sonucu görmek için sayfayı yeniden yükleyin; değişikliği yeniden göndermeyin.',
+    'err.REQUEST_OUTCOME_UNKNOWN': 'CelikPanel bu değişiklik sürerken yeniden başladı ya da hata verdi; bu yüzden değişikliğin tamamlanıp tamamlanmadığı bilinmiyor. Kendiliğinden yeniden çalıştırılmayacak. Sayfayı yeniden yükleyip mevcut durumu kontrol edin; değişikliği yalnızca eksikse yeniden yapın.',
+    'err.REQUEST_COMPLETED_RESULT_NOT_RETAINED': 'Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun.',
+    'err.REQUEST_COMPLETED_RESULT_NOT_RETAINED.failed': 'Bu değişiklik daha önce hatayla sonuçlandı ve o yanıt saklanmıyor; ikinci kez denenmedi. Sayfayı yeniden yükleyip mevcut durumu kontrol edin; değişikliği yalnızca eksikse yeniden yapın.',
+    'err.BACKUP_RESTORE_IN_PROGRESS': 'Bu alan adının başka bir geri yüklemesi hâlâ sürüyor; bu yüzden bu geri yükleme başlatılmadı ve hiçbir şeyi değiştirmedi. Bitmesini bekleyip siteyi kontrol edin; yalnızca hâlâ gerekiyorsa yeniden geri yükleyin.',
+
+    // Kimlik taşıyan rotadaki, sonucu bilinmeyen değişiklik (D-029): ilk cümle ne
+    // olduğunu, ikincisi yeniden okunan durumun ne gösterdiğini söyler.
+    'common.lostAsked': "Bu değişikliğin yanıtı ulaşmadı; sunucudan aynı yanıt bir kez daha istendiğinde de gelmedi. Bu yüzden değişikliğin yapılıp yapılmadığı bilinmiyor. Yeniden sormak değişikliği asla ikinci kez yapmaz.",
+    'common.lostInterrupted': "CelikPanel bu değişiklik sürerken yeniden başladı ya da hata verdi; bu yüzden değişikliğin tamamlanıp tamamlanmadığı bilinmiyor. Kendiliğinden yeniden çalıştırılmayacak.",
+    'common.lostRunning': "Bu değişiklik sunucuda hâlâ sürüyor; bu yüzden sonucu henüz bilinmiyor. İkinci kez başlatılmadı.",
+    'common.lostStateReading': "Burada gösterilen yeniden okunuyor. Bir şeyi değiştiren ya da kaldıran denetimler, okuma bitene dek kapalı kalır.",
+    'common.lostStateRead': "Burada gösterilen, saat {time} itibarıyla yeniden okundu. Değişikliği yeniden yapmadan önce ona bakın; değişiklik hâlâ sürüyor olabilirse biraz sonra tekrar kontrol edin.",
+    'common.lostStateUnread': "Güncel durum yeniden okunamadı; bu yüzden bir şeyi değiştiren ya da kaldıran denetimler kapalı kalıyor. Tekrar kontrol edin.",
+    'common.lostStateMade': "Bu değişikliğin yanıtı bu sayfaya ulaşmadı; ancak saat {time} itibarıyla yeniden okunan durum değişikliği gösteriyor, yani yapıldı. Hiçbir şeyin yeniden gönderilmesi gerekmiyor.",
+    'common.lostStateNotMade': "Saat {time} itibarıyla yeniden okunan durum değişikliği göstermiyor; bu yüzden yapıldığı bilinmiyor. Girdikleriniz hâlâ burada. Sunucu hâlâ üzerinde çalışıyorsa değişiklik sonradan görünebilir: ikinci kez göndermeden önce tekrar kontrol edin.",
+
+    // Hizmetler sayfasındaki Başlat, Durdur, Yeniden başlat ve Yeniden yükle
+    // (10 Eki 2026). Bilinmeyen sonuç hata değildir.
+    'err.SERVICE_ACTION_FAILED': "{unit} üzerindeki işlem etkili olmadı. Sunucuda {command} komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin.",
+    'err.SERVICE_ACTION_FAILED.check': "Hiçbir şey değiştirilmedi: {unit} kendi yapılandırmasını reddediyor; bu yüzden işlem yapılmadı. Sunucuda {command} komutunu çalıştırıp neye itiraz ettiğini görün, düzeltin, sonra işlemi burada yineleyin.",
+    'err.SERVICE_ACTION_FAILED.reload': "{unit} yeniden yüklenmedi ve önceki ayarlarıyla çalışmayı sürdürüyor. Sunucuda {command} komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin.",
+    'err.SERVICE_ACTION_FAILED.start': "{unit} başlamadı ya da çalışır durumda kalmadı. Sunucuda {command} komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin.",
+    'err.SERVICE_ACTION_FAILED.stop': "{unit} durmadı: hâlâ çalışıyor. Sunucuda {command} komutuyla durumunu görün, sonra işlemi burada yineleyin.",
+    'err.SERVICE_ACTION_FAILED.verify': "İşlem gönderildi ancak {unit} istenen durumda değil. Sunucuda {command} komutuyla durumunu görün, nedeni düzeltin, sonra işlemi burada yineleyin.",
+    'err.SERVICE_ACTION_FAILED.command': "Sunucunun hizmet yöneticisi {unit} üzerindeki işlemi yapmadı. Sunucuda {command} komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin.",
+    'err.SERVICE_ACTION_UNKNOWN': "İşlem gönderildi ancak sonucu doğrulanamadı; bu yüzden yapıldı diye gösterilmiyor. Bu doğrulanmış bir hata değildir: {unit} istediğiniz duruma zaten gelmiş olabilir. Sunucuda {command} komutuyla durumunu görün; işlemi yalnız hâlâ gerekiyorsa burada yineleyin.",
 };

@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Database, Plus, Trash2, RefreshCw, ExternalLink } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { readApiError } from '../lib/apiError';
-import { Button, Checking, CouldNotCheck, RemoteGate } from './ui';
+import { apiErrorText, readApiError } from '../lib/apiError';
+import { useLostAnswer } from '../lib/lostAnswer';
+import { Button, Checking, CouldNotCheck, RemoteGate, ResultUnknown } from './ui';
 import { lastKnown, mapRemote, useRemote, type Remote } from '../lib/remote';
 import { decodeDomainDatabases, type DatabaseEngine, type DatabaseInfo, type DatabaseType } from '../lib/domainDatabases';
 import { useHostingCapabilities, type CapabilitiesRemote } from '../lib/hostingCapabilities';
@@ -100,6 +101,7 @@ export function DomainDatabaseManager({
     // alan adı yeni adrestir; önceki alan adının yanıtı bunun için gösterilmez.
     const list = useRemote(`/api/v1/domains/${domainId}/databases`, decodeDomainDatabases);
     const listed = lastKnown(list.remote);
+    const answer = useLostAnswer(() => list.retry());
 
     // Only engines that are actually installed may be offered — a dropdown
     // with MySQL and PostgreSQL on a server that runs neither is a settings
@@ -123,7 +125,12 @@ export function DomainDatabaseManager({
         ? mapRemote(list.remote, (value) => value.availableTypes)
         : mapRemote(capabilities.remote, (value) => value.database_servers.flatMap((id) => engineLabels[id] ?? []));
     const engines = engineSource.state === 'known' ? engineSource.value : [];
-    const canCreate = !readOnly && engineSource.state === 'known' && engines.length > 0;
+    // Nothing is created while an earlier create has no result and the list
+    // has not been read again.
+    // Önceki oluşturmanın sonucu yokken ve liste yeniden okunmamışken hiçbir
+    // şey oluşturulmaz.
+    const enginesReady = !readOnly && engineSource.state === 'known' && engines.length > 0;
+    const canCreate = enginesReady && !answer.holding;
 
     // Form state
     const [dbName, setDbName] = useState('');
@@ -142,7 +149,19 @@ export function DomainDatabaseManager({
 
         setCreating(true);
         try {
-            const res = await fetch(`/api/v1/domains/${domainId}/databases`, {
+            // The request carries an identity the server keeps (D-029), and a
+            // lost answer has been asked for once more before `send` gives up.
+            // When there is still no result, the list is read again and asked
+            // one thing: does it name this database? If it does, the form is
+            // closed and the notice says it was made; if not, what was typed
+            // stays. Nothing here says "failed" for a result nobody knows
+            // (10 Oct 2026: a dropped connection was "Failed to create
+            // database").
+            // İstek, sunucunun sakladığı bir kimlik taşır (D-029). Sonuç yine
+            // yoksa liste yeniden okunur ve tek bir şey sorulur: bu veritabanını
+            // adlandırıyor mu? Kimsenin bilmediği sonuca "başarısız" denmez.
+            const name = dbName;
+            const res = await answer.send(`/api/v1/domains/${domainId}/databases`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -150,7 +169,19 @@ export function DomainDatabaseManager({
                     type: dbType,
                     password: dbPassword
                 })
+            }, {
+                shows: ([read]) => {
+                    const value = read?.value as { databases?: Array<{ name?: string }> } | undefined;
+                    return Array.isArray(value?.databases) ? value.databases.some((db) => db.name === name) : null;
+                },
+                made: () => {
+                    setShowCreateForm(false);
+                    setDbName('');
+                    setDbPassword('');
+                },
             });
+            if (!res) return;
+            answer.settle();
 
             if (res.ok) {
                 const data = await res.json();
@@ -160,18 +191,20 @@ export function DomainDatabaseManager({
                 setDbPassword('');
                 void list.retry();
             } else {
-                showToast('error', (await readApiError(res)).message || 'Failed to create database');
+                showToast('error', apiErrorText(await readApiError(res), t, 'common.error'));
             }
         } catch (err) {
+            // The answer arrived and could not be read as one.
+            // Yanıt geldi ama yanıt olarak okunamadı.
             console.error(err);
-            showToast('error', 'Failed to create database');
+            answer.lose(undefined, 'asked');
         } finally {
             setCreating(false);
         }
     };
 
     const handleDeleteDatabase = async (db: DatabaseInfo) => {
-        if (readOnly || list.remote.state !== 'known') return;
+        if (readOnly || list.remote.state !== 'known' || answer.holding) return;
         if (!confirm(`Delete database "${db.name}"?\n\nThis action cannot be undone. All data will be lost.`)) {
             return;
         }
@@ -208,6 +241,8 @@ export function DomainDatabaseManager({
                 Veritabanı Oluştur düğmesi. Baştan yerindedir ve motorlar
                 bilindiğinde kullanılabilir olur; yanındaki satır henüz neden
                 kullanılamadığını söyler. */}
+            <ResultUnknown answer={answer} />
+
             {!readOnly && !showCreateForm && !(engineSource.state === 'known' && engines.length === 0) && (
                 <div className="flex flex-wrap items-center gap-3">
                     {/* The shared primary button: its face is readable in both
@@ -242,7 +277,7 @@ export function DomainDatabaseManager({
             )}
 
             {/* Create Database Form */}
-            {showCreateForm && canCreate && (
+            {showCreateForm && enginesReady && (
                 <div className="bg-surface-2/50 rounded-lg p-6 border border-border">
                     <h4 className="text-md font-semibold text-fg mb-4">Create New Database</h4>
                     <form onSubmit={handleCreateDatabase} className="space-y-4">
@@ -289,7 +324,7 @@ export function DomainDatabaseManager({
                         <div className="flex gap-2">
                             <button
                                 type="submit"
-                                disabled={creating || dbType === null}
+                                disabled={creating || dbType === null || answer.holding}
                                 className="px-6 py-2 bg-success text-white rounded hover:bg-success disabled:opacity-50 flex items-center gap-2"
                             >
                                 <Database className="w-4 h-4" />

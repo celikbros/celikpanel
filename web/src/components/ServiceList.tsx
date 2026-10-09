@@ -6,6 +6,7 @@ import { useI18n } from '../i18n';
 import { Button, Checking, CouldNotCheck, Dialog, EmptyState, ErrorBanner, SearchInput, Spinner, StatusDot } from './ui';
 import { PageHeader } from './PageHeader';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
+import { ServiceActionNotice, isServiceActionOutcome } from './ServiceActionNotice';
 import { lastKnown, useRemote } from '../lib/remote';
 import {
     canonicalMailHostname,
@@ -394,6 +395,12 @@ export function ServiceList({ onManageService }: ServiceListProps) {
     // sonraki hamlesidir; sayfa onu saklar.
     const [autoCheckFailed, setAutoCheckFailed] = useState(false);
     const [busy, setBusy] = useState<string | null>(null);
+    // What a start, stop or restart ended with when it is not "done": a
+    // verified failure or an unknown result, with the service's own line. It
+    // stays above the list until it is closed or another action is taken.
+    // Bir başlat, durdur ya da yeniden başlat işleminin "yapıldı" olmayan
+    // sonucu; kapatılana ya da başka bir işlem yapılana dek listenin üstünde.
+    const [actionOutcome, setActionOutcome] = useState<ApiError | null>(null);
     const [installTarget, setInstallTarget] = useState<ManagedService | null>(null);
     const [profileTarget, setProfileTarget] = useState<ManagedMailProfile | null>(null);
     const [uninstallTarget, setUninstallTarget] = useState<ManagedService | null>(null);
@@ -895,6 +902,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
             showToast('error', t('services.stateUnverifiedHint'));
             return;
         }
+        setActionOutcome(null);
         setBusy(service.id);
         try {
             // Target the unit the SCAN found, not the catalogue id. They differ
@@ -920,13 +928,27 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     handleStateRefreshFailure(error);
                     return;
                 }
+                if (isServiceActionOutcome(error)) {
+                    // The action may have changed the service, so the list is
+                    // read again under the outcome.
+                    // İşlem hizmeti değiştirmiş olabilir; liste sonucun
+                    // altında yeniden okunur.
+                    setActionOutcome(error);
+                    if (!(await loadServices())) markStateUnverified();
+                    return;
+                }
                 showToast('error', apiErrorText(error, t, 'services.actionFailed'));
                 return;
             }
             if (!(await loadServices())) markStateUnverified();
         } catch {
+            // No answer arrived: the action may have been carried out. That is
+            // not a failure; the notice above the list says the state is not
+            // verified and offers the rescan.
+            // Yanıt gelmedi: işlem yapılmış olabilir. Bu bir hata değildir;
+            // listenin üstündeki bildirim durumun doğrulanmadığını söyler.
             markStateUnverified();
-            showToast('error', t('services.actionFailed'));
+            showToast('warning', t('services.stateUnverifiedHint'));
         } finally {
             setBusy(null);
         }
@@ -943,6 +965,7 @@ export function ServiceList({ onManageService }: ServiceListProps) {
             showToast('error', t('services.stateUnverifiedHint'));
             return;
         }
+        setActionOutcome(null);
         setBusy(`${serviceId}:${unit}`);
         try {
             const res = await fetch('/api/v1/service/action', {
@@ -956,13 +979,27 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     handleStateRefreshFailure(error);
                     return;
                 }
+                if (isServiceActionOutcome(error)) {
+                    // The action may have changed the service, so the list is
+                    // read again under the outcome.
+                    // İşlem hizmeti değiştirmiş olabilir; liste sonucun
+                    // altında yeniden okunur.
+                    setActionOutcome(error);
+                    if (!(await loadServices())) markStateUnverified();
+                    return;
+                }
                 showToast('error', apiErrorText(error, t, 'services.actionFailed'));
                 return;
             }
             if (!(await loadServices())) markStateUnverified();
         } catch {
+            // No answer arrived: the action may have been carried out. That is
+            // not a failure; the notice above the list says the state is not
+            // verified and offers the rescan.
+            // Yanıt gelmedi: işlem yapılmış olabilir. Bu bir hata değildir;
+            // listenin üstündeki bildirim durumun doğrulanmadığını söyler.
             markStateUnverified();
-            showToast('error', t('services.actionFailed'));
+            showToast('warning', t('services.stateUnverifiedHint'));
         } finally {
             setBusy(null);
         }
@@ -1170,6 +1207,8 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                     </div>
                 )}
             </div>
+
+            <ServiceActionNotice outcome={actionOutcome} onClose={() => setActionOutcome(null)} className="mb-4" />
 
             {stateUnverified && (
                 <div role="alert" className="mb-4 flex items-start gap-3 rounded-xl border border-warning-mark/60 bg-warning-mark/10 p-4">

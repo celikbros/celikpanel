@@ -239,7 +239,9 @@ func TestPanelUpdateRoutesRemainBehindAuthenticationAndCSRF(t *testing.T) {
 			t.Fatalf("update route is not registered exactly: %s", route)
 		}
 	}
-	if !strings.Contains(text, "applicationHandler := panel.requireRemoteDNSMachineAuth(csrfProtect(\n\t\tpanel.requireAuth(http.DefaultServeMux),\n\t))") {
+	// The request-identity guard (D-029) sits inside authentication, in front
+	// of the mux; it lets every route it does not name pass untouched.
+	if !strings.Contains(text, "applicationHandler := panel.requireRemoteDNSMachineAuth(csrfProtect(\n\t\tpanel.requireAuth(panel.requestIdentities.wrap(http.DefaultServeMux)),\n\t))") {
 		t.Fatal("default API mux is no longer wrapped by auth then same-origin CSRF")
 	}
 }

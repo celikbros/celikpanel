@@ -60,11 +60,15 @@ const loginURL = link('../src/components/Login.tsx', withGuidance);
 const noticeURL = link('../src/components/UpdateReloadNotice.tsx', withGuidance);
 const bareNoticeURL = link('../src/components/UpdateReloadNotice.tsx', () => stub);
 const sessionURL = link('../src/auth/usePanelSession.ts', () => stub);
+// The interception sends every call through the request identity (D-029); the
+// gate is tested with the real one.
+const identityURL = dataModule(compile('../src/lib/requestIdentity.ts'));
 const app = source('../src/App.tsx');
 const gateURL = dataModule(`import React, { useCallback, useState, useEffect, useLayoutEffect, useRef, Suspense } from '${reactURL}';
  import { usePanelSession } from '${sessionURL}';
  import { AccessHold } from '${holdURL}';
  import { Login } from '${loginURL}';
+ import { sendIdentified } from '${identityURL}';
  const fixture = () => globalThis.holdTest;
  const RecoveryAccess = props => React.createElement('aside', { cause: props.cause, checking: props.checking, user: props.user }, 'recovery');
  const AuthProvider = ({ user, onLogout, children }) => { fixture().logout = onLogout; return React.createElement('section', { 'data-user': user.username }, children); };

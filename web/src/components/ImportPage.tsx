@@ -9,6 +9,8 @@ import { useNavigate } from '../router';
 import { decodeList, readRemote, useRemote } from '../lib/remote';
 import { SUBSCRIPTIONS_URL, decodeSubscriptions } from '../lib/subscriptions';
 import { PageHeader } from './PageHeader';
+import { REQUEST_ID_HEADER, newRequestId } from '../lib/requestIdentity';
+import { unansweredCause, type LostCause } from '../lib/lostAnswer';
 
 // cPanel import wizard (roadmap 3B): source → preview → result. Nothing is
 // applied until the operator sees the honest preview and confirms; the
@@ -38,17 +40,33 @@ interface StepResult {
 
 type Stage = 'source' | 'preview' | 'result';
 
-// The apply request has no identity the server keeps: when its answer is lost
-// nothing can be asked about that request. What can be read is whether the
-// domain it creates first is on the server now. `unchecked` is "nobody has
-// looked yet"; none of these is "the import failed".
+// The apply request carries an identity the server keeps for a day (D-029):
+// when its answer is lost the same request is asked for once more under the
+// same identity, and the server answers it from the first run instead of
+// importing twice. This state is what remains when that second asking got no
+// answer either (`why` is `asked`), or when the Panel itself answered that the
+// import is still running (`running`) or that it restarted while the import
+// ran (`interrupted`): the notice says which. What can still be read is
+// whether the domain the import creates first is on the server now.
+// `unchecked` is "nobody has looked yet"; none of these is "the import failed".
 //
-// Uygulama isteğinin sunucuda tutulan bir kimliği yoktur: yanıtı kaybolunca o
-// istek hakkında soru sorulamaz. Okunabilen, ilk oluşturduğu alan adının şu an
-// sunucuda olup olmadığıdır. Bunların hiçbiri "içe aktarım başarısız" değildir.
-type UnknownResult =
-    | { check: 'unchecked' | 'checking' | 'unreadable' | 'absent'; domain: string }
-    | { check: 'present'; domain: string };
+// Uygulama isteği, sunucunun bir gün tuttuğu bir kimlik taşır (D-029): yanıtı
+// kaybolunca aynı istek aynı kimlikle bir kez daha sorulur ve sunucu onu iki
+// kez içe aktarmak yerine ilk çalışmadan yanıtlar. Bu durum, o ikinci sorunun da
+// yanıtsız kaldığı zaman kalandır. Bunların hiçbiri "içe aktarım başarısız"
+// değildir.
+type UnknownResult = {
+    check: 'unchecked' | 'checking' | 'unreadable' | 'absent' | 'present';
+    domain: string;
+    why: LostCause;
+};
+
+const unknownBody: Record<LostCause, 'import.unknown.body' | 'import.unknown.bodyRunning' | 'import.unknown.bodyInterrupted'> = {
+    dropped: 'import.unknown.body',
+    asked: 'import.unknown.body',
+    running: 'import.unknown.bodyRunning',
+    interrupted: 'import.unknown.bodyInterrupted',
+};
 
 const namesDomain = (row: unknown, domain: string) =>
     !!row && typeof row === 'object' && String((row as { domain_name?: unknown }).domain_name ?? '').toLowerCase() === domain.toLowerCase();
@@ -76,6 +94,10 @@ export function ImportPage() {
     const [subID, setSubID] = useState(0);
     const [opts, setOpts] = useState({ files: true, mail: true, dns: true, databases: true });
     const [steps, setSteps] = useState<StepResult[]>([]);
+    // The apply request whose answer has not arrived yet: its identity and the
+    // exact body it was sent with.
+    // Yanıtı henüz gelmemiş uygulama isteği: kimliği ve gönderildiği gövde.
+    const applyRequest = useRef<{ id: string; body: string } | null>(null);
 
     const inspect = async () => {
         setBusy(true);
@@ -110,45 +132,83 @@ export function ImportPage() {
         // başlatılır.
         if (unknownResult && unknownResult.check !== 'absent') return;
         const domain = targetDomain;
+        // A first start has a new identity. A start after a lost answer is the
+        // same request under the same identity: the server answers it from the
+        // first run if there was one, and runs it only if it never arrived.
+        // İlk başlatmanın yeni bir kimliği vardır. Kaybolan yanıttan sonraki
+        // başlatma, aynı kimlikle aynı istektir: sunucu onu varsa ilk
+        // çalışmadan yanıtlar, yalnızca hiç ulaşmadıysa çalıştırır.
+        const request = (unknownResult && applyRequest.current) || {
+            id: newRequestId(),
+            body: JSON.stringify({
+                path,
+                subscription_id: subID,
+                domain: targetDomain,
+                do_files: opts.files,
+                do_mail: opts.mail,
+                do_dns: opts.dns,
+                do_databases: opts.databases,
+            }),
+        };
+        applyRequest.current = request;
         setBusy(true);
+        // Why the import has no result of its own, when it has none.
+        // İçe aktarımın kendi sonucu yoksa nedeni.
+        let why: LostCause = 'asked';
         try {
-            const res = await fetch('/api/v1/import/cpanel/apply', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    path,
-                    subscription_id: subID,
-                    domain: targetDomain,
-                    do_files: opts.files,
-                    do_mail: opts.mail,
-                    do_dns: opts.dns,
-                    do_databases: opts.databases,
-                }),
-            });
-            // A gateway between the browser and the Panel answers like this
-            // when it lost the Panel's own answer: that is not a refusal by
-            // the Panel, and the import may be running.
-            // Tarayıcı ile Panel arasındaki bir geçit, Panelin kendi yanıtını
-            // kaybettiğinde böyle yanıt verir: bu Panelin reddi değildir.
-            if ([408, 429, 502, 503, 504].includes(res.status)) throw new Error('unanswered');
+            let res: Response | null = null;
+            try {
+                res = await fetch('/api/v1/import/cpanel/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', [REQUEST_ID_HEADER]: request.id },
+                    body: request.body,
+                });
+            } catch {
+                res = null;
+            }
+            // No answer after the second asking, an answer a gateway gave in
+            // the Panel's place, or the Panel's own word that the import is
+            // still running or was interrupted: the result is not known, and
+            // the page says which of these it was. One definition for every
+            // screen (lib/lostAnswer.ts).
+            // İkinci sorudan sonra da yanıt yok, Panel'in yerine bir geçidin
+            // yanıtı ya da Panel'in içe aktarımın sürdüğünü ya da kesildiğini
+            // kendisinin söylemesi: sonuç bilinmiyor; sayfa hangisi olduğunu
+            // söyler.
+            const cause = await unansweredCause('POST', '/api/v1/import/cpanel/apply', res);
+            if (cause || !res) {
+                why = cause ?? 'asked';
+                // The Panel lost track of the import: a later start is a new
+                // request. In every other case a later start asks for the
+                // same request again.
+                // Panel içe aktarımı izleyemedi: sonraki başlatma yeni bir
+                // istektir. Öteki durumlarda aynı istek yeniden sorulur.
+                if (why === 'interrupted') applyRequest.current = null;
+                throw new Error(why);
+            }
             if (!res.ok) {
+                // Any other answer is the Panel's own: the result is known.
+                // Başka her yanıt Panel'in kendi yanıtıdır: sonuç bilinir.
                 showToast('error', apiErrorText(await readApiError(res), t));
+                applyRequest.current = null;
+                setUnknownResult(null);
                 return;
             }
             const data = await res.json();
             if (!data || !Array.isArray(data.steps)) throw new Error('steps');
+            applyRequest.current = null;
             setSteps(data.steps);
             setUnknownResult(null);
             setStage('result');
         } catch {
-            // The connection dropped, or the answer could not be read: the
-            // server may have imported everything, a part, or nothing. That is
-            // said on the page and stays there; "Start import" does not come
-            // back by itself.
-            // Bağlantı koptu ya da yanıt okunamadı: sunucu her şeyi, bir kısmını
+            // No result, or an answer that could not be read: the server may
+            // have imported everything, a part, or nothing. That is said on
+            // the page and stays there; "Start import" does not come back by
+            // itself.
+            // Sonuç yok ya da yanıt okunamadı: sunucu her şeyi, bir kısmını
             // içe aktarmış ya da hiçbir şey yapmamış olabilir. Bu sayfada söylenir
             // ve orada kalır; "İçe aktarımı başlat" kendiliğinden geri gelmez.
-            setUnknownResult({ check: 'unchecked', domain });
+            setUnknownResult({ check: 'unchecked', domain, why });
         } finally {
             setBusy(false);
         }
@@ -158,13 +218,13 @@ export function ImportPage() {
     // Alan adı listesini okur. Hiçbir şeyi değiştirmez, hiçbir şey başlatmaz.
     const checkResult = async () => {
         if (!unknownResult) return;
-        const { domain } = unknownResult;
-        setUnknownResult({ check: 'checking', domain });
+        const { domain, why } = unknownResult;
+        setUnknownResult({ check: 'checking', domain, why });
         const list = await readRemote('/api/v1/domains', decodeList<unknown>, undefined, { cache: 'no-store' });
         setUnknownResult((current) => {
             if (!current || current.domain !== domain) return current;
-            if (list.state !== 'known') return { check: 'unreadable', domain };
-            return { check: list.value.some((row) => namesDomain(row, domain)) ? 'present' : 'absent', domain };
+            if (list.state !== 'known') return { check: 'unreadable', domain, why };
+            return { check: list.value.some((row) => namesDomain(row, domain)) ? 'present' : 'absent', domain, why };
         });
     };
 
@@ -174,6 +234,7 @@ export function ImportPage() {
         setSteps([]);
         setPath('');
         setUnknownResult(null);
+        applyRequest.current = null;
     };
     const subsKnown = subs.remote.state === 'known';
     const subOptions = subs.remote.state === 'known' ? subs.remote.value : [];
@@ -282,12 +343,12 @@ export function ImportPage() {
                         {opts.databases && <Note text={t('import.dbNote')} />}
 
                         {unknownResult && (
-                            <div ref={unknownNotice} role="alert" className="scroll-mb-20 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-sm leading-relaxed text-fg">
+                            <div ref={unknownNotice} role="alert" data-import-unknown={unknownResult.why} className="scroll-mb-20 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-sm leading-relaxed text-fg">
                                 <p className="flex items-start gap-2 font-semibold">
                                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
                                     <span>{t('import.unknown.title')}</span>
                                 </p>
-                                <p className="mt-1.5 break-words">{t('import.unknown.body', { domain: unknownResult.domain })}</p>
+                                <p className="mt-1.5 break-words">{t(unknownBody[unknownResult.why], { domain: unknownResult.domain })}</p>
                                 <div className="mt-2 min-h-5" aria-live="polite">
                                     {unknownResult.check === 'checking' && <Checking label={t('domains.checking')} />}
                                     {unknownResult.check === 'unreadable' && <p className="break-words">{t('import.unknown.unreadable')}</p>}

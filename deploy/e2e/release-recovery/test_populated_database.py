@@ -149,6 +149,38 @@ class PopulatedDatabaseTests(unittest.TestCase):
         self.assertEqual(proof['tables']['schema_migrations']['added'], 4)
         self.assertEqual(proof['tables']['domains']['before'], 3)
 
+    def test_actual_39_through_43_migrations_add_one_empty_table_and_change_no_old_row(self):
+        # Migration 43 (request identities, D-029). A candidate that carries it
+        # is held to its own pinned digests; schema42 evidence does not cover it.
+        self.assertEqual(len(self.sql), 43, 'a migration after 43 needs its own pin before a candidate carries it')
+        result = self.build()
+        connection = sqlite3.connect(result['database'])
+        connection.execute('PRAGMA foreign_keys=ON')
+        apply(connection, self.sql[38:43])
+        connection.close()
+        with self.assertRaises(p.Refused):
+            self.verify(result, 42)
+        proof = self.verify(result, 43)
+        self.assertEqual(proof['schema_version'], 43)
+        self.assertEqual(proof['table_count'], 66)
+        self.assertEqual(proof['old_table_count'], 55)
+        self.assertTrue(proof['domain_defaults_40_42_verified'])
+        self.assertEqual(proof['old_rows_missing_or_changed'], 0)
+        self.assertEqual(proof['tables']['schema_migrations']['added'], 5)
+        self.assertEqual(p.NEW_TABLES[43] - p.NEW_TABLES[42], {'request_identities'})
+        for version in (44, 41, '43', True):
+            with self.subTest(version=version), self.assertRaises(p.Refused):
+                self.verify(result, version)
+
+    def test_schema42_copy_is_not_accepted_as_schema43(self):
+        result = self.build()
+        connection = sqlite3.connect(result['database'])
+        connection.execute('PRAGMA foreign_keys=ON')
+        apply(connection, self.sql[38:42])
+        connection.close()
+        with self.assertRaises(p.Refused):
+            self.verify(result, 43)
+
     def test_old_row_modification_and_deletion_are_both_refused(self):
         for sql in ("UPDATE users SET password_hash='changed' WHERE id=81", 'DELETE FROM domain_aliases WHERE id=87'):
             with self.subTest(sql=sql):

@@ -149,6 +149,20 @@ func (p *Panel) handleProvisionDatabaseAdminAccount(w http.ResponseWriter, r *ht
 	if !ok {
 		return
 	}
+	// One change of this account at a time per server (D-029). Each call sets
+	// a new password on the engine and then records it; two calls that
+	// interleave could leave the engine on one password and the Panel holding
+	// the other. The row is read again under the lock so the record this call
+	// writes is built from the state the previous call left.
+	// Sunucu başına bu hesabın tek değişikliği (D-029). İç içe geçen iki çağrı
+	// motoru bir parolada, Panel'i ötekinde bırakabilirdi.
+	unlock := databaseAdminAccountLocks.lock(server.ID)
+	defer unlock()
+	server, err := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB()).GetByID(r.Context(), server.ID)
+	if err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
+		return
+	}
 	if !databaseEngineIsOnThisMachine(server.Host) {
 		writeClientError(w, http.StatusConflict,
 			"CelikPanel can only open an account for itself on a database engine "+
@@ -264,6 +278,15 @@ func (p *Panel) handleRevealDatabaseAdminAccountPassword(w http.ResponseWriter, 
 func (p *Panel) handleRemoveDatabaseAdminAccount(w http.ResponseWriter, r *http.Request) {
 	server, ok := p.loadDatabaseServerForAdminAccount(w, r)
 	if !ok {
+		return
+	}
+	// Never interleaved with opening or re-keying the same account (D-029).
+	// Aynı hesabın açılması ya da yeniden anahtarlanmasıyla iç içe geçmez.
+	unlock := databaseAdminAccountLocks.lock(server.ID)
+	defer unlock()
+	server, err := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB()).GetByID(r.Context(), server.ID)
+	if err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
 		return
 	}
 	if strings.TrimSpace(server.AdminUsername) == "" {

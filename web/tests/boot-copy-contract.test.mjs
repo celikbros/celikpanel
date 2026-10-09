@@ -79,6 +79,7 @@ const eagerModules = [
   'src/lib/api.ts',
   'src/lib/apiError.ts',
   'src/lib/remote.ts',
+  'src/lib/requestIdentity.ts',
   'src/lib/componentCensus.ts',
   'src/lib/systemUpdateAuthSignal.ts',
   'src/lib/systemUpdateLease.ts',

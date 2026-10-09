@@ -709,19 +709,41 @@ export function ResultUnknown({
     const lost = answer.lost;
     if (!lost) return null;
     const made = lost.readAt !== null && lost.shows === true;
-    const readKey = lost.shows === true ? 'common.resultUnknownMade' : lost.shows === false ? 'common.resultUnknownNotMade' : 'common.resultUnknownRead';
+    const time = lost.readAt !== null
+        ? new Date(lost.readAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+        : '';
+    // A change on a route that carries an identity (D-029) was not simply
+    // dropped: the same answer was asked for once more, or the Panel said
+    // itself that the result is not known. The first sentence says which; the
+    // second says what the state that was read again shows. Once that state
+    // shows the change, one sentence is left.
+    // Kimlik taşıyan rotadaki değişiklik yalnızca kopmamıştır: aynı yanıt bir
+    // kez daha sorulmuş ya da Panel sonucun bilinmediğini kendisi söylemiştir.
+    // İlk cümle hangisi olduğunu, ikincisi yeniden okunan durumun ne
+    // gösterdiğini söyler.
+    const identified = lost.cause !== 'dropped';
+    const why = !identified || made
+        ? null
+        : t(lost.cause === 'asked' ? 'common.lostAsked' : lost.cause === 'running' ? 'common.lostRunning' : 'common.lostInterrupted');
+    const readKey = identified
+        ? (lost.shows === true ? 'common.lostStateMade' : lost.shows === false ? 'common.lostStateNotMade' : 'common.lostStateRead')
+        : (lost.shows === true ? 'common.resultUnknownMade' : lost.shows === false ? 'common.resultUnknownNotMade' : 'common.resultUnknownRead');
     const text = lost.readAt !== null
-        ? t(readKey, { time: new Date(lost.readAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) })
-        : t(answer.checking ? 'common.resultUnknown' : 'common.resultUnknownUnread');
+        ? t(readKey, { time })
+        : identified
+            ? t(answer.checking ? 'common.lostStateReading' : 'common.lostStateUnread')
+            : t(answer.checking ? 'common.resultUnknown' : 'common.resultUnknownUnread');
     return (
         <div
             ref={box}
             role={made ? 'status' : 'alert'}
             data-result-unknown={lost.readAt === null ? 'holding' : made ? 'made' : lost.shows === false ? 'not-made' : 'read'}
+            data-lost-cause={lost.cause}
             className={`flex items-start gap-2 rounded-lg border p-3 text-sm leading-relaxed text-fg ${made ? 'border-border-strong bg-surface-2' : 'border-warning-mark/50 bg-warning-mark/20'} ${className ?? ''}`}
         >
             {made ? <CheckMark /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />}
             <div className="min-w-0">
+                {why && <p className="mb-1 max-w-[75ch] break-words">{why}</p>}
                 <p className="max-w-[75ch] break-words">{text}</p>
                 {where && !made && <p className="mt-1 max-w-[75ch] break-words">{where}</p>}
                 <div className="mt-2 flex flex-wrap items-center gap-2">

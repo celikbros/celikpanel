@@ -38,7 +38,6 @@
       "rawRead": 4
     },
     "src/components/DatabaseAccountStrip.tsx": {
-      "swallowedFailure": 1,
       "rawRead": 1
     },
     "src/components/DomainLogsViewer.tsx": {

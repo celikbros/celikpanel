@@ -19,7 +19,9 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
-import { Button, EmptyState, ErrorBanner, Spinner, StatusDot, inputClass } from './ui';
+import { Button, EmptyState, ErrorBanner, ResultUnknown, Spinner, StatusDot, inputClass } from './ui';
+import { useLostAnswer } from '../lib/lostAnswer';
+import { OnceOnlyNotice, resultNotKept } from './OnceOnlyNotice';
 import { PageHeader } from './PageHeader';
 import { HelpButton } from './HelpDrawer';
 
@@ -202,22 +204,44 @@ export function VPNPage() {
                     (!entitlement.expires_at || Date.parse(entitlement.expires_at) > now)
                 ))
             ));
+            const listed = peerPayload.peers ?? [];
             setStatus(server);
-            setPeers(peerPayload.peers ?? []);
+            setPeers(listed);
             setSubscriptions(availableSubscriptions);
             setSelectedSubscriptionID((current) => (
                 availableSubscriptions.some((subscription) => subscription.id === current)
                     ? current
                     : availableSubscriptions[0]?.id ?? null
             ));
+            return listed;
         } catch (error) {
             const apiError = asApiError(error);
             setLoadError(apiError);
             showToast('error', apiErrorText(apiError, t));
+            return null;
         } finally {
             setLoading(false);
         }
     }, [t]);
+
+    // Adding a device carries an identity the server keeps (D-029): a lost
+    // answer has been asked for once more before this page hears of it, and at
+    // most one device was made. When there is still no result the devices are
+    // read again, and nothing is added or removed until that read answers.
+    // Cihaz ekleme, sunucunun sakladığı bir kimlik taşır (D-029). Sonuç yine
+    // yoksa cihazlar yeniden okunur; o okuma yanıtlanana dek hiçbir şey
+    // eklenmez ya da kaldırılmaz.
+    const answer = useLostAnswer(async () => {
+        const listed = await load();
+        return listed
+            ? { state: 'known', value: listed, observedAt: Date.now() }
+            : { state: 'unknown', reason: { message: '' } };
+    });
+    // The device that was made while its configuration, shown only once, did
+    // not reach this page.
+    // Yapılan, ama yalnızca bir kez gösterilen yapılandırması bu sayfaya
+    // ulaşmayan cihaz.
+    const [configNotShown, setConfigNotShown] = useState<string | null>(null);
 
     useEffect(() => {
         void load();
@@ -322,20 +346,62 @@ export function VPNPage() {
     const addPeer = async () => {
         const name = newName.trim();
         if (!name || !selectedSubscriptionID) return;
+        // Enter in the name field reaches here while the button is off.
+        // Ad alanındaki Enter, düğme kapalıyken de buraya ulaşır.
+        if (busyAction !== null || answer.holding) return;
         setBusyAction('create');
+        setConfigNotShown(null);
         try {
-            const created = await apiJSON<{
-                id: number;
-                client_config: string;
-                delivery_token: string;
-            }>('/api/v1/vpn/peers', {
+            // Asked of the devices that are read again when there is no
+            // result: do they name this device? Only where no device had that
+            // name before, so that one of the same name is not taken for it.
+            // When they do, the device was made and its configuration never
+            // arrived: the page says what to do about that.
+            // Sonuç yokken yeniden okunan cihazlara sorulur: bu cihazı
+            // adlandırıyorlar mı? Yalnız o adda bir cihaz önceden yoksa.
+            const named = (list: unknown) => Array.isArray(list) && list.some((peer) => (peer as VPNPeer).name === name);
+            const res = await answer.send('/api/v1/vpn/peers', {
                 method: 'POST',
+                cache: 'no-store',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name,
                     subscription_id: selectedSubscriptionID,
                 }),
+            }, named(peers) ? undefined : {
+                shows: ([read]) => named(read?.value),
+                made: () => {
+                    answer.dismiss();
+                    setConfigNotShown(name);
+                    setNewName('');
+                },
             });
+            // No result of its own: the notice is up and the devices are being
+            // read again.
+            // Kendi sonucu yok: bildirim açıldı, cihazlar yeniden okunuyor.
+            if (!res) return;
+            answer.settle();
+            if (!res.ok) {
+                const problem = await readApiError(res);
+                if (!resultNotKept(problem)) throw problem;
+                // The answer was lost and asked for again: the device was
+                // made, and its configuration cannot be shown a second time.
+                // That is said in place, with what to do, and the list is read
+                // so the device is there to remove.
+                // Yanıt kayboldu ve yeniden soruldu: cihaz yapıldı ve
+                // yapılandırması ikinci kez gösterilemez. Bu, ne yapılacağıyla
+                // birlikte yerinde söylenir; cihaz kaldırılabilsin diye liste
+                // okunur.
+                setConfigNotShown(name);
+                setNewName('');
+                await load();
+                return;
+            }
+            const created = await res.json() as {
+                id: number;
+                client_config: string;
+                delivery_token: string;
+            };
             const receipt: IssuedConfig = {
                 id: created.id,
                 name,
@@ -598,6 +664,11 @@ export function VPNPage() {
 
             {view === 'devices' && (
                 <div className="space-y-5">
+                    <ResultUnknown answer={answer} />
+                    <OnceOnlyNotice
+                        text={configNotShown === null ? null : t('vpn.configNotShown', { name: configNotShown })}
+                        onClose={() => setConfigNotShown(null)}
+                    />
                     {issued && (
                         <section className="rounded-xl border border-warning-mark/60 bg-warning-mark/10 p-5">
                             <div className="flex flex-wrap gap-5">
@@ -698,6 +769,7 @@ export function VPNPage() {
                                 icon={Plus}
                                 disabled={
                                     busyAction !== null ||
+                                    answer.holding ||
                                     !status?.running ||
                                     !newName.trim() ||
                                     !selectedSubscriptionID
@@ -795,7 +867,7 @@ export function VPNPage() {
                                                     <button
                                                         type="button"
                                                         onClick={() => void removePeer(peer)}
-                                                        disabled={busyAction !== null}
+                                                        disabled={busyAction !== null || answer.holding}
                                                         title={t('common.remove')}
                                                         aria-label={t('vpn.removeDevice', { name: peer.name })}
                                                         className="rounded-md p-1.5 text-fg-muted hover:bg-danger/10 hover:text-danger disabled:opacity-50"

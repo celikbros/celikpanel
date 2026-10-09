@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { Shield, CheckCircle, AlertTriangle, XCircle, Lock, Upload, Unlink, RefreshCw } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { Button, Checking, CouldNotCheck, Field, FormActions, FormSection, inputClass } from './ui';
+import { Button, Checking, CouldNotCheck, Field, FormActions, FormSection, ResultUnknown, inputClass } from './ui';
 import type { TranslationKey } from '../i18n/en';
 import { apiErrorText, readApiError } from '../lib/apiError';
 import { decodeListIn, lastKnown, useRemote } from '../lib/remote';
 import { sslTier, sslTierLabel } from '../lib/sslTier';
+import { useLostAnswer } from '../lib/lostAnswer';
 
 interface DomainSSLSettingsProps {
     domainId: number;
@@ -175,9 +176,29 @@ export function DomainSSLSettings({
     // earlier answer, or while the answer is being read again.
     // Sertifikayı ya da ayarlarını değiştiren hiçbir şey, önceki bir yanıt
     // üzerinde ya da yanıt yeniden okunurken sunulmaz.
-    const locked = ssl.remote.state !== 'known' || ssl.reading;
+    // Issuing and reissuing carry an identity the server keeps (D-029): a lost
+    // answer has been asked for once more before this screen hears of it, and
+    // the certificate authority was asked at most once. What is left unknown is
+    // said in place, with the certificate read again and the controls off
+    // until that read answers; the sentence says that it was asked again.
+    // Çıkarma ve yeniden çıkarma, sunucunun sakladığı bir kimlik taşır (D-029):
+    // kaybolan yanıt bu ekran haberdar olmadan önce bir kez daha sorulmuştur.
+    // Bilinmeyen sonuç yerinde söylenir; sertifika yeniden okunur ve o okuma
+    // yanıtlanana dek denetimler kapalıdır.
+    // The certificate is what the change acts on, so its read decides when the
+    // controls come back; the mail state is read beside it and has its own
+    // "not known" on this screen.
+    // Değişiklik sertifika üzerinde işlem yapar; denetimlerin ne zaman
+    // döneceğine onun okuması karar verir.
+    const issueAnswer = useLostAnswer(() => {
+        void mailState.retry();
+        return ssl.retry();
+    });
+    const dismissIssueAnswer = issueAnswer.dismiss;
+    const locked = ssl.remote.state !== 'known' || ssl.reading || issueAnswer.holding;
 
     useEffect(() => {
+        dismissIssueAnswer();
         setShowReissue(false);
         setIncludeMail(false);
         setCertSource('letsencrypt');
@@ -281,10 +302,9 @@ export function DomainSSLSettings({
                       : 'ssl.issueConfirm';
         const authority = providers.find((candidate) => candidate.id === provider)?.name ?? provider;
         if (!confirm(t(confirmationKey, { name: domainName, mailName: `mail.${normaliseDNSName(domainName)}`, authority }))) return;
-        const targetDomainId = domainId;
         setIssuing(true);
         try {
-            const res = await fetch(`/api/v1/domains/${domainId}/ssl/letsencrypt`, {
+            const res = await issueAnswer.send(`/api/v1/domains/${domainId}/ssl/letsencrypt`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -297,6 +317,11 @@ export function DomainSSLSettings({
                     reissue: isReissue,
                 }),
             });
+            // No result of its own: the notice is up and the certificate is
+            // being read again.
+            // Kendi sonucu yok: bildirim açıldı, sertifika yeniden okunuyor.
+            if (!res) return;
+            issueAnswer.settle();
             if (!res.ok) {
                 const apiError = await readApiError(res);
                 if (
@@ -324,7 +349,9 @@ export function DomainSSLSettings({
             // the server has said what the certificate is now.
             await loadSSLData();
         } catch {
-            await resultUnknown(targetDomainId);
+            // The answer arrived and could not be read as one.
+            // Yanıt geldi ama yanıt olarak okunamadı.
+            issueAnswer.lose(undefined, 'asked');
         } finally {
             setEabKid('');
             setEabHmac('');
@@ -607,6 +634,7 @@ export function DomainSSLSettings({
             ) : ssl.reading ? (
                 <Checking label={t('ssl.rereading')} className="mb-4" />
             ) : null}
+            <ResultUnknown answer={issueAnswer} className="mb-4" />
             {/* Certificate status */}
             <FormSection title="SSL/TLS">
                 <div className="flex items-start gap-3">

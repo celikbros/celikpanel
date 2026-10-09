@@ -66,6 +66,12 @@ type Panel struct {
 	loginLimiter  *rateLimiter
 	demoMode      bool
 	startupGate   *panelHTTPStartupGate
+	// requestIdentities answers a re-sent state-changing request from the row
+	// of its first arrival instead of running it again (D-029). Handler tests
+	// that call a handler directly leave it nil.
+	// requestIdentities, yeniden gönderilen durum değiştiren isteği ikinci kez
+	// çalıştırmak yerine ilk gelişinin satırından yanıtlar (D-029).
+	requestIdentities *requestIdentityGuard
 	// webmailReadinessProbe is injectable only so handler tests never need a
 	// real Roundcube process. Production leaves it nil and uses the fixed,
 	// Unix-socket-backed probe.
@@ -879,8 +885,22 @@ func main() {
 	// activation restarts the panel and then verifies the published leaf over
 	// this listener. The closed gate serves a fixed recovery surface while
 	// ordinary application requests remain blocked until startup completes.
+	//
+	// A request a previous process left `running` did not finish under this
+	// one. It is marked before any application request is served, so a replay
+	// is told the outcome is unknown instead of waiting for work nobody runs
+	// (D-029). A failure here is not fatal: the guard treats a `running` row
+	// this process is not running the same way when the replay arrives.
+	// Önceki sürecin `running` bıraktığı istek bu süreçte bitmedi; herhangi bir
+	// uygulama isteğinden önce işaretlenir (D-029).
+	panel.requestIdentities = newRequestIdentityGuard(database.GetDB())
+	if interrupted, err := panel.requestIdentities.markInterruptedAtStart(context.Background()); err != nil {
+		log.Printf("[request-identity] interrupted requests could not be marked at start: %v", err)
+	} else if interrupted > 0 {
+		log.Printf("[request-identity] %d request(s) were running when the Panel stopped; their outcome is reported as unknown", interrupted)
+	}
 	applicationHandler := panel.requireRemoteDNSMachineAuth(csrfProtect(
-		panel.requireAuth(http.DefaultServeMux),
+		panel.requireAuth(panel.requestIdentities.wrap(http.DefaultServeMux)),
 	))
 	startupGate := newPanelHTTPStartupGate(applicationHandler)
 	panel.startupGate = startupGate
@@ -1136,9 +1156,14 @@ func main() {
 	// Purge expired sessions on startup and then hourly.
 	// Başlangıçta ve sonra saatlik olarak süresi dolmuş oturumları temizle.
 	_ = sessions.DeleteExpired(context.Background())
+	_, _ = panel.requestIdentities.sweepExpired(context.Background())
 	go func() {
 		for range time.Tick(time.Hour) {
 			_ = sessions.DeleteExpired(context.Background())
+			// Request identities are kept for 24 hours (D-029).
+			if _, err := panel.requestIdentities.sweepExpired(context.Background()); err != nil {
+				log.Printf("[request-identity] expired rows could not be removed: %v", err)
+			}
 		}
 	}()
 

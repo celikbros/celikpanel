@@ -6,10 +6,12 @@ import { AddDatabaseModalV2 } from './AddDatabaseModalV2';
 import { AddUserModalV2 } from './AddUserModalV2';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
-import { Button, KnownEmpty, RemoteGate, StatusDot } from './ui';
+import { Button, KnownEmpty, RemoteGate, ResultUnknown, StatusDot } from './ui';
 import { PageHeader } from './PageHeader';
 import { DatabaseAccountStrip } from './DatabaseAccountStrip';
 import { decodeList, lastKnown, useRemote, type Remote } from '../lib/remote';
+import { useLostAnswer } from '../lib/lostAnswer';
+import { OnceOnlyNotice } from './OnceOnlyNotice';
 
 // One API surface (B1, Jul 18): the former /api/v2 lives under /api/v1 now.
 // Tek API yüzeyi (B1, 18 Tem): eski /api/v2 artık /api/v1 altında.
@@ -98,6 +100,20 @@ export function DatabaseManagementV2() {
     const databases = useRemote(serverURL && `${serverURL}/databases`, decodeList<DatabaseItem>);
     const users = useRemote(serverURL && `${serverURL}/users`, decodeList<DatabaseUser>);
     const active = activeTab === 'databases' ? databases : users;
+    // Creating a database on a server carries an identity the server keeps
+    // (D-029): a lost answer has been asked for once more before the dialog
+    // hears of it, and at most one database was made. When there is still no
+    // result both lists are read again; the dialog asks them whether they name
+    // the database, and nothing is created or deleted until they answer.
+    // Sunucuda veritabanı oluşturma, sunucunun sakladığı bir kimlik taşır
+    // (D-029). Sonuç yine yoksa iki liste de yeniden okunur; yanıtlanana dek
+    // hiçbir şey oluşturulmaz ya da silinmez.
+    const createAnswer = useLostAnswer(() => Promise.all([databases.retry(), users.retry()]));
+    // The database that was made while the answer carrying its new user's
+    // password, shown only once, did not reach this page.
+    // Yapılan, ama yeni kullanıcısının yalnızca bir kez gösterilen parolasını
+    // taşıyan yanıtı bu sayfaya ulaşmayan veritabanı.
+    const [passwordNotShown, setPasswordNotShown] = useState<{ name: string; user: string } | null>(null);
     const knownUsers = users.remote.state === 'known' ? users.remote.value : null;
     // A count is a claim too: it is a number once the list is known, "…" while
     // it is being read and "–" when it could not be read.
@@ -212,10 +228,21 @@ export function DatabaseManagementV2() {
                 <DatabaseAccountStrip
                     key={selectedServer.id}
                     server={selectedServer}
-                    onChanged={() => void servers.retry()}
+                    onChanged={() => servers.retry()}
                     current={serversCurrent && !servers.reading}
                 />
             )}
+
+            {/* While the dialog is open the notice stands in it, beside what
+                was typed; once it is closed, here.
+                İletişim kutusu açıkken bildirim onun içinde, yazılanın yanında
+                durur; kapandığında burada. */}
+            {!showAddDatabase && <ResultUnknown answer={createAnswer} className="mb-4" />}
+            <OnceOnlyNotice
+                className="mb-4"
+                text={passwordNotShown === null ? null : t('databases.passwordNotShown', passwordNotShown)}
+                onClose={() => setPasswordNotShown(null)}
+            />
 
             {selectedServer && (
                 <div className="rounded-xl border border-border-strong bg-surface">
@@ -248,7 +275,7 @@ export function DatabaseManagementV2() {
                             <Button
                                 variant="primary"
                                 icon={Plus}
-                                disabled={!serversCurrent || databases.remote.state !== 'known' || knownUsers === null}
+                                disabled={!serversCurrent || databases.remote.state !== 'known' || knownUsers === null || createAnswer.holding}
                                 onClick={() => setShowAddDatabase(true)}
                             >
                                 {t('databases.addDatabase')}
@@ -305,7 +332,7 @@ export function DatabaseManagementV2() {
                                                 <td className="row-actions px-4 py-3 text-right">
                                                     <DeleteBtn
                                                         label={t('databases.deleteDatabase', { name: d.name })}
-                                                        disabled={list.stale}
+                                                        disabled={list.stale || createAnswer.holding}
                                                         onClick={() => handleDeleteDatabase(d.id, d.name)}
                                                     />
                                                 </td>
@@ -349,7 +376,7 @@ export function DatabaseManagementV2() {
                                                 <td className="row-actions px-4 py-3 text-right">
                                                     <DeleteBtn
                                                         label={t('databases.deleteUser', { name: u.username })}
-                                                        disabled={list.stale}
+                                                        disabled={list.stale || createAnswer.holding}
                                                         onClick={() => handleDeleteUser(u.id, u.username)}
                                                     />
                                                 </td>
@@ -364,6 +391,13 @@ export function DatabaseManagementV2() {
 
             {showAddDatabase && selectedServer && knownUsers !== null && (
                 <AddDatabaseModalV2
+                    answer={createAnswer}
+                    onPasswordNotShown={(name, user) => {
+                        setPasswordNotShown({ name, user });
+                        setShowAddDatabase(false);
+                        void databases.retry();
+                        void users.retry();
+                    }}
                     serverId={selectedServer.id}
                     serverName={selectedServer.name}
                     existingUsers={knownUsers.map((u) => ({ id: u.id, username: u.username }))}

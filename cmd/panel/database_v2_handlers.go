@@ -761,6 +761,12 @@ func (p *Panel) handleCreateDatabaseV2(w http.ResponseWriter, r *http.Request) {
 	// Stored credentials are never loaded into an API response.
 	if newUserSecret != "" {
 		response["password"] = newUserSecret
+		// "Exactly once" also binds the request-identity row (D-029): this
+		// answer is not stored, so a replay is told the database was created
+		// and that its password was shown only once.
+		// "Tam bir kez", istek kimliği satırını da bağlar (D-029): bu yanıt
+		// saklanmaz.
+		doNotRetainRequestAnswer(r.Context())
 	}
 	json.NewEncoder(w).Encode(response)
 }

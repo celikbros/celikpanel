@@ -62,9 +62,9 @@ test('team-member DB, PHP and DNS panels avoid server-global capability calls', 
   // another domain's answer is carried over: engines exist only for a known
   // answer of this domain's own address.
   assert.match(databasesSource, /const engines = engineSource\.state === 'known' \? engineSource\.value : \[\];/);
-  assert.match(databasesSource, /const canCreate = !readOnly && engineSource\.state === 'known' && engines\.length > 0;/);
+  assert.match(databasesSource, /const enginesReady = !readOnly && engineSource\.state === 'known' && engines\.length > 0;/);
   assert.match(databasesSource, /if \(!canCreate \|\| dbType === null\) return;/);
-  assert.match(databasesSource, /\{showCreateForm && canCreate && \(/);
+  assert.match(databasesSource, /\{showCreateForm && enginesReady && \(/);
   assert.doesNotMatch(databasesSource, /useState<DatabaseType>\('mysql'\)/, 'a default engine is back');
   assert.doesNotMatch(databasesSource, /database\.type\.toLowerCase\(\)/);
 

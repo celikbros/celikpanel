@@ -5,6 +5,11 @@
 * CSRF: the Panel has no token; unsafe methods must carry an ``Origin`` equal
   to the request host (``cmd/panel/security.go`` ``csrfProtect``), exactly
   what a browser sends.
+* Request identity (D-029): like the web UI's one fetch interceptor
+  (``web/src/lib/requestIdentity.ts``), every unsafe request whose body does
+  not already carry ``request_id`` gets ``X-CelikPanel-Request-Id``, a new
+  32-hex value per request. Eight routes are refused without it; a Panel
+  older than D-029 ignores it. The driver still never sends a request twice.
 * TLS: the fresh panel serves its self-signed certificate. The client pins
   the leaf SHA-256 that the guest itself reported over the fixture's SSH
   channel instead of disabling verification blindly.
@@ -21,6 +26,7 @@ import contextlib
 import hashlib
 import http.client
 import json
+import secrets
 import socket
 import ssl
 import time
@@ -31,6 +37,7 @@ from typing import Any, Callable, Iterator
 from redaction import Redactor
 
 SESSION_COOKIE = "celikpanel_session"
+REQUEST_ID_HEADER = "X-CelikPanel-Request-Id"
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
@@ -202,6 +209,9 @@ class PanelClient:
             raise PollMutationError(f"{method} {path} attempted inside a status poll")
         payload = None if body is None else json.dumps(body, separators=(",", ":")).encode()
         headers = self._headers(method, payload)
+        if method in UNSAFE_METHODS and not (isinstance(body, dict) and isinstance(body.get("request_id"), str)
+                                             and body["request_id"]):
+            headers[REQUEST_ID_HEADER] = secrets.token_hex(16)
         try:
             response = self.transport(method, path, headers, payload, timeout)
         except (OSError, socket.timeout, http.client.HTTPException) as exc:

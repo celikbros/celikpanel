@@ -2087,7 +2087,8 @@ the rest in `screens` and `screens/server`).
   inferred from the domain list. In the browser run, one send by the page
   reached the mock on six or seven connections (the browser repeats a request on
   a connection that is closed under it), which is harmless against a mock and
-  is exactly what an idempotency key exists for.
+  is exactly what an idempotency key exists for. Since 2026-10-10 the apply
+  carries a request identity (D-029; the entry of that date below).
 - A change whose answer was lost (accounts, plans, files) has no identity
   either; the screen can only read the state again.
 
@@ -2970,8 +2971,10 @@ the rest in `screens`).
 
 **Needs the server (not done here; no Go was changed).**
 
-- None of these changes has a request identity. Until the server keeps one, a
-  lost answer leaves the result to the person, as above:
+- None of these changes had a request identity on 2026-10-09. Since 2026-10-10
+  the manual backup and the restore carry one (D-029; the entry of that date
+  below). For the others, until the server keeps one, a lost answer leaves the
+  result to the person, as above:
   `POST /api/v1/domains/{id}/dns/records`,
   `DELETE /api/v1/domains/{id}/dns/records?id=`,
   `POST /api/v1/domains/{id}/dns/zone`, `POST /api/v1/domains/{id}/dnssec` (DNS
@@ -2991,7 +2994,8 @@ the rest in `screens`).
   still with a toast and a re-read only: `POST`/`PUT`/`DELETE /api/v1/users…`,
   `POST /api/v1/users/{id}/impersonate`, `/api/v1/plans…` (Accounts) and the
   changes of a domain's Files. Not migrated yet, and not looked at here: the
-  add-ons, the VPN peers and the team members.
+  add-ons, the VPN peers and the team members (adding a VPN device carries an
+  identity since 2026-10-10).
 - A browser can send a change again by itself. In the browser run, when the
   mock only reset a connection that had carried an earlier request, Chrome
   sent the `POST` again without the page asking: one click, three arrivals.
@@ -3032,7 +3036,8 @@ the rest in `screens`).
   where the server verified a cause: the scheduled tasks and the mail queue
   (entry of 2026-10-10 below).
 - The changes that ask the re-read state no question (listed above) still leave
-  the result to the person. No change on these panels has a request identity.
+  the result to the person. No change on these panels had a request identity on
+  that date; the backup and the restore have one since 2026-10-10.
 - Not verified on a real server; one Chrome against a mock.
 
 **Browser inspection of this batch (2026-10-09).** In a real, installed Chrome
@@ -3931,13 +3936,18 @@ general sentence of `CURRENT_SETTINGS_UNREADABLE` in a toast. Neither change of
 2026-10-10 was measured on a real service; in the browser run of that date
 (fourth batch, above) the mail policy answers, the two configuration reload
 answers and the four crontab answers were photographed against the mock. Seen
-there and not changed: the configuration reload answer whose running settings
-are unknown (`restored_running_unknown`) is on the failure surface, because the
-unit's reload verifiably failed; the line under both configuration reload
-answers is introduced as what the service said although the systemd unit's
-reload printed it; and the sentence for a not-reloaded answer that names no
-stage (an older Agent) still names `sudo systemctl reload postfix`, against the
-rule at the top of this entry.
+there and changed with the merge of 2026-10-10: the configuration reload answer
+whose running settings are unknown (`restored_running_unknown`) stood on the
+failure surface; it is an unknown, not a verified failure, and stands on the
+attention surface now (`restored_unit_reload_failed`, where the server verified
+its previous settings, stays on the failure surface). The line under both
+answers was introduced as what the service said ("PostgreSQL says:") although
+the unit's journal or the reload command printed it; it is introduced by
+`dbconf.reloadSaid` now (EN: "Reported when {unit} was reloaded:" TR:
+"{unit} yeniden yüklenirken bildirilen:"). Seen there and not
+changed: the sentence for a not-reloaded answer that names no stage (an older
+Agent) still names `sudo systemctl reload postfix`, against the rule at the top
+of this entry.
 
 **Not shown yet.** The scheduled tasks screen still shows its one neutral
 sentence (`cron.unknown`); the `cron.unknown.*` entries above are in the
@@ -3979,9 +3989,11 @@ repeats the action only if it is still needed. A refused configuration stops
 Start, Restart and Reload before anything is sent; Stop is always sent.
 
 **The texts, Services page (`POST /api/v1/service/action`).** API sentences are
-the `error` field, English only. The catalogue entries below are proposed
-wordings: they are not in `web/src/i18n` yet, so the screen shows the API
-sentence, without the service's line. `{unit}` is the unit that was acted on,
+the `error` field, English only. The catalogue entries below are in
+`web/src/i18n` since the merge of 2026-10-10 (the `err.*` ones in the shell
+catalogue, the two `services.action.*` ones in `screens/server`) and are what
+the screens show; `web/tests/service-action-outcome.test.mjs` compares them
+with this entry. `{unit}` is the unit that was acted on,
 `{command}` the command, `{detail}` the service's own line, `{owner_unit}` the
 unit that runs the service when it is another one. Every API sentence except
 the unknown one ends with: "The server owner runs the command shown to read the
@@ -3991,7 +4003,7 @@ here; nothing repeats it automatically."
 - `502 SERVICE_ACTION_FAILED`, reason `check`
   API: "Nothing was changed: the service's own check refuses its configuration,
   so the action was not carried out."
-- `err.SERVICE_ACTION_FAILED.check` (proposed)
+- `err.SERVICE_ACTION_FAILED.check`
   EN: "Nothing was changed: {unit} refuses its own configuration, so the action
   was not carried out. On the server, run {command} to see what it objects to,
   correct it, then repeat the action here."
@@ -4001,7 +4013,7 @@ here; nothing repeats it automatically."
 - `502 SERVICE_ACTION_FAILED`, reason `reload`
   API: "The service was not reloaded and keeps running with the settings it
   had."
-- `err.SERVICE_ACTION_FAILED.reload` (proposed)
+- `err.SERVICE_ACTION_FAILED.reload`
   EN: "{unit} was not reloaded and keeps running with the settings it had. On
   the server, run {command} to see why, correct it, then repeat the action
   here."
@@ -4010,14 +4022,14 @@ here; nothing repeats it automatically."
   burada yineleyin."
 - `502 SERVICE_ACTION_FAILED`, reason `start`
   API: "The service did not start, or did not stay running."
-- `err.SERVICE_ACTION_FAILED.start` (proposed)
+- `err.SERVICE_ACTION_FAILED.start`
   EN: "{unit} did not start, or did not stay running. On the server, run
   {command} to see why, correct it, then repeat the action here."
   TR: "{unit} başlamadı ya da çalışır durumda kalmadı. Sunucuda {command}
   komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin."
 - `502 SERVICE_ACTION_FAILED`, reason `stop`
   API: "The service did not stop: its daemon is still running."
-- `err.SERVICE_ACTION_FAILED.stop` (proposed)
+- `err.SERVICE_ACTION_FAILED.stop`
   EN: "{unit} did not stop: it is still running. On the server, run {command}
   to see its state, then repeat the action here."
   TR: "{unit} durmadı: hâlâ çalışıyor. Sunucuda {command} komutuyla durumunu
@@ -4025,7 +4037,7 @@ here; nothing repeats it automatically."
 - `502 SERVICE_ACTION_FAILED`, reason `verify`
   API: "The action was sent, but afterwards the service's daemon is not in the
   state that was asked for."
-- `err.SERVICE_ACTION_FAILED.verify` (proposed)
+- `err.SERVICE_ACTION_FAILED.verify`
   EN: "The action was sent, but {unit} is not in the state that was asked for.
   On the server, run {command} to see its state, correct the cause, then repeat
   the action here."
@@ -4033,7 +4045,7 @@ here; nothing repeats it automatically."
   komutuyla durumunu görün, nedeni düzeltin, sonra işlemi burada yineleyin."
 - `502 SERVICE_ACTION_FAILED`, reason `command`
   API: "The server's service manager did not carry out the action."
-- `err.SERVICE_ACTION_FAILED.command` (proposed)
+- `err.SERVICE_ACTION_FAILED.command`
   EN: "The server's service manager did not carry out the action on {unit}. On
   the server, run {command} to see why, correct it, then repeat the action
   here."
@@ -4042,7 +4054,7 @@ here; nothing repeats it automatically."
   yineleyin."
 - `502 SERVICE_ACTION_FAILED`, no reason (a stage this Panel does not know)
   API: "The action did not take effect."
-- `err.SERVICE_ACTION_FAILED` (proposed)
+- `err.SERVICE_ACTION_FAILED`
   EN: "The action on {unit} did not take effect. On the server, run {command}
   to see why, correct it, then repeat the action here."
   TR: "{unit} üzerindeki işlem etkili olmadı. Sunucuda {command} komutunu
@@ -4053,7 +4065,7 @@ here; nothing repeats it automatically."
   already be in the state that was asked for. The server owner runs the command
   shown to see the service's state, and repeats this action here only if it is
   still needed; nothing repeats it automatically."
-- `err.SERVICE_ACTION_UNKNOWN` (proposed)
+- `err.SERVICE_ACTION_UNKNOWN`
   EN: "The action was sent, but what came of it could not be verified, so it is
   not shown as done. This is not a verified failure: {unit} may already be in
   the state you asked for. On the server, run {command} to see its state, and
@@ -4062,11 +4074,11 @@ here; nothing repeats it automatically."
   gösterilmiyor. Bu doğrulanmış bir hata değildir: {unit} istediğiniz duruma
   zaten gelmiş olabilir. Sunucuda {command} komutuyla durumunu görün; işlemi
   yalnız hâlâ gerekiyorsa burada yineleyin."
-- `services.action.said` (proposed; shown under either answer when `vars.detail`
-  is present)
+- `services.action.said` (shown under either answer when `vars.detail` is
+  present)
   EN: "The service said: {detail}"
   TR: "Hizmetin yanıtı: {detail}"
-- `services.action.ownerUnit` (proposed; when `vars.owner_unit` is present)
+- `services.action.ownerUnit` (when `vars.owner_unit` is present)
   EN: "The service itself runs as {owner_unit}; {unit} only groups it."
   TR: "Hizmetin kendisi {owner_unit} olarak çalışır; {unit} yalnız onu
   gruplar."
@@ -4112,6 +4124,308 @@ The first line is the certificate Postfix presents, the second the one that is
 installed. When they differ, `sudo postfix reload` makes Postfix take it and
 prints what Postfix objects to if it cannot. Both lines only read.
 
-**Not shown yet.** The proposed entries above; the Services page shows the API
-sentence. The mail certificate status on the Panel does not show an open
-renewal's cause; it is in the helper's journal and the Agent's log.
+**On screen (2026-10-10).** Every component's page (`ServiceShell`, the generic
+page of `ComponentDetail` included) and the components list (`ServiceList`)
+keep the answer on the page, above the content, until it is closed or another
+action is taken: the sentence with the command set apart, the service's line
+under `services.action.said`, `services.action.ownerUnit` where another unit
+runs the service, and Close. A verified failure stands on the failure surface,
+an unknown result on the attention surface. The state is read again under it,
+because the action may have changed it. Before, both were toasts that left
+after five seconds. An action that gets no answer at all is no longer a red
+toast either.
+
+**Not shown yet.** The mail certificate status on the Panel does not show an
+open renewal's cause; it is in the helper's journal and the Agent's log.
+
+### A change is sent once and answered once: the request-identity refusals (2026-10-10)
+
+Source state with component tests; no installed server and no native run. See
+D-029 and the resilience contract entry of the same date. Eight state-changing
+routes now run a request once however often it arrives; these are the sentences
+a screen shows when the answer is not the change's own result.
+
+**Who acts, in every case below.** The person at the screen. Nothing is sent or
+run again by itself, with one exception that changes nothing twice: after a
+lost answer the page asks once more for the same answer, under the same
+identity, and the server answers it from the first run.
+
+**How the work goes on.** Reloading the page only reads. A change made again
+after a reload is a new request with a new identity.
+
+**The texts.** Keys are in the shell catalogue (`web/src/i18n/en.ts`,
+`web/src/i18n/tr.ts`), because any screen can receive them. The server's own
+English message for each code is the same sentence, for anything that reads the
+API directly.
+
+- *The page is older than the Panel (refused before any change; `428`).*
+  - `err.REQUEST_ID_REQUIRED`:
+    - EN: "This page was opened before CelikPanel was updated, so the server
+      did not accept the change and nothing was changed. Reload the page, then
+      make the change again."
+    - TR: "Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu
+      değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden
+      yükleyin, sonra değişikliği yeniden yapın."
+  - The server's message adds, for a client that is not the page: "(A client
+    that is not the CelikPanel page sends the header X-CelikPanel-Request-Id:
+    32 lowercase hexadecimal characters, a new value for each action.)"
+- *The identifier was already used for something else (refused before any
+  change; `409`).*
+  - `err.REQUEST_ID_REUSED`:
+    - EN: "This change was sent with an identifier the server already used for
+      a different change, so it was not carried out. Reload the page, then make
+      the change again."
+    - TR: "Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı
+      bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin,
+      sonra değişikliği yeniden yapın."
+- *The first arrival is still running (waiting; `409`).*
+  - `err.REQUEST_IN_PROGRESS`:
+    - EN: "This change is still running on the server. It was not started a
+      second time. Wait a little, then reload the page to see the result; do
+      not send it again."
+    - TR: "Bu değişiklik sunucuda hâlâ sürüyor. İkinci kez başlatılmadı. Biraz
+      bekleyin, sonra sonucu görmek için sayfayı yeniden yükleyin; değişikliği
+      yeniden göndermeyin."
+- *The Panel stopped while the change was running (unknown result; `409`).*
+  - `err.REQUEST_OUTCOME_UNKNOWN`:
+    - EN: "CelikPanel restarted or failed while this change was running, so it
+      is not known whether the change was completed. It will not be run again
+      by itself. Reload the page and check the current state; make the change
+      again only if it is missing."
+    - TR: "CelikPanel bu değişiklik sürerken yeniden başladı ya da hata verdi;
+      bu yüzden değişikliğin tamamlanıp tamamlanmadığı bilinmiyor.
+      Kendiliğinden yeniden çalıştırılmayacak. Sayfayı yeniden yükleyip mevcut
+      durumu kontrol edin; değişikliği yalnızca eksikse yeniden yapın."
+- *The change was made; its one-time result is not kept (known result; `409`).*
+  - `err.REQUEST_COMPLETED_RESULT_NOT_RETAINED`:
+    - EN: "This change was already made; it was not made a second time. Its
+      result was shown only once and is not kept. Reload the page to see the
+      current state; if you still need what was shown once (a password or a
+      configuration file), create a new one."
+    - TR: "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca
+      bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı
+      yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası)
+      hâlâ ihtiyacınız varsa yenisini oluşturun."
+  - `err.REQUEST_COMPLETED_RESULT_NOT_RETAINED.failed` (the first attempt ended
+    with an error and that answer is not kept; a verified failure whose detail
+    is gone):
+    - EN: "This change already ended with an error, and that answer is not
+      kept; it was not tried a second time. Reload the page and check the
+      current state; make the change again only if it is missing."
+    - TR: "Bu değişiklik daha önce hatayla sonuçlandı ve o yanıt saklanmıyor;
+      ikinci kez denenmedi. Sayfayı yeniden yükleyip mevcut durumu kontrol
+      edin; değişikliği yalnızca eksikse yeniden yapın."
+  - On a database server's own account the screen treats the first of these two
+    as the success it was: that answer carries no password (it is read with
+    "Show password"), so nothing is missing.
+- *Another restore of the same domain is running (refused before any change;
+  `409`).*
+  - `err.BACKUP_RESTORE_IN_PROGRESS`:
+    - EN: "Another restore of this domain is still running, so this one was not
+      started and changed nothing. Wait for it to finish and check the site;
+      restore again only if it is still needed."
+    - TR: "Bu alan adının başka bir geri yüklemesi hâlâ sürüyor; bu yüzden bu
+      geri yükleme başlatılmadı ve hiçbir şeyi değiştirmedi. Bitmesini bekleyip
+      siteyi kontrol edin; yalnızca hâlâ gerekiyorsa yeniden geri yükleyin."
+- *cPanel import: the result is still not known after the second asking
+  (unknown result). Changed text; key in `web/src/i18n/screens`.*
+  - `import.unknown.body`:
+    - EN: "This page did not get the result of the import: the answer from the
+      server did not arrive, and asking once more for it did not bring the
+      result either. The import may have run completely, in part or not at
+      all, or may still be running. Asking again never starts it a second
+      time, and starting it again is not offered until you have checked.
+      Check whether {domain} is on this server now; checking only reads."
+    - TR: "Bu sayfa içe aktarımın sonucunu alamadı: sunucunun yanıtı ulaşmadı ve
+      yanıt bir kez daha istendiğinde de sonuç gelmedi. İçe aktarım tamamen,
+      kısmen çalışmış ya da hiç çalışmamış olabilir; hâlâ sürüyor da olabilir.
+      Yeniden sormak onu ikinci kez başlatmaz; siz kontrol edene dek yeniden
+      başlatma da sunulmaz. {domain} alan adının şu an bu sunucuda olup
+      olmadığını kontrol edin; kontrol yalnız okur."
+  - "Start import again", offered only after the check found the domain absent,
+    now sends the same request under the same identity: the server answers it
+    from the first run if there was one, and runs it only if it never arrived.
+
+**One behaviour for a result that is not known (merged with the fourth batch,
+2026-10-10).** The request identity and the lost-answer handling of the fourth
+batch (entry of 2026-10-09 above) were written side by side. Together they are
+this.
+
+- *What a lost answer is* is defined once (`answerWasLost` in
+  `web/src/lib/requestIdentity.ts`): no answer at all, or an answer with status
+  408, 429, 502, 503 or 504 that is not JSON, which is a gateway speaking in
+  the Panel's place. The Panel's own refusal is JSON also when its status is
+  one of these (an Agent that could not be reached is a 502 with a sentence);
+  it is the answer, and it is shown. Before the merge the interceptor asked
+  again for it too, and on the two routes whose answers are never stored the
+  screen then showed "already ended with an error, and that answer is not kept"
+  in place of the Panel's sentence.
+- *On the eight routes* the interceptor asks once more, 1.5 seconds later,
+  under the same identity. When that is answered, the screen shows the change's
+  own result and nothing else.
+- *When it is not answered either*, or when the Panel answers
+  `REQUEST_OUTCOME_UNKNOWN` or `REQUEST_IN_PROGRESS`, the result is not known,
+  and all eight screens do what the fourth batch does for a change without an
+  identity: a notice in place on the attention surface, what the change acts on
+  read again (a read only), and every control that changes or removes off until
+  that read has answered. Nothing of it is a toast and nothing is drawn as a
+  failure.
+- *The notice says which happened.* For a change without an identity it still
+  says that nothing was sent a second time (`common.resultUnknown*`,
+  unchanged). For one of the eight it never says that. It has two sentences:
+  what happened, then what the state that was read again shows. Once that state
+  shows the change, one sentence is left and the form that sent it is closed.
+- *A change found made by that read, whose result was shown to nobody* (a VPN
+  device; a database with a new user) is said with the sentence of the
+  status-only answer below, not with "it was made" alone.
+
+**The texts of that notice.** Shell catalogue.
+
+- *What happened.*
+  - `common.lostAsked`:
+    - EN: "No answer arrived for this change, and asking the server once more
+      for the same answer brought none either, so it is not known whether the
+      change was made. Asking again never makes the change a second time."
+    - TR: "Bu değişikliğin yanıtı ulaşmadı; sunucudan aynı yanıt bir kez daha
+      istendiğinde de gelmedi. Bu yüzden değişikliğin yapılıp yapılmadığı
+      bilinmiyor. Yeniden sormak değişikliği asla ikinci kez yapmaz."
+  - `common.lostInterrupted`:
+    - EN: "CelikPanel restarted or failed while this change was running, so it
+      is not known whether the change was completed. It will not be run again
+      by itself."
+    - TR: "CelikPanel bu değişiklik sürerken yeniden başladı ya da hata verdi;
+      bu yüzden değişikliğin tamamlanıp tamamlanmadığı bilinmiyor.
+      Kendiliğinden yeniden çalıştırılmayacak."
+  - `common.lostRunning`:
+    - EN: "This change is still running on the server, so its result is not
+      known yet. It was not started a second time."
+    - TR: "Bu değişiklik sunucuda hâlâ sürüyor; bu yüzden sonucu henüz
+      bilinmiyor. İkinci kez başlatılmadı."
+
+- *What the state that was read again shows.*
+  - `common.lostStateReading`:
+    - EN: "What is shown here is being read again. Controls that change or
+      remove something stay off until it has been read."
+    - TR: "Burada gösterilen yeniden okunuyor. Bir şeyi değiştiren ya da
+      kaldıran denetimler, okuma bitene dek kapalı kalır."
+  - `common.lostStateRead`:
+    - EN: "What is shown here was read again at {time}. Check it before making
+      the change again; if the change may still be running, check again in a
+      little while."
+    - TR: "Burada gösterilen, saat {time} itibarıyla yeniden okundu.
+      Değişikliği yeniden yapmadan önce ona bakın; değişiklik hâlâ sürüyor
+      olabilirse biraz sonra tekrar kontrol edin."
+  - `common.lostStateUnread`:
+    - EN: "The current state could not be read again, so controls that change
+      or remove something stay off. Check again."
+    - TR: "Güncel durum yeniden okunamadı; bu yüzden bir şeyi değiştiren ya da
+      kaldıran denetimler kapalı kalıyor. Tekrar kontrol edin."
+  - `common.lostStateNotMade`:
+    - EN: "What was read again at {time} does not show the change, so it is not
+      known to have been made. What you entered is still here. If the server is
+      still working on it, the change can appear later: check again before
+      sending it a second time."
+    - TR: "Saat {time} itibarıyla yeniden okunan durum değişikliği göstermiyor;
+      bu yüzden yapıldığı bilinmiyor. Girdikleriniz hâlâ burada. Sunucu hâlâ
+      üzerinde çalışıyorsa değişiklik sonradan görünebilir: ikinci kez
+      göndermeden önce tekrar kontrol edin."
+  - `common.lostStateMade`:
+    - EN: "The answer to this change did not reach this page, but what was read
+      again at {time} shows the change, so it was made. Nothing needs to be
+      sent again."
+    - TR: "Bu değişikliğin yanıtı bu sayfaya ulaşmadı; ancak saat {time}
+      itibarıyla yeniden okunan durum değişikliği gösteriyor, yani yapıldı.
+      Hiçbir şeyin yeniden gönderilmesi gerekmiyor."
+
+**A change that was made, whose one-time result is not kept (`409
+REQUEST_COMPLETED_RESULT_NOT_RETAINED` without a reason).** Said in place, on
+the attention surface, until the person closes it; the list is read again so
+that what was made is there.
+
+- *A VPN device.*
+  - `vpn.configNotShown`:
+    - EN: "The device {name} was added; it was not added a second time. Its
+      configuration did not reach this page, and a configuration is shown only
+      once and is not stored, so it cannot be shown again. If {name} is in the
+      list below, remove it; then add the device again to get a new
+      configuration."
+    - TR: "{name} cihazı eklendi; ikinci kez eklenmedi. Yapılandırması bu
+      sayfaya ulaşmadı; yapılandırma yalnızca bir kez gösterilir ve saklanmaz,
+      bu yüzden yeniden gösterilemez. {name} aşağıdaki listedeyse onu kaldırın;
+      sonra yeni bir yapılandırma almak için cihazı yeniden ekleyin."
+
+- *A database on a database server, with a new user.*
+  - `databases.passwordNotShown`:
+    - EN: "The database {name} was created; it was not created a second time.
+      The answer that carried the password of its user {user} did not reach
+      this page and is not kept, so the password cannot be shown again. It is
+      the password you entered in the form. If you no longer have it, set a new
+      password for {user} on the database server itself; this page has no
+      control for that yet."
+    - TR: "{name} veritabanı oluşturuldu; ikinci kez oluşturulmadı. {user}
+      kullanıcısının parolasını taşıyan yanıt bu sayfaya ulaşmadı ve
+      saklanmıyor; bu yüzden parola yeniden gösterilemez. Parola, formda
+      girdiğiniz paroladır. Artık elinizde değilse {user} için veritabanı
+      sunucusunun kendisinde yeni bir parola belirleyin; bu sayfada bunun için
+      henüz bir denetim yok."
+  - The Panel has no control that sets a database user's password, and the
+    sentence says so. D-029 names "a minted database password is set again" as
+    a consequence; the control for it is not built.
+
+- *The Panel's own account on a database engine:* the success it was, as above.
+- *With the reason `failed`:*
+  `err.REQUEST_COMPLETED_RESULT_NOT_RETAINED.failed`, as above.
+
+**The import page** keeps its own notice, with the check of the domain. Its
+body says which happened: `import.unknown.body` (above) when the second asking
+brought no answer either, and
+
+- `import.unknown.bodyRunning`:
+  - EN: "The import is still running on the server, so this page does not have
+    its result yet. It was not started a second time. Asking again never starts
+    it a second time, and starting it again is not offered until you have
+    checked. Wait a little, then check whether {domain} is on this server now;
+    checking only reads."
+  - TR: "İçe aktarım sunucuda hâlâ sürüyor; bu yüzden bu sayfa sonucunu henüz
+    alamadı. İkinci kez başlatılmadı. Yeniden sormak onu ikinci kez başlatmaz;
+    siz kontrol edene dek yeniden başlatma da sunulmaz. Biraz bekleyin, sonra
+    {domain} alan adının şu an bu sunucuda olup olmadığını kontrol edin;
+    kontrol yalnız okur."
+- `import.unknown.bodyInterrupted`:
+  - EN: "CelikPanel restarted or failed while the import was running, so it is
+    not known whether it ran completely, in part or not at all. It will not be
+    run again by itself, and starting it again is not offered until you have
+    checked. Check whether {domain} is on this server now; checking only
+    reads."
+  - TR: "CelikPanel içe aktarım sürerken yeniden başladı ya da hata verdi; bu
+    yüzden içe aktarımın tamamen mi, kısmen mi çalıştığı, yoksa hiç çalışmadığı
+    bilinmiyor. Kendiliğinden yeniden çalıştırılmayacak; siz kontrol edene dek
+    yeniden başlatma da sunulmaz. {domain} alan adının şu an bu sunucuda olup
+    olmadığını kontrol edin; kontrol yalnız okur."
+
+After `REQUEST_OUTCOME_UNKNOWN` a later start is a new request; in the other
+two cases it asks for the same request again.
+
+**Where each of the eight is drawn.** Backup and restore: the Backups panel of
+a domain (`DomainBackupManager`). Certificate: the SSL/TLS tab
+(`DomainSSLSettings`); the certificate is read again and the tab's controls are
+off meanwhile. A domain's database: `DomainDatabaseManager`, which asks the
+list whether it names the database. A database on a server: the dialog
+(`AddDatabaseModalV2`) while it is open and the Databases page after it; it
+asks both lists. The engine account: its strip (`DatabaseAccountStrip`). A VPN
+device: the Devices tab (`VPNPage`), which asks the devices whether they name
+it. Import: `ImportPage`.
+
+**A page that predates the update (`428`).** It runs the old code: it sends no
+header and has no entry for the code, so it shows the server's English
+sentence, which ends with the reload. The entry `err.REQUEST_ID_REQUIRED` is
+what the current page shows if it ever receives the code. The answer is a
+refusal, not an unknown result, and nothing was changed. No button reloads the
+page; the sentence asks for it.
+
+**Limits.** The dialog for a database on a server and the form for a domain's
+database are in English only, apart from these notices, as before. A refusal
+they have no words of their own for is shown through the catalogue when its
+code has an entry, else as the server's sentence. Inspected in a real Chrome
+against a loopback mock that keeps the guard's contract (resilience contract,
+entry of this date); not on a real Panel.

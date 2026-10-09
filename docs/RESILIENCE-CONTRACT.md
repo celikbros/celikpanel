@@ -3375,11 +3375,209 @@ installed server, and nothing here has been measured on real services.
     x509 -noout -fingerprint -sha256` against `openssl x509 -noout -fingerprint
     -sha256 -in /etc/ssl/celikpanel/_mail/host/current/fullchain.pem`, and runs
     `sudo postfix reload` when they differ.
-  - *No screen text yet.* The catalogue has no `err.SERVICE_ACTION_FAILED.*`
-    or `err.SERVICE_ACTION_UNKNOWN` entries; the screen shows the API sentence
-    in English, without the service's line. The wordings are in the operation
-    guidance entry of this date.
+  - *Screen text (merge of 2026-10-10).* The catalogue has the
+    `err.SERVICE_ACTION_FAILED.*` and `err.SERVICE_ACTION_UNKNOWN` entries, in
+    English and Turkish, and the Services screens show them in place with the
+    service's line, the command and the unit that runs the service (operation
+    guidance entry of this date). A verified failure stands on the failure
+    surface and an unknown result on the attention surface. Inspected in a
+    browser against a mock; not on a real service.
   - *A wrapper is recognised only on positive evidence.* When `systemctl show`
     cannot be read before the action, the unit keeps its own job result.
   - The `StartServiceMutation` RPC (Postfix and Dovecot, used when a mail
     service has been installed) now starts through the same verified path.
+
+### A state-changing request carries one identity; a replay is answered, never run again (invariants 2, 4 and 6, 2026-10-10)
+
+D-025 invariants 2 (a timeout is not proof of failure, success, or permission to
+start again; unknown is its own state), 4 (the browser is an observer; retry is
+bounded, idempotent and tied to one operation) and 6 (an operation's identity
+stays reachable after reload or reconnect); constitution rule 3 ("refresh,
+reconnect and timeout never authorize duplicate work"); D-024, D-029. No P0
+item is closed or advanced. Found by a real-browser inspection and a read-only
+inventory of the source at `7a64bda91`; not observed on an installed server.
+
+- **Confirmed in the source at `7a64bda91`.**
+  - *The browser repeats a request by itself.* When a connection is reset while
+    a POST is being sent, Chrome sends it again: one click reached the Panel
+    three times. Of about 115 state-changing routes, 12 are harmful when they
+    run twice.
+  - *A reset tore the first attempt.* Handlers passed the connection's context
+    to the Agent call and to the database writes after it. The cancelled Panel
+    returned while the Agent went on, and the replay ran against that state.
+  - *The eight routes of this entry, each read in the code and reproduced by
+    `TestRequestIdentityEightRoutesRepeatTheirEffectWithoutTheGuard`:*
+    - restore of a domain backup: the Agent had no lock, so each arrival wrote
+      a safety backup, replaced the document root and imported the databases,
+      side by side;
+    - cPanel import: stopped between two Agent calls with the site half
+      imported (`TestImportApplyWithoutTheGuardStopsWhenTheConnectionGoesAway`);
+      the replay was then refused as "domain already exists";
+    - Let's Encrypt reissue: every arrival forced another issuance (three
+      arrivals, three issuances);
+    - manual backup: no job key, so no job lock and one archive per arrival;
+    - the Panel's own account on a database engine: a new password per
+      arrival, with nothing keeping two arrivals apart and the record written
+      on the connection's context;
+    - VPN peer: new keys and a new address per arrival (three peers);
+    - database on a database server: MariaDB accepts the second `CREATE
+      DATABASE IF NOT EXISTS`, the replay fails on the existing record, and its
+      compensation drops the database the first request created and recorded;
+    - database of a domain: created on the engine, not recorded by the Panel.
+- **Changed.**
+  - *The guard* (`cmd/panel/request_identity.go`), inside authentication and in
+    front of the router. A request for one of the eight routes must carry
+    `X-CelikPanel-Request-Id` (32 lowercase hexadecimal characters); without it
+    the answer is `428 REQUEST_ID_REQUIRED` and the handler is not reached.
+    The first arrival writes a `running` row and runs the handler on a context
+    the connection cannot cancel, bounded by the route's time limit (restore 40
+    min, import 2 h, issuance 25 min, backup 35 min, databases 15 min, engine
+    account 12 min, VPN peer 10 min). The answer is stored, then sent. A
+    handler never starts without its row.
+  - *A replay* (same identity, actor and SHA-256 of method, path, query and
+    body) is answered from the row. While the first is running it waits up to
+    20 seconds, then gets `409 REQUEST_IN_PROGRESS` with the same identity. The
+    same identity for anything else is `409 REQUEST_ID_REUSED`.
+  - *Unknown stays unknown.* A row left `running` by a previous process, or by
+    a handler that failed unexpectedly, is `interrupted`; its replay is `409
+    REQUEST_OUTCOME_UNKNOWN` and the request is never executed again under
+    that identity.
+  - *Secrets are not retained.* The engine-account and VPN peer routes, a
+    database answer that carries a password minted by that request, and any
+    answer over 64 KiB keep only the status code; the replay is `409
+    REQUEST_COMPLETED_RESULT_NOT_RETAINED` (reason `failed` when the first
+    attempt ended with an error). The request body is never stored.
+  - *At the Agent.* A second restore of a domain is refused while one is
+    running, before anything is read or written (`409
+    BACKUP_RESTORE_IN_PROGRESS` at the Panel). A manual backup sends its
+    request identity as the job key (`request:<identity>`), so the Agent's job
+    lock and its lookup of an archive this job already published apply.
+  - *At the Panel.* Opening, re-keying and removing one database server's own
+    account run one at a time, each reading the row again under the lock.
+  - *In the browser.* The one fetch interceptor adds the header to every
+    non-GET `/api/` call whose body does not carry `request_id`, one identity
+    per action, never to another origin. On the eight routes a lost answer
+    (connection failure, or a 408, 429, 502, 503 or 504 that is not JSON; the
+    Panel's own refusal with one of these statuses is its answer and is shown)
+    is asked for once more after 1.5 seconds with the same identity and that
+    answer is used. When that brings no answer either, or the Panel answers
+    `REQUEST_OUTCOME_UNKNOWN` or `REQUEST_IN_PROGRESS`, each of the eight
+    screens shows the result as not known the way the fourth batch of the
+    remote-state rule does for a change without an identity: a notice in place
+    that says which happened, a read-only re-read, and the controls that
+    change or remove off until that read answers. A change that was made while
+    its one-time result reached nobody says what was made and what to do. The
+    import page keeps the identity and the exact body of its request: starting
+    again after the read-only check is the same request, which the server
+    answers from the first run and cannot import twice.
+  - Every other route behaves as before, with or without the header.
+- **Schema or version transition.** Migration 43
+  (`043_request_identities.sql`) creates `request_identities` and its expiry
+  index through the ordinary ledger; no existing table changes. An older Panel
+  refuses to start on a ledger that carries entry 43
+  (`TestOlderReleaseRefusesALedgerWithTheRequestIdentitiesEntry`); rollback is
+  the pre-update snapshot restore, as for every earlier migration. The table
+  holds no owner data: after a restore that loses it a replay is a first
+  arrival, which is what it was before this change. **Now required:** the
+  header on the eight routes. Additive: the header on every other state-changing
+  call (ignored), `X-CelikPanel-Request-Id` and `X-CelikPanel-Request-Replayed`
+  on guarded answers, `vars.request_id` on the guard's refusals,
+  `CreateRequest.JobKey` on manual backups (a field an older Agent already
+  reads), the Agent answer `RESTORE_IN_PROGRESS`. New refusal codes:
+  `REQUEST_ID_REQUIRED`, `REQUEST_ID_REUSED`, `REQUEST_IN_PROGRESS`,
+  `REQUEST_OUTCOME_UNKNOWN`, `REQUEST_COMPLETED_RESULT_NOT_RETAINED`,
+  `BACKUP_RESTORE_IN_PROGRESS`. A page opened before the update is refused on
+  the eight routes until it is reloaded.
+- **Recovery behaviour.** Nothing is retried or repaired automatically. At
+  start the Panel marks every `running` row `interrupted` before it serves an
+  application request; a `running` row that this process is not running is
+  treated the same way when its replay arrives, so a failed start-up pass or a
+  failed write of the outcome cannot turn into a wait for work nobody runs. An
+  interrupted request has an unknown outcome: the owner checks the current
+  state on the page and makes the change again only if it is missing. The
+  Agent's work is not cancelled by the Panel's time limit or by a Panel
+  restart; native services keep running without the Panel exactly as before,
+  and rows expire after 24 hours.
+- **Evidence.** Component tests; no native run.
+  - Panel, the guard: `TestRequestIdentityFirstArrivalRunsAndReplayIsAnsweredFromTheRow`,
+    `TestRequestIdentityNeverStoresTheRequestBody`,
+    `TestRequestIdentityIsRequiredOnProtectedRoutesAndIgnoredElsewhere`,
+    `TestRequestIdentityReusedForADifferentRequestIsRefused`,
+    `TestRequestIdentityReplayWhileRunningWaitsThenSaysInProgress`,
+    `TestRequestIdentityRunningRowsAreInterruptedAtStartAndNeverReExecuted`,
+    `TestRequestIdentityOversizeAnswerKeepsOnlyItsStatus`,
+    `TestRequestIdentitySecretAnswersAreNeverStored`,
+    `TestRequestIdentityExpirySweep`,
+    `TestRequestIdentityHandlerPanicLeavesATruthfulRow`,
+    `TestRequestIdentityHandlerOutlivesTheConnection`,
+    `TestRequestIdentityConcurrentArrivalsRunOnce`,
+    `TestRequestIdentityHandlerDoesNotRunWithoutItsRow`,
+    `TestKeyedLocksSerialisePerKeyAndForgetIdleKeys`.
+  - Panel, the eight routes through the product's dispatcher with a fake Agent
+    or database driver: `TestRequestIdentityEightRoutesSentThreeTimesInARow`,
+    `TestRequestIdentityEightRoutesSentThreeTimesAtOnce` (one effect, the same
+    answer; for a one-time answer exactly one arrival gets it),
+    `TestRequestIdentityEightRoutesRepeatTheirEffectWithoutTheGuard`,
+    `TestRequestIdentityRoutesMuxMirrorsMain`,
+    `TestImportApplyIsNotCutWhenTheConnectionGoesAway`,
+    `TestImportApplyWithoutTheGuardStopsWhenTheConnectionGoesAway`,
+    `TestDatabaseAdminAccountChangesAreSerialisedPerServer`,
+    `TestRestoreRefusedByTheAgentWhileAnotherRunsIsANamedRefusal`. The import
+    case ends at the import's second Agent call; a whole import was not run.
+  - Agent: `TestOnlyOneRestoreOfADomainHoldsTheLock`,
+    `TestConcurrentRestoreClaimsNeverOverlap`,
+    `TestRestoreBackupIsRefusedWhileAnotherRestoreOfTheDomainRuns`,
+    `TestSecondRestoreOfADomainIsRefusedWhileTheFirstRuns`,
+    `TestManualBackupWithTheRequestJobKeyPublishesOnce`.
+  - Migration: `TestRequestIdentitiesMigrationContracts`,
+    `TestRequestIdentitiesMigrationAppliesToAnExistingDatabase`,
+    `TestOlderReleaseRefusesALedgerWithTheRequestIdentitiesEntry`.
+  - Web: `web/tests/request-identity-runtime.test.mjs` (also: the Panel's own
+    refusal is never asked for again; one definition of a result that is not
+    known for the eight screens); the backup cases of
+    `web/tests/remote-state-mounted-batch4.test.mjs`;
+    `web/tests/service-action-outcome.test.mjs` (the status-only answers); the
+    import case of `web/tests/remote-state-mounted.test.mjs`. Harness:
+    `deploy/e2e/dns-pair-acceptance/test_panel_api.py` (the driver names its
+    unsafe requests the way the web interface does);
+    `test_populated_database.py`, `test_database_exchange_rows.py` and
+    `test_guest_populated_baseline.py` (the schema 43 pin).
+
+Open: a real, installed Chrome was run against a loopback mock that keeps this
+guard's contract (`web/tools/browser-inspect`, scenarios `idbackup`,
+`idrestore`, `idcertificate`, `iddomaindb`, `idserverdb`, `idaccount`,
+`idpeer`, `idimport`, `idrefusal`, `serviceaction`; 53 states in each of eight
+configurations: 1440x900 and 390x844, English and Turkish, light and dark).
+With the connection really reset, one click reached the mock up to 10 times
+(the requests Chrome repeats by itself and the page's one second asking), every
+arrival under one identity, and each of the eight changes was made once. That
+is the browser against a mock, not against this guard; no Panel was restarted
+in the middle of one of the eight; no real restore, import, issuance, backup or
+database engine was run. The route time limits and the 20-second wait are chosen, not measured. The
+time limit bounds the Panel's handler, not the Agent's work, which the Agent
+RPC cannot cancel. A Panel that stops while a guarded request runs leaves the
+Agent's work unreconciled: the row says unknown and the owner checks. The
+owner-started panel update does not yet look at `running` request identities
+before it stops the Panel. The guard answers a repeat of the same request; two
+separate clicks are two requests and both run, except where a lock of the
+route itself refuses or orders them (restore, engine account, certificate). The
+engine-account answer carries no password and is still kept as status only; the
+screen treats that replay as the success it was. A manual backup now stops on
+an unreadable `.cpbak` in the domain's backup directory, as a scheduled backup
+already did. The update harness's populated-database proof
+(`deploy/e2e/release-recovery/populated_database.py`) pins schema 43 beside 38
+and 42 since the merge of 2026-10-10: the migration ledger digest
+`a0b5c4247f83...` and the schema digest `48cbd3b47573...`, computed from the 43
+migration files the way its offline tests build their input (the same
+computation reproduces the two existing pins), 66 tables: the 65 of schema 42
+and `request_identities`. `verify_copy` and `guest_populated_baseline.py verify
+--expected-version` accept 43; `database_exchange_rows.verify_pair` reads from
+the candidate's own ledger which pinned schema it reached, holds it to that
+pin, and requires `request_identities` to be empty after a migration-only
+exchange. A cell that verifies this candidate passes 43 where it passed 42. No
+cell was run with it. The Panel has no control that sets a database user's
+password, so "a minted database password is set again" (D-029) is done on the
+engine; the screen says so. Not covered: the other harmful routes of the
+inventory (service and application restart, plans, enrollments), the about 38
+routes that report wrongly after a replay, the 7 unclassified routes and the
+version-token routes.

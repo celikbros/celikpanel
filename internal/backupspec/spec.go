@@ -133,6 +133,11 @@ type RestoreResponse struct {
 	Error        string `json:"error,omitempty"`
 }
 
+// RestoreInProgress is the exact RestoreResponse.Error of a restore refused
+// because another restore of the same domain is still running on the Agent.
+// The refused request changed nothing (D-029).
+const RestoreInProgress = "RESTORE_IN_PROGRESS"
+
 type DeleteRequest struct {
 	ProtocolVersion int    `json:"protocol_version"`
 	SubscriptionID  int    `json:"subscription_id"`

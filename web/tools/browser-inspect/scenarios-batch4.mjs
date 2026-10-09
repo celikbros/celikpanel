@@ -196,6 +196,7 @@ export default function register(scenarios, tools) {
     // A change whose answer does not arrive. `start` does what the person
     // does; the read that follows is slowed so the held state can be seen.
     const sentCount = async (key) => ((await (await fetch(`${base}/api/v1/__b4`)).json()).sent[key] || 0);
+    const sentIds = async (key) => ((await (await fetch(`${base}/api/v1/__b4`)).json()).ids[key] || []);
     const noticePlace = (page) => page.evaluate(() => {
         const node = document.querySelector('[data-result-unknown]');
         if (!node) return null;
@@ -205,14 +206,28 @@ export default function register(scenarios, tools) {
     // `expect` is the notice's state after the re-read: `read` for a change
     // with no form to ask, `made` or `not-made` for a form that asks the
     // re-read state whether it shows the change.
-    const lostChange = async (page, name, { key, rereadPath, start, held, loseAs = 'drop', loseApplied = true, b4 = {}, expect = 'read', afterRead = null }) => {
+    //
+    // `identified` (10 Oct 2026, D-029): the change is one of the eight that
+    // carry an identity the server keeps. The page then asks once more for the
+    // same answer, under the same identity, before it says the result is not
+    // known, and its notice says so. This mock loses that second asking too:
+    // what the page does when the second asking IS answered is in the
+    // scenarios of batch 5, whose mock keeps the guard's contract.
+    const lostChange = async (page, name, { key, rereadPath, start, held, loseAs = 'drop', loseApplied = true, b4 = {}, expect = 'read', afterRead = null, identified = false }) => {
         await ctl({ b4: { ...b4Defaults(), ...b4, lose: key, loseAs, loseApplied }, override: { [rereadPath]: { delay: 2500 } } });
         await start(page);
         await page.waitForSelector('[data-result-unknown]', { timeout: 15000 }).catch(() => {});
         await pause(500);
         let place = await noticePlace(page);
-        let seen = await record(page, `${name}a-result-unknown-held`, { notice: place, sent: await sentCount(key) });
+        const cause = await page.evaluate(() => document.querySelector('[data-result-unknown]')?.dataset.lostCause ?? null);
+        let seen = await record(page, `${name}a-result-unknown-held`, { notice: place, cause, sent: await sentCount(key) });
         must(place, `${name}a: no result-unknown notice appeared after the answer was lost`);
+        // The notice says which happened: nothing was sent again, or the same
+        // answer was asked for once more.
+        must(cause === (identified ? 'asked' : 'dropped'), `${name}a: the notice's cause is "${cause}" for a change that ${identified ? 'carries an identity' : 'carries no identity'}`);
+        const noticeText = seen.notices.join(' ');
+        const saysNothingSentAgain = /sent a second time|ikinci kez gönderil/.test(noticeText);
+        must(saysNothingSentAgain !== identified, `${name}a: the notice ${identified ? 'says nothing was sent a second time although the answer was asked for again' : 'does not say that nothing was sent a second time'}: ${noticeText.slice(0, 160)}`);
         must(place.state === 'holding', `${name}a: the notice is not holding while nothing was read again (${place.state})`);
         must(place.inView, `${name}a: the notice is outside the window (top ${place.top})`);
         const stillOn = held.filter((labels) => seen.enabledButtons.some((item) => labels.includes(item)));
@@ -225,10 +240,18 @@ export default function register(scenarios, tools) {
         const sent = await sentCount(key);
         const [method, path] = key.split(' ');
         const pageSent = page.changes.filter((item) => item === `${method} ${path}`).length;
-        seen = await record(page, `${name}b-read-again`, { notice: place, sent, pageSent, expected: expect });
+        const ids = await sentIds(key);
+        seen = await record(page, `${name}b-read-again`, { notice: place, sent, pageSent, identities: new Set(ids).size, expected: expect });
         must(place && place.state === expect, `${name}b: after the state was read again the notice is "${place?.state}", expected "${expect}"`);
-        must(pageSent === 1, `${name}b: the page sent the change ${pageSent} times`);
-        must(sent === 1, `${name}b: the change arrived at the server ${sent} times`);
+        if (identified) {
+            // One click: the request and one second asking, both under one identity.
+            must(pageSent === 2, `${name}b: the page sent the identified change ${pageSent} times, expected the request and one second asking`);
+            must(sent === 2, `${name}b: the identified change arrived at the server ${sent} times`);
+            must(new Set(ids).size === 1 && /^[0-9a-f]{32}$/.test(ids[0] || ''), `${name}b: the arrivals did not carry one identity: ${ids.join(', ')}`);
+        } else {
+            must(pageSent === 1, `${name}b: the page sent the change ${pageSent} times`);
+            must(sent === 1, `${name}b: the change arrived at the server ${sent} times`);
+        }
         if (afterRead) await afterRead(page, seen);
         await drainLog();
         if (expect === 'made') {
@@ -239,7 +262,7 @@ export default function register(scenarios, tools) {
             await settle(page);
             const log = await drainLog();
             must(log.length > 0 && log.every((line) => line.includes(' GET ')), `${name}: "Check again" sent something other than a read: ${log.join(' ; ').slice(0, 200)}`);
-            must(await sentCount(key) === 1, `${name}: "Check again" sent the change`);
+            must(await sentCount(key) === (identified ? 2 : 1), `${name}: "Check again" sent the change`);
         }
         await clickByText(page, CLOSE);
         await pause(300);
@@ -495,7 +518,7 @@ export default function register(scenarios, tools) {
         await rowActions(page, '97-backups-row-actions', 'main section[aria-busy] .space-y-2 button');
         // A files backup: the connection drops and the backup was NOT made.
         await lostChange(page, '97-backups-create-lost-', {
-            key: `POST ${D}/backups`, rereadPath: `${D}/backups`, loseApplied: false,
+            key: `POST ${D}/backups`, rereadPath: `${D}/backups`, loseApplied: false, identified: true,
             held: [['Create backup', 'Yedek oluştur']],
             start: (at) => at.evaluate(() => { const card = document.querySelector('main section button'); card.scrollIntoView({ block: 'center' }); card.click(); }),
         });

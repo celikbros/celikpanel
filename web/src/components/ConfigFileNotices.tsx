@@ -110,9 +110,17 @@ function refusalSentence(refusal: ApiError, service: string, t: ReturnType<typeo
         // reason this screen does not know falls back to.
         // Sunucunun doğruladığı her gerekçe için bir cümle; yalnız geri
         // konamayan dosya "geri konamadı" der.
+        //
+        // The third is not a verified failure of the service (10 Oct 2026: it
+        // was drawn red): the file is back, and which settings the service
+        // runs with could not be established. It is drawn on the attention
+        // surface, like every other unknown result.
+        // Üçüncüsü hizmetin doğrulanmış bir hatası değildir: dosya yerindedir,
+        // hizmetin hangi ayarlarla çalıştığı belirlenememiştir. Dikkat
+        // yüzeyinde çizilir.
         return {
             text: t(reloadFailedSentences[refusal.reason ?? ''] ?? 'dbconf.reloadFailed.notRestored', vars),
-            failure: true,
+            failure: refusal.reason !== 'restored_running_unknown',
             unknown: false,
         };
     }
@@ -153,9 +161,22 @@ export function ConfigSaveNotices({
         const { text, failure, unknown } = refusalSentence(refusal, service, t);
         const detail = refusalDetail(refusal);
         const line = refusalLine(refusal);
+        // Whose line it is. After a reload that failed, the line is the first
+        // one the unit's journal or the reload command gave: often the service
+        // manager's own ("Job for ... failed"), so it is not put in the
+        // service's mouth (10 Oct 2026: "PostgreSQL says:" stood in front of a
+        // systemd line). Only a refusal by the service's own check is "says".
+        // Satır kimin: başarısız yeniden yüklemeden sonra satır, birimin
+        // günlüğünün ya da yeniden yükleme komutunun ilk satırıdır; çoğu kez
+        // hizmet yöneticisinindir, bu yüzden hizmetin ağzına konmaz.
+        const reloadFailed = refusal.code === 'CONFIG_RELOAD_FAILED';
+        const said = reloadFailed
+            ? t('dbconf.reloadSaid', { unit: refusal.vars?.unit || service })
+            : refusal.reason === 'daemon' ? t('dbconf.says', { service }) : t('dbconf.notAccepted');
         return (
             <div
                 role="alert"
+                data-config-refusal={failure ? 'failure' : 'attention'}
                 className={`mb-4 flex items-start gap-2 rounded-lg border p-3 text-sm leading-relaxed ${
                     failure ? 'border-danger/30 bg-danger/10 text-fg' : 'border-warning-mark/50 bg-warning-mark/20 text-fg'
                 }`}
@@ -163,10 +184,10 @@ export function ConfigSaveNotices({
                 <AlertTriangle className={`mt-0.5 h-4 w-4 shrink-0 ${failure ? 'text-danger' : 'text-warning'}`} aria-hidden="true" />
                 <div className="min-w-0">
                     <p className="max-w-[75ch] break-words">{text}</p>
-                    {detail && (!placed || failure) && (
+                    {detail && (!placed || reloadFailed) && (
                         <p className="mt-1.5 max-w-[75ch] break-words text-fg-muted">
-                            {failure || refusal.reason === 'daemon' ? t('dbconf.says', { service }) : t('dbconf.notAccepted')}{' '}
-                            {line >= 0 && !failure && <span>{t('dbconf.atLine', { line: line + 1 })} </span>}
+                            {said}{' '}
+                            {line >= 0 && !reloadFailed && <span>{t('dbconf.atLine', { line: line + 1 })} </span>}
                             <span className="font-mono text-fg">{detail}</span>
                         </p>
                     )}

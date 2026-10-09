@@ -22,7 +22,7 @@ class ExchangeRowsTests(unittest.TestCase):
     setUp = base.PopulatedDatabaseTests.setUp
     build = base.PopulatedDatabaseTests.build
 
-    def pair(self):
+    def pair(self, upto=42):
         result = self.build()
         before = Path(result['database'])
         # These additions happen after the seed receipt, so comparing only seed
@@ -34,7 +34,7 @@ class ExchangeRowsTests(unittest.TestCase):
         after = before.with_name('migrated.db')
         after.write_bytes(before.read_bytes()); after.chmod(0o600)
         connection = sqlite3.connect(after)
-        base.apply(connection, self.sql[38:42]); connection.close()
+        base.apply(connection, self.sql[38:upto]); connection.close()
         return result, before, after
 
     def check(self, item):
@@ -53,6 +53,46 @@ class ExchangeRowsTests(unittest.TestCase):
         self.assertEqual(sum(proof['new_table_rows'].values()), 1)
         self.assertEqual(proof['domain_defaults_verified'], 3)
         self.assertEqual([p.read_bytes() for p in item[1:]], before)
+
+    def test_candidate_with_migration43_is_proven_against_its_own_pins(self):
+        item = self.pair(43); before = [p.read_bytes() for p in item[1:]]
+        proof = self.check(item)
+        self.assertEqual((proof['before_schema'], proof['after_schema']), (38, 43))
+        self.assertEqual(proof['new_table_count'], 11)
+        self.assertEqual(proof['historical_table_additions'], {'schema_migrations': 5})
+        self.assertEqual(proof['new_table_rows']['request_identities'], 0)
+        self.assertEqual(sum(proof['new_table_rows'].values()), 1)
+        self.assertEqual(proof['migrated_proof']['table_count'], 66)
+        self.assertEqual([p.read_bytes() for p in item[1:]], before)
+        # Named explicitly, the other pinned schema is refused for this copy.
+        result, old, new = item
+        with self.assertRaises(r.pop.Refused):
+            r.verify_pair(old, new, result['manifest'], manifest_sha256=result['manifest_sha256'], after_version=42)
+        self.assertEqual(r.verify_pair(old, new, result['manifest'], manifest_sha256=result['manifest_sha256'], after_version=43)['after_schema'], 43)
+        for version in (38, 44, '43'):
+            with self.subTest(version=version), self.assertRaises(r.pop.Refused):
+                r.verify_pair(old, new, result['manifest'], manifest_sha256=result['manifest_sha256'], after_version=version)
+
+    def test_schema42_candidate_still_reports_42(self):
+        proof = self.check(self.pair())
+        self.assertEqual((proof['after_schema'], proof['new_table_count']), (42, 10))
+        self.assertNotIn('request_identities', proof['new_table_rows'])
+
+    def test_request_identity_row_in_a_migration_only_pair_is_refused(self):
+        item = self.pair(43)
+        self.mutate(item, "INSERT INTO request_identities(id,actor_user_id,method,route,request_sha256,status,created_at,expires_at) "
+                          "VALUES('" + 'a' * 32 + "',1,'POST','/api/v1/vpn/peers','" + 'b' * 64 + "','done',1,2)")
+        with self.assertRaisesRegex(r.pop.Refused, 'new table contains unexpected rows: request_identities'): self.check(item)
+
+    def test_half_migrated_after_copy_is_refused(self):
+        result = self.build()
+        before = Path(result['database'])
+        after = before.with_name('migrated.db')
+        after.write_bytes(before.read_bytes()); after.chmod(0o600)
+        connection = sqlite3.connect(after)
+        base.apply(connection, self.sql[38:41]); connection.close()
+        with self.assertRaisesRegex(r.pop.Refused, 'not at a pinned released schema'):
+            r.verify_pair(before, after, result['manifest'], manifest_sha256=result['manifest_sha256'])
 
     def test_row_added_since_seed_cannot_disappear(self):
         item = self.pair(); self.mutate(item, 'DELETE FROM metrics_samples WHERE rowid=2')

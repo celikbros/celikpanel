@@ -219,3 +219,54 @@ notice must be in once the state was read again (`read`, `made` or
 brought into the window before it is photographed (on a phone the tabs of a
 domain fill the first screen); where the result-unknown notice stood before
 that is recorded as `notice.inView`.
+
+## Scenarios of the request identity and the service actions (2026-10-10)
+
+These live in `scenarios-batch5.mjs`, with their mock routes in
+`mock-batch5.mjs` (state under `state.b5`; the routes answer only while a
+scenario of this batch has set it, and they are asked before the routes of
+`mock.mjs`, because some addresses are the same). `run.mjs` and `mock.mjs`
+each load them in one marked block.
+
+The mock keeps the contract of the Panel's guard (D-029,
+`cmd/panel/request_identity.go`) for the eight routes that carry an identity:
+no header is `428 REQUEST_ID_REQUIRED`; the first arrival of an identity makes
+the change once and stores its answer (the status only for the two routes
+whose answers are never stored and for an answer that carries a minted
+password); the same identity with the same request again is answered from that
+row, `409 REQUEST_IN_PROGRESS` while the first still runs (after 1.2 s here;
+the Panel waits 20 s), `409 REQUEST_OUTCOME_UNKNOWN` after a "restart" and
+`409 REQUEST_COMPLETED_RESULT_NOT_RETAINED` where the answer was not kept.
+Here the connection IS reset, as a real one: what Chrome then sends again by
+itself carries the same identity. The mock counts, per change, how often it
+arrived, how often it was made, how often it was answered from the row and
+which identity each arrival carried.
+
+A scenario sets `state.b5.plan["METHOD path"]`: `loseFor` (ms after the first
+arrival during which every answer is lost; 1000 lets the page's own second
+asking, 1.5 s later, be answered; -1 loses every one), `loseAs: 'gateway'`,
+`restart` (with `applied`), `slow`, `fail` (the Panel's own refusal) and
+`noHeader` (a page that predates the update). An override of `mock.mjs` can
+carry `method`, so that a read is slowed down at an address that also takes the
+change.
+
+| Name | States |
+| --- | --- |
+| `idbackup`, `idrestore`, `idcertificate`, `iddomaindb`, `idserverdb`, `idaccount`, `idpeer`, `idimport` | one scenario per change (manual backup, restore, Let's Encrypt, a domain's database, a database on a server, the engine account, a VPN device, cPanel import): (a) the answer arrives; (b) the connection is reset and the second asking is answered from the first run (for a one-time result: the notice that says what was made and what to do); (c1, c2) the second asking is lost too: the notice while nothing was read again, with the controls it holds, and after the read; (d) the Panel restarted while the change ran; for the backup and the import also (e, f) the first arrival still running, then finished, and (g) with the VPN device a page that sends no header (110–117) |
+| `idrefusal` | the Panel's own 502 with a sentence on a route whose answers are never stored: shown, and not asked for again (118) |
+| `serviceaction` | Restart on a component's page, on Postfix's page and from a row of the components list, answered with a verified failure (the check refuses; sent and not in that state, with the unit that runs the service) and with an unknown result (120) |
+
+A scenario of this batch **fails** when one click made the change more than
+once or its arrivals carried more than one identity; when the second asking was
+answered and the page still says the result is not known; when a result that is
+not known is a toast, is drawn on the failure surface or says that nothing was
+sent a second time; when the notice does not hold the controls it should while
+nothing was read again; when a change that was made while its one-time result
+reached nobody does not say what was made and what to do; when a service
+action's outcome is not on the page with the service's line and the command,
+is also a toast, or an unknown one stands on the failure surface. Since this
+batch the lost backup of `domainbackups` expects what the page now does on that
+address: the request and one second asking under one identity, and a notice
+that says so. `dbconfig` also measures the surface of the two configuration
+reload answers (failure for settings verified unchanged, attention for
+settings that could not be established) and the label of the line under them.

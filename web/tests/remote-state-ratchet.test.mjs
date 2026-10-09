@@ -54,9 +54,12 @@ const actual = scanTree(webDir);
 // general settings, the applications, the certificate card of the overview,
 // mail authentication, the backups, the scheduled tasks; and the logs, whose
 // one read stays in its file because a Go test pins it there).
+// After the fourth batch:        8 / 25 / 6 / 42 / 12 in 31 files.
+// With the request identity (D-029, 10 Oct 2026) the engine-account strip no
+// longer swallows a failed change: 8 / 24 / 6 / 42 / 12 in 31 files.
 const ceilings = {
   valueFromFailure: 8,
-  swallowedFailure: 25,
+  swallowedFailure: 24,
   ignoredFailure: 6,
   rawRead: 42,
   unprovenEmptyState: 12,

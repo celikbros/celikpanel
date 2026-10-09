@@ -261,6 +261,24 @@ export default function register(scenarios, tools) {
             must(!/could not put the previous file back|önceki dosyayı kesin olarak geri koyamadı/i.test(notice), `${name}: says the previous file could not be put back`);
             must(typed === '300', `${name}: the change that was not kept is no longer in the form (${typed})`);
             must(seen.toasts.length === 0, `${name}: a toast was raised: ${seen.toasts.join(' | ')}`);
+            // The surface (10 Oct 2026). A service verified to run its previous
+            // settings after a change that was not kept is a failure of that
+            // change. Settings that could not be established are an unknown:
+            // the attention surface, and no text in the failure colour.
+            const surface = await page.evaluate(() => {
+                const box = document.querySelector('main [data-config-refusal]');
+                if (!box) return null;
+                const colour = (value) => (value.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+                const [r, g, b] = colour(getComputedStyle(box).backgroundColor);
+                const icon = box.querySelector('svg');
+                return { tone: box.dataset.configRefusal, background: getComputedStyle(box).backgroundColor, redder: r > g * 1.6 && r > b * 1.6, icon: icon ? getComputedStyle(icon).color : '' };
+            });
+            must(surface, `${name}: the notice does not say which surface it is on`);
+            must(surface.tone === (mode === 'reloadUnknown' ? 'attention' : 'failure'), `${name}: drawn on the ${surface.tone} surface (${surface.background})`);
+            // The line is the unit's (systemd's "Job for ... failed"), so it is
+            // not put in the service's mouth.
+            must(!/PostgreSQL says:|PostgreSQL yanıtı:/.test(notice), `${name}: a line of the service manager is labelled as PostgreSQL's own: ${notice.slice(-200)}`);
+            must(/Reported when postgresql@17-main was reloaded:|postgresql@17-main yeniden yüklenirken bildirilen:/.test(notice), `${name}: the line does not say where it comes from: ${notice.slice(-200)}`);
             await closePage(page);
         }
 

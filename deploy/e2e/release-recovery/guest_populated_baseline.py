@@ -434,8 +434,8 @@ def verify(args):
     identity, directory, installed, manifest = _seed_record(args)
     if not isinstance(args.capture_id, str) or not HEX32.fullmatch(args.capture_id):
         raise Refused('exact capture identity required')
-    if type(args.expected_version) is not int or args.expected_version not in (38, 42):
-        raise Refused('exact38 or42 verification required')
+    if type(args.expected_version) is not int or args.expected_version not in populated.SCHEMAS:
+        raise Refused('exact38, 42 or43 verification required')
     observation = directory / ('capture-' + args.capture_id)
     record, record_hash = _read_json(observation / 'capture.json')
     if (record.get('schema') != 'celikpanel/lab-populated-capture/v1' or record.get('identity') != identity
@@ -504,7 +504,7 @@ def main(argv=None):
     for name in ('lab-nonce', 'vm-uuid', 'cell-id', 'node', 'seed-id'):
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--capture-id')
-    parser.add_argument('--expected-version', type=int, choices=(38, 42))
+    parser.add_argument('--expected-version', type=int, choices=(38, 42, 43))
     args = parser.parse_args(argv)
     if ((args.action == 'seed' and (args.capture_id is not None or args.expected_version is not None))
             or (args.action == 'capture' and (args.capture_id is None or args.expected_version is not None))

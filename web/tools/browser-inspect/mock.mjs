@@ -101,7 +101,9 @@ async function api(req, res, path, query) {
     const override = state.overrides[path];
     // after: let the first N requests through untouched, then apply.
     // times: apply to that many requests only, then let the rest through.
-    if (override && (override.hits = (override.hits || 0) + 1) > (override.after || 0) && (!override.times || override.hits <= (override.after || 0) + override.times)) {
+    // method: apply to requests of that method only (a read slowed down at an
+    // address that also takes the change).
+    if (override && (!override.method || override.method === req.method) && (override.hits = (override.hits || 0) + 1) > (override.after || 0) && (!override.times || override.hits <= (override.after || 0) + override.times)) {
         if (override.delay) await pause(override.delay);
         if (override.drop) { req.socket.destroy(); return; }
         if (override.hang) return;
@@ -115,6 +117,11 @@ async function api(req, res, path, query) {
     if (key === 'GET /api/v1/panel/access-address') { send(res, 200, { hostname: state.served }); return; }
     if (!state.session) { coded(res, 401, 'AUTH_REQUIRED', 'authentication required'); return; }
     if (key === 'POST /api/v1/auth/logout') { state.session = false; send(res, 200, {}); return; }
+    // --- batch 5 (10 Oct 2026): the request identity, service actions, VPN ---
+    // Before the routes below, because it answers some of the same addresses
+    // through the guard's contract; it answers only while `state.b5` is set.
+    if (await (await import('./mock-batch5.mjs')).batch5(req, res, path, query, { state, send, coded, readBody })) return;
+    // --- end of batch 5 ---
     if (key === 'GET /api/v1/auth/me') { send(res, 200, user); return; }
     if (key === 'GET /api/v1/panel/availability') { send(res, 200, { schema: 'celikpanel-panel-availability/v1', state: state.mode === 'starting' ? 'starting' : 'ready' }); return; }
     if (key === 'GET /api/v1/license/access') {

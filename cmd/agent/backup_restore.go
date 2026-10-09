@@ -5,15 +5,59 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/alicelik/celikpanel/internal/backupspec"
 )
+
+// One restore per domain at a time (D-029). A restore writes a safety backup,
+// replaces the document root and imports the databases; two of them on the
+// same domain extracted into the same document root and imported the same
+// database side by side. The second one is refused before it reads or writes
+// anything, it does not wait: a restore that arrives while one is running was
+// not asked for after seeing the first one's result.
+//
+// Alan adı başına aynı anda tek geri yükleme (D-029). İkincisi hiçbir şey
+// okumadan ve yazmadan reddedilir; beklemez.
+type backupRestoreKey struct {
+	subscriptionID int
+	domainID       int
+}
+
+var backupRestoresRunning = struct {
+	sync.Mutex
+	domains map[backupRestoreKey]struct{}
+}{domains: make(map[backupRestoreKey]struct{})}
+
+var errBackupRestoreInProgress = errors.New(backupspec.RestoreInProgress)
+
+// tryLockBackupRestore claims the domain for one restore. ok is false while
+// another restore of the same domain holds it.
+func tryLockBackupRestore(scope backupScope) (release func(), ok bool) {
+	key := backupRestoreKey{subscriptionID: scope.SubscriptionID, domainID: scope.DomainID}
+	backupRestoresRunning.Lock()
+	defer backupRestoresRunning.Unlock()
+	if _, running := backupRestoresRunning.domains[key]; running {
+		return nil, false
+	}
+	backupRestoresRunning.domains[key] = struct{}{}
+	return func() {
+		backupRestoresRunning.Lock()
+		delete(backupRestoresRunning.domains, key)
+		backupRestoresRunning.Unlock()
+	}, true
+}
 
 func (a *Agent) restoreBackup(req *backupspec.RestoreRequest, resp *backupspec.RestoreResponse) error {
 	scope := restoreScope(req)
 	if err := validateV2Scope(scope); err != nil {
 		return err
 	}
+	release, ok := tryLockBackupRestore(scope)
+	if !ok {
+		return errBackupRestoreInProgress
+	}
+	defer release()
 	backupPath, legacy, err := resolveBackup(scope, req.BackupName)
 	if err != nil {
 		return err

@@ -1706,6 +1706,13 @@ const scenarios = {
 (await import('./scenarios-batch4.mjs')).default(scenarios, { base, vp, locale, theme, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
 // --- end of batch 4 ---
 
+// --- batch 5 (10 Oct 2026): the request identity, service actions, VPN ---
+// `idbackup`, `idrestore`, `idcertificate`, `iddomaindb`, `idserverdb`,
+// `idaccount`, `idpeer`, `idimport`, `idrefusal` and `serviceaction` live in
+// their own file, like the batches before.
+(await import('./scenarios-batch5.mjs')).default(scenarios, { base, vp, locale, theme, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
+// --- end of batch 5 ---
+
 for (const [name, run] of Object.entries(scenarios)) {
     if (wanted && !wanted.includes(name)) continue;
     const started = Date.now();

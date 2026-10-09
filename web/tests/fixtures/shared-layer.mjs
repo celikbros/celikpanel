@@ -53,7 +53,15 @@ export const capabilitiesURL = compileSource('lib/hostingCapabilities.ts', (spec
 // Dördüncü partiden beri paylaşılan katmanda, gelmeyen yanıt, bir alan adının
 // veritabanlarının tek çözücüsü ve dosya indirme de vardır; hepsi gönderilen
 // modüllerdir.
-export const lostAnswerURL = compileSource('lib/lostAnswer.ts', unexpected('lib/lostAnswer.ts'));
+// The answer that did not arrive shares its definition of a lost answer, and
+// the list of routes that carry an identity, with the request identity
+// (D-029, 10 Oct 2026): the shipped module again.
+// Gelmeyen yanıt, kaybolan yanıt tanımını ve kimlik taşıyan rotaların listesini
+// istek kimliğiyle paylaşır: yine gönderilen modül.
+export const requestIdentityURL = compileSource('lib/requestIdentity.ts', unexpected('lib/requestIdentity.ts'));
+export const lostAnswerURL = compileSource('lib/lostAnswer.ts', (specifier) => (
+  specifier.endsWith('/requestIdentity') ? requestIdentityURL : unexpected('lib/lostAnswer.ts')(specifier)
+));
 export const domainDatabasesURL = compileSource('lib/domainDatabases.ts', (specifier) => (
   specifier.endsWith('/remote') ? remoteURL : unexpected('lib/domainDatabases.ts')(specifier)
 ));
