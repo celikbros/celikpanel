@@ -135,6 +135,21 @@ var (
 	dbConfigNow      = time.Now
 	dbConfigStat     = os.Stat
 
+	// dbConfigIsMariaDB asks a program named `mysqld` what it is. `mariadbd`
+	// is MariaDB's own name and is not asked. `mysqld` is also the name of
+	// Oracle's MySQL, which reads an option file by other rules: measured on
+	// a host with MySQL 8.0 (9 Oct 2026, the CI runner), the check below
+	// exits 0 for `no_such_variable = 3`, so its answer is not a validation
+	// of a MariaDB file.
+	// `mysqld` adlı programa ne olduğunu sorar. `mysqld`, Oracle MySQL'in de
+	// adıdır ve onun yanıtı bir MariaDB dosyasının doğrulaması değildir.
+	dbConfigIsMariaDB = func(ctx context.Context, program string) bool {
+		cmd := exec.CommandContext(ctx, program, "--version")
+		cmd.Env = append(dbConfigCleanEnv(os.Environ()), "LC_ALL=C", "LANGUAGE=C")
+		out, err := cmd.Output()
+		return err == nil && strings.Contains(string(out), "MariaDB")
+	}
+
 	// dbConfigRun runs one validating program and returns what it printed on
 	// standard error.
 	dbConfigRun = func(ctx context.Context, dir, name string, args ...string) (stderr string, err error) {
@@ -434,6 +449,9 @@ func dbConfigValidateWithDaemon(target dbConfigTarget, pre dnsFileSnapshot, cont
 	}
 	if program == "" {
 		return unavailable("mariadbd", errors.New("neither mariadbd nor mysqld is on PATH"))
+	}
+	if filepath.Base(program) != "mariadbd" && !dbConfigIsMariaDB(ctx, program) {
+		return unavailable("mariadbd", fmt.Errorf("%s does not say it is MariaDB, so what it accepts is not a check of this file", program))
 	}
 	private, err := os.MkdirTemp("", "celikpanel-mariadb-check-")
 	if err != nil {

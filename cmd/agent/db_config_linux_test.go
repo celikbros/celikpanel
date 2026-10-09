@@ -514,6 +514,47 @@ func TestDatabaseConfigIsNotInstalledWithoutItsValidator(t *testing.T) {
 	wantRefusal(t, err, transport.ConfigErrorValidationFail, transport.ConfigInvalidNoValidator)
 }
 
+// A program named mysqld that is not MariaDB is not this file's validator:
+// MySQL 8.0 exits 0 for a variable MariaDB does not have. The file stays, and
+// the check itself is never run.
+func TestAMysqldThatIsNotMariaDBDoesNotValidateAMariaDBFile(t *testing.T) {
+	fake := installDBConfigFakes(t)
+	oldIs := dbConfigIsMariaDB
+	t.Cleanup(func() { dbConfigIsMariaDB = oldIs })
+	target := dbConfigTarget{kind: dbConfigMariaDB, unit: "mariadb"}
+	dbConfigLookPath = func(name string) (string, error) {
+		if name == "mysqld" {
+			return "/usr/sbin/mysqld", nil
+		}
+		return "", exec.ErrNotFound
+	}
+
+	asked := ""
+	dbConfigIsMariaDB = func(_ context.Context, program string) bool { asked = program; return false }
+	path := writeOwnerFile(t, "50-server.cnf", "[mysqld]\nmax_connections = 100\n", 0o644)
+	_, err := applyDatabaseConfigUpdate(target, dbConfigPreimage(t, path), []byte("[mysqld]\nno_such_variable = 3\n"), fake.reload)
+	rpcErr := wantRefusal(t, err, transport.ConfigErrorValidationFail, transport.ConfigInvalidNoValidator)
+	if asked != "/usr/sbin/mysqld" || rpcErr.Name != "mariadbd" {
+		t.Fatalf("asked %q, refusal %+v", asked, rpcErr)
+	}
+	if got := readFileForTest(t, path); got != "[mysqld]\nmax_connections = 100\n" {
+		t.Fatalf("the file was changed without being checked: %q", got)
+	}
+	if len(fake.runs) != 0 || len(fake.reloads) != 0 {
+		t.Fatalf("runs %v reloads %v", fake.runs, fake.reloads)
+	}
+
+	// A mysqld that says it is MariaDB (releases before 10.5 had no other
+	// name) is asked as before.
+	dbConfigIsMariaDB = func(context.Context, string) bool { return true }
+	if _, err := applyDatabaseConfigUpdate(target, dbConfigPreimage(t, path), []byte("[mysqld]\nmax_connections = 200\n"), fake.reload); err != nil {
+		t.Fatalf("a MariaDB named mysqld was not asked: %v", err)
+	}
+	if len(fake.runs) == 0 {
+		t.Fatal("the check was not run")
+	}
+}
+
 func TestFailedReloadPutsThePreviousFileBack(t *testing.T) {
 	fake := installDBConfigFakes(t)
 	path := writeOwnerFile(t, "postgresql.conf", ownerPostgreSQLConf, 0o640)
@@ -956,6 +997,12 @@ func TestRealMariaDBValidatesACandidateFile(t *testing.T) {
 	program := realProgram(t, "CELIKPANEL_TEST_MARIADBD", "mariadbd", "mysqld")
 	if program == "" {
 		t.Skip("MariaDB is not installed on this host")
+	}
+	if !dbConfigIsMariaDB(context.Background(), program) {
+		// The CI runner carries Oracle's MySQL under the name mysqld; the
+		// product refuses to take its answer (the test below), and this test
+		// is about MariaDB's own.
+		t.Skipf("%s is not MariaDB", program)
 	}
 	oldLook := dbConfigLookPath
 	t.Cleanup(func() { dbConfigLookPath = oldLook })
