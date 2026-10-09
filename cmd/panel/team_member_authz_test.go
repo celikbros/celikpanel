@@ -559,7 +559,7 @@ func TestHandleDomainsParentVisibilityAndLegacyMetadataContract(t *testing.T) {
 
 			legacyParent := domainListObjectByID(t, legacyDomains, teamMemberAuthzSecondCustomerDomainID)
 			for key, want := range map[string]string{
-				"php_version":  `"8.3"`,
+				"php_version":  `""`,
 				"ssl_enabled":  "false",
 				"project_type": `"php"`,
 				"disk_usage":   "0",

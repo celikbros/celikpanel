@@ -259,7 +259,13 @@ export const enServerScreens = {
     'panelUpdate.available': 'A signed update is available.',
     'panelUpdate.none': 'There is no new update on this channel.',
     'panelUpdate.previousAttempt.title': 'This version already failed on this server',
-    'panelUpdate.previousAttempt.recovered': '{version} was tried on this server on {time}, and the server was returned to the previous version. Starting it again repeats the same update unless the cause has been fixed.',
+    // The offered version was already tried here and rolled back (12 Oct 2026):
+    // what happened and what runs now, the recorded cause or that none was
+    // recorded, and what starting it again does. Start is never blocked.
+    'panelUpdate.previousAttempt.rolledBackTitle': 'This version was already tried on this server and rolled back',
+    'panelUpdate.previousAttempt.recovered': '{version} was started here on {time}. The update did not complete, and the server was returned to {current}, which it runs now.',
+    'panelUpdate.previousAttempt.noCause': 'The server recorded no more specific cause for that attempt.',
+    'panelUpdate.previousAttempt.again': 'Starting it again runs the same update. If the cause was on this server and has been corrected, the result can differ; otherwise expect the same one. A corrected version, when it is published, is offered here as a newer version. The button below still starts {version}.',
     'panelUpdate.previousAttempt.failed': '{version} was tried on this server on {time} and did not complete; this server runs {current} now. Starting it again repeats the same update unless the cause has been fixed.',
     'panelUpdate.previousAttempt.cause': 'Recorded cause: {cause}.',
     'panelUpdate.previousAttempt.stoppedTitle': "An earlier update to this version stopped before changing the installed version",
@@ -307,6 +313,10 @@ export const enServerScreens = {
     'services.actionFailed': 'Service action failed',
     'services.action.said': "The service said: {detail}",
     'services.action.ownerUnit': "The service itself runs as {owner_unit}; {unit} only groups it.",
+    // A Stop that succeeded and left the unit marked as failed (12 Oct 2026):
+    // said, not cleared. The mark is systemd's own record.
+    'services.action.note.unit_marked_failed': "{unit} was stopped and is not running. systemd now shows {failed_unit} as failed (result: {result}), which it was not before the stop. That mark is systemd’s own record of how the unit’s stop went (with the result exit-code, a command of the unit exited with an error), and CelikPanel leaves it as it is. Start can be used from this state. To clear the mark without starting, run {command} on the server.",
+    'services.action.note.unit_marked_failed_config': "{unit} was stopped and is not running. systemd now shows {failed_unit} as failed (result: {result}), which it was not before the stop. That mark is systemd’s own record of how the unit’s stop went, and CelikPanel leaves it as it is. {unit} refuses its own configuration at present (its line is below), and the unit’s stop command reads the same file; it will not start until that is corrected. To clear the mark without starting, run {command} on the server.",
     'services.scanNow': 'Scan services',
     'services.rescan': 'Rescan',
     'services.scanning': 'Scanning\u2026',

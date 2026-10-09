@@ -89,7 +89,13 @@ test('the sentences on screen are the ones the operation guidance records, in bo
 test('the Services screens keep the outcome on the page, and an unknown result is not coloured as a failure', () => {
   const notice = read('../src/components/ServiceActionNotice.tsx');
   assert.match(notice, /const unknown = outcome\.code === 'SERVICE_ACTION_UNKNOWN';/);
-  assert.match(notice, /unknown \? 'border-warning-mark\/50 bg-warning-mark\/20' : 'border-danger\/30 bg-danger\/10'/);
+  // Neither an unknown result nor a note about a success (12 Oct 2026) is a
+  // failure: both are drawn on the attention surface, a failure alone on the
+  // failure surface.
+  assert.match(notice, /const note = outcome\.code === 'SERVICE_ACTION_NOTE';/);
+  assert.match(notice, /const attention = unknown \|\| note;/);
+  assert.match(notice, /attention \? 'border-warning-mark\/50 bg-warning-mark\/20' : 'border-danger\/30 bg-danger\/10'/);
+  assert.match(notice, /\{attention\s+\? <AlertTriangle [^>]*text-warning[^>]*\/>\s+: <XCircle [^>]*text-danger[^>]*\/>\}/);
   assert.match(notice, /t\('services\.action\.said', \{ detail: '\\u0000' \}\)/);
   assert.match(notice, /vars\.owner_unit && vars\.owner_unit !== vars\.unit/);
   for (const file of ['ServiceShell.tsx', 'ServiceList.tsx']) {

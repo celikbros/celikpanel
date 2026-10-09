@@ -4705,3 +4705,348 @@ kendisi ürettiğinde onu hâlâ İngilizce bir bildirimde gösterir; çağıran
 yazdıysa hiçbir şey gösterilmez, çünkü sunucu onu artık geri göndermez. Yerel
 döngü taklidine karşı gerçek bir Chrome'da incelendi; gerçek bir Panel'de
 değil.
+
+### Son gerçek sistem turundan sonra: reddedilen site neyin kaldırıldığını söyler, durmuş hizmet yeniden yüklenmez, içe aktarım neyi dışarıda bıraktığını adlandırır, Durdur geride ne bıraktığını söyler, güncelleme kartı daha önce ne olduğunu söyler (2026-10-12)
+
+Bileşen testleriyle kaynak durumu; Arch üzerindeki gerçek sistem denetimi
+bekliyor ve kurulu bir sunucuda hiçbir şey gözlenmedi. Neyin ölçüldüğü ve neyin
+değiştiği için aynı tarihli dayanıklılık sözleşmesi kaydına bakın. Bu kayıt
+cümleleri tutar.
+
+**Metinlerin izlediği kural.** Bir yanıt, bir şeyin kaldırıldığını yalnızca
+kaldırma doğrulandığında söyler; doğrulanmadığında nereye bakılacağını söyler.
+Hiçbiri sunucuda hiçbir şeyin kalmadığını söylemez. Çalışmayan bir hizmet,
+hangi hizmet olursa olsun, yeniden yüklenmemiştir. Sahibin beklemeyeceği bir
+yerel durum bırakan başarı bunu söyler ve o durumu hizmet yöneticisinin
+kaydettiği gibi bırakır. Arşivin içe aktarılmayan bir girdisi adıyla listelenir
+ve eksik kalan seçilmiş bir parçayla karıştırılmaz. Bu sunucuda daha önce
+başarısız olmuş bir sürüm, yeniden başlatılmadan önce öyle adlandırılır ve yine
+de başlatılabilir.
+
+**Yerini alan.** 2026-10-01 kaydında yazılı
+`panelUpdate.previousAttempt.recovered` cümlesi ("... ve sunucu önceki sürüme
+döndürüldü. Neden giderilmediyse yeniden başlatmak aynı güncellemeyi
+tekrarlar.") artık gösterilmez; geri döndürülmüş bir sürümün başlığı da artık
+`panelUpdate.previousAttempt.title` değildir. Aşağıdakiler gösterilir. Web
+sunucusunun reddettiği bir site eskiden `500 INTERNAL` "internal server error"
+yanıtı alıyordu.
+
+**Web sunucusunun reddettiği site (`POST /api/v1/domains/create`, `POST /api/v1/import/cpanel/apply`).**
+
+`vars`: `domain`, `command` (`sudo nginx -t`). `details`: nginx'in kendi
+satırı, tek satır, yalnızca yönetici için; sunucudaki yolları adlandırabilir.
+
+- `502 SITE_WEB_SERVER_REFUSED`, reason `removed`
+  API: "The site {domain} was not created: the web server (nginx) refused the
+  configuration CelikPanel generated for it, so the site was never put into
+  service. What had been created for it was removed again and the removal was
+  confirmed: its web server configuration, its system account, its files and,
+  for a PHP site, its PHP pool. nginx was reloaded with the configuration it
+  had before. The server owner runs sudo nginx -t on the server. If it reports
+  an error now, a file of the server's own nginx configuration is refused and
+  is corrected first. If it passes, what nginx refused was in the configuration
+  CelikPanel generated for this server; the line nginx printed names it and is
+  shown to administrators. Then create the site again; nothing retries by
+  itself."
+- `domains.add.webServerRefused.removed`
+  EN: "{domain} was not created: the web server (nginx) refused the
+  configuration CelikPanel generated for it. What had been created for the site
+  was removed again, and the removal was confirmed: its web server
+  configuration, system account, files and, for a PHP site, PHP pool. nginx was
+  reloaded with the configuration it had before. On the server, run {command}.
+  If it reports an error, a file of the server’s own nginx configuration is
+  refused; correct that first. If it passes, the refusal came from the
+  configuration CelikPanel generated, and the line nginx printed names it
+  (administrators see it below). Then create the site again; nothing retries by
+  itself."
+  TR: "{domain} oluşturulmadı: web sunucusu (nginx), CelikPanel’in bu site için
+  ürettiği yapılandırmayı reddetti. Site için oluşturulanlar yeniden kaldırıldı
+  ve bu kaldırma doğrulandı: web sunucusu yapılandırması, sistem hesabı,
+  dosyaları ve PHP sitesiyse PHP havuzu. nginx, önceki yapılandırmasıyla
+  yeniden yüklendi. Sunucuda {command} komutunu çalıştırın. Bir hata
+  bildiriyorsa sunucunun kendi nginx yapılandırmasındaki bir dosya
+  reddediliyordur; önce onu düzeltin. Geçiyorsa ret CelikPanel’in ürettiği
+  yapılandırmadan gelmiştir ve nginx’in yazdığı satır onu adlandırır
+  (yöneticiler aşağıda görür). Ardından siteyi yeniden oluşturun; hiçbir şey
+  kendiliğinden yeniden denemez."
+- `502 SITE_WEB_SERVER_REFUSED`, reason `cleanup_unconfirmed`
+  API: "The site {domain} was not created: the web server (nginx) refused the
+  configuration CelikPanel generated for it, so the site was never put into
+  service. nginx was reloaded with the configuration it had before. Removing
+  what had been created for the site was not confirmed, so parts of it may
+  remain on the server: open Domains and, if {domain} is listed there, delete
+  it, which removes its parts. The server owner runs sudo nginx -t on the
+  server. If it reports an error now, a file of the server's own nginx
+  configuration is refused and is corrected first. If it passes, what nginx
+  refused was in the configuration CelikPanel generated for this server; the
+  line nginx printed names it and is shown to administrators. Then create the
+  site again; nothing retries by itself."
+- `domains.add.webServerRefused.unconfirmed`
+  EN: "{domain} was not created: the web server (nginx) refused the
+  configuration CelikPanel generated for it. nginx was reloaded with the
+  configuration it had before. Removing what had been created for the site was
+  not confirmed, so parts of it may remain on the server: open Domains and, if
+  {domain} is listed there, delete it, which removes its parts. On the server,
+  run {command}. If it reports an error, a file of the server’s own nginx
+  configuration is refused; correct that first. If it passes, the refusal came
+  from the configuration CelikPanel generated, and the line nginx printed names
+  it (administrators see it below). Then create the site again; nothing retries
+  by itself."
+  TR: "{domain} oluşturulmadı: web sunucusu (nginx), CelikPanel’in bu site için
+  ürettiği yapılandırmayı reddetti. nginx, önceki yapılandırmasıyla yeniden
+  yüklendi. Site için oluşturulanların kaldırıldığı doğrulanamadı; bu yüzden
+  bir bölümü sunucuda kalmış olabilir: Alan Adları sayfasını açın ve {domain}
+  orada listeleniyorsa silin; silme, parçalarını da kaldırır. Sunucuda
+  {command} komutunu çalıştırın. Bir hata bildiriyorsa sunucunun kendi nginx
+  yapılandırmasındaki bir dosya reddediliyordur; önce onu düzeltin. Geçiyorsa
+  ret CelikPanel’in ürettiği yapılandırmadan gelmiştir ve nginx’in yazdığı
+  satır onu adlandırır (yöneticiler aşağıda görür). Ardından siteyi yeniden
+  oluşturun; hiçbir şey kendiliğinden yeniden denemez."
+- `502 SITE_WEB_SERVER_REFUSED`, reason `import_removed`
+  API: "The import did not start, and no file, mailbox, DNS record or database
+  of the archive was imported. The site {domain} is the import's first step and
+  it was not created: the web server (nginx) refused the configuration
+  CelikPanel generated for it, so the site was never put into service. What had
+  been created for it was removed again and the removal was confirmed: its web
+  server configuration, its system account, its files and, for a PHP site, its
+  PHP pool. nginx was reloaded with the configuration it had before. The server
+  owner runs sudo nginx -t on the server. If it reports an error now, a file of
+  the server's own nginx configuration is refused and is corrected first. If it
+  passes, what nginx refused was in the configuration CelikPanel generated for
+  this server; the line nginx printed names it and is shown to administrators.
+  Then start the import again; nothing starts it again automatically."
+- `import.webServerRefused.removed`
+  EN: "The import did not start, and no file, mailbox, DNS record or database
+  of the archive was imported. Its first step is the site {domain}, which was
+  not created: the web server (nginx) refused the configuration CelikPanel
+  generated for it. What had been created for the site was removed again, and
+  the removal was confirmed: its web server configuration, system account,
+  files and, for a PHP site, PHP pool. nginx was reloaded with the
+  configuration it had before. On the server, run {command}. If it reports an
+  error, a file of the server’s own nginx configuration is refused; correct
+  that first. If it passes, the refusal came from the configuration CelikPanel
+  generated, and the line nginx printed names it (administrators see it below).
+  Then start the import again; nothing starts it again automatically."
+  TR: "İçe aktarma başlamadı ve arşivden hiçbir dosya, posta kutusu, DNS kaydı
+  ya da veritabanı içe aktarılmadı. İlk adımı {domain} sitesidir ve bu site
+  oluşturulmadı: web sunucusu (nginx), CelikPanel’in bu site için ürettiği
+  yapılandırmayı reddetti. Site için oluşturulanlar yeniden kaldırıldı ve bu
+  kaldırma doğrulandı: web sunucusu yapılandırması, sistem hesabı, dosyaları ve
+  PHP sitesiyse PHP havuzu. nginx, önceki yapılandırmasıyla yeniden yüklendi.
+  Sunucuda {command} komutunu çalıştırın. Bir hata bildiriyorsa sunucunun kendi
+  nginx yapılandırmasındaki bir dosya reddediliyordur; önce onu düzeltin.
+  Geçiyorsa ret CelikPanel’in ürettiği yapılandırmadan gelmiştir ve nginx’in
+  yazdığı satır onu adlandırır (yöneticiler aşağıda görür). Ardından içe
+  aktarmayı yeniden başlatın; hiçbir şey onu kendiliğinden yeniden başlatmaz."
+- `502 SITE_WEB_SERVER_REFUSED`, reason `import_cleanup_unconfirmed`
+  API: "The import did not start, and no file, mailbox, DNS record or database
+  of the archive was imported. The site {domain} is the import's first step and
+  it was not created: the web server (nginx) refused the configuration
+  CelikPanel generated for it, so the site was never put into service. nginx
+  was reloaded with the configuration it had before. Removing what had been
+  created for the site was not confirmed, so parts of it may remain on the
+  server: open Domains and, if {domain} is listed there, delete it, which
+  removes its parts. The server owner runs sudo nginx -t on the server. If it
+  reports an error now, a file of the server's own nginx configuration is
+  refused and is corrected first. If it passes, what nginx refused was in the
+  configuration CelikPanel generated for this server; the line nginx printed
+  names it and is shown to administrators. Then start the import again; nothing
+  starts it again automatically."
+- `import.webServerRefused.unconfirmed`
+  EN: "The import did not start, and no file, mailbox, DNS record or database
+  of the archive was imported. Its first step is the site {domain}, which was
+  not created: the web server (nginx) refused the configuration CelikPanel
+  generated for it. nginx was reloaded with the configuration it had before.
+  Removing what had been created for the site was not confirmed, so parts of it
+  may remain on the server: open Domains and, if {domain} is listed there,
+  delete it, which removes its parts. On the server, run {command}. If it
+  reports an error, a file of the server’s own nginx configuration is refused;
+  correct that first. If it passes, the refusal came from the configuration
+  CelikPanel generated, and the line nginx printed names it (administrators see
+  it below). Then start the import again; nothing starts it again
+  automatically."
+  TR: "İçe aktarma başlamadı ve arşivden hiçbir dosya, posta kutusu, DNS kaydı
+  ya da veritabanı içe aktarılmadı. İlk adımı {domain} sitesidir ve bu site
+  oluşturulmadı: web sunucusu (nginx), CelikPanel’in bu site için ürettiği
+  yapılandırmayı reddetti. nginx, önceki yapılandırmasıyla yeniden yüklendi.
+  Site için oluşturulanların kaldırıldığı doğrulanamadı; bu yüzden bir bölümü
+  sunucuda kalmış olabilir: Alan Adları sayfasını açın ve {domain} orada
+  listeleniyorsa silin; silme, parçalarını da kaldırır. Sunucuda {command}
+  komutunu çalıştırın. Bir hata bildiriyorsa sunucunun kendi nginx
+  yapılandırmasındaki bir dosya reddediliyordur; önce onu düzeltin. Geçiyorsa
+  ret CelikPanel’in ürettiği yapılandırmadan gelmiştir ve nginx’in yazdığı
+  satır onu adlandırır (yöneticiler aşağıda görür). Ardından içe aktarmayı
+  yeniden başlatın; hiçbir şey onu kendiliğinden yeniden başlatmaz."
+
+**Sunucunun çalıştırmadığı bir PHP sürümü (`POST /api/v1/domains/create`).**
+
+`vars`: `version`, `installed`. Hiçbir şey oluşturulmadan reddedilir. Hiçbir
+ekran yeni bir siteyle birlikte PHP sürümü göndermez; bu cümle yalnızca bir API
+istemcisine ulaşır ve katalogda karşılığı yoktur.
+
+- `409 PHP_VERSION_NOT_INSTALLED`
+  API: "Nothing was created: PHP {version} is not installed on this server.
+  Installed: {installed}. Choose one of these versions and create the site
+  again; another version can be used only after it is installed on this server
+  (Services)."
+
+**Çalışmayan bir hizmetin yeniden yüklenmesi (`POST /api/v1/service/action`).**
+
+Yeni cümle yok: 2026-10-11 kaydında yazılı `409 SERVICE_ACTION_FAILED`, gerekçe
+`not_running` ve `err.SERVICE_ACTION_FAILED.not_running` artık yalnızca Postfix
+ve Dovecot için değil, yeniden yükleme istendiğinde `inactive` ya da `failed`
+olan her birim için yanıttır (nginx, MariaDB, PHP-FPM, PostgreSQL ve
+sarmalayıcısı). `vars.detail` okunan şeydir; örneğin "nginx.service is inactive
+(dead); nothing was reloaded".
+
+**Başarılı olan ve birimi `failed` işaretli bırakan Durdur (`POST /api/v1/service/action`).**
+
+Yanıt her zamanki başarıdır ve bir `note` taşır: `code`, `reason`, `error` ve
+`vars` (`unit`, `failed_unit`, `result`, `command`; hizmetin kendi denetimi şu
+an bir satır yazıyorsa `detail`). `command`, `sudo systemctl reset-failed
+<failed_unit>` komutudur; CelikPanel onu çalıştırmaz.
+
+- `200`, `note.code` `SERVICE_ACTION_NOTE`, `note.reason` `unit_marked_failed`
+  API: "The service was stopped and is not running. systemd now shows its unit
+  as failed, which it was not before the stop. That mark is systemd's own
+  record of how the unit's stop went (with the result exit-code: a command of
+  the unit exited with an error), and CelikPanel leaves it as it is. Start can
+  be used from this state. To clear the mark without starting the service, the
+  server owner runs the command shown."
+- `services.action.note.unit_marked_failed`
+  EN: "{unit} was stopped and is not running. systemd now shows {failed_unit}
+  as failed (result: {result}), which it was not before the stop. That mark is
+  systemd’s own record of how the unit’s stop went (with the result exit-code,
+  a command of the unit exited with an error), and CelikPanel leaves it as it
+  is. Start can be used from this state. To clear the mark without starting,
+  run {command} on the server."
+  TR: "{unit} durduruldu ve çalışmıyor. systemd şimdi {failed_unit} birimini
+  failed (sonuç: {result}) olarak gösteriyor; durdurmadan önce öyle değildi. Bu
+  işaret, systemd’nin birimin durdurulmasının nasıl geçtiğine dair kendi
+  kaydıdır (sonuç exit-code ise birimin bir komutu hatayla çıkmıştır) ve
+  CelikPanel onu olduğu gibi bırakır. Bu durumdan Başlat kullanılabilir.
+  İşareti başlatmadan temizlemek için sunucuda {command} komutunu çalıştırın."
+- `200`, `note.code` `SERVICE_ACTION_NOTE`, `note.reason` `unit_marked_failed_config`
+  API: "The service was stopped and is not running. systemd now shows its unit
+  as failed, which it was not before the stop. That mark is systemd's own
+  record of how the unit's stop went (with the result exit-code: a command of
+  the unit exited with an error), and CelikPanel leaves it as it is. The
+  service's own check refuses its configuration at present, and the unit's stop
+  command reads the same file; the service will not start until that is
+  corrected. Start can be used from this state. To clear the mark without
+  starting the service, the server owner runs the command shown."
+- `services.action.note.unit_marked_failed_config`
+  EN: "{unit} was stopped and is not running. systemd now shows {failed_unit}
+  as failed (result: {result}), which it was not before the stop. That mark is
+  systemd’s own record of how the unit’s stop went, and CelikPanel leaves it as
+  it is. {unit} refuses its own configuration at present (its line is below),
+  and the unit’s stop command reads the same file; it will not start until that
+  is corrected. To clear the mark without starting, run {command} on the
+  server."
+  TR: "{unit} durduruldu ve çalışmıyor. systemd şimdi {failed_unit} birimini
+  failed (sonuç: {result}) olarak gösteriyor; durdurmadan önce öyle değildi. Bu
+  işaret, systemd’nin birimin durdurulmasının nasıl geçtiğine dair kendi
+  kaydıdır ve CelikPanel onu olduğu gibi bırakır. {unit} şu an kendi
+  yapılandırmasını reddediyor (satırı aşağıda) ve birimin durdurma komutu da
+  aynı dosyayı okur; bu düzeltilene dek başlamaz. İşareti başlatmadan
+  temizlemek için sunucuda {command} komutunu çalıştırın."
+
+**Arşiv girdilerini dışarıda bırakan cPanel içe aktarımı (`POST /api/v1/import/cpanel/apply`).**
+
+Arşivin mutlak yolla adlandırdığı bir girdi kendi adımıdır, `member:<ad>`; en
+çok 20 tanesi listelenir, listelenmeyen n tanesi için tek bir `members:<n>`
+adımı gelir. Başka eksik yoksa alan adı bitmiş diye işaretlenir. Dosya adımının
+kendi satırı, arşivin ne kadarının site klasörünün dışında olduğunu da
+sunucunun İngilizcesiyle söyler: "2 files, 59 bytes. 5 other entries of the
+archive are outside the site folder (homedir/public_html) and are not copied by
+this step: homedir/mail (2), homedir/etc (1), mysql (1), homedir (1). The
+databases, mailboxes, forwarders and DNS records are read from their own
+entries by their own steps; mailbox contents and the other folders of the home
+directory are not imported". Tümüyle reddedilen bir dosya adımı girdiyi
+adlandırır: "unsupported cpmove site entry type:
+cpmove-user/homedir/public_html/uploads is a symbolic link".
+
+- step `member:<name>`, `detail`
+  API: "not imported: the archive names this entry with an absolute path, and
+  an import writes only below the site's own folder; nothing was written for
+  it"
+- `import.detail.absoluteMember`
+  EN: "Not imported: the archive names this entry with an absolute path, and an
+  import writes only inside the site’s own folder. Nothing was written for it."
+  TR: "İçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe
+  aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir
+  şey yazılmadı."
+- `200`, `status: partial`, `domain_status: active`, `message`
+  API: "The import ended and every part that was chosen was imported; {domain}
+  is in service. Imported: {imported}. Not imported: {not imported}. These
+  entries of the archive were refused by their names, and nothing was written
+  for them; the reason of each is in its step below. If one of them is a file
+  the site needs, add it with the file manager of {domain}. Importing the
+  archive again refuses the same entries; nothing continues by itself."
+- `import.partial.entriesBody`
+  EN: "The import has ended. Everything you chose was imported, and {domain} is
+  in service. The archive entries listed as not imported were refused by their
+  names; nothing was written for them."
+  TR: "İçe aktarma sona erdi. Seçtiğiniz her şey içe aktarıldı ve {domain}
+  yayında. İçe aktarılmadı diye listelenen arşiv girdileri adları yüzünden
+  reddedildi; onlar için hiçbir şey yazılmadı."
+- `import.partial.entriesNext`
+  EN: "Nothing more is needed for {domain}. If one of these entries is a file
+  the site needs, add it with the site’s file manager. Importing the archive
+  again refuses the same entries."
+  TR: "{domain} için başka bir şey gerekmiyor. Bu girdilerden biri sitenin
+  ihtiyaç duyduğu bir dosyaysa onu sitenin dosya yöneticisiyle ekleyin. Arşivi
+  yeniden içe aktarmak aynı girdileri yine reddeder."
+- `import.part.member`
+  EN: "Archive entry {name}"
+  TR: "Arşiv girdisi {name}"
+- `import.part.moreMembers`
+  EN: "{name} more archive entries"
+  TR: "{name} arşiv girdisi daha"
+
+**Sunulan sürüm burada daha önce denendiğinde güncelleme kartı (`GET /api/v1/panel/update/check`, `previous_attempt`).**
+
+Başlat düğmesinin üstünde, şu sırayla gösterilir: başlık, ne olduğu ve
+sunucunun şu an neyi çalıştırdığı, kaydedilen neden
+(`panelUpdate.previousAttempt.cause`, değişmedi) ya da neden kaydedilmediği, ve
+yeniden başlatmanın ne yaptığı. Geri dönüşü kaydedilmemiş başarısız bir deneme
+2026-10-01 tarihli başlığını ve cümlesini korur; artık neden kaydedilmediğinde
+bunu da söyler. Bu bildirim Başlat düğmesini hiçbir zaman kapatmaz ve sürüm
+hiçbir zaman gizlenmez.
+
+- `panelUpdate.previousAttempt.rolledBackTitle`
+  EN: "This version was already tried on this server and rolled back"
+  TR: "Bu sürüm bu sunucuda daha önce denendi ve geri alındı"
+- `panelUpdate.previousAttempt.recovered`
+  EN: "{version} was started here on {time}. The update did not complete, and
+  the server was returned to {current}, which it runs now."
+  TR: "{version} burada {time} tarihinde başlatıldı. Güncelleme tamamlanmadı ve
+  sunucu {current} sürümüne döndürüldü; şu an onu çalıştırıyor."
+- `panelUpdate.previousAttempt.noCause`
+  EN: "The server recorded no more specific cause for that attempt."
+  TR: "Sunucu o deneme için daha belirli bir neden kaydetmedi."
+- `panelUpdate.previousAttempt.again`
+  EN: "Starting it again runs the same update. If the cause was on this server
+  and has been corrected, the result can differ; otherwise expect the same one.
+  A corrected version, when it is published, is offered here as a newer
+  version. The button below still starts {version}."
+  TR: "Yeniden başlatmak aynı güncellemeyi çalıştırır. Neden bu sunucudaysa ve
+  giderildiyse sonuç değişebilir; değilse aynı sonucu bekleyin. Düzeltilmiş bir
+  sürüm yayımlandığında burada daha yeni bir sürüm olarak sunulur. Aşağıdaki
+  düğme {version} sürümünü yine başlatır."
+
+**Her birinin çizildiği yer.** Reddedilen site: Alan Adı Ekle penceresi ve içe
+aktarma sayfası (`ErrorBanner`); orada kalır. nginx'in satırı cümlenin altında,
+program çıktısının yazı tipiyle çizilir. Durdur notu: bir bileşenin
+sayfasındaki ve bileşen listesindeki bildirim (`ServiceActionNotice`);
+`role="status"` ile dikkat yüzeyinde, asla hata yüzeyinde değil. Hizmetin
+satırı ve komut, diğer sonuçlardaki gibi ayrı gösterilir. İçe aktarım: sonucun
+iki listesi ve adımları (`ImportPage`). Güncelleme kartı: `PanelUpdateCard`.
+
+**Sınırlar.** Alan Adı Ekle penceresi statik bir site oluşturur ve hiçbir zaman
+PHP sürümü göndermez; bu yüzden tarayıcıda reddedilen bir siteye içe aktarımla
+ya da tarayıcı kaydındaki taklit bir yanıtla ulaşılır. Barındırma türü ya da
+sertifika değişikliği sırasındaki aynı ret hâlâ önceki hatasını yanıtlar. Dosya
+adımının site klasörü dışındaki girdilere dair satırı sunucunun İngilizcesidir.
+Gerçek bir Chrome'da, yerel taklit sunucuya karşı incelendi; gerçek bir
+Panel'de değil.

@@ -7,6 +7,7 @@ import { Button, Checking, CouldNotCheck, Dialog, EmptyState, ErrorBanner, Searc
 import { PageHeader } from './PageHeader';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
 import { ServiceActionNotice, isServiceActionOutcome } from './ServiceActionNotice';
+import { readServiceActionNote } from '../lib/serviceActionNote';
 import { lastKnown, useRemote } from '../lib/remote';
 import {
     canonicalMailHostname,
@@ -940,6 +941,13 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 showToast('error', apiErrorText(error, t, 'services.actionFailed'));
                 return;
             }
+            // A success can leave something to know (a Stop that left the
+            // unit marked as failed): it is said under the same notice.
+            // Başarı, bilinmesi gereken bir şey bırakabilir.
+            // An answer that cannot be read ends in the handler below: the
+            // state is not verified, and nothing is assumed about it.
+            const note = readServiceActionNote(await res.json());
+            if (note) setActionOutcome(note);
             if (!(await loadServices())) markStateUnverified();
         } catch {
             // No answer arrived: the action may have been carried out. That is
@@ -991,6 +999,13 @@ export function ServiceList({ onManageService }: ServiceListProps) {
                 showToast('error', apiErrorText(error, t, 'services.actionFailed'));
                 return;
             }
+            // A success can leave something to know (a Stop that left the
+            // unit marked as failed): it is said under the same notice.
+            // Başarı, bilinmesi gereken bir şey bırakabilir.
+            // An answer that cannot be read ends in the handler below: the
+            // state is not verified, and nothing is assumed about it.
+            const note = readServiceActionNote(await res.json());
+            if (note) setActionOutcome(note);
             if (!(await loadServices())) markStateUnverified();
         } catch {
             // No answer arrived: the action may have been carried out. That is

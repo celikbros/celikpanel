@@ -100,6 +100,8 @@ const (
 	errCodeDNSSECStatusUnavailable        = "DNSSEC_STATUS_UNAVAILABLE"
 	errCodeWebServerRequired              = "WEB_SERVER_REQUIRED"
 	errCodePHPRequired                    = "PHP_REQUIRED"
+	errCodePHPVersionNotInstalled         = "PHP_VERSION_NOT_INSTALLED"
+	errCodeSiteWebServerRefused           = "SITE_WEB_SERVER_REFUSED"
 	errCodeNoSubscription                 = "NO_SUBSCRIPTION"
 	errCodeQuotaDomains                   = "QUOTA_DOMAINS_EXCEEDED"
 	errCodeQuotaDisk                      = "QUOTA_DISK_EXCEEDED"

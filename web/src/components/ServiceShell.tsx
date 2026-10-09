@@ -7,6 +7,7 @@ import { Button, Checking, CouldNotCheck, Dialog, EmptyState, StatusDot } from '
 import { HelpButton } from './HelpDrawer';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
 import { ServiceActionNotice, isServiceActionOutcome } from './ServiceActionNotice';
+import { readServiceActionNote } from '../lib/serviceActionNote';
 import { decodeManagedServicesSnapshot, useComponentOperation } from './ComponentOperation';
 import { publishComponentCensus } from '../lib/componentCensus';
 
@@ -372,6 +373,21 @@ export function ServiceShell({
                 showToast('error', apiErrorText(refusal, t, 'svc.actionFailed'));
                 return;
             }
+            // A success can leave something to know (a Stop that left the
+            // unit marked as failed): it is said under the same notice.
+            // Başarı, bilinmesi gereken bir şey bırakabilir.
+            let answer: unknown;
+            try {
+                answer = await r.json();
+            } catch {
+                // The answer could not be read: what the action came to is not
+                // known. The state is read again; nothing is sent twice.
+                showToast('warning', t('common.resultUnknown'));
+                await load();
+                return;
+            }
+            const note = readServiceActionNote(answer);
+            if (note) setActionOutcome(note);
             await new Promise((res) => setTimeout(res, 1500));
             await load();
         } finally {

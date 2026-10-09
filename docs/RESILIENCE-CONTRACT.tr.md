@@ -3093,3 +3093,250 @@ gerçek hizmetlerde ölçülmedi.
     durup duramayacağı yalnızca o koşuyla saptanır.
   - Gerçek cPanel arşivleri (iç içe `homedir.tar` olarak ev dizini, askıya
     alınmış posta kutuları, büyük siteler) içe aktarılmadı.
+
+### Son gerçek sistem turunun düzeltmeleri (ilke 1-4 ve 6, 2026-10-12)
+
+D-025 ilke 1 (sahibin yerel yapılandırması algılanır, değiştirilmez), 2
+(bilinmeyen; yok, boş ya da başarı değildir), 3 (güvensiz yazma kendi sınırında
+durdurulur), 4 (bir değişiklik ön görüntüsünü okur, doğrular ve sınanmış bir
+tersine sahiptir) ve 6 (ekran yetkili durumu çizer); D-022, D-024, D-029.
+Hiçbir P0 işi kapanmadı ya da ilerlemedi. Kaynak: 2026-10-09 (UTC) tarihli
+`set3` koşusu; tek kullanımlık QEMU/KVM konuklarında (Debian 13, Ubuntu 24.04,
+Arch; kanıt `deploy/e2e/release-recovery/evidence/set3-20261012/`). Koşu, bir
+önceki kaydın düzelttiği her işi Debian 13 ve Ubuntu 24.04 üzerinde ve
+yayımlanmış v0.1.0-alpha.81 sürümünden başlayan güncelleme matrisinin tümünü
+geçti; Arch üzerinde bir aday kusur (P5b) ve O16-O21 gözlemlerini ölçtü.
+Buradaki hiçbir şey kurulu bir sunucuda gözlenmedi. Bu kayıt onları kaynakta
+düzeltir; düzeltmelerin hiçbiri gerçek hizmetlerde ölçülmedi.
+
+- **Ölçülen.**
+  - *P5b, Arch: PHP sitesi yine oluşturulamadı.* Havuz yazıldı ve PHP-FPM onu
+    kabul etti; ardından nginx sanal konağı reddetti (`open()
+    "/etc/nginx/snippets/fastcgi-php.conf" failed`). PHP sanal konağı
+    `snippets/fastcgi-php.conf` dosyasını içeriyordu; bu dosyayı Debian ve
+    Ubuntu'nun nginx paketleri (nginx-common) getirir, Arch'ınki getirmez.
+    Arch, `/etc/nginx` içinde `fastcgi.conf` ve `fastcgi_params` dosyalarını
+    getirir ve `snippets` dizini yoktur. Agent sanal konağı eski haline getirdi
+    ve hesabı kaldırdı; Panel `500 INTERNAL`, içe aktarım `502
+    IMPORT_SITE_NOT_CREATED` yanıtını verdi. O tek dosya elle
+    yerleştirildiğinde (ikinci okuma, bir sahip işlemi) site oluşturuldu,
+    paketin kendi birimi altında kendi hesabıyla PHP çalıştırdı, temiz silindi
+    ve her içe aktarım tamamlandı.
+  - *O21.* O konukta sitenin soketi `/run/php-fpm/php8.3-fpm-site2.sock` idi;
+    oysa tek PHP 8.5.11'dir. Oluşturma işleyicisi Panel'in kendi diskinde
+    `/etc/php/<sürüm>/fpm` okuyor, bir şey bulamayınca sabit `8.3` değerini
+    alıyordu.
+  - *O16.* Durmuş bir nginx'in ve durmuş PostgreSQL sarmalayıcısının yeniden
+    yüklenmesi, systemd'nin satırıyla ("postgresql.service is not active,
+    cannot reload.") `502` / `command` yanıtını aldı: systemd yeniden
+    yüklemeyi, Agent'ın kendi okuması uygulanmadan reddetti. Yalnızca Postfix
+    ve Dovecot `409` / `not_running` yanıtı alıyordu.
+  - *O17.* Mutlak yolla adlandırılmış bir arşiv üyesi içe aktarımın dışında
+    bırakıldı ve yanıt bundan tek söz etmeden `200` / `active` oldu. Onun için
+    hiçbir şey yazılmamıştı.
+  - *O19.* Reddettiği bir main.cf ile Postfix durdurulduktan sonra yanıt doğru
+    bir başarıydı (ana süreç gitmişti) ve systemd birimi `failed`,
+    `Result=exit-code` gösteriyordu (Debian 13'te `postfix.service`, Ubuntu
+    24.04'te `postfix@-.service`). Günlük nedenini gösterir: birimin kendi
+    durdurma komutu (`postfix stop`) önce main.cf dosyasını okur ve 1 ile çıkar
+    ("fatal: bad numerical configuration"); systemd de süreçleri kendisi
+    sonlandırır.
+  - *O18.* Kusurlu bir adaydan otomatik geri dönüşten sonra güncelleme denetimi
+    aynı sürümü, `previous_attempt: {phase: recovered}` ile yine sunar. İçinde
+    tipli bir neden yalnızca kurtarma kaydı bir neden tutuyorsa bulunur
+    (başlangıç denetimi adayı); geçişi başarısız olan adayda bulunmaz.
+- **Değişen.**
+  - *PHP devri sanal konakta açık yazılır*
+    (`internal/services/templates/nginx/vhost.conf.tmpl`). Debian'ın
+    `snippets/fastcgi-php.conf` dosyasının altı yönergesi onun yerine, onun
+    sırasıyla üretilir: `fastcgi_split_path_info`, `try_files
+    $fastcgi_script_name =404` koruması, `set $path_info`, `fastcgi_param
+    PATH_INFO`, `fastcgi_index index.php`, `include fastcgi.conf`. İçermeden
+    sonraki satırlar değişmedi. Bir sanal konak artık yalnızca nginx'in kendi
+    dosyaları olan ve her paketin kurduğu `fastcgi.conf` ile `fastcgi_params`
+    dosyalarını içerir. Sunucuya dosya eklenmez ve sahibin hiçbir dosyasına
+    dokunulmaz. İçermeyle üretilmiş bir sitenin yeniden üretimi, içermenin
+    açılmış haliyle aynı yapılandırmadır: nginx bir içermeyi, içerilen dosyanın
+    metni onun yerindeymiş gibi okur.
+  - *Web sunucusunun reddettiği site öyle yanıtlanır*
+    (`internal/services/nginx_generator.go`, `cmd/agent/site_rpc.go`,
+    `internal/services/site_orchestrator.go`,
+    `cmd/panel/domain_web_server_refused.go`). Kendi durumuyla çıkan `nginx -t`
+    tiplidir (`NginxConfigRefusedError`); tersi sonuna kadar uygulanmış bir
+    sanal konak değişikliği de öyledir (`VhostRestoredError`: dosya ve bağlantı
+    eski halindedir, nginx önceki yapılandırmayı kabul etmiş ve yeniden
+    yüklenmiştir). Agent yalnızca ikisi birden geçerliyse, nginx'in ilk
+    `[emerg]` satırıyla `WebServerRefusedConfig` yanıtını verir. Panel `502
+    SITE_WEB_SERVER_REFUSED` yanıtını verir; `reason`, sitenin Agent üzerindeki
+    silinmesinin (düzenleyicinin telafisi; yalnızca sanal konak, havuz, hesap
+    ve site dizini gittiğinde başarı yanıtlar) doğrulanıp doğrulanmadığını
+    söyler. nginx'in satırı yalnızca yöneticiye gösterilir.
+  - *Yeni bir sitenin PHP sürümü, sunucunun çalıştırdığı bir sürümdür*
+    (`cmd/panel/domain_handlers.go`, `domain_php_handlers.go`,
+    `internal/services/service_scanner.go`). Oluşturma işleyicisi Agent'ın
+    bildirdiği en yeni sürümü alır (tek ve sürümsüz PHP-FPM'li bir sunucuda
+    programın kendi yanıtı) ve adı verilen ama sunucunun çalıştırmadığı bir
+    sürümü hiçbir şey oluşturulmadan reddeder (`409
+    PHP_VERSION_NOT_INSTALLED`). Sürüm değişikliği, Debian'ın yolunu kurmak
+    yerine Agent'ın havuzu yazdığı soketi kaydeder
+    (`services.PHPFPMSocketPath`). Liste, sitesi olmayan bir alan adı için PHP
+    sürümü yanıtlamaz (`8.3` yanıtlıyordu). PHP-FPM için listelenen
+    yapılandırma dosyaları kurulu düzenin dosyalarıdır; sürüm varsayılmaz.
+  - *Uygulama birimi, sunucunun web sunucusu hesabıyla çalışır*
+    (`cmd/agent/app_rpc.go`). Panel `www-data` ister; bu hesabın olmadığı yerde
+    birim, ürünün geri kalanının okuduğu sırayla `nginx` ya da `http` ile
+    yazılır.
+  - *Çalışmayan her şeyin yeniden yüklenmesi `not_running` olur*
+    (`cmd/agent/service_action_verify.go`). Hiçbir şey gönderilmeden önce
+    okunur: bir sarmalayıcı, yeniden yüklemesinin ulaştığı her birim `inactive`
+    ya da `failed` ise; başka her birim, yüklüyse ve kendisi `inactive` ya da
+    `failed` ise. Arada bir durum, yüklü olmayan bir birim ve okunamayan bir
+    durum, hizmet yöneticisinin kendi yanıtını korur.
+  - *Birimi `failed` işaretli bırakan Durdur bunu söyler ve işareti bırakır*
+    (`cmd/agent/service_action_verify.go`,
+    `cmd/panel/service_action_outcome.go`). Karar: Agent `systemctl
+    reset-failed` çalıştırmaz. İşaret, systemd'nin birimin durdurma komutunun
+    ne yaptığına dair kendi kaydıdır ve sahibin o sunucudaki kendi `systemctl
+    stop postfix` komutunun bıraktığı kayıtla aynıdır; yani Panel kendi yerel
+    durumunu eklemez. İşareti silmek, yapılandırmanın reddedildiğini ve
+    hizmetin bu haliyle başlatılamayacağını gösteren tek yerel belirtiyi
+    `systemctl --failed` çıktısından ve izlemeden kaldırır, ayrıca birimin
+    başlatma sınırı sayaçlarını sıfırlardı; bir Durdur'dan bu istenmedi.
+    Agent'ın gönderebileceği hiçbir şey işareti önlemez: systemd, birimi
+    durdurmanın her yolunda birimin durdurma komutunu çalıştırır. Birim
+    durdurmadan önce ve doğrulanmış bir durdurmadan sonra okunur; önce `failed`
+    olmayan ve sonra `failed` olan birim, başarının içinde (`note`),
+    systemd'nin sonucuyla ve Postfix için kendi denetiminin şu an yazdığı
+    satırla bildirilir.
+  - *İçe aktarımın dosya adımının dışarıda bıraktıkları sayılır ve
+    adlandırılır* (`cmd/agent/cpmove_left_out.go`, `cpmove_extract_linux.go`,
+    `cmd/panel/import_handlers.go`). Her üye şunlardan tam birinde biter: içe
+    aktarıldı; adımın tümü eskisi gibi reddedildi, artık üyeyi ve ne olduğunu
+    adlandırarak (sembolik bağ, katı bağ, aygıt düğümü, adlandırılmış boru,
+    `..`, ters eğik çizgi ya da NUL içeren ad, boyut ya da sayı sınırını aşan
+    içerik); adı yüzünden reddedilip dışarıda bırakıldı (mutlak yol), bu da
+    `member:<ad>` adımı olarak, en çok 20 tane ve ardından bir sayıyla
+    listelenir ve içe aktarımı `partial` yapar; ya da `homedir/public_html`
+    dışındadır, bu da arşivde bulunduğu klasöre göre sayılır ve dosya adımının
+    kendi satırında söylenir. Tek eksiği reddedilen üyeler olan bir içe aktarım
+    `domain_status: active` ile `partial` olur: seçilen her parça yerindedir ve
+    aynı arşivin aynı girdileri yine reddedilirdi.
+  - *Güncelleme kartı Başlat'tan önce daha önce ne olduğunu söyler*
+    (`web/src/components/PanelUpdateCard.tsx`). Burada denenmiş ve geri
+    döndürülmüş bir sürümün kendi başlığı vardır; sunucunun şu an neyi
+    çalıştırdığını, kaydedilen nedeni ya da neden kaydedilmediğini ve yeniden
+    başlatmanın ne yaptığını söyler. Sürüm gizlenmez ve Başlat kapatılmaz.
+  - *H42* (`deploy/e2e/release-recovery/build-upd1-artifacts.sh`): başarısız
+    olan ya da reddedilen bir dist derlemesi, ardından önceki bir derlemenin
+    aynı adla bıraktığı arşivle devam edilmek yerine derleyiciyi durdurur.
+- **Debian düzenine dair aranan diğer varsayımlar.**
+  - Burada düzeltilenler: snippet dosyası; sabit `8.3`; sürüm değişikliğinin
+    soket yolu; uygulama biriminin hesabı olarak `www-data`; yapılandırma
+    taramasının PHP-FPM dosya listesi.
+  - Zaten sunucudan okunanlar ve ikinci Arch okumasında çalıştığı görülenler:
+    sanal konak dizinleri (`sites-available`, `sites-enabled`; web sunucusunun
+    kurulum adımı bunları Arch'ın `nginx.conf` dosyasına ekler), web sunucusu
+    hesabı, PHP-FPM'in havuz dizini, birimi ve soket dizini, `/var/log/nginx`.
+  - Düzeltilmeyenler: tek birimli bir sunucuda PHP eklenti dizinleri hâlâ
+    Debian'ınkilerdir; MariaDB'nin ayar dosyası
+    `/etc/mysql/mariadb.conf.d/50-server.cnf` yoludur;
+    `DetectInstalledPHPVersion` hâlâ yalnızca sürümlü ağaçları okur (web
+    postası kurulumu onu yalnızca Debian'da var olan paket adları için
+    kullanır); statik oluşturulmuş bir site PHP'yi barındırma türü
+    değişikliğiyle alır ve bu Arch üzerinde denenmedi.
+- **API değişiklikleri (sürüm notları için).**
+  - `POST /api/v1/domains/create`: nginx siteyi reddettiğinde `500 INTERNAL`
+    yerine, `reason` `removed` ya da `cleanup_unconfirmed`, `vars` ve yönetici
+    için `details` ile `502 SITE_WEB_SERVER_REFUSED`; adı verilen ama sunucunun
+    çalıştırmadığı bir PHP sürümü için `409 PHP_VERSION_NOT_INSTALLED`.
+  - `POST /api/v1/import/cpanel/apply`: bu neden için `502
+    IMPORT_SITE_NOT_CREATED` yerine `502 SITE_WEB_SERVER_REFUSED`
+    (`import_removed`, `import_cleanup_unconfirmed`); `member:<ad>` ve
+    `members:<n>` adımları; yalnızca böyle girdiler eksikse `domain_status:
+    active` ile `status: partial`; dosya adımının `detail` alanı daha uzundur.
+  - `POST /api/v1/service/action`: durmuş her birimin yeniden yüklenmesi için
+    `409` / `not_running` (`502` / `command` idi); başarılı bir Durdur `note`
+    taşıyabilir.
+  - `GET /api/v1/domains`: sitesi olmayan bir alan adı için `php_version`
+    boştur.
+- **Değişmeyen ve nedeni.**
+  - Paketin `/etc/nginx/snippets/fastcgi-php.conf` dosyasını düzenlemiş bir
+    sahip: bir sitenin sanal konağı, bir sonraki yeniden üretiminden sonra o
+    dosyayı artık okumaz. Dosya yerinde bırakılır ve paketteki halinden farklı
+    olduğunu hiçbir şey algılamaz.
+  - Barındırma türü, sertifika ya da site ayarı değişikliği sırasında nginx'in
+    aynı reddi hâlâ önceki hatasını yanıtlar; yeni yanıtı yalnızca site
+    oluşturma ve içe aktarım taşır.
+  - Site klasörünün altındaki bir `..` bileşeni, bağ ya da aygıt hâlâ dosya
+    adımının tümünü reddeder; yalnızca mutlak bir ad tek başına dışarıda
+    bırakılır.
+  - O18: denetim sürümü yine sunar ve sürüm taban dosyası geri dönüşten sonra
+    adayın sıra numarasında kalır. Güncellemenin kendi satırını ("offline panel
+    database migration failed ...") geri dönüşten sonraki sonuç bildirimi
+    gösterir; Başlat'tan önceki kart tipli nedeni ya da neden kaydedilmediğini
+    gösterir.
+  - O20 (yayımlanmış alpha.81'in Arch üzerindeki `web_mail` planı) bu kaynağın
+    değil, başlangıç sürümünün koşum sınırıdır.
+- **Şema ya da sürüm geçişi.**
+  - Veritabanı şeması ve kalıcı durum yok. Agent'ın RPC'si adıyla aktarılan
+    alanlar kazanır: `CreateSiteResponse.ErrorDetail` ve
+    `web_server_refused_config` hata kodu; `ServiceActionResult.Notice`,
+    `NoticeUnit`, `NoticeResult`, `NoticeDetail`;
+    `CpmoveExtractResponse.Refused`, `RefusedCount`, `OutsideCount`,
+    `OutsideGroups`. Bunlar olmayan bir Agent ile karşılaşan Panel eskisi gibi
+    yanıtlar. Diskteki sanal konak dosyaları bir güncellemeyle yeniden
+    yazılmaz: bir sitenin sanal konağı yeni metni bir sonraki üretiminde alır
+    (sertifika, ayar, barındırma değişikliği) ve o üretim aynı yapılandırmadır.
+    Bir sürümle zaten kaydedilmiş siteler ve soketler onu korur.
+- **Kurtarma davranışı.**
+  - Hiçbir şey kendiliğinden yeniden denemez. nginx'in reddettiği site,
+    Agent'ın kendi tersi ve Panel'in telafisiyle yeniden kaldırılır; bu
+    doğrulanmadığında alan adı satırı, Alan Adları sayfasından silinebilsin
+    diye tutulur. Durmuş bir birimin yeniden yüklenmesi hiçbir şey göndermez.
+    Bir Durdur'un ardından hiçbir zaman `reset-failed` gelmez. Reddedilen
+    üyeleri olan bir içe aktarım, içe aktardığı her şeyi korur ve alan adını
+    bitmiş diye işaretler.
+- **Kanıt.**
+  - Yalnızca bileşen testleri; Arch üzerindeki gerçek sistem denetimi bekliyor.
+    Services: `nginx_php_handoff_test.go` (üretilen PHP konumu, yönerge
+    yönerge, içermenin yerine Debian'ın dosyası konmuş eski konumdur; dosyanın
+    metni set3 koşusunun kaydettiği SHA-256 ile sabitlenmiştir; hiçbir proje
+    türünün sanal konağı `snippets/` altında bir dosya adlandırmaz ve nginx'in
+    iki dosyasından başkasını içermez), `set3_corrections_test.go`. Agent:
+    `set3_corrections_test.go`, `cpmove_set3_linux_test.go`. Panel:
+    `set3_corrections_test.go`. Ekranlar:
+    `web/tests/set3-corrections.test.mjs`, `panel-update-card-mounted.test.mjs`
+    ve yerel taklit sunucuya karşı gerçek bir Chrome
+    (`web/tools/browser-inspect`, `siterefused`, `importentries`, `stopnote`,
+    `updaterolledback` senaryoları; masaüstü ve telefon, İngilizce ve Türkçe,
+    açık ve koyu).
+  - Debian 13'ün kendi nginx'iyle yerel bir denetim (`nginx` ve `nginx-common`
+    1.26.3-3+deb13u7; geliştirme konuğunun özel bir dizinine indirilip açıldı,
+    kurulmadı; yalnızca yerel döngü adresi): paketin
+    `snippets/fastcgi-php.conf` dosyası sabitlenen SHA-256 değerine sahiptir
+    (`a9dd98bf...411f2`); `nginx -t`, önceki kaynağın ürettiği sanal konağı
+    snippet bulunan bir düzende kabul eder ve onsuz, Arch'ta ölçülen satırla
+    reddeder; `nginx -t`, bu kaynağın ürettiği sanal konağı `snippets` dizini
+    olmayan bir düzende kabul eder; ve 17 istek için (bir betik, bir sorgu
+    dizgisi, `PATH_INFO`, eksik bir betik, ön denetleyici, statik bir dosya,
+    noktalı bir dosya, ACME konumu) durum kodu ve her FastCGI parametresi,
+    sırasıyla, ikisinde de aynıdır. Denetlenmeyen: Ubuntu'nun paketi, Arch'ın
+    nginx'i, PHP-FPM'in kendisi.
+- **Açık.**
+  - Gerçek sistem denetimi Arch üzerinde şunları göstermelidir: stok bir
+    sunucuda oluşturulan PHP sitesi, sitenin hesabıyla çalışan bir PHP sayfası,
+    silinen site, tamamlanan içe aktarım; kurulu PHP'nin sürümünü taşıyan soket
+    ve kayıtlı sürüm. Sanal konak şablonu değiştiği için Debian 13 ve Ubuntu
+    24.04 üzerinde: `/etc/nginx/snippets/fastcgi-php.conf` dosyasının
+    sabitlenen SHA-256 değerine sahip olduğu; oluşturulan PHP sitesi, çalışan
+    PHP sayfası, `PATH_INFO` ve eksik bir betiğin eskisi gibi yanıtlandığı;
+    yayımlanmış alpha.81'in oluşturduğu bir sitenin bu kaynakla yeniden
+    üretildiği, `nginx -t` komutunun geçtiği ve sayfanın hâlâ sunulduğu.
+  - Ayrıca ölçülecekler: reddedilen sitenin, ondan hiçbir şey kalmadan `502
+    SITE_WEB_SERVER_REFUSED` yanıtını alması; durmuş nginx, MariaDB ve
+    PostgreSQL sarmalayıcısının yeniden yüklenmesinin `409` yanıtını alması;
+    reddedilen main.cf ile Postfix'in durdurulmasının not ile `200` yanıtını
+    alması ve birimin hâlâ `failed` olması; mutlak üyenin listelenmesi ve alan
+    adının `active` olması.
+  - Gerçek cPanel arşivleri içe aktarılmadı; site klasörü dışındaki girdilerin
+    sayımı yalnızca deneme arşivlerinde görüldü.

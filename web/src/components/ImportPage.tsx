@@ -3,6 +3,7 @@ import { AlertTriangle, DownloadCloud, FolderInput, Eye, Mail, ArrowRight, Netwo
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { readApiError, type ApiError } from '../lib/apiError';
+import { siteWebServerRefusedIn } from '../lib/siteWebServerRefused';
 import type { TranslationKey } from '../i18n/en';
 import { Button, Checking, CouldNotCheck, ErrorBanner, inputClass } from './ui';
 import { useNavigate } from '../router';
@@ -126,6 +127,12 @@ const namedPartKeys: Record<string, TranslationKey> = {
     mail: 'import.part.mailbox',
     forwarder: 'import.part.forwarder',
     database: 'import.part.database',
+    // An entry of the archive the files step refused by its name, and the
+    // count of those that are not listed one by one (12 Oct 2026).
+    // Dosya adımının adı yüzünden reddettiği arşiv girdisi ve tek tek
+    // listelenmeyenlerin sayısı.
+    member: 'import.part.member',
+    members: 'import.part.moreMembers',
 };
 type Say = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
@@ -136,8 +143,20 @@ function partLabel(step: string, t: Say): string {
     return named ? t(named, { name: step.slice(colon + 1) }) : step;
 }
 
-// The one line of the server's that this page has its own words for.
+// The lines of the server's that this page has its own words for.
 const noPasswordDetail = 'not imported: the archive holds no password for this mailbox';
+const absoluteMemberDetail = "not imported: the archive names this entry with an absolute path, and an import writes only below the site's own folder; nothing was written for it";
+const detailKeys: Record<string, TranslationKey> = {
+    [noPasswordDetail]: 'import.detail.noPassword',
+    [absoluteMemberDetail]: 'import.detail.absoluteMember',
+};
+
+// An archive entry that was refused by its name is not a chosen part that is
+// missing: when nothing else is missing, every chosen part was imported and
+// the domain is in service.
+// Adı yüzünden reddedilen arşiv girdisi, eksik kalan seçilmiş bir parça
+// değildir: başka eksik yoksa seçilen her parça içe aktarılmıştır.
+const refusedEntry = (step: string) => step.startsWith('member:') || step.startsWith('members:');
 
 type Stage = 'source' | 'preview' | 'result';
 
@@ -308,7 +327,7 @@ export function ImportPage() {
             if (!res.ok) {
                 // Any other answer is the Panel's own: the result is known.
                 // Başka her yanıt Panel'in kendi yanıtıdır: sonuç bilinir.
-                setRefusal(await readApiError(res));
+                setRefusal(siteWebServerRefusedIn(await readApiError(res), t));
                 applyRequest.current = null;
                 setUnknownResult(null);
                 return;
@@ -542,13 +561,17 @@ export function ImportPage() {
                                 <span className="min-w-0 break-words">{t('import.partial.title', { domain: result.domain })}</span>
                             </h3>
                             <p className="mt-1.5 max-w-[75ch] break-words">
-                                {t(result.notImported.length === 0 ? 'import.partial.unfinished' : 'import.partial.body', { domain: result.domain })}
+                                {t(result.notImported.length === 0 ? 'import.partial.unfinished'
+                                    : result.notImported.every(refusedEntry) ? 'import.partial.entriesBody'
+                                        : 'import.partial.body', { domain: result.domain })}
                             </p>
                             <dl className="mt-3 grid gap-x-6 gap-y-3 sm:grid-cols-2">
                                 <PartList label={t('import.partial.notImported')} parts={result.notImported} />
                                 <PartList label={t('import.partial.imported')} parts={result.imported} />
                             </dl>
-                            <p className="mt-3 max-w-[75ch] break-words">{t('import.partial.next', { domain: result.domain })}</p>
+                            <p className="mt-3 max-w-[75ch] break-words">
+                                {t(result.notImported.length > 0 && result.notImported.every(refusedEntry) ? 'import.partial.entriesNext' : 'import.partial.next', { domain: result.domain })}
+                            </p>
                             <div className="mt-3 flex flex-wrap gap-2">
                                 <Button type="button" onClick={() => navigate(`/domains/${encodeURIComponent(result.domain)}`)}>
                                     {t('import.unknown.open', { domain: result.domain })}
@@ -579,7 +602,7 @@ export function ImportPage() {
                                         {partLabel(s.step, t)}
                                         <span className="sr-only">: {t(s.ok ? 'import.step.done' : 'import.step.notDone')}</span>
                                     </div>
-                                    <div className="break-words text-xs text-fg-muted">{s.detail === noPasswordDetail ? t('import.detail.noPassword') : s.detail}</div>
+                                    <div className="break-words text-xs text-fg-muted">{detailKeys[s.detail] ? t(detailKeys[s.detail]) : s.detail}</div>
                                 </div>
                             </li>
                         ))}

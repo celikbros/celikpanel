@@ -247,6 +247,9 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 		if agentReply.ErrorCode == transport.HostingRootNotTraversable && agentReply.HostingRoot != nil {
 			cause = &HostingRootNotTraversableError{Block: *agentReply.HostingRoot}
 		}
+		if agentReply.ErrorCode == transport.WebServerRefusedConfig {
+			cause = &WebServerRefusedConfigError{Detail: agentReply.ErrorDetail}
+		}
 		return nil, errors.Join(cause, so.rollbackCreatedSite(agentReq, domain.ID, siteID))
 	}
 

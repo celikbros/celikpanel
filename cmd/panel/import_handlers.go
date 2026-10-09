@@ -322,6 +322,10 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 			writeHostingRootNotTraversable(w, refusal)
 			return
 		}
+		if refusal, confirmed, ok := webServerRefusedConfig(err); ok {
+			writeSiteWebServerRefused(w, currentCaller(r), req.Domain, refusal, confirmed, true)
+			return
+		}
 		if _, stable := classifyStableAgentError(err); stable {
 			writeServerError(w, err)
 			return
@@ -358,7 +362,18 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 		case !ext.Complete:
 			fail("files", fmt.Errorf("agent did not confirm complete atomic extraction"))
 		default:
-			ok("files", fmt.Sprintf("%d files, %d bytes", ext.Files, ext.Bytes))
+			ok("files", fmt.Sprintf("%d files, %d bytes", ext.Files, ext.Bytes)+importOutsideSiteFolder(&ext))
+			// A member the files step refused by its name was left out while
+			// the rest was imported. It is a part of the archive that was not
+			// imported, and is listed as one (12 Oct 2026; it used to be left
+			// out without a word and the import answered `active`). It does
+			// not keep the domain from being marked as finished: every part
+			// that was chosen is there, and importing the archive again would
+			// refuse the same member.
+			// Dosya adımının adı yüzünden reddettiği üye, arşivin içe
+			// aktarılmayan bir parçasıdır ve öyle listelenir. Alan adının
+			// bitmiş diye işaretlenmesini engellemez.
+			steps = append(steps, importRefusedMemberSteps(&ext)...)
 		}
 	}
 
@@ -612,15 +627,75 @@ func (p *Panel) handleImportApply(w http.ResponseWriter, r *http.Request) {
 			fail("finalize", err)
 		}
 	}
-	if !complete {
+	answer := importApplyAnswerFor(req.Domain, domainID, siteID, steps)
+	if answer.Status != importStatusComplete {
 		p.audit(r, "import.cpanel.incomplete", "domain", domainID)
 	} else {
 		p.audit(r, "import.cpanel.complete", "domain", domainID)
 	}
-	_ = json.NewEncoder(w).Encode(importApplyAnswerFor(req.Domain, domainID, siteID, steps))
+	_ = json.NewEncoder(w).Encode(answer)
 }
 
 const importMailboxWithoutPassword = "not imported: the archive holds no password for this mailbox"
+
+// What the files step left out, in the answer (12 Oct 2026).
+//
+// importRefusedMemberAbsolute is the line of a member the archive names with
+// an absolute path; the import screen has its own words for it.
+const importRefusedMemberAbsolute = "not imported: the archive names this entry with an absolute path, and an import writes only below the site's own folder; nothing was written for it"
+
+// importRefusedMemberSteps lists each refused member as a step that was not
+// imported: `member:<name>`, at most transport.CpmoveRefusedMemberLimit of
+// them, then one `members:<n>` for the n that are not listed. The count is
+// never lost.
+func importRefusedMemberSteps(ext *transport.CpmoveExtractResponse) []importStep {
+	var steps []importStep
+	listed := ext.Refused
+	if len(listed) > transport.CpmoveRefusedMemberLimit {
+		listed = listed[:transport.CpmoveRefusedMemberLimit]
+	}
+	for _, member := range listed {
+		detail := "not imported: the files step refused this entry of the archive by its name; nothing was written for it"
+		if member.Reason == transport.CpmoveRefusedAbsolutePath {
+			detail = importRefusedMemberAbsolute
+		}
+		steps = append(steps, importStep{Step: "member:" + boundedAgentDiagnostic(member.Name), OK: false, Detail: detail})
+	}
+	if rest := ext.RefusedCount - len(listed); rest > 0 {
+		steps = append(steps, importStep{
+			Step: fmt.Sprintf("members:%d", rest), OK: false,
+			Detail: fmt.Sprintf("not imported: %d more entries of the archive were refused by their names in the same way; %d in all", rest, ext.RefusedCount),
+		})
+	}
+	return steps
+}
+
+// importOutsideSiteFolder says, on the files step's own line, how much of the
+// archive is not below homedir/public_html and was therefore not copied by
+// this step, and where it is. It is not a failure and not a part that is
+// missing from the import: every cPanel archive holds the account's mail
+// directories, the home directory's other folders and its metadata. The
+// databases, mailboxes, forwarders and DNS records are read from their own
+// entries by the steps that are listed for them.
+func importOutsideSiteFolder(ext *transport.CpmoveExtractResponse) string {
+	if ext.OutsideCount <= 0 {
+		return ""
+	}
+	groups := make([]string, 0, len(ext.OutsideGroups))
+	for index, group := range ext.OutsideGroups {
+		if index >= transport.CpmoveOutsideGroupLimit+1 {
+			break
+		}
+		groups = append(groups, fmt.Sprintf("%s (%d)", boundedAgentDiagnostic(group.Name), group.Count))
+	}
+	where := ""
+	if len(groups) > 0 {
+		where = ": " + strings.Join(groups, ", ")
+	}
+	return fmt.Sprintf(". %d other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step%s. "+
+		"The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+		ext.OutsideCount, where)
+}
 
 const (
 	errCodeImportSiteNotCreated = "IMPORT_SITE_NOT_CREATED"
@@ -703,9 +778,42 @@ func importApplyAnswerFor(domain string, domainID, siteID int, steps []importSte
 	if complete {
 		return answer
 	}
-	answer.Status, answer.DomainStatus, answer.Code = importStatusPartial, "pending", errCodeImportPartial
+	answer.Status, answer.Code = importStatusPartial, errCodeImportPartial
+	if importOnlyRefusedMembers(steps) {
+		// Every chosen part is there and the domain was marked as finished;
+		// what is missing is entries the archive names in a way no import
+		// places.
+		answer.Message = importRefusedMembersMessage(domain, answer.Imported, answer.NotImported)
+		return answer
+	}
+	answer.DomainStatus = "pending"
 	answer.Message = importPartialMessage(domain, answer.Imported, answer.NotImported)
 	return answer
+}
+
+// importOnlyRefusedMembers reports that the only steps that were not imported
+// are archive members refused by their names.
+func importOnlyRefusedMembers(steps []importStep) bool {
+	refused := false
+	for _, step := range steps {
+		if step.OK {
+			continue
+		}
+		if !strings.HasPrefix(step.Step, "member:") && !strings.HasPrefix(step.Step, "members:") {
+			return false
+		}
+		refused = true
+	}
+	return refused
+}
+
+func importRefusedMembersMessage(domain string, imported, notImported []string) string {
+	return "The import ended and every part that was chosen was imported; " + domain + " is in service. " +
+		"Imported: " + strings.Join(imported, ", ") + ". " +
+		"Not imported: " + strings.Join(notImported, ", ") + ". " +
+		"These entries of the archive were refused by their names, and nothing was written for them; the reason of each is in its step below. " +
+		"If one of them is a file the site needs, add it with the file manager of " + domain + ". " +
+		"Importing the archive again refuses the same entries; nothing continues by itself."
 }
 
 func importPartialMessage(domain string, imported, notImported []string) string {

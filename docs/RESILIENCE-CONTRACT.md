@@ -3804,3 +3804,239 @@ the corrections has been measured on real services.
     established only by that run.
   - Real cPanel archives (the home directory as a nested `homedir.tar`,
     suspended mailboxes, large sites) have not been imported.
+
+### Corrections from the final native round (invariants 1-4 and 6, 2026-10-12)
+
+D-025 invariants 1 (the owner's native configuration is detected, not
+replaced), 2 (unknown is not absent, empty or success), 3 (the unsafe write is
+stopped at its own boundary), 4 (a mutation reads its pre-image, validates and
+has a tested inverse) and 6 (the screen renders the authoritative state);
+D-022, D-024, D-029. No P0 item is closed or advanced. Source: the `set3` run
+of 2026-10-09 (UTC) on disposable QEMU/KVM guests (Debian 13, Ubuntu 24.04,
+Arch; evidence `deploy/e2e/release-recovery/evidence/set3-20261012/`), which
+passed every corrected item of the entry before this one on Debian 13 and
+Ubuntu 24.04 and the whole update matrix from the published v0.1.0-alpha.81,
+and measured one candidate defect on Arch (P5b) and the observations O16-O21.
+Nothing here was observed on an installed server. This entry corrects them in
+source; none of the corrections has been measured on real services.
+
+- **Measured.**
+  - *P5b, Arch: a PHP site still could not be created.* The pool was written
+    and PHP-FPM accepted it; then nginx refused the virtual host (`open()
+    "/etc/nginx/snippets/fastcgi-php.conf" failed`). The PHP vhost included
+    `snippets/fastcgi-php.conf`, a file Debian's and Ubuntu's nginx packages
+    ship (nginx-common) and Arch's does not; Arch ships `fastcgi.conf` and
+    `fastcgi_params` in `/etc/nginx` and has no `snippets` directory. The Agent
+    restored the vhost and removed the account; the Panel answered `500
+    INTERNAL`, and an import `502 IMPORT_SITE_NOT_CREATED`. With that one file
+    placed by hand (second reading, an owner action) the site was created,
+    served PHP as its own account under the packaged unit and was deleted
+    cleanly, and every import completed.
+  - *O21.* On that guest the site's socket was
+    `/run/php-fpm/php8.3-fpm-site2.sock` although the only PHP is 8.5.11: the
+    create handler read `/etc/php/<version>/fpm` on the Panel's own disk and
+    took the literal `8.3` when it found nothing.
+  - *O16.* A Reload of a stopped nginx and of the stopped PostgreSQL wrapper
+    answered `502` / `command` with systemd's line ("postgresql.service is not
+    active, cannot reload."): systemd refused the reload before the Agent's own
+    reading applied. Only Postfix and Dovecot were answered `409` /
+    `not_running`.
+  - *O17.* An archive member named by an absolute path was left out of the
+    import and the answer was `200` / `active` without a word about it. Nothing
+    had been written for it.
+  - *O19.* After a Stop of Postfix with a main.cf it refuses, the answer was a
+    truthful success (the master was gone) and systemd showed the unit as
+    `failed`, `Result=exit-code` (`postfix.service` on Debian 13,
+    `postfix@-.service` on Ubuntu 24.04). The journal shows why: the unit's own
+    stop command (`postfix stop`) reads main.cf first and exits 1 ("fatal: bad
+    numerical configuration"), and systemd then ends the processes itself.
+  - *O18.* After an automatic return from a defective candidate the update
+    check still offers the same version, with `previous_attempt: {phase:
+    recovered}`; a typed cause is in it only when the recovery record holds one
+    (the start-check candidate), not for a candidate whose migration failed.
+- **Changed.**
+  - *The PHP hand-off is written out in the vhost*
+    (`internal/services/templates/nginx/vhost.conf.tmpl`). The six directives
+    of Debian's `snippets/fastcgi-php.conf` are rendered in its place, in its
+    order: `fastcgi_split_path_info`, the `try_files $fastcgi_script_name =404`
+    guard, `set $path_info`, `fastcgi_param PATH_INFO`, `fastcgi_index
+    index.php`, `include fastcgi.conf`. The lines that followed the include are
+    unchanged. A vhost now includes only `fastcgi.conf` and `fastcgi_params`,
+    nginx's own files, which every package installs. No file is added to the
+    server and none of the owner's is touched. For a site that was generated
+    with the include, a re-render is the same configuration with the include
+    expanded: nginx reads an include as the included file's text in its place.
+  - *A site the web server refused is answered as that*
+    (`internal/services/nginx_generator.go`, `cmd/agent/site_rpc.go`,
+    `internal/services/site_orchestrator.go`,
+    `cmd/panel/domain_web_server_refused.go`). `nginx -t` that exits with its
+    own status is typed (`NginxConfigRefusedError`), and so is a vhost change
+    whose inverse ran to the end (`VhostRestoredError`: the file and link are
+    what they were, nginx accepted the previous configuration and was
+    reloaded). Only when both hold does the Agent answer
+    `WebServerRefusedConfig` with nginx's first `[emerg]` line. The Panel
+    answers `502 SITE_WEB_SERVER_REFUSED`; its `reason` says whether the site's
+    deletion on the Agent (the orchestrator's compensation, which answers
+    success only when the vhost, the pool, the account and the site's directory
+    are gone) was confirmed. nginx's line is shown to an administrator only.
+  - *The PHP version of a new site is one the server runs*
+    (`cmd/panel/domain_handlers.go`, `domain_php_handlers.go`,
+    `internal/services/service_scanner.go`). The create handler takes the
+    newest version the Agent reports (the program's own answer on a host with
+    one unversioned PHP-FPM) and refuses a named version the server does not
+    run (`409 PHP_VERSION_NOT_INSTALLED`) before anything is created. A version
+    switch records the socket the Agent wrote the pool with
+    (`services.PHPFPMSocketPath`) instead of building Debian's path. The list
+    answers no PHP version for a domain without a site (it answered `8.3`). The
+    configuration files listed for PHP-FPM are those of the installed layout,
+    with no assumed version.
+  - *An application unit runs as the web server's account of the host*
+    (`cmd/agent/app_rpc.go`). The Panel asks for `www-data`; where that account
+    does not exist the unit is written with `nginx` or `http`, in the order the
+    rest of the product reads them.
+  - *A reload of anything that is not running is `not_running`*
+    (`cmd/agent/service_action_verify.go`). Read before anything is sent: a
+    wrapper when every unit its reload reaches is `inactive` or `failed`, any
+    other unit when it is loaded and `inactive` or `failed` itself. A state in
+    between, a unit that is not loaded and a state that could not be read keep
+    the service manager's own answer.
+  - *A Stop that left the unit marked as failed says so and leaves the mark*
+    (`cmd/agent/ service_action_verify.go`,
+    `cmd/panel/service_action_outcome.go`). Decision: the Agent does not run
+    `systemctl reset-failed`. The mark is systemd's own record of what the
+    unit's stop command did, and the same one the owner's own `systemctl stop
+    postfix` leaves on that host, so the Panel adds no native state of its own;
+    clearing it would remove from `systemctl --failed` and from monitoring the
+    one native sign that the configuration is refused and that the service
+    cannot be started as it is, and would reset the unit's start-limit
+    counters, which a Stop was not asked to do. Nothing the Agent could send
+    avoids the mark: systemd runs the unit's stop command for every way of
+    stopping it. The unit is read before the stop and after a verified one; a
+    unit that was not failed before and is failed after is reported in the
+    success (`note`), with systemd's result and, for Postfix, the line its own
+    check prints now.
+  - *What the files step of an import leaves out is counted and named*
+    (`cmd/agent/cpmove_left_out.go`, `cpmove_extract_linux.go`,
+    `cmd/panel/import_handlers.go`). Every member ends in exactly one of:
+    imported; the whole step refused, as before, now naming the member and what
+    it is (a symbolic link, a hard link, a device node, a named pipe, a name
+    with `..`, a backslash or a NUL, a payload over the size or count limit);
+    refused by its name and left out (an absolute path), which is listed as a
+    step `member:<name>`, at most 20 and then a count, and makes the import
+    `partial`; or outside `homedir/public_html`, which is counted by the folder
+    of the archive it is in and said on the files step's own line. An import
+    whose only missing entries are refused members is `partial` with
+    `domain_status: active`: every chosen part is there, and the same archive
+    would be refused the same entries again.
+  - *The update card says before Start what already happened*
+    (`web/src/components/PanelUpdateCard.tsx`). A version that was tried here
+    and returned has its own heading, says what the server runs now, the
+    recorded cause or that none was recorded, and what starting it again does.
+    The version is not hidden and Start is not disabled.
+  - *H42* (`deploy/e2e/release-recovery/build-upd1-artifacts.sh`): a dist build
+    that fails or is refused stops the builder instead of being followed by the
+    archive an earlier build left under the same name.
+- **Other assumptions of the Debian layout that were looked for.**
+  - Corrected here: the snippet file; the literal `8.3`; the socket path of a
+    version switch; `www-data` as the account of an application unit; the
+    PHP-FPM file list of the configuration scan.
+  - Already read from the host, and seen working in the second Arch reading:
+    the vhost directories (`sites-available`, `sites-enabled`, added to Arch's
+    `nginx.conf` by the web server's setup step), the web server account, the
+    pool directory, unit and socket directory of PHP-FPM, `/var/log/nginx`.
+  - Not corrected: on a single-unit host the PHP extension directories are
+    still Debian's; MariaDB's settings file is
+    `/etc/mysql/mariadb.conf.d/50-server.cnf`; `DetectInstalledPHPVersion`
+    still reads versioned trees only (the webmail setup uses it for package
+    names that exist on Debian only); a site that was created as static gets
+    PHP through the hosting type change, which was not exercised on Arch.
+- **API changes (for the release notes).**
+  - `POST /api/v1/domains/create`: `502 SITE_WEB_SERVER_REFUSED` with `reason`
+    `removed` or `cleanup_unconfirmed`, `vars` and, for an administrator,
+    `details`, in place of `500 INTERNAL` when nginx refused the site; `409
+    PHP_VERSION_NOT_INSTALLED` for a named PHP version the server does not run.
+  - `POST /api/v1/import/cpanel/apply`: `502 SITE_WEB_SERVER_REFUSED`
+    (`import_removed`, `import_cleanup_unconfirmed`) in place of `502
+    IMPORT_SITE_NOT_CREATED` for that cause; steps `member:<name>` and
+    `members:<n>`; `status: partial` with `domain_status: active` when only
+    such entries are missing; the files step's `detail` is longer.
+  - `POST /api/v1/service/action`: `409` / `not_running` for a reload of any
+    stopped unit (it was `502` / `command`); a successful Stop may carry
+    `note`.
+  - `GET /api/v1/domains`: `php_version` is empty for a domain without a site.
+- **Not changed, and why.**
+  - An owner who had edited the package's
+    `/etc/nginx/snippets/fastcgi-php.conf`: a site's vhost no longer reads that
+    file after its next re-render. The file is left in place and nothing
+    detects that it differs from the packaged one.
+  - The same refusal by nginx during a change of hosting type, of a certificate
+    or of a site's settings still answers its earlier error; only site creation
+    and the import carry the new answer.
+  - A `..` component, a link or a device below the site folder still refuses
+    the whole files step; only an absolute name is left out by itself.
+  - O18: the check still offers the version and the release floor file stays at
+    the candidate's sequence after a return. The update's own line ("offline
+    panel database migration failed ...") is shown by the outcome notice after
+    the return; the card before Start shows the typed cause or that none was
+    recorded.
+  - O20 (the published alpha.81's `web_mail` plan on Arch) is a harness limit
+    of the baseline, not of this source.
+- **Schema or version transition.**
+  - No database schema and no persisted state. The Agent's RPC gains fields
+    that are transferred by name: `CreateSiteResponse.ErrorDetail` and the
+    error code `web_server_refused_config`; `ServiceActionResult.Notice`,
+    `NoticeUnit`, `NoticeResult`, `NoticeDetail`;
+    `CpmoveExtractResponse.Refused`, `RefusedCount`, `OutsideCount`,
+    `OutsideGroups`. A Panel that meets an Agent without them answers as
+    before. Vhost files on disk are not rewritten by an update: a site's vhost
+    takes the new text when it is next rendered (a certificate, a setting, a
+    hosting change), and that render is the same configuration. Sites and
+    sockets already recorded with a version keep it.
+- **Recovery behaviour.**
+  - Nothing retries by itself. A site nginx refused is removed again by the
+    Agent's own inverse and by the Panel's compensation; when that is not
+    confirmed the domain row is kept so that it can be deleted from the Domains
+    page. A reload of a stopped unit sends nothing. A Stop is never followed by
+    `reset-failed`. An import with refused members keeps everything it imported
+    and marks the domain as finished.
+- **Evidence.**
+  - Component tests only; the native re-check on Arch is pending. Services:
+    `nginx_php_handoff_test.go` (the rendered PHP location is, directive for
+    directive, the old one with Debian's file put in for the include, whose
+    text is pinned by the SHA-256 the set3 run recorded; no vhost of any
+    project type names a file under `snippets/` or includes anything but
+    nginx's two files), `set3_corrections_test.go`. Agent:
+    `set3_corrections_test.go`, `cpmove_set3_linux_test.go`. Panel:
+    `set3_corrections_test.go`. Screens: `web/tests/set3-corrections.test.mjs`,
+    `panel-update-card-mounted.test.mjs`, and a real Chrome against the
+    loopback mock (`web/tools/browser-inspect`, scenarios `siterefused`,
+    `importentries`, `stopnote`, `updaterolledback`; desktop and phone, English
+    and Turkish, light and dark).
+  - A local check with Debian 13's own nginx (`nginx` and `nginx-common`
+    1.26.3-3+deb13u7, fetched and unpacked into a private directory of the
+    development guest, not installed; loopback only): the package's
+    `snippets/fastcgi-php.conf` has the pinned SHA-256 (`a9dd98bf...411f2`);
+    `nginx -t` accepts the vhost as the previous source renders it on a layout
+    with the snippet and refuses it without it, with the line measured on Arch;
+    `nginx -t` accepts the vhost as this source renders it on a layout that has
+    no `snippets` directory; and for 17 requests (a script, a query string,
+    `PATH_INFO`, a missing script, the front controller, a static file, a dot
+    file, the ACME location) the status and every FastCGI parameter, in order,
+    are the same under both. Not checked: Ubuntu's package, Arch's nginx,
+    PHP-FPM itself.
+- **Open.**
+  - The native re-check must show, on Arch: a PHP site created on a stock host,
+    a PHP page executed as the site's account, the site deleted, an import
+    completed; the socket and the recorded version carrying the installed PHP's
+    version. On Debian 13 and Ubuntu 24.04, because the vhost template changed:
+    that `/etc/nginx/snippets/fastcgi-php.conf` has the pinned SHA-256; a PHP
+    site created, a PHP page executed, `PATH_INFO` and a missing script
+    answered as before; a site created by the published alpha.81 re-rendered by
+    this source with `nginx -t` passing and the page still served.
+  - Also to be measured: a refused site answered `502 SITE_WEB_SERVER_REFUSED`
+    with nothing of it left; a reload of a stopped nginx, MariaDB and
+    PostgreSQL wrapper answered `409`; the Stop of Postfix with a refused
+    main.cf answered `200` with the note and the unit still `failed`; the
+    absolute member listed and the domain `active`.
+  - Real cPanel archives have not been imported; the count of entries outside
+    the site folder was seen only on fixtures.

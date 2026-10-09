@@ -481,6 +481,24 @@ func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.Cre
 	err = ops.applyVhost(rendered.Domain, rendered.Config)
 	if err != nil {
 		fail("nginx vhost activation", err)
+		// nginx read the configuration with this vhost in it and refused it,
+		// and the vhost was put back as it was. That is said as what it is,
+		// with nginx's own line, instead of a bare failure (12 Oct 2026;
+		// measured on Arch: `500 INTERNAL`). Only when the vhost's own inverse
+		// ran to the end; whether the other parts were removed is the Panel's
+		// to establish (it asks for the site's deletion and reads the answer).
+		// nginx bu sanal konağı içeren yapılandırmayı okudu ve reddetti; sanal
+		// konak eski haline getirildi. Çıplak bir hata yerine bu söylenir.
+		var refused *services.NginxConfigRefusedError
+		var restored *services.VhostRestoredError
+		if errors.As(err, &refused) && errors.As(err, &restored) {
+			reply.ErrorCode = transport.WebServerRefusedConfig
+			line := []rune(refused.FirstLine())
+			if len(line) > 300 {
+				line = line[:300]
+			}
+			reply.ErrorDetail = string(line)
+		}
 		return nil
 	}
 

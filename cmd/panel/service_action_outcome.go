@@ -138,3 +138,82 @@ func writeServiceActionOutcome(w http.ResponseWriter, unit, action string, reply
 	_ = json.NewEncoder(w).Encode(apiErrorBody{Error: message, Code: code, Reason: reason, Vars: vars})
 	return true
 }
+
+// A Stop that succeeded and left the unit marked as failed (12 Oct 2026;
+// D-022, D-024).
+//
+// Measured on Debian 13 and Ubuntu 24.04: Postfix with a main.cf it refuses is
+// stopped from the Services page; the master is gone, the answer is a truthful
+// success, and `systemctl status postfix` shows `failed (Result: exit-code)`,
+// because the unit's own stop command (`postfix stop`) reads main.cf first and
+// exits 1. The Agent leaves that mark: it is systemd's record of what the
+// unit's command did, the same one the owner's own `systemctl stop postfix`
+// leaves, and clearing it would hide the one native sign that the
+// configuration is refused. The answer says it instead: the success carries a
+// `note` in the shape of every other explained answer (`code`
+// SERVICE_ACTION_NOTE, `reason`, `error`, `vars`), which the Services screens
+// draw on the attention surface, not as a failure.
+//
+// `reason`: `unit_marked_failed`, or `unit_marked_failed_config` when the
+// service's own check refuses its configuration now (Postfix; `vars.detail` is
+// the line it prints). `vars`: `unit`, `failed_unit`, `result` (systemd's
+// `Result`), `command` (what clears the mark, for the owner to run).
+//
+// Başarılı olan ve birimi `failed` işaretli bırakan Durdur. Agent işareti
+// silmez: o, systemd'nin birimin kendi komutunun ne yaptığına dair kaydıdır.
+// Yanıt bunu bir `note` ile söyler; ekran onu hata olarak değil, dikkat
+// yüzeyinde gösterir.
+const (
+	errCodeServiceActionNote          = "SERVICE_ACTION_NOTE"
+	serviceActionNoteUnitFailed       = "unit_marked_failed"
+	serviceActionNoteUnitFailedConfig = "unit_marked_failed_config"
+)
+
+var serviceActionSystemdResult = regexp.MustCompile(`^[a-z-]{1,40}$`)
+
+func serviceActionNoteMessage(reason string) string {
+	message := "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. " +
+		"That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. "
+	if reason == serviceActionNoteUnitFailedConfig {
+		message += "The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. "
+	}
+	return message + "Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown."
+}
+
+// serviceActionNote builds the note of a successful action, or nil. Anything
+// the Agent sent that is not a unit name or a systemd result is not repeated.
+func serviceActionNote(unit, action string, reply *transport.ServiceActionResult) *apiErrorBody {
+	if reply == nil || !reply.Success || action != "stop" || reply.Notice != transport.ServiceActionNoticeUnitFailed ||
+		!serviceActionUnitName.MatchString(reply.NoticeUnit) {
+		return nil
+	}
+	result := reply.NoticeResult
+	if !serviceActionSystemdResult.MatchString(result) {
+		result = "failed"
+	}
+	reason := serviceActionNoteUnitFailed
+	vars := map[string]string{
+		"unit": unit, "failed_unit": reply.NoticeUnit, "result": result,
+		"command": "sudo systemctl reset-failed " + reply.NoticeUnit,
+	}
+	if detail := boundedAgentDiagnostic(reply.NoticeDetail); detail != "" {
+		reason = serviceActionNoteUnitFailedConfig
+		vars["detail"] = detail
+	}
+	return &apiErrorBody{Error: serviceActionNoteMessage(reason), Code: errCodeServiceActionNote, Reason: reason, Vars: vars}
+}
+
+// serviceActionSuccessAnswer is the body of a successful service action: the
+// Agent's result as it always was, with `note` when there is one.
+func serviceActionSuccessAnswer(unit, action string, reply transport.ServiceActionResult) any {
+	note := serviceActionNote(unit, action, &reply)
+	reply.Notice, reply.NoticeUnit, reply.NoticeResult, reply.NoticeDetail = "", "", "", ""
+	if note == nil {
+		return reply
+	}
+	log.Printf("[200][service action] %s %s: %s %s: %s", action, unit, errCodeServiceActionNote, note.Reason, note.Vars["failed_unit"])
+	return struct {
+		transport.ServiceActionResult
+		Note *apiErrorBody `json:"note"`
+	}{reply, note}
+}

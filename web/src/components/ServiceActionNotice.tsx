@@ -1,6 +1,7 @@
 import { AlertTriangle, XCircle } from 'lucide-react';
 import { Fragment, useEffect, useRef } from 'react';
 import { useI18n } from '../i18n';
+import type { TranslationKey } from '../i18n/en';
 import { apiErrorText, type ApiError } from '../lib/apiError';
 import { Button } from './ui';
 
@@ -30,6 +31,21 @@ export function isServiceActionOutcome(error: ApiError): boolean {
     return error.code === 'SERVICE_ACTION_FAILED' || error.code === 'SERVICE_ACTION_UNKNOWN';
 }
 
+// A successful action can leave a fact the success does not say (12 Oct 2026;
+// lib/serviceActionNote.ts): a Stop after which systemd shows the unit as
+// failed. It is drawn here too, on the attention surface and announced
+// politely: it is not a failure. The sentences live with the Services screens'
+// copy, not in the boot copy; a reason this page has no words for keeps the
+// server's own sentence.
+//
+// Başarılı bir işlem, başarının söylemediği bir bilgi bırakabilir: systemd'nin
+// birimi `failed` gösterdiği bir Durdur. Burada, hata olarak değil, dikkat
+// yüzeyinde gösterilir.
+const noteSentences: Record<string, TranslationKey> = {
+    unit_marked_failed: 'services.action.note.unit_marked_failed',
+    unit_marked_failed_config: 'services.action.note.unit_marked_failed_config',
+};
+
 export function ServiceActionNotice({
     outcome,
     onClose,
@@ -45,7 +61,10 @@ export function ServiceActionNotice({
         if (outcome) box.current?.scrollIntoView?.({ block: 'nearest' });
     }, [outcome]);
     if (!outcome) return null;
+    const note = outcome.code === 'SERVICE_ACTION_NOTE';
     const unknown = outcome.code === 'SERVICE_ACTION_UNKNOWN';
+    // Neither an unknown result nor a note about a success is a failure.
+    const attention = unknown || note;
     const vars = outcome.vars ?? {};
     // The service's line is set apart from the sentence around it, in the
     // face used for what a program printed.
@@ -58,18 +77,21 @@ export function ServiceActionNotice({
     // of its own.
     // Komut sunucuda yazılacak bir şeydir; onu taşıyan cümleden ayrı
     // gösterilir. Komutu adlandırmayan cümlede komut kendi satırında durur.
-    const sentence = apiErrorText({ ...outcome, vars: { ...vars, command: '\u0001' } }, t, 'services.actionFailed').split('\u0001');
+    const noteKey = note ? noteSentences[outcome.reason ?? ''] : undefined;
+    const sentence = (noteKey
+        ? t(noteKey, { ...vars, command: '\u0001' })
+        : apiErrorText({ ...outcome, vars: { ...vars, command: '\u0001' } }, t, 'services.actionFailed')).split('\u0001');
     const command = vars.command ? <code className="rounded bg-surface px-1 py-0.5 font-mono text-[0.9em] text-fg">{vars.command}</code> : null;
     return (
         <div
             ref={box}
-            role="alert"
-            data-service-action={unknown ? 'unknown' : 'failed'}
+            role={note ? 'status' : 'alert'}
+            data-service-action={note ? 'note' : unknown ? 'unknown' : 'failed'}
             className={`flex items-start gap-2 rounded-lg border p-3 text-sm leading-relaxed text-fg ${
-                unknown ? 'border-warning-mark/50 bg-warning-mark/20' : 'border-danger/30 bg-danger/10'
+                attention ? 'border-warning-mark/50 bg-warning-mark/20' : 'border-danger/30 bg-danger/10'
             } ${className ?? ''}`}
         >
-            {unknown
+            {attention
                 ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
                 : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden="true" />}
             <div className="min-w-0">

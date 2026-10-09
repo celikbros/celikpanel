@@ -180,8 +180,13 @@ func (p *Panel) handleDomainPHPSettings(w http.ResponseWriter, r *http.Request) 
 				return
 			}
 
-			// Update php_fpm_socket with new version path
-			newSocket := fmt.Sprintf("/var/run/php/php%s-fpm-%s.sock", req.PHPVersion, poolName)
+			// The socket is the one the Agent just wrote the pool with: the
+			// same function on the same host (services.PHPFPMSocketPath). It
+			// used to be built here as Debian's /var/run/php/..., which on a
+			// host with one unversioned PHP-FPM is not where the pool listens.
+			// Soket, Agent'ın havuzu az önce yazdığı sokettir: aynı sunucuda
+			// aynı fonksiyon.
+			newSocket := services.PHPFPMSocketPath(req.PHPVersion, poolName)
 			updateQuery := `UPDATE sites SET php_version = ?, php_fpm_socket = ?, updated_at = datetime('now') WHERE domain_id = ?`
 			_, err = p.db.GetDB().ExecContext(context.Background(), updateQuery, req.PHPVersion, newSocket, domainID)
 

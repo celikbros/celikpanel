@@ -72,6 +72,12 @@ export const downloadURL = compileSource('lib/download.ts', (specifier) => (
 // sharedLayer returns the resolver a screen is compiled with: the real shared
 // modules by their import suffix, `extra` for a test's own real modules, and
 // the stub for the rest.
+// The readers of one explained answer each (12 Oct 2026) are the shipped ones in
+// every mounted test: a site the web server refused, and the note of a Stop
+// that left the unit marked as failed. They import types only.
+export const siteWebServerRefusedURL = compileSource('lib/siteWebServerRefused.ts', unexpected('lib/siteWebServerRefused.ts'));
+export const serviceActionNoteURL = compileSource('lib/serviceActionNote.ts', unexpected('lib/serviceActionNote.ts'));
+
 export function sharedLayer(stubURL, extra = {}) {
   const uiURL = compileSource('components/ui.tsx', (specifier) => (
     specifier.endsWith('/apiError') ? apiErrorURL : stubURL
@@ -83,6 +89,8 @@ export function sharedLayer(stubURL, extra = {}) {
     '/lib/lostAnswer': lostAnswerURL,
     '/lib/domainDatabases': domainDatabasesURL,
     '/lib/download': downloadURL,
+    '/lib/siteWebServerRefused': siteWebServerRefusedURL,
+    '/lib/serviceActionNote': serviceActionNoteURL,
     '/ui': uiURL,
     ...extra,
   };

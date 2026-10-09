@@ -39,6 +39,8 @@
 # committed policy's version. Output: <stamp>/upd1-artifacts.json for
 # owner_update_trial.py. None of these archives is a release.
 set -euo pipefail
+# set3 H42: errexit also inside $(...), so that a failure in commit_fixture or build stops the builder.
+shopt -s inherit_errexit
 umask 022
 
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
@@ -47,7 +49,8 @@ BASELINE_REF=
 if [[ ${1:-} == --baseline-ref ]]; then
     BASELINE_REF=${2:?usage: build-upd1-artifacts.sh [--baseline-ref TAG] [SOURCE_COMMIT]}
     shift 2
-    [[ $BASELINE_REF == v0.1.0-alpha.80 ]] || { echo "only --baseline-ref v0.1.0-alpha.80 is supported" >&2; exit 2; }
+    [[ $BASELINE_REF == v0.1.0-alpha.80 || $BASELINE_REF == v0.1.0-alpha.81 ]] \
+        || { echo "only --baseline-ref v0.1.0-alpha.80 or v0.1.0-alpha.81 is supported" >&2; exit 2; }
 fi
 SOURCE=${1:-HEAD}
 BUILD_DIST="$HERE/../dns-pair-acceptance/scripts/build-dist.sh"
@@ -94,23 +97,47 @@ use_web() {     # place one saved web/dist into the clone for build-dist.sh
     cp -a "$1" "$clone/web/dist"
 }
 
+# set3 H42: build runs inside $(...), where bash does not apply errexit unless
+# inherit_errexit is set, so a dist build that failed or was refused ("refusing
+# to reuse .../dist/<commit>-acceptance-license") used to be followed by the
+# echo below, and the builder went on with the archive an earlier build had
+# left under the same name. A dist build that does not succeed now stops this
+# builder, in words, whatever the shell options are; so does a missing dist.json.
 build() {
-    local commit=$1 version=$2
-    CELIKPANEL_REPO=$clone CELIKPANEL_DIST_VERSION=$version CELIKPANEL_ACCEPTANCE_GUARD=$GUARD \
-        bash "$BUILD_DIST" --acceptance-license "$commit" >&2
-    echo "/var/tmp/cp-pair-accept/dist/$commit-acceptance-license/dist.json"
+    local commit=$1 version=$2 dist_json
+    dist_json=/var/tmp/cp-pair-accept/dist/$commit-acceptance-license/dist.json
+    if ! CELIKPANEL_REPO=$clone CELIKPANEL_DIST_VERSION=$version CELIKPANEL_ACCEPTANCE_GUARD=$GUARD \
+        bash "$BUILD_DIST" --acceptance-license "$commit" >&2; then
+        echo "BUILD-UPD1-FAILED: the dist build of $commit ($version) failed or was refused; an archive that an earlier" \
+            "build left at ${dist_json%/dist.json} is NOT used. Remove or rename that directory if it is in the way, then" \
+            "run this builder again." >&2
+        return 1
+    fi
+    [[ -s $dist_json ]] || { echo "BUILD-UPD1-FAILED: the dist build of $commit ($version) wrote no $dist_json" >&2; return 1; }
+    echo "$dist_json"
 }
 
 if [[ -n $BASELINE_REF ]]; then
     tag_commit=$(git -C "$clone" rev-parse "${BASELINE_REF}^{commit}")
     git -C "$clone" checkout --quiet --detach "$tag_commit"
+    if [[ $BASELINE_REF == v0.1.0-alpha.81 ]]; then
+        # set3: the published v0.1.0-alpha.81 already carries the acceptance-license seam and its guard, so the
+        # baseline is the tag's own commit: no fixture commit, no patched file. A tag without them is refused.
+        for needed in internal/licensing/acceptance_fixture.go internal/licensing/acceptance_off.go \
+                deploy/release-acceptance-license-guard.sh; do
+            git -C "$clone" cat-file -e "$tag_commit:$needed" \
+                || { echo "$BASELINE_REF lacks $needed; it cannot be built unpatched" >&2; exit 1; }
+        done
+        baseline=$tag_commit
+    else
     python3 "$DRIVER" fixture-source --repo "$clone" --kind baseline-ref --baseline-ref "$BASELINE_REF" \
         --source-commit "$source_commit" >&2
     git -C "$clone" add -A -- internal/licensing cmd/panel/license.go
     git -C "$clone" commit --quiet -m "test(fixture): upd7 baseline = published $BASELINE_REF + the D-027 acceptance-license seam only (disposable)"
     baseline=$(git -C "$clone" rev-parse HEAD)
+    fi
     git -C "$clone" update-ref refs/upd1/baseline "$baseline"
-    expected=$(python3 -c 'import importlib.util,sys;s=importlib.util.spec_from_file_location("o",sys.argv[1]);m=importlib.util.module_from_spec(s);sys.modules["o"]=m;s.loader.exec_module(m);print("\n".join(m.BASELINE_REF_PATCHED))' "$DRIVER")
+    expected=$(python3 -c 'import importlib.util,sys;s=importlib.util.spec_from_file_location("o",sys.argv[1]);m=importlib.util.module_from_spec(s);sys.modules["o"]=m;s.loader.exec_module(m);print("\n".join(m.baseline_ref_patched(sys.argv[2])))' "$DRIVER" "$BASELINE_REF")
     actual=$(git -C "$clone" diff --name-only "$tag_commit" "$baseline" | LC_ALL=C sort)
     [[ $actual == "$expected" ]] || { echo "baseline fixture changed other files than the seam: $actual" >&2; exit 1; }
     proof=$work/baseline-ref-proof.txt
@@ -141,17 +168,31 @@ if [[ -n $BASELINE_REF ]]; then
     [[ $(tail -n 1 "$proof") == 0 ]] || { echo "the Agent package closure includes the licensing seam; see $proof" >&2; exit 1; }
     build_web "$work/web-dist-baseline"
     git -C "$clone" checkout --quiet --detach "$source_commit"
-    good=$(commit_fixture good "test(fixture): upd7 good candidate labelled v0.1.0-alpha.81 after the published $BASELINE_REF (unpublished, disposable)" "$baseline")
+    good=$(commit_fixture good "test(fixture): upd7 good candidate labelled as the release after the published $BASELINE_REF (unpublished, disposable)" "$baseline")
     defective=$(commit_fixture defective "test(fixture): upd7 defective candidate - migrate-only fails (unpublished, disposable)")
+    startcheck=
+    if [[ $BASELINE_REF == v0.1.0-alpha.81 ]]; then
+        # set3: the start-check candidate as in the default mode: one commit over G changing its one reviewed file.
+        git -C "$clone" checkout --quiet --detach "$good"
+        startcheck=$(commit_fixture start-check "test(fixture): set3 start-check candidate - shared panel TLS preparation fails (unpublished, disposable)")
+        [[ $(git -C "$clone" diff --name-only "$good" "$startcheck") == cmd/panel/server_lifecycle.go ]] \
+            || { echo "start-check fixture changed more than cmd/panel/server_lifecycle.go" >&2; exit 1; }
+        git -C "$clone" checkout --quiet --detach "$defective"
+    fi
     build_web "$work/web-dist-candidate"
     [[ -z $(git -C "$clone" diff --stat "$source_commit" "$defective" -- web) ]] || { echo "fixture commit changed web/" >&2; exit 1; }
     use_web "$work/web-dist-baseline"
     b_json=$(build "$baseline" "$BASELINE_REF")
     use_web "$work/web-dist-candidate"
-    g_json=$(build "$good" v0.1.0-alpha.81)
-    d_json=$(build "$defective" v0.1.0-alpha.81)
-    s_json= r_json= startcheck= realstart=
-    b_seq=80 c_seq=81 b_parent=$tag_commit
+    if [[ $BASELINE_REF == v0.1.0-alpha.81 ]]; then
+        c_version=v0.1.0-alpha.82 b_seq=81 c_seq=82 b_parent=
+    else
+        c_version=v0.1.0-alpha.81 b_seq=80 c_seq=81 b_parent=$tag_commit
+    fi
+    g_json=$(build "$good" "$c_version")
+    d_json=$(build "$defective" "$c_version")
+    s_json= r_json= realstart=
+    [[ -z $startcheck ]] || s_json=$(build "$startcheck" "$c_version")
 else
 baseline=$(commit_fixture baseline "test(fixture): upd1 baseline labelled v0.1.0-alpha.81 (unpublished, disposable)")
 good=$(commit_fixture good "test(fixture): upd1 good candidate labelled v0.1.0-alpha.82 (unpublished, disposable)" "$baseline")
@@ -220,12 +261,14 @@ document["defective"]["defect"] = "cmd/panel --migrate-only exits 1 after migrat
 if ref:
     spec = importlib.util.spec_from_file_location("upd7_driver", driver)
     module = importlib.util.module_from_spec(spec); sys.modules["upd7_driver"] = module; spec.loader.exec_module(module)
-    document["baseline_ref"] = {"ref": ref, "tag_commit": tag, "patched_files": list(module.BASELINE_REF_PATCHED),
-                                "proof": proof}
-    document["provenance"] = (f"baseline: the published {ref} tree ({tag}) plus the D-027 acceptance-license seam only; "
-                              "candidates: unpublished disposable fixture commits over the source labelled "
-                              "v0.1.0-alpha.81; acceptance-license panels; signed only by the per-lab fixture key at "
-                              "run time; not a release")
+    patched = list(module.baseline_ref_patched(ref))
+    document["baseline_ref"] = {"ref": ref, "tag_commit": tag, "patched_files": patched, "proof": proof}
+    document["provenance"] = (f"baseline: the published {ref} tree ({tag}) "
+                              + ("plus the D-027 acceptance-license seam only; " if patched else
+                                 "unchanged (the tag commit itself; it carries the acceptance-license seam); ")
+                              + "candidates: unpublished disposable fixture commits over the source labelled "
+                              f"{document['good']['version']}; acceptance-license panels; signed only by the per-lab "
+                              "fixture key at run time; not a release")
 with open(out, "x") as handle:
     json.dump(document, handle, indent=2, sort_keys=True)
     handle.write("\n")

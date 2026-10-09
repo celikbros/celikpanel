@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/hostingpath"
+	"github.com/alicelik/celikpanel/internal/transport"
 	"golang.org/x/sys/unix"
 )
 
@@ -368,6 +369,7 @@ func extractCpmoveFilesSecure(
 
 	files := 0
 	var bytes int64
+	var left cpmoveLeftOut
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
@@ -376,15 +378,25 @@ func extractCpmoveFilesSecure(
 		if err != nil {
 			return fmt.Errorf("read cpmove archive: %w", err)
 		}
+		if strings.HasPrefix(hdr.Name, "/") {
+			// An absolute name is never placed anywhere, and never silently:
+			// the member is counted and named in the answer.
+			left.refuse(hdr.Name, transport.CpmoveRefusedAbsolutePath)
+			continue
+		}
 		relative, payload, err := cpmovePayloadRelative(hdr.Name, hdr.Typeflag == tar.TypeDir)
 		if err != nil {
-			return fmt.Errorf("unsafe cpmove member path")
+			return fmt.Errorf("unsafe cpmove member path: %s", cpmoveMemberName(hdr.Name))
 		}
-		if !payload || relative == "" {
+		if !payload {
+			left.outside(hdr)
+			continue
+		}
+		if relative == "" {
 			continue
 		}
 		if hdr.Size < 0 || hdr.Size > maxCpmoveSiteBytes-bytes {
-			return fmt.Errorf("cpmove site payload exceeds the allowed size")
+			return fmt.Errorf("cpmove site payload exceeds the allowed size: %s", cpmoveMemberName(hdr.Name))
 		}
 		switch hdr.Typeflag {
 		case tar.TypeDir:
@@ -403,7 +415,7 @@ func extractCpmoveFilesSecure(
 			}
 		case tar.TypeReg, tar.TypeRegA:
 			if files >= maxCpmoveSiteFiles {
-				return fmt.Errorf("cpmove site payload contains too many files")
+				return fmt.Errorf("cpmove site payload contains too many files: more than %d", maxCpmoveSiteFiles)
 			}
 			written, err := writeCpmoveRegularFile(
 				stageFD,
@@ -419,7 +431,7 @@ func extractCpmoveFilesSecure(
 			files++
 			bytes += written
 		default:
-			return fmt.Errorf("unsupported cpmove site entry type")
+			return fmt.Errorf("unsupported cpmove site entry type: %s is %s", cpmoveMemberName(hdr.Name), cpmoveEntryKind(hdr.Typeflag))
 		}
 	}
 	if err := unix.Fsync(stageFD); err != nil {
@@ -437,5 +449,6 @@ func extractCpmoveFilesSecure(
 	resp.Files = files
 	resp.Bytes = bytes
 	resp.Complete = true
+	left.report(resp)
 	return nil
 }

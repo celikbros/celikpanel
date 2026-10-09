@@ -287,3 +287,20 @@ when it does not), because a reload of a stopped service is answered 409.
 Every record of this batch fails when the page scrolls sideways, when a text
 is cut inside its box, when a placeholder is on screen, or when a value shaped
 like a password hash is on screen.
+
+## Scenarios of the seventh batch (corrections from the final native round)
+
+These live in `scenarios-batch7.mjs`. They add no mock route: each answer of
+this batch is given through the mock's own `override` of one address (the
+update check, the domain creation, a successful service action with a note),
+and the import's answers through the plan of the fifth batch.
+
+| Name | States |
+| --- | --- |
+| `siterefused` | a site the web server refused, in the Add Domain dialog and on the import page, each with the removal confirmed and not confirmed (140a-140d). Fails when the sentence says more or less than its reason, when nginx's own line is not under it in the face of program output, or when it leaves with a toast |
+| `importentries` | an import whose only missing entries are archive entries refused by their names: the summary and the steps (141a, 141b). Fails when the result reads as an unfinished domain or shows a step by its internal name |
+| `stopnote` | a Stop that succeeded and left the unit marked as failed, with and without a line of the service's own (142a, 142b). Fails when it stands on the failure surface or is not announced as a status |
+| `updaterolledback` | the update card when the offered version was already tried here and rolled back, with a recorded cause and without one, and with no earlier attempt (143a-143c). Fails when Start is disabled, when the version is hidden, or when the notice is not above Start |
+
+Every record of this batch fails when the page scrolls sideways, when a text
+is cut inside its box, or when a placeholder is on screen.

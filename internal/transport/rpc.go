@@ -122,7 +122,23 @@ type CreateSiteResponse struct {
 	// HostingRoot names the blocking directory for HostingRootNotTraversable.
 	// HostingRoot, HostingRootNotTraversable için engelleyen dizini adlandırır.
 	HostingRoot *HostingRootBlock
+	// ErrorDetail is one bounded line for WebServerRefusedConfig: the line of
+	// nginx's own output that names what it refused. It can name paths of this
+	// server, so the Panel shows it to an administrator only. Additive.
+	// ErrorDetail, WebServerRefusedConfig için tek ve sınırlı bir satırdır:
+	// nginx'in neyi reddettiğini adlandıran kendi satırı. Eklemelidir.
+	ErrorDetail string
 }
+
+// WebServerRefusedConfig: the site's parts were created, then nginx's own test
+// (`nginx -t`) refused the configuration with the site's vhost in it. The
+// Agent restored the vhost to what it was (absent), had nginx accept and reload
+// the previous configuration, and removed the parts it had created (12 Oct
+// 2026; measured on Arch: the answer was a bare `500 INTERNAL`).
+// WebServerRefusedConfig: sitenin parçaları oluşturuldu, sonra nginx'in kendi
+// sınaması sitenin sanal konağını içeren yapılandırmayı reddetti. Agent sanal
+// konağı eski haline getirdi ve oluşturduğu parçaları kaldırdı.
+const WebServerRefusedConfig = "web_server_refused_config"
 
 // HostingRootNotTraversable: a directory above the hosting base
 // (/var/www/celikpanel) exists with a mode or owner that keeps the web server
@@ -350,7 +366,29 @@ type ServiceActionResult struct {
 	Detail string `json:"detail,omitempty"`
 	// Unit names the unit that owns the daemon when it is not the one acted on.
 	Unit string `json:"unit,omitempty"`
+	// Notice is a fact about native state that a successful action left and
+	// that its success does not say (12 Oct 2026). One value:
+	// ServiceActionNoticeUnitFailed. NoticeUnit is the unit, NoticeResult
+	// systemd's `Result` for it, NoticeDetail one bounded line of the
+	// service's own words when it has any. Additive; never set on a failure.
+	// Notice, başarılı bir işlemin geride bıraktığı ve başarının söylemediği
+	// yerel durum bilgisidir. Eklemelidir; hata yanıtında hiç doldurulmaz.
+	Notice       string `json:"notice,omitempty"`
+	NoticeUnit   string `json:"notice_unit,omitempty"`
+	NoticeResult string `json:"notice_result,omitempty"`
+	NoticeDetail string `json:"notice_detail,omitempty"`
 }
+
+// ServiceActionNoticeUnitFailed: the service was stopped as asked and is not
+// running, and systemd now shows its unit as `failed` although it was not
+// before the stop: a command of the unit exited with an error while it
+// stopped. Measured on Debian 13 and Ubuntu 24.04 with a main.cf Postfix
+// refuses: the unit's stop command is `postfix stop`, which reads main.cf
+// first. The mark is systemd's own record and is left as it is.
+// ServiceActionNoticeUnitFailed: hizmet istendiği gibi durduruldu ve çalışmıyor;
+// systemd birimini, durdurmadan önce öyle olmadığı halde, `failed` gösteriyor.
+// İşaret systemd'nin kendi kaydıdır ve olduğu gibi bırakılır.
+const ServiceActionNoticeUnitFailed = "unit_marked_failed"
 
 const (
 	ServiceActionVerified = "verified"

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -347,7 +348,76 @@ func (ng *NginxGenerator) rollbackVhostMutationWithRuntime(
 	if err := reloadNginx(); err != nil {
 		return fmt.Errorf("%w; rollback reload failed: %v", cause, err)
 	}
-	return fmt.Errorf("%w; rollback restored and reloaded the previous vhost", cause)
+	return &VhostRestoredError{Cause: cause}
+}
+
+// VhostRestoredError is a vhost change that failed and whose inverse was
+// carried out to the end: the vhost's file and link are what they were before
+// (absent, for a new site), nginx accepted that configuration again and was
+// reloaded with it. Its words are the ones this failure always had.
+// VhostRestoredError, başarısız olan ve tersi sonuna kadar uygulanan bir sanal
+// konak değişikliğidir: dosya ve bağlantı önceki halindedir, nginx o
+// yapılandırmayı yeniden kabul etmiş ve onunla yeniden yüklenmiştir.
+type VhostRestoredError struct{ Cause error }
+
+func (e *VhostRestoredError) Error() string {
+	return e.Cause.Error() + "; rollback restored and reloaded the previous vhost"
+}
+
+func (e *VhostRestoredError) Unwrap() error { return e.Cause }
+
+// NginxConfigRefusedError is `nginx -t` that ran and exited with its own
+// status: nginx read the configuration and refused it. A test that could not
+// be run, or that was cut by its time limit, is not this. Output is what nginx
+// printed.
+// NginxConfigRefusedError, çalışıp kendi durumuyla çıkan `nginx -t`'dir: nginx
+// yapılandırmayı okudu ve reddetti. Çalıştırılamayan ya da süresi dolan bir
+// sınama bu değildir.
+type NginxConfigRefusedError struct {
+	Output string
+	Cause  error
+}
+
+func (e *NginxConfigRefusedError) Error() string {
+	if e.Output == "" {
+		return fmt.Sprintf("nginx validation failed: %v", e.Cause)
+	}
+	return fmt.Sprintf("nginx validation failed: %s: %v", e.Output, e.Cause)
+}
+
+func (e *NginxConfigRefusedError) Unwrap() error { return e.Cause }
+
+// FirstLine is the line of nginx's output that names what it refused: its
+// first `[emerg]` line, or its first line when it printed none.
+func (e *NginxConfigRefusedError) FirstLine() string {
+	first := ""
+	for _, line := range strings.Split(e.Output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if strings.Contains(line, "[emerg]") {
+			return line
+		}
+		if first == "" {
+			first = line
+		}
+	}
+	return first
+}
+
+// nginxValidationError keeps the words a failed `nginx -t` always had and adds
+// the type when the failure is nginx's own exit status.
+func nginxValidationError(output []byte, err error) error {
+	detail := strings.TrimSpace(string(output))
+	var exited *exec.ExitError
+	if errors.As(err, &exited) && exited.ExitCode() > 0 {
+		return &NginxConfigRefusedError{Output: detail, Cause: err}
+	}
+	if detail == "" {
+		return fmt.Errorf("nginx validation failed: %w", err)
+	}
+	return fmt.Errorf("nginx validation failed: %s: %w", detail, err)
 }
 
 func (ng *NginxGenerator) rollbackVhostMutations(
@@ -682,11 +752,7 @@ func (ng *NginxGenerator) ValidateNginx() error {
 	}
 	output, err := runNginxCommand("nginx", "-t")
 	if err != nil {
-		detail := strings.TrimSpace(string(output))
-		if detail == "" {
-			return fmt.Errorf("nginx validation failed: %w", err)
-		}
-		return fmt.Errorf("nginx validation failed: %s: %w", detail, err)
+		return nginxValidationError(output, err)
 	}
 	return nil
 }
@@ -700,11 +766,7 @@ func (ng *NginxGenerator) validateNginxWithCommandRunner(
 	}
 	output, err := run(ctx, "nginx", "-t")
 	if err != nil {
-		detail := strings.TrimSpace(string(output))
-		if detail == "" {
-			return fmt.Errorf("nginx validation failed: %w", err)
-		}
-		return fmt.Errorf("nginx validation failed: %s: %w", detail, err)
+		return nginxValidationError(output, err)
 	}
 	return nil
 }

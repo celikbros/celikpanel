@@ -70,7 +70,10 @@ test('an import that ended is complete or a verified partial result, never "pend
   const result = importPage.slice(importPage.indexOf("{stage === 'result' && result && ("));
   assert.ok(result.indexOf("t('import.partial.title'") < result.indexOf("t('import.stepsTitle')"), 'the steps come before what the import came to');
   assert.match(result, /<div role="alert" className="rounded-lg border border-warning-mark\/50 bg-warning-mark\/20/);
-  assert.match(result, /t\('import\.partial\.next', \{ domain: result\.domain \}\)/);
+  // What to do next: the sentence of a missing part, or (12 Oct 2026) the one
+  // for a result whose only missing entries the archive names in a way no
+  // import places.
+  assert.match(result, /t\(result\.notImported\.length > 0 && result\.notImported\.every\(refusedEntry\) \? 'import\.partial\.entriesNext' : 'import\.partial\.next', \{ domain: result\.domain \}\)/);
   assert.match(result, /navigate\(`\/domains\/\$\{encodeURIComponent\(result\.domain\)\}`\)/);
   // "Import finished" is the heading of a complete import only.
   assert.equal([...importPage.matchAll(/t\('import\.resultTitle'\)/g)].length, 1);

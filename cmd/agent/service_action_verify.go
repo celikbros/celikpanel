@@ -74,6 +74,18 @@ func serviceActionRunner(ctx context.Context, systemctl string) mailServiceRunne
 // only with what was observed.
 func verifiedServiceAction(run mailServiceRunner, serviceID, unit, action string) transport.ServiceActionResult {
 	var result transport.ServiceActionResult
+	// Read before a stop, so that a unit systemd shows as failed afterwards
+	// can be told apart from one that already was.
+	var watched []string
+	notFailedBefore := map[string]bool{}
+	if action == "stop" {
+		watched = stopWatchedUnits(serviceID, unit)
+		for _, name := range watched {
+			if state, known := readUnitFailure(run, name); known && state.active != "failed" {
+				notFailedBefore[name] = true
+			}
+		}
+	}
 	switch {
 	case serviceID == "postfix" && unit == "postfix":
 		result = postfixServiceAction(run, action)
@@ -84,8 +96,91 @@ func verifiedServiceAction(run mailServiceRunner, serviceID, unit, action string
 	}
 	if !result.Success {
 		log.Printf("ERROR service %s %s: %s %s: %s", action, unit, result.Outcome, result.Stage, result.Error)
+	} else if action == "stop" {
+		noteStopLeftUnitFailed(run, serviceID, watched, notFailedBefore, &result)
 	}
 	return result
+}
+
+// A stop that succeeded and left the unit marked as failed (12 Oct 2026).
+//
+// Measured on Debian 13 and Ubuntu 24.04: Postfix with a main.cf it refuses is
+// stopped from the Services page. The master is gone and the answer is a
+// truthful success, and `systemctl status postfix` shows `failed (Result:
+// exit-code)`: the unit's own stop command is `postfix stop`, which reads
+// main.cf before it does anything, exits 1, and systemd then ends the processes
+// itself. Nothing the Agent could send avoids it: systemd runs that stop
+// command for every way of stopping the unit, also when the master is
+// signalled directly.
+//
+// The mark is left as it is, and said. It is systemd's own record of what the
+// unit's command did, and the same record the server owner's own
+// `systemctl stop postfix` leaves on this host, so the Panel adds no native
+// state of its own. Clearing it (`systemctl reset-failed`) would remove from
+// `systemctl --failed` and from monitoring the one native sign that the
+// configuration is refused and that the service cannot be started again as it
+// is, and it would reset the unit's start-limit counters, which a Stop was not
+// asked to do. What was missing was the answer: a success that did not say
+// what the owner would find. The answer now carries it
+// (transport.ServiceActionNoticeUnitFailed) with the unit, systemd's result
+// and, for Postfix, the line its own check prints now.
+//
+// Only a unit that was read as not failed before the stop and is failed after
+// it is reported: a mark that was already there is not this action's.
+//
+// Başarılı olan ve birimi `failed` işaretli bırakan durdurma. İşaret
+// systemd'nin, birimin kendi durdurma komutunun ne yaptığına dair kaydıdır;
+// sunucu sahibinin kendi `systemctl stop postfix` komutu da aynı kaydı bırakır.
+// Agent onu silmez; yanıt artık onu söyler.
+func stopWatchedUnits(serviceID, unit string) []string {
+	watched := []string{unit + ".service"}
+	if serviceID == "postfix" && unit == "postfix" {
+		// Ubuntu's daemon is the instance unit behind the wrapper.
+		watched = append(watched, "postfix@-.service")
+	}
+	return watched
+}
+
+// readUnitFailure reads a unit's state and result. known is false when the
+// unit is not loaded or could not be read.
+func readUnitFailure(run mailServiceRunner, name string) (state memberUnitState, known bool) {
+	out, err := run("systemctl", "show", name,
+		"--property=LoadState", "--property=ActiveState", "--property=Result")
+	if err != nil {
+		return memberUnitState{}, false
+	}
+	values := systemdProperties(out)
+	first := func(property string) string {
+		if len(values[property]) == 0 {
+			return ""
+		}
+		return values[property][0]
+	}
+	if first("LoadState") != "loaded" || first("ActiveState") == "" {
+		return memberUnitState{}, false
+	}
+	return memberUnitState{active: first("ActiveState"), result: first("Result")}, true
+}
+
+func noteStopLeftUnitFailed(run mailServiceRunner, serviceID string, watched []string, notFailedBefore map[string]bool, result *transport.ServiceActionResult) {
+	for _, name := range watched {
+		if !notFailedBefore[name] {
+			continue
+		}
+		state, known := readUnitFailure(run, name)
+		if !known || state.active != "failed" {
+			continue
+		}
+		result.Notice, result.NoticeUnit, result.NoticeResult = transport.ServiceActionNoticeUnitFailed, name, state.result
+		if serviceID == "postfix" {
+			// What Postfix's own check prints now; the unit's stop command
+			// reads the same main.cf. Empty when the check passes.
+			if out, err := run("postfix", "check"); err != nil && mailServiceExited(err) {
+				result.NoticeDetail = mailServiceLine(out)
+			}
+		}
+		return
+	}
 }
 
 func postfixServiceAction(run mailServiceRunner, action string) transport.ServiceActionResult {
@@ -374,6 +469,46 @@ func postgresReloadDetail(stage, member, reported string) string {
 	return "the reload of " + member + " failed (" + reported + "); which settings it runs with now was not read"
 }
 
+// reloadTargetStopped answers, from states read before anything is sent, that
+// nothing a reload of unit would reach is running. owner names the unit that
+// runs the daemon when it is not the one acted on.
+//
+// A wrapper: every unit systemd propagates its reload to is `inactive` or
+// `failed`. A wrapper with no such unit is not answered here. Any other unit:
+// it is loaded and `inactive` or `failed` itself. A unit that is not loaded
+// (no such unit on this server) is left to systemd's own words.
+func reloadTargetStopped(run mailServiceRunner, unit string, wrapper bool, members []string, before map[string]memberUnitState) (detail, owner string, stopped bool) {
+	if wrapper {
+		if len(members) == 0 {
+			return "", "", false
+		}
+		for _, member := range members {
+			if !before[member].stopped() {
+				return "", "", false
+			}
+		}
+		return "none of the units behind " + unit + ".service is running (" + strings.Join(members, ", ") + " " + before[members[0]].describe() + "); nothing was reloaded", members[0], true
+	}
+	name := unit + ".service"
+	out, err := run("systemctl", "show", name,
+		"--property=LoadState", "--property=ActiveState", "--property=SubState", "--property=Result")
+	if err != nil {
+		return "", "", false
+	}
+	values := systemdProperties(out)
+	first := func(property string) string {
+		if len(values[property]) == 0 {
+			return ""
+		}
+		return values[property][0]
+	}
+	state := memberUnitState{active: first("ActiveState"), sub: first("SubState"), result: first("Result")}
+	if first("LoadState") != "loaded" || !state.stopped() {
+		return "", "", false
+	}
+	return name + " is " + state.describe() + "; nothing was reloaded", "", true
+}
+
 // unitServiceAction acts on a unit that is neither Postfix nor Dovecot.
 func unitServiceAction(run mailServiceRunner, serviceID, unit, action string) transport.ServiceActionResult {
 	// PostgreSQL can be asked when it last re-read its files. That is read
@@ -406,6 +541,27 @@ func unitServiceAction(run mailServiceRunner, serviceID, unit, action string) tr
 				}
 			}
 			before[member] = state
+		}
+	}
+
+	if action == "reload" {
+		// A reload of something that is not running reloads nothing (12 Oct
+		// 2026). It used to be sent anyway and systemd's own refusal
+		// ("postgresql.service is not active, cannot reload.") came back as a
+		// failed command, for nginx, MariaDB and the PostgreSQL wrapper alike;
+		// only Postfix and Dovecot were answered as not running. The rule is
+		// the unit's own state, read before anything is sent: a wrapper is not
+		// running when none of the units a reload reaches is active, any other
+		// unit when it is `inactive` or `failed` itself. A state that could
+		// not be read, or one in between (`activating`, `deactivating`), is
+		// not this answer: the command is sent and its own answer stands.
+		// Çalışmayan bir şeyin yeniden yüklenmesi hiçbir şeyi yeniden yüklemez.
+		// Kural, hiçbir şey gönderilmeden önce okunan unit durumudur.
+		if detail, owner, stopped := reloadTargetStopped(run, unit, wrapper != nil, members, before); stopped {
+			return transport.ServiceActionResult{
+				Error: detail, Outcome: transport.ServiceActionFailed, Stage: transport.ServiceActionStageNotRunning,
+				Unit: owner, Detail: detail,
+			}
 		}
 	}
 

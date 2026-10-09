@@ -5,6 +5,7 @@ import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { Button, Checking, CouldNotCheck, Dialog, ErrorBanner } from './ui';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
+import { isSiteWebServerRefused, siteWebServerRefusedIn } from '../lib/siteWebServerRefused';
 import { gateOn } from '../lib/remote';
 import {
     dnsBlocker,
@@ -194,6 +195,14 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                     return;
                 }
                 const apiErr = await readApiError(res);
+                if (isSiteWebServerRefused(apiErr)) {
+                    // The web server refused the site: a sentence with a
+                    // command to run stays in the dialog, in the page's
+                    // language, with nginx's own line under it; it is not
+                    // a toast that leaves after five seconds.
+                    setError(siteWebServerRefusedIn(apiErr, t));
+                    return;
+                }
                 if (!apiErr.message && !apiErr.code) apiErr.message = t('domains.add.failed');
                 setError(apiErr);
                 showToast('error', apiErrorText(apiErr, t, 'domains.add.failed'));

@@ -78,6 +78,46 @@ type CpmoveExtractResponse struct {
 	Bytes    int64  `json:"bytes"`
 	Complete bool   `json:"complete"`
 	Error    string `json:"error,omitempty"`
+	// What the files step left out while it imported the rest (12 Oct 2026).
+	// It used to leave these out without a word. Additive.
+	//
+	// Refused: members whose name is not one the step will place anywhere (an
+	// absolute path). RefusedCount is how many there were; Refused holds at
+	// most CpmoveRefusedMemberLimit of them, in archive order.
+	//
+	// Outside: members that are not below homedir/public_html, the one folder
+	// this step copies. OutsideCount counts them (directories are not
+	// counted); OutsideGroups says where they are, by the folder they are in,
+	// largest first, at most CpmoveOutsideGroupLimit groups.
+	//
+	// Dosya adımının, geri kalanını içe aktarırken dışarıda bıraktıkları.
+	// Eskiden tek söz etmeden bırakılıyorlardı. Eklemelidir.
+	Refused       []CpmoveRefusedMember `json:"refused,omitempty"`
+	RefusedCount  int                   `json:"refused_count,omitempty"`
+	OutsideCount  int                   `json:"outside_count,omitempty"`
+	OutsideGroups []CpmoveMemberGroup   `json:"outside_groups,omitempty"`
+}
+
+const (
+	CpmoveRefusedMemberLimit = 20
+	CpmoveOutsideGroupLimit  = 12
+	// CpmoveRefusedAbsolutePath: the archive names the member with an
+	// absolute path. Nothing was written for it, anywhere.
+	CpmoveRefusedAbsolutePath = "absolute_path"
+)
+
+// CpmoveRefusedMember is one member the files step refused by its name. Name
+// is bounded and holds no control characters.
+type CpmoveRefusedMember struct {
+	Name   string `json:"name"`
+	Reason string `json:"reason"`
+}
+
+// CpmoveMemberGroup counts the members outside the site folder that are in
+// one folder of the archive ("homedir/mail", "mysql").
+type CpmoveMemberGroup struct {
+	Name  string `json:"name"`
+	Count int    `json:"count"`
 }
 
 type CpmoveImportDBRequest struct {

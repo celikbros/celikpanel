@@ -1697,7 +1697,7 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(reply)
+	json.NewEncoder(w).Encode(serviceActionSuccessAnswer(serviceName, req.Action, reply))
 }
 
 // handleConfig reads (GET ?path=) and writes (POST {path, content, version}) a
