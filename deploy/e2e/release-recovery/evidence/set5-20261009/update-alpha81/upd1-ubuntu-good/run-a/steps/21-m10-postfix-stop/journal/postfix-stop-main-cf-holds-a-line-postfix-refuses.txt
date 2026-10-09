@@ -1,0 +1,10 @@
+2026-10-09T17:47:04.017361+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-09T17:47:04.017607+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-09T17:47:04.023737+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T17:47:04.029689+00:00 dns-ubuntu postmulti[63968]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T17:47:04.723510+00:00 dns-ubuntu postfix/submission/smtpd[62120]: connect from localhost[127.0.0.1]
+2026-10-09T17:47:04.724649+00:00 dns-ubuntu postfix/submission/smtpd[62120]: disconnect from localhost[127.0.0.1] quit=1 commands=1
+2026-10-09T17:47:05.031902+00:00 dns-ubuntu systemd[1]: postfix@-.service: Control process exited, code=exited, status=1/FAILURE
+2026-10-09T17:47:05.035162+00:00 dns-ubuntu systemd[1]: postfix@-.service: Failed with result 'exit-code'.
+2026-10-09T17:47:05.035502+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T17:47:05.033523+00:00 dns-ubuntu postfix/master[35314]: terminating on signal 15

@@ -1,0 +1,26 @@
+{
+  "note": "TimeoutError: _ssl.c:1064: The handshake operation timed out",
+  "outcome": "unknown",
+  "panel": "owner",
+  "purpose": "SystemUpdateOperation status (read-only poll)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18691"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/panel/update/status?request_id=bd5f83a8b513938ce70b5208bb269006"
+  },
+  "response": null
+}

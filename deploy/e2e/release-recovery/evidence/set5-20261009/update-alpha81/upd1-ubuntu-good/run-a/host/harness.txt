@@ -1,0 +1,1 @@
+harness=/var/tmp/cp-set5-run/harness-d (git archive 67b62cc0f without earlier evidence, overlay overlay-d, harness.diff sha256 6f03b5f4b9a507377d2bdb6b6f9080cfa768688065d088a99004bff77ed25d0d)

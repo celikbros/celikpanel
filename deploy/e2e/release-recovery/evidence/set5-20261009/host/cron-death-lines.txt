@@ -1,0 +1,13 @@
+# Lines `(CRON) DEATH (can't lock /var/run/crond.pid, ...)` in each run's journal of the Panel's and the Agent's units
+# (steps/NN-collect/journal-product.txt): count, first and last time. An observation; the cause was not looked into.
+
+update-alpha81/upd1-debian13-good/run-a: 3 (first 2026-10-09T17:19:09, last 2026-10-09T17:19:17)
+update-alpha81/upd1-ubuntu-good/run-a: 17 (first 2026-10-09T17:33:33, last 2026-10-09T17:37:07)
+update-alpha81/upd1-arch-good/run-a: 0
+update-alpha81/upd1-debian13-defective/run-a: 3 (first 2026-10-09T17:53:48, last 2026-10-09T17:53:57)
+update-alpha81/upd1-ubuntu-defective/run-a: 18 (first 2026-10-09T18:18:59, last 2026-10-09T18:22:36)
+update-alpha81/upd1-arch-defective/run-a: 0
+update-alpha81/upd1-debian13-startcheck/run-a: 3 (first 2026-10-09T18:49:45, last 2026-10-09T18:49:54)
+update-alpha81/upd1-debian13-owner-continuation/run-a: 2 (first 2026-10-09T19:04:20, last 2026-10-09T19:04:26)
+update-alpha81/upd1-ubuntu-owner-continuation/run-a: 18 (first 2026-10-09T19:25:24, last 2026-10-09T19:29:28)
+update-alpha81/upd1-debian13-mgmt-off-reboot/run-a: 2 (first 2026-10-09T19:52:30, last 2026-10-09T19:52:33)

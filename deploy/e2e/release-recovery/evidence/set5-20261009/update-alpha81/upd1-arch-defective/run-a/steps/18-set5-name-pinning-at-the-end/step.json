@@ -1,0 +1,67 @@
+{
+  "checks": {
+    "asked_with": "getent -s files ahosts NAME and getent -s files hosts NAME (the hosts file only; no DNS question is sent)",
+    "at": "2026-10-09T18:43:57Z",
+    "boot_id": "d273229a-113c-4a41-98a1-bf8870dfd147",
+    "boot_id_at_the_pinning": "87934d5a-9271-4325-bf0d-55718c5f80ab",
+    "certbot_directories": [
+      {
+        "entries": [],
+        "path": "/var/log/letsencrypt"
+      },
+      {
+        "entries": null,
+        "path": "/etc/letsencrypt/accounts",
+        "reason": "FileNotFoundError"
+      },
+      {
+        "entries": null,
+        "path": "/etc/letsencrypt/live",
+        "reason": "FileNotFoundError"
+      },
+      {
+        "entries": null,
+        "path": "/etc/letsencrypt/renewal",
+        "reason": "FileNotFoundError"
+      }
+    ],
+    "certbot_program": "/usr/bin/certbot",
+    "file": "name-pinning-at-the-end.json",
+    "kernel": "7.2.9-arch1-1",
+    "loopback_only": {
+      "acme-staging-v02.api.letsencrypt.org": true,
+      "acme-v02.api.letsencrypt.org": true,
+      "acme.zerossl.com": true,
+      "celikpanel.net": true,
+      "dv.acme-v02.api.pki.goog": true
+    },
+    "names": [
+      "acme-v02.api.letsencrypt.org",
+      "acme-staging-v02.api.letsencrypt.org",
+      "acme.zerossl.com",
+      "dv.acme-v02.api.pki.goog",
+      "celikpanel.net"
+    ],
+    "os_release": {
+      "BUILD_ID": "rolling",
+      "ID": "arch",
+      "PRETTY_NAME": "Arch Linux"
+    },
+    "packages_installed": {
+      "certbot": "5.8.0-1",
+      "cron": "1.7.2-2",
+      "cronie": "1.7.2-2",
+      "mariadb": "13.0.2-2",
+      "mariadb-server": "13.0.2-2",
+      "nginx": "1.30.5-1",
+      "openssl": "3.6.5-1",
+      "php": "8.5.11-1",
+      "php-fpm": "8.5.11-1",
+      "systemd": "262-1"
+    }
+  },
+  "finished_at": "2026-10-09T18:43:56Z",
+  "name": "set5-name-pinning-at-the-end",
+  "started_at": "2026-10-09T18:43:56Z",
+  "verdict": "passed"
+}

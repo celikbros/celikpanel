@@ -1,0 +1,28 @@
+Formatting '/var/tmp/cp-release-drill-s5-ub-oc-a/cells/4fbfbd34be526857d2fe59f4/ubuntu/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-s5-ub-oc-a/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-s5-ub-oc-a", "cell_id": "release-recovery__e43cbcf20096a7fe", "ssh_ports": [4691, 4692]}
+RAM-backed node directories of cp-release-drill-s5-ub-oc-a: 1
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s5-ub-oc-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s5-ub-oc-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"step": "set5-name-pinning", "verdict": "passed", "reason": null}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "seed", "verdict": "passed", "reason": null}
+{"step": "pre-state", "verdict": "passed", "reason": null}
+{"step": "arm", "verdict": "passed", "reason": null}
+{"step": "owner-start", "verdict": "passed", "reason": null}
+{"step": "track", "verdict": "observed", "reason": null}
+{"step": "owner-continuation (required)", "verdict": "observed", "reason": null}
+{"step": "track-after-owner-continuation", "verdict": "passed", "reason": null}
+{"step": "terminal", "verdict": "passed", "reason": null}
+{"step": "deferred-mail-watch", "verdict": "observed", "reason": null}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"step": "verdicts", "verdict": "passed", "reason": null}
+{"step": "set5-name-pinning-at-the-end", "verdict": "passed", "reason": null}
+{"step": "kind-expectation", "verdict": "passed", "reason": null}
+{"outcome": "recovered-after-owner-continuation", "overall": "complete-for-review", "request_id": "bd5f83a8b513938ce70b5208bb269006", "steps": {"arm": "passed", "baseline-install": "passed", "collect": "passed", "deferred-mail-watch": "observed", "kind-expectation": "passed", "license": "passed", "origin": "passed", "owner-continuation (required)": "observed", "owner-login": "passed", "owner-start": "passed", "pre-state": "passed", "preflight": "passed", "seed": "passed", "set5-name-pinning": "passed", "set5-name-pinning-at-the-end": "passed", "setup": "observed", "terminal": "passed", "track": "observed", "track-after-owner-continuation": "passed", "verdicts": "passed"}}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-s5-ub-oc-a", "evidence_retained": true}
+SET5 cell=upd1-ubuntu-owner-continuation lab=/var/tmp/cp-release-drill-s5-ub-oc-a driver_exit=0 evidence=/var/tmp/cp-release-drill-s5-ub-oc-a/evidence/*/upd1

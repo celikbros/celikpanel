@@ -1,0 +1,36 @@
+working tree of the repository, read with the Windows git at 2026-10-09T20:02:42Z (after the last cell was staged)
+HEAD 2ab7bf20c3070ec44e3231c470be47f3f9dd0c37 branch fix/setup-handover-guidance
+--- git status --short (untracked directories are listed as git prints them)
+ M ROADMAP.md
+ M ROADMAP.tr.md
+ M deploy/e2e/release-recovery/lab.py
+ M docs/RESILIENCE-CONTRACT.md
+ M docs/RESILIENCE-CONTRACT.tr.md
+?? .agents/
+?? .attic/
+?? .claude/
+?? .codex/
+?? .github/agents/
+?? .github/hooks/
+?? .github/skills/
+?? .impeccable/review-final/
+?? .impeccable/review/
+?? deploy/e2e/release-recovery/evidence/set5-20261009/
+?? deploy/e2e/release-recovery/run-set5.sh
+?? deploy/e2e/release-recovery/set5_redact.py
+?? deploy/e2e/release-recovery/set5_trial.py
+?? deploy/e2e/release-recovery/test_set5_trial.py
+?? docs/RELEASE-NOTES-v0.1.0-alpha.82.md
+?? docs/RELEASE-NOTES-v0.1.0-alpha.82.tr.md
+--- git diff --stat HEAD -- cmd internal web
+(end; empty means no product file of the working tree differs from HEAD)
+--- git diff --stat HEAD -- docs ROADMAP.md ROADMAP.tr.md (not edited by this run; ROADMAP* was modified before the run began, docs/RESILIENCE-CONTRACT* changed while it went on, by another session)
+ ROADMAP.md                     | 90 ++++++++++++++++++++++++++++++++++++++++-
+ ROADMAP.tr.md                  | 91 +++++++++++++++++++++++++++++++++++++++++-
+ docs/RESILIENCE-CONTRACT.md    | 16 ++++++--
+ docs/RESILIENCE-CONTRACT.tr.md | 18 +++++++--
+ 4 files changed, 203 insertions(+), 12 deletions(-)
+--- git diff --stat HEAD -- deploy/e2e/release-recovery (outside evidence/)
+ deploy/e2e/release-recovery/lab.py | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+--- git status at the start of the session (from the session's own record): M ROADMAP.md, M ROADMAP.tr.md, and untracked .agents/ .attic/ .claude/ .codex/ .github/agents/ .github/hooks/ .github/skills/ .impeccable/review-final/ .impeccable/review/ docs/RELEASE-NOTES-v0.1.0-alpha.82.md docs/RELEASE-NOTES-v0.1.0-alpha.82.tr.md

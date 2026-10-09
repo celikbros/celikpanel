@@ -1,0 +1,5 @@
+2026-10-09T16:42:00Z first-reading-of-this-run (Get-PSDrive C in the session, about this time; before any work) free_bytes=49233260544 free_GiB=45.85
+2026-10-09T17:13:44Z before-the-first-cell free_bytes=45010337792 free_GiB=41.92
+2026-10-09T20:02:11Z after-the-last-cell-was-staged free_bytes=44018675712 free_GiB=41
+2026-10-09T20:03:51Z watchers-stopped free_bytes=44039258112 free_GiB=41.01
+2026-10-09T20:15:33Z end-of-run (Get-PSDrive C in the session, after the folder was written once) free_bytes=43985334272 free_GiB=40.96

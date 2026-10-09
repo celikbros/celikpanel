@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-s5-d13-mr-a
+upd1-debian13-mgmt-off-reboot-20261009t194749z

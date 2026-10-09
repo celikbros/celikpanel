@@ -1,0 +1,20 @@
+{
+  "at_staging": {
+    "driver_files_changed": [],
+    "driver_sha256sums_lines_rewritten": [],
+    "host_side_files_changed": [],
+    "values_learned_from": "the lab's own raw records on the WSL host (not retained here)"
+  },
+  "distinct_values_known": 0,
+  "files_changed": {},
+  "files_read": 296,
+  "mark": "[REDACTED-SHA256]",
+  "note": "counts only; no removed value is recorded anywhere",
+  "places_by_class": {
+    "learned_value": 0,
+    "migration_directory": 0,
+    "named_field": 0
+  },
+  "rewritten_in_place": true,
+  "schema": "celikpanel/set5-token-digest-sweep/v1"
+}

@@ -1,0 +1,14 @@
+{
+  "distinct_values_known": 1,
+  "files_changed": {},
+  "files_read": 244,
+  "mark": "[REDACTED-SHA256]",
+  "note": "counts only; no removed value is recorded anywhere",
+  "places_by_class": {
+    "learned_value": 0,
+    "migration_directory": 2,
+    "named_field": 0
+  },
+  "rewritten_in_place": true,
+  "schema": "celikpanel/set5-token-digest-sweep/v1"
+}

@@ -1,0 +1,138 @@
+2026-10-09T16:43:38Z
+--- whoami
+root
+--- uptime
+ 19:43:38 up 0 min,  1 user,  load average: 0.00, 0.00, 0.00
+--- memory
+               total        used        free      shared  buff/cache   available
+Mem:           15697         664       14711           3         516       15033
+Swap:           4096           0        4096
+--- cpus
+16
+--- qemu
+--- kvm
+crw-rw-rw- 1 root kvm 10, 232 Oct  9 19:43 /dev/kvm
+--- go
+go version go1.26.5 linux/amd64
+--- node
+v26.8.1
+12.0.2
+--- python
+Python 3.14.7
+--- images
+total 1486060
+drwx------ 2 root root      4096 Oct  1 15:57 .
+drwx------ 5 root root      4096 Sep 28 21:06 ..
+-r--r--r-- 5 root root 556609024 Sep 27 02:09 Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+-r--r--r-- 5 root root 340262912 Sep 27 02:09 debian-13-genericcloud-amd64-20260826-2582.qcow2
+-r--r--r-- 2 root root 624829952 Sep  8 20:39 ubuntu-24.04-server-cloudimg-amd64-20260826.img
+--- existing cp-set5*
+none
+--- other jobs
+--- repo head
+2ab7bf20c3070ec44e3231c470be47f3f9dd0c37
+--- 67b62cc0f
+67b62cc0fa4a6b8edd33e6a1bf4a55a982ceaaed
+a3167582da96fe38caa44b58dbc46cecf42a4600
+--- tag alpha.81
+a0beb7263d1f4ca72258f6b306f9111ba4e2a334
+b1dffa78bcaca9e3514e5b2bc42f0e2cf47dca2f
+--- builds
+20261002t203047z
+20261002t203514z
+20261008t205628z
+20261008t210046z
+20261009t030455z
+20261009t061555z
+20261009t064831z
+20261009t070418z
+20261009t101529z
+20261009t102025z
+20261009t143202z
+--- dist dirs
+42
+/var/tmp/cp-pair-accept/dist/a0beb7263d1f4ca72258f6b306f9111ba4e2a334-acceptance-license
+no dist of the tag commit
+--- a81 dist
+total 64184
+drwxr-xr-x  4 root root     4096 Oct  9 09:49 .
+drwxr-xr-x 44 root root     4096 Oct  9 17:36 ..
+-rw-r--r--  1 root root      628 Oct  9 09:49 archive-evidence-entries.json
+-rw-r--r--  1 root root     9742 Oct  9 09:49 build.log
+-rw-r--r--  1 root root 65661321 Oct  9 09:49 celikpanel-v0.1.0-alpha.81-acceptance-license.tar.gz
+-rw-r--r--  1 root root     1177 Oct  9 09:49 dist.json
+-rw-r--r--  1 root root       32 Oct  9 09:49 go-version.txt
+-rw-r--r--  1 root root      623 Oct  9 09:49 guard-refusal.txt
+drwxrwxr-x 11 root root     4096 Oct  9 09:49 product-web-src
+drwxr-xr-x 15 root root     4096 Oct  9 09:49 src
+-rw-r--r--  1 root root    10496 Oct  9 09:49 web-dist.sha256
+3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109  /var/tmp/cp-pair-accept/dist/a0beb7263d1f4ca72258f6b306f9111ba4e2a334-acceptance-license/celikpanel-v0.1.0-alpha.81-acceptance-license.tar.gz
+--- git local config key list
+b6f8491de6f4969250c85cd1d20d8607  -
+--- var/tmp count
+562
+--- var/tmp disk
+/dev/sdd       1007G  225G  732G  24% /
+/dev/sdd       1081101176832 241146195968 784962625536  24% /
+--- listening ports 4xxx / 18xxx
+none
+--- labs
+132
+--- sizes of set4 labs (what a lab leaves without overlay)
+922M	/var/tmp/cp-release-drill-s4-u9-d13-b
+662M	/var/tmp/cp-release-drill-s4-u9-ub-a
+921M	/var/tmp/cp-release-drill-s4-u12-arch-b
+912K	/var/tmp/cp-release-drill-s4-u9-d13-b/cells
+8.0K	/var/tmp/cp-release-drill-s4-u9-d13-b/current-worker-baseline-debian13-current-worker-baseline.log
+4.0K	/var/tmp/cp-release-drill-s4-u9-d13-b/current-worker-baseline-debian13-current-worker-baseline-result.json
+16K	/var/tmp/cp-release-drill-s4-u9-d13-b/current-worker-baseline-debian13-driver.py
+24K	/var/tmp/cp-release-drill-s4-u9-d13-b/current-worker-baseline-debian13-intent.json
+2.0M	/var/tmp/cp-release-drill-s4-u9-d13-b/evidence
+856M	/var/tmp/cp-release-drill-s4-u9-d13-b/images
+4.0K	/var/tmp/cp-release-drill-s4-u9-d13-b/key
+4.0K	/var/tmp/cp-release-drill-s4-u9-d13-b/key.pub
+4.0K	/var/tmp/cp-release-drill-s4-u9-d13-b/lab.json
+63M	/var/tmp/cp-release-drill-s4-u9-d13-b/worker-origin
+--- set4 run dir
+3.3G	/var/tmp/cp-set4-run
+4.2G	/var/tmp/cp-set4b-run
+build
+c-drive-cells.txt
+harness-b
+harness-c
+harness-d
+harness-e
+harness-f
+job-build.sh
+job-cell-arch-a.sh
+job-cell-arch-b.sh
+job-cell-d13-a.sh
+job-cell-d13-b.sh
+job-cell-u12-archb.sh
+job-cell-u12-arch.sh
+job-cell-u12c-arch.sh
+job-cell-u9-d13b.sh
+job-cell-u9-d13.sh
+job-cell-u9-ub.sh
+job-cell-ub-a.sh
+job-cell-ub-b.sh
+job-prove.sh
+logs
+overlay-b
+overlay-c
+overlay-d
+overlay-e
+overlay-f
+progress.txt
+runcopy-557b554eb-files.sha256
+--- build dir sizes
+902M	/var/tmp/cp-upd1-build/20261009t030455z
+945M	/var/tmp/cp-upd1-build/20261009t061555z
+950M	/var/tmp/cp-upd1-build/20261009t064831z
+950M	/var/tmp/cp-upd1-build/20261009t070418z
+1013M	/var/tmp/cp-upd1-build/20261009t101529z
+1018M	/var/tmp/cp-upd1-build/20261009t102025z
+1.1G	/var/tmp/cp-upd1-build/20261009t143202z
+--- fstrim/discard
+/dev/sdd on / type ext4 (rw,relatime,discard,errors=remount-ro,data=ordered)
+/dev/sdd / ext4 rw,relatime,discard,errors=remount-ro,data=ordered 0 0

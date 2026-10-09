@@ -1,0 +1,734 @@
+--- /dev/null
++++ b/deploy/e2e/release-recovery/set5_trial.py
+@@ -0,0 +1,337 @@
++#!/usr/bin/env python3
++"""set5: the closing native measurement of the release candidate (commit 67b62cc0f): set3's Part 2 again, the
++owner-started update from the published v0.1.0-alpha.81, cell by cell, on disposable QEMU guests (lab.py).
++
++``Set5UpdateTrial`` is ``set4_trial.Set4UpdateTrial`` (itself ``owner_update_trial.Trial`` with two added steps) and
++changes no step of either. Every one of the ten ``upd1-*`` cells of set3's Part 2 runs through it. What it adds:
++
++  set5-name-pinning (the first step, before ``preflight``)
++      Lab preparation, not an owner action: the directory names of the certificate authorities the product knows
++      (``internal/core/acme_providers.go`` and certbot's default) are mapped to this guest's own loopback in its hosts
++      file, before anything of the product is on the guest, and read back with ``getent -s files`` (the hosts file
++      only; no DNS question is sent). ``preflight`` and everything after it run only if the reading shows it.
++      ``celikpanel.net`` is mapped by the ``origin`` step, as in set3, before the baseline is installed.
++  set4-php-site-before-the-update, set4-php-site-after-the-update (set4's item 9, unchanged)
++      Only in ``upd1-debian13-good`` and ``upd1-ubuntu-good``: a PHP site created by the installed alpha.81, ten
++      requests before the update, after it, and after the vhost was rendered again. Not on Arch (alpha.81 cannot
++      create a PHP site there); set4's update-check step of the rollback cells is not run (not asked for here).
++  M10-postfix-stop (set4's section, unchanged code; after ``verdicts``)
++      Only in ``upd1-debian13-good`` and ``upd1-ubuntu-good``: one Stop of Postfix through the Panel while
++      ``postfix check`` refuses ``main.cf``. It runs after the sample series was collected and judged, so that the
++      cell's own outage windows are those of the update only. The section's code is ``Set4Trial.m10_postfix_stop`` and
++      the recording methods of ``SettingsTrial``, borrowed as plain functions; the candidate was installed by the
++      update, not fresh.
++  set5-name-pinning-at-the-end (the last step)
++      Read only: the same names again and ``celikpanel.net``, the boot id, and whether a certbot log exists.
++
++Collection: ``set5_redact`` is put in front of the driver's redactor (digests under token-named keys, the directory
++name under ``.release-db-migrations/``, and every such value wherever it appears again); before the result is written
++every file of the run is passed through it once more and the counts are kept in ``set5-redaction-sweep.json``.
++
++The driver calls only the Panel's HTTP API; every native fact is read over SSH by the guest helpers. No certificate
++authority and no licence service is contacted. Every result carries ``native_evidence: false``.
++
++  set5_trial.py plan --cell upd1-debian13-good --artifacts A.json --work-root /var/tmp/cp-release-drill-X [--dry-run]
++  set5_trial.py run  --cell upd1-debian13-good --artifacts A.json --work-root /var/tmp/cp-release-drill-X --execute
++"""
++from __future__ import annotations
++
++import argparse
++import json
++from pathlib import Path
++import shlex
++import sys
++import types
++from typing import Any
++
++HERE = Path(__file__).resolve().parent
++if str(HERE) not in sys.path:
++    sys.path.insert(0, str(HERE))
++import set4_trial as s4  # noqa: E402
++import set5_redact  # noqa: E402
++
++sw, base = s4.sw, s4.base
++CELL_KIND = "set5-closing-update"
++UPDATE_CELLS = ("upd1-arch-defective", "upd1-arch-good", "upd1-debian13-defective", "upd1-debian13-good",
++                "upd1-debian13-mgmt-off-reboot", "upd1-debian13-owner-continuation", "upd1-debian13-startcheck",
++                "upd1-ubuntu-defective", "upd1-ubuntu-good", "upd1-ubuntu-owner-continuation")
++ITEM9_CELLS = ("upd1-debian13-good", "upd1-ubuntu-good")
++M10_CELLS = ("upd1-debian13-good", "upd1-ubuntu-good")
++PIN_STEP, PIN_END_STEP, M10_STEP = "set5-name-pinning", "set5-name-pinning-at-the-end", "M10-postfix-stop"
++M10_TITLE = "Postfix stopped through the Panel while `postfix check` refuses main.cf (set4's section; the candidate installed by the update)"
++ORIGIN_NAME = "celikpanel.net"
++# certbot's default and its staging directory; the two other directories internal/core/acme_providers.go names.
++CA_NAMES = ("acme-v02.api.letsencrypt.org", "acme-staging-v02.api.letsencrypt.org", "acme.zerossl.com",
++            "dv.acme-v02.api.pki.goog")
++PIN_MARK = "# set5 lab pin (disposable guest): certificate-authority directory names answer on this guest's own loopback"
++LOOPBACK = ("127.0.0.1", "::1")
++
++# One guest script for both readings; `apply` appends the lines first. It prints one JSON object and no secret.
++PIN_SCRIPT = r'''
++import hashlib, json, os, subprocess, sys, time
++apply = sys.argv[1] == "apply"
++names = json.loads(sys.argv[2]); mark = sys.argv[3]; origin = sys.argv[4]
++hosts = "/etc/hosts"
++def mapped(text, name):
++    return [l.strip() for l in text.splitlines() if name in l.split("#", 1)[0].split()[1:]]
++def ask(database, name):
++    done = subprocess.run(["getent", "-s", "files", database, name], capture_output=True, text=True, timeout=20)
++    return {"returncode": done.returncode, "stdout": done.stdout.strip()}
++before = open(hosts, "rb").read()
++out = {"mode": sys.argv[1], "hosts_sha256_before": hashlib.sha256(before).hexdigest(),
++       "mapped_before": {n: mapped(before.decode("utf-8", "replace"), n) for n in names + [origin]}}
++if apply:
++    if any(out["mapped_before"][n] for n in names):
++        out["refused"] = "a name is already mapped; the hosts file is not written twice"
++    else:
++        with open(hosts, "ab") as stream:
++            stream.write(("\n" + mark + "\n" + "".join("127.0.0.1 %s\n::1 %s\n" % (n, n) for n in names)).encode())
++            stream.flush(); os.fsync(stream.fileno())
++        out["appended_lines"] = 1 + 2 * len(names)
++text = open(hosts, "rb").read()
++out["hosts_sha256_after"] = hashlib.sha256(text).hexdigest()
++out["hosts_lines"] = [l for l in text.decode("utf-8", "replace").splitlines() if l.strip() and not l.lstrip().startswith("#")]
++out["hosts_mode"] = oct(os.stat(hosts).st_mode & 0o7777)
++out["asked_with"] = "getent -s files ahosts NAME and getent -s files hosts NAME (the hosts file only; no DNS question is sent)"
++out["resolves"] = {n: {"ahosts": ask("ahosts", n), "hosts": ask("hosts", n)} for n in names + [origin]}
++try:
++    out["nsswitch_hosts"] = [l.strip() for l in open("/etc/nsswitch.conf") if l.startswith("hosts:")]
++except OSError as exc:
++    out["nsswitch_hosts"] = type(exc).__name__
++out["product_paths_present"] = [p for p in ("/opt/celikpanel", "/etc/celikpanel", "/var/lib/celikpanel", "/usr/libexec/celikpanel") if os.path.exists(p)]
++out["certbot_program"] = next((p for p in ("/usr/bin/certbot", "/usr/local/bin/certbot", "/snap/bin/certbot") if os.path.exists(p)), None)
++logs = []
++for directory in ("/var/log/letsencrypt", "/etc/letsencrypt/accounts", "/etc/letsencrypt/live", "/etc/letsencrypt/renewal"):
++    try:
++        logs.append({"path": directory, "entries": sorted(os.listdir(directory))[:20]})
++    except OSError as exc:
++        logs.append({"path": directory, "entries": None, "reason": type(exc).__name__})
++out["certbot_directories"] = logs
++out["boot_id"] = open("/proc/sys/kernel/random/boot_id").read().strip()
++out["uptime_seconds"] = float(open("/proc/uptime").read().split()[0])
++out["at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
++print(json.dumps(out, sort_keys=True))
++'''
++
++
++# ---------------------------------------------------------------------------
++# Pure rules
++# ---------------------------------------------------------------------------
++
++def addresses_of(answer: dict | None) -> list:
++    """The addresses of one ``getent`` answer (first field of every line)."""
++    return [line.split()[0] for line in str((answer or {}).get("stdout") or "").splitlines() if line.split()]
++
++
++def loopback_only(reading: dict | None) -> bool:
++    """Both databases answered from the hosts file, and every address is this guest's own loopback."""
++    reading = reading or {}
++    found = addresses_of(reading.get("ahosts")) + addresses_of(reading.get("hosts"))
++    return (bool(addresses_of(reading.get("ahosts"))) and bool(addresses_of(reading.get("hosts")))
++            and all(address in LOOPBACK for address in found))
++
++
++def pin_verdict(reading: dict, names: tuple) -> dict:
++    resolves = reading.get("resolves") or {}
++    return {name: loopback_only(resolves.get(name)) for name in names}
++
++
++def cell_additions(name: str) -> dict:
++    return {"item9": name in ITEM9_CELLS, "m10": name in M10_CELLS}
++
++
++# ---------------------------------------------------------------------------
++# The trial
++# ---------------------------------------------------------------------------
++
++class Set5UpdateTrial(s4.Set4UpdateTrial):
++    # set1..set4's recording and service-action methods and set4's M10 section, borrowed as plain functions. None of
++    # these names exists in owner_update_trial.Trial or Set4UpdateTrial, so no method of the update driver is replaced.
++    native = sw.SettingsTrial.native
++    snap = sw.SettingsTrial.snap
++    owner = sw.SettingsTrial.owner
++    keep_text = sw.SettingsTrial.keep_text
++    check = sw.SettingsTrial.check
++    note = sw.SettingsTrial.note
++    catalogue = sw.SettingsTrial.catalogue
++    call = sw.SettingsTrial.call
++    refused = sw.SettingsTrial.refused
++    section = sw.SettingsTrial.section
++    postfix = sw.SettingsTrial.postfix
++    smtp = sw.SettingsTrial.smtp
++    journal = sw.SettingsTrial.journal
++    guest_clock = sw.SettingsTrial.guest_clock
++    service_units = sw.SettingsTrial.service_units
++    service_state = sw.SettingsTrial.service_state
++    daemon = sw.SettingsTrial.daemon
++    service_action = sw.SettingsTrial.service_action
++    snap4 = s4.Set4Trial.snap4
++    m10_postfix_stop = s4.Set4Trial.m10_postfix_stop
++
++    def __init__(self, cell: Any, artifacts: dict, work_root: str, local_port: int) -> None:
++        super().__init__(cell, artifacts, work_root, local_port, None, "external")
++        self.additions = cell_additions(cell.name)
++        self.redactor, self.token_digests = set5_redact.wrap(self.redactor)
++        # what the borrowed methods read of a fresh-install trial
++        self.settings = types.SimpleNamespace(name=cell.name, mail=bool(cell.mail_required), purpose=None, components=())
++        self.sections: dict[str, dict] = {}
++        self.current: dict[str, Any] = {}
++        self.native_sequence = 0
++        finalize = self.ev.finalize_upd1
++
++        def finalize_swept(result: dict) -> dict:
++            result["set5"] = {"cell_kind": CELL_KIND, "additions": self.additions, "sections": self.sections,
++                              "pinned_names": list(CA_NAMES)}
++            report = set5_redact.sweep([self.ev.directory], self.token_digests)
++            self.ev.write_json("set5-redaction-sweep.json", report)
++            return finalize(result)
++        self.ev.finalize_upd1 = finalize_swept
++
++    def upload_helpers(self) -> dict:
++        # set3's helpers always; set4's two only where item 9 or M10 runs, and set1's settings helper for M10.
++        helpers = base.Trial.upload_helpers(self)
++        extra = []
++        if self.additions["item9"] or self.additions["m10"]:
++            extra += [s4.rid.HELPER, s4.HELPER4]
++        if self.additions["m10"]:
++            extra.append(sw.HELPER)
++        for name in extra:
++            helpers[name] = self.lab.put_file(self.root, self.record, self.plan, self.node_name, HERE / name, name)[1]
++        return helpers
++
++    # -- the added steps -------------------------------------------------------------------------------------
++
++    def step(self, name: str, function, *, needs: tuple = ()) -> str:
++        plain = base.Trial.step
++        if name == "preflight":
++            plain(self, PIN_STEP, self.pin_names)
++            needs = tuple(needs) + (PIN_STEP,)
++        if name == "pre-state" and self.additions["item9"]:
++            plain(self, "set4-php-site-before-the-update", self.php_before, needs=("seed",))
++        if name == "collect" and self.additions["item9"]:
++            plain(self, "set4-php-site-after-the-update", self.php_after,
++                  needs=("terminal", "set4-php-site-before-the-update"))
++        verdict = plain(self, name, function, needs=needs)
++        if name == "verdicts":
++            if self.additions["m10"]:
++                self.m10_after_the_update()
++            plain(self, PIN_END_STEP, self.pin_reading_at_the_end)
++        return verdict
++
++    def pin_reading(self, mode: str) -> dict:
++        script = ("python3 -I - " + shlex.join([mode, json.dumps(list(CA_NAMES)), PIN_MARK, ORIGIN_NAME])
++                  + " <<'CP_SET5_PIN'\n" + PIN_SCRIPT + "\nCP_SET5_PIN\n")
++        return json.loads(self.guest(script, timeout=120).stdout)
++
++    def pin_names(self, checks: dict) -> str:
++        """Before anything else is done on the guest: the certificate authorities' names answer on its loopback."""
++        self.lab.process_guard(self.node)
++        reading = self.pin_reading("apply")
++        self.record_json("name-pinning.json", reading)
++        verdict = pin_verdict(reading, CA_NAMES)
++        checks.update(what="lab preparation, not an owner action", names=list(CA_NAMES), loopback_only=verdict,
++                      appended_lines=reading.get("appended_lines"), refused=reading.get("refused"),
++                      product_paths_present=reading.get("product_paths_present"),
++                      certbot_program=reading.get("certbot_program"), boot_id=reading.get("boot_id"),
++                      uptime_seconds=reading.get("uptime_seconds"), at=reading.get("at"),
++                      origin_name_mapped_yet=bool((reading.get("mapped_before") or {}).get(ORIGIN_NAME)),
++                      origin_name_note=f"{ORIGIN_NAME} is mapped by the origin step, before the baseline is installed",
++                      asked_with=reading.get("asked_with"), file="name-pinning.json")
++        if reading.get("refused") or not all(verdict.values()):
++            raise base.StepFailed("the certificate authorities' names do not answer on this guest's loopback only: "
++                                  + json.dumps(verdict, sort_keys=True))
++        if reading.get("product_paths_present"):
++            raise base.StepFailed("the product was on the guest before the names were pinned")
++        return "passed"
++
++    def pin_reading_at_the_end(self, checks: dict) -> str:
++        if self.verdict_of(PIN_STEP) != "passed":
++            checks["reason"] = "the names were not pinned at the start; there is nothing to read again"
++            return "skipped"
++        reading = self.pin_reading("read")
++        self.record_json("name-pinning-at-the-end.json", reading)
++        names = CA_NAMES + (ORIGIN_NAME,)
++        verdict = pin_verdict(reading, names)
++        first = next((s for s in self.steps if s["name"] == PIN_STEP), {})
++        checks.update(names=list(names), loopback_only=verdict, boot_id=reading.get("boot_id"),
++                      boot_id_at_the_pinning=(first.get("checks") or {}).get("boot_id"),
++                      certbot_program=reading.get("certbot_program"),
++                      certbot_directories=reading.get("certbot_directories"), at=reading.get("at"),
++                      asked_with=reading.get("asked_with"), file="name-pinning-at-the-end.json")
++        if not all(verdict.values()):
++            raise base.StepFailed("a pinned name no longer answers on this guest's loopback only: "
++                                  + json.dumps(verdict, sort_keys=True))
++        return "passed"
++
++    def m10_after_the_update(self) -> str:
++        """set4's M10 section on the candidate the update installed. The fresh-install trial's site domain and
++        mailbox are those of this cell's seed."""
++        seed = self.state.get("seed") or {}
++        mail = seed.get("mail") or {}
++        self.state["mailbox"] = mail.get("address") if mail.get("listed") else None
++        if self.verdict_of("terminal") != "passed" or not seed.get("domain") or not self.state["mailbox"]:
++            return base.Trial.step(self, M10_STEP, lambda checks: checks.update(
++                reason="not run: the update did not end verified, or the seeded mailbox is missing") or "not-run")
++        with base.patched(sw, "SITE_DOMAIN", seed["domain"]):
++            return self.section(M10_STEP, M10_TITLE, self.m10_postfix_stop, needs=("terminal",))
++
++
++# ---------------------------------------------------------------------------
++# CLI
++# ---------------------------------------------------------------------------
++
++def build_plan(name: str, artifacts: dict, work_root: str, local_port: int) -> dict:
++    cell = base.validate_cell(name)
++    additions = cell_additions(name)
++    added = [PIN_STEP]
++    if additions["item9"]:
++        added += ["set4-php-site-before-the-update", "set4-php-site-after-the-update"]
++    if additions["m10"]:
++        added.append(M10_STEP)
++    added.append(PIN_END_STEP)
++    return {"schema": "celikpanel/set5-plan/v1", "cell_kind": CELL_KIND, "native_evidence": False, "cell": name,
++            "work_root": work_root, "local_port": local_port,
++            "rule": "the driver calls only the Panel's HTTP API as the logged-in owner; every native fact is a read-only SSH "
++                    "inspection; owner actions and lab preparation on the guest are recorded as such; no certificate "
++                    "authority and no licence service is contacted",
++            "pinned_names": list(CA_NAMES),
++            "update": base.build_plan(cell, artifacts, work_root, local_port, "external").get("steps"),
++            "added_steps": added}
++
++
++def main(argv: list[str] | None = None) -> int:
++    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
++    sub = parser.add_subparsers(dest="command", required=True)
++    for name in ("plan", "run"):
++        cmd = sub.add_parser(name)
++        cmd.add_argument("--cell", required=True, choices=sorted(UPDATE_CELLS))
++        cmd.add_argument("--artifacts", required=True, type=Path)
++        cmd.add_argument("--work-root", required=True)
++        cmd.add_argument("--local-port", type=int, default=18443)
++        if name == "plan":
++            cmd.add_argument("--dry-run", action="store_true", help="validate the plan without any guest")
++        else:
++            cmd.add_argument("--execute", action="store_true")
++    args = parser.parse_args(argv)
++    base.validate_work_root(args.work_root)
++    if not 1024 < args.local_port < 65536:
++        parser.error("--local-port must be an unprivileged loopback port")
++    document = json.loads(args.artifacts.read_text())
++    base.configure_labels(document)
++    cell = base.validate_cell(args.cell)
++    if args.command == "plan":
++        base.validate_cell_artifacts(document, cell, check_files=not args.dry_run)
++        print(json.dumps(build_plan(args.cell, document, args.work_root, args.local_port), indent=2, sort_keys=True))
++        return 0
++    if not args.execute:
++        parser.error("run mutates one registered disposable guest and requires --execute")
++    base.validate_cell_artifacts(document, cell)
++    result = Set5UpdateTrial(cell, document, args.work_root, args.local_port).execute()
++    print(json.dumps({"overall": result["overall"], "outcome": result["outcome"]["classification"],
++                      "request_id": result["request_id"],
++                      "steps": {s["name"]: s["verdict"] for s in result["steps"]}}, sort_keys=True))
++    return 0 if result["overall"] != "failed" else 1
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+--- /dev/null
++++ b/deploy/e2e/release-recovery/set5_redact.py
+@@ -0,0 +1,184 @@
++#!/usr/bin/env python3
++"""set5: collection-time rules for digests of credentials and tokens, beside the pair redactor and set3's shape rules.
++
++set3 and set4 retained ``transaction_token_sha256`` (the digest of a one-shot update-transaction token) and the same
++digest as a directory name under ``.release-db-migrations/`` in a sudo journal line: the pair redactor treats a key
++that ends in ``_sha256`` as public, and a path is not a key at all. set4 had to be redacted after collection.
++
++Rules (every one keeps the key or the path prefix and replaces only the value):
++
++  token-named field   a value of 32 to 128 hexadecimal characters (optionally ``sha256:``-prefixed) under a key whose
++                      name contains ``token``: JSON members, ``key=value`` and ``key: value`` pairs, also inside a
++                      JSON string that was escaped once or twice;
++  migration directory the hexadecimal directory name directly under ``.release-db-migrations/``;
++  learned value       every value the two rules above have removed is remembered by this process and removed wherever
++                      it appears again (a journal line, a path, a command line), whatever stands before it.
++
++A value is never printed, logged or stored by this module: only counts by class and file leave it.
++
++  set5_redact.py sweep [--learn-from DIR]... DIR...   rewrite the files of DIR in place; print the counts as JSON
++  set5_redact.py count DIR...                         read only: what the rules would still remove (expected: nothing)
++
++set5: kimlik bilgisi ve belirteç özetleri için toplama anı kuralları. Hiçbir değer yazdırılmaz; yalnız sayılar çıkar.
++"""
++from __future__ import annotations
++
++import json
++import os
++from pathlib import Path
++import re
++import sys
++from typing import Any, Mapping
++
++MARK = "[REDACTED-SHA256]"
++HEX = r"[0-9a-fA-F]{32,128}"
++TOKEN_KEY = re.compile(r"(?i)token")
++# key (containing "token"), then up to two levels of escaped quote, a colon or an equals sign, an optional quote and an
++# optional "sha256:" prefix, then the digest. The value must end at a non-hexadecimal character.
++TOKEN_PAIR = re.compile(r"(?i)([A-Za-z0-9_.-]*token[A-Za-z0-9_.-]*)((?:\\{0,3}[\"'])?\s*[:=]\s*(?:\\{0,3}[\"'])?(?:sha256:)?)"
++                        r"(" + HEX + r")(?![0-9a-fA-F])")
++MIGRATION_DIR = re.compile(r"(\.release-db-migrations/)(" + HEX + r")(?![0-9a-fA-F])")
++DIGEST_VALUE = re.compile(r"(?:sha256:)?(" + HEX + r")\Z")
++CLASSES = ("token_named_field", "migration_directory", "learned_value")
++
++
++class TokenDigests:
++    """The rules with their memory of removed values. ``counts`` holds numbers only."""
++
++    def __init__(self) -> None:
++        self._values: set[str] = set()
++        self.counts = {name: 0 for name in CLASSES}
++
++    @property
++    def learned(self) -> int:
++        return len({value.lower() for value in self._values})
++
++    def _learn(self, value: str) -> None:
++        self._values.add(value)
++        self._values.add(value.lower())
++
++    def learn_text(self, text: str) -> None:
++        """Remember the values of a text without changing it (used on a lab's own raw files before a sweep)."""
++        for match in TOKEN_PAIR.finditer(text):
++            self._learn(match.group(3))
++        for match in MIGRATION_DIR.finditer(text):
++            self._learn(match.group(2))
++
++    def text(self, text: str) -> str:
++        def pair(match: re.Match) -> str:
++            self._learn(match.group(3))
++            self.counts["token_named_field"] += 1
++            return match.group(1) + match.group(2) + MARK
++
++        def directory(match: re.Match) -> str:
++            self._learn(match.group(2))
++            self.counts["migration_directory"] += 1
++            return match.group(1) + MARK
++
++        text = TOKEN_PAIR.sub(pair, text)
++        text = MIGRATION_DIR.sub(directory, text)
++        for value in sorted(self._values, key=len, reverse=True):
++            found = text.count(value)
++            if found:
++                self.counts["learned_value"] += found
++                text = text.replace(value, MARK)
++        return text
++
++    def value(self, value: Any) -> Any:
++        """A JSON value: a digest under a token-named key goes (and is learned); every string passes ``text``."""
++        if isinstance(value, str):
++            return self.text(value)
++        if isinstance(value, Mapping):
++            result = {}
++            for key, item in value.items():
++                name = str(key)
++                if TOKEN_KEY.search(name) and isinstance(item, str) and DIGEST_VALUE.match(item.strip()):
++                    self._learn(DIGEST_VALUE.match(item.strip()).group(1))
++                    self.counts["token_named_field"] += 1
++                    result[name] = MARK
++                else:
++                    result[name] = self.value(item)
++            return result
++        if isinstance(value, (list, tuple)):
++            return [self.value(item) for item in value]
++        return value
++
++    def would_remove(self, text: str) -> int:
++        """Read only: how many places the rules would still change in ``text``."""
++        return (len(TOKEN_PAIR.findall(text)) + len(MIGRATION_DIR.findall(text))
++                + sum(text.count(value) for value in self._values))
++
++
++def wrap(redactor: Any, rules: TokenDigests | None = None) -> tuple:
++    """The driver's redactor with these rules in front of every text and JSON value it handles."""
++    rules = rules or TokenDigests()
++    plain_text, plain_value = redactor.text, redactor.value
++    redactor.text = lambda value: plain_text(rules.text(value))
++    redactor.value = lambda value: plain_value(rules.value(value))
++    return redactor, rules
++
++
++def files_of(directory: Path) -> list:
++    return sorted(path for path in directory.rglob("*") if path.is_file() and not path.is_symlink())
++
++
++def sweep(directories: list, rules: TokenDigests | None = None, *, write: bool = True) -> dict:
++    """Every file of ``directories`` through the rules. First all files are read once so that every value is known
++    (a value named in one file is removed from every other); then each file is judged, and with ``write`` rewritten
++    in place when it changes. A JSON file must still parse afterwards."""
++    rules = rules or TokenDigests()
++    listed = []
++    for directory in directories:
++        directory = Path(directory)
++        for path in files_of(directory):
++            try:
++                text = path.read_bytes().decode("utf-8")
++            except UnicodeDecodeError:
++                continue
++            rules.learn_text(text)
++            listed.append((directory, path))
++    changed: dict[str, int] = {}
++    for directory, path in listed:
++        text = path.read_bytes().decode("utf-8")
++        before = dict(rules.counts)
++        result = rules.text(text)
++        if result == text:
++            continue
++        key = str(path.relative_to(directory)).replace(os.sep, "/")
++        changed[key] = sum(rules.counts[name] - before[name] for name in CLASSES)
++        if write:
++            if path.suffix == ".json":
++                json.loads(result)
++            path.write_bytes(result.encode("utf-8"))
++    return {"schema": "celikpanel/set5-token-digest-sweep/v1", "mark": MARK, "files_read": len(listed),
++            "files_changed" if write else "files_that_would_change": changed,
++            "places_by_class": dict(rules.counts), "distinct_values_known": rules.learned,
++            "rewritten_in_place": write, "note": "counts only; no removed value is recorded anywhere"}
++
++
++def main(argv: list | None = None) -> int:
++    argv = list(sys.argv[1:] if argv is None else argv)
++    if not argv or argv[0] not in ("sweep", "count"):
++        print(__doc__, file=sys.stderr)
++        return 2
++    mode, rest = argv[0], argv[1:]
++    rules = TokenDigests()
++    directories = []
++    while rest:
++        item = rest.pop(0)
++        if item == "--learn-from":
++            source = Path(rest.pop(0))
++            for path in files_of(source) if source.is_dir() else [source]:
++                try:
++                    rules.learn_text(path.read_bytes().decode("utf-8"))
++                except (UnicodeDecodeError, OSError):
++                    continue
++        else:
++            directories.append(Path(item))
++    report = sweep(directories, rules, write=mode == "sweep")
++    print(json.dumps(report, indent=2, sort_keys=True))
++    return 0 if mode == "sweep" or not report["files_that_would_change"] else 1
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+--- /dev/null
++++ b/deploy/e2e/release-recovery/run-set5.sh
+@@ -0,0 +1,60 @@
++#!/usr/bin/env bash
++# set5 wrapper for the Linux QEMU host (archlinux), run as root: the closing native measurement of the release
++# candidate, set3's Part 2 again (the owner-started update from the published v0.1.0-alpha.81).
++#
++#   run-set5.sh dry-run CELL ARTIFACTS_JSON LAB_NAME
++#       Validate the plan without any guest (no lab is created).
++#   run-set5.sh cell CELL ARTIFACTS_JSON LAB_NAME SSH_PORT [LOCAL_PORT]
++#       Prepare and start a NEW lab /var/tmp/cp-release-drill-LAB_NAME, run the one cell on its node, then
++#       stop the lab (disks and evidence retained).
++#
++# CELL: upd1-debian13-good | upd1-ubuntu-good | upd1-arch-good
++#       upd1-debian13-defective | upd1-ubuntu-defective | upd1-arch-defective | upd1-debian13-startcheck
++#       upd1-debian13-owner-continuation | upd1-ubuntu-owner-continuation | upd1-debian13-mgmt-off-reboot
++# ARTIFACTS_JSON: an upd1-artifacts.json from run-upd1.sh build --baseline-ref v0.1.0-alpha.81.
++# One cell per new lab. Never reuse a lab or a guest. SET5_DISK_GATE, when set, is a program that must exit 0
++# immediately before the guests are started (the host's free-disk rule); otherwise no guest is started.
++# SET5_AFTER_PREPARE, when set, is a program run with the lab root after the lab was prepared and before the
++# gate (set5: it moves the guests' node directories, overlay disks included, onto RAM-backed tmpfs mounts).
++# CELIKPANEL_LAB_LINK_BASE_IMAGES=1 (lab.py) hard-links the cached base images instead of copying them.
++set -euo pipefail
++HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
++IMAGES=${UPD1_IMAGE_CACHE:-/var/tmp/cp-v3n28/images}
++LAB=(python3 "$HERE/lab.py")
++DRIVER=(python3 "$HERE/set5_trial.py")
++
++usage() { sed -n '2,19p' "${BASH_SOURCE[0]}" >&2; exit 2; }
++[[ $# -ge 1 ]] || usage
++command=$1; shift
++case $command in
++    dry-run)
++        [[ $# -eq 3 ]] || usage
++        exec "${DRIVER[@]}" plan --cell "$1" --artifacts "$2" --work-root "/var/tmp/cp-release-drill-$3" --dry-run
++        ;;
++    cell)
++        [[ $# -ge 4 && $# -le 5 ]] || usage
++        cell=$1 artifacts=$2 name=$3 port=$4 local_port=${5:-18443}
++        [[ $EUID -eq 0 ]] || { echo "run as root (fixture signing keys are root-only)" >&2; exit 2; }
++        root=/var/tmp/cp-release-drill-$name
++        [[ ! -e $root ]] || { echo "lab $root exists; every cell needs a NEW lab" >&2; exit 2; }
++        "${DRIVER[@]}" plan --cell "$cell" --artifacts "$artifacts" --work-root "$root" > /dev/null
++        platform=debian13-arch
++        [[ $cell != upd1-ubuntu-* ]] || platform=ubuntu
++        "${LAB[@]}" prepare --work-root "$root" --image-cache "$IMAGES" --ssh-port "$port" --platform "$platform" --execute
++        if [[ -n ${SET5_AFTER_PREPARE:-} ]]; then
++            bash "$SET5_AFTER_PREPARE" "$root" || { echo "SET5 cell=$cell lab=$root NOT STARTED: the after-prepare program failed" >&2; exit 76; }
++        fi
++        if [[ -n ${SET5_DISK_GATE:-} ]]; then
++            bash "$SET5_DISK_GATE" "$cell run-${name##*-} (guest start)" || { echo "SET5 cell=$cell lab=$root NOT STARTED: the disk gate refused the guest start" >&2; exit 75; }
++        fi
++        "${LAB[@]}" start --work-root "$root" --execute
++        "${LAB[@]}" status --work-root "$root"
++        status=0
++        "${DRIVER[@]}" run --cell "$cell" --artifacts "$artifacts" --work-root "$root" --local-port "$local_port" \
++            --execute || status=$?
++        "${LAB[@]}" stop --work-root "$root" --execute || true
++        echo "SET5 cell=$cell lab=$root driver_exit=$status evidence=$root/evidence/*/upd1"
++        exit "$status"
++        ;;
++    *) usage ;;
++esac
+--- /dev/null
++++ b/deploy/e2e/release-recovery/test_set5_trial.py
+@@ -0,0 +1,121 @@
++"""Offline tests of set5's pure rules: the token-digest redaction, the name-pinning verdict, and that the added
++steps borrow from the earlier drivers without replacing a method of the update driver."""
++import json
++from pathlib import Path
++import sys
++import tempfile
++import unittest
++
++HERE = Path(__file__).resolve().parent
++sys.path.insert(0, str(HERE))
++import set5_redact  # noqa: E402
++import set5_trial  # noqa: E402
++
++A, B, C = "ab" * 32, "cd" * 32, "0123456789abcdef" * 4
++
++
++class Plain:
++    def text(self, value):
++        return value
++
++    def value(self, value):
++        return value
++
++
++class RedactionTest(unittest.TestCase):
++    def test_a_digest_under_a_token_named_key_goes_and_other_digests_stay(self):
++        rules = set5_redact.TokenDigests()
++        got = rules.value({"bound_worker": {"transaction_token_sha256": A, "worker_state_sha256": B},
++                           "handoff": {"intent": {"transaction_token_sha256": "sha256:" + A, "nonce": C}}})
++        self.assertEqual(got["bound_worker"]["transaction_token_sha256"], set5_redact.MARK)
++        self.assertEqual(got["handoff"]["intent"]["transaction_token_sha256"], set5_redact.MARK)
++        self.assertEqual(got["bound_worker"]["worker_state_sha256"], B)
++        self.assertEqual(got["handoff"]["intent"]["nonce"], C)
++        self.assertEqual(rules.counts["token_named_field"], 2)
++
++    def test_the_directory_name_and_every_later_occurrence_go(self):
++        rules = set5_redact.TokenDigests()
++        line = f"sudo[1]: COMMAND=/usr/bin/env CELIKPANEL_DATA_DIR=/var/lib/celikpanel/.release-db-migrations/{A}/work panel"
++        self.assertNotIn(A, rules.text(line))
++        self.assertIn(".release-db-migrations/" + set5_redact.MARK + "/work", rules.text(line))
++        self.assertEqual(rules.text(f"elsewhere {A} again"), f"elsewhere {set5_redact.MARK} again")
++        self.assertEqual(rules.text(f"another digest {B}"), f"another digest {B}")
++
++    def test_pairs_in_text_and_in_escaped_json(self):
++        rules = set5_redact.TokenDigests()
++        for text in (f"token_sha256={A}", f'"transaction_token_sha256": "{A}"', f'\\"transaction_token_sha256\\": \\"{A}\\"',
++                     f"transaction_token_sha256: sha256:{A}"):
++            self.assertNotIn(A, rules.text(text), text)
++        self.assertEqual(rules.text('"c_version_tokens": ["v1"] tokenizer.ini'), '"c_version_tokens": ["v1"] tokenizer.ini')
++        self.assertEqual(rules.text(f"request id {C[:32]}"), f"request id {C[:32]}")
++
++    def test_wrap_puts_the_rules_in_front_of_the_driver_redactor(self):
++        redactor, rules = set5_redact.wrap(Plain())
++        self.assertEqual(redactor.value({"transaction_token_sha256": A})["transaction_token_sha256"], set5_redact.MARK)
++        self.assertEqual(redactor.text(f"seen again {A}"), f"seen again {set5_redact.MARK}")
++        self.assertEqual(rules.learned, 1)
++
++    def test_sweep_removes_a_value_from_a_file_written_before_it_was_known_and_keeps_json_valid(self):
++        with tempfile.TemporaryDirectory() as directory:
++            root = Path(directory)
++            (root / "journal.txt").write_text(f"early line {A}\n")
++            (root / "events.json").write_text(json.dumps([{"transaction_token_sha256": A, "manifest_sha256": B}]))
++            report = set5_redact.sweep([root])
++            self.assertEqual(sorted(report["files_changed"]), ["events.json", "journal.txt"])
++            self.assertNotIn(A, (root / "journal.txt").read_text())
++            self.assertEqual(json.loads((root / "events.json").read_text())[0]["manifest_sha256"], B)
++            self.assertNotIn(A, json.dumps(report))
++            again = set5_redact.sweep([root], write=False)
++            self.assertEqual(again["files_that_would_change"], {})
++
++
++class PinningTest(unittest.TestCase):
++    def reading(self, ahosts, hosts):
++        return {"ahosts": {"returncode": 0, "stdout": ahosts}, "hosts": {"returncode": 0, "stdout": hosts}}
++
++    def test_loopback_only(self):
++        good = self.reading("127.0.0.1       STREAM acme.zerossl.com\n127.0.0.1       DGRAM\n::1 STREAM", "::1 acme.zerossl.com")
++        self.assertTrue(set5_trial.loopback_only(good))
++        self.assertFalse(set5_trial.loopback_only(self.reading("", "")))
++        self.assertFalse(set5_trial.loopback_only(self.reading("127.0.0.1 STREAM x\n203.0.113.9 STREAM x", "127.0.0.1 x")))
++        self.assertFalse(set5_trial.loopback_only(self.reading("127.0.0.1 STREAM x", "")))
++        self.assertFalse(set5_trial.loopback_only(None))
++
++    def test_the_pinned_names_are_the_directories_the_product_names(self):
++        source = (HERE.parents[2] / "internal" / "core" / "acme_providers.go").read_text(encoding="utf-8")
++        for name in ("acme.zerossl.com", "dv.acme-v02.api.pki.goog"):
++            self.assertIn(name, source)
++            self.assertIn(name, set5_trial.CA_NAMES)
++        self.assertIn("acme-v02.api.letsencrypt.org", set5_trial.CA_NAMES)
++        self.assertIn("acme-staging-v02.api.letsencrypt.org", set5_trial.CA_NAMES)
++
++    def test_the_guest_script_is_valid_python(self):
++        compile(set5_trial.PIN_SCRIPT, "pin", "exec")
++
++
++class CompositionTest(unittest.TestCase):
++    def test_the_ten_cells_are_set3_part_two(self):
++        self.assertEqual(len(set5_trial.UPDATE_CELLS), 10)
++        for name in set5_trial.UPDATE_CELLS:
++            set5_trial.base.validate_cell(name)
++        self.assertEqual(set5_trial.cell_additions("upd1-debian13-good"), {"item9": True, "m10": True})
++        self.assertEqual(set5_trial.cell_additions("upd1-arch-good"), {"item9": False, "m10": False})
++        self.assertEqual(set5_trial.cell_additions("upd1-ubuntu-defective"), {"item9": False, "m10": False})
++
++    def test_no_method_of_the_update_driver_is_replaced_by_a_borrowed_one(self):
++        borrowed = ("native", "snap", "owner", "keep_text", "check", "note", "catalogue", "call", "refused", "section",
++                    "postfix", "smtp", "journal", "guest_clock", "service_units", "service_state", "daemon",
++                    "service_action", "snap4", "m10_postfix_stop")
++        for name in borrowed:
++            self.assertFalse(hasattr(set5_trial.s4.Set4UpdateTrial, name), name)
++            self.assertTrue(callable(getattr(set5_trial.Set5UpdateTrial, name)), name)
++        self.assertIs(set5_trial.Set5UpdateTrial.m10_postfix_stop, set5_trial.s4.Set4Trial.m10_postfix_stop)
++        self.assertIs(set5_trial.Set5UpdateTrial.service_action, set5_trial.sw.SettingsTrial.service_action)
++        for name in ("execute", "collect", "verdicts", "terminal", "post_update_facts", "seed", "setup", "preflight", "origin"):
++            self.assertIs(getattr(set5_trial.Set5UpdateTrial, name), getattr(set5_trial.base.Trial, name), name)
++        for name in ("php_before", "php_after"):
++            self.assertIs(getattr(set5_trial.Set5UpdateTrial, name), getattr(set5_trial.s4.Set4UpdateTrial, name), name)
++
++
++if __name__ == "__main__":
++    unittest.main()
+--- a/deploy/e2e/release-recovery/lab.py
++++ b/deploy/e2e/release-recovery/lab.py
+@@ -292,8 +292,15 @@
+     fixture.initialize_work_root(root)
+     for pin in pins.values():
+         target = root / "images" / pin.filename
+-        run(["cp", "--reflink=auto", "--", str(cache / pin.filename), str(target)])
+-        target.chmod(0o444)
++        if os.environ.get("CELIKPANEL_LAB_LINK_BASE_IMAGES") == "1":
++            # set5 (opt-in): a hard link to the cached base image instead of a copy of it. The cache and the lab are
++            # on one filesystem, the cached file is read-only, QEMU opens it only as a backing file, and it is
++            # verified against the reviewed pin just below exactly as a copy is. Nothing is chmod'ed here: the
++            # verification refuses a writable image.
++            os.link(cache / pin.filename, target)
++        else:
++            run(["cp", "--reflink=auto", "--", str(cache / pin.filename), str(target)])
++            target.chmod(0o444)
+     if ubuntu:
+         fixture.verify_image(fixture.validate_work_root(root), pins["ubuntu"])
+     else:

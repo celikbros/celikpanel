@@ -1,0 +1,171 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "ServerSetup review (web)",
+  "request": {
+    "body": {
+      "revision": 2
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18631"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18631"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "8dc488476bd87cdbaa30c15a86b54bf5"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/setup/plan"
+  },
+  "response": {
+    "elapsed_seconds": 0.645,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 18:06:25 GMT"
+      ],
+      [
+        "Content-Length",
+        "1355"
+      ]
+    ],
+    "json": {
+      "actor": {
+        "IP": "127.0.0.1",
+        "UserAgent": "",
+        "UserID": 2
+      },
+      "blockers": [],
+      "build_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+      "can_start": true,
+      "contact_email": "labadmin@example.invalid",
+      "draft": {
+        "database": "",
+        "dns_engine": "bind",
+        "dns_mode": "external",
+        "dns_role": "primary",
+        "local_ip": "192.0.2.11",
+        "mail_hostname": "",
+        "node_version": "",
+        "ns1": "ns1.upd1-infra.test",
+        "ns2": "ns2.upd1-infra.test",
+        "panel_domain": "panel-arch.upd1-infra.test",
+        "peer_ip": "",
+        "peer_ns": "",
+        "purpose": "web",
+        "remote_dns_connection_id": ""
+      },
+      "id": "b9c4e015b4eae44ba0f85ed2cc1de4f9",
+      "persist_firewall": true,
+      "preserve_ssh": true,
+      "purpose": "web",
+      "revision": 2,
+      "server_ip": "192.0.2.11",
+      "steps": [
+        {
+          "id": "01-dns",
+          "kind": "dns",
+          "target": "external"
+        },
+        {
+          "id": "02-service",
+          "kind": "service",
+          "target": "nginx"
+        },
+        {
+          "id": "03-service",
+          "kind": "service",
+          "target": "php-fpm"
+        },
+        {
+          "id": "04-service",
+          "kind": "service",
+          "target": "mariadb"
+        },
+        {
+          "id": "05-service",
+          "kind": "service",
+          "target": "cron"
+        },
+        {
+          "id": "06-service",
+          "kind": "service",
+          "target": "certbot"
+        },
+        {
+          "id": "07-firewall",
+          "kind": "firewall",
+          "target": "enable_and_persist"
+        },
+        {
+          "id": "08-access_dns",
+          "kind": "access_dns",
+          "qualifier": "192.0.2.11",
+          "target": "panel-arch.upd1-infra.test"
+        },
+        {
+          "id": "09-panel_certificate",
+          "kind": "panel_certificate",
+          "target": "panel-arch.upd1-infra.test"
+        },
+        {
+          "id": "10-verify",
+          "kind": "verify",
+          "target": "web"
+        }
+      ],
+      "tcp_ports": [
+        22,
+        80,
+        443,
+        2083
+      ],
+      "udp_ports": [],
+      "version": 1
+    },
+    "status": 200,
+    "text": null
+  }
+}

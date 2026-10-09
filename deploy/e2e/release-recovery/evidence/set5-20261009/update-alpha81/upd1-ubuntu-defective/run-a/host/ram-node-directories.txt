@@ -1,0 +1,1 @@
+/var/tmp/cp-release-drill-s5-ub-def-a/cells/46f30bf03e476379986f74f0/ubuntu 8G 576K

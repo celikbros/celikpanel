@@ -1,0 +1,50 @@
+Oct 09 19:38:01 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+Oct 09 19:38:01 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+Oct 09 19:38:03 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+Oct 09 19:38:05 dns-ubuntu release-recovery[59360]: Recovery dispatch admitted: attempt=1 snapshot=20261009T193629Z-from-unknown-to-8c2250b05132fa91291a33bd23924d0aefd72617-899e4a5e549193b250bf318bef2f9cfc
+Oct 09 19:38:12 dns-ubuntu release-recovery[59794]: CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start
+Oct 09 19:39:15 dns-ubuntu release-recovery[59794]: !! pending update panel did not stay running and answer on its own address
+Oct 09 19:39:15 dns-ubuntu release-recovery[59794]: !! Pending update finalization failed; marker preserved and both coordinators stopped.
+Oct 09 19:39:15 dns-ubuntu release-recovery[59794]: !! Bekleyen güncelleme sonuçlandırması başarısız; marker korundu ve iki koordinatör durduruldu.
+Oct 09 19:39:15 dns-ubuntu release-recovery[59360]: Automatic recovery attempt 1 of 3 did not finish; the native timer admits the next attempt for this same operation. No owner action is needed yet.
+Oct 09 19:39:15 dns-ubuntu release-recovery[59360]: Otomatik kurtarma denemesi 1/3 tamamlanmadı; yerel zamanlayıcı aynı işlem için sonraki denemeyi başlatır. Henüz kullanıcı işlemi gerekmiyor.
+Oct 09 19:39:15 dns-ubuntu release-recovery[59360]: !! release recovery child failed with status 1
+Oct 09 19:39:15 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Main process exited, code=exited, status=1/FAILURE
+Oct 09 19:39:15 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Failed with result 'exit-code'.
+Oct 09 19:39:15 dns-ubuntu systemd[1]: Failed to start celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+Oct 09 19:39:15 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Consumed 11.907s CPU time, 23.6M memory peak, 0B memory swap peak.
+Oct 09 19:39:45 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+Oct 09 19:39:47 dns-ubuntu release-recovery[64394]: Recovery dispatch admitted: attempt=2 snapshot=20261009T193629Z-from-unknown-to-8c2250b05132fa91291a33bd23924d0aefd72617-899e4a5e549193b250bf318bef2f9cfc
+Oct 09 19:39:54 dns-ubuntu release-recovery[64772]: CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start
+Oct 09 19:40:58 dns-ubuntu release-recovery[64772]: !! pending update panel did not stay running and answer on its own address
+Oct 09 19:40:58 dns-ubuntu release-recovery[64772]: !! Pending update finalization failed; marker preserved and both coordinators stopped.
+Oct 09 19:40:58 dns-ubuntu release-recovery[64772]: !! Bekleyen güncelleme sonuçlandırması başarısız; marker korundu ve iki koordinatör durduruldu.
+Oct 09 19:40:58 dns-ubuntu release-recovery[64394]: Automatic recovery attempt 2 of 3 did not finish; the native timer admits the next attempt for this same operation. No owner action is needed yet.
+Oct 09 19:40:58 dns-ubuntu release-recovery[64394]: Otomatik kurtarma denemesi 2/3 tamamlanmadı; yerel zamanlayıcı aynı işlem için sonraki denemeyi başlatır. Henüz kullanıcı işlemi gerekmiyor.
+Oct 09 19:40:58 dns-ubuntu release-recovery[64394]: !! release recovery child failed with status 1
+Oct 09 19:40:58 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Main process exited, code=exited, status=1/FAILURE
+Oct 09 19:40:58 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Failed with result 'exit-code'.
+Oct 09 19:40:58 dns-ubuntu systemd[1]: Failed to start celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+Oct 09 19:40:58 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Consumed 12.367s CPU time, 23.9M memory peak, 0B memory swap peak.
+Oct 09 19:41:28 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+Oct 09 19:41:39 dns-ubuntu release-recovery[69184]: Recovery dispatch admitted: attempt=3 snapshot=20261009T193629Z-from-unknown-to-8c2250b05132fa91291a33bd23924d0aefd72617-899e4a5e549193b250bf318bef2f9cfc
+Oct 09 19:42:16 dns-ubuntu release-recovery[69780]: CELIKPANEL_UPDATE_CHECKPOINT database_verified_before_start
+Oct 09 19:43:23 dns-ubuntu release-recovery[69780]: !! pending update panel did not stay running and answer on its own address
+Oct 09 19:43:23 dns-ubuntu release-recovery[69780]: !! Pending update finalization failed; marker preserved and both coordinators stopped.
+Oct 09 19:43:23 dns-ubuntu release-recovery[69780]: !! Bekleyen güncelleme sonuçlandırması başarısız; marker korundu ve iki koordinatör durduruldu.
+Oct 09 19:43:25 dns-ubuntu release-recovery[69184]: Automatic certificate renewal (Certbot) was returned to its state from before the update while this operation waits; the retry pauses it again before it continues.
+Oct 09 19:43:25 dns-ubuntu release-recovery[69184]: Otomatik sertifika yenileme (Certbot) bu işlem beklerken güncellemeden önceki durumuna döndürüldü; yeniden deneme devam etmeden önce onu yeniden duraklatır.
+Oct 09 19:43:25 dns-ubuntu release-recovery[69184]: The last admitted recovery attempt did not finish. The next run of the recovery timer records the pause and prints the one-time retry command for this operation.
+Oct 09 19:43:25 dns-ubuntu release-recovery[69184]: İzin verilen son kurtarma denemesi tamamlanmadı. Kurtarma zamanlayıcısının sonraki çalışması duraklamayı kaydeder ve bu işlem için tek seferlik yeniden deneme komutunu yazdırır.
+Oct 09 19:43:25 dns-ubuntu release-recovery[69184]: !! release recovery child failed with status 1
+Oct 09 19:43:25 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Main process exited, code=exited, status=1/FAILURE
+Oct 09 19:43:25 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Failed with result 'exit-code'.
+Oct 09 19:43:25 dns-ubuntu systemd[1]: Failed to start celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+Oct 09 19:43:25 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Consumed 50.905s CPU time, 23.7M memory peak, 0B memory swap peak.
+Oct 09 19:43:55 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+Oct 09 19:43:56 dns-ubuntu release-recovery[74865]: Automatic recovery paused after three admitted attempts. No recovery child was started. Preserve evidence and inspect the recovery service journal.
+Oct 09 19:43:56 dns-ubuntu release-recovery[74865]: Otomatik kurtarma, izin verilen üç denemeden sonra durdu. Kurtarma alt işlemi başlatılmadı. Kanıtları koruyun ve kurtarma servisi günlüğünü inceleyin.
+Oct 09 19:43:56 dns-ubuntu release-recovery[74865]: After resolving the cause, the owner may authorize one same-snapshot retry: sudo /usr/libexec/celikpanel/recovery recover --retry --snapshot 20261009T193629Z-from-unknown-to-8c2250b05132fa91291a33bd23924d0aefd72617-899e4a5e549193b250bf318bef2f9cfc
+Oct 09 19:43:56 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+Oct 09 19:43:56 dns-ubuntu systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+Oct 09 19:43:56 dns-ubuntu systemd[1]: celikpanel-release-recovery.service: Consumed 1.388s CPU time, 9.7M memory peak, 0B memory swap peak.

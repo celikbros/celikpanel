@@ -1,0 +1,16 @@
+run copy b (pristine, before the overlay) against commit 67b62cc0fa4a6b8edd33e6a1bf4a55a982ceaaed tree a3167582da96fe38caa44b58dbc46cecf42a4600
+files in the copy: 4656
+files of the copy whose blob id and path are NOT in the commit: 0
+files of the commit not in the copy: 60478
+of those, outside deploy/e2e/{release-recovery,dns-kill-matrix,dns-pair-acceptance}/evidence/: 0
+files of the copy under deploy/e2e/release-recovery/evidence/: 1094 (all under upd1-20261001: 1094)
+caace3d68936a4ec2dac784a540d708c9d6876f721eb3c8233a1bde591e4cb53  /var/tmp/cp-set5-run/overlay-b/harness.diff
+483ec528341335a7cdd4c2609e2dba4577119668eb051b49038c73d3b5d233d1  deploy/e2e/release-recovery/set5_trial.py
+cb0b2f3ef786ec3c46c438ba17cbadd79a9d3ccc53511bb3588b0ef09097274b  deploy/e2e/release-recovery/set5_redact.py
+9173724dab9afea0350ac74240a0632d07cf5c4e96550415e777dfb402803b35  deploy/e2e/release-recovery/run-set5.sh
+7892fe3d57f7f584f8ce6508a7925ff6eb0c90a46eaeb3e5df617cb11618bb83  deploy/e2e/release-recovery/test_set5_trial.py
+608
+differs:       1 > ./deploy/e2e/release-recovery/run-set5.sh
+differs:       1 > ./deploy/e2e/release-recovery/set5_redact.py
+differs:       1 > ./deploy/e2e/release-recovery/set5_trial.py
+differs:       1 > ./deploy/e2e/release-recovery/test_set5_trial.py

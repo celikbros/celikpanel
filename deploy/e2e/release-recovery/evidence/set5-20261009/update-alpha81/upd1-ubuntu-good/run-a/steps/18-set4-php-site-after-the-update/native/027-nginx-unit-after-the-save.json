@@ -1,0 +1,52 @@
+{
+  "at": "2026-10-09T17:46:49Z",
+  "is_active": {
+    "nginx.service": "active"
+  },
+  "is_failed": {
+    "nginx.service": "active"
+  },
+  "journal": {
+    "nginx.service": [
+      "2026-10-09T17:46:47.347790+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-09T17:46:47.357539+00:00 dns-ubuntu nginx[62335]: 2026/10/09 17:46:47 [notice] 62335#62335: signal process started",
+      "2026-10-09T17:46:47.358363+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+    ]
+  },
+  "journal_product": [
+    "2026-10-09T17:46:45.455964+00:00 dns-ubuntu panel[55397]: 2026/10/09 17:46:45 http: TLS handshake error from 127.0.0.1:40482: EOF",
+    "2026-10-09T17:46:46.030576+00:00 dns-ubuntu panel[55397]: 2026/10/09 17:46:46 http: TLS handshake error from 127.0.0.1:40498: EOF",
+    "2026-10-09T17:46:47.311154+00:00 dns-ubuntu panel[55397]: 2026/10/09 17:46:47 http: TLS handshake error from 127.0.0.1:40516: EOF"
+  ],
+  "journal_systemd_manager": [
+    "2026-10-09T17:46:47.347790+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-09T17:46:47.358363+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+  ],
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "since_epoch": 1791568005,
+  "units": {
+    "nginx.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 17:33:28 UTC",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "active",
+      "ExecMainPID": "10971",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 17:33:29 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; master_process on; -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 17:46:47 UTC] ; stop_time=[Fri 2026-10-09 17:46:47 UTC] ; pid=62335 ; code=exited ; status=0 }",
+      "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "Fri 2026-10-09 17:33:28 UTC",
+      "InvocationID": "5ebc81b2dae64054a47df31c33f778ef",
+      "LoadState": "loaded",
+      "MainPID": "10971",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 17:46:47 UTC",
+      "SubState": "running",
+      "Type": "forking"
+    }
+  }
+}

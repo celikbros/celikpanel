@@ -1,0 +1,37 @@
+{
+  "present": true,
+  "receipts": [
+    {
+      "mtime": 1791574685.1756427,
+      "mtime_utc": "2026-10-09T19:38:05.175643Z",
+      "name": "1",
+      "sha256": "d75b9185b689928fe597092f0db5bfd19fd673a1adb088d1a47c2030cf2f9a6f",
+      "snapshot": "20261009T193629Z-from-unknown-to-8c2250b05132fa91291a33bd23924d0aefd72617-899e4a5e549193b250bf318bef2f9cfc",
+      "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261009T193629Z-from-unknown-to-8c2250b05132fa91291a33bd23924d0aefd72617-899e4a5e549193b250bf318bef2f9cfc\nattempt=1\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+    },
+    {
+      "mtime": 1791574787.073544,
+      "mtime_utc": "2026-10-09T19:39:47.073544Z",
+      "name": "2",
+      "sha256": "534f9741f0ef9b90863d8e562392d862a7205c92093ebfa44617e1e9e3a12d77",
+      "snapshot": "20261009T193629Z-from-unknown-to-8c2250b05132fa91291a33bd23924d0aefd72617-899e4a5e549193b250bf318bef2f9cfc",
+      "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261009T193629Z-from-unknown-to-8c2250b05132fa91291a33bd23924d0aefd72617-899e4a5e549193b250bf318bef2f9cfc\nattempt=2\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+    },
+    {
+      "mtime": 1791574898.7274747,
+      "mtime_utc": "2026-10-09T19:41:38.727475Z",
+      "name": "3",
+      "sha256": "633f4f8b53fcb717bafe68763a85c2ca3f8e2a28acec47d4456a57756e31981a",
+      "snapshot": "20261009T193629Z-from-unknown-to-8c2250b05132fa91291a33bd23924d0aefd72617-899e4a5e549193b250bf318bef2f9cfc",
+      "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261009T193629Z-from-unknown-to-8c2250b05132fa91291a33bd23924d0aefd72617-899e4a5e549193b250bf318bef2f9cfc\nattempt=3\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+    },
+    {
+      "mtime": 1791575067.246811,
+      "mtime_utc": "2026-10-09T19:44:27.246811Z",
+      "name": "owner.1QEOJEew",
+      "sha256": "665e1089fd77f65592b03debc22bcf94fca7b90daef23b9b5b320e3fa7c6f68c",
+      "snapshot": "20261009T193629Z-from-unknown-to-8c2250b05132fa91291a33bd23924d0aefd72617-899e4a5e549193b250bf318bef2f9cfc",
+      "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261009T193629Z-from-unknown-to-8c2250b05132fa91291a33bd23924d0aefd72617-899e4a5e549193b250bf318bef2f9cfc\nattempt=owner\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+    }
+  ]
+}

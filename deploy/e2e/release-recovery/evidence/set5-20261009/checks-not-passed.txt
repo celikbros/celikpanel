@@ -1,0 +1,1 @@
+every step and every check of every staged run passed (or was `observed` / `skipped` as recorded)

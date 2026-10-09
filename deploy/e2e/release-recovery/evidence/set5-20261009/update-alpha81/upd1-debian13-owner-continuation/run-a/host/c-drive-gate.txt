@@ -1,0 +1,2 @@
+2026-10-09T18:58:26Z before upd1-debian13-owner-continuation run-a (lab prepare) free_GiB=41.56 free_bytes=44620738560 (Get-PSDrive C reading of 2026-10-09T18:58:07Z, 19s old) allowed=yes
+2026-10-09T18:58:29Z before upd1-debian13-owner-continuation run-a (guest start) free_GiB=41.56 free_bytes=44620738560 (Get-PSDrive C reading of 2026-10-09T18:58:07Z, 22s old) allowed=yes

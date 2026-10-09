@@ -1,0 +1,316 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+      "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+      "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+      "commit": "ecccd8d7b3f3e8106b9d7d21bfb8d0ef1e1ad8ef",
+      "sha256": "3f35d8c653ca2f8177434b5a1ec2f171c309bd89419db2152096cee82bc58c59",
+      "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+      "commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+      "sha256": "a814f52a98b088edccb256d926786eba9320fc25115945b83731a65ef782218a",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "cell": {
+    "h19": true,
+    "mail_required": true,
+    "name": "upd1-debian13-mgmt-off-reboot",
+    "node": "debian13",
+    "pk_observe": false,
+    "recovery_fault": null,
+    "scenario": null,
+    "variant": "mgmt-off-reboot"
+  },
+  "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__f05acef1e01ae5b8",
+    "node": "debian13",
+    "vm_uuid": "fd1fc8ec-6139-5ea4-a53b-3aadc5f485ab"
+  },
+  "kind": {
+    "expected": "the good update is verified; the owner disables and stops the Panel and Agent, reboots once (orderly); for at least 180 s after the boot, with management off, the site answers with its marker, SMTP answers (Debian), the cron stamp advances, the owner's database row is read through the native client, the certificate renewal timer keeps its pre-update state and the firewall ruleset is present and unchanged; management is re-enabled and the Panel shows the same owner state",
+    "judged": {
+      "expected": [
+        "update-verified",
+        "management-off",
+        "new-boot",
+        "measured-window",
+        "cron-served-without-management",
+        "db-served-without-management",
+        "smtp-served-without-management",
+        "web-served-without-management",
+        "renewal-timer-kept",
+        "firewall-present",
+        "management-returned"
+      ],
+      "findings": [],
+      "kind": "mgmt-off-reboot",
+      "native_evidence": false,
+      "unknown": [],
+      "verdict": "as-expected"
+    },
+    "measured": true,
+    "printed_retry_command": null,
+    "variant": "mgmt-off-reboot"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the P0 rows are judged separately.",
+  "outcome": {
+    "attempts": {
+      "automatic": [],
+      "automatic_count": 0,
+      "journal_admissions": [],
+      "owner": [],
+      "owner_count": 0
+    },
+    "classification": "update-verified",
+    "final_status": {
+      "observation": "known",
+      "observed_at": "2026-10-09T19:57:03Z",
+      "phase": "succeeded",
+      "reason": "update_verified",
+      "request_id": "1b61180adddcdae7721c2088d3c02081",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "update_verified"
+    },
+    "owner_continuation": false,
+    "owner_reboot": {
+      "after_boot_id": "ee4a11e9-8103-4130-9e91-c79173c2f7d2",
+      "before_boot_id": "021ed0e7-c8bb-4df8-a898-c119d998feac",
+      "command": "sudo systemctl reboot",
+      "new_boot": true,
+      "ssh_return_seconds": 8.3
+    },
+    "pin_changes": [],
+    "port_hold": null,
+    "reboot": null,
+    "track_stop": null
+  },
+  "overall": "complete-for-review",
+  "provenance": {
+    "baseline": "published-tag-v0.1.0-alpha.81-commit-unchanged (the tag carries the D-027 acceptance-license seam; bin/panel is built from the tag's source with the acceptance_license build tag); its release policy, installer, update/rollback/recovery/bootstrap scripts, get.sh, web and Agent are the tag's; installed by the real installer; fixture trust root enrolled; not-production-release-admission; not the signed release archive",
+    "candidate": "unpublished-local-fixture-commit-over-the-source-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "no candidate defect (good candidate G); after the verified update the owner disables and stops the Panel and Agent units, reboots once (orderly) and measures every workload without management (owner action on a disposable guest, never a product change)"
+  },
+  "request_id": "1b61180adddcdae7721c2088d3c02081",
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "scope": {
+    "cron": {
+      "crontab": "/usr/bin/crontab",
+      "verdict": "available"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "origin": {
+      "after-provision": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      },
+      "before-arm": {
+        "addresses": [
+          "127.0.0.1"
+        ],
+        "http": "200",
+        "ok": true
+      }
+    },
+    "setup": {
+      "code": "server_setup_access_dns_required",
+      "not_run": [
+        "11-panel_certificate",
+        "12-access_dns",
+        "13-mail_certificate",
+        "14-mail_enrollment",
+        "15-verify"
+      ],
+      "phase": "access_dns",
+      "verdict": "observed isolated-host wait",
+      "volatile_tables_added": [
+        "server_setup_executions"
+      ]
+    }
+  },
+  "set5": {
+    "additions": {
+      "item9": false,
+      "m10": false
+    },
+    "cell_kind": "set5-closing-update",
+    "pinned_names": [
+      "acme-v02.api.letsencrypt.org",
+      "acme-staging-v02.api.letsencrypt.org",
+      "acme.zerossl.com",
+      "dv.acme-v02.api.pki.goog"
+    ],
+    "sections": {}
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-09T19:47:49Z",
+      "name": "set5-name-pinning",
+      "reason": null,
+      "started_at": "2026-10-09T19:47:49Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T19:47:53Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-09T19:47:49Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T19:48:02Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-09T19:47:53Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T19:48:36Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-09T19:48:02Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T19:48:37Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-09T19:48:36Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T19:48:37Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-09T19:48:37Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T19:54:45Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-09T19:48:37Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-09T19:54:48Z",
+      "name": "seed",
+      "reason": null,
+      "started_at": "2026-10-09T19:54:45Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T19:56:05Z",
+      "name": "pre-state",
+      "reason": null,
+      "started_at": "2026-10-09T19:54:48Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T19:56:07Z",
+      "name": "arm",
+      "reason": null,
+      "started_at": "2026-10-09T19:56:05Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T19:56:07Z",
+      "name": "owner-start",
+      "reason": null,
+      "started_at": "2026-10-09T19:56:07Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T19:57:04Z",
+      "name": "track",
+      "reason": null,
+      "started_at": "2026-10-09T19:56:07Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T19:57:04Z",
+      "name": "owner-continuation (required)",
+      "reason": null,
+      "started_at": "2026-10-09T19:57:04Z",
+      "verdict": "skipped"
+    },
+    {
+      "finished_at": "2026-10-09T19:57:12Z",
+      "name": "terminal",
+      "reason": null,
+      "started_at": "2026-10-09T19:57:04Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T19:57:21Z",
+      "name": "management-off",
+      "reason": null,
+      "started_at": "2026-10-09T19:57:12Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T19:57:41Z",
+      "name": "owner-reboot",
+      "reason": null,
+      "started_at": "2026-10-09T19:57:21Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T20:00:49Z",
+      "name": "management-off-measure",
+      "reason": null,
+      "started_at": "2026-10-09T19:57:41Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T20:01:11Z",
+      "name": "management-return",
+      "reason": null,
+      "started_at": "2026-10-09T20:00:49Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T20:01:13Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-09T20:01:11Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T20:01:13Z",
+      "name": "verdicts",
+      "reason": null,
+      "started_at": "2026-10-09T20:01:13Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T20:01:13Z",
+      "name": "set5-name-pinning-at-the-end",
+      "reason": null,
+      "started_at": "2026-10-09T20:01:13Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T20:01:13Z",
+      "name": "kind-expectation",
+      "reason": null,
+      "started_at": "2026-10-09T20:01:13Z",
+      "verdict": "passed"
+    }
+  ]
+}

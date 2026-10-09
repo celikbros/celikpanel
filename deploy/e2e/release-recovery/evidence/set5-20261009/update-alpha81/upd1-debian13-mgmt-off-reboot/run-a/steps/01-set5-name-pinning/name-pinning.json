@@ -1,0 +1,122 @@
+{
+  "appended_lines": 9,
+  "asked_with": "getent -s files ahosts NAME and getent -s files hosts NAME (the hosts file only; no DNS question is sent)",
+  "at": "2026-10-09T19:47:50Z",
+  "boot_id": "021ed0e7-c8bb-4df8-a898-c119d998feac",
+  "certbot_directories": [
+    {
+      "entries": null,
+      "path": "/var/log/letsencrypt",
+      "reason": "FileNotFoundError"
+    },
+    {
+      "entries": null,
+      "path": "/etc/letsencrypt/accounts",
+      "reason": "FileNotFoundError"
+    },
+    {
+      "entries": null,
+      "path": "/etc/letsencrypt/live",
+      "reason": "FileNotFoundError"
+    },
+    {
+      "entries": null,
+      "path": "/etc/letsencrypt/renewal",
+      "reason": "FileNotFoundError"
+    }
+  ],
+  "certbot_program": null,
+  "hosts_lines": [
+    "127.0.0.1\tlocalhost",
+    "::1\t\tlocalhost ip6-localhost ip6-loopback",
+    "ff02::1\t\tip6-allnodes",
+    "ff02::2\t\tip6-allrouters",
+    "127.0.0.1 acme-v02.api.letsencrypt.org",
+    "::1 acme-v02.api.letsencrypt.org",
+    "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+    "::1 acme-staging-v02.api.letsencrypt.org",
+    "127.0.0.1 acme.zerossl.com",
+    "::1 acme.zerossl.com",
+    "127.0.0.1 dv.acme-v02.api.pki.goog",
+    "::1 dv.acme-v02.api.pki.goog"
+  ],
+  "hosts_mode": "0o644",
+  "hosts_sha256_after": "4e7d464ae4deef6b9c433bbc7063289a76f365ab93aaf0afae76b5a174d667fe",
+  "hosts_sha256_before": "9adb29b748caaeec3f9086e01443e5520e7d9c00ea6a5bacd73249c4c504628a",
+  "kernel": "6.12.105+deb13-cloud-amd64",
+  "mapped_before": {
+    "acme-staging-v02.api.letsencrypt.org": [],
+    "acme-v02.api.letsencrypt.org": [],
+    "acme.zerossl.com": [],
+    "celikpanel.net": [],
+    "dv.acme-v02.api.pki.goog": []
+  },
+  "mode": "apply",
+  "nsswitch_hosts": [
+    "hosts:          files myhostname resolve [!UNAVAIL=return] dns"
+  ],
+  "os_release": {
+    "ID": "debian",
+    "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+    "VERSION_CODENAME": "trixie",
+    "VERSION_ID": "13"
+  },
+  "packages_installed": {
+    "openssl": "3.5.7-1~deb13u2",
+    "systemd": "257.13-1~deb13u1"
+  },
+  "product_paths_present": [],
+  "resolves": {
+    "acme-staging-v02.api.letsencrypt.org": {
+      "ahosts": {
+        "returncode": 0,
+        "stdout": "::1             STREAM acme-staging-v02.api.letsencrypt.org\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stdout": "::1             acme-staging-v02.api.letsencrypt.org"
+      }
+    },
+    "acme-v02.api.letsencrypt.org": {
+      "ahosts": {
+        "returncode": 0,
+        "stdout": "::1             STREAM acme-v02.api.letsencrypt.org\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stdout": "::1             acme-v02.api.letsencrypt.org"
+      }
+    },
+    "acme.zerossl.com": {
+      "ahosts": {
+        "returncode": 0,
+        "stdout": "::1             STREAM acme.zerossl.com\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stdout": "::1             acme.zerossl.com"
+      }
+    },
+    "celikpanel.net": {
+      "ahosts": {
+        "returncode": 2,
+        "stdout": ""
+      },
+      "hosts": {
+        "returncode": 2,
+        "stdout": ""
+      }
+    },
+    "dv.acme-v02.api.pki.goog": {
+      "ahosts": {
+        "returncode": 0,
+        "stdout": "::1             STREAM dv.acme-v02.api.pki.goog\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stdout": "::1             dv.acme-v02.api.pki.goog"
+      }
+    }
+  },
+  "uptime_seconds": 57.91
+}
