@@ -27,6 +27,8 @@ INTENT = GUEST_ROOT / 'worker-origin-intent.json'
 SCHEMA = 'celikpanel/worker-fixture-origin/v1'
 PREFIX = 'worker-origin-'
 MAX_ARCHIVE = 100 * 1024 * 1024
+# set6: the one hosts line a lab may have written for the origin name before provisioning (see provision()).
+LAB_PRE_PIN_LINE = '127.0.0.1 celikpanel.net # disposable CelikPanel lab pin before provisioning'
 RELEASE_POLICY = {'version': 'v0.1.0-alpha.82', 'current': 82, 'previous': 81, 'previous_version': 'v0.1.0-alpha.81'}
 # upd7: the closed set of target transitions this origin may serve. The first is the upd1-upd6 fixture
 # transition; the second is the first update from the published v0.1.0-alpha.80 (a candidate labelled
@@ -309,7 +311,13 @@ def provision(path, nonce):
         raise ValueError('native fixture CA store or updater unavailable')
     hosts = Path('/etc/hosts')
     before = read_file(hosts, 65536, 0o644)
-    if any('celikpanel.net' in line.split('#', 1)[0].split()[1:] for line in before.decode().splitlines()):
+    mapped = [line.strip() for line in before.decode().splitlines()
+              if 'celikpanel.net' in line.split('#', 1)[0].split()[1:]]
+    # set6: a lab that pinned the name to this guest's loopback in its first step (before anything of the product
+    # was on the guest) wrote exactly LAB_PRE_PIN_LINE. That one line, and nothing else that maps the name, is
+    # accepted as the mapping; it is not written a second time. Any other existing mapping is refused as before.
+    pre_pinned = bool(mapped) and all(line == LAB_PRE_PIN_LINE for line in mapped)
+    if mapped and not pre_pinned:
         raise ValueError('origin mapping already exists; no retry mutation')
     private_write(GUEST_ROOT / 'worker-origin-hosts.before', before)
     raw = read_file(GUEST_ROOT / 'worker-origin-ca.pem')
@@ -317,16 +325,18 @@ def provision(path, nonce):
     certificate.chmod(0o644)
     run(updater)
     # The prior exact bytes and intent are durable before this one-time lab-only mapping.
-    with hosts.open('ab') as stream:
-        stream.write(b'\n127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture\n')
-        stream.flush()
-        os.fsync(stream.fileno())
+    if not pre_pinned:
+        with hosts.open('ab') as stream:
+            stream.write(b'\n127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture\n')
+            stream.flush()
+            os.fsync(stream.fileno())
     private_write(GUEST_ROOT / 'worker-origin-provisioned.json', (json.dumps({
         'schema': SCHEMA, 'nonce': nonce, 'intent_sha256': digest(INTENT),
         'hosts_before_sha256': hashlib.sha256(before).hexdigest(), 'hosts_after_sha256': digest(hosts),
         'ca_sha256': hashlib.sha256(raw).hexdigest()}) + '\n').encode())
     return {'origin': 'https://celikpanel.net', 'bind': '127.0.0.1:443',
-            'provenance': intent['provenance'], 'release_key_enrolled': False}
+            'provenance': intent['provenance'], 'release_key_enrolled': False,
+            'hosts_mapping': 'the lab pre-pin line of the first step, kept' if pre_pinned else 'written by this provisioning'}
 
 
 def make_handler(root, intent):
