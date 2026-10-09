@@ -1,0 +1,56 @@
+### git diff --stat: the published tag v0.1.0-alpha.81 (a0beb7263d1f4ca72258f6b306f9111ba4e2a334) against this build's baseline a0beb7263d1f4ca72258f6b306f9111ba4e2a334
+### git diff --stat: the source 557b554eb (557b554ebdb17dee4466205eef07d004d9f23d35) against this build's baseline a0beb7263d1f4ca72258f6b306f9111ba4e2a334
+ 12832 files changed, 5513 insertions(+), 1842537 deletions(-)
+### git diff: the source 557b554eb (557b554ebdb17dee4466205eef07d004d9f23d35) against the good candidate a8bd6124a99390246c978281992e6eaf48fbb377
+diff --git a/deploy/release-sequence-policy b/deploy/release-sequence-policy
+index 3066bb17a..a431bb99a 100644
+--- a/deploy/release-sequence-policy
++++ b/deploy/release-sequence-policy
+@@ -1,6 +1,6 @@
+ format=celikpanel-release-sequence-policy-v1
+-version=v0.1.0-alpha.81
+-current=81
+-previous=80
+-previous_version=v0.1.0-alpha.80
+-previous_commit=bd14d97efc5cfd19acd70ddf0edb9c6343317e2b
++version=v0.1.0-alpha.82
++current=82
++previous=81
++previous_version=v0.1.0-alpha.81
++previous_commit=a0beb7263d1f4ca72258f6b306f9111ba4e2a334
+### git diff: the good candidate against defective c911b3083cb53aa539e6c25b720b7b86c2e08644
+diff --git a/cmd/panel/main.go b/cmd/panel/main.go
+index fde6d2a26..5f231af6f 100644
+--- a/cmd/panel/main.go
++++ b/cmd/panel/main.go
+@@ -802,8 +802,10 @@ func main() {
+ 	// These bootstrap modes only touch the database, then exit — no agent.
+ 	// Bu önyükleme modları yalnızca veritabanına dokunup çıkar — agent yok.
+ 	if *migrateOnlyFlag {
+-		log.Println("Canonical panel database migrations completed")
+-		return
++		// upd1 disposable fixture defect: never a release. The isolated copy is
++		// migrated, then this candidate reports failure so the signed update fails
++		// after candidate-installed, while the transaction is still active.
++		log.Fatalf("upd1 fixture defect: this candidate cannot complete its offline database migration")
+ 	}
+ 	if *countUsersFlag {
+ 		p := &Panel{db: database}
+### git diff: the good candidate against startcheck 75f0b8a487b8ae1d7fbaec63a739a364d661ac31
+diff --git a/cmd/panel/server_lifecycle.go b/cmd/panel/server_lifecycle.go
+index 27c9dc777..d43517884 100644
+--- a/cmd/panel/server_lifecycle.go
++++ b/cmd/panel/server_lifecycle.go
+@@ -98,6 +98,12 @@ func configurePanelHTTPTLS(server *http.Server, certPath, keyPath string) (bool,
+ 	if server == nil {
+ 		return false, errors.New("panel HTTP server is nil")
+ 	}
++	// upd3 disposable fixture defect (start-check): never a release. The TLS
++	// preparation shared by the read-only start check and the real start fails,
++	// so the update stops at the start check, before completion.pending.
++	if server != nil {
++		return false, errors.New("upd3 fixture defect: this candidate cannot prepare its panel TLS listener")
++	}
+ 	tlsOn := certPath != "" || keyPath != ""
+ 	if tlsOn {
+ 		if certPath == "" || keyPath == "" {

@@ -1,0 +1,96 @@
+{
+  "account": null,
+  "account_name": "set4_php_test",
+  "acme_challenge_directories": [
+    "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/1",
+    "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2"
+  ],
+  "acme_root": {
+    "exists": true,
+    "group": "root",
+    "kind": "directory",
+    "mode": "0755",
+    "owner": "root",
+    "path": "/var/lib/celikpanel-agent/acme-http-01"
+  },
+  "at": "2026-10-09T12:42:08Z",
+  "crontab_spool": [],
+  "domain": "set4-php.test",
+  "group": null,
+  "mode": "read-leftovers",
+  "nginx_dump_lines_naming_the_domain": [],
+  "nginx_dump_returncode": 0,
+  "nginx_files_naming_the_domain": [],
+  "nginx_test": {
+    "at": "2026-10-09T12:42:08Z",
+    "output": "2026/10/09 12:42:08 [warn] 3072#3072: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": false,
+  "panel": {
+    "autoincrement": {
+      "domains": 2,
+      "sites": 2
+    },
+    "domains": [],
+    "row_counts": {
+      "databases_v2": 0,
+      "domains": 1,
+      "email_accounts": 0,
+      "sites": 1,
+      "subscriptions": 1
+    },
+    "sites": [],
+    "tables_naming_the_domain": {
+      "audit_logs": {
+        "action": 2
+      }
+    }
+  },
+  "pool_files": [
+    {
+      "names_the_account": false,
+      "names_the_domain": false,
+      "path": "/etc/php/php-fpm.d/www.conf",
+      "settings": {
+        "group": "http",
+        "listen": "/run/php-fpm/php-fpm.sock",
+        "listen.group": "http",
+        "listen.owner": "http",
+        "pool": "www",
+        "user": "http"
+      }
+    }
+  ],
+  "pool_files_of_the_account": [],
+  "processes_of_the_account": [],
+  "schema": "celikpanel/set4-native/v1",
+  "site_directories": [
+    "/var/www/celikpanel/subscriptions/2/sites/1"
+  ],
+  "site_directories_root": {
+    "exists": true,
+    "group": "celikpanel",
+    "kind": "directory",
+    "mode": "0755",
+    "owner": "root",
+    "path": "/var/www/celikpanel/subscriptions"
+  },
+  "sockets": [
+    {
+      "exists": true,
+      "group": "http",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "http",
+      "path": "/run/php-fpm/php-fpm.sock"
+    }
+  ],
+  "subscription_directories": {
+    "/var/www/celikpanel/subscriptions/2": [
+      "sites"
+    ]
+  },
+  "this_domain": {}
+}

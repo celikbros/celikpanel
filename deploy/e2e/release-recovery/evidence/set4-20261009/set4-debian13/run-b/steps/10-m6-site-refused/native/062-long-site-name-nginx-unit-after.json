@@ -1,0 +1,64 @@
+{
+  "at": "2026-10-09T12:52:28Z",
+  "is_active": {
+    "nginx.service": "active"
+  },
+  "is_failed": {
+    "nginx.service": "active"
+  },
+  "journal": {
+    "nginx.service": [
+      "2026-10-09T12:52:27.561727+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-09T12:52:27.589596+00:00 dns-debian13 nginx[31600]: 2026/10/09 12:52:27 [notice] 31600#31600: signal process started",
+      "2026-10-09T12:52:27.592213+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-09T12:52:27.873967+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-09T12:52:27.894305+00:00 dns-debian13 nginx[31618]: 2026/10/09 12:52:27 [notice] 31618#31618: signal process started",
+      "2026-10-09T12:52:27.896173+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+    ]
+  },
+  "journal_product": [
+    "2026-10-09T12:52:26.331416+00:00 dns-debian13 panel[5217]: 2026/10/09 12:52:26 http: TLS handshake error from 127.0.0.1:59710: EOF",
+    "2026-10-09T12:52:27.279603+00:00 dns-debian13 useradd[31575]: new group: name=set4_a_long_site_name_an_owner_c, GID=5002",
+    "2026-10-09T12:52:27.279732+00:00 dns-debian13 useradd[31575]: new user: name=set4_a_long_site_name_an_owner_c, UID=5002, GID=5002, home=/var/www/celikpanel/subscriptions/2/sites/5, shell=/bin/bash, from=none",
+    "2026-10-09T12:52:27.412915+00:00 dns-debian13 chpasswd[31580]: pam_unix(chpasswd:chauthtok): password changed for set4_a_long_site_name_an_owner_c",
+    "2026-10-09T12:52:27.755815+00:00 dns-debian13 userdel[31609]: delete user 'set4_a_long_site_name_an_owner_c'",
+    "2026-10-09T12:52:27.755975+00:00 dns-debian13 userdel[31609]: removed group 'set4_a_long_site_name_an_owner_c' owned by 'set4_a_long_site_name_an_owner_c'",
+    "2026-10-09T12:52:27.755997+00:00 dns-debian13 userdel[31609]: removed shadow group 'set4_a_long_site_name_an_owner_c' owned by 'set4_a_long_site_name_an_owner_c'",
+    "2026-10-09T12:52:27.859745+00:00 dns-debian13 agent[5026]: 2026/10/09 12:52:27 CreateSite set4-a-long-site-name-an-owner-could-plausibly-choose.test: nginx vhost activation: nginx validation failed: nginx validation failed: 2026/10/09 12:52:27 [emerg] 31593#31593: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64",
+    "2026-10-09T12:52:27.859745+00:00 dns-debian13 agent[5026]: nginx: configuration file /etc/nginx/nginx.conf test failed: exit status 1; rollback restored and reloaded the previous vhost",
+    "2026-10-09T12:52:27.917702+00:00 dns-debian13 panel[5217]: 2026/10/09 12:52:27 [502][domain] set4-a-long-site-name-an-owner-could-plausibly-choose.test: SITE_WEB_SERVER_REFUSED removed: 2026/10/09 12:52:27 [emerg] 31593#31593: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64"
+  ],
+  "journal_systemd_manager": [
+    "2026-10-09T12:52:27.561727+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-09T12:52:27.592213+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-09T12:52:27.873967+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-09T12:52:27.896173+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+  ],
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "since_epoch": 1791550345,
+  "units": {
+    "nginx.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 12:46:13 UTC",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "active",
+      "ExecMainPID": "7049",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 12:46:13 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; master_process on; -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 12:52:27 UTC] ; stop_time=[Fri 2026-10-09 12:52:27 UTC] ; pid=31618 ; code=exited ; status=0 }",
+      "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "Fri 2026-10-09 12:46:13 UTC",
+      "InvocationID": "7bfb6c8d41ed44bc86bbef363bfb6b73",
+      "LoadState": "loaded",
+      "MainPID": "7049",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 12:52:27 UTC",
+      "SubState": "running",
+      "Type": "forking"
+    }
+  }
+}

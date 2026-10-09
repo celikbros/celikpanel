@@ -1,0 +1,64 @@
+{
+  "at": "2026-10-09T11:25:58Z",
+  "is_active": {
+    "nginx.service": "active"
+  },
+  "is_failed": {
+    "nginx.service": "active"
+  },
+  "journal": {
+    "nginx.service": [
+      "2026-10-09T11:25:57.664410+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-09T11:25:57.671940+00:00 dns-ubuntu nginx[45834]: 2026/10/09 11:25:57 [notice] 45834#45834: signal process started",
+      "2026-10-09T11:25:57.674785+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-09T11:25:57.976934+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-09T11:25:57.984507+00:00 dns-ubuntu nginx[45856]: 2026/10/09 11:25:57 [notice] 45856#45856: signal process started",
+      "2026-10-09T11:25:57.985354+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+    ]
+  },
+  "journal_product": [
+    "2026-10-09T11:25:55.530601+00:00 dns-ubuntu panel[7574]: 2026/10/09 11:25:55 http: TLS handshake error from 127.0.0.1:59680: EOF",
+    "2026-10-09T11:25:57.329945+00:00 dns-ubuntu useradd[45810]: new group: name=set4_refused_test, GID=5002",
+    "2026-10-09T11:25:57.330055+00:00 dns-ubuntu useradd[45810]: new user: name=set4_refused_test, UID=5002, GID=5002, home=/var/www/celikpanel/subscriptions/2/sites/3, shell=/bin/bash, from=none",
+    "2026-10-09T11:25:57.508225+00:00 dns-ubuntu chpasswd[45817]: pam_unix(chpasswd:chauthtok): password changed for set4_refused_test",
+    "2026-10-09T11:25:57.836506+00:00 dns-ubuntu userdel[45844]: delete user 'set4_refused_test'",
+    "2026-10-09T11:25:57.838387+00:00 dns-ubuntu userdel[45844]: removed group 'set4_refused_test' owned by 'set4_refused_test'",
+    "2026-10-09T11:25:57.838426+00:00 dns-ubuntu userdel[45844]: removed shadow group 'set4_refused_test' owned by 'set4_refused_test'",
+    "2026-10-09T11:25:57.958507+00:00 dns-ubuntu agent[7376]: 2026/10/09 11:25:57 CreateSite set4-refused.test: nginx vhost activation: nginx validation failed: nginx validation failed: 2026/10/09 11:25:57 [emerg] 45828#45828: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31",
+    "2026-10-09T11:25:57.958507+00:00 dns-ubuntu agent[7376]: nginx: configuration file /etc/nginx/nginx.conf test failed: exit status 1; rollback restored and reloaded the previous vhost",
+    "2026-10-09T11:25:58.014820+00:00 dns-ubuntu panel[7574]: 2026/10/09 11:25:58 [502][domain] set4-refused.test: SITE_WEB_SERVER_REFUSED removed: 2026/10/09 11:25:57 [emerg] 45828#45828: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31"
+  ],
+  "journal_systemd_manager": [
+    "2026-10-09T11:25:57.664410+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-09T11:25:57.674785+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-09T11:25:57.976934+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-09T11:25:57.985354+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+  ],
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "since_epoch": 1791545154,
+  "units": {
+    "nginx.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 11:12:52 UTC",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "active",
+      "ExecMainPID": "11893",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 11:12:53 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; master_process on; -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 11:25:57 UTC] ; stop_time=[Fri 2026-10-09 11:25:57 UTC] ; pid=45856 ; code=exited ; status=0 }",
+      "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "Fri 2026-10-09 11:12:52 UTC",
+      "InvocationID": "728fdf37c9534955b67a89dbf77ff3a5",
+      "LoadState": "loaded",
+      "MainPID": "11893",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 11:25:57 UTC",
+      "SubState": "running",
+      "Type": "forking"
+    }
+  }
+}

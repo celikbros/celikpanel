@@ -1,0 +1,35 @@
+{
+  "at": "2026-10-09T10:36:18Z",
+  "domain": "set4-refused.test",
+  "files": [],
+  "mode": "read-nginx",
+  "nginx_test": {
+    "at": "2026-10-09T10:36:18Z",
+    "output": "2026/10/09 10:36:18 [warn] 3561#3561: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "unit": {
+    "ActiveEnterTimestamp": "Fri 2026-10-09 10:33:01 UTC",
+    "ActiveExitTimestamp": "",
+    "ActiveState": "active",
+    "ExecMainPID": "1200",
+    "ExecMainStartTimestamp": "Fri 2026-10-09 10:33:01 UTC",
+    "ExecMainStatus": "0",
+    "ExecReload": "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 10:36:14 UTC] ; stop_time=[Fri 2026-10-09 10:36:14 UTC] ; pid=3426 ; code=exited ; status=0 }",
+    "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+    "InactiveEnterTimestamp": "",
+    "InactiveExitTimestamp": "Fri 2026-10-09 10:33:01 UTC",
+    "InvocationID": "13d6878b86744880b087b4862c25466d",
+    "LoadState": "loaded",
+    "MainPID": "1200",
+    "NRestarts": "0",
+    "ReloadResult": "success",
+    "Result": "success",
+    "StateChangeTimestamp": "Fri 2026-10-09 10:36:14 UTC",
+    "SubState": "running",
+    "Type": "forking"
+  }
+}

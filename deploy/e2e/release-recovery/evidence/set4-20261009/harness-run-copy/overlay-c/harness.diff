@@ -1,0 +1,1654 @@
+--- a/deploy/e2e/release-recovery/build-upd1-artifacts.sh
++++ b/deploy/e2e/release-recovery/build-upd1-artifacts.sh
+@@ -106,6 +106,16 @@
+ build() {
+     local commit=$1 version=$2 dist_json
+     dist_json=/var/tmp/cp-pair-accept/dist/$commit-acceptance-license/dist.json
++    # set4: an explicit reuse of ONE dist an earlier run built, named by its full commit in
++    # UPD1_REUSE_DIST_OF_COMMIT (the published v0.1.0-alpha.81 baseline, whose dist directory an earlier run
++    # left and this run may not remove). Never implicit: any other commit, or a missing dist.json, is built or
++    # refused as before. The reuse is said in the build log and in the artifacts document; `run-upd1.sh prove`
++    # verifies the reused archive against the commit's own blobs.
++    if [[ -n ${UPD1_REUSE_DIST_OF_COMMIT:-} && ${UPD1_REUSE_DIST_OF_COMMIT} == "$commit" && -s $dist_json ]]; then
++        echo "BUILD-UPD1-REUSED: the dist of $commit ($version) at ${dist_json%/dist.json}, left by an earlier build, is"             "used unchanged because UPD1_REUSE_DIST_OF_COMMIT names exactly this commit; it was NOT built by this run." >&2
++        echo "$dist_json"
++        return 0
++    fi
+     if ! CELIKPANEL_REPO=$clone CELIKPANEL_DIST_VERSION=$version CELIKPANEL_ACCEPTANCE_GUARD=$GUARD \
+         bash "$BUILD_DIST" --acceptance-license "$commit" >&2; then
+         echo "BUILD-UPD1-FAILED: the dist build of $commit ($version) failed or was refused; an archive that an earlier" \
+@@ -258,6 +268,10 @@
+     document["realstart"] = item(r, c_seq, good)
+     document["realstart"]["defect"] = "cmd/panel main() exits before its listener; the start check never reaches it"
+ document["defective"]["defect"] = "cmd/panel --migrate-only exits 1 after migrating the isolated copy"
++import os
++for role in ("baseline", "good", "defective", "startcheck", "realstart"):
++    if role in document and os.environ.get("UPD1_REUSE_DIST_OF_COMMIT") == document[role]["commit"]:
++        document[role]["reused_dist"] = "built by an earlier run, used unchanged (UPD1_REUSE_DIST_OF_COMMIT)"
+ if ref:
+     spec = importlib.util.spec_from_file_location("upd7_driver", driver)
+     module = importlib.util.module_from_spec(spec); sys.modules["upd7_driver"] = module; spec.loader.exec_module(module)
+--- /dev/null
++++ b/deploy/e2e/release-recovery/set4_trial.py
+@@ -0,0 +1,1078 @@
++#!/usr/bin/env python3
++"""set4: a narrow re-measurement of what commit 557b554eb ("Corrections from the final native round") changed, with
++real services on disposable QEMU guests (lab.py).
++
++Two cell kinds, both built on the drivers of set3 and changing none of them:
++
++``set4-arch`` | ``set4-debian13`` | ``set4-ubuntu`` (``Set4Trial`` over ``request_identity_trial.RequestIdentityTrial``):
++the candidate is installed fresh and the owner's setup is run exactly as in the ``rid3-*`` cells (steps preflight,
++origin, baseline-install, owner-login, license, setup, site); then, as the logged-in owner,
++
++  M0  the platform as it stands, the lab's isolation, the nginx package's PHP snippet and its digest (item 7);
++  M1  a PHP site: created through the Panel, ``nginx -t``, one PHP page executed as the site's own account, a missing
++      script, PATH_INFO, the PHP version and the PHP-FPM socket the Panel recorded, the site deleted and what is left
++      (items 1, 3, 8);
++  M2  the cPanel-archive import of set3's fixture, and the imported site served (items 2, 3);
++  M5  an archive with a member named by an absolute path (item 5);
++  M10 Postfix stopped through the Panel while ``postfix check`` refuses ``main.cf`` (item 10; mail platforms);
++  M4  a Reload of a stopped nginx, MariaDB and PostgreSQL through the Panel (item 4);
++  M6  a new site whose configuration the web server refuses (item 6): one reading after the owner moved nginx's own
++      ``fastcgi.conf`` away, one with a long site name and no owner action. M6 runs right after M1, while no PHP
++      site exists.
++
++``upd1-*`` (``Set4UpdateTrial`` over ``owner_update_trial.Trial``): the owner-started update of set3 with two added
++steps. Good cells: a PHP site is created by the installed baseline before the update and asked a fixed set of
++requests; after the verified update the same requests are asked again, the site's General settings are saved once
++through the Panel (which renders the vhost again) and the requests are asked a third time (item 9). Rollback cells:
++after the automatic return the update check is read and recorded raw, with what the served web build holds (item 12).
++
++The driver calls only the Panel's HTTP API; every native fact is read over SSH by ``guest_set4_native.py`` and the
++set3 helpers, and what the owner does on the server by hand goes through ``owner-*`` modes and is recorded as such.
++No certificate authority and no licence service is contacted. Every result carries ``native_evidence: false``.
++
++  set4_trial.py plan --cell set4-arch --artifacts A.json --work-root /var/tmp/cp-release-drill-X [--dry-run]
++  set4_trial.py run  --cell set4-arch --artifacts A.json --work-root /var/tmp/cp-release-drill-X --execute
++"""
++from __future__ import annotations
++
++import argparse
++import base64
++import dataclasses
++import hashlib
++import json
++from pathlib import Path
++import re
++import sys
++import time
++from typing import Any
++
++HERE = Path(__file__).resolve().parent
++if str(HERE) not in sys.path:
++    sys.path.insert(0, str(HERE))
++import request_identity_trial as rid  # noqa: E402
++import settings_writes_trial as sw  # noqa: E402
++
++base = sw.base
++CELL_KIND = "set4-final-round"
++HELPER4 = "guest_set4_native.py"
++PINNED_SOURCE = HERE.parents[2] / "internal" / "services" / "nginx_php_handoff_test.go"
++PHP_DOMAIN = "set4-php.test"
++IMPORT_DOMAIN = "set4-import.test"
++ABSOLUTE_DOMAIN = "set4-absolute.test"
++REFUSED_DOMAIN = "set4-refused.test"
++LONG_DOMAIN = "set4-a-long-site-name-an-owner-could-plausibly-choose.test"     # 58 characters
++UPDATE_PHP_DOMAIN = "set4-upd-php.test"
++PROBE_MARK = "set4-php-executed"
++REQUESTS = (("probe", "/set4-probe.php"), ("probe_query", "/set4-probe.php?x=1&y=two"),
++            ("missing_script", "/set4-missing.php"), ("path_info_tail_php", "/set4-probe.php/tail.php"),
++            ("path_info_deep_tail_php", "/set4-probe.php/a/b/tail.php?q=1"), ("path_info_plain", "/set4-probe.php/extra/info"),
++            ("static", "/set4-static.txt"), ("missing_static", "/set4-none.txt"), ("root", "/"), ("dotfile", "/.env"))
++SIX_DIRECTIVES = ["fastcgi_split_path_info ^(.+?\\.php)(/.*)$;", "try_files $fastcgi_script_name =404;",
++                  "set $path_info $fastcgi_path_info;", "fastcgi_param PATH_INFO $path_info;", "fastcgi_index index.php;",
++                  "include fastcgi.conf;"]
++# docs/OPERATION-GUIDANCE.md, "After the final native round" (2026-10-12): the API's own sentences.
++REFUSED_WHAT = ("the web server (nginx) refused the configuration CelikPanel generated for it, so the site was never put "
++                "into service. ")
++REFUSED_REMOVED = ("What had been created for it was removed again and the removal was confirmed: its web server "
++                   "configuration, its system account, its files and, for a PHP site, its PHP pool. nginx was reloaded with "
++                   "the configuration it had before. ")
++REFUSED_UNCONFIRMED = ("nginx was reloaded with the configuration it had before. Removing what had been created for the site "
++                       "was not confirmed, so parts of it may remain on the server: open Domains and, if {domain} is listed "
++                       "there, delete it, which removes its parts. ")
++REFUSED_OWNER = ("The server owner runs sudo nginx -t on the server. If it reports an error now, a file of the server's own "
++                 "nginx configuration is refused and is corrected first. If it passes, what nginx refused was in the "
++                 "configuration CelikPanel generated for this server; the line nginx printed names it and is shown to "
++                 "administrators. ")
++REFUSED_END = "Then create the site again; nothing retries by itself."
++MEMBER_DETAIL = ("not imported: the archive names this entry with an absolute path, and an import writes only below the "
++                 "site's own folder; nothing was written for it")
++PARTIAL_HEAD = "The import ended and every part that was chosen was imported; {domain} is in service. Imported: "
++PARTIAL_TAIL = (" These entries of the archive were refused by their names, and nothing was written for them; the reason of "
++                "each is in its step below. If one of them is a file the site needs, add it with the file manager of "
++                "{domain}. Importing the archive again refuses the same entries; nothing continues by itself.")
++NOTE_HEAD = ("The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the "
++             "stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of "
++             "the unit exited with an error), and CelikPanel leaves it as it is. ")
++NOTE_CONFIG = ("The service's own check refuses its configuration at present, and the unit's stop command reads the same "
++               "file; the service will not start until that is corrected. ")
++NOTE_TAIL = ("Start can be used from this state. To clear the mark without starting the service, the server owner runs the "
++             "command shown.")
++NOTE_SENTENCES = {"unit_marked_failed": NOTE_HEAD + NOTE_TAIL, "unit_marked_failed_config": NOTE_HEAD + NOTE_CONFIG + NOTE_TAIL}
++CARD_KEYS = ("panelUpdate.previousAttempt.rolledBackTitle", "panelUpdate.previousAttempt.title",
++             "panelUpdate.previousAttempt.stoppedTitle", "panelUpdate.previousAttempt.recovered",
++             "panelUpdate.previousAttempt.noCause", "panelUpdate.previousAttempt.cause", "panelUpdate.previousAttempt.again")
++CARD_NEEDLES = ("This version was already tried on this server and rolled back",
++                "Bu sürüm bu sunucuda daha önce denendi ve geri alındı",
++                "The server recorded no more specific cause for that attempt.",
++                "Starting it again runs the same update.")
++
++# M6 runs while no PHP site exists (after M1 deleted its own, before the imports create theirs): its owner action
++# moves a file that every PHP vhost in service reads, and `nginx -t` must still pass with the configuration in service.
++SECTIONS = (
++    ("M0-prepare", "the platform, the lab's isolation, the nginx package's PHP snippet (item 7)", None),
++    ("M1-php-site", "a PHP site: created, nginx -t, executed as the site's account, PATH_INFO, a missing script, the recorded "
++                    "PHP version and socket, deleted (items 1, 3, 8)", None),
++    ("M6-site-refused", "a new site whose configuration the web server refuses (item 6)", None),
++    ("M2-import", "the cPanel-archive import of set3's fixture; the imported site served (items 2, 3)", None),
++    ("M5-import-absolute", "an archive with a member named by an absolute path (item 5)", None),
++    ("M10-postfix-stop", "Postfix stopped through the Panel while `postfix check` refuses main.cf (item 10)", "mail"),
++    ("M4-reload-stopped", "Reload of a stopped nginx, MariaDB and PostgreSQL (item 4)", None),
++)
++CELLS = {
++    "set4-arch": sw.SettingsCell("set4-arch", "arch", "web", sw.WEB_PRESET + ("postgresql",), False),
++    "set4-debian13": sw.SettingsCell("set4-debian13", "debian13", "web_mail", sw.MAIL_PRESET + ("postgresql",), True),
++    "set4-ubuntu": sw.SettingsCell("set4-ubuntu", "ubuntu", "web_mail", sw.MAIL_PRESET + ("postgresql",), True),
++}
++UPDATE_CELLS = ("upd1-debian13-good", "upd1-ubuntu-good", "upd1-arch-good", "upd1-arch-defective", "upd1-debian13-defective",
++                "upd1-ubuntu-defective", "upd1-debian13-startcheck")
++
++
++# ---------------------------------------------------------------------------
++# Pure rules
++# ---------------------------------------------------------------------------
++
++def pinned_snippet_sha256(source: Path = PINNED_SOURCE) -> str | None:
++    """The digest the product's test pins for the Debian 13 package's snippet (read from this run copy's source)."""
++    try:
++        found = re.search(r'debianFastCGIPHPSnippetSHA256\s*=\s*"([0-9a-f]{64})"', source.read_text())
++    except OSError:
++        return None
++    return found.group(1) if found else None
++
++
++def parse_probe(reading: dict | None) -> dict:
++    """What the probe page printed: its first line (marker, 6*7, PHP version, server API, account) and the request
++    values PHP-FPM was handed. ``executed`` only when the marker, 42 and no source text are there."""
++    body = str((reading or {}).get("body") or "")
++    lines = body.splitlines()
++    parts = lines[0].split(":") if lines else []
++    values = {}
++    for line in lines[1:]:
++        found = re.fullmatch(r"([A-Z_]+)=\[(.*)\]", line)
++        if found:
++            values[found.group(1)] = found.group(2)
++    executed = (reading or {}).get("status") == 200 and len(parts) >= 5 and parts[0] == PROBE_MARK and parts[1] == "42" \
++        and "<?php" not in body
++    return {"executed": bool(executed), "php_version": parts[2] if executed else None, "server_api": parts[3] if executed else None,
++            "runs_as": parts[4] if executed else None, "values": values if executed else {}}
++
++
++def major_minor(version: Any) -> str | None:
++    found = re.search(r"(\d+)\.(\d+)", str(version or ""))
++    return f"{found.group(1)}.{found.group(2)}" if found else None
++
++
++def brief_reading(reading: dict | None) -> dict:
++    reading = reading or {}
++    return {"status": reading.get("status"), "bytes": reading.get("bytes"), "body_sha256": reading.get("body_sha256"),
++            "headers": reading.get("headers"), "error": reading.get("error"), "body": str(reading.get("body") or "")[:700]}
++
++
++def same_answers(before: dict, after: dict) -> dict:
++    """Per request: the status and the body digest of two readings, and whether both are equal."""
++    out = {}
++    for name, _path in REQUESTS:
++        a, b = before.get(name) or {}, after.get(name) or {}
++        out[name] = {"status": [a.get("status"), b.get("status")], "body_sha256": [a.get("body_sha256"), b.get("body_sha256")],
++                     "equal": a.get("status") is not None and a.get("status") == b.get("status")
++                     and a.get("body_sha256") == b.get("body_sha256")}
++    return out
++
++
++def refused_sentence(reason: str, domain: str) -> str | None:
++    if reason == "removed":
++        return "The site " + domain + " was not created: " + REFUSED_WHAT + REFUSED_REMOVED + REFUSED_OWNER + REFUSED_END
++    if reason == "cleanup_unconfirmed":
++        return ("The site " + domain + " was not created: " + REFUSED_WHAT + REFUSED_UNCONFIRMED.replace("{domain}", domain)
++                + REFUSED_OWNER + REFUSED_END)
++    return None
++
++
++def vhost_of(nginx: dict) -> dict | None:
++    files = [f for f in (nginx or {}).get("files") or [] if f.get("kind") == "file" and f.get("php_location_lines")]
++    return files[0] if files else None
++
++
++class Native4:
++    """The set4 guest helper, for both trial kinds."""
++
++    def native4(self, mode: str, **arguments: Any) -> dict:
++        payload = base64.b64encode(json.dumps(arguments).encode()).decode()
++        return self.helper(HELPER4, mode, "--args-b64", payload, timeout=300)
++
++    def ask(self, domain: str, keep) -> dict:
++        """The fixed set of requests to this guest's own web server with the site's Host header."""
++        answers = {}
++        for name, path in REQUESTS:
++            answers[name] = keep(name.replace("_", "-"), "read-http", domain=domain, path=path)
++        return answers
++
++    def texts(self, keys, values: dict | None = None) -> dict:
++        english = self.translator.catalog["en"]
++        return {key: {language: self.translator.text(key, dict(values or {}), language=language) for language in ("en", "tr")}
++                for key in keys if key in english}
++
++
++# ---------------------------------------------------------------------------
++# Fresh-install cells
++# ---------------------------------------------------------------------------
++
++class Set4Trial(Native4, rid.RequestIdentityTrial):
++    def upload_helpers(self) -> dict:
++        helpers = super().upload_helpers()
++        helpers[HELPER4] = self.lab.put_file(self.root, self.record, self.plan, self.node_name, HERE / HELPER4, HELPER4)[1]
++        return helpers
++
++    def snap4(self, label: str, mode: str, **arguments: Any) -> dict:
++        value = self.native4(mode, **arguments)
++        self.native_sequence += 1
++        name = f"native/{self.native_sequence:03d}-{label}.json"
++        self.record_json(name, value)
++        self.current.setdefault("natives", []).append({"label": label, "mode": mode, "file": name,
++                                                       "owner_action": mode.startswith("owner-")})
++        return value
++
++    def owner4(self, label: str, mode: str, **arguments: Any) -> dict:
++        value = self.snap4("owner-" + label, mode, **arguments)
++        self.current.setdefault("owner_actions", []).append({"label": label, "mode": mode, "at": value.get("at")})
++        return value
++
++    def requests(self, domain: str, when: str) -> dict:
++        return self.ask(domain, lambda name, mode, **arguments: self.snap4(f"http-{when}-{name}", mode, **arguments))
++
++    def domains_listed(self) -> list | None:
++        listing = self.api("GET", "/api/v1/domains", purpose="Domains list")
++        rows = listing.json() if listing.status == 200 else None
++        return rows if isinstance(rows, list) else None
++
++    def wait_unlisted(self, domain: str, limit: float = 240) -> tuple:
++        started, names = time.time(), None
++        while time.time() - started < limit:
++            rows = self.domains_listed()
++            names = [d.get("domain_name") for d in rows] if rows is not None else None
++            if isinstance(names, list) and domain not in names:
++                return True, round(time.time() - started, 1), names
++            time.sleep(3)
++        return False, round(time.time() - started, 1), names
++
++    # -- M0 ---------------------------------------------------------------------------------------------------
++
++    def m0_prepare(self) -> None:
++        domain_id = self.state["domain_id"]
++        state = self.panel_state("panel-state-before")
++        mine = next((d for d in state["domains"] if d.get("id") == domain_id), None)
++        self.check("the Panel's database names the owner's site and its subscription", bool(mine), mine)
++        self.state["subscription_id"] = (mine or {}).get("subscription_id")
++        before = self.snap4("isolation-before", "read-isolation")
++        isolated = self.snap2("lab-isolate-acme", "lab-isolate-acme", action="apply")
++        after = self.snap4("isolation", "read-isolation")
++        self.current["isolation"] = {"before_the_acme_lines": before.get("resolves"), "resolves": after.get("resolves"),
++                                     "loopback_only": after.get("loopback_only"), "hosts_lines": after.get("hosts_lines"),
++                                     "how": "`getent -s files hosts NAME`: the guest's own hosts file only, no DNS question is sent",
++                                     "acme_confirmed": isolated.get("confirmed")}
++        loop = after.get("loopback_only") or {}
++        self.check("lab isolation: celikpanel.net resolves to this guest's loopback only (its own fixture origin)",
++                   loop.get("celikpanel.net") is True, after.get("resolves"))
++        self.check("lab isolation: the two Let's Encrypt directory names resolve to this guest's loopback only",
++                   loop.get("acme-v02.api.letsencrypt.org") is True and loop.get("acme-staging-v02.api.letsencrypt.org") is True
++                   and isolated.get("confirmed") is True, after.get("resolves"))
++        platform = self.snap4("platform", "read-platform")
++        snippet = platform.get("nginx_php_snippet") or {}
++        pinned = pinned_snippet_sha256()
++        self.state["platform"] = platform
++        self.current["platform"] = {k: platform.get(k) for k in ("os_release", "kernel", "packages", "package_manager",
++                                                                 "nginx_version", "php_fpm_programs", "etc_php_directories")}
++        self.current["nginx_php_snippet"] = {"path": snippet.get("path"), "exists": snippet.get("exists"),
++                                             "sha256": snippet.get("sha256"), "bytes": snippet.get("bytes"),
++                                             "owner_package": snippet.get("owner_package"),
++                                             "pinned_in_the_product_test": pinned,
++                                             "equals_the_pinned_digest": bool(pinned) and snippet.get("sha256") == pinned,
++                                             "snippets_directory": platform.get("nginx_snippets_directory")}
++        self.keep_text("native-text/nginx-snippets-fastcgi-php.conf.txt", snippet.get("text") or "(the file does not exist)")
++        if self.node_name == "arch":
++            self.check("item 1 (stock host): the nginx package of this host ships no snippets/fastcgi-php.conf",
++                       snippet.get("exists") is False, self.current["nginx_php_snippet"])
++        else:
++            self.check("item 7: the package's /etc/nginx/snippets/fastcgi-php.conf has the SHA-256 the product's test pins",
++                       bool(pinned) and snippet.get("sha256") == pinned, self.current["nginx_php_snippet"])
++        self.check("`nginx -t` passes before anything is measured", (platform.get("nginx_test") or {}).get("returncode") == 0,
++                   platform.get("nginx_test"))
++
++    # -- M1 ---------------------------------------------------------------------------------------------------
++
++    def site_record(self, label: str, domain: str) -> dict:
++        left = self.snap4(label, "read-leftovers", domain=domain)
++        site = ((left.get("panel") or {}).get("sites") or [{}])[0]
++        return {"left": left, "php_version": site.get("php_version"), "php_fpm_socket": site.get("php_fpm_socket"),
++                "project_type": site.get("project_type"), "site_keys": sorted(site)}
++
++    def php_facts(self, label: str, domain: str, domain_id: int, when: str) -> dict:
++        """Items 1 and 3 for one existing PHP site: the vhost nginx accepted, one PHP page executed, PATH_INFO, a
++        missing script, and the PHP version and socket the Panel recorded against what is installed."""
++        nginx = self.snap4(f"{label}-nginx", "read-nginx", domain=domain)
++        vhost = vhost_of(nginx) or {}
++        self.keep_text(f"native-text/{label}-vhost.conf.txt", vhost.get("text") or "(no vhost file names the domain)")
++        self.check(f"{label}: `nginx -t` passes with the site's vhost", (nginx.get("nginx_test") or {}).get("returncode") == 0,
++                   nginx.get("nginx_test"))
++        location = vhost.get("php_location_lines") or []
++        passed = (vhost.get("fastcgi_pass") or [None])[0]
++        socket_in_vhost = passed[5:] if isinstance(passed, str) and passed.startswith("unix:") else passed
++        self.check(f"{label}: the vhost names no file under snippets/ and its PHP location is the six directives, then the "
++                   "socket, SCRIPT_FILENAME and fastcgi_params",
++                   vhost.get("names_the_php_snippet") is False and location[:6] == SIX_DIRECTIVES and len(location) == 9
++                   and location[7:] == ["fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;", "include fastcgi_params;"],
++                   {"path": vhost.get("path"), "includes": vhost.get("includes"), "php_location_lines": location})
++        probe = self.owner4(f"{label}-php-probe", "owner-php-probe", domain_id=domain_id)
++        answers = self.requests(domain, when)
++        page = parse_probe(answers["probe"])
++        tail = parse_probe(answers["path_info_tail_php"])
++        deep = parse_probe(answers["path_info_deep_tail_php"])
++        plain = parse_probe(answers["path_info_plain"])
++        served = {"site_account": probe.get("site_account"), "docroot_entries": probe.get("docroot_entries"),
++                  "probe": page, "answers": {name: brief_reading(value) for name, value in answers.items()},
++                  "path_info": {"/set4-probe.php/tail.php": tail, "/set4-probe.php/a/b/tail.php?q=1": deep,
++                                "/set4-probe.php/extra/info": plain}}
++        self.current.setdefault("php", {})[label] = served
++        self.check(f"{label}: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = "
++                   "42, no source text, server API fpm-fcgi)", page["executed"] and page["server_api"] == "fpm-fcgi",
++                   {"probe": page, "answer": brief_reading(answers["probe"])})
++        self.check(f"{label}: the page runs as the site's own account", page["executed"] and page["runs_as"] == probe.get("site_account")
++                   and page["runs_as"] not in (None, "root", "www-data", "http", "nginx"), {"runs_as": page["runs_as"], "site_account": probe.get("site_account")})
++        self.check(f"{label}: a PHP script that does not exist answers 404", answers["missing_script"].get("status") == 404,
++                   brief_reading(answers["missing_script"]))
++        self.check(f"{label}: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: "
++                   "PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)",
++                   tail["executed"] and tail["values"].get("PATH_INFO") == "/tail.php" and tail["values"].get("SCRIPT_NAME") == "/set4-probe.php",
++                   {"tail": tail, "deep": deep, "answer": brief_reading(answers["path_info_tail_php"])})
++        self.note(f"{label}: a request whose path does not end in .php (/set4-probe.php/extra/info) "
++                  + ("reached PHP with PATH_INFO=" + str(plain["values"].get("PATH_INFO")) if plain["executed"]
++                     else "did not reach the probe page: status " + str(answers["path_info_plain"].get("status"))),
++                  {"parsed": plain, "answer": brief_reading(answers["path_info_plain"])})
++        self.check(f"{label}: a static file of the site is served as it is (200)", answers["static"].get("status") == 200
++                   and "set4 static file" in str(answers["static"].get("body")), brief_reading(answers["static"]))
++        # item 3
++        record = self.site_record(f"{label}-site-record", domain)
++        platform = self.state.get("platform") or {}
++        programs = platform.get("php_fpm_programs") or {}
++        installed = sorted({major_minor(line[0]) for line in programs.values() if line and major_minor(line[0])})
++        pools = [p for p in record["left"].get("pool_files") or [] if p.get("names_the_account")]
++        listen = ((pools[0].get("settings") or {}).get("listen")) if pools else None
++        sockets = {s.get("path"): s for s in record["left"].get("sockets") or []}
++        listed = next((d for d in self.domains_listed() or [] if d.get("domain_name") == domain), {})
++        api_php = {k: v for k, v in listed.items() if "php" in k.lower()}
++        facts = {"installed_php_versions": installed, "php_fpm_programs": programs, "php_version_of_the_page": page["php_version"],
++                 "recorded_php_version": record["php_version"], "recorded_php_fpm_socket": record["php_fpm_socket"],
++                 "domains_list_php_fields": api_php, "pool_file": pools[0].get("path") if pools else None, "pool_listen": listen,
++                 "vhost_fastcgi_pass": passed, "socket": sockets.get(listen) or sockets.get(str(listen).replace("/var/run/", "/run/"))}
++        self.current.setdefault("php_version", {})[label] = facts
++        self.check(f"{label} (item 3): the PHP version recorded for the site is the installed one that runs the page",
++                   bool(record["php_version"]) and record["php_version"] == major_minor(page["php_version"])
++                   and record["php_version"] in installed, facts)
++        name = f"php{record['php_version']}-fpm-"
++        self.check(f"{label} (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the "
++                   "vhost's `fastcgi_pass` and a socket that exists",
++                   bool(record["php_fpm_socket"]) and name in str(record["php_fpm_socket"]) and record["php_fpm_socket"] == listen
++                   and socket_in_vhost == listen and (facts["socket"] or {}).get("kind") == "socket", facts)
++        return {"answers": answers, "probe": probe, "record": record, "listen": listen, "page": page}
++
++    def delete_site(self, label: str, domain: str, domain_id: int, facts: dict | None, with_site: dict) -> None:
++        deleted = self.call(f"{label}: delete the site (Domains page)", "DELETE", f"/api/v1/domains/{domain_id}", timeout=600)
++        gone, seconds, names = self.wait_unlisted(domain)
++        left = self.snap4(f"{label}-leftovers-after-delete", "read-leftovers", domain=domain)
++        answers = self.requests(domain, f"{label}-after-delete")
++        nginx = self.snap4(f"{label}-nginx-after-delete", "read-nginx", domain=domain)
++        units = self.snap2(f"{label}-php-after-delete", "read-php")
++        mine = with_site.get("this_domain") or {}
++        after = {"delete_status": deleted["status"], "delete_answer": deleted.get("answer") or deleted.get("json"),
++                 "no_longer_listed": gone, "listed_after_seconds": seconds,
++                 "domain_rows": (left.get("panel") or {}).get("domains"), "site_rows": (left.get("panel") or {}).get("sites"),
++                 "tables_still_naming_the_domain": (left.get("panel") or {}).get("tables_naming_the_domain"),
++                 "account": left.get("account"), "group": left.get("group"),
++                 "site_home": mine.get("site_home"), "site_home_left": mine.get("site_home") in (left.get("site_directories") or []),
++                 "acme_challenge_root": mine.get("acme_challenge_root"),
++                 "acme_challenge_root_left": mine.get("acme_challenge_root") in (left.get("acme_challenge_directories") or []),
++                 "nginx_files_naming_the_domain": left.get("nginx_files_naming_the_domain"),
++                 "nginx_dump_lines_naming_the_domain": left.get("nginx_dump_lines_naming_the_domain"),
++                 "pool_files_left": left.get("pool_files_of_the_account"),
++                 "socket_left": bool(facts) and any(s.get("path") == facts.get("listen") and s.get("exists") for s in left.get("sockets") or []),
++                 "nginx_test": nginx.get("nginx_test"),
++                 "answers_after": {name: brief_reading(value) for name, value in answers.items()},
++                 "probe_executed_after": parse_probe(answers["probe"])["executed"],
++                 "static_served_after": "set4 static file" in str(answers["static"].get("body")),
++                 "php_fpm_units_after": {name: unit.get("ActiveState") for name, unit in units["units"].items()}}
++        self.current.setdefault("deleted", {})[label] = after
++        self.check(f"{label}: the site is deleted through the Panel and nothing of it is left serving (not listed, no domain "
++                   "or site row, no account, no home, no vhost in nginx, no pool file, no socket, the page and the static "
++                   "file no longer served, `nginx -t` passes)",
++                   deleted["status"] == 200 and gone and not after["domain_rows"] and not after["site_rows"] and after["account"] is None
++                   and not after["site_home_left"] and not after["nginx_files_naming_the_domain"]
++                   and not after["nginx_dump_lines_naming_the_domain"] and not after["pool_files_left"] and not after["socket_left"]
++                   and not after["probe_executed_after"] and not after["static_served_after"]
++                   and (after["nginx_test"] or {}).get("returncode") == 0, after)
++        self.check(f"{label}: PHP-FPM is still active after the delete",
++                   bool(after["php_fpm_units_after"]) and "active" in after["php_fpm_units_after"].values(), after["php_fpm_units_after"])
++        self.note(f"{label}: the certificate-validation directory of the deleted site "
++                  + ("is still there" if after["acme_challenge_root_left"] else "is gone"),
++                  {"path": after["acme_challenge_root"], "left": after["acme_challenge_root_left"],
++                   "tables_still_naming_the_domain": after["tables_still_naming_the_domain"]})
++
++    def m1_php_site(self) -> None:
++        domain = PHP_DOMAIN
++        before = self.snap4("leftovers-before", "read-leftovers", domain=domain)
++        self.current["php_before"] = self.snap2("php-before", "read-php")
++        created = self.call("M1 create a PHP site (POST /api/v1/domains/create, project_type php)", "POST", "/api/v1/domains/create",
++                            {"domain": domain, "project_type": "php", "ssl_type": "none"}, timeout=600)
++        answer = created["_parsed"] if isinstance(created["_parsed"], dict) else {}
++        domain_id = answer.get("DomainID") or answer.get("domain_id")
++        self.check("item 1/8: a PHP site is created through the Panel (200 with the new domain's id)",
++                   created["status"] == 200 and isinstance(domain_id, int), created.get("answer") or answer)
++        if not isinstance(domain_id, int):
++            self.current["nginx_after_the_failed_create"] = self.snap4("nginx-after-failed-create", "read-nginx", domain=domain)
++            self.current["leftovers_after_the_failed_create"] = self.snap4("leftovers-after-failed-create", "read-leftovers", domain=domain)
++            return
++        facts = self.php_facts("php-site", domain, domain_id, "php-site")
++        self.delete_site("php-site", domain, domain_id, facts, facts["record"]["left"])
++        self.current["site_directories_before"] = before.get("site_directories")
++
++    # -- M2 ---------------------------------------------------------------------------------------------------
++
++    def m2_import(self) -> None:
++        self.import_password = self.password()
++        self.redactor.register(base64.b64encode(self.import_password.encode()).decode())
++        fixture = self.import_fixture("s4imp", IMPORT_DOMAIN, "s4imp")
++        self.current["fixture"] = fixture
++        self.state["set4_import_fixture"] = fixture
++        self.preview("set4", fixture)
++        answer = self.post("import: the archive of set3's fixture (POST /api/v1/import/cpanel/apply)", "/api/v1/import/cpanel/apply",
++                           self.import_body(fixture), self._own_identity("import (set4, the set3 fixture)"), 3600)
++        parsed = answer.get("_parsed") if isinstance(answer.get("_parsed"), dict) else {}
++        state = self.imported("import-after", fixture)
++        ok, detail = self.import_complete(fixture, state, answer)
++        steps = parsed.get("steps") or []
++        files_step = next((s for s in steps if s.get("step") == "files"), {})
++        self.current["import"] = {"status": answer.get("status"), "import_status": parsed.get("status"), "code": parsed.get("code"),
++                                  "domain_status": parsed.get("domain_status"), "message": parsed.get("message"),
++                                  "imported": parsed.get("imported"), "not_imported": parsed.get("not_imported"), "steps": steps,
++                                  "native": state["fp"], "answer": answer.get("answer")}
++        self.check("item 2: the import of set3's fixture completes (200, active; the document root's files equal the archive's; "
++                   "the database is on the engine with its rows)", ok, detail)
++        self.check("item 5 (declared deviation): entries of the archive outside the site folder are counted in the files "
++                   "step's line and do not make the import partial",
++                   parsed.get("status") == "active" and "outside the site folder" in str(files_step.get("detail") or ""),
++                   {"import_status": parsed.get("status"), "files_step": files_step})
++        if answer.get("status") != 200 or not state["fp"]["domain_row"]:
++            return
++        root = self.snap4("import-http-root", "read-http", domain=IMPORT_DOMAIN, path="/")
++        index = self.snap4("import-http-index", "read-http", domain=IMPORT_DOMAIN, path="/index.html")
++        expected = (fixture.get("docroot_expected") or {}).get("index.html") or [None, None]
++        self.current["import_served"] = {"root": brief_reading(root), "index": brief_reading(index), "archive_index": expected}
++        self.check("item 2: the imported site serves the archive's own index page through the web server",
++                   index.get("status") == 200 and index.get("body_sha256") == expected[1] and root.get("status") == 200
++                   and root.get("body_sha256") == expected[1], self.current["import_served"])
++        record = self.site_record("import-site-record", IMPORT_DOMAIN)
++        rows = (record["left"].get("panel") or {}).get("domains") or [{}]
++        domain_id = rows[0].get("id")
++        self.current["import_site"] = {"domain_id": domain_id, "project_type": record["project_type"],
++                                       "php_version": record["php_version"], "php_fpm_socket": record["php_fpm_socket"]}
++        if isinstance(domain_id, int) and record["project_type"] == "php":
++            self.php_facts("imported-site", IMPORT_DOMAIN, domain_id, "imported-site")
++        else:
++            self.note("the imported site is not a PHP site, so no PHP page was asked of it", self.current["import_site"])
++
++    # -- M5 ---------------------------------------------------------------------------------------------------
++
++    def m5_import_absolute(self) -> None:
++        if not self.import_password:
++            self.import_password = self.password()
++            self.redactor.register(base64.b64encode(self.import_password.encode()).decode())
++        domain = ABSOLUTE_DOMAIN
++        fixture = self.import_fixture("s4abs", domain, "s4abs", hostile="absolute")
++        self.current["fixture"] = fixture
++        self.preview("absolute", fixture)
++        request = self.import_body(fixture)
++        before = self.imported("absolute-before", fixture)
++        answer = self.post("import: an archive with a member named by an absolute path", "/api/v1/import/cpanel/apply", request,
++                           self._own_identity("import (set4, absolute member)"), 3600)
++        state = self.imported("absolute-after", fixture)
++        parsed = answer.get("_parsed") if isinstance(answer.get("_parsed"), dict) else {}
++        steps = parsed.get("steps") or []
++        members = [s for s in steps if str(s.get("step") or "").startswith("member")]
++        files_step = next((s for s in steps if s.get("step") == "files"), {})
++        should_in, should_out = rid.partial_lists(steps)
++        hostile = [m.get("name") for m in fixture.get("hostile_members") or []]
++        message = str(parsed.get("message") or "")
++        record = {"request": {k: request[k] for k in ("do_files", "do_mail", "do_dns", "do_databases")},
++                  "hostile_members": fixture.get("hostile_members"), "status": answer.get("status"),
++                  "import_status": parsed.get("status"), "code": parsed.get("code"), "domain_status": parsed.get("domain_status"),
++                  "message": parsed.get("message"), "imported": parsed.get("imported"), "not_imported": parsed.get("not_imported"),
++                  "steps": steps, "member_steps": members, "files_step": files_step, "native": state["fp"],
++                  "docroot_files": sorted(state.get("file_list") or {}), "archive_files": sorted(fixture.get("docroot_expected") or {}),
++                  "entries_outside": state.get("escapes"), "entries_outside_before": before.get("escapes"),
++                  "answer_keys": sorted(parsed), "catalogue_texts": self.texts(
++                      ("import.detail.absoluteMember", "import.partial.entriesBody", "import.partial.entriesNext",
++                       "import.part.member", "import.part.moreMembers"), {"domain": domain, "name": (hostile or [""])[0]})}
++        self.current["absolute"] = record
++        self.check("item 5: the member named by an absolute path is listed in the import result as a step of its own "
++                   "(`member:<name>`, not ok) with the documented reason",
++                   any(s.get("step") == "member:" + name and s.get("ok") is False and s.get("detail") == MEMBER_DETAIL
++                       for s in members for name in hostile), {"member_steps": members, "expected_detail": MEMBER_DETAIL})
++        self.check("item 5: the import answers 200 with status `partial`", answer.get("status") == 200 and parsed.get("status") == "partial",
++                   {k: record[k] for k in ("status", "import_status", "code", "domain_status")})
++        self.check("item 5 (declared deviation): a result that misses only refused entries keeps `domain_status: active`, and "
++                   "the domain's row is `active`", parsed.get("domain_status") == "active" and state["fp"]["status"] == "active",
++                   {"domain_status": parsed.get("domain_status"), "domain_row_status": state["fp"]["status"]})
++        self.check("item 5: `imported` and `not_imported` are the steps' own results; the member is in `not_imported` and "
++                   "every chosen part is in `imported`",
++                   parsed.get("imported") == should_in and parsed.get("not_imported") == should_out
++                   and any(str(name).startswith("member:") for name in parsed.get("not_imported") or [])
++                   and {"domain", "files"} <= set(parsed.get("imported") or []),
++                   {"imported": parsed.get("imported"), "not_imported": parsed.get("not_imported"), "from_the_steps": [should_in, should_out]})
++        self.check("item 5: the message is the documented one (every chosen part imported, the domain in service, the "
++                   "entries refused by their names)",
++                   message.startswith(PARTIAL_HEAD.replace("{domain}", domain)) and message.endswith(PARTIAL_TAIL.replace("{domain}", domain)),
++                   {"message": message})
++        mail_ok = (not request["do_mail"]) or state["fp"]["mailboxes"] == ["info@" + domain]
++        self.check("item 5: the rest is imported: the document root's files equal the archive's site files, the database is on "
++                   "the engine with its rows" + (", the mailbox exists" if request["do_mail"] else ""),
++                   (state.get("file_list") or {}) == fixture.get("docroot_expected") and not state.get("non_regular")
++                   and state["fp"]["database_on_engine"] and state["fp"]["rows"] == str(rid.IMPORT_ROWS) and mail_ok, record["native"])
++        self.check("item 5: nothing was written for the member anywhere on the server", state.get("escapes") == [] and before.get("escapes") == [],
++                   {"entries_outside": state.get("escapes")})
++        index = self.snap4("absolute-http-index", "read-http", domain=domain, path="/index.html")
++        expected = (fixture.get("docroot_expected") or {}).get("index.html") or [None, None]
++        self.check("item 5: the imported site serves the archive's index page", index.get("status") == 200
++                   and index.get("body_sha256") == expected[1], brief_reading(index))
++
++    # -- M4 ---------------------------------------------------------------------------------------------------
++
++    def m4_reload_stopped(self) -> None:
++        for service in ("nginx", "mariadb", "postgresql"):
++            units = [u for u in self.service_units()[service]]
++            first = self.snap4(f"{service}-units-at-start", "read-units", units=units)
++            loaded = [u for u in units if (first["units"].get(u) or {}).get("LoadState") == "loaded"]
++            stopped = self.service_action(service, "stop", "set4, before the reload")
++            how = "the Panel's Stop"
++            if stopped["daemon_after"]["running"]:
++                real = stopped["daemon_after"]["real_unit"] or loaded[-1]
++                self.owner(f"{service}-owner-stop", "owner-systemctl", action="stop", unit=real)
++                how = f"`systemctl stop {real}` by the owner on the server (the Panel's Stop left it running)"
++            time.sleep(2)
++            t0 = self.guest_clock()
++            time.sleep(1.2)
++            before = self.snap4(f"{service}-stopped-before-reload", "read-units", units=loaded)
++            answer = self.service_action(service, "reload", "while stopped", sw.NOT_RUNNING)
++            time.sleep(2)
++            after = self.snap4(f"{service}-after-refused-reload", "read-units", units=loaded, since_epoch=int(t0))
++            same = {u: {k: [before["units"][u].get(k), after["units"][u].get(k)] for k in (
++                        "ActiveState", "SubState", "InvocationID", "StateChangeTimestamp", "ActiveEnterTimestamp",
++                        "InactiveEnterTimestamp", "ExecMainStartTimestamp", "ExecReload", "NRestarts", "MainPID")} for u in loaded}
++            unchanged = all(pair[0] == pair[1] for unit in same.values() for pair in unit.values())
++            journal = after.get("journal") or {}
++            record = {"service": service, "stopped_by": how, "units": loaded, "since": after.get("since_epoch"),
++                      "answer": {k: answer.get(k) for k in ("status", "code", "reason", "vars", "answer")},
++                      "state_before": before.get("is_active"), "state_after": after.get("is_active"),
++                      "unit_properties_before_and_after": same, "unit_properties_unchanged": unchanged,
++                      "journal_of_the_units_since": journal, "journal_of_systemd_about_them_since": after.get("journal_systemd_manager"),
++                      "journal_of_the_product_since": after.get("journal_product")}
++            self.current.setdefault("reloads", {})[service] = record
++            self.keep_text(f"journal/{service}-since-the-refused-reload.txt", "\n".join(
++                [f"##### {u} (journalctl -u {u} --since @{after.get('since_epoch')})\n" + ("\n".join(journal.get(u) or []) or "(no lines)")
++                 for u in loaded] + ["##### systemd (PID 1) lines naming the unit\n" + ("\n".join(after.get("journal_systemd_manager") or []) or "(no lines)"),
++                                     "##### celikpanel-agent.service and celikpanel-panel.service\n" + ("\n".join(after.get("journal_product") or []) or "(no lines)")]))
++            self.check(f"item 4 ({service}): the unit was stopped before the reload was asked",
++                       not answer["daemon_before"]["running"] and all(v in ("inactive", "failed") for v in (before.get("is_active") or {}).values()),
++                       {"stopped_by": how, "is_active": before.get("is_active"), "daemon": answer["daemon_before"]["running"]})
++            self.check(f"item 4 ({service}): the journal shows nothing was sent to the unit: no line of the unit and no line of "
++                       "systemd about it since the reload was asked, and systemd's own record of the unit is unchanged",
++                       all(not journal.get(u) for u in loaded) and not after.get("journal_systemd_manager") and unchanged
++                       and all(v in ("inactive", "failed") for v in (after.get("is_active") or {}).values()), record)
++            started = self.service_action(service, "start", "after the refused reload")
++            self.check(f"item 4 ({service}): Start brings the service back afterwards", started["daemon_after"]["running"],
++                       {k: started[k] for k in ("status", "code", "reason", "answer")})
++
++    # -- M10 --------------------------------------------------------------------------------------------------
++
++    def m10_postfix_stop(self) -> None:
++        units = ["postfix.service", "postfix@-.service"]
++        first = self.snap4("postfix-units-at-start", "read-units", units=units)
++        loaded = [u for u in units if (first["units"].get(u) or {}).get("LoadState") == "loaded"]
++        base_text = self.snap("postfix-main.cf-before-typo", "read-file", path=sw.MAIN_CF)["file"]["text"]
++        situation = "main.cf holds a line Postfix refuses"
++        note, stopped, after, later = None, None, {}, {}
++        try:
++            self.owner("postfix-typo-main-cf", "owner-edit", path=sw.MAIN_CF, content_b64=sw.b64(sw.add_line(base_text, sw.MAIN_CF_TYPO)))
++            refused = self.postfix("postfix-with-typo")
++            self.check("item 10: `postfix check` refuses main.cf (the owner's line)",
++                       True if refused["check"].get("returncode") not in (0, None) else None, refused["check"])
++            before = self.snap4("postfix-units-before-stop", "read-units", units=loaded)
++            t0 = self.guest_clock()
++            time.sleep(1.2)
++            stopped = self.service_action("postfix", "stop", situation)
++            entry = [c for c in self.current["calls"] if c["label"].startswith("S8 postfix stop")][-1]
++            body = entry.get("_parsed") if isinstance(entry.get("_parsed"), dict) else (entry.get("json") or {})
++            note = body.get("note") if isinstance(body, dict) else None
++            after = self.snap4("postfix-units-after-stop", "read-units", units=loaded, since_epoch=int(t0))
++            time.sleep(8)
++            later = self.snap4("postfix-units-8s-after-stop", "read-units", units=loaded, since_epoch=int(t0))
++            failed_before = [u for u in loaded if (before.get("is_active") or {}).get(u) == "failed"]
++            failed_after = [u for u in loaded if (after.get("is_active") or {}).get(u) == "failed"]
++            failed_later = [u for u in loaded if (later.get("is_active") or {}).get(u) == "failed"]
++            product = "\n".join((later.get("journal_product") or []))
++            variables = (note or {}).get("vars") or {} if isinstance(note, dict) else {}
++            record = {"status": stopped["status"], "answer": body, "note": note, "units_before": before.get("is_active"),
++                      "units_after": after.get("is_active"), "units_8s_later": later.get("is_active"),
++                      "unit_results_after": {u: (after["units"].get(u) or {}).get("Result") for u in loaded},
++                      "failed_before": failed_before, "failed_after": failed_after, "failed_8s_later": failed_later,
++                      "master_running_after": stopped["daemon_after"]["running"],
++                      "reset_failed_in_the_product_journal": "reset-failed" in product,
++                      "journal_of_the_units_since": later.get("journal"),
++                      "documented_sentence_for_the_reason": NOTE_SENTENCES.get((note or {}).get("reason") if isinstance(note, dict) else None),
++                      "catalogue_texts": self.texts(("services.action.note.unit_marked_failed", "services.action.note.unit_marked_failed_config"),
++                                                    variables)}
++            self.current["postfix_stop"] = record
++            self.keep_text("journal/postfix-since-the-stop.txt", "\n".join(
++                [f"##### {u}\n" + ("\n".join((later.get("journal") or {}).get(u) or []) or "(no lines)") for u in loaded]
++                + ["##### celikpanel-agent.service and celikpanel-panel.service\n" + (product or "(no lines)")]))
++            self.check("item 10: Stop answers 200 success and the master is gone",
++                       stopped["status"] == 200 and stopped["said"] == "success" and not stopped["daemon_after"]["running"],
++                       {k: stopped[k] for k in ("status", "code", "reason", "answer")})
++            self.check("item 10: the unit ended `failed`, which it was not before the stop (set3's observation)",
++                       bool(failed_after) and not failed_before, {k: record[k] for k in ("units_before", "units_after", "unit_results_after")})
++            self.check("item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or "
++                       "`unit_marked_failed_config`",
++                       isinstance(note, dict) and note.get("code") == "SERVICE_ACTION_NOTE"
++                       and note.get("reason") in ("unit_marked_failed", "unit_marked_failed_config"), note)
++            self.check("item 10: the note names the failed unit systemd shows as failed, its result and the command "
++                       "`sudo systemctl reset-failed <failed_unit>`",
++                       isinstance(note, dict) and variables.get("failed_unit") in failed_after
++                       and variables.get("command") == "sudo systemctl reset-failed " + str(variables.get("failed_unit"))
++                       and bool(variables.get("result")) and bool(variables.get("unit")), variables)
++            self.check("item 10: the note's sentence is the documented one for its reason",
++                       isinstance(note, dict) and note.get("error") == NOTE_SENTENCES.get(note.get("reason")),
++                       {"error": (note or {}).get("error") if isinstance(note, dict) else None})
++            self.check("item 10: no `reset-failed` was issued: the unit is still `failed` after the answer and 8 seconds later, "
++                       "and the product's journal names no reset-failed",
++                       bool(failed_after) and failed_later == failed_after and not record["reset_failed_in_the_product_journal"],
++                       {k: record[k] for k in ("failed_after", "failed_8s_later", "reset_failed_in_the_product_journal")})
++        finally:
++            self.owner("postfix-typo-removed", "owner-edit", path=sw.MAIN_CF, content_b64=sw.b64(base_text))
++        started = self.service_action("postfix", "start", "after the owner's correction")
++        end = self.snap4("postfix-units-after-start", "read-units", units=loaded)
++        mail = self.smtp("postfix-smtp-end")
++        self.current["postfix_start"] = {"status": started["status"], "answer": started["answer"], "units": end.get("is_active"),
++                                         "master_running": started["daemon_after"]["running"]}
++        self.check("item 10: after main.cf is restored, Start answers success, the master runs and no unit is `failed`",
++                   started["status"] == 200 and started["said"] == "success" and started["daemon_after"]["running"]
++                   and "failed" not in (end.get("is_active") or {}).values(), self.current["postfix_start"])
++        self.check("item 10: mail is accepted on 25 and 587 answers at the end", mail["25"].get("ok") and mail["587"].get("ok"), mail)
++
++    # -- M6 ---------------------------------------------------------------------------------------------------
++
++    def refused_reading(self, key: str, domain: str, what: str) -> dict:
++        before = self.snap4(f"{key}-leftovers-before", "read-leftovers", domain=domain)
++        nginx_before = self.snap4(f"{key}-nginx-unit-before", "read-units", units=["nginx.service"])
++        t0 = self.guest_clock()
++        time.sleep(1.2)
++        answer = self.call(f"M6 ({key}) create a PHP site ({what})", "POST", "/api/v1/domains/create",
++                           {"domain": domain, "project_type": "php", "ssl_type": "none"}, timeout=600)
++        parsed = answer["_parsed"] if isinstance(answer["_parsed"], dict) else {}
++        after = self.snap4(f"{key}-leftovers-after", "read-leftovers", domain=domain)
++        nginx_after = self.snap4(f"{key}-nginx-unit-after", "read-units", units=["nginx.service"], since_epoch=int(t0))
++        listed = [d.get("domain_name") for d in self.domains_listed() or []]
++        panel_b, panel_a = before.get("panel") or {}, after.get("panel") or {}
++        new_site_dirs = sorted(set(after.get("site_directories") or []) - set(before.get("site_directories") or []))
++        new_acme_dirs = sorted(set(after.get("acme_challenge_directories") or []) - set(before.get("acme_challenge_directories") or []))
++        new_sockets = sorted({s.get("path") for s in after.get("sockets") or []} - {s.get("path") for s in before.get("sockets") or []})
++        reason = parsed.get("reason")
++        native = {"vhost_files_naming_the_domain": after.get("nginx_files_naming_the_domain"),
++                  "nginx_dump_lines_naming_the_domain": after.get("nginx_dump_lines_naming_the_domain"),
++                  "pool_files_of_the_account": after.get("pool_files_of_the_account"), "new_sockets": new_sockets,
++                  "system_account": after.get("account"), "system_group": after.get("group"),
++                  "processes_of_the_account": after.get("processes_of_the_account"),
++                  "new_site_directories": new_site_dirs, "domain_rows": panel_a.get("domains"), "site_rows": panel_a.get("sites"),
++                  "row_counts": [panel_b.get("row_counts"), panel_a.get("row_counts")],
++                  "autoincrement": [panel_b.get("autoincrement"), panel_a.get("autoincrement")],
++                  "tables_naming_the_domain": panel_a.get("tables_naming_the_domain"),
++                  "new_acme_challenge_directories": new_acme_dirs, "listed_in_domains": domain in listed,
++                  "nginx_test_after": after.get("nginx_test"),
++                  "nginx_unit": {k: [(nginx_before["units"]["nginx.service"]).get(k), (nginx_after["units"]["nginx.service"]).get(k)]
++                                 for k in ("ActiveState", "MainPID", "InvocationID", "ExecReload")},
++                  "nginx_journal_since": (nginx_after.get("journal") or {}).get("nginx.service"),
++                  "product_journal_since": nginx_after.get("journal_product")}
++        removed_true = {"its web server configuration": not native["vhost_files_naming_the_domain"] and not native["nginx_dump_lines_naming_the_domain"],
++                        "its system account": native["system_account"] is None and not native["system_group"],
++                        "its files": not new_site_dirs,
++                        "its PHP pool": not native["pool_files_of_the_account"] and not new_sockets,
++                        "the domain and site rows": not native["domain_rows"] and not native["site_rows"] and not native["listed_in_domains"]}
++        record = {"domain": domain, "what_made_nginx_refuse": what, "status": answer["status"], "code": parsed.get("code"),
++                  "reason": reason, "vars": parsed.get("vars"), "details": parsed.get("details"), "error": parsed.get("error"),
++                  "answer_keys": sorted(parsed), "documented_sentence_for_the_reason": refused_sentence(str(reason), domain),
++                  "error_equals_the_documented_sentence": parsed.get("error") == refused_sentence(str(reason), domain),
++                  "native": native, "what_the_removed_answer_claims_and_whether_it_is_true": removed_true,
++                  "not_claimed_by_the_answer": {"the certificate-validation directory": new_acme_dirs},
++                  "catalogue_texts": self.texts(("domains.add.webServerRefused.removed", "domains.add.webServerRefused.unconfirmed"),
++                                                parsed.get("vars") or {"domain": domain, "command": "sudo nginx -t"})}
++        self.current.setdefault("refused", {})[key] = record
++        self.keep_text(f"journal/{key}-nginx-and-product-since-the-request.txt", "\n".join(
++            ["##### nginx.service"] + (native["nginx_journal_since"] or ["(no lines)"])
++            + ["##### celikpanel-agent.service and celikpanel-panel.service"] + (native["product_journal_since"] or ["(no lines)"])))
++        return record
++
++    def judge_refused(self, key: str, record: dict) -> None:
++        self.check(f"item 6 ({key}): the answer is 502 SITE_WEB_SERVER_REFUSED with a reason",
++                   record["status"] == 502 and record["code"] == "SITE_WEB_SERVER_REFUSED"
++                   and record["reason"] in ("removed", "cleanup_unconfirmed"),
++                   {k: record[k] for k in ("status", "code", "reason", "vars", "details")})
++        self.check(f"item 6 ({key}): `vars` are the domain and `sudo nginx -t`, `details` is one line of nginx's own, and the "
++                   "sentence is the documented one for the reason",
++                   (record["vars"] or {}).get("domain") == record["domain"] and (record["vars"] or {}).get("command") == "sudo nginx -t"
++                   and isinstance(record["details"], list) and len(record["details"]) == 1 and record["error_equals_the_documented_sentence"],
++                   {k: record[k] for k in ("vars", "details", "error", "error_equals_the_documented_sentence")})
++        claims = record["what_the_removed_answer_claims_and_whether_it_is_true"]
++        if record["reason"] == "removed":
++            self.check(f"item 6 ({key}): what the answer says was removed is gone on the guest (vhost, system account, files, "
++                       "PHP pool) and no domain or site row is left; it claims no more than is true",
++                       all(claims.values()), {"claims": claims, "native": record["native"]})
++        elif record["reason"] == "cleanup_unconfirmed":
++            self.check(f"item 6 ({key}): the answer does not claim a removal (cleanup_unconfirmed); what is left is recorded",
++                       True, {"left": {name: not gone for name, gone in claims.items()}, "native": record["native"]})
++        unit = record["native"]["nginx_unit"]
++        self.check(f"item 6 ({key}): nginx still runs as the same process after the refusal (reloaded, not restarted) and "
++                   "`nginx -t` passes", unit["ActiveState"] == ["active", "active"] and unit["MainPID"][0] == unit["MainPID"][1]
++                   and (record["native"]["nginx_test_after"] or {}).get("returncode") == 0,
++                   {"nginx_unit": unit, "nginx_test_after": record["native"]["nginx_test_after"]})
++        self.note(f"item 6 ({key}): the certificate-validation directory the Agent prepared for the refused site "
++                  + ("is left on the server; the answer does not mention it" if record["not_claimed_by_the_answer"]["the certificate-validation directory"]
++                     else "is not on the server"), record["not_claimed_by_the_answer"])
++
++    def m6_site_refused(self) -> None:
++        # Reading A: the owner, tidying /etc/nginx by hand, renamed nginx's own fastcgi.conf. The configuration in
++        # service does not read that file, so `nginx -t` still passes; the vhost of a new PHP site names it.
++        moved = None
++        try:
++            moved = self.owner4("nginx-fastcgi-conf-moved-away", "owner-nginx-file", action="move-away")
++            passes = (moved["after"]["nginx_test"] or {}).get("returncode") == 0
++            self.current["owner_moved_fastcgi_conf"] = {"path": moved.get("path"), "moved_to": moved.get("moved_to"),
++                                                        "nginx_test_before": moved["before"]["nginx_test"],
++                                                        "nginx_test_after_the_move": moved["after"]["nginx_test"]}
++            self.check("item 6 (owner-moved-file): after the owner moved /etc/nginx/fastcgi.conf away, `nginx -t` still passes "
++                       "(the refusal can only come with a new vhost)", passes, self.current["owner_moved_fastcgi_conf"])
++            if passes:
++                record = self.refused_reading("owner-moved-file", REFUSED_DOMAIN,
++                                              "the owner renamed nginx's own /etc/nginx/fastcgi.conf, which the generated PHP vhost includes")
++                self.judge_refused("owner-moved-file", record)
++        finally:
++            if moved is not None:
++                restored = self.owner4("nginx-fastcgi-conf-restored", "owner-nginx-file", action="restore")
++                self.check("item 6 (owner-moved-file): the owner put the file back and `nginx -t` passes",
++                           (restored["after"]["nginx_test"] or {}).get("returncode") == 0, restored["after"])
++        again = self.call("M6 (owner-moved-file) create the same site again after the owner's correction", "POST",
++                          "/api/v1/domains/create", {"domain": REFUSED_DOMAIN, "project_type": "php", "ssl_type": "none"}, timeout=600)
++        body = again["_parsed"] if isinstance(again["_parsed"], dict) else {}
++        again_id = body.get("DomainID") or body.get("domain_id")
++        self.check("item 6 (owner-moved-file): after the correction the same site is created (200), as the sentence says",
++                   again["status"] == 200 and isinstance(again_id, int), again.get("answer") or body)
++        if isinstance(again_id, int):
++            with_site = self.snap4("refused-again-leftovers-with-site", "read-leftovers", domain=REFUSED_DOMAIN)
++            self.delete_site("refused-again", REFUSED_DOMAIN, again_id, None, with_site)
++        # Reading B: no owner action at all; a long site name. Whether nginx refuses it is the observation.
++        record = self.refused_reading("long-site-name", LONG_DOMAIN,
++                                      f"no owner action; the site name has {len(LONG_DOMAIN)} characters")
++        if record["status"] == 200:
++            created = self.snap4("long-site-name-leftovers-with-site", "read-leftovers", domain=LONG_DOMAIN)
++            rows = (created.get("panel") or {}).get("domains") or [{}]
++            self.note("item 6 (long-site-name): nginx accepted the vhost of the long site name; the site was created (200) "
++                      "and is deleted again", {"domain_id": rows[0].get("id")})
++            if isinstance(rows[0].get("id"), int):
++                self.delete_site("long-site-name", LONG_DOMAIN, rows[0]["id"], None, created)
++        elif record["status"] == 502:
++            self.judge_refused("long-site-name", record)
++        else:
++            self.note("item 6 (long-site-name): the request was answered neither 200 nor 502; recorded as it is",
++                      {k: record[k] for k in ("status", "code", "reason", "error")})
++
++    # -- run --------------------------------------------------------------------------------------------------
++
++    def execute(self) -> dict:
++        self.step("preflight", self.preflight)
++        self.step("origin", self.origin, needs=("preflight",))
++        self.step("baseline-install", self.baseline_install, needs=("origin",))
++        self.step("owner-login", self.owner_login, needs=("baseline-install",))
++        self.step("license", self.license, needs=("owner-login",))
++        self.step("setup", self.setup, needs=("license",))
++        self.step("site", self.site, needs=("setup",))
++        functions = {"M0-prepare": self.m0_prepare, "M1-php-site": self.m1_php_site, "M2-import": self.m2_import,
++                     "M5-import-absolute": self.m5_import_absolute, "M10-postfix-stop": self.m10_postfix_stop,
++                     "M4-reload-stopped": self.m4_reload_stopped, "M6-site-refused": self.m6_site_refused}
++        for key, title, only in SECTIONS:
++            if only == "mail" and not self.settings.mail:
++                self.step(key, lambda checks: checks.update(reason="mail is not supported on this platform") or "skipped")
++                self.sections[key] = {"title": title, "verdict": "not-run", "reason": "mail is not supported on this platform"}
++                continue
++            if key == "M0-prepare":
++                self.section(key, title, functions[key], needs=("site",))
++            else:
++                # Every later section needs the site and the isolation of M0 to have been applied (not to have passed
++                # every check of M0: a digest that differs must not stop the measurement).
++                if self.state.get("subscription_id") is None:
++                    self.step(key, lambda checks: checks.update(reason="M0 did not establish the subscription") or "not-run")
++                else:
++                    self.section(key, title, functions[key], needs=("site",))
++            self.sections.setdefault(key, {"title": title, "verdict": "not-run", "reason": "an earlier step did not pass"})
++        self.step("collect", self.collect)
++        self.tunnel.close()
++        verdicts = [s["verdict"] for s in self.steps]
++        result = {"schema": base.RESULT_SCHEMA, "cell_kind": CELL_KIND, "native_evidence": False,
++                  "cell": dataclasses.asdict(self.settings),
++                  "identity": {k: self.identity[k] for k in ("cell_id", "node", "vm_uuid")},
++                  "request_id": None, "provenance": base.provenance_for("good"),
++                  "artifacts": {"baseline": {k: self.artifacts["baseline"][k] for k in ("version", "commit", "sha256")}},
++                  "outcome": {"classification": "set4-measured", "final_status": None},
++                  "setup": {"purpose": self.settings.purpose, "components": sorted(self.settings.components),
++                            "waiting": self.state.get("setup_waiting")},
++                  "site": {k: self.state.get(k) for k in ("domain_id", "site_user", "mailbox", "subscription_id")},
++                  "sections": self.sections, "findings": self.state["findings"],
++                  "steps": [{k: s.get(k) for k in ("name", "verdict", "reason", "started_at", "finished_at")} for s in self.steps],
++                  "overall": base.overall(verdicts),
++                  "note": "set4: observations for the owner's review; no update is started and no P0 row is judged."}
++        self.step_dir = "result"
++        return self.ev.finalize_upd1(result)
++
++
++# ---------------------------------------------------------------------------
++# Update cells (items 9 and 12)
++# ---------------------------------------------------------------------------
++
++class Set4UpdateTrial(Native4, base.Trial):
++    def upload_helpers(self) -> dict:
++        helpers = super().upload_helpers()
++        for name in (rid.HELPER, HELPER4):
++            helpers[name] = self.lab.put_file(self.root, self.record, self.plan, self.node_name, HERE / name, name)[1]
++        return helpers
++
++    def keep4(self, label: str, mode: str, **arguments: Any) -> dict:
++        value = self.native4(mode, **arguments)
++        self.state["set4_n"] = self.state.get("set4_n", 0) + 1
++        self.record_json(f"native/{self.state['set4_n']:03d}-{label}.json", value)
++        return value
++
++    def step(self, name: str, function, *, needs: tuple = ()) -> str:
++        # The two added steps: after the seed and before the pre-update state is taken; and before the collection.
++        if name == "pre-state" and self.cell.variant == "good":
++            super().step("set4-php-site-before-the-update", self.php_before, needs=("seed",))
++        if name == "collect":
++            if self.cell.variant == "good":
++                super().step("set4-php-site-after-the-update", self.php_after, needs=("terminal", "set4-php-site-before-the-update"))
++            elif self.cell.variant in base.ROLLBACK_VARIANTS:
++                super().step("set4-update-check-after-the-return", self.update_check_after_return, needs=("terminal",))
++        return super().step(name, function, needs=needs)
++
++    def reading(self, domain: str, when: str) -> dict:
++        answers = self.ask(domain, lambda name, mode, **arguments: self.keep4(f"http-{when}-{name}", mode, **arguments))
++        nginx = self.keep4(f"nginx-{when}", "read-nginx", domain=domain)
++        vhost = vhost_of(nginx) or {}
++        self.ev.write_text(f"{self.step_dir}/native-text/vhost-{when}.conf.txt", vhost.get("text") or "(no vhost file names the domain)")
++        return {"answers": answers, "nginx_test": nginx.get("nginx_test"),
++                "vhost": {k: vhost.get(k) for k in ("path", "sha256", "bytes", "includes", "names_the_php_snippet",
++                                                    "fastcgi_pass", "php_location_lines")},
++                "nginx_unit": {k: (nginx.get("unit") or {}).get(k) for k in ("ActiveState", "MainPID", "InvocationID")}}
++
++    def php_before(self, checks: dict) -> str:
++        """Item 9, before the update: the installed baseline creates a PHP site; its vhost names the snippet."""
++        domain = UPDATE_PHP_DOMAIN
++        version = self.api("GET", "/api/v1/panel/version", purpose="version before the PHP site is created")
++        checks["panel_version"] = version.json()
++        platform = self.keep4("platform", "read-platform")
++        snippet = platform.get("nginx_php_snippet") or {}
++        checks["platform"] = {k: platform.get(k) for k in ("os_release", "packages", "nginx_version", "php_fpm_programs")}
++        checks["nginx_php_snippet"] = {"sha256": snippet.get("sha256"), "exists": snippet.get("exists"),
++                                       "pinned_in_the_product_test": pinned_snippet_sha256(),
++                                       "owner_package": snippet.get("owner_package")}
++        response = self.api("POST", "/api/v1/domains/create", {"domain": domain, "project_type": "php", "ssl_type": "none"},
++                            purpose="set4: a PHP site created by the installed baseline", timeout=600)
++        body = response.json() or {}
++        domain_id = body.get("DomainID") or body.get("domain_id")
++        checks["create"] = {"http": response.status, "body": body}
++        if response.status != 200 or not isinstance(domain_id, int):
++            raise base.StepFailed(f"the baseline did not create the PHP site: HTTP {response.status}")
++        probe = self.keep4("owner-php-probe", "owner-php-probe", domain_id=domain_id)
++        reading = self.reading(domain, "before-the-update")
++        page = parse_probe(reading["answers"]["probe"])
++        record = self.keep4("leftovers-before-the-update", "read-leftovers", domain=domain)
++        site = ((record.get("panel") or {}).get("sites") or [{}])[0]
++        self.state["set4_php"] = {"domain": domain, "domain_id": domain_id, "before": reading, "site_account": probe.get("site_account")}
++        checks.update(domain=domain, domain_id=domain_id, owner_action="the owner uploaded set4-probe.php and set4-static.txt",
++                      site_account=probe.get("site_account"), probe=page, vhost=reading["vhost"], nginx_test=reading["nginx_test"],
++                      recorded={"php_version": site.get("php_version"), "php_fpm_socket": site.get("php_fpm_socket")},
++                      answers={name: brief_reading(value) for name, value in reading["answers"].items()})
++        failures = []
++        if not page["executed"] or page["runs_as"] != probe.get("site_account"):
++            failures.append("the PHP page was not executed as the site's account before the update")
++        if reading["vhost"].get("names_the_php_snippet") is not True:
++            failures.append("the baseline's vhost does not name snippets/fastcgi-php.conf (the precondition of item 9)")
++        if (reading["nginx_test"] or {}).get("returncode") != 0:
++            failures.append("`nginx -t` does not pass before the update")
++        if failures:
++            raise base.StepFailed("; ".join(failures))
++        return "passed"
++
++    def php_after(self, checks: dict) -> str:
++        """Item 9, after the verified update: the same requests; one Panel action that renders the vhost again (the
++        site's General settings saved with the values the Panel shows); the same requests once more."""
++        seen = self.state["set4_php"]
++        domain, domain_id, before = seen["domain"], seen["domain_id"], seen["before"]
++        version = self.api("GET", "/api/v1/panel/version", purpose="version after the update")
++        checks["panel_version"] = version.json()
++        untouched = self.reading(domain, "after-the-update-before-the-save")
++        general = self.api("GET", f"/api/v1/domains/{domain_id}/general", purpose="DomainGeneralSettings read")
++        shown = general.json() if general.status == 200 else {}
++        sent = {"document_root": (shown or {}).get("document_root"), "web_server": (shown or {}).get("web_server") or "nginx",
++                "redirect_www": bool((shown or {}).get("redirect_www"))}
++        saved = self.api("POST", f"/api/v1/domains/{domain_id}/general", sent, purpose="DomainGeneralSettings save (renders the vhost again)",
++                         timeout=300)
++        checks["render_action"] = {"what": "POST /api/v1/domains/{id}/general with the values GET /api/v1/domains/{id}/general "
++                                           "answered (the site's General settings saved unchanged); "
++                                           "cmd/panel/domain_general_handlers.go updateDomainGeneralSettings applies the vhost",
++                                   "read_http": general.status, "shown": shown, "sent": sent, "http": saved.status, "body": saved.json()}
++        after = self.reading(domain, "after-the-save")
++        page = parse_probe(after["answers"]["probe"])
++        location = after["vhost"].get("php_location_lines") or []
++        compare_untouched = same_answers(before["answers"], untouched["answers"])
++        compare = same_answers(before["answers"], after["answers"])
++        checks.update(domain=domain, domain_id=domain_id,
++                      vhost_before_the_update=before["vhost"], vhost_after_the_update_before_the_save=untouched["vhost"],
++                      vhost_after_the_save=after["vhost"], nginx_test_after_the_update=untouched["nginx_test"],
++                      nginx_test_after_the_save=after["nginx_test"],
++                      vhost_file_changed_by_the_update_itself=before["vhost"].get("sha256") != untouched["vhost"].get("sha256"),
++                      vhost_file_changed_by_the_save=untouched["vhost"].get("sha256") != after["vhost"].get("sha256"),
++                      answers_before_the_update_and_after_it=compare_untouched, answers_before_the_update_and_after_the_save=compare,
++                      probe_after_the_save=page,
++                      answers_after_the_save={name: brief_reading(value) for name, value in after["answers"].items()})
++        failures = []
++        if saved.status != 200:
++            failures.append(f"the General settings save answered HTTP {saved.status}")
++        if (after["nginx_test"] or {}).get("returncode") != 0:
++            failures.append("`nginx -t` does not pass after the vhost was rendered again")
++        if after["vhost"].get("names_the_php_snippet") is not False or location[:6] != SIX_DIRECTIVES:
++            failures.append("the vhost rendered by the candidate still names the snippet, or its PHP location is not the six directives")
++        if untouched["vhost"].get("sha256") == after["vhost"].get("sha256"):
++            failures.append("the save did not change the vhost file (nothing was rendered again)")
++        if not page["executed"] or page["runs_as"] != seen["site_account"]:
++            failures.append("the PHP page is not executed as the site's account after the save")
++        different = [name for name, value in compare.items() if not value["equal"]]
++        if different:
++            failures.append("answers differ from before the update: " + ", ".join(different))
++        different_untouched = [name for name, value in compare_untouched.items() if not value["equal"]]
++        if different_untouched:
++            failures.append("answers differ right after the update, before any save: " + ", ".join(different_untouched))
++        if failures:
++            raise base.StepFailed("; ".join(failures))
++        return "passed"
++
++    def update_check_after_return(self, checks: dict) -> str:
++        """Item 12: after the automatic return, what the update check answers about the offered version (the data the
++        card's notice above Start is built from), and what the served web build holds for it."""
++        check = self.api("GET", "/api/v1/panel/update/check", purpose="set4: update check after the automatic return")
++        version = self.api("GET", "/api/v1/panel/version", purpose="set4: version after the automatic return")
++        body = check.json() if check.status == 200 else None
++        checks["update_check"] = {"http": check.status, "body": check.json(), "raw_sha256": hashlib.sha256(check.body).hexdigest(),
++                                  "raw_bytes": len(check.body)}
++        self.ev.write_text(f"{self.step_dir}/update-check-raw.json.txt", check.text)
++        checks["version"] = {"http": version.status, "body": version.json()}
++        attempt = (body or {}).get("previous_attempt") if isinstance(body, dict) else None
++        target = (body or {}).get("target") if isinstance(body, dict) else None
++        checks["previous_attempt"] = attempt
++        served = self.keep4("served-web-build", "read-spa", needles=list(CARD_NEEDLES))
++        checks["served_web_build"] = served
++        english = self.translator.catalog["en"]
++        checks["catalogue_of_the_installed_baseline"] = {key: (key in english) for key in CARD_KEYS}
++        values = {"version": (target or {}).get("version"), "current": (body or {}).get("current_version") if isinstance(body, dict) else None,
++                  "time": (attempt or {}).get("finished_at") if isinstance(attempt, dict) else None}
++        checks["catalogue_texts_of_the_installed_baseline"] = self.texts(CARD_KEYS, values)
++        heading = None
++        if isinstance(attempt, dict):
++            heading = "panelUpdate.previousAttempt.rolledBackTitle" if attempt.get("phase") == "recovered" \
++                else "panelUpdate.previousAttempt.title"
++        checks["heading_key_the_candidate_card_would_choose_for_this_answer"] = heading
++        checks["heading_key_exists_in_the_served_build_catalogue"] = bool(heading) and heading in english
++        failures = []
++        if check.status != 200 or not isinstance(body, dict):
++            failures.append(f"the update check answered HTTP {check.status}")
++        elif not isinstance(attempt, dict):
++            failures.append("the update check carries no previous_attempt for the offered version")
++        else:
++            if attempt.get("phase") != "recovered":
++                failures.append(f"previous_attempt.phase is {attempt.get('phase')!r}, not recovered")
++            if (target or {}).get("commit") != self.candidate["commit"]:
++                failures.append("the offered target is not the candidate that was tried")
++            if body.get("current_commit") != self.artifacts["baseline"]["commit"]:
++                failures.append("the running version is not the baseline")
++        if failures:
++            raise base.StepFailed("; ".join(failures))
++        return "passed"
++
++
++# ---------------------------------------------------------------------------
++# CLI
++# ---------------------------------------------------------------------------
++
++def build_plan(name: str, artifacts: dict, work_root: str, local_port: int) -> dict:
++    plan = {"schema": "celikpanel/set4-plan/v1", "cell_kind": CELL_KIND, "native_evidence": False, "cell": name,
++            "work_root": work_root, "local_port": local_port,
++            "rule": "the driver calls only the Panel's HTTP API as the logged-in owner; every native fact is a read-only SSH "
++                    "inspection; owner actions on the guest are recorded as such; no certificate authority and no licence "
++                    "service is contacted"}
++    if name in CELLS:
++        settings = CELLS[name]
++        plan.update(candidate={k: artifacts["baseline"][k] for k in ("version", "commit", "sha256")},
++                    setup={"purpose": settings.purpose, "components": sorted(settings.components), "dns_mode": "external"},
++                    steps=["preflight", "origin", "baseline-install", "owner-login", "license", "setup", "site"]
++                          + [key for key, _title, only in SECTIONS if not (only == "mail" and not settings.mail)] + ["collect"])
++    else:
++        plan.update(update=base.build_plan(base.validate_cell(name), artifacts, work_root, local_port, "external").get("steps"),
++                    added_steps=["set4-php-site-before-the-update", "set4-php-site-after-the-update"]
++                    if base.validate_cell(name).variant == "good" else ["set4-update-check-after-the-return"])
++    return plan
++
++
++def main(argv: list[str] | None = None) -> int:
++    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
++    sub = parser.add_subparsers(dest="command", required=True)
++    for name in ("plan", "run"):
++        cmd = sub.add_parser(name)
++        cmd.add_argument("--cell", required=True, choices=sorted(CELLS) + sorted(UPDATE_CELLS))
++        cmd.add_argument("--artifacts", required=True, type=Path)
++        cmd.add_argument("--work-root", required=True)
++        cmd.add_argument("--local-port", type=int, default=18443)
++        if name == "plan":
++            cmd.add_argument("--dry-run", action="store_true", help="validate the plan without any guest")
++        else:
++            cmd.add_argument("--execute", action="store_true")
++    args = parser.parse_args(argv)
++    base.validate_work_root(args.work_root)
++    if not 1024 < args.local_port < 65536:
++        parser.error("--local-port must be an unprivileged loopback port")
++    document = json.loads(args.artifacts.read_text())
++    base.configure_labels(document)
++    cell = CELLS[args.cell].cell if args.cell in CELLS else base.validate_cell(args.cell)
++    if args.command == "plan":
++        base.validate_cell_artifacts(document, cell, check_files=not args.dry_run)
++        print(json.dumps(build_plan(args.cell, document, args.work_root, args.local_port), indent=2, sort_keys=True))
++        return 0
++    if not args.execute:
++        parser.error("run mutates one registered disposable guest and requires --execute")
++    base.validate_cell_artifacts(document, cell)
++    if args.cell in CELLS:
++        result = Set4Trial(CELLS[args.cell], document, args.work_root, args.local_port).execute()
++        print(json.dumps({"overall": result["overall"], "cell_kind": CELL_KIND,
++                          "sections": {k: v.get("verdict") for k, v in result["sections"].items()}}, sort_keys=True))
++    else:
++        result = Set4UpdateTrial(cell, document, args.work_root, args.local_port, None, "external").execute()
++        print(json.dumps({"overall": result["overall"], "outcome": result["outcome"]["classification"],
++                          "request_id": result["request_id"],
++                          "steps": {s["name"]: s["verdict"] for s in result["steps"]}}, sort_keys=True))
++    return 0 if result["overall"] != "failed" else 1
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+--- /dev/null
++++ b/deploy/e2e/release-recovery/guest_set4_native.py
+@@ -0,0 +1,488 @@
++#!/usr/bin/env python3
++"""set4: native readers and the lab owner's actions for the re-measurement of commit 557b554eb, inside a marked
++disposable QEMU guest.
++
++Readers (``read-*``) only inspect: the platform and its packages, the nginx package's PHP snippet (digest and text),
++what ``nginx -t`` says, the files of nginx's configuration that name a domain, one GET to this guest's own web server
++on loopback, what exists on the server for a domain name (rows of the Panel's database opened read-only, the system
++account, the site's directories, PHP-FPM pool files and sockets, the certificate-validation directories), systemd's
++own view of a unit with its journal since a moment. Owner actions (``owner-*``) are what a server owner does by hand:
++upload one PHP page and one text file to a site, move one of nginx's own files away and back.
++
++No mode prints a password, a private key or a hash, and no mode contacts another host.
++
++set4: 557b554eb düzeltmelerinin yeniden ölçümü için işaretli geçici QEMU konuğunda yerel durum okuyucuları ve sunucu
++sahibinin elle yaptığı işlemler. Hiçbir kip parola, özel anahtar ya da özet yazdırmaz; başka bir sunucuya bağlanmaz.
++"""
++from __future__ import annotations
++
++import argparse
++import base64
++import glob
++import hashlib
++import importlib.util
++import json
++import os
++from pathlib import Path
++import pwd
++import re
++import socket
++import sqlite3
++import sys
++
++HERE = Path(__file__).resolve().parent
++SCHEMA = "celikpanel/set4-native/v1"
++PROBE = "set4-probe.php"
++PROBE_MARK = "set4-php-executed"
++STATIC = "set4-static.txt"
++STATIC_TEXT = b"set4 static file served by the web server\n"
++NGINX = "/etc/nginx"
++SNIPPET = NGINX + "/snippets/fastcgi-php.conf"
++OWNER_MOVED = NGINX + "/fastcgi.conf"
++OWNER_MOVED_TO = NGINX + "/fastcgi.conf.set4-owner-moved"
++SITES_ROOT = "/var/www/celikpanel/subscriptions"
++ACME_ROOT = "/var/lib/celikpanel-agent/acme-http-01"
++POOL_GLOBS = ("/etc/php/*/fpm/pool.d/*.conf", "/etc/php/php-fpm.d/*.conf")
++SOCKET_DIRS = ("/run/php", "/run/php-fpm")
++PATH_RE = re.compile(r"/[A-Za-z0-9._/?=&%-]{0,200}\Z")
++UNIT_RE = re.compile(r"[A-Za-z0-9@_.:-]{1,80}\.service\Z")
++SECRET_COLUMN = re.compile(r"pass|secret|token|key|hash|salt|credential", re.I)
++UNIT_PROPERTIES = ("LoadState", "ActiveState", "SubState", "Result", "MainPID", "ExecMainPID", "ExecMainStatus",
++                   "InvocationID", "NRestarts", "StateChangeTimestamp", "ActiveEnterTimestamp", "ActiveExitTimestamp",
++                   "InactiveEnterTimestamp", "InactiveExitTimestamp", "ExecMainStartTimestamp", "ExecReload",
++                   "ReloadResult", "Type", "FragmentPath")
++PACKAGES = ("nginx", "nginx-common", "nginx-core", "nginx-mainline", "php", "php-fpm", "php8.3-fpm", "php8.4-fpm",
++            "php8.5-fpm", "php-cgi", "mariadb", "mariadb-server", "postgresql", "postgresql-17", "postgresql-16",
++            "postfix", "dovecot-core", "dovecot", "certbot", "systemd")
++
++
++def _load(name: str):
++    spec = importlib.util.spec_from_file_location("set4_" + name.replace(".", "_"), HERE / name)
++    value = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(value)
++    return value
++
++
++rid = _load("guest_request_identity_native.py")
++run, utc, Refused = rid.run, rid.utc, rid.Refused
++
++
++def sha256_file(path: str):
++    try:
++        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
++    except OSError:
++        return None
++
++
++def text_of(path: str, limit: int = 12000):
++    try:
++        return Path(path).read_bytes()[:limit].decode("utf-8", "replace")
++    except OSError:
++        return None
++
++
++def file_facts(path: str, text: bool = False) -> dict:
++    value = dict(rid._stat(path), sha256=sha256_file(path) if os.path.isfile(path) else None)
++    if text and os.path.isfile(path):
++        value["text"] = text_of(path)
++        value["bytes"] = os.path.getsize(path)
++    return value
++
++
++def nginx_test() -> dict:
++    done = run(["nginx", "-t"], timeout=60)
++    return {"returncode": done.get("returncode"), "status": done.get("status"), "output": (done.get("stderr") or "") + (done.get("stdout") or ""),
++            "at": done.get("at")}
++
++
++def package_owner(path: str) -> dict:
++    if not os.path.exists(path):
++        return {"path": path, "exists": False}
++    for argv in (["dpkg", "-S", path], ["pacman", "-Qo", path]):
++        done = run(argv, timeout=30)
++        if done.get("status") == "ok":
++            return {"path": path, "exists": True, "asked": " ".join(argv), "returncode": done.get("returncode"),
++                    "answer": ((done.get("stdout") or "") + (done.get("stderr") or "")).strip()[:300]}
++    return {"path": path, "exists": True, "asked": None}
++
++
++def read_platform(args: dict) -> dict:
++    """The platform as it stands: the distribution, the packages' own versions, nginx's and PHP-FPM's own version
++    lines, and the nginx package's PHP snippet with its digest, text and owning package."""
++    release = {}
++    for line in (text_of("/etc/os-release") or "").splitlines():
++        key, _, value = line.partition("=")
++        if key in ("ID", "VERSION_ID", "PRETTY_NAME", "VERSION_CODENAME", "BUILD_ID", "IMAGE_ID", "IMAGE_VERSION"):
++            release[key] = value.strip('"')
++    packages = {}
++    dpkg = run(["dpkg-query", "-W", "-f", "${Package} ${Version} ${db:Status-Abbrev}\n", *PACKAGES], timeout=60)
++    if dpkg.get("status") == "ok":
++        for line in (dpkg.get("stdout") or "").splitlines():
++            parts = line.split()
++            if len(parts) >= 3 and parts[2].startswith("ii"):
++                packages[parts[0]] = parts[1]
++    pacman = run(["pacman", "-Q", *PACKAGES], timeout=60)
++    if pacman.get("status") == "ok":
++        for line in (pacman.get("stdout") or "").splitlines():
++            parts = line.split()
++            if len(parts) == 2:
++                packages[parts[0]] = parts[1]
++    programs = {}
++    for name in ("php-fpm", "php-fpm8.5", "php-fpm8.4", "php-fpm8.3", "php-fpm8.2"):
++        done = run([name, "-v"], timeout=30)
++        if done.get("status") == "ok":
++            programs[name] = (done.get("stdout") or "").splitlines()[:1]
++    nginx_v = run(["nginx", "-v"], timeout=30)
++    php_dirs = sorted(p for p in glob.glob("/etc/php/*") if os.path.isdir(p))
++    return {"os_release": release, "kernel": os.uname().release, "packages": packages,
++            "package_manager": "dpkg" if dpkg.get("status") == "ok" else "pacman" if pacman.get("status") == "ok" else None,
++            "nginx_version": ((nginx_v.get("stderr") or "") + (nginx_v.get("stdout") or "")).strip(),
++            "php_fpm_programs": programs, "etc_php_directories": php_dirs,
++            "nginx_php_snippet": dict(file_facts(SNIPPET, text=True), owner_package=package_owner(SNIPPET)),
++            "nginx_snippets_directory": rid._stat(NGINX + "/snippets"),
++            "nginx_fastcgi_conf": dict(file_facts(NGINX + "/fastcgi.conf"), owner_package=package_owner(NGINX + "/fastcgi.conf")),
++            "nginx_fastcgi_params": file_facts(NGINX + "/fastcgi_params"),
++            "nginx_directory": sorted(os.listdir(NGINX)) if os.path.isdir(NGINX) else None,
++            "nginx_test": nginx_test(), "at": utc()}
++
++
++def nginx_files_naming(domain: str) -> list:
++    found = []
++    for root, _dirs, files in os.walk(NGINX, followlinks=False):
++        for name in sorted(files):
++            path = os.path.join(root, name)
++            if os.path.islink(path):
++                target = os.path.realpath(path)
++                if domain in name or domain in os.path.basename(target):
++                    found.append({"path": path, "kind": "symlink", "target": os.readlink(path), "target_exists": os.path.exists(target)})
++                continue
++            try:
++                data = Path(path).read_bytes()
++            except OSError:
++                continue
++            if domain.encode() in data or domain in name:
++                text = data[:16000].decode("utf-8", "replace")
++                found.append({"path": path, "kind": "file", "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
++                              "text": text,
++                              "includes": re.findall(r"(?m)^\s*include\s+([^;]+);", text),
++                              "names_the_php_snippet": "snippets/fastcgi-php.conf" in text,
++                              "fastcgi_pass": re.findall(r"(?m)^\s*fastcgi_pass\s+([^;]+);", text),
++                              "php_location_lines": php_location(text)})
++    return found
++
++
++def php_location(text: str) -> list:
++    """The directive lines of the first ``location ~ \\.php$`` block of a vhost text, in their order."""
++    match = re.search(r"location\s+~\s+\\\.php\$\s*\{(.*?)\n\s*\}", text, re.S)
++    if not match:
++        return []
++    return [line.strip() for line in match.group(1).splitlines() if line.strip() and not line.strip().startswith("#")]
++
++
++def read_nginx(args: dict) -> dict:
++    domain = rid.domain_name(args["domain"])
++    return {"domain": domain, "nginx_test": nginx_test(), "files": nginx_files_naming(domain),
++            "unit": unit_show("nginx.service"), "at": utc()}
++
++
++def read_http(args: dict) -> dict:
++    """One GET to this guest's own web server on loopback with the site's Host header (never another host)."""
++    host = rid.domain_name(args["domain"])
++    path = args.get("path", "/")
++    if not isinstance(path, str) or not PATH_RE.fullmatch(path):
++        raise Refused("not a path this reader asks for")
++    try:
++        with socket.create_connection(("127.0.0.1", 80), timeout=20) as connection:
++            connection.sendall(("GET " + path + " HTTP/1.0\r\nHost: " + host + "\r\nConnection: close\r\n\r\n").encode())
++            raw = b""
++            while len(raw) < 262144:
++                chunk = connection.recv(65536)
++                if not chunk:
++                    break
++                raw += chunk
++    except Exception as exc:  # noqa: BLE001 - reported as data
++        return {"host": host, "path": path, "error": type(exc).__name__ + ": " + str(exc)[:200], "at": utc()}
++    head, _, body = raw.partition(b"\r\n\r\n")
++    lines = head.decode("latin-1").split("\r\n")
++    status = int(lines[0].split()[1]) if len(lines[0].split()) > 1 and lines[0].split()[1].isdigit() else None
++    headers = {}
++    for line in lines[1:]:
++        name, _, value = line.partition(":")
++        if name.lower() in ("content-type", "server", "x-powered-by", "location", "content-length"):
++            headers[name.lower()] = value.strip()
++    return {"host": host, "path": path, "status": status, "status_line": lines[0], "headers": headers, "bytes": len(body),
++            "body_sha256": hashlib.sha256(body).hexdigest(), "body": body[:2000].decode("utf-8", "replace"), "at": utc()}
++
++
++def owner_php_probe(args: dict) -> dict:
++    """The owner uploads one PHP page and one text file to the site. The page prints a marker, a product only PHP
++    can compute, the PHP version, the server API, the account it runs as and the request values PHP-FPM was handed
++    (PATH_INFO, SCRIPT_NAME, SCRIPT_FILENAME, DOCUMENT_ROOT, REQUEST_URI, QUERY_STRING), one per line."""
++    identity, root, uid, gid = rid._site(args)
++    source = ("<?php\nheader('Content-Type: text/plain');\n"
++              "echo '" + PROBE_MARK + ":' . (6 * 7) . ':' . PHP_VERSION . ':' . php_sapi_name() . ':' . "
++              "(function_exists('posix_geteuid') ? posix_getpwuid(posix_geteuid())['name'] : get_current_user()) . \"\\n\";\n"
++              "foreach (['PATH_INFO', 'SCRIPT_NAME', 'SCRIPT_FILENAME', 'DOCUMENT_ROOT', 'REQUEST_URI', 'QUERY_STRING', "
++              "'DOCUMENT_URI', 'PATH_TRANSLATED'] as $k) {\n"
++              "    echo $k . '=[' . (isset($_SERVER[$k]) ? $_SERVER[$k] : '(unset)') . \"]\\n\";\n}\n")
++    rid._write(os.path.join(root, PROBE), source.encode(), uid, gid)
++    rid._write(os.path.join(root, STATIC), STATIC_TEXT, uid, gid)
++    return {"action": "owner-php-probe", "domain": identity, "path": os.path.join(root, PROBE), "document_root": root,
++            "probe_sha256": hashlib.sha256(source.encode()).hexdigest(),
++            "docroot_entries": sorted(os.listdir(root)), "site_account": pwd.getpwuid(uid).pw_name, "at": utc()}
++
++
++def _panel_tables(connection) -> list:
++    return [row["name"] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")]
++
++
++def _visible(row: sqlite3.Row) -> dict:
++    return {key: ("[not read: secret-shaped column]" if SECRET_COLUMN.search(key) else row[key]) for key in row.keys()}
++
++
++def panel_rows_for(domain: str) -> dict:
++    """Every row of the Panel's database (opened read-only) that names the domain in a text column, and the rows of
++    ``domains`` and ``sites`` for it. Secret-shaped columns are never read out."""
++    connection = rid.panel_db()
++    connection.row_factory = sqlite3.Row
++    try:
++        tables = _panel_tables(connection)
++        domains = [_visible(r) for r in connection.execute("SELECT * FROM domains WHERE name = ?", (domain,))]
++        ids = [r.get("id") for r in domains]
++        sites = []
++        if "sites" in tables:
++            for domain_id in ids:
++                sites += [_visible(r) for r in connection.execute("SELECT * FROM sites WHERE domain_id = ?", (domain_id,))]
++        naming = {}
++        for table in tables:
++            columns = [r["name"] for r in connection.execute("PRAGMA table_info(" + '"' + table.replace('"', '') + '"' + ")")
++                       if not SECRET_COLUMN.search(r["name"])]
++            total = 0
++            for column in columns:
++                try:
++                    found = connection.execute(
++                        "SELECT COUNT(*) AS n FROM \"" + table + "\" WHERE typeof(\"" + column + "\") = 'text' AND instr(\"" + column + "\", ?) > 0",
++                        (domain,)).fetchone()["n"]
++                except sqlite3.Error:
++                    continue
++                if found:
++                    naming.setdefault(table, {})[column] = found
++                    total += found
++        counts = {}
++        for table in ("domains", "sites", "subscriptions", "databases_v2", "email_accounts"):
++            if table in tables:
++                counts[table] = connection.execute("SELECT COUNT(*) AS n FROM \"" + table + "\"").fetchone()["n"]
++        sequence = {}
++        try:
++            for row in connection.execute("SELECT name, seq FROM sqlite_sequence WHERE name IN ('domains', 'sites')"):
++                sequence[row["name"]] = row["seq"]
++        except sqlite3.Error:
++            pass
++        return {"domains": domains, "sites": sites, "tables_naming_the_domain": naming, "row_counts": counts,
++                "autoincrement": sequence}
++    finally:
++        connection.close()
++
++
++def _listing(root: str, pattern: str) -> list:
++    return sorted(p for p in glob.glob(os.path.join(root, pattern)))
++
++
++def read_leftovers(args: dict) -> dict:
++    """What exists on this server for one domain name: the Panel's rows, nginx's files, the system account, its
++    processes, the site directories and the certificate-validation directories (all of them, so that two readings can
++    be compared when the domain has no row any more), PHP-FPM pool files and sockets."""
++    domain = rid.domain_name(args["domain"])
++    user = rid.site_username(domain)
++    account = None
++    try:
++        entry = pwd.getpwnam(user)
++        account = {"name": entry.pw_name, "uid": entry.pw_uid, "gid": entry.pw_gid, "home": entry.pw_dir, "shell": entry.pw_shell,
++                   "home_exists": os.path.isdir(entry.pw_dir)}
++    except KeyError:
++        pass
++    group = run(["getent", "group", user], timeout=20)
++    pools = []
++    for pattern in POOL_GLOBS:
++        for path in sorted(glob.glob(pattern)):
++            text = text_of(path, 8000) or ""
++            keep = {}
++            for line in text.splitlines():
++                line = line.strip()
++                if line.startswith("[") and line.endswith("]"):
++                    keep["pool"] = line[1:-1]
++                for key in ("listen", "user", "group", "listen.owner", "listen.group", "listen.mode"):
++                    if re.match(re.escape(key) + r"\s*=", line):
++                        keep[key] = line.split("=", 1)[1].strip()
++            pools.append({"path": path, "settings": keep, "names_the_account": keep.get("user") == user or user in os.path.basename(path),
++                          "names_the_domain": domain in text})
++    sockets = []
++    for directory in SOCKET_DIRS:
++        if os.path.isdir(directory):
++            sockets += [rid._stat(os.path.join(directory, name)) for name in sorted(os.listdir(directory))]
++    processes = run(["pgrep", "-a", "-u", user], timeout=20) if account else {"status": "no-account"}
++    rows = panel_rows_for(domain)
++    site_dirs = _listing(SITES_ROOT, "*/domains/*")
++    acme_dirs = _listing(ACME_ROOT, "subscriptions/*/domains/*")
++    mine = {}
++    for row in rows["domains"]:
++        sub, dom = row.get("subscription_id"), row.get("id")
++        mine = {"site_home": f"{SITES_ROOT}/{sub}/domains/{dom}", "acme_challenge_root": f"{ACME_ROOT}/subscriptions/{sub}/domains/{dom}"}
++        mine["site_home_stat"] = rid._stat(mine["site_home"])
++        mine["site_home_entries"] = sorted(os.listdir(mine["site_home"])) if os.path.isdir(mine["site_home"]) else None
++        mine["acme_challenge_root_stat"] = rid._stat(mine["acme_challenge_root"])
++    crontab = [p for p in ("/var/spool/cron/crontabs/" + user, "/var/spool/cron/" + user) if os.path.exists(p)]
++    dumped = run(["nginx", "-T"], timeout=60, limit=4 << 20)
++    dumped_lines = [line.strip()[:200] for line in (dumped.get("stdout") or "").splitlines() if domain in line]
++    return {"domain": domain, "account_name": user, "account": account,
++            "group": (group.get("stdout") or "").strip().split(":")[0] or None,
++            "processes_of_the_account": [l.split(None, 1)[-1][:120] for l in (processes.get("stdout") or "").splitlines()] if account else [],
++            "panel": rows, "this_domain": mine,
++            "nginx_files_naming_the_domain": [{k: f.get(k) for k in ("path", "kind", "target", "target_exists", "bytes", "sha256")}
++                                              for f in nginx_files_naming(domain)],
++            "nginx_dump_lines_naming_the_domain": dumped_lines[:20], "nginx_dump_returncode": dumped.get("returncode"),
++            "nginx_test": nginx_test(),
++            "pool_files": pools, "pool_files_of_the_account": [p["path"] for p in pools if p["names_the_account"] or p["names_the_domain"]],
++            "sockets": sockets, "site_directories": site_dirs, "acme_challenge_directories": acme_dirs,
++            "acme_root": rid._stat(ACME_ROOT), "crontab_spool": crontab, "at": utc()}
++
++
++def unit_show(unit: str) -> dict:
++    argv = ["systemctl", "show", unit]
++    for name in UNIT_PROPERTIES:
++        argv += ["-p", name]
++    done = run(argv, timeout=30)
++    return dict(line.split("=", 1) for line in (done.get("stdout") or "").splitlines() if "=" in line)
++
++
++def read_units(args: dict) -> dict:
++    """systemd's own view of each unit and, with ``since_epoch``, every journal line of the unit since that moment
++    (the unit's own messages and systemd's messages about it), and the Agent's and the Panel's lines of the window."""
++    units = []
++    for unit in args.get("units", []):
++        if not isinstance(unit, str) or not UNIT_RE.fullmatch(unit):
++            raise Refused("not a service unit name")
++        units.append(unit)
++    result = {"units": {unit: unit_show(unit) for unit in units}, "is_active": {}, "at": utc()}
++    for unit in units:
++        done = run(["systemctl", "is-active", unit], timeout=20)
++        result["is_active"][unit] = (done.get("stdout") or "").strip()
++        failed = run(["systemctl", "is-failed", unit], timeout=20)
++        result.setdefault("is_failed", {})[unit] = (failed.get("stdout") or "").strip()
++    if args.get("since_epoch") is not None:
++        since = "@" + str(int(args["since_epoch"]))
++        result["since_epoch"] = int(args["since_epoch"])
++        result["journal"] = {}
++        for unit in units:
++            done = run(["journalctl", "--no-pager", "-o", "short-iso-precise", "--since", since, "-u", unit, "-n", "400"], timeout=60)
++            lines = [l for l in (done.get("stdout") or "").splitlines() if l.strip() and not l.startswith("-- ")]
++            result["journal"][unit] = lines
++        product = run(["journalctl", "--no-pager", "-o", "short-iso-precise", "--since", since, "-u", "celikpanel-agent.service",
++                       "-u", "celikpanel-panel.service", "-n", "400"], timeout=60)
++        result["journal_product"] = [l[:600] for l in (product.get("stdout") or "").splitlines() if l.strip() and not l.startswith("-- ")]
++        manager = run(["journalctl", "--no-pager", "-o", "short-iso-precise", "--since", since, "_PID=1", "-n", "400"], timeout=60)
++        result["journal_systemd_manager"] = [l[:400] for l in (manager.get("stdout") or "").splitlines()
++                                             if l.strip() and not l.startswith("-- ") and any(u.split(".service")[0] in l for u in units)]
++    return result
++
++
++def owner_nginx_file(args: dict) -> dict:
++    """The owner, tidying nginx's directory by hand, renames one of nginx's own files (``fastcgi.conf``) and later
++    renames it back. Nothing else is touched; nginx is neither tested into service nor reloaded by this action."""
++    action = args.get("action")
++    before = {"file": rid._stat(OWNER_MOVED), "moved": rid._stat(OWNER_MOVED_TO), "nginx_test": nginx_test()}
++    if action == "move-away":
++        if not os.path.isfile(OWNER_MOVED) or os.path.exists(OWNER_MOVED_TO):
++            raise Refused("the file is not there to move, or was moved already")
++        os.rename(OWNER_MOVED, OWNER_MOVED_TO)
++    elif action == "restore":
++        if not os.path.isfile(OWNER_MOVED_TO) or os.path.exists(OWNER_MOVED):
++            raise Refused("nothing to restore")
++        os.rename(OWNER_MOVED_TO, OWNER_MOVED)
++    else:
++        raise Refused("unknown owner action")
++    return {"action": "owner-nginx-file", "what": action, "path": OWNER_MOVED, "moved_to": OWNER_MOVED_TO, "before": before,
++            "after": {"file": rid._stat(OWNER_MOVED), "moved": rid._stat(OWNER_MOVED_TO), "nginx_test": nginx_test()}, "at": utc()}
++
++
++def read_isolation(args: dict) -> dict:
++    """Lab isolation as this guest's own hosts file answers it: the product's name and the certificate authority's
++    two directory names. Asked with ``getent -s files``, which reads /etc/hosts only: no DNS question is sent for
++    any of these names, and nothing is connected to."""
++    names = ("celikpanel.net", "acme-v02.api.letsencrypt.org", "acme-staging-v02.api.letsencrypt.org")
++    resolves = {name: (run(["getent", "-s", "files", "hosts", name], timeout=20).get("stdout") or "").strip() for name in names}
++    return {"asked_with": "getent -s files hosts NAME", "resolves": resolves,
++            "loopback_only": {name: rid.loopback_only(answer) for name, answer in resolves.items()},
++            "hosts_lines": [l for l in (text_of("/etc/hosts") or "").splitlines() if l.strip() and not l.startswith("#")],
++            "at": utc()}
++
++
++def read_spa(args: dict) -> dict:
++    """What the installed web build holds: for every ``web/dist`` on this guest, how many of its files contain each
++    of the given sentences; and where the running Panel's process lives."""
++    needles = [n for n in args.get("needles", []) if isinstance(n, str) and 8 <= len(n) <= 200][:12]
++    found = run(["find", "/opt", "/usr/local", "/var/lib", "/srv", "/root", "/home", "-xdev", "-type", "f", "-path",
++                 "*/web/dist/index.html"], timeout=180)
++    builds = []
++    for index in sorted((found.get("stdout") or "").splitlines()):
++        root = os.path.dirname(index)
++        counts, files = {needle: 0 for needle in needles}, 0
++        for directory, _dirs, names in os.walk(root):
++            for name in names:
++                if not name.endswith((".js", ".html", ".json", ".mjs")):
++                    continue
++                files += 1
++                try:
++                    data = Path(os.path.join(directory, name)).read_bytes()
++                except OSError:
++                    continue
++                for needle in needles:
++                    if needle.encode() in data:
++                        counts[needle] += 1
++        builds.append({"dist": root, "real_path": os.path.realpath(root), "files_read": files, "files_containing": counts,
++                       "index_sha256": sha256_file(index)})
++    unit = run(["systemctl", "show", "celikpanel-panel.service", "-p", "MainPID", "-p", "ExecStart", "-p", "WorkingDirectory",
++                "-p", "ActiveState"], timeout=30)
++    shown = dict(line.split("=", 1) for line in (unit.get("stdout") or "").splitlines() if "=" in line)
++    process = {}
++    pid = shown.get("MainPID")
++    if pid and pid.isdigit() and int(pid) > 1:
++        for name in ("exe", "cwd"):
++            try:
++                process[name] = os.readlink(f"/proc/{pid}/{name}")
++            except OSError as exc:
++                process[name] = type(exc).__name__
++    return {"needles": needles, "web_builds": builds, "panel_unit": shown, "panel_process": process, "at": utc()}
++
++
++MODES = {"read-platform": read_platform, "read-nginx": read_nginx, "read-http": read_http, "read-leftovers": read_leftovers,
++         "read-units": read_units, "read-isolation": read_isolation, "read-spa": read_spa,
++         "owner-php-probe": owner_php_probe, "owner-nginx-file": owner_nginx_file}
++
++
++def main(argv=None) -> int:
++    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
++    parser.add_argument("mode", choices=sorted(MODES))
++    for name in ("lab-nonce", "vm-uuid", "cell-id", "node"):
++        parser.add_argument("--" + name, required=True)
++    parser.add_argument("--args-b64", default="e30=")
++    args = parser.parse_args(argv)
++    rid._load_probe().guard_guest(args)
++    request = json.loads(base64.b64decode(args.args_b64, validate=True))
++    if not isinstance(request, dict):
++        parser.error("--args-b64 must hold a JSON object")
++    value = MODES[args.mode](request)
++    value.update(schema=SCHEMA, mode=args.mode, owner_action=args.mode.startswith("owner-"))
++    print(json.dumps(value, sort_keys=True, default=str))
++    return 0
++
++
++if __name__ == "__main__":
++    try:
++        raise SystemExit(main())
++    except Refused as exc:
++        print(json.dumps({"refused": "Refused", "reason": str(exc)[:300]}), file=sys.stderr)
++        raise SystemExit(3)
++    except Exception as exc:  # noqa: BLE001 - reported as data; the driver decides
++        print(json.dumps({"refused": type(exc).__name__, "reason": str(exc)[:300]}), file=sys.stderr)
++        raise SystemExit(2)
+--- /dev/null
++++ b/deploy/e2e/release-recovery/run-set4.sh
+@@ -0,0 +1,49 @@
++#!/usr/bin/env bash
++# set4 wrapper for the Linux QEMU host (archlinux), run as root: the narrow re-measurement of commit 557b554eb.
++#
++#   run-set4.sh dry-run CELL ARTIFACTS_JSON LAB_NAME
++#       Validate the plan without any guest (no lab is created).
++#   run-set4.sh cell CELL ARTIFACTS_JSON LAB_NAME SSH_PORT [LOCAL_PORT]
++#       Prepare and start a NEW lab /var/tmp/cp-release-drill-LAB_NAME, run the one cell on its node, then
++#       stop the lab (disks and evidence retained).
++#
++# CELL: set4-arch | set4-debian13 | set4-ubuntu          (set4_trial.Set4Trial; the candidate installed fresh)
++#       upd1-debian13-good | upd1-ubuntu-good | upd1-arch-good                (item 9: a PHP site across the update)
++#       upd1-arch-defective | upd1-debian13-defective | upd1-ubuntu-defective | upd1-debian13-startcheck
++#                                                         (item 12: the update check after the automatic return)
++# ARTIFACTS_JSON: an upd1-artifacts.json from run-upd1.sh build. One cell per new lab. Never reuse a lab or a guest.
++set -euo pipefail
++HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
++IMAGES=${UPD1_IMAGE_CACHE:-/var/tmp/cp-v3n28/images}
++LAB=(python3 "$HERE/lab.py")
++DRIVER=(python3 "$HERE/set4_trial.py")
++
++usage() { sed -n '2,14p' "${BASH_SOURCE[0]}" >&2; exit 2; }
++[[ $# -ge 1 ]] || usage
++command=$1; shift
++case $command in
++    dry-run)
++        [[ $# -eq 3 ]] || usage
++        exec "${DRIVER[@]}" plan --cell "$1" --artifacts "$2" --work-root "/var/tmp/cp-release-drill-$3" --dry-run
++        ;;
++    cell)
++        [[ $# -ge 4 && $# -le 5 ]] || usage
++        cell=$1 artifacts=$2 name=$3 port=$4 local_port=${5:-18443}
++        [[ $EUID -eq 0 ]] || { echo "run as root (fixture signing keys are root-only)" >&2; exit 2; }
++        root=/var/tmp/cp-release-drill-$name
++        [[ ! -e $root ]] || { echo "lab $root exists; every cell needs a NEW lab" >&2; exit 2; }
++        "${DRIVER[@]}" plan --cell "$cell" --artifacts "$artifacts" --work-root "$root" > /dev/null
++        platform=debian13-arch
++        [[ $cell != *-ubuntu && $cell != upd1-ubuntu-* ]] || platform=ubuntu
++        "${LAB[@]}" prepare --work-root "$root" --image-cache "$IMAGES" --ssh-port "$port" --platform "$platform" --execute
++        "${LAB[@]}" start --work-root "$root" --execute
++        "${LAB[@]}" status --work-root "$root"
++        status=0
++        "${DRIVER[@]}" run --cell "$cell" --artifacts "$artifacts" --work-root "$root" --local-port "$local_port" \
++            --execute || status=$?
++        "${LAB[@]}" stop --work-root "$root" --execute || true
++        echo "SET4 cell=$cell lab=$root driver_exit=$status evidence=$root/evidence/*/upd1"
++        exit "$status"
++        ;;
++    *) usage ;;
++esac

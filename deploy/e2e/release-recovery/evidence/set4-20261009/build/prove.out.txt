@@ -1,0 +1,2 @@
+prove cur rc=0
+prove a81 rc=0

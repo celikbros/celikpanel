@@ -1,0 +1,7 @@
+driver SHA256SUMS verified on the staged copy (252 files)
+2026-10-09T10:37:29Z removed /var/tmp/cp-release-drill-s4-arch-a/cells/457add2e2b9da83bba5b1733/arch/overlay.qcow2 bytes=2082996224 (evidence staged at set4-20261009/set4-arch/run-a, checksums verified)
+2026-10-09T10:37:29Z removed /var/tmp/cp-release-drill-s4-arch-a/cells/457add2e2b9da83bba5b1733/debian13/overlay.qcow2 bytes=29622272 (evidence staged at set4-20261009/set4-arch/run-a, checksums verified)
+263
+overall: complete-for-review | native_evidence: False | outcome: set4-measured
+  step M10-postfix-stop skipped | None
+  section M10-postfix-stop not-run | failed: [] | unknown: [] | error: None

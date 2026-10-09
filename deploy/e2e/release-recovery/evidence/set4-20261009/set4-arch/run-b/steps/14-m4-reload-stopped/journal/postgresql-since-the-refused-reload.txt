@@ -1,0 +1,11 @@
+##### postgresql.service (journalctl -u postgresql.service --since @1791549796)
+(no lines)
+##### systemd (PID 1) lines naming the unit
+(no lines)
+##### celikpanel-agent.service and celikpanel-panel.service
+2026-10-09T12:43:18.399707+00:00 dns-arch panel[424]: 2026/10/09 12:43:18 http: TLS handshake error from 127.0.0.1:51840: EOF
+2026-10-09T12:43:18.441730+00:00 dns-arch sudo[5025]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on --no-align --tuples-only --quiet
+2026-10-09T12:43:18.442214+00:00 dns-arch sudo[5025]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)
+2026-10-09T12:43:18.447685+00:00 dns-arch sudo[5025]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T12:43:18.526144+00:00 dns-arch agent[412]: 2026/10/09 12:43:18 ERROR service reload postgresql: failed not_running: postgresql.service is inactive (dead); nothing was reloaded
+2026-10-09T12:43:19.704441+00:00 dns-arch panel[424]: 2026/10/09 12:43:19 [409][service action] reload postgresql: SERVICE_ACTION_FAILED not_running: postgresql.service is inactive (dead); nothing was reloaded

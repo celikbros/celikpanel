@@ -1,0 +1,22 @@
+Formatting '/var/tmp/cp-release-drill-s4-ub-a/cells/4b5f8a177cc2bb783cb90227/ubuntu/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-s4-ub-a/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-s4-ub-a", "cell_id": "release-recovery__2b61a4879452e495", "ssh_ports": [4531, 4532]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s4-ub-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s4-ub-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "site", "verdict": "passed", "reason": null}
+{"step": "M0-prepare", "verdict": "passed", "reason": null}
+{"step": "M1-php-site", "verdict": "passed", "reason": null}
+{"step": "M6-site-refused", "verdict": "passed", "reason": null}
+{"step": "M2-import", "verdict": "passed", "reason": null}
+{"step": "M5-import-absolute", "verdict": "passed", "reason": null}
+{"step": "M10-postfix-stop", "verdict": "failed", "reason": "item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`; item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`; item 10: the note's sentence is the documented one for its reason"}
+{"step": "M4-reload-stopped", "verdict": "passed", "reason": null}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"cell_kind": "set4-final-round", "overall": "failed", "sections": {"M0-prepare": "passed", "M1-php-site": "passed", "M10-postfix-stop": "failed", "M2-import": "passed", "M4-reload-stopped": "passed", "M5-import-absolute": "passed", "M6-site-refused": "passed"}}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-s4-ub-a", "evidence_retained": true}
+SET4 cell=set4-ubuntu lab=/var/tmp/cp-release-drill-s4-ub-a driver_exit=1 evidence=/var/tmp/cp-release-drill-s4-ub-a/evidence/*/upd1

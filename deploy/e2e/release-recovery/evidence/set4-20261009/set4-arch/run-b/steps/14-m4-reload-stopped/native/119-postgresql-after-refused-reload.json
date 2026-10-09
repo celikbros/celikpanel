@@ -1,0 +1,48 @@
+{
+  "at": "2026-10-09T12:43:22Z",
+  "is_active": {
+    "postgresql.service": "inactive"
+  },
+  "is_failed": {
+    "postgresql.service": "inactive"
+  },
+  "journal": {
+    "postgresql.service": []
+  },
+  "journal_product": [
+    "2026-10-09T12:43:18.399707+00:00 dns-arch panel[424]: 2026/10/09 12:43:18 http: TLS handshake error from 127.0.0.1:51840: EOF",
+    "2026-10-09T12:43:18.441730+00:00 dns-arch sudo[5025]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on --no-align --tuples-only --quiet",
+    "2026-10-09T12:43:18.442214+00:00 dns-arch sudo[5025]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)",
+    "2026-10-09T12:43:18.447685+00:00 dns-arch sudo[5025]: pam_unix(sudo:session): session closed for user postgres",
+    "2026-10-09T12:43:18.526144+00:00 dns-arch agent[412]: 2026/10/09 12:43:18 ERROR service reload postgresql: failed not_running: postgresql.service is inactive (dead); nothing was reloaded",
+    "2026-10-09T12:43:19.704441+00:00 dns-arch panel[424]: 2026/10/09 12:43:19 [409][service action] reload postgresql: SERVICE_ACTION_FAILED not_running: postgresql.service is inactive (dead); nothing was reloaded"
+  ],
+  "journal_systemd_manager": [],
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "since_epoch": 1791549796,
+  "units": {
+    "postgresql.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 12:39:36 UTC",
+      "ActiveExitTimestamp": "Fri 2026-10-09 12:43:11 UTC",
+      "ActiveState": "inactive",
+      "ExecMainPID": "1783",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 12:39:35 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/bin/kill ; argv[]=/bin/kill -HUP ${MAINPID} ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postgresql.service",
+      "InactiveEnterTimestamp": "Fri 2026-10-09 12:43:12 UTC",
+      "InactiveExitTimestamp": "Fri 2026-10-09 12:39:35 UTC",
+      "InvocationID": "4403bfe204604fcb81cf9916163f46a8",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 12:43:12 UTC",
+      "SubState": "dead",
+      "Type": "notify"
+    }
+  }
+}

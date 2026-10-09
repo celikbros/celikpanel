@@ -1,0 +1,67 @@
+{
+  "at": "2026-10-09T10:48:07Z",
+  "databases_v2": [
+    {
+      "name": "s4abs_app",
+      "server_id": 1
+    }
+  ],
+  "docroot": {
+    "bytes": 98,
+    "exists": true,
+    "file_list": {
+      "assets/site.css": [
+        34,
+        "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+      ],
+      "index.html": [
+        64,
+        "4356e006d113cdde4a2cf2fa8ebd2dee74fb95099c81620b39e7481ec005dd1c"
+      ]
+    },
+    "files": 2,
+    "mode": "0750",
+    "names": [
+      "index.html",
+      "assets/site.css"
+    ],
+    "newest_mtime": 1791542887,
+    "non_regular": [],
+    "owner_uid": 5003,
+    "root": "/var/www/celikpanel/subscriptions/2/sites/7/public_html",
+    "sha256": "b89c4cc426f256ac858e2380edaab821f8ebd3a4df25084bd92d8cf6f4373ada"
+  },
+  "domain": "set4-absolute.test",
+  "email_accounts": [
+    {
+      "address": "info@set4-absolute.test",
+      "quota_mb": 256
+    }
+  ],
+  "email_forwardings": [
+    {
+      "destination": "info@set4-absolute.test",
+      "source": "sales@set4-absolute.test"
+    }
+  ],
+  "escapes": [],
+  "lab_action": false,
+  "mode": "read-imported",
+  "owner_action": false,
+  "rows": [
+    {
+      "id": 7,
+      "name": "set4-absolute.test",
+      "status": "active",
+      "subscription_id": 2
+    }
+  ],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "site_account": {
+    "home": "/var/www/celikpanel/subscriptions/2/sites/7",
+    "uid": 5003
+  },
+  "site_home_entries": [
+    "public_html"
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T11:27:24Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791545240",
+      "-n",
+      "400",
+      "-u",
+      "mariadb.service"
+    ],
+    "at": "2026-10-09T11:27:24Z",
+    "returncode": 0,
+    "seconds": 0.008,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T11:27:20.906464+00:00 dns-ubuntu systemd[1]: Stopping mariadb.service - MariaDB 10.11.14 database server...\n2026-10-09T11:27:20.907197+00:00 dns-ubuntu mariadbd[10948]: 2026-10-09 11:27:20 0 [Note] /usr/sbin/mariadbd (initiated by: unknown): Normal shutdown\n2026-10-09T11:27:20.909952+00:00 dns-ubuntu mariadbd[10948]: 2026-10-09 11:27:20 0 [Note] InnoDB: FTS optimize thread exiting.\n2026-10-09T11:27:20.930441+00:00 dns-ubuntu mariadbd[10948]: 2026-10-09 11:27:20 0 [Note] InnoDB: Starting shutdown...\n2026-10-09T11:27:20.942526+00:00 dns-ubuntu mariadbd[10948]: 2026-10-09 11:27:20 0 [Note] InnoDB: Dumping buffer pool(s) to /var/lib/mysql/ib_buffer_pool\n2026-10-09T11:27:20.943271+00:00 dns-ubuntu mariadbd[10948]: 2026-10-09 11:27:20 0 [Note] InnoDB: Buffer pool(s) dump completed at 261009 11:27:20\n2026-10-09T11:27:21.179687+00:00 dns-ubuntu mariadbd[10948]: 2026-10-09 11:27:21 0 [Note] InnoDB: Removed temporary tablespace data file: \"./ibtmp1\"\n2026-10-09T11:27:21.179687+00:00 dns-ubuntu mariadbd[10948]: 2026-10-09 11:27:21 0 [Note] InnoDB: Shutdown completed; log sequence number 104467; transaction id 31\n2026-10-09T11:27:21.196833+00:00 dns-ubuntu mariadbd[10948]: 2026-10-09 11:27:21 0 [Note] /usr/sbin/mariadbd: Shutdown complete\n2026-10-09T11:27:21.203399+00:00 dns-ubuntu systemd[1]: mariadb.service: Deactivated successfully.\n2026-10-09T11:27:21.203689+00:00 dns-ubuntu systemd[1]: Stopped mariadb.service - MariaDB 10.11.14 database server.\n2026-10-09T11:27:21.204702+00:00 dns-ubuntu systemd[1]: mariadb.service: Consumed 1.315s CPU time, 81.5M memory peak, 0B memory swap peak.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791545240,
+  "units": [
+    "mariadb.service"
+  ]
+}

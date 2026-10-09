@@ -1,0 +1,52 @@
+2026-10-09T10:15:14Z set4 run directory created
+2026-10-09T10:15:29Z made run copy b
+2026-10-09T10:15:29Z start build
+2026-10-09T10:20:25Z build cur rc=0
+2026-10-09T10:23:50Z build a81 rc=0
+2026-10-09T10:23:50Z end build rc=0
+2026-10-09T10:27:05Z start prove
+2026-10-09T10:27:14Z end prove rc=0
+2026-10-09T10:27:19Z made run copy c
+2026-10-09T10:29:21Z start cell-arch-a (C: 76.5 GiB)
+2026-10-09T10:37:26Z end cell-arch-a rc=0
+2026-10-09T10:37:29Z staged cell-arch-a rc=0 overall: complete-for-review | native_evidence: False | outcome: set4-measured
+2026-10-09T10:37:29Z queue done
+2026-10-09T10:37:53Z start cell-d13-a (C: 73.5 GiB)
+2026-10-09T10:49:27Z end cell-d13-a rc=0
+2026-10-09T10:49:31Z staged cell-d13-a rc=0 overall: complete-for-review | native_evidence: False | outcome: set4-measured
+2026-10-09T10:49:31Z start cell-u9-d13 (C: 72.9 GiB)
+2026-10-09T11:04:46Z end cell-u9-d13 rc=1
+2026-10-09T11:04:52Z staged cell-u9-d13 rc=0 overall: failed | native_evidence: False | outcome: update-verified
+2026-10-09T11:04:52Z start cell-ub-a (C: 71.5 GiB)
+2026-10-09T11:08:49Z made run copy d
+2026-10-09T11:28:01Z end cell-ub-a rc=1
+2026-10-09T11:28:07Z staged cell-ub-a rc=0 overall: failed | native_evidence: False | outcome: set4-measured
+2026-10-09T11:28:07Z start cell-u9-ub (C: 69.1 GiB)
+2026-10-09T11:48:00Z end cell-u9-ub rc=0
+2026-10-09T11:48:04Z staged cell-u9-ub rc=0 overall: complete-for-review | native_evidence: False | outcome: update-verified
+2026-10-09T11:48:04Z start cell-u12-arch (C: 67.3 GiB)
+2026-10-09T11:58:50Z end cell-u12-arch rc=0
+2026-10-09T11:58:53Z staged cell-u12-arch rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-automatically
+2026-10-09T11:58:53Z start cell-u12c-arch (C: 79.4 GiB)
+2026-10-09T12:00:20Z made run copy e
+2026-10-09T12:07:55Z end cell-u12c-arch rc=0
+2026-10-09T12:07:57Z staged cell-u12c-arch rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-automatically
+2026-10-09T12:07:57Z queue done
+2026-10-09T12:08:22Z start cell-u9-d13b (C: 78 GiB)
+2026-10-09T12:20:41Z end cell-u9-d13b rc=0
+2026-10-09T12:20:44Z staged cell-u9-d13b rc=0 overall: complete-for-review | native_evidence: False | outcome: update-verified
+2026-10-09T12:20:44Z start cell-u12-archb (C: 77 GiB)
+2026-10-09T12:30:51Z end cell-u12-archb rc=0
+2026-10-09T12:30:54Z staged cell-u12-archb rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-automatically
+2026-10-09T12:30:54Z queue done
+2026-10-09T12:35:46Z made run copy f
+2026-10-09T12:35:55Z start cell-arch-b (C: 76.2 GiB)
+2026-10-09T12:43:26Z end cell-arch-b rc=0
+2026-10-09T12:43:29Z staged cell-arch-b rc=0 overall: complete-for-review | native_evidence: False | outcome: set4-measured
+2026-10-09T12:43:29Z start cell-d13-b (C: 74.4 GiB)
+2026-10-09T12:53:50Z end cell-d13-b rc=0
+2026-10-09T12:53:54Z staged cell-d13-b rc=0 overall: complete-for-review | native_evidence: False | outcome: set4-measured
+2026-10-09T12:53:54Z start cell-ub-b (C: 73.7 GiB)
+2026-10-09T13:13:08Z end cell-ub-b rc=1
+2026-10-09T13:13:14Z staged cell-ub-b rc=0 overall: failed | native_evidence: False | outcome: set4-measured
+2026-10-09T13:13:14Z queue done

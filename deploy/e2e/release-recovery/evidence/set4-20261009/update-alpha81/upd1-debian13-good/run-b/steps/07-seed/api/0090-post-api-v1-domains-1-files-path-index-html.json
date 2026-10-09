@@ -1,0 +1,81 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "DomainFileManager save",
+  "request": {
+    "body": {
+      "action": "write",
+      "content": "<!doctype html><title>upd1 owner site</title><p>upd1-marker-3e58fd330af4c2292e19f3b1e675e031</p>\n"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18581"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18581"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "95d7d63dc0951c3bcd581766593d0281"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/1/files?path=/index.html"
+  },
+  "response": {
+    "elapsed_seconds": 0.017,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 12:16:35 GMT"
+      ],
+      [
+        "Content-Length",
+        "17"
+      ]
+    ],
+    "json": {
+      "success": true
+    },
+    "status": 200,
+    "text": null
+  }
+}

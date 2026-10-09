@@ -1,0 +1,58 @@
+{
+  "at": "2026-10-09T10:49:16Z",
+  "is_active": {
+    "postgresql.service": "inactive",
+    "postgresql@17-main.service": "inactive"
+  },
+  "is_failed": {
+    "postgresql.service": "inactive",
+    "postgresql@17-main.service": "inactive"
+  },
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "units": {
+    "postgresql.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 10:41:49 UTC",
+      "ActiveExitTimestamp": "Fri 2026-10-09 10:49:10 UTC",
+      "ActiveState": "inactive",
+      "ExecMainPID": "14876",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 10:41:49 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postgresql.service",
+      "InactiveEnterTimestamp": "Fri 2026-10-09 10:49:10 UTC",
+      "InactiveExitTimestamp": "Fri 2026-10-09 10:41:49 UTC",
+      "InvocationID": "a3e9912a8bf84f76aca327416daef9f7",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 10:49:10 UTC",
+      "SubState": "dead",
+      "Type": "oneshot"
+    },
+    "postgresql@17-main.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 10:41:54 UTC",
+      "ActiveExitTimestamp": "Fri 2026-10-09 10:49:10 UTC",
+      "ActiveState": "inactive",
+      "ExecMainPID": "15731",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 10:41:51 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/bin/pg_ctlcluster ; argv[]=/usr/bin/pg_ctlcluster --skip-systemctl-redirect 17-main reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postgresql@.service",
+      "InactiveEnterTimestamp": "Fri 2026-10-09 10:49:10 UTC",
+      "InactiveExitTimestamp": "Fri 2026-10-09 10:41:51 UTC",
+      "InvocationID": "cdc02d1076bd4cd6a005db52f54f2c0f",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 10:49:10 UTC",
+      "SubState": "dead",
+      "Type": "forking"
+    }
+  }
+}

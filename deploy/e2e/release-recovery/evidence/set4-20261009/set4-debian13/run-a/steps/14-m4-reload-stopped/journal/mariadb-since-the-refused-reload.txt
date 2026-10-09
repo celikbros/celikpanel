@@ -1,0 +1,9 @@
+##### mariadb.service (journalctl -u mariadb.service --since @1791542938)
+(no lines)
+##### systemd (PID 1) lines naming the unit
+(no lines)
+##### celikpanel-agent.service and celikpanel-panel.service
+2026-10-09T10:49:00.928509+00:00 dns-debian13 panel[5223]: 2026/10/09 10:49:00 http: TLS handshake error from 127.0.0.1:40036: EOF
+2026-10-09T10:49:01.044061+00:00 dns-debian13 agent[5026]: 2026/10/09 10:49:01 ERROR service reload mariadb: failed not_running: mariadb.service is inactive (dead); nothing was reloaded
+2026-10-09T10:49:01.167609+00:00 dns-debian13 cron[33883]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 29408: Resource temporarily unavailable)
+2026-10-09T10:49:03.183469+00:00 dns-debian13 panel[5223]: 2026/10/09 10:49:03 [409][service action] reload mariadb: SERVICE_ACTION_FAILED not_running: mariadb.service is inactive (dead); nothing was reloaded

@@ -1,0 +1,27 @@
+{
+  "checks": {
+    "checks": 11,
+    "error": null,
+    "failed": [
+      "item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`",
+      "item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`",
+      "item 10: the note's sentence is the documented one for its reason"
+    ],
+    "finished_at": "2026-10-09T11:27:01Z",
+    "notes": [],
+    "started_at": "2026-10-09T11:26:29Z",
+    "substeps": {
+      "S8 postfix start": "passed",
+      "S8 postfix stop": "passed",
+      "item 10": "failed"
+    },
+    "title": "Postfix stopped through the Panel while `postfix check` refuses main.cf (item 10)",
+    "unknown": [],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-09T11:27:01Z",
+  "name": "M10-postfix-stop",
+  "reason": "item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`; item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`; item 10: the note's sentence is the documented one for its reason",
+  "started_at": "2026-10-09T11:26:29Z",
+  "verdict": "failed"
+}

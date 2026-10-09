@@ -1,0 +1,1172 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-09T13:10:30Z",
+      "json": {
+        "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "Domain": "set4-php.test",
+        "DomainID": 2,
+        "FTPPassword": "[REDACTED]",
+        "FTPUser": "set4_php_test",
+        "PHPVersion": "8.3",
+        "ProjectType": "php",
+        "SiteID": 2,
+        "TempDomain": ""
+      },
+      "label": "M1 create a PHP site (POST /api/v1/domains/create, project_type php)",
+      "request": {
+        "body": {
+          "domain": "set4-php.test",
+          "project_type": "php",
+          "ssl_type": "none"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/create"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T13:10:34Z",
+      "json": {
+        "domain": "set4-php.test",
+        "status": "deleted"
+      },
+      "label": "php-site: delete the site (Domains page)",
+      "request": {
+        "body": null,
+        "method": "DELETE",
+        "path": "/api/v1/domains/2"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "Domain": "set4-php.test",
+        "DomainID": 2,
+        "FTPPassword": "[REDACTED]",
+        "FTPUser": "set4_php_test",
+        "PHPVersion": "8.3",
+        "ProjectType": "php",
+        "SiteID": 2,
+        "TempDomain": ""
+      },
+      "name": "item 1/8: a PHP site is created through the Panel (200 with the new domain's id)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "at": "2026-10-09T13:10:31Z",
+        "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+        "returncode": 0,
+        "status": "ok"
+      },
+      "name": "php-site: `nginx -t` passes with the site's vhost",
+      "ok": true
+    },
+    {
+      "detail": {
+        "includes": [
+          "fastcgi.conf",
+          "fastcgi_params"
+        ],
+        "path": "/etc/nginx/sites-available/set4-php.test.conf",
+        "php_location_lines": [
+          "fastcgi_split_path_info ^(.+?\\.php)(/.*)$;",
+          "try_files $fastcgi_script_name =404;",
+          "set $path_info $fastcgi_path_info;",
+          "fastcgi_param PATH_INFO $path_info;",
+          "fastcgi_index index.php;",
+          "include fastcgi.conf;",
+          "fastcgi_pass unix:/var/run/php/php8.3-fpm-site2.sock;",
+          "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+          "include fastcgi_params;"
+        ]
+      },
+      "name": "php-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "body": "set4-php-executed:42:8.3.6:fpm-fcgi:set4_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/2/public_html]\nREQUEST_URI=[/set4-probe.php]\nQUERY_STRING=[]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+          "body_sha256": "cd214acaf2ebbe296025d1d10e249de1aa07cd5031faae80b33a3709e55acd7f",
+          "bytes": 357,
+          "error": null,
+          "headers": {
+            "content-type": "text/plain;charset=UTF-8",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 200
+        },
+        "probe": {
+          "executed": true,
+          "php_version": "8.3.6",
+          "runs_as": "set4_php_test",
+          "server_api": "fpm-fcgi",
+          "values": {
+            "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+            "DOCUMENT_URI": "/set4-probe.php",
+            "PATH_INFO": "",
+            "PATH_TRANSLATED": "(unset)",
+            "QUERY_STRING": "",
+            "REQUEST_URI": "/set4-probe.php",
+            "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+            "SCRIPT_NAME": "/set4-probe.php"
+          }
+        }
+      },
+      "name": "php-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "runs_as": "set4_php_test",
+        "site_account": "set4_php_test"
+      },
+      "name": "php-site: the page runs as the site's own account",
+      "ok": true
+    },
+    {
+      "detail": {
+        "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+        "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+        "bytes": 162,
+        "error": null,
+        "headers": {
+          "content-length": "162",
+          "content-type": "text/html",
+          "server": "nginx/1.24.0 (Ubuntu)"
+        },
+        "status": 404
+      },
+      "name": "php-site: a PHP script that does not exist answers 404",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "body": "set4-php-executed:42:8.3.6:fpm-fcgi:set4_php_test\nPATH_INFO=[/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/2/public_html]\nREQUEST_URI=[/set4-probe.php/tail.php]\nQUERY_STRING=[]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+          "body_sha256": "8ca2443a08dc3ed144574743a60b6a9568180a4dba4ab5eacbbe12a754a31449",
+          "bytes": 375,
+          "error": null,
+          "headers": {
+            "content-type": "text/plain;charset=UTF-8",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 200
+        },
+        "deep": {
+          "executed": true,
+          "php_version": "8.3.6",
+          "runs_as": "set4_php_test",
+          "server_api": "fpm-fcgi",
+          "values": {
+            "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+            "DOCUMENT_URI": "/set4-probe.php",
+            "PATH_INFO": "/a/b/tail.php",
+            "PATH_TRANSLATED": "(unset)",
+            "QUERY_STRING": "q=1",
+            "REQUEST_URI": "/set4-probe.php/a/b/tail.php?q=1",
+            "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+            "SCRIPT_NAME": "/set4-probe.php"
+          }
+        },
+        "tail": {
+          "executed": true,
+          "php_version": "8.3.6",
+          "runs_as": "set4_php_test",
+          "server_api": "fpm-fcgi",
+          "values": {
+            "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+            "DOCUMENT_URI": "/set4-probe.php",
+            "PATH_INFO": "/tail.php",
+            "PATH_TRANSLATED": "(unset)",
+            "QUERY_STRING": "",
+            "REQUEST_URI": "/set4-probe.php/tail.php",
+            "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+            "SCRIPT_NAME": "/set4-probe.php"
+          }
+        }
+      },
+      "name": "php-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "body": "set4 static file served by the web server\n",
+        "body_sha256": "027f7a0fc431eed3894f237433bd0db7888d8959469abe66602efa29d4bda904",
+        "bytes": 42,
+        "error": null,
+        "headers": {
+          "content-length": "42",
+          "content-type": "text/plain",
+          "server": "nginx/1.24.0 (Ubuntu)"
+        },
+        "status": 200
+      },
+      "name": "php-site: a static file of the site is served as it is (200)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "domains_list_php_fields": {
+          "php_version": "8.3"
+        },
+        "installed_php_versions": [
+          "8.3"
+        ],
+        "php_fpm_programs": {
+          "php-fpm8.3": [
+            "PHP 8.3.6 (fpm-fcgi) (built: Sep  2 2026 12:56:02)"
+          ]
+        },
+        "php_version_of_the_page": "8.3.6",
+        "pool_file": "/etc/php/8.3/fpm/pool.d/site2.conf",
+        "pool_listen": "/var/run/php/php8.3-fpm-site2.sock",
+        "recorded_php_fpm_socket": "/var/run/php/php8.3-fpm-site2.sock",
+        "recorded_php_version": "8.3",
+        "socket": {
+          "exists": true,
+          "group": "www-data",
+          "kind": "socket",
+          "mode": "0660",
+          "owner": "www-data",
+          "path": "/run/php/php8.3-fpm-site2.sock"
+        },
+        "vhost_fastcgi_pass": "unix:/var/run/php/php8.3-fpm-site2.sock"
+      },
+      "name": "php-site (item 3): the PHP version recorded for the site is the installed one that runs the page",
+      "ok": true
+    },
+    {
+      "detail": {
+        "domains_list_php_fields": {
+          "php_version": "8.3"
+        },
+        "installed_php_versions": [
+          "8.3"
+        ],
+        "php_fpm_programs": {
+          "php-fpm8.3": [
+            "PHP 8.3.6 (fpm-fcgi) (built: Sep  2 2026 12:56:02)"
+          ]
+        },
+        "php_version_of_the_page": "8.3.6",
+        "pool_file": "/etc/php/8.3/fpm/pool.d/site2.conf",
+        "pool_listen": "/var/run/php/php8.3-fpm-site2.sock",
+        "recorded_php_fpm_socket": "/var/run/php/php8.3-fpm-site2.sock",
+        "recorded_php_version": "8.3",
+        "socket": {
+          "exists": true,
+          "group": "www-data",
+          "kind": "socket",
+          "mode": "0660",
+          "owner": "www-data",
+          "path": "/run/php/php8.3-fpm-site2.sock"
+        },
+        "vhost_fastcgi_pass": "unix:/var/run/php/php8.3-fpm-site2.sock"
+      },
+      "name": "php-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists",
+      "ok": true
+    },
+    {
+      "detail": {
+        "account": null,
+        "acme_challenge_root": "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2",
+        "acme_challenge_root_left": true,
+        "answers_after": {
+          "dotfile": {
+            "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+            "bytes": 162,
+            "error": null,
+            "headers": {
+              "content-length": "162",
+              "content-type": "text/html",
+              "server": "nginx/1.24.0 (Ubuntu)"
+            },
+            "status": 404
+          },
+          "missing_script": {
+            "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+            "bytes": 162,
+            "error": null,
+            "headers": {
+              "content-length": "162",
+              "content-type": "text/html",
+              "server": "nginx/1.24.0 (Ubuntu)"
+            },
+            "status": 404
+          },
+          "missing_static": {
+            "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+            "bytes": 162,
+            "error": null,
+            "headers": {
+              "content-length": "162",
+              "content-type": "text/html",
+              "server": "nginx/1.24.0 (Ubuntu)"
+            },
+            "status": 404
+          },
+          "path_info_deep_tail_php": {
+            "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+            "bytes": 162,
+            "error": null,
+            "headers": {
+              "content-length": "162",
+              "content-type": "text/html",
+              "server": "nginx/1.24.0 (Ubuntu)"
+            },
+            "status": 404
+          },
+          "path_info_plain": {
+            "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+            "bytes": 162,
+            "error": null,
+            "headers": {
+              "content-length": "162",
+              "content-type": "text/html",
+              "server": "nginx/1.24.0 (Ubuntu)"
+            },
+            "status": 404
+          },
+          "path_info_tail_php": {
+            "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+            "bytes": 162,
+            "error": null,
+            "headers": {
+              "content-length": "162",
+              "content-type": "text/html",
+              "server": "nginx/1.24.0 (Ubuntu)"
+            },
+            "status": 404
+          },
+          "probe": {
+            "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+            "bytes": 162,
+            "error": null,
+            "headers": {
+              "content-length": "162",
+              "content-type": "text/html",
+              "server": "nginx/1.24.0 (Ubuntu)"
+            },
+            "status": 404
+          },
+          "probe_query": {
+            "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+            "bytes": 162,
+            "error": null,
+            "headers": {
+              "content-length": "162",
+              "content-type": "text/html",
+              "server": "nginx/1.24.0 (Ubuntu)"
+            },
+            "status": 404
+          },
+          "root": {
+            "body": "<!DOCTYPE html>\n<html>\n<head>\n<title>Welcome to nginx!</title>\n<style>\nhtml { color-scheme: light dark; }\nbody { width: 35em; margin: 0 auto;\nfont-family: Tahoma, Verdana, Arial, sans-serif; }\n</style>\n</head>\n<body>\n<h1>Welcome to nginx!</h1>\n<p>If you see this page, the nginx web server is successfully installed and\nworking. Further configuration is required.</p>\n\n<p>For online documentation and support please refer to\n<a href=\"http://nginx.org/\">nginx.org</a>.<br/>\nCommercial support is available at\n<a href=\"http://nginx.com/\">nginx.com</a>.</p>\n\n<p><em>Thank you for using nginx.</em></p>\n</body>\n</html>\n",
+            "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+            "bytes": 615,
+            "error": null,
+            "headers": {
+              "content-length": "615",
+              "content-type": "text/html",
+              "server": "nginx/1.24.0 (Ubuntu)"
+            },
+            "status": 200
+          },
+          "static": {
+            "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+            "bytes": 162,
+            "error": null,
+            "headers": {
+              "content-length": "162",
+              "content-type": "text/html",
+              "server": "nginx/1.24.0 (Ubuntu)"
+            },
+            "status": 404
+          }
+        },
+        "delete_answer": {
+          "domain": "set4-php.test",
+          "status": "deleted"
+        },
+        "delete_status": 200,
+        "domain_rows": [],
+        "group": null,
+        "listed_after_seconds": 0.0,
+        "nginx_dump_lines_naming_the_domain": [],
+        "nginx_files_naming_the_domain": [],
+        "nginx_test": {
+          "at": "2026-10-09T13:10:42Z",
+          "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+          "returncode": 0,
+          "status": "ok"
+        },
+        "no_longer_listed": true,
+        "php_fpm_units_after": {
+          "php8.3-fpm.service": "active",
+          "phpsessionclean.service": "[REDACTED]"
+        },
+        "pool_files_left": [],
+        "probe_executed_after": false,
+        "site_directories_after": [
+          "/var/www/celikpanel/subscriptions/2/sites/1"
+        ],
+        "site_home": "/var/www/celikpanel/subscriptions/2/sites/2",
+        "site_home_existed_with_the_site": true,
+        "site_home_left": false,
+        "site_rows": [],
+        "socket_left": false,
+        "sockets_after": [
+          "/run/php/php-fpm.sock",
+          "/run/php/php8.3-fpm.pid",
+          "/run/php/php8.3-fpm.sock"
+        ],
+        "static_served_after": false,
+        "tables_still_naming_the_domain": {
+          "audit_logs": {
+            "action": 1
+          }
+        }
+      },
+      "name": "php-site: the site is deleted through the Panel and nothing of it is left serving (not listed, no domain or site row, no account, no home, no vhost in nginx, no pool file, no socket, the page and the static file no longer served, `nginx -t` passes)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "php8.3-fpm.service": "active",
+        "phpsessionclean.service": "[REDACTED]"
+      },
+      "name": "php-site: PHP-FPM is still active after the delete",
+      "ok": true
+    }
+  ],
+  "deleted": {
+    "php-site": {
+      "account": null,
+      "acme_challenge_root": "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2",
+      "acme_challenge_root_left": true,
+      "answers_after": {
+        "dotfile": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+          "bytes": 162,
+          "error": null,
+          "headers": {
+            "content-length": "162",
+            "content-type": "text/html",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 404
+        },
+        "missing_script": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+          "bytes": 162,
+          "error": null,
+          "headers": {
+            "content-length": "162",
+            "content-type": "text/html",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 404
+        },
+        "missing_static": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+          "bytes": 162,
+          "error": null,
+          "headers": {
+            "content-length": "162",
+            "content-type": "text/html",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 404
+        },
+        "path_info_deep_tail_php": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+          "bytes": 162,
+          "error": null,
+          "headers": {
+            "content-length": "162",
+            "content-type": "text/html",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 404
+        },
+        "path_info_plain": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+          "bytes": 162,
+          "error": null,
+          "headers": {
+            "content-length": "162",
+            "content-type": "text/html",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 404
+        },
+        "path_info_tail_php": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+          "bytes": 162,
+          "error": null,
+          "headers": {
+            "content-length": "162",
+            "content-type": "text/html",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 404
+        },
+        "probe": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+          "bytes": 162,
+          "error": null,
+          "headers": {
+            "content-length": "162",
+            "content-type": "text/html",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 404
+        },
+        "probe_query": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+          "bytes": 162,
+          "error": null,
+          "headers": {
+            "content-length": "162",
+            "content-type": "text/html",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 404
+        },
+        "root": {
+          "body": "<!DOCTYPE html>\n<html>\n<head>\n<title>Welcome to nginx!</title>\n<style>\nhtml { color-scheme: light dark; }\nbody { width: 35em; margin: 0 auto;\nfont-family: Tahoma, Verdana, Arial, sans-serif; }\n</style>\n</head>\n<body>\n<h1>Welcome to nginx!</h1>\n<p>If you see this page, the nginx web server is successfully installed and\nworking. Further configuration is required.</p>\n\n<p>For online documentation and support please refer to\n<a href=\"http://nginx.org/\">nginx.org</a>.<br/>\nCommercial support is available at\n<a href=\"http://nginx.com/\">nginx.com</a>.</p>\n\n<p><em>Thank you for using nginx.</em></p>\n</body>\n</html>\n",
+          "body_sha256": "fb47468a2cd3953c7131431991afcc6a2703f14640520102eea0a685a7e8d6de",
+          "bytes": 615,
+          "error": null,
+          "headers": {
+            "content-length": "615",
+            "content-type": "text/html",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 200
+        },
+        "static": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+          "bytes": 162,
+          "error": null,
+          "headers": {
+            "content-length": "162",
+            "content-type": "text/html",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 404
+        }
+      },
+      "delete_answer": {
+        "domain": "set4-php.test",
+        "status": "deleted"
+      },
+      "delete_status": 200,
+      "domain_rows": [],
+      "group": null,
+      "listed_after_seconds": 0.0,
+      "nginx_dump_lines_naming_the_domain": [],
+      "nginx_files_naming_the_domain": [],
+      "nginx_test": {
+        "at": "2026-10-09T13:10:42Z",
+        "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+        "returncode": 0,
+        "status": "ok"
+      },
+      "no_longer_listed": true,
+      "php_fpm_units_after": {
+        "php8.3-fpm.service": "active",
+        "phpsessionclean.service": "[REDACTED]"
+      },
+      "pool_files_left": [],
+      "probe_executed_after": false,
+      "site_directories_after": [
+        "/var/www/celikpanel/subscriptions/2/sites/1"
+      ],
+      "site_home": "/var/www/celikpanel/subscriptions/2/sites/2",
+      "site_home_existed_with_the_site": true,
+      "site_home_left": false,
+      "site_rows": [],
+      "socket_left": false,
+      "sockets_after": [
+        "/run/php/php-fpm.sock",
+        "/run/php/php8.3-fpm.pid",
+        "/run/php/php8.3-fpm.sock"
+      ],
+      "static_served_after": false,
+      "tables_still_naming_the_domain": {
+        "audit_logs": {
+          "action": 1
+        }
+      }
+    }
+  },
+  "finished_at": "2026-10-09T13:10:42Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/011-leftovers-before.json",
+      "label": "leftovers-before",
+      "mode": "read-leftovers",
+      "owner_action": false
+    },
+    {
+      "file": "native/012-php-before.json",
+      "lab_action": false,
+      "label": "php-before",
+      "mode": "read-php",
+      "owner_action": false
+    },
+    {
+      "file": "native/013-php-site-nginx.json",
+      "label": "php-site-nginx",
+      "mode": "read-nginx",
+      "owner_action": false
+    },
+    {
+      "file": "native/014-owner-php-site-php-probe.json",
+      "label": "owner-php-site-php-probe",
+      "mode": "owner-php-probe",
+      "owner_action": true
+    },
+    {
+      "file": "native/015-http-php-site-probe.json",
+      "label": "http-php-site-probe",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/016-http-php-site-probe-query.json",
+      "label": "http-php-site-probe-query",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/017-http-php-site-missing-script.json",
+      "label": "http-php-site-missing-script",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/018-http-php-site-path-info-tail-php.json",
+      "label": "http-php-site-path-info-tail-php",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/019-http-php-site-path-info-deep-tail-php.json",
+      "label": "http-php-site-path-info-deep-tail-php",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/020-http-php-site-path-info-plain.json",
+      "label": "http-php-site-path-info-plain",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/021-http-php-site-static.json",
+      "label": "http-php-site-static",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/022-http-php-site-missing-static.json",
+      "label": "http-php-site-missing-static",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/023-http-php-site-root.json",
+      "label": "http-php-site-root",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/024-http-php-site-dotfile.json",
+      "label": "http-php-site-dotfile",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/025-php-site-site-record.json",
+      "label": "php-site-site-record",
+      "mode": "read-leftovers",
+      "owner_action": false
+    },
+    {
+      "file": "native/026-php-site-leftovers-after-delete.json",
+      "label": "php-site-leftovers-after-delete",
+      "mode": "read-leftovers",
+      "owner_action": false
+    },
+    {
+      "file": "native/027-http-php-site-after-delete-probe.json",
+      "label": "http-php-site-after-delete-probe",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/028-http-php-site-after-delete-probe-query.json",
+      "label": "http-php-site-after-delete-probe-query",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/029-http-php-site-after-delete-missing-script.json",
+      "label": "http-php-site-after-delete-missing-script",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/030-http-php-site-after-delete-path-info-tail-php.json",
+      "label": "http-php-site-after-delete-path-info-tail-php",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/031-http-php-site-after-delete-path-info-deep-tail-php.json",
+      "label": "http-php-site-after-delete-path-info-deep-tail-php",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/032-http-php-site-after-delete-path-info-plain.json",
+      "label": "http-php-site-after-delete-path-info-plain",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/033-http-php-site-after-delete-static.json",
+      "label": "http-php-site-after-delete-static",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/034-http-php-site-after-delete-missing-static.json",
+      "label": "http-php-site-after-delete-missing-static",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/035-http-php-site-after-delete-root.json",
+      "label": "http-php-site-after-delete-root",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/036-http-php-site-after-delete-dotfile.json",
+      "label": "http-php-site-after-delete-dotfile",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/037-php-site-nginx-after-delete.json",
+      "label": "php-site-nginx-after-delete",
+      "mode": "read-nginx",
+      "owner_action": false
+    },
+    {
+      "file": "native/038-php-site-php-after-delete.json",
+      "lab_action": false,
+      "label": "php-site-php-after-delete",
+      "mode": "read-php",
+      "owner_action": false
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [
+    {
+      "detail": {
+        "answer": {
+          "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set4-php.test</title>\n<style>\n  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}\n  main{text-align:center;padding:2rem}\n  h1{font-weight:600}\n  p{color:#94a3b8}\n</style>\n</head>\n<body>\n<main>\n  <h1>set4-php.test</h1>\n  <p>Bu site hazırlanıyor. / This site is being prepared.</p>\n  <p>CelikPanel · PHP 8.3.6 · 2026</p>\n</main>\n</body>\n</html>\n",
+          "body_sha256": "74fa5e021dff8072558ab2f214877e141f37a3ddb75b04fa719150978469cc4d",
+          "bytes": 566,
+          "error": null,
+          "headers": {
+            "content-type": "text/html; charset=UTF-8",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 200
+        },
+        "parsed": {
+          "executed": false,
+          "php_version": null,
+          "runs_as": null,
+          "server_api": null,
+          "values": {}
+        }
+      },
+      "note": "php-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 200"
+    },
+    {
+      "detail": {
+        "left": true,
+        "path": "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2",
+        "tables_still_naming_the_domain": {
+          "audit_logs": {
+            "action": 1
+          }
+        }
+      },
+      "note": "php-site: the certificate-validation directory of the deleted site is still there"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T13:10:31Z",
+      "label": "php-site-php-probe",
+      "mode": "owner-php-probe"
+    }
+  ],
+  "owner_waited_for_idle": {
+    "at": "2026-10-09T13:10:27Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.2
+  },
+  "php": {
+    "php-site": {
+      "answers": {
+        "dotfile": {
+          "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "2de2499f4e5f896995ee7ebaa527a39b75f520f98e12110ec6c156a2433dbe75",
+          "bytes": 162,
+          "error": null,
+          "headers": {
+            "content-length": "162",
+            "content-type": "text/html",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 403
+        },
+        "missing_script": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+          "bytes": 162,
+          "error": null,
+          "headers": {
+            "content-length": "162",
+            "content-type": "text/html",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 404
+        },
+        "missing_static": {
+          "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set4-php.test</title>\n<style>\n  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}\n  main{text-align:center;padding:2rem}\n  h1{font-weight:600}\n  p{color:#94a3b8}\n</style>\n</head>\n<body>\n<main>\n  <h1>set4-php.test</h1>\n  <p>Bu site hazırlanıyor. / This site is being prepared.</p>\n  <p>CelikPanel · PHP 8.3.6 · 2026</p>\n</main>\n</body>\n</html>\n",
+          "body_sha256": "74fa5e021dff8072558ab2f214877e141f37a3ddb75b04fa719150978469cc4d",
+          "bytes": 566,
+          "error": null,
+          "headers": {
+            "content-type": "text/html; charset=UTF-8",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 200
+        },
+        "path_info_deep_tail_php": {
+          "body": "set4-php-executed:42:8.3.6:fpm-fcgi:set4_php_test\nPATH_INFO=[/a/b/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/2/public_html]\nREQUEST_URI=[/set4-probe.php/a/b/tail.php?q=1]\nQUERY_STRING=[q=1]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+          "body_sha256": "7c70f4a675edfa196e3b7ae3d6e3479a1ea25ad18908639ec5d0acf07e785b11",
+          "bytes": 390,
+          "error": null,
+          "headers": {
+            "content-type": "text/plain;charset=UTF-8",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 200
+        },
+        "path_info_plain": {
+          "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set4-php.test</title>\n<style>\n  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}\n  main{text-align:center;padding:2rem}\n  h1{font-weight:600}\n  p{color:#94a3b8}\n</style>\n</head>\n<body>\n<main>\n  <h1>set4-php.test</h1>\n  <p>Bu site hazırlanıyor. / This site is being prepared.</p>\n  <p>CelikPanel · PHP 8.3.6 · 2026</p>\n</main>\n</body>\n</html>\n",
+          "body_sha256": "74fa5e021dff8072558ab2f214877e141f37a3ddb75b04fa719150978469cc4d",
+          "bytes": 566,
+          "error": null,
+          "headers": {
+            "content-type": "text/html; charset=UTF-8",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 200
+        },
+        "path_info_tail_php": {
+          "body": "set4-php-executed:42:8.3.6:fpm-fcgi:set4_php_test\nPATH_INFO=[/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/2/public_html]\nREQUEST_URI=[/set4-probe.php/tail.php]\nQUERY_STRING=[]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+          "body_sha256": "8ca2443a08dc3ed144574743a60b6a9568180a4dba4ab5eacbbe12a754a31449",
+          "bytes": 375,
+          "error": null,
+          "headers": {
+            "content-type": "text/plain;charset=UTF-8",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 200
+        },
+        "probe": {
+          "body": "set4-php-executed:42:8.3.6:fpm-fcgi:set4_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/2/public_html]\nREQUEST_URI=[/set4-probe.php]\nQUERY_STRING=[]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+          "body_sha256": "cd214acaf2ebbe296025d1d10e249de1aa07cd5031faae80b33a3709e55acd7f",
+          "bytes": 357,
+          "error": null,
+          "headers": {
+            "content-type": "text/plain;charset=UTF-8",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 200
+        },
+        "probe_query": {
+          "body": "set4-php-executed:42:8.3.6:fpm-fcgi:set4_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/2/public_html]\nREQUEST_URI=[/set4-probe.php?x=1&y=two]\nQUERY_STRING=[x=1&y=two]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+          "body_sha256": "635681fc71e2ee4f5648cb10871191331a070042f8420be349c4f0f1cfab6d23",
+          "bytes": 376,
+          "error": null,
+          "headers": {
+            "content-type": "text/plain;charset=UTF-8",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 200
+        },
+        "root": {
+          "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set4-php.test</title>\n<style>\n  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}\n  main{text-align:center;padding:2rem}\n  h1{font-weight:600}\n  p{color:#94a3b8}\n</style>\n</head>\n<body>\n<main>\n  <h1>set4-php.test</h1>\n  <p>Bu site hazırlanıyor. / This site is being prepared.</p>\n  <p>CelikPanel · PHP 8.3.6 · 2026</p>\n</main>\n</body>\n</html>\n",
+          "body_sha256": "74fa5e021dff8072558ab2f214877e141f37a3ddb75b04fa719150978469cc4d",
+          "bytes": 566,
+          "error": null,
+          "headers": {
+            "content-type": "text/html; charset=UTF-8",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 200
+        },
+        "static": {
+          "body": "set4 static file served by the web server\n",
+          "body_sha256": "027f7a0fc431eed3894f237433bd0db7888d8959469abe66602efa29d4bda904",
+          "bytes": 42,
+          "error": null,
+          "headers": {
+            "content-length": "42",
+            "content-type": "text/plain",
+            "server": "nginx/1.24.0 (Ubuntu)"
+          },
+          "status": 200
+        }
+      },
+      "docroot_entries": [
+        "index.php",
+        "set4-probe.php",
+        "set4-static.txt"
+      ],
+      "path_info": {
+        "/set4-probe.php/a/b/tail.php?q=1": {
+          "executed": true,
+          "php_version": "8.3.6",
+          "runs_as": "set4_php_test",
+          "server_api": "fpm-fcgi",
+          "values": {
+            "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+            "DOCUMENT_URI": "/set4-probe.php",
+            "PATH_INFO": "/a/b/tail.php",
+            "PATH_TRANSLATED": "(unset)",
+            "QUERY_STRING": "q=1",
+            "REQUEST_URI": "/set4-probe.php/a/b/tail.php?q=1",
+            "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+            "SCRIPT_NAME": "/set4-probe.php"
+          }
+        },
+        "/set4-probe.php/extra/info": {
+          "executed": false,
+          "php_version": null,
+          "runs_as": null,
+          "server_api": null,
+          "values": {}
+        },
+        "/set4-probe.php/tail.php": {
+          "executed": true,
+          "php_version": "8.3.6",
+          "runs_as": "set4_php_test",
+          "server_api": "fpm-fcgi",
+          "values": {
+            "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+            "DOCUMENT_URI": "/set4-probe.php",
+            "PATH_INFO": "/tail.php",
+            "PATH_TRANSLATED": "(unset)",
+            "QUERY_STRING": "",
+            "REQUEST_URI": "/set4-probe.php/tail.php",
+            "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+            "SCRIPT_NAME": "/set4-probe.php"
+          }
+        }
+      },
+      "probe": {
+        "executed": true,
+        "php_version": "8.3.6",
+        "runs_as": "set4_php_test",
+        "server_api": "fpm-fcgi",
+        "values": {
+          "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+          "DOCUMENT_URI": "/set4-probe.php",
+          "PATH_INFO": "",
+          "PATH_TRANSLATED": "(unset)",
+          "QUERY_STRING": "",
+          "REQUEST_URI": "/set4-probe.php",
+          "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+          "SCRIPT_NAME": "/set4-probe.php"
+        }
+      },
+      "site_account": "set4_php_test"
+    }
+  },
+  "php_before": {
+    "at": "2026-10-09T13:10:28Z",
+    "lab_action": false,
+    "mode": "read-php",
+    "nginx_php_snippet": {
+      "exists": true,
+      "group": "root",
+      "kind": "file",
+      "mode": "0644",
+      "owner": "root",
+      "path": "/etc/nginx/snippets/fastcgi-php.conf"
+    },
+    "owner_action": false,
+    "pool_directories": [
+      "/etc/php/8.3/fpm/pool.d"
+    ],
+    "pools": [
+      {
+        "directory": "/etc/php/8.3/fpm/pool.d",
+        "exists": true,
+        "group": "root",
+        "kind": "file",
+        "mode": "0644",
+        "owner": "root",
+        "path": "/etc/php/8.3/fpm/pool.d/www.conf",
+        "settings": {
+          "group": "www-data",
+          "listen": "/run/php/php8.3-fpm.sock",
+          "listen.group": "www-data",
+          "listen.owner": "www-data",
+          "pool": "www",
+          "user": "www-data"
+        }
+      }
+    ],
+    "program": "/usr/sbin/php-fpm8.3",
+    "program_version": [
+      "PHP 8.3.6 (fpm-fcgi) (built: Sep  2 2026 12:56:02)"
+    ],
+    "run_directories": [
+      {
+        "exists": true,
+        "group": "www-data",
+        "kind": "directory",
+        "mode": "0755",
+        "owner": "www-data",
+        "path": "/run/php"
+      }
+    ],
+    "schema": "celikpanel/set2-request-identity-native/v1",
+    "sockets": {
+      "/run/php/php8.3-fpm.sock": {
+        "exists": true,
+        "group": "www-data",
+        "kind": "socket",
+        "mode": "0660",
+        "owner": "www-data",
+        "path": "/run/php/php8.3-fpm.sock"
+      }
+    },
+    "units": {
+      "php8.3-fpm.service": {
+        "ActiveState": "active",
+        "DropInPaths": "",
+        "ExecStart": "{ path=/usr/sbin/php-fpm8.3 ; argv[]=/usr/sbin/php-fpm8.3 --nodaemonize --fpm-config /etc/php/8.3/fpm/php-fpm.conf ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "FragmentPath": "/usr/lib/systemd/system/php8.3-fpm.service",
+        "LoadState": "loaded",
+        "MainPID": "32431",
+        "NoNewPrivileges": "no",
+        "PrivateTmp": "[REDACTED]",
+        "ProtectHome": "no",
+        "ProtectSystem": "no",
+        "ReadWritePaths": "",
+        "SubState": "running"
+      },
+      "phpsessionclean.service": {
+        "ActiveState": "inactive",
+        "DropInPaths": "",
+        "ExecStart": "{ path=/usr/lib/php/sessionclean ; argv[]=/usr/lib/php/sessionclean ; ignore_errors=no ; start_time=[Fri 2026-10-09 13:09:00 UTC] ; stop_time=[Fri 2026-10-09 13:09:00 UTC] ; pid=42366 ; code=exited ; status=0 }",
+        "FragmentPath": "/usr/lib/systemd/system/phpsessionclean.service",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "NoNewPrivileges": "no",
+        "PrivateTmp": "[REDACTED]",
+        "ProtectHome": "yes",
+        "ProtectSystem": "yes",
+        "ReadWritePaths": "",
+        "SubState": "dead"
+      }
+    },
+    "web_server_accounts": [
+      "www-data"
+    ]
+  },
+  "php_version": {
+    "php-site": {
+      "domains_list_php_fields": {
+        "php_version": "8.3"
+      },
+      "installed_php_versions": [
+        "8.3"
+      ],
+      "php_fpm_programs": {
+        "php-fpm8.3": [
+          "PHP 8.3.6 (fpm-fcgi) (built: Sep  2 2026 12:56:02)"
+        ]
+      },
+      "php_version_of_the_page": "8.3.6",
+      "pool_file": "/etc/php/8.3/fpm/pool.d/site2.conf",
+      "pool_listen": "/var/run/php/php8.3-fpm-site2.sock",
+      "recorded_php_fpm_socket": "/var/run/php/php8.3-fpm-site2.sock",
+      "recorded_php_version": "8.3",
+      "socket": {
+        "exists": true,
+        "group": "www-data",
+        "kind": "socket",
+        "mode": "0660",
+        "owner": "www-data",
+        "path": "/run/php/php8.3-fpm-site2.sock"
+      },
+      "vhost_fastcgi_pass": "unix:/var/run/php/php8.3-fpm-site2.sock"
+    }
+  },
+  "section": "M1-php-site",
+  "site_directories_before": [
+    "/var/www/celikpanel/subscriptions/2/sites/1"
+  ],
+  "started_at": "2026-10-09T13:10:27Z",
+  "substeps": {
+    "item 1/8": "passed",
+    "php-site": "passed"
+  },
+  "title": "a PHP site: created, nginx -t, executed as the site's account, PATH_INFO, a missing script, the recorded PHP version and socket, deleted (items 1, 3, 8)",
+  "verdict": "passed"
+}

@@ -1,0 +1,4 @@
+build-upd1-artifacts.sh
+set4_trial.py
+guest_set4_native.py
+run-set4.sh

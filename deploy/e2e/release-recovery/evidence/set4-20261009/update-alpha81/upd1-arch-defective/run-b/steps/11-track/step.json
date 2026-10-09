@@ -1,0 +1,26 @@
+{
+  "checks": {
+    "agreement": {
+      "agreed_samples": 13,
+      "lag_samples": 0,
+      "samples": 21,
+      "verdict": "passed"
+    },
+    "final": {
+      "observation": "known",
+      "observed_at": "2026-10-09T12:30:40Z",
+      "phase": "recovered",
+      "previous_failure": "update_failed",
+      "reason": "rollback_verified",
+      "request_id": "484a810a74a3e382072d094a45a5cbfb",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "rollback_verified"
+    },
+    "reboot": null,
+    "samples": 21
+  },
+  "finished_at": "2026-10-09T12:30:41Z",
+  "name": "track",
+  "started_at": "2026-10-09T12:29:08Z",
+  "verdict": "passed"
+}

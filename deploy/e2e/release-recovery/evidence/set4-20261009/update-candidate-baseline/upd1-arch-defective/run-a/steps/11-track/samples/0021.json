@@ -1,0 +1,218 @@
+{
+  "agreement": {
+    "known_sources": [
+      "api",
+      "cli"
+    ],
+    "phase": {
+      "api": "recovered",
+      "cli": "recovered"
+    },
+    "reasons": [],
+    "sources": [
+      "api",
+      "cli",
+      "shell"
+    ],
+    "verdict": "agree"
+  },
+  "cli": {
+    "boot_id": "97e4f788-250c-4109-8a25-b31906b85f6d",
+    "captured_at": "2026-10-09T12:07:45.402758Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update did not complete, and the server was returned automatically to the version it ran before; that restoration was verified. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published; the panel's update page shows what is known about the cause.\nRequest: 06acf6c45f86201439f599fd34127534\nRecorded at: 2026-10-09T12:07:43Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"06acf6c45f86201439f599fd34127534\",\"observation\":\"known\",\"phase\":\"recovered\",\"terminal_proof\":\"rollback_verified\",\"reason\":\"rollback_verified\",\"observed_at\":\"2026-10-09T12:07:43Z\",\"previous_failure\":\"update_failed\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme tamamlanmadı ve sunucu otomatik olarak güncellemeden önce çalıştırdığı sürüme döndürüldü; bu geri dönüş doğrulandı. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın; nedenle ilgili bilinenler panelin güncelleme sayfasında gösterilir.\nİşlem: 06acf6c45f86201439f599fd34127534\nKayıt zamanı: 2026-10-09T12:07:43Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed\n"
+    }
+  },
+  "guidance_api": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.recovered",
+      "recovery.next.recovered",
+      "recovery.previousFailure",
+      "recovery.reason.update_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "observation": {
+      "automatic_recovery": null,
+      "failure_code": null,
+      "first_failure_code": null,
+      "observation": "known",
+      "observed_at": "2026-10-09T12:07:43Z",
+      "panel_state": "ready",
+      "phase": "recovered",
+      "previous_failure": "update_failed",
+      "reason": "rollback_verified",
+      "renewal_before_update": null,
+      "request_id": "06acf6c45f86201439f599fd34127534",
+      "terminal_proof": "rollback_verified",
+      "waiting_for": null
+    },
+    "observation_unavailable": false,
+    "texts": {
+      "en": [
+        "Rollback verified",
+        "The server verified restoration of the previous release. Reload CelikPanel to check panel access.",
+        "Previously recorded failure: Update failed"
+      ],
+      "tr": [
+        "Geri alma doğrulandı",
+        "Sunucu önceki sürümün geri yüklendiğini doğruladı. Panel erişimini kontrol etmek için CelikPanel’i yeniden yükleyin.",
+        "Önceden kaydedilmiş hata: Güncelleme başarısız oldu"
+      ]
+    }
+  },
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.recovered",
+      "recovery.next.recovered",
+      "recovery.previousFailure",
+      "recovery.reason.update_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "observation": {
+      "automatic_recovery": null,
+      "failure_code": null,
+      "first_failure_code": null,
+      "observation": "known",
+      "observed_at": "2026-10-09T12:07:43Z",
+      "panel_state": "ready",
+      "phase": "recovered",
+      "previous_failure": "update_failed",
+      "reason": "rollback_verified",
+      "renewal_before_update": null,
+      "request_id": "06acf6c45f86201439f599fd34127534",
+      "terminal_proof": "rollback_verified",
+      "waiting_for": null
+    },
+    "observation_unavailable": false,
+    "texts": {
+      "en": [
+        "Rollback verified",
+        "The server verified restoration of the previous release. Reload CelikPanel to check panel access.",
+        "Previously recorded failure: Update failed"
+      ],
+      "tr": [
+        "Geri alma doğrulandı",
+        "Sunucu önceki sürümün geri yüklendiğini doğruladı. Panel erişimini kontrol etmek için CelikPanel’i yeniden yükleyin.",
+        "Önceden kaydedilmiş hata: Güncelleme başarısız oldu"
+      ]
+    }
+  },
+  "index": 20,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-10-09T12:07:43Z",
+    "phase": "recovered",
+    "previous_failure": "update_failed",
+    "reason": "rollback_verified",
+    "request_id": "06acf6c45f86201439f599fd34127534",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "rollback_verified"
+  },
+  "recovery_api": {
+    "body": {
+      "observation": "known",
+      "observed_at": "2026-10-09T12:07:43Z",
+      "panel_state": "ready",
+      "phase": "recovered",
+      "previous_failure": "update_failed",
+      "reason": "rollback_verified",
+      "request_id": "06acf6c45f86201439f599fd34127534",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "rollback_verified"
+    },
+    "http": 200
+  },
+  "t": 1791547664.6950324,
+  "update_card": {
+    "keys": [
+      "panelUpdate.outcome.rolledBackTitle",
+      "panelUpdate.outcome.rolledBack",
+      "panelUpdate.outcome.cause.generic",
+      "panelUpdate.outcome.rolledBackNext",
+      "panelUpdate.outcome.rolledBackResume",
+      "panelUpdate.outcome.serverMessage"
+    ],
+    "missing_keys": [],
+    "observation_error": null,
+    "role": "baseline",
+    "server_message": "reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved",
+    "source": {
+      "observation": {
+        "path": "lib/recoveryObservation.ts",
+        "sha256": "511f922c36fe4bae5feddde6abc18580a7e767a63f9fbaca85bb6d33f3a2685d"
+      },
+      "outcome": {
+        "path": "lib/systemUpdateOutcome.ts",
+        "sha256": "7329a488a436f12637f3c46a60521bbe22027de032044c4963f5686b0a83f67c"
+      },
+      "screen": {
+        "path": "components/RecoveryAccess.tsx",
+        "sha256": "d5e44cfcd69ac883b817da07b9f09e6a987bc453af287ce0d5b6e1a4cca568f9"
+      },
+      "typed": {
+        "path": "lib/systemUpdateFailure.ts",
+        "sha256": "b12d9a0d2989bd70670e02481159128ba716bb21f15db5084b9631475a610af4"
+      }
+    },
+    "state": "rolled_back",
+    "texts": {
+      "en": [
+        "Update not completed; previous version restored",
+        "The update to v0.1.0-alpha.82 did not complete. The server was returned to v0.1.0-alpha.81 automatically and is running it now.",
+        "Cause: the update failed before it completed; the server recorded no more specific cause.",
+        "Nothing needs to be done on the server. Do not start the update to v0.1.0-alpha.82 again until a corrected version is published. If the server's message names a problem on this server, fix it first.",
+        "Nothing resumes by itself: the server keeps running v0.1.0-alpha.81. When a newer version is published, “Check for updates” offers it.",
+        "The server reported: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved"
+      ],
+      "tr": [
+        "Güncelleme tamamlanmadı; önceki sürüm geri yüklendi",
+        "v0.1.0-alpha.82 sürümüne güncelleme tamamlanmadı. Sunucu otomatik olarak v0.1.0-alpha.81 sürümüne döndürüldü ve şu an onu çalıştırıyor.",
+        "Neden: güncelleme tamamlanmadan başarısız oldu; sunucu daha belirli bir neden kaydetmedi.",
+        "Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar v0.1.0-alpha.82 güncellemesini yeniden başlatmayın. Sunucunun iletisi bu sunucudaki bir sorunu belirtiyorsa önce onu giderin.",
+        "Hiçbir işlem kendiliğinden sürmez: sunucu v0.1.0-alpha.81 sürümünü çalıştırmaya devam eder. Daha yeni bir sürüm yayımlandığında “Güncellemeyi kontrol et” onu gösterir.",
+        "Sunucunun İngilizce günlük satırı: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved"
+      ]
+    },
+    "unavailable": null
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-10-09T12:06:13.725286196Z",
+      "found": true,
+      "request_id": "06acf6c45f86201439f599fd34127534",
+      "status": "failed",
+      "summary": "reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "ea8f81c844c6bf0e08ffb6c628448bac2da56d1060b2f5cd32f19f6947eecf01",
+        "archive_size": "65895628",
+        "commit": "52208d415f61041dd9ec27bdb9cbe0b2d5c7eac4",
+        "os": "linux",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      },
+      "updated_at": "2026-10-09T12:06:43.671493774Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-10-09T12:07:44Z"
+}

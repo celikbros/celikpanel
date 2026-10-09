@@ -1,0 +1,57 @@
+{
+  "at": "2026-10-09T10:36:27Z",
+  "databases_v2": [
+    {
+      "name": "s4imp_app",
+      "server_id": 1
+    }
+  ],
+  "docroot": {
+    "bytes": 96,
+    "exists": true,
+    "file_list": {
+      "assets/site.css": [
+        34,
+        "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+      ],
+      "index.html": [
+        62,
+        "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe"
+      ]
+    },
+    "files": 2,
+    "mode": "0750",
+    "names": [
+      "index.html",
+      "assets/site.css"
+    ],
+    "newest_mtime": 1791542186,
+    "non_regular": [],
+    "owner_uid": 1003,
+    "root": "/var/www/celikpanel/subscriptions/2/sites/6/public_html",
+    "sha256": "06dab7783561d5877c217cf27341d8c73d5c5febe35cc2ec1a5e5e604d92c8f8"
+  },
+  "domain": "set4-import.test",
+  "email_accounts": [],
+  "email_forwardings": [],
+  "escapes": [],
+  "lab_action": false,
+  "mode": "read-imported",
+  "owner_action": false,
+  "rows": [
+    {
+      "id": 6,
+      "name": "set4-import.test",
+      "status": "active",
+      "subscription_id": 2
+    }
+  ],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "site_account": {
+    "home": "/var/www/celikpanel/subscriptions/2/sites/6",
+    "uid": 1003
+  },
+  "site_home_entries": [
+    "public_html"
+  ]
+}

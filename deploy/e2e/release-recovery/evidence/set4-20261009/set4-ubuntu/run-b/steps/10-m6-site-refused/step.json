@@ -1,0 +1,25 @@
+{
+  "checks": {
+    "checks": 13,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T13:11:07Z",
+    "notes": [
+      "item 6 (owner-moved-file): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it",
+      "refused-again: the certificate-validation directory of the deleted site is still there",
+      "item 6 (long-site-name): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it"
+    ],
+    "started_at": "2026-10-09T13:10:42Z",
+    "substeps": {
+      "item 6": "passed",
+      "refused-again": "passed"
+    },
+    "title": "a new site whose configuration the web server refuses (item 6)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T13:11:07Z",
+  "name": "M6-site-refused",
+  "started_at": "2026-10-09T13:10:42Z",
+  "verdict": "passed"
+}

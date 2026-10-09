@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T10:36:52Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791542210",
+      "-n",
+      "400",
+      "-u",
+      "nginx.service"
+    ],
+    "at": "2026-10-09T10:36:52Z",
+    "returncode": 0,
+    "seconds": 0.004,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T10:36:50.751989+00:00 dns-arch systemd[1]: Starting nginx web server...\n2026-10-09T10:36:50.778071+00:00 dns-arch nginx[4426]: 2026/10/09 10:36:50 [warn] 4426#4426: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\n2026-10-09T10:36:50.784589+00:00 dns-arch systemd[1]: Started nginx web server.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791542210,
+  "units": [
+    "nginx.service"
+  ]
+}

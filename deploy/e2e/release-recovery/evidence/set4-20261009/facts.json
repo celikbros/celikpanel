@@ -1,0 +1,5699 @@
+{
+ "cells": {
+  "set4-arch/run-a": {
+   "artifacts": {
+    "baseline": {
+     "commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+     "sha256": "d2fcf5c98c194c36bec9dd0fe2442eecb6390ba3824842f879a77f9b5debebc5",
+     "version": "v0.1.0-alpha.81"
+    }
+   },
+   "harness": "harness=/var/tmp/cp-set4-run/harness-c (git archive 557b554eb, overlay overlay-c ef58e9f2073fc5bf)",
+   "image": {
+    "digest": "5d8be8d28cfd290f051b0f67df0a6874596ad23de3f3f18b90c91aeb758eb878",
+    "digest_algorithm": "sha256",
+    "file": "Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2"
+   },
+   "lab": [
+    "lab=/var/tmp/cp-release-drill-s4-arch-a"
+   ],
+   "native_evidence": false,
+   "outcome": "set4-measured",
+   "overall": "complete-for-review",
+   "request_id": null,
+   "steps_not_passed": [
+    [
+     "M10-postfix-stop",
+     "skipped",
+     ""
+    ]
+   ],
+   "wrapper": [
+    "2026-10-09T10:29:21Z",
+    "2026-10-09T10:37:26Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "set4-arch/run-b": {
+   "artifacts": {
+    "baseline": {
+     "commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+     "sha256": "d2fcf5c98c194c36bec9dd0fe2442eecb6390ba3824842f879a77f9b5debebc5",
+     "version": "v0.1.0-alpha.81"
+    }
+   },
+   "harness": "harness=/var/tmp/cp-set4-run/harness-f (git archive 557b554eb, overlay overlay-f 3a61b09b0dca5e9a)",
+   "image": {
+    "digest": "5d8be8d28cfd290f051b0f67df0a6874596ad23de3f3f18b90c91aeb758eb878",
+    "digest_algorithm": "sha256",
+    "file": "Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2"
+   },
+   "lab": [
+    "lab=/var/tmp/cp-release-drill-s4-arch-b"
+   ],
+   "native_evidence": false,
+   "outcome": "set4-measured",
+   "overall": "complete-for-review",
+   "request_id": null,
+   "steps_not_passed": [
+    [
+     "M10-postfix-stop",
+     "skipped",
+     ""
+    ]
+   ],
+   "wrapper": [
+    "2026-10-09T12:35:55Z",
+    "2026-10-09T12:43:26Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "set4-debian13/run-a": {
+   "artifacts": {
+    "baseline": {
+     "commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+     "sha256": "d2fcf5c98c194c36bec9dd0fe2442eecb6390ba3824842f879a77f9b5debebc5",
+     "version": "v0.1.0-alpha.81"
+    }
+   },
+   "harness": "harness=/var/tmp/cp-set4-run/harness-c (git archive 557b554eb, overlay overlay-c ef58e9f2073fc5bf)",
+   "image": {
+    "digest": "184761b0dad0f9ace02f9298050ca96ce3caa39a461a47706d47ff9698b59933918b91b40177fbd4d392f6446af8b4d18ecb94caca988169b19641606bf34003",
+    "digest_algorithm": "sha512",
+    "file": "debian-13-genericcloud-amd64-20260826-2582.qcow2"
+   },
+   "lab": [
+    "lab=/var/tmp/cp-release-drill-s4-d13-a"
+   ],
+   "native_evidence": false,
+   "outcome": "set4-measured",
+   "overall": "complete-for-review",
+   "request_id": null,
+   "steps_not_passed": [],
+   "wrapper": [
+    "2026-10-09T10:37:53Z",
+    "2026-10-09T10:49:27Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "set4-debian13/run-b": {
+   "artifacts": {
+    "baseline": {
+     "commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+     "sha256": "d2fcf5c98c194c36bec9dd0fe2442eecb6390ba3824842f879a77f9b5debebc5",
+     "version": "v0.1.0-alpha.81"
+    }
+   },
+   "harness": "harness=/var/tmp/cp-set4-run/harness-f (git archive 557b554eb, overlay overlay-f 3a61b09b0dca5e9a)",
+   "image": {
+    "digest": "184761b0dad0f9ace02f9298050ca96ce3caa39a461a47706d47ff9698b59933918b91b40177fbd4d392f6446af8b4d18ecb94caca988169b19641606bf34003",
+    "digest_algorithm": "sha512",
+    "file": "debian-13-genericcloud-amd64-20260826-2582.qcow2"
+   },
+   "lab": [
+    "lab=/var/tmp/cp-release-drill-s4-d13-b"
+   ],
+   "native_evidence": false,
+   "outcome": "set4-measured",
+   "overall": "complete-for-review",
+   "request_id": null,
+   "steps_not_passed": [],
+   "wrapper": [
+    "2026-10-09T12:43:29Z",
+    "2026-10-09T12:53:50Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "set4-ubuntu/run-a": {
+   "artifacts": {
+    "baseline": {
+     "commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+     "sha256": "d2fcf5c98c194c36bec9dd0fe2442eecb6390ba3824842f879a77f9b5debebc5",
+     "version": "v0.1.0-alpha.81"
+    }
+   },
+   "harness": "harness=/var/tmp/cp-set4-run/harness-c (git archive 557b554eb, overlay overlay-c ef58e9f2073fc5bf)",
+   "image": {
+    "digest": "d0fe84bb5f80853425fa6be28e2c106f30104c3cfe8611933f2e65c9b63f0e30",
+    "digest_algorithm": "sha256",
+    "file": "ubuntu-24.04-server-cloudimg-amd64-20260826.img"
+   },
+   "lab": [
+    "lab=/var/tmp/cp-release-drill-s4-ub-a"
+   ],
+   "native_evidence": false,
+   "outcome": "set4-measured",
+   "overall": "failed",
+   "request_id": null,
+   "steps_not_passed": [
+    [
+     "M10-postfix-stop",
+     "failed",
+     "item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`; item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`; item 10: the note's sentence is "
+    ]
+   ],
+   "wrapper": [
+    "2026-10-09T11:04:52Z",
+    "2026-10-09T11:28:01Z"
+   ],
+   "wrapper_rc": "1"
+  },
+  "set4-ubuntu/run-b": {
+   "artifacts": {
+    "baseline": {
+     "commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+     "sha256": "d2fcf5c98c194c36bec9dd0fe2442eecb6390ba3824842f879a77f9b5debebc5",
+     "version": "v0.1.0-alpha.81"
+    }
+   },
+   "harness": "harness=/var/tmp/cp-set4-run/harness-f (git archive 557b554eb, overlay overlay-f 3a61b09b0dca5e9a)",
+   "image": {
+    "digest": "d0fe84bb5f80853425fa6be28e2c106f30104c3cfe8611933f2e65c9b63f0e30",
+    "digest_algorithm": "sha256",
+    "file": "ubuntu-24.04-server-cloudimg-amd64-20260826.img"
+   },
+   "lab": [
+    "lab=/var/tmp/cp-release-drill-s4-ub-b"
+   ],
+   "native_evidence": false,
+   "outcome": "set4-measured",
+   "overall": "failed",
+   "request_id": null,
+   "steps_not_passed": [
+    [
+     "M10-postfix-stop",
+     "failed",
+     "item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`; item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`; item 10: the note's sentence is "
+    ]
+   ],
+   "wrapper": [
+    "2026-10-09T12:53:54Z",
+    "2026-10-09T13:13:08Z"
+   ],
+   "wrapper_rc": "1"
+  },
+  "update-alpha81/upd1-arch-defective/run-a": {
+   "artifacts": {
+    "baseline": {
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "c911b3083cb53aa539e6c25b720b7b86c2e08644",
+     "sha256": "99a00422844f0ec376494cd17686e397373318a971d968ad2de06f5877761b29",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "a8bd6124a99390246c978281992e6eaf48fbb377",
+     "sha256": "219de1b848a7eccc6caca1a8946051e89a3da1a56a2feac828cfa2cdf2c2bcb7",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "harness": "harness=/var/tmp/cp-set4-run/harness-d (git archive 557b554eb, overlay overlay-d f0913b4556bee422)",
+   "image": {
+    "digest": "5d8be8d28cfd290f051b0f67df0a6874596ad23de3f3f18b90c91aeb758eb878",
+    "digest_algorithm": "sha256",
+    "file": "Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2"
+   },
+   "lab": [
+    "lab=/var/tmp/cp-release-drill-s4-u12-arch-a"
+   ],
+   "native_evidence": false,
+   "outcome": "recovered-automatically",
+   "overall": "complete-for-review",
+   "request_id": "80203f4d033d4a1a404e4265c3bb0673",
+   "steps_not_passed": [
+    [
+     "owner-continuation (required)",
+     "skipped",
+     ""
+    ]
+   ],
+   "wrapper": [
+    "2026-10-09T11:48:04Z",
+    "2026-10-09T11:58:50Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "update-alpha81/upd1-arch-defective/run-b": {
+   "artifacts": {
+    "baseline": {
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "c911b3083cb53aa539e6c25b720b7b86c2e08644",
+     "sha256": "99a00422844f0ec376494cd17686e397373318a971d968ad2de06f5877761b29",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "a8bd6124a99390246c978281992e6eaf48fbb377",
+     "sha256": "219de1b848a7eccc6caca1a8946051e89a3da1a56a2feac828cfa2cdf2c2bcb7",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "harness": "harness=/var/tmp/cp-set4-run/harness-e (git archive 557b554eb, overlay overlay-e ec67beac660647a7)",
+   "image": {
+    "digest": "5d8be8d28cfd290f051b0f67df0a6874596ad23de3f3f18b90c91aeb758eb878",
+    "digest_algorithm": "sha256",
+    "file": "Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2"
+   },
+   "lab": [
+    "lab=/var/tmp/cp-release-drill-s4-u12-arch-b"
+   ],
+   "native_evidence": false,
+   "outcome": "recovered-automatically",
+   "overall": "complete-for-review",
+   "request_id": "484a810a74a3e382072d094a45a5cbfb",
+   "steps_not_passed": [
+    [
+     "owner-continuation (required)",
+     "skipped",
+     ""
+    ]
+   ],
+   "wrapper": [
+    "2026-10-09T12:20:44Z",
+    "2026-10-09T12:30:51Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "update-alpha81/upd1-debian13-good/run-a": {
+   "artifacts": {
+    "baseline": {
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "c911b3083cb53aa539e6c25b720b7b86c2e08644",
+     "sha256": "99a00422844f0ec376494cd17686e397373318a971d968ad2de06f5877761b29",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "a8bd6124a99390246c978281992e6eaf48fbb377",
+     "sha256": "219de1b848a7eccc6caca1a8946051e89a3da1a56a2feac828cfa2cdf2c2bcb7",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "harness": "harness=/var/tmp/cp-set4-run/harness-c (git archive 557b554eb, overlay overlay-c ef58e9f2073fc5bf)",
+   "image": {
+    "digest": "184761b0dad0f9ace02f9298050ca96ce3caa39a461a47706d47ff9698b59933918b91b40177fbd4d392f6446af8b4d18ecb94caca988169b19641606bf34003",
+    "digest_algorithm": "sha512",
+    "file": "debian-13-genericcloud-amd64-20260826-2582.qcow2"
+   },
+   "lab": [
+    "lab=/var/tmp/cp-release-drill-s4-u9-d13-a"
+   ],
+   "native_evidence": false,
+   "outcome": "update-verified",
+   "overall": "failed",
+   "request_id": "925748bc2a6bca86b6e3bfc5ac206009",
+   "steps_not_passed": [
+    [
+     "owner-continuation (required)",
+     "skipped",
+     ""
+    ],
+    [
+     "set4-php-site-after-the-update",
+     "failed",
+     "the save did not change the vhost file (nothing was rendered again)"
+    ]
+   ],
+   "wrapper": [
+    "2026-10-09T10:49:31Z",
+    "2026-10-09T11:04:46Z"
+   ],
+   "wrapper_rc": "1"
+  },
+  "update-alpha81/upd1-debian13-good/run-b": {
+   "artifacts": {
+    "baseline": {
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "c911b3083cb53aa539e6c25b720b7b86c2e08644",
+     "sha256": "99a00422844f0ec376494cd17686e397373318a971d968ad2de06f5877761b29",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "a8bd6124a99390246c978281992e6eaf48fbb377",
+     "sha256": "219de1b848a7eccc6caca1a8946051e89a3da1a56a2feac828cfa2cdf2c2bcb7",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "harness": "harness=/var/tmp/cp-set4-run/harness-e (git archive 557b554eb, overlay overlay-e ec67beac660647a7)",
+   "image": {
+    "digest": "184761b0dad0f9ace02f9298050ca96ce3caa39a461a47706d47ff9698b59933918b91b40177fbd4d392f6446af8b4d18ecb94caca988169b19641606bf34003",
+    "digest_algorithm": "sha512",
+    "file": "debian-13-genericcloud-amd64-20260826-2582.qcow2"
+   },
+   "lab": [
+    "lab=/var/tmp/cp-release-drill-s4-u9-d13-b"
+   ],
+   "native_evidence": false,
+   "outcome": "update-verified",
+   "overall": "complete-for-review",
+   "request_id": "21c76fe4d42ab96c61fe3ef190c38242",
+   "steps_not_passed": [
+    [
+     "owner-continuation (required)",
+     "skipped",
+     ""
+    ]
+   ],
+   "wrapper": [
+    "2026-10-09T12:08:22Z",
+    "2026-10-09T12:20:41Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "update-alpha81/upd1-ubuntu-good/run-a": {
+   "artifacts": {
+    "baseline": {
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "c911b3083cb53aa539e6c25b720b7b86c2e08644",
+     "sha256": "99a00422844f0ec376494cd17686e397373318a971d968ad2de06f5877761b29",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "a8bd6124a99390246c978281992e6eaf48fbb377",
+     "sha256": "219de1b848a7eccc6caca1a8946051e89a3da1a56a2feac828cfa2cdf2c2bcb7",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "harness": "harness=/var/tmp/cp-set4-run/harness-d (git archive 557b554eb, overlay overlay-d f0913b4556bee422)",
+   "image": {
+    "digest": "d0fe84bb5f80853425fa6be28e2c106f30104c3cfe8611933f2e65c9b63f0e30",
+    "digest_algorithm": "sha256",
+    "file": "ubuntu-24.04-server-cloudimg-amd64-20260826.img"
+   },
+   "lab": [
+    "lab=/var/tmp/cp-release-drill-s4-u9-ub-a"
+   ],
+   "native_evidence": false,
+   "outcome": "update-verified",
+   "overall": "complete-for-review",
+   "request_id": "3cba4206ef122c410bfa188ded39bab2",
+   "steps_not_passed": [
+    [
+     "owner-continuation (required)",
+     "skipped",
+     ""
+    ]
+   ],
+   "wrapper": [
+    "2026-10-09T11:28:07Z",
+    "2026-10-09T11:48:00Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "update-candidate-baseline/upd1-arch-defective/run-a": {
+   "artifacts": {
+    "baseline": {
+     "commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+     "sha256": "d2fcf5c98c194c36bec9dd0fe2442eecb6390ba3824842f879a77f9b5debebc5",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "52208d415f61041dd9ec27bdb9cbe0b2d5c7eac4",
+     "sha256": "ea8f81c844c6bf0e08ffb6c628448bac2da56d1060b2f5cd32f19f6947eecf01",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "dc0841af9eb9023ead02393a70bf59968a74ae2f",
+     "sha256": "fa3f2e0f26fe669f6d364a4c82419424cb36459606942b8891d157951891c039",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "harness": "harness=/var/tmp/cp-set4-run/harness-d (git archive 557b554eb, overlay overlay-d f0913b4556bee422)",
+   "image": {
+    "digest": "5d8be8d28cfd290f051b0f67df0a6874596ad23de3f3f18b90c91aeb758eb878",
+    "digest_algorithm": "sha256",
+    "file": "Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2"
+   },
+   "lab": [
+    "lab=/var/tmp/cp-release-drill-s4-u12c-arch-a"
+   ],
+   "native_evidence": false,
+   "outcome": "recovered-automatically",
+   "overall": "complete-for-review",
+   "request_id": "06acf6c45f86201439f599fd34127534",
+   "steps_not_passed": [
+    [
+     "owner-continuation (required)",
+     "skipped",
+     ""
+    ]
+   ],
+   "wrapper": [
+    "2026-10-09T11:58:53Z",
+    "2026-10-09T12:07:54Z"
+   ],
+   "wrapper_rc": "0"
+  }
+ },
+ "fresh": {
+  "set4-arch/run-a": {
+   "absolute": {
+    "code": "IMPORT_PARTIAL",
+    "domain_status": "active",
+    "entries_outside": [],
+    "hostile_members": [
+     {
+      "name": "/etc/set3-escape-absolute.txt",
+      "type": "file"
+     }
+    ],
+    "import_status": "partial",
+    "imported": [
+     "domain",
+     "files",
+     "dns",
+     "database:s4abs_app"
+    ],
+    "message": "The import ended and every part that was chosen was imported; set4-absolute.test is in service. Imported: domain, files, dns, database:s4abs_app. Not imported: member:/etc/set3-escape-absolute.txt. These entries of the archive were refused by their names, and nothing was written for them; the reason of each is in its step below. If one of them is a file the site needs, add it with the file manager of set4-absolute.test. Importing the archive again refuses the same entries; nothing continues by itself.",
+    "not_imported": [
+     "member:/etc/set3-escape-absolute.txt"
+    ],
+    "request": {
+     "do_databases": true,
+     "do_dns": false,
+     "do_files": true,
+     "do_mail": false
+    },
+    "status": 200,
+    "steps": [
+     {
+      "detail": "set4-absolute.test (id 7, site 7) → /var/www/celikpanel/subscriptions/2/sites/7/public_html",
+      "ok": true,
+      "step": "domain"
+     },
+     {
+      "detail": "2 files, 98 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+      "ok": true,
+      "step": "files"
+     },
+     {
+      "detail": "not imported: the archive names this entry with an absolute path, and an import writes only below the site's own folder; nothing was written for it",
+      "ok": false,
+      "step": "member:/etc/set3-escape-absolute.txt"
+     },
+     {
+      "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+      "ok": true,
+      "step": "dns"
+     },
+     {
+      "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+      "ok": true,
+      "step": "database:s4abs_app"
+     }
+    ]
+   },
+   "deleted": {
+    "account": null,
+    "acme_challenge_root": "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2",
+    "acme_challenge_root_left": true,
+    "delete_answer": {
+     "domain": "set4-php.test",
+     "status": "deleted"
+    },
+    "delete_status": 200,
+    "no_longer_listed": true,
+    "pool_files_left": [],
+    "probe_executed_after": false,
+    "site_home_left": false,
+    "socket_left": false,
+    "static_served_after": false,
+    "tables_still_naming_the_domain": {
+     "audit_logs": {
+      "action": 2
+     }
+    }
+   },
+   "deleted_answers_after": {
+    "dotfile": 403,
+    "missing_script": 403,
+    "missing_static": 404,
+    "path_info_deep_tail_php": 403,
+    "path_info_plain": 404,
+    "path_info_tail_php": 403,
+    "probe": 403,
+    "probe_query": 403,
+    "root": 200,
+    "static": 404
+   },
+   "import": {
+    "code": null,
+    "domain_status": "active",
+    "import_status": "active",
+    "imported": [
+     "domain",
+     "files",
+     "dns",
+     "database:s4imp_app"
+    ],
+    "not_imported": [],
+    "status": 200,
+    "steps": [
+     {
+      "detail": "set4-import.test (id 6, site 6) → /var/www/celikpanel/subscriptions/2/sites/6/public_html",
+      "ok": true,
+      "step": "domain"
+     },
+     {
+      "detail": "2 files, 96 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+      "ok": true,
+      "step": "files"
+     },
+     {
+      "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+      "ok": true,
+      "step": "dns"
+     },
+     {
+      "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+      "ok": true,
+      "step": "database:s4imp_app"
+     }
+    ]
+   },
+   "import_php_version": {
+    "imported-site": {
+     "domains_list_php_fields": {
+      "php_version": "8.5"
+     },
+     "installed_php_versions": [
+      "8.5"
+     ],
+     "php_fpm_programs": {
+      "php-fpm": [
+       "PHP 8.5.11 (fpm-fcgi) (built: Sep 23 2026 17:41:29) (NTS)"
+      ]
+     },
+     "php_version_of_the_page": "8.5.11",
+     "pool_file": "/etc/php/php-fpm.d/site6.conf",
+     "pool_listen": "/run/php-fpm/php8.5-fpm-site6.sock",
+     "recorded_php_fpm_socket": "/run/php-fpm/php8.5-fpm-site6.sock",
+     "recorded_php_version": "8.5",
+     "socket": {
+      "exists": true,
+      "group": "http",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "http",
+      "path": "/run/php-fpm/php8.5-fpm-site6.sock"
+     },
+     "vhost_fastcgi_pass": "unix:/run/php-fpm/php8.5-fpm-site6.sock"
+    }
+   },
+   "import_served": {
+    "archive_index": [
+     62,
+     "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe"
+    ],
+    "index": {
+     "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+     "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+     "bytes": 62,
+     "error": null,
+     "headers": {
+      "content-length": "62",
+      "content-type": "text/html",
+      "server": "nginx/1.30.5"
+     },
+     "status": 200
+    },
+    "root": {
+     "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+     "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+     "bytes": 62,
+     "error": null,
+     "headers": {
+      "content-length": "62",
+      "content-type": "text/html",
+      "server": "nginx/1.30.5"
+     },
+     "status": 200
+    }
+   },
+   "import_site": {
+    "domain_id": 6,
+    "php_fpm_socket": "/run/php-fpm/php8.5-fpm-site6.sock",
+    "php_version": "8.5",
+    "project_type": "php"
+   },
+   "isolation": {
+    "acme_confirmed": true,
+    "before_the_acme_lines": {
+     "acme-staging-v02.api.letsencrypt.org": "",
+     "acme-v02.api.letsencrypt.org": "",
+     "celikpanel.net": "127.0.0.1       celikpanel.net"
+    },
+    "hosts_lines": [
+     "127.0.0.1        localhost",
+     "::1              localhost",
+     "127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture",
+     "127.0.0.1 acme-v02.api.letsencrypt.org",
+     "::1 acme-v02.api.letsencrypt.org",
+     "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+     "::1 acme-staging-v02.api.letsencrypt.org"
+    ],
+    "how": "`getent -s files hosts NAME`: the guest's own hosts file only, no DNS question is sent",
+    "loopback_only": {
+     "acme-staging-v02.api.letsencrypt.org": true,
+     "acme-v02.api.letsencrypt.org": true,
+     "celikpanel.net": true
+    },
+    "resolves": {
+     "acme-staging-v02.api.letsencrypt.org": "::1             acme-staging-v02.api.letsencrypt.org",
+     "acme-v02.api.letsencrypt.org": "::1             acme-v02.api.letsencrypt.org",
+     "celikpanel.net": "127.0.0.1       celikpanel.net"
+    }
+   },
+   "owner_moved": {
+    "nginx_test_after_the_move": 0,
+    "nginx_test_before": 0
+   },
+   "php_answers": {
+    "dotfile": [
+     403,
+     "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1."
+    ],
+    "missing_script": [
+     404,
+     "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1."
+    ],
+    "missing_static": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "path_info_deep_tail_php": [
+     200,
+     "set4-php-executed:42:8.5.11:fpm-fcgi:set4_php_test\nPATH_INFO=[/a/b/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENA"
+    ],
+    "path_info_plain": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "path_info_tail_php": [
+     200,
+     "set4-php-executed:42:8.5.11:fpm-fcgi:set4_php_test\nPATH_INFO=[/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=["
+    ],
+    "probe": [
+     200,
+     "set4-php-executed:42:8.5.11:fpm-fcgi:set4_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/"
+    ],
+    "probe_query": [
+     200,
+     "set4-php-executed:42:8.5.11:fpm-fcgi:set4_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/"
+    ],
+    "root": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "static": [
+     200,
+     "set4 static file served by the web server\n"
+    ]
+   },
+   "php_path_info": {
+    "/set4-probe.php/a/b/tail.php?q=1": {
+     "PATH_INFO": "/a/b/tail.php",
+     "SCRIPT_NAME": "/set4-probe.php",
+     "executed": true
+    },
+    "/set4-probe.php/extra/info": {
+     "PATH_INFO": null,
+     "SCRIPT_NAME": null,
+     "executed": false
+    },
+    "/set4-probe.php/tail.php": {
+     "PATH_INFO": "/tail.php",
+     "SCRIPT_NAME": "/set4-probe.php",
+     "executed": true
+    }
+   },
+   "php_probe": {
+    "executed": true,
+    "php_version": "8.5.11",
+    "runs_as": "set4_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "php_version": {
+    "php-site": {
+     "domains_list_php_fields": {
+      "php_version": "8.5"
+     },
+     "installed_php_versions": [
+      "8.5"
+     ],
+     "php_fpm_programs": {
+      "php-fpm": [
+       "PHP 8.5.11 (fpm-fcgi) (built: Sep 23 2026 17:41:29) (NTS)"
+      ]
+     },
+     "php_version_of_the_page": "8.5.11",
+     "pool_file": "/etc/php/php-fpm.d/site2.conf",
+     "pool_listen": "/run/php-fpm/php8.5-fpm-site2.sock",
+     "recorded_php_fpm_socket": "/run/php-fpm/php8.5-fpm-site2.sock",
+     "recorded_php_version": "8.5",
+     "socket": {
+      "exists": true,
+      "group": "http",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "http",
+      "path": "/run/php-fpm/php8.5-fpm-site2.sock"
+     },
+     "vhost_fastcgi_pass": "unix:/run/php-fpm/php8.5-fpm-site2.sock"
+    }
+   },
+   "platform": {
+    "etc_php_directories": [
+     "/etc/php/conf.d",
+     "/etc/php/php-fpm.d"
+    ],
+    "kernel": "7.2.9-arch1-1",
+    "nginx_version": "nginx version: nginx/1.30.5",
+    "os_release": {
+     "BUILD_ID": "rolling",
+     "ID": "arch",
+     "PRETTY_NAME": "Arch Linux"
+    },
+    "package_manager": "pacman",
+    "packages": {
+     "certbot": "5.8.0-1",
+     "mariadb": "13.0.2-2",
+     "nginx": "1.30.5-1",
+     "php": "8.5.11-1",
+     "php-fpm": "8.5.11-1",
+     "postgresql": "18.6-2",
+     "systemd": "262-1"
+    },
+    "php_fpm_programs": {
+     "php-fpm": [
+      "PHP 8.5.11 (fpm-fcgi) (built: Sep 23 2026 17:41:29) (NTS)"
+     ]
+    }
+   },
+   "postfix_start": null,
+   "postfix_stop": {
+    "answer": null,
+    "master_running_after": null,
+    "reset_failed_in_the_product_journal": null,
+    "status": null,
+    "unit_results_after": null,
+    "units_8s_later": null,
+    "units_after": null,
+    "units_before": null
+   },
+   "refused": {
+    "long-site-name": {
+     "autoincrement": [
+      {
+       "domains": 4,
+       "sites": 4
+      },
+      {
+       "domains": 5,
+       "sites": 5
+      }
+     ],
+     "code": "SITE_WEB_SERVER_REFUSED",
+     "details": [
+      "2026/10/09 10:36:23 [emerg] 3646#3646: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64"
+     ],
+     "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test",
+     "error_equals_the_documented_sentence": true,
+     "nginx_unit_pid": [
+      "1200",
+      "1200"
+     ],
+     "not_claimed_by_the_answer": {
+      "the certificate-validation directory": [
+       "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/5"
+      ]
+     },
+     "reason": "removed",
+     "status": 502,
+     "tables_naming_the_domain": {},
+     "vars": {
+      "command": "sudo nginx -t",
+      "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test"
+     },
+     "what_made_nginx_refuse": "no owner action; the site name has 58 characters",
+     "what_the_removed_answer_claims_and_whether_it_is_true": {
+      "its PHP pool": true,
+      "its files": true,
+      "its system account": true,
+      "its web server configuration": true,
+      "the domain and site rows": true
+     }
+    },
+    "owner-moved-file": {
+     "autoincrement": [
+      {
+       "domains": 2,
+       "sites": 2
+      },
+      {
+       "domains": 3,
+       "sites": 3
+      }
+     ],
+     "code": "SITE_WEB_SERVER_REFUSED",
+     "details": [
+      "2026/10/09 10:36:10 [emerg] 3310#3310: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31"
+     ],
+     "domain": "set4-refused.test",
+     "error_equals_the_documented_sentence": true,
+     "nginx_unit_pid": [
+      "1200",
+      "1200"
+     ],
+     "not_claimed_by_the_answer": {
+      "the certificate-validation directory": [
+       "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/3"
+      ]
+     },
+     "reason": "removed",
+     "status": 502,
+     "tables_naming_the_domain": {},
+     "vars": {
+      "command": "sudo nginx -t",
+      "domain": "set4-refused.test"
+     },
+     "what_made_nginx_refuse": "the owner renamed nginx's own /etc/nginx/fastcgi.conf, which the generated PHP vhost includes",
+     "what_the_removed_answer_claims_and_whether_it_is_true": {
+      "its PHP pool": true,
+      "its files": true,
+      "its system account": true,
+      "its web server configuration": true,
+      "the domain and site rows": true
+     }
+    }
+   },
+   "reload": {
+    "mariadb": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status mariadb",
+       "detail": "mariadb.service is inactive (dead); nothing was reloaded",
+       "unit": "mariadb"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "mariadb.service": []
+     },
+     "state_after": {
+      "mariadb.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "mariadb.service"
+     ]
+    },
+    "nginx": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status nginx",
+       "detail": "nginx.service is inactive (dead); nothing was reloaded",
+       "unit": "nginx"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "nginx.service": []
+     },
+     "state_after": {
+      "nginx.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "nginx.service"
+     ]
+    },
+    "postgresql": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status postgresql",
+       "detail": "postgresql.service is inactive (dead); nothing was reloaded",
+       "unit": "postgresql"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "postgresql.service": []
+     },
+     "state_after": {
+      "postgresql.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "postgresql.service"
+     ]
+    }
+   },
+   "sections": {
+    "08-m0-prepare": [
+     "passed",
+     5,
+     0,
+     0,
+     null
+    ],
+    "09-m1-php-site": [
+     "passed",
+     12,
+     0,
+     0,
+     null
+    ],
+    "10-m6-site-refused": [
+     "passed",
+     13,
+     0,
+     0,
+     null
+    ],
+    "11-m2-import": [
+     "passed",
+     14,
+     0,
+     0,
+     null
+    ],
+    "12-m5-import-absolute": [
+     "passed",
+     10,
+     0,
+     0,
+     null
+    ],
+    "14-m4-reload-stopped": [
+     "passed",
+     21,
+     0,
+     0,
+     null
+    ]
+   },
+   "snippet": {
+    "bytes": null,
+    "equals_the_pinned_digest": false,
+    "exists": false,
+    "owner_package": {
+     "exists": false,
+     "path": "/etc/nginx/snippets/fastcgi-php.conf"
+    },
+    "path": "/etc/nginx/snippets/fastcgi-php.conf",
+    "pinned_in_the_product_test": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "sha256": null,
+    "snippets_directory": {
+     "error": "FileNotFoundError",
+     "exists": false,
+     "path": "/etc/nginx/snippets"
+    }
+   }
+  },
+  "set4-arch/run-b": {
+   "absolute": {
+    "code": "IMPORT_PARTIAL",
+    "domain_status": "active",
+    "entries_outside": [],
+    "hostile_members": [
+     {
+      "name": "/etc/set3-escape-absolute.txt",
+      "type": "file"
+     }
+    ],
+    "import_status": "partial",
+    "imported": [
+     "domain",
+     "files",
+     "dns",
+     "database:s4abs_app"
+    ],
+    "message": "The import ended and every part that was chosen was imported; set4-absolute.test is in service. Imported: domain, files, dns, database:s4abs_app. Not imported: member:/etc/set3-escape-absolute.txt. These entries of the archive were refused by their names, and nothing was written for them; the reason of each is in its step below. If one of them is a file the site needs, add it with the file manager of set4-absolute.test. Importing the archive again refuses the same entries; nothing continues by itself.",
+    "not_imported": [
+     "member:/etc/set3-escape-absolute.txt"
+    ],
+    "request": {
+     "do_databases": true,
+     "do_dns": false,
+     "do_files": true,
+     "do_mail": false
+    },
+    "status": 200,
+    "steps": [
+     {
+      "detail": "set4-absolute.test (id 7, site 7) → /var/www/celikpanel/subscriptions/2/sites/7/public_html",
+      "ok": true,
+      "step": "domain"
+     },
+     {
+      "detail": "2 files, 98 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+      "ok": true,
+      "step": "files"
+     },
+     {
+      "detail": "not imported: the archive names this entry with an absolute path, and an import writes only below the site's own folder; nothing was written for it",
+      "ok": false,
+      "step": "member:/etc/set3-escape-absolute.txt"
+     },
+     {
+      "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+      "ok": true,
+      "step": "dns"
+     },
+     {
+      "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+      "ok": true,
+      "step": "database:s4abs_app"
+     }
+    ]
+   },
+   "deleted": {
+    "account": null,
+    "acme_challenge_root": "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2",
+    "acme_challenge_root_left": true,
+    "delete_answer": {
+     "domain": "set4-php.test",
+     "status": "deleted"
+    },
+    "delete_status": 200,
+    "no_longer_listed": true,
+    "pool_files_left": [],
+    "probe_executed_after": false,
+    "site_home_left": false,
+    "socket_left": false,
+    "static_served_after": false,
+    "tables_still_naming_the_domain": {
+     "audit_logs": {
+      "action": 2
+     }
+    }
+   },
+   "deleted_answers_after": {
+    "dotfile": 403,
+    "missing_script": 403,
+    "missing_static": 404,
+    "path_info_deep_tail_php": 403,
+    "path_info_plain": 404,
+    "path_info_tail_php": 403,
+    "probe": 403,
+    "probe_query": 403,
+    "root": 200,
+    "static": 404
+   },
+   "import": {
+    "code": null,
+    "domain_status": "active",
+    "import_status": "active",
+    "imported": [
+     "domain",
+     "files",
+     "dns",
+     "database:s4imp_app"
+    ],
+    "not_imported": [],
+    "status": 200,
+    "steps": [
+     {
+      "detail": "set4-import.test (id 6, site 6) → /var/www/celikpanel/subscriptions/2/sites/6/public_html",
+      "ok": true,
+      "step": "domain"
+     },
+     {
+      "detail": "2 files, 96 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+      "ok": true,
+      "step": "files"
+     },
+     {
+      "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+      "ok": true,
+      "step": "dns"
+     },
+     {
+      "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+      "ok": true,
+      "step": "database:s4imp_app"
+     }
+    ]
+   },
+   "import_php_version": {
+    "imported-site": {
+     "domains_list_php_fields": {
+      "php_version": "8.5"
+     },
+     "installed_php_versions": [
+      "8.5"
+     ],
+     "php_fpm_programs": {
+      "php-fpm": [
+       "PHP 8.5.11 (fpm-fcgi) (built: Sep 23 2026 17:41:29) (NTS)"
+      ]
+     },
+     "php_version_of_the_page": "8.5.11",
+     "pool_file": "/etc/php/php-fpm.d/site6.conf",
+     "pool_listen": "/run/php-fpm/php8.5-fpm-site6.sock",
+     "recorded_php_fpm_socket": "/run/php-fpm/php8.5-fpm-site6.sock",
+     "recorded_php_version": "8.5",
+     "socket": {
+      "exists": true,
+      "group": "http",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "http",
+      "path": "/run/php-fpm/php8.5-fpm-site6.sock"
+     },
+     "vhost_fastcgi_pass": "unix:/run/php-fpm/php8.5-fpm-site6.sock"
+    }
+   },
+   "import_served": {
+    "archive_index": [
+     62,
+     "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe"
+    ],
+    "index": {
+     "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+     "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+     "bytes": 62,
+     "error": null,
+     "headers": {
+      "content-length": "62",
+      "content-type": "text/html",
+      "server": "nginx/1.30.5"
+     },
+     "status": 200
+    },
+    "root": {
+     "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+     "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+     "bytes": 62,
+     "error": null,
+     "headers": {
+      "content-length": "62",
+      "content-type": "text/html",
+      "server": "nginx/1.30.5"
+     },
+     "status": 200
+    }
+   },
+   "import_site": {
+    "domain_id": 6,
+    "php_fpm_socket": "/run/php-fpm/php8.5-fpm-site6.sock",
+    "php_version": "8.5",
+    "project_type": "php"
+   },
+   "isolation": {
+    "acme_confirmed": true,
+    "before_the_acme_lines": {
+     "acme-staging-v02.api.letsencrypt.org": "",
+     "acme-v02.api.letsencrypt.org": "",
+     "celikpanel.net": "127.0.0.1       celikpanel.net"
+    },
+    "hosts_lines": [
+     "127.0.0.1        localhost",
+     "::1              localhost",
+     "127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture",
+     "127.0.0.1 acme-v02.api.letsencrypt.org",
+     "::1 acme-v02.api.letsencrypt.org",
+     "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+     "::1 acme-staging-v02.api.letsencrypt.org"
+    ],
+    "how": "`getent -s files hosts NAME`: the guest's own hosts file only, no DNS question is sent",
+    "loopback_only": {
+     "acme-staging-v02.api.letsencrypt.org": true,
+     "acme-v02.api.letsencrypt.org": true,
+     "celikpanel.net": true
+    },
+    "resolves": {
+     "acme-staging-v02.api.letsencrypt.org": "::1             acme-staging-v02.api.letsencrypt.org",
+     "acme-v02.api.letsencrypt.org": "::1             acme-v02.api.letsencrypt.org",
+     "celikpanel.net": "127.0.0.1       celikpanel.net"
+    }
+   },
+   "owner_moved": {
+    "nginx_test_after_the_move": 0,
+    "nginx_test_before": 0
+   },
+   "php_answers": {
+    "dotfile": [
+     403,
+     "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1."
+    ],
+    "missing_script": [
+     404,
+     "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1."
+    ],
+    "missing_static": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "path_info_deep_tail_php": [
+     200,
+     "set4-php-executed:42:8.5.11:fpm-fcgi:set4_php_test\nPATH_INFO=[/a/b/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENA"
+    ],
+    "path_info_plain": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "path_info_tail_php": [
+     200,
+     "set4-php-executed:42:8.5.11:fpm-fcgi:set4_php_test\nPATH_INFO=[/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=["
+    ],
+    "probe": [
+     200,
+     "set4-php-executed:42:8.5.11:fpm-fcgi:set4_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/"
+    ],
+    "probe_query": [
+     200,
+     "set4-php-executed:42:8.5.11:fpm-fcgi:set4_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/"
+    ],
+    "root": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "static": [
+     200,
+     "set4 static file served by the web server\n"
+    ]
+   },
+   "php_path_info": {
+    "/set4-probe.php/a/b/tail.php?q=1": {
+     "PATH_INFO": "/a/b/tail.php",
+     "SCRIPT_NAME": "/set4-probe.php",
+     "executed": true
+    },
+    "/set4-probe.php/extra/info": {
+     "PATH_INFO": null,
+     "SCRIPT_NAME": null,
+     "executed": false
+    },
+    "/set4-probe.php/tail.php": {
+     "PATH_INFO": "/tail.php",
+     "SCRIPT_NAME": "/set4-probe.php",
+     "executed": true
+    }
+   },
+   "php_probe": {
+    "executed": true,
+    "php_version": "8.5.11",
+    "runs_as": "set4_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "php_version": {
+    "php-site": {
+     "domains_list_php_fields": {
+      "php_version": "8.5"
+     },
+     "installed_php_versions": [
+      "8.5"
+     ],
+     "php_fpm_programs": {
+      "php-fpm": [
+       "PHP 8.5.11 (fpm-fcgi) (built: Sep 23 2026 17:41:29) (NTS)"
+      ]
+     },
+     "php_version_of_the_page": "8.5.11",
+     "pool_file": "/etc/php/php-fpm.d/site2.conf",
+     "pool_listen": "/run/php-fpm/php8.5-fpm-site2.sock",
+     "recorded_php_fpm_socket": "/run/php-fpm/php8.5-fpm-site2.sock",
+     "recorded_php_version": "8.5",
+     "socket": {
+      "exists": true,
+      "group": "http",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "http",
+      "path": "/run/php-fpm/php8.5-fpm-site2.sock"
+     },
+     "vhost_fastcgi_pass": "unix:/run/php-fpm/php8.5-fpm-site2.sock"
+    }
+   },
+   "platform": {
+    "etc_php_directories": [
+     "/etc/php/conf.d",
+     "/etc/php/php-fpm.d"
+    ],
+    "kernel": "7.2.9-arch1-1",
+    "nginx_version": "nginx version: nginx/1.30.5",
+    "os_release": {
+     "BUILD_ID": "rolling",
+     "ID": "arch",
+     "PRETTY_NAME": "Arch Linux"
+    },
+    "package_manager": "pacman",
+    "packages": {
+     "certbot": "5.8.0-1",
+     "mariadb": "13.0.2-2",
+     "nginx": "1.30.5-1",
+     "php": "8.5.11-1",
+     "php-fpm": "8.5.11-1",
+     "postgresql": "18.6-2",
+     "systemd": "262-1"
+    },
+    "php_fpm_programs": {
+     "php-fpm": [
+      "PHP 8.5.11 (fpm-fcgi) (built: Sep 23 2026 17:41:29) (NTS)"
+     ]
+    }
+   },
+   "postfix_start": null,
+   "postfix_stop": {
+    "answer": null,
+    "master_running_after": null,
+    "reset_failed_in_the_product_journal": null,
+    "status": null,
+    "unit_results_after": null,
+    "units_8s_later": null,
+    "units_after": null,
+    "units_before": null
+   },
+   "refused": {
+    "long-site-name": {
+     "autoincrement": [
+      {
+       "domains": 4,
+       "sites": 4
+      },
+      {
+       "domains": 5,
+       "sites": 5
+      }
+     ],
+     "code": "SITE_WEB_SERVER_REFUSED",
+     "details": [
+      "2026/10/09 12:42:27 [emerg] 3657#3657: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64"
+     ],
+     "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test",
+     "error_equals_the_documented_sentence": true,
+     "nginx_unit_pid": [
+      "1174",
+      "1174"
+     ],
+     "not_claimed_by_the_answer": {
+      "the certificate-validation directory": [
+       "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/5"
+      ]
+     },
+     "reason": "removed",
+     "status": 502,
+     "tables_naming_the_domain": {},
+     "vars": {
+      "command": "sudo nginx -t",
+      "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test"
+     },
+     "what_made_nginx_refuse": "no owner action; the site name has 58 characters",
+     "what_the_removed_answer_claims_and_whether_it_is_true": {
+      "its PHP pool": true,
+      "its files": true,
+      "its system account": true,
+      "its web server configuration": true,
+      "the domain and site rows": true
+     }
+    },
+    "owner-moved-file": {
+     "autoincrement": [
+      {
+       "domains": 2,
+       "sites": 2
+      },
+      {
+       "domains": 3,
+       "sites": 3
+      }
+     ],
+     "code": "SITE_WEB_SERVER_REFUSED",
+     "details": [
+      "2026/10/09 12:42:16 [emerg] 3281#3281: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31"
+     ],
+     "domain": "set4-refused.test",
+     "error_equals_the_documented_sentence": true,
+     "nginx_unit_pid": [
+      "1174",
+      "1174"
+     ],
+     "not_claimed_by_the_answer": {
+      "the certificate-validation directory": [
+       "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/3"
+      ]
+     },
+     "reason": "removed",
+     "status": 502,
+     "tables_naming_the_domain": {},
+     "vars": {
+      "command": "sudo nginx -t",
+      "domain": "set4-refused.test"
+     },
+     "what_made_nginx_refuse": "the owner renamed nginx's own /etc/nginx/fastcgi.conf, which the generated PHP vhost includes",
+     "what_the_removed_answer_claims_and_whether_it_is_true": {
+      "its PHP pool": true,
+      "its files": true,
+      "its system account": true,
+      "its web server configuration": true,
+      "the domain and site rows": true
+     }
+    }
+   },
+   "reload": {
+    "mariadb": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status mariadb",
+       "detail": "mariadb.service is inactive (dead); nothing was reloaded",
+       "unit": "mariadb"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "mariadb.service": []
+     },
+     "state_after": {
+      "mariadb.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "mariadb.service"
+     ]
+    },
+    "nginx": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status nginx",
+       "detail": "nginx.service is inactive (dead); nothing was reloaded",
+       "unit": "nginx"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "nginx.service": []
+     },
+     "state_after": {
+      "nginx.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "nginx.service"
+     ]
+    },
+    "postgresql": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status postgresql",
+       "detail": "postgresql.service is inactive (dead); nothing was reloaded",
+       "unit": "postgresql"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "postgresql.service": []
+     },
+     "state_after": {
+      "postgresql.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "postgresql.service"
+     ]
+    }
+   },
+   "sections": {
+    "08-m0-prepare": [
+     "passed",
+     5,
+     0,
+     0,
+     null
+    ],
+    "09-m1-php-site": [
+     "passed",
+     12,
+     0,
+     0,
+     null
+    ],
+    "10-m6-site-refused": [
+     "passed",
+     13,
+     0,
+     0,
+     null
+    ],
+    "11-m2-import": [
+     "passed",
+     14,
+     0,
+     0,
+     null
+    ],
+    "12-m5-import-absolute": [
+     "passed",
+     10,
+     0,
+     0,
+     null
+    ],
+    "14-m4-reload-stopped": [
+     "passed",
+     21,
+     0,
+     0,
+     null
+    ]
+   },
+   "snippet": {
+    "bytes": null,
+    "equals_the_pinned_digest": false,
+    "exists": false,
+    "owner_package": {
+     "exists": false,
+     "path": "/etc/nginx/snippets/fastcgi-php.conf"
+    },
+    "path": "/etc/nginx/snippets/fastcgi-php.conf",
+    "pinned_in_the_product_test": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "sha256": null,
+    "snippets_directory": {
+     "error": "FileNotFoundError",
+     "exists": false,
+     "path": "/etc/nginx/snippets"
+    }
+   }
+  },
+  "set4-debian13/run-a": {
+   "absolute": {
+    "code": "IMPORT_PARTIAL",
+    "domain_status": "active",
+    "entries_outside": [],
+    "hostile_members": [
+     {
+      "name": "/etc/set3-escape-absolute.txt",
+      "type": "file"
+     }
+    ],
+    "import_status": "partial",
+    "imported": [
+     "domain",
+     "files",
+     "mail",
+     "forwarders",
+     "dns",
+     "database:s4abs_app"
+    ],
+    "message": "The import ended and every part that was chosen was imported; set4-absolute.test is in service. Imported: domain, files, mail, forwarders, dns, database:s4abs_app. Not imported: member:/etc/set3-escape-absolute.txt. These entries of the archive were refused by their names, and nothing was written for them; the reason of each is in its step below. If one of them is a file the site needs, add it with the file manager of set4-absolute.test. Importing the archive again refuses the same entries; nothing continues by itself.",
+    "not_imported": [
+     "member:/etc/set3-escape-absolute.txt"
+    ],
+    "request": {
+     "do_databases": true,
+     "do_dns": false,
+     "do_files": true,
+     "do_mail": true
+    },
+    "status": 200,
+    "steps": [
+     {
+      "detail": "set4-absolute.test (id 7, site 7) → /var/www/celikpanel/subscriptions/2/sites/7/public_html",
+      "ok": true,
+      "step": "domain"
+     },
+     {
+      "detail": "2 files, 98 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+      "ok": true,
+      "step": "files"
+     },
+     {
+      "detail": "not imported: the archive names this entry with an absolute path, and an import writes only below the site's own folder; nothing was written for it",
+      "ok": false,
+      "step": "member:/etc/set3-escape-absolute.txt"
+     },
+     {
+      "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+      "ok": true,
+      "step": "mail"
+     },
+     {
+      "detail": "1 forwarders",
+      "ok": true,
+      "step": "forwarders"
+     },
+     {
+      "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+      "ok": true,
+      "step": "dns"
+     },
+     {
+      "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+      "ok": true,
+      "step": "database:s4abs_app"
+     }
+    ]
+   },
+   "deleted": {
+    "account": null,
+    "acme_challenge_root": "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2",
+    "acme_challenge_root_left": true,
+    "delete_answer": {
+     "domain": "set4-php.test",
+     "status": "deleted"
+    },
+    "delete_status": 200,
+    "no_longer_listed": true,
+    "pool_files_left": [],
+    "probe_executed_after": false,
+    "site_home_left": false,
+    "socket_left": false,
+    "static_served_after": false,
+    "tables_still_naming_the_domain": {
+     "audit_logs": {
+      "action": 1
+     }
+    }
+   },
+   "deleted_answers_after": {
+    "dotfile": 404,
+    "missing_script": 404,
+    "missing_static": 404,
+    "path_info_deep_tail_php": 404,
+    "path_info_plain": 404,
+    "path_info_tail_php": 404,
+    "probe": 404,
+    "probe_query": 404,
+    "root": 200,
+    "static": 404
+   },
+   "import": {
+    "code": null,
+    "domain_status": "active",
+    "import_status": "active",
+    "imported": [
+     "domain",
+     "files",
+     "mail",
+     "forwarders",
+     "dns",
+     "database:s4imp_app"
+    ],
+    "not_imported": [],
+    "status": 200,
+    "steps": [
+     {
+      "detail": "set4-import.test (id 6, site 6) → /var/www/celikpanel/subscriptions/2/sites/6/public_html",
+      "ok": true,
+      "step": "domain"
+     },
+     {
+      "detail": "2 files, 96 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+      "ok": true,
+      "step": "files"
+     },
+     {
+      "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+      "ok": true,
+      "step": "mail"
+     },
+     {
+      "detail": "1 forwarders",
+      "ok": true,
+      "step": "forwarders"
+     },
+     {
+      "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+      "ok": true,
+      "step": "dns"
+     },
+     {
+      "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+      "ok": true,
+      "step": "database:s4imp_app"
+     }
+    ]
+   },
+   "import_php_version": {
+    "imported-site": {
+     "domains_list_php_fields": {
+      "php_version": "8.4"
+     },
+     "installed_php_versions": [
+      "8.4"
+     ],
+     "php_fpm_programs": {
+      "php-fpm8.4": [
+       "PHP 8.4.26 (fpm-fcgi) (built: Sep 24 2026 17:16:18) (NTS)"
+      ]
+     },
+     "php_version_of_the_page": "8.4.26",
+     "pool_file": "/etc/php/8.4/fpm/pool.d/site6.conf",
+     "pool_listen": "/var/run/php/php8.4-fpm-site6.sock",
+     "recorded_php_fpm_socket": "/var/run/php/php8.4-fpm-site6.sock",
+     "recorded_php_version": "8.4",
+     "socket": {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/run/php/php8.4-fpm-site6.sock"
+     },
+     "vhost_fastcgi_pass": "unix:/var/run/php/php8.4-fpm-site6.sock"
+    }
+   },
+   "import_served": {
+    "archive_index": [
+     62,
+     "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe"
+    ],
+    "index": {
+     "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+     "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+     "bytes": 62,
+     "error": null,
+     "headers": {
+      "content-length": "62",
+      "content-type": "text/html",
+      "server": "nginx"
+     },
+     "status": 200
+    },
+    "root": {
+     "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+     "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+     "bytes": 62,
+     "error": null,
+     "headers": {
+      "content-length": "62",
+      "content-type": "text/html",
+      "server": "nginx"
+     },
+     "status": 200
+    }
+   },
+   "import_site": {
+    "domain_id": 6,
+    "php_fpm_socket": "/var/run/php/php8.4-fpm-site6.sock",
+    "php_version": "8.4",
+    "project_type": "php"
+   },
+   "isolation": {
+    "acme_confirmed": true,
+    "before_the_acme_lines": {
+     "acme-staging-v02.api.letsencrypt.org": "",
+     "acme-v02.api.letsencrypt.org": "",
+     "celikpanel.net": "127.0.0.1       celikpanel.net"
+    },
+    "hosts_lines": [
+     "127.0.0.1\tlocalhost",
+     "::1\t\tlocalhost ip6-localhost ip6-loopback",
+     "ff02::1\t\tip6-allnodes",
+     "ff02::2\t\tip6-allrouters",
+     "127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture",
+     "127.0.0.1 acme-v02.api.letsencrypt.org",
+     "::1 acme-v02.api.letsencrypt.org",
+     "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+     "::1 acme-staging-v02.api.letsencrypt.org"
+    ],
+    "how": "`getent -s files hosts NAME`: the guest's own hosts file only, no DNS question is sent",
+    "loopback_only": {
+     "acme-staging-v02.api.letsencrypt.org": true,
+     "acme-v02.api.letsencrypt.org": true,
+     "celikpanel.net": true
+    },
+    "resolves": {
+     "acme-staging-v02.api.letsencrypt.org": "::1             acme-staging-v02.api.letsencrypt.org",
+     "acme-v02.api.letsencrypt.org": "::1             acme-v02.api.letsencrypt.org",
+     "celikpanel.net": "127.0.0.1       celikpanel.net"
+    }
+   },
+   "owner_moved": {
+    "nginx_test_after_the_move": 0,
+    "nginx_test_before": 0
+   },
+   "php_answers": {
+    "dotfile": [
+     403,
+     "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx</c"
+    ],
+    "missing_script": [
+     404,
+     "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx</c"
+    ],
+    "missing_static": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "path_info_deep_tail_php": [
+     200,
+     "set4-php-executed:42:8.4.26:fpm-fcgi:set4_php_test\nPATH_INFO=[/a/b/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENA"
+    ],
+    "path_info_plain": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "path_info_tail_php": [
+     200,
+     "set4-php-executed:42:8.4.26:fpm-fcgi:set4_php_test\nPATH_INFO=[/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=["
+    ],
+    "probe": [
+     200,
+     "set4-php-executed:42:8.4.26:fpm-fcgi:set4_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/"
+    ],
+    "probe_query": [
+     200,
+     "set4-php-executed:42:8.4.26:fpm-fcgi:set4_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/"
+    ],
+    "root": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "static": [
+     200,
+     "set4 static file served by the web server\n"
+    ]
+   },
+   "php_path_info": {
+    "/set4-probe.php/a/b/tail.php?q=1": {
+     "PATH_INFO": "/a/b/tail.php",
+     "SCRIPT_NAME": "/set4-probe.php",
+     "executed": true
+    },
+    "/set4-probe.php/extra/info": {
+     "PATH_INFO": null,
+     "SCRIPT_NAME": null,
+     "executed": false
+    },
+    "/set4-probe.php/tail.php": {
+     "PATH_INFO": "/tail.php",
+     "SCRIPT_NAME": "/set4-probe.php",
+     "executed": true
+    }
+   },
+   "php_probe": {
+    "executed": true,
+    "php_version": "8.4.26",
+    "runs_as": "set4_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "php_version": {
+    "php-site": {
+     "domains_list_php_fields": {
+      "php_version": "8.4"
+     },
+     "installed_php_versions": [
+      "8.4"
+     ],
+     "php_fpm_programs": {
+      "php-fpm8.4": [
+       "PHP 8.4.26 (fpm-fcgi) (built: Sep 24 2026 17:16:18) (NTS)"
+      ]
+     },
+     "php_version_of_the_page": "8.4.26",
+     "pool_file": "/etc/php/8.4/fpm/pool.d/site2.conf",
+     "pool_listen": "/var/run/php/php8.4-fpm-site2.sock",
+     "recorded_php_fpm_socket": "/var/run/php/php8.4-fpm-site2.sock",
+     "recorded_php_version": "8.4",
+     "socket": {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/run/php/php8.4-fpm-site2.sock"
+     },
+     "vhost_fastcgi_pass": "unix:/var/run/php/php8.4-fpm-site2.sock"
+    }
+   },
+   "platform": {
+    "etc_php_directories": [
+     "/etc/php/8.4"
+    ],
+    "kernel": "6.12.105+deb13-cloud-amd64",
+    "nginx_version": "nginx version: nginx/1.26.3",
+    "os_release": {
+     "ID": "debian",
+     "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+     "VERSION_CODENAME": "trixie",
+     "VERSION_ID": "13"
+    },
+    "package_manager": "dpkg",
+    "packages": {
+     "certbot": "4.0.0-2+deb13u1",
+     "dovecot-core": "1:2.4.1+dfsg1-6+deb13u7",
+     "mariadb-server": "1:11.8.6-0+deb13u1",
+     "nginx": "1.26.3-3+deb13u9",
+     "nginx-common": "1.26.3-3+deb13u9",
+     "php-fpm": "2:8.4+96",
+     "php8.4-fpm": "8.4.26-1~deb13u1",
+     "postfix": "3.10.13-0+deb13u1",
+     "postgresql": "17+278",
+     "postgresql-17": "17.11-0+deb13u1",
+     "systemd": "257.13-1~deb13u1"
+    },
+    "php_fpm_programs": {
+     "php-fpm8.4": [
+      "PHP 8.4.26 (fpm-fcgi) (built: Sep 24 2026 17:16:18) (NTS)"
+     ]
+    }
+   },
+   "postfix_start": {
+    "answer": {
+     "applied": "started",
+     "outcome": "verified",
+     "success": true
+    },
+    "master_running": true,
+    "status": 200,
+    "units": {
+     "postfix.service": "active",
+     "postfix@-.service": "inactive"
+    }
+   },
+   "postfix_stop": {
+    "answer": {
+     "applied": "stopped",
+     "note": {
+      "code": "SERVICE_ACTION_NOTE",
+      "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+      "reason": "unit_marked_failed_config",
+      "vars": {
+       "command": "sudo systemctl reset-failed postfix.service",
+       "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+       "failed_unit": "postfix.service",
+       "result": "exit-code",
+       "unit": "postfix"
+      }
+     },
+     "outcome": "verified",
+     "success": true
+    },
+    "master_running_after": false,
+    "reset_failed_in_the_product_journal": false,
+    "status": 200,
+    "unit_results_after": {
+     "postfix.service": "exit-code",
+     "postfix@-.service": "success"
+    },
+    "units_8s_later": {
+     "postfix.service": "failed",
+     "postfix@-.service": "inactive"
+    },
+    "units_after": {
+     "postfix.service": "failed",
+     "postfix@-.service": "inactive"
+    },
+    "units_before": {
+     "postfix.service": "active",
+     "postfix@-.service": "inactive"
+    }
+   },
+   "refused": {
+    "long-site-name": {
+     "autoincrement": [
+      {
+       "domains": 4,
+       "sites": 4
+      },
+      {
+       "domains": 5,
+       "sites": 5
+      }
+     ],
+     "code": "SITE_WEB_SERVER_REFUSED",
+     "details": [
+      "2026/10/09 10:47:54 [emerg] 31706#31706: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64"
+     ],
+     "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test",
+     "error_equals_the_documented_sentence": true,
+     "nginx_unit_pid": [
+      "7051",
+      "7051"
+     ],
+     "not_claimed_by_the_answer": {
+      "the certificate-validation directory": [
+       "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/5"
+      ]
+     },
+     "reason": "removed",
+     "status": 502,
+     "tables_naming_the_domain": {},
+     "vars": {
+      "command": "sudo nginx -t",
+      "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test"
+     },
+     "what_made_nginx_refuse": "no owner action; the site name has 58 characters",
+     "what_the_removed_answer_claims_and_whether_it_is_true": {
+      "its PHP pool": true,
+      "its files": true,
+      "its system account": true,
+      "its web server configuration": true,
+      "the domain and site rows": true
+     }
+    },
+    "owner-moved-file": {
+     "autoincrement": [
+      {
+       "domains": 2,
+       "sites": 2
+      },
+      {
+       "domains": 3,
+       "sites": 3
+      }
+     ],
+     "code": "SITE_WEB_SERVER_REFUSED",
+     "details": [
+      "2026/10/09 10:47:40 [emerg] 31218#31218: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31"
+     ],
+     "domain": "set4-refused.test",
+     "error_equals_the_documented_sentence": true,
+     "nginx_unit_pid": [
+      "7051",
+      "7051"
+     ],
+     "not_claimed_by_the_answer": {
+      "the certificate-validation directory": [
+       "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/3"
+      ]
+     },
+     "reason": "removed",
+     "status": 502,
+     "tables_naming_the_domain": {},
+     "vars": {
+      "command": "sudo nginx -t",
+      "domain": "set4-refused.test"
+     },
+     "what_made_nginx_refuse": "the owner renamed nginx's own /etc/nginx/fastcgi.conf, which the generated PHP vhost includes",
+     "what_the_removed_answer_claims_and_whether_it_is_true": {
+      "its PHP pool": true,
+      "its files": true,
+      "its system account": true,
+      "its web server configuration": true,
+      "the domain and site rows": true
+     }
+    }
+   },
+   "reload": {
+    "mariadb": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status mariadb",
+       "detail": "mariadb.service is inactive (dead); nothing was reloaded",
+       "unit": "mariadb"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "mariadb.service": []
+     },
+     "state_after": {
+      "mariadb.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "mariadb.service"
+     ]
+    },
+    "nginx": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status nginx",
+       "detail": "nginx.service is inactive (dead); nothing was reloaded",
+       "unit": "nginx"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "nginx.service": []
+     },
+     "state_after": {
+      "nginx.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "nginx.service"
+     ]
+    },
+    "postgresql": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status postgresql@17-main.service",
+       "detail": "none of the units behind postgresql.service is running (postgresql@17-main.service inactive (dead)); nothing was reloaded",
+       "owner_unit": "postgresql@17-main.service",
+       "unit": "postgresql"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "postgresql.service": [],
+      "postgresql@17-main.service": []
+     },
+     "state_after": {
+      "postgresql.service": "inactive",
+      "postgresql@17-main.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "postgresql.service",
+      "postgresql@17-main.service"
+     ]
+    }
+   },
+   "sections": {
+    "08-m0-prepare": [
+     "passed",
+     5,
+     0,
+     0,
+     null
+    ],
+    "09-m1-php-site": [
+     "passed",
+     12,
+     0,
+     0,
+     null
+    ],
+    "10-m6-site-refused": [
+     "passed",
+     13,
+     0,
+     0,
+     null
+    ],
+    "11-m2-import": [
+     "passed",
+     14,
+     0,
+     0,
+     null
+    ],
+    "12-m5-import-absolute": [
+     "passed",
+     10,
+     0,
+     0,
+     null
+    ],
+    "13-m10-postfix-stop": [
+     "passed",
+     11,
+     0,
+     0,
+     null
+    ],
+    "14-m4-reload-stopped": [
+     "passed",
+     21,
+     0,
+     0,
+     null
+    ]
+   },
+   "snippet": {
+    "bytes": 423,
+    "equals_the_pinned_digest": true,
+    "exists": true,
+    "owner_package": {
+     "answer": "nginx-common: /etc/nginx/snippets/fastcgi-php.conf",
+     "asked": "dpkg -S /etc/nginx/snippets/fastcgi-php.conf",
+     "exists": true,
+     "path": "/etc/nginx/snippets/fastcgi-php.conf",
+     "returncode": 0
+    },
+    "path": "/etc/nginx/snippets/fastcgi-php.conf",
+    "pinned_in_the_product_test": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "sha256": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "snippets_directory": {
+     "exists": true,
+     "group": "root",
+     "kind": "directory",
+     "mode": "0755",
+     "owner": "root",
+     "path": "/etc/nginx/snippets"
+    }
+   }
+  },
+  "set4-debian13/run-b": {
+   "absolute": {
+    "code": "IMPORT_PARTIAL",
+    "domain_status": "active",
+    "entries_outside": [],
+    "hostile_members": [
+     {
+      "name": "/etc/set3-escape-absolute.txt",
+      "type": "file"
+     }
+    ],
+    "import_status": "partial",
+    "imported": [
+     "domain",
+     "files",
+     "mail",
+     "forwarders",
+     "dns",
+     "database:s4abs_app"
+    ],
+    "message": "The import ended and every part that was chosen was imported; set4-absolute.test is in service. Imported: domain, files, mail, forwarders, dns, database:s4abs_app. Not imported: member:/etc/set3-escape-absolute.txt. These entries of the archive were refused by their names, and nothing was written for them; the reason of each is in its step below. If one of them is a file the site needs, add it with the file manager of set4-absolute.test. Importing the archive again refuses the same entries; nothing continues by itself.",
+    "not_imported": [
+     "member:/etc/set3-escape-absolute.txt"
+    ],
+    "request": {
+     "do_databases": true,
+     "do_dns": false,
+     "do_files": true,
+     "do_mail": true
+    },
+    "status": 200,
+    "steps": [
+     {
+      "detail": "set4-absolute.test (id 7, site 7) → /var/www/celikpanel/subscriptions/2/sites/7/public_html",
+      "ok": true,
+      "step": "domain"
+     },
+     {
+      "detail": "2 files, 98 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+      "ok": true,
+      "step": "files"
+     },
+     {
+      "detail": "not imported: the archive names this entry with an absolute path, and an import writes only below the site's own folder; nothing was written for it",
+      "ok": false,
+      "step": "member:/etc/set3-escape-absolute.txt"
+     },
+     {
+      "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+      "ok": true,
+      "step": "mail"
+     },
+     {
+      "detail": "1 forwarders",
+      "ok": true,
+      "step": "forwarders"
+     },
+     {
+      "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+      "ok": true,
+      "step": "dns"
+     },
+     {
+      "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+      "ok": true,
+      "step": "database:s4abs_app"
+     }
+    ]
+   },
+   "deleted": {
+    "account": null,
+    "acme_challenge_root": "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2",
+    "acme_challenge_root_left": true,
+    "delete_answer": {
+     "domain": "set4-php.test",
+     "status": "deleted"
+    },
+    "delete_status": 200,
+    "no_longer_listed": true,
+    "pool_files_left": [],
+    "probe_executed_after": false,
+    "site_home_left": false,
+    "socket_left": false,
+    "static_served_after": false,
+    "tables_still_naming_the_domain": {
+     "audit_logs": {
+      "action": 1
+     }
+    }
+   },
+   "deleted_answers_after": {
+    "dotfile": 404,
+    "missing_script": 404,
+    "missing_static": 404,
+    "path_info_deep_tail_php": 404,
+    "path_info_plain": 404,
+    "path_info_tail_php": 404,
+    "probe": 404,
+    "probe_query": 404,
+    "root": 200,
+    "static": 404
+   },
+   "import": {
+    "code": null,
+    "domain_status": "active",
+    "import_status": "active",
+    "imported": [
+     "domain",
+     "files",
+     "mail",
+     "forwarders",
+     "dns",
+     "database:s4imp_app"
+    ],
+    "not_imported": [],
+    "status": 200,
+    "steps": [
+     {
+      "detail": "set4-import.test (id 6, site 6) → /var/www/celikpanel/subscriptions/2/sites/6/public_html",
+      "ok": true,
+      "step": "domain"
+     },
+     {
+      "detail": "2 files, 96 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+      "ok": true,
+      "step": "files"
+     },
+     {
+      "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+      "ok": true,
+      "step": "mail"
+     },
+     {
+      "detail": "1 forwarders",
+      "ok": true,
+      "step": "forwarders"
+     },
+     {
+      "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+      "ok": true,
+      "step": "dns"
+     },
+     {
+      "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+      "ok": true,
+      "step": "database:s4imp_app"
+     }
+    ]
+   },
+   "import_php_version": {
+    "imported-site": {
+     "domains_list_php_fields": {
+      "php_version": "8.4"
+     },
+     "installed_php_versions": [
+      "8.4"
+     ],
+     "php_fpm_programs": {
+      "php-fpm8.4": [
+       "PHP 8.4.26 (fpm-fcgi) (built: Sep 24 2026 17:16:18) (NTS)"
+      ]
+     },
+     "php_version_of_the_page": "8.4.26",
+     "pool_file": "/etc/php/8.4/fpm/pool.d/site6.conf",
+     "pool_listen": "/var/run/php/php8.4-fpm-site6.sock",
+     "recorded_php_fpm_socket": "/var/run/php/php8.4-fpm-site6.sock",
+     "recorded_php_version": "8.4",
+     "socket": {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/run/php/php8.4-fpm-site6.sock"
+     },
+     "vhost_fastcgi_pass": "unix:/var/run/php/php8.4-fpm-site6.sock"
+    }
+   },
+   "import_served": {
+    "archive_index": [
+     62,
+     "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe"
+    ],
+    "index": {
+     "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+     "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+     "bytes": 62,
+     "error": null,
+     "headers": {
+      "content-length": "62",
+      "content-type": "text/html",
+      "server": "nginx"
+     },
+     "status": 200
+    },
+    "root": {
+     "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+     "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+     "bytes": 62,
+     "error": null,
+     "headers": {
+      "content-length": "62",
+      "content-type": "text/html",
+      "server": "nginx"
+     },
+     "status": 200
+    }
+   },
+   "import_site": {
+    "domain_id": 6,
+    "php_fpm_socket": "/var/run/php/php8.4-fpm-site6.sock",
+    "php_version": "8.4",
+    "project_type": "php"
+   },
+   "isolation": {
+    "acme_confirmed": true,
+    "before_the_acme_lines": {
+     "acme-staging-v02.api.letsencrypt.org": "",
+     "acme-v02.api.letsencrypt.org": "",
+     "celikpanel.net": "127.0.0.1       celikpanel.net"
+    },
+    "hosts_lines": [
+     "127.0.0.1\tlocalhost",
+     "::1\t\tlocalhost ip6-localhost ip6-loopback",
+     "ff02::1\t\tip6-allnodes",
+     "ff02::2\t\tip6-allrouters",
+     "127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture",
+     "127.0.0.1 acme-v02.api.letsencrypt.org",
+     "::1 acme-v02.api.letsencrypt.org",
+     "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+     "::1 acme-staging-v02.api.letsencrypt.org"
+    ],
+    "how": "`getent -s files hosts NAME`: the guest's own hosts file only, no DNS question is sent",
+    "loopback_only": {
+     "acme-staging-v02.api.letsencrypt.org": true,
+     "acme-v02.api.letsencrypt.org": true,
+     "celikpanel.net": true
+    },
+    "resolves": {
+     "acme-staging-v02.api.letsencrypt.org": "::1             acme-staging-v02.api.letsencrypt.org",
+     "acme-v02.api.letsencrypt.org": "::1             acme-v02.api.letsencrypt.org",
+     "celikpanel.net": "127.0.0.1       celikpanel.net"
+    }
+   },
+   "owner_moved": {
+    "nginx_test_after_the_move": 0,
+    "nginx_test_before": 0
+   },
+   "php_answers": {
+    "dotfile": [
+     403,
+     "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx</c"
+    ],
+    "missing_script": [
+     404,
+     "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx</c"
+    ],
+    "missing_static": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "path_info_deep_tail_php": [
+     200,
+     "set4-php-executed:42:8.4.26:fpm-fcgi:set4_php_test\nPATH_INFO=[/a/b/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENA"
+    ],
+    "path_info_plain": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "path_info_tail_php": [
+     200,
+     "set4-php-executed:42:8.4.26:fpm-fcgi:set4_php_test\nPATH_INFO=[/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=["
+    ],
+    "probe": [
+     200,
+     "set4-php-executed:42:8.4.26:fpm-fcgi:set4_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/"
+    ],
+    "probe_query": [
+     200,
+     "set4-php-executed:42:8.4.26:fpm-fcgi:set4_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/"
+    ],
+    "root": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "static": [
+     200,
+     "set4 static file served by the web server\n"
+    ]
+   },
+   "php_path_info": {
+    "/set4-probe.php/a/b/tail.php?q=1": {
+     "PATH_INFO": "/a/b/tail.php",
+     "SCRIPT_NAME": "/set4-probe.php",
+     "executed": true
+    },
+    "/set4-probe.php/extra/info": {
+     "PATH_INFO": null,
+     "SCRIPT_NAME": null,
+     "executed": false
+    },
+    "/set4-probe.php/tail.php": {
+     "PATH_INFO": "/tail.php",
+     "SCRIPT_NAME": "/set4-probe.php",
+     "executed": true
+    }
+   },
+   "php_probe": {
+    "executed": true,
+    "php_version": "8.4.26",
+    "runs_as": "set4_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "php_version": {
+    "php-site": {
+     "domains_list_php_fields": {
+      "php_version": "8.4"
+     },
+     "installed_php_versions": [
+      "8.4"
+     ],
+     "php_fpm_programs": {
+      "php-fpm8.4": [
+       "PHP 8.4.26 (fpm-fcgi) (built: Sep 24 2026 17:16:18) (NTS)"
+      ]
+     },
+     "php_version_of_the_page": "8.4.26",
+     "pool_file": "/etc/php/8.4/fpm/pool.d/site2.conf",
+     "pool_listen": "/var/run/php/php8.4-fpm-site2.sock",
+     "recorded_php_fpm_socket": "/var/run/php/php8.4-fpm-site2.sock",
+     "recorded_php_version": "8.4",
+     "socket": {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/run/php/php8.4-fpm-site2.sock"
+     },
+     "vhost_fastcgi_pass": "unix:/var/run/php/php8.4-fpm-site2.sock"
+    }
+   },
+   "platform": {
+    "etc_php_directories": [
+     "/etc/php/8.4"
+    ],
+    "kernel": "6.12.105+deb13-cloud-amd64",
+    "nginx_version": "nginx version: nginx/1.26.3",
+    "os_release": {
+     "ID": "debian",
+     "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+     "VERSION_CODENAME": "trixie",
+     "VERSION_ID": "13"
+    },
+    "package_manager": "dpkg",
+    "packages": {
+     "certbot": "4.0.0-2+deb13u1",
+     "dovecot-core": "1:2.4.1+dfsg1-6+deb13u7",
+     "mariadb-server": "1:11.8.6-0+deb13u1",
+     "nginx": "1.26.3-3+deb13u9",
+     "nginx-common": "1.26.3-3+deb13u9",
+     "php-fpm": "2:8.4+96",
+     "php8.4-fpm": "8.4.26-1~deb13u1",
+     "postfix": "3.10.13-0+deb13u1",
+     "postgresql": "17+278",
+     "postgresql-17": "17.11-0+deb13u1",
+     "systemd": "257.13-1~deb13u1"
+    },
+    "php_fpm_programs": {
+     "php-fpm8.4": [
+      "PHP 8.4.26 (fpm-fcgi) (built: Sep 24 2026 17:16:18) (NTS)"
+     ]
+    }
+   },
+   "postfix_start": {
+    "answer": {
+     "applied": "started",
+     "outcome": "verified",
+     "success": true
+    },
+    "master_running": true,
+    "status": 200,
+    "units": {
+     "postfix.service": "active",
+     "postfix@-.service": "inactive"
+    }
+   },
+   "postfix_stop": {
+    "answer": {
+     "applied": "stopped",
+     "note": {
+      "code": "SERVICE_ACTION_NOTE",
+      "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+      "reason": "unit_marked_failed_config",
+      "vars": {
+       "command": "sudo systemctl reset-failed postfix.service",
+       "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+       "failed_unit": "postfix.service",
+       "result": "exit-code",
+       "unit": "postfix"
+      }
+     },
+     "outcome": "verified",
+     "success": true
+    },
+    "master_running_after": false,
+    "reset_failed_in_the_product_journal": false,
+    "status": 200,
+    "unit_results_after": {
+     "postfix.service": "exit-code",
+     "postfix@-.service": "success"
+    },
+    "units_8s_later": {
+     "postfix.service": "failed",
+     "postfix@-.service": "inactive"
+    },
+    "units_after": {
+     "postfix.service": "failed",
+     "postfix@-.service": "inactive"
+    },
+    "units_before": {
+     "postfix.service": "active",
+     "postfix@-.service": "inactive"
+    }
+   },
+   "refused": {
+    "long-site-name": {
+     "autoincrement": [
+      {
+       "domains": 4,
+       "sites": 4
+      },
+      {
+       "domains": 5,
+       "sites": 5
+      }
+     ],
+     "code": "SITE_WEB_SERVER_REFUSED",
+     "details": [
+      "2026/10/09 12:52:27 [emerg] 31593#31593: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64"
+     ],
+     "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test",
+     "error_equals_the_documented_sentence": true,
+     "nginx_unit_pid": [
+      "7049",
+      "7049"
+     ],
+     "not_claimed_by_the_answer": {
+      "the certificate-validation directory": [
+       "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/5"
+      ]
+     },
+     "reason": "removed",
+     "status": 502,
+     "tables_naming_the_domain": {},
+     "vars": {
+      "command": "sudo nginx -t",
+      "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test"
+     },
+     "what_made_nginx_refuse": "no owner action; the site name has 58 characters",
+     "what_the_removed_answer_claims_and_whether_it_is_true": {
+      "its PHP pool": true,
+      "its files": true,
+      "its system account": true,
+      "its web server configuration": true,
+      "the domain and site rows": true
+     }
+    },
+    "owner-moved-file": {
+     "autoincrement": [
+      {
+       "domains": 2,
+       "sites": 2
+      },
+      {
+       "domains": 3,
+       "sites": 3
+      }
+     ],
+     "code": "SITE_WEB_SERVER_REFUSED",
+     "details": [
+      "2026/10/09 12:52:18 [emerg] 31138#31138: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31"
+     ],
+     "domain": "set4-refused.test",
+     "error_equals_the_documented_sentence": true,
+     "nginx_unit_pid": [
+      "7049",
+      "7049"
+     ],
+     "not_claimed_by_the_answer": {
+      "the certificate-validation directory": [
+       "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/3"
+      ]
+     },
+     "reason": "removed",
+     "status": 502,
+     "tables_naming_the_domain": {},
+     "vars": {
+      "command": "sudo nginx -t",
+      "domain": "set4-refused.test"
+     },
+     "what_made_nginx_refuse": "the owner renamed nginx's own /etc/nginx/fastcgi.conf, which the generated PHP vhost includes",
+     "what_the_removed_answer_claims_and_whether_it_is_true": {
+      "its PHP pool": true,
+      "its files": true,
+      "its system account": true,
+      "its web server configuration": true,
+      "the domain and site rows": true
+     }
+    }
+   },
+   "reload": {
+    "mariadb": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status mariadb",
+       "detail": "mariadb.service is inactive (dead); nothing was reloaded",
+       "unit": "mariadb"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "mariadb.service": []
+     },
+     "state_after": {
+      "mariadb.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "mariadb.service"
+     ]
+    },
+    "nginx": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status nginx",
+       "detail": "nginx.service is inactive (dead); nothing was reloaded",
+       "unit": "nginx"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "nginx.service": []
+     },
+     "state_after": {
+      "nginx.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "nginx.service"
+     ]
+    },
+    "postgresql": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status postgresql@17-main.service",
+       "detail": "none of the units behind postgresql.service is running (postgresql@17-main.service inactive (dead)); nothing was reloaded",
+       "owner_unit": "postgresql@17-main.service",
+       "unit": "postgresql"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "postgresql.service": [],
+      "postgresql@17-main.service": []
+     },
+     "state_after": {
+      "postgresql.service": "inactive",
+      "postgresql@17-main.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "postgresql.service",
+      "postgresql@17-main.service"
+     ]
+    }
+   },
+   "sections": {
+    "08-m0-prepare": [
+     "passed",
+     5,
+     0,
+     0,
+     null
+    ],
+    "09-m1-php-site": [
+     "passed",
+     12,
+     0,
+     0,
+     null
+    ],
+    "10-m6-site-refused": [
+     "passed",
+     13,
+     0,
+     0,
+     null
+    ],
+    "11-m2-import": [
+     "passed",
+     14,
+     0,
+     0,
+     null
+    ],
+    "12-m5-import-absolute": [
+     "passed",
+     10,
+     0,
+     0,
+     null
+    ],
+    "13-m10-postfix-stop": [
+     "passed",
+     11,
+     0,
+     0,
+     null
+    ],
+    "14-m4-reload-stopped": [
+     "passed",
+     21,
+     0,
+     0,
+     null
+    ]
+   },
+   "snippet": {
+    "bytes": 423,
+    "equals_the_pinned_digest": true,
+    "exists": true,
+    "owner_package": {
+     "answer": "nginx-common: /etc/nginx/snippets/fastcgi-php.conf",
+     "asked": "dpkg -S /etc/nginx/snippets/fastcgi-php.conf",
+     "exists": true,
+     "path": "/etc/nginx/snippets/fastcgi-php.conf",
+     "returncode": 0
+    },
+    "path": "/etc/nginx/snippets/fastcgi-php.conf",
+    "pinned_in_the_product_test": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "sha256": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "snippets_directory": {
+     "exists": true,
+     "group": "root",
+     "kind": "directory",
+     "mode": "0755",
+     "owner": "root",
+     "path": "/etc/nginx/snippets"
+    }
+   }
+  },
+  "set4-ubuntu/run-a": {
+   "absolute": {
+    "code": "IMPORT_PARTIAL",
+    "domain_status": "active",
+    "entries_outside": [],
+    "hostile_members": [
+     {
+      "name": "/etc/set3-escape-absolute.txt",
+      "type": "file"
+     }
+    ],
+    "import_status": "partial",
+    "imported": [
+     "domain",
+     "files",
+     "mail",
+     "forwarders",
+     "dns",
+     "database:s4abs_app"
+    ],
+    "message": "The import ended and every part that was chosen was imported; set4-absolute.test is in service. Imported: domain, files, mail, forwarders, dns, database:s4abs_app. Not imported: member:/etc/set3-escape-absolute.txt. These entries of the archive were refused by their names, and nothing was written for them; the reason of each is in its step below. If one of them is a file the site needs, add it with the file manager of set4-absolute.test. Importing the archive again refuses the same entries; nothing continues by itself.",
+    "not_imported": [
+     "member:/etc/set3-escape-absolute.txt"
+    ],
+    "request": {
+     "do_databases": true,
+     "do_dns": false,
+     "do_files": true,
+     "do_mail": true
+    },
+    "status": 200,
+    "steps": [
+     {
+      "detail": "set4-absolute.test (id 7, site 7) → /var/www/celikpanel/subscriptions/2/sites/7/public_html",
+      "ok": true,
+      "step": "domain"
+     },
+     {
+      "detail": "2 files, 98 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+      "ok": true,
+      "step": "files"
+     },
+     {
+      "detail": "not imported: the archive names this entry with an absolute path, and an import writes only below the site's own folder; nothing was written for it",
+      "ok": false,
+      "step": "member:/etc/set3-escape-absolute.txt"
+     },
+     {
+      "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+      "ok": true,
+      "step": "mail"
+     },
+     {
+      "detail": "1 forwarders",
+      "ok": true,
+      "step": "forwarders"
+     },
+     {
+      "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+      "ok": true,
+      "step": "dns"
+     },
+     {
+      "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+      "ok": true,
+      "step": "database:s4abs_app"
+     }
+    ]
+   },
+   "deleted": {
+    "account": null,
+    "acme_challenge_root": "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2",
+    "acme_challenge_root_left": true,
+    "delete_answer": {
+     "domain": "set4-php.test",
+     "status": "deleted"
+    },
+    "delete_status": 200,
+    "no_longer_listed": true,
+    "pool_files_left": [],
+    "probe_executed_after": false,
+    "site_home_left": false,
+    "socket_left": false,
+    "static_served_after": false,
+    "tables_still_naming_the_domain": {
+     "audit_logs": {
+      "action": 1
+     }
+    }
+   },
+   "deleted_answers_after": {
+    "dotfile": 404,
+    "missing_script": 404,
+    "missing_static": 404,
+    "path_info_deep_tail_php": 404,
+    "path_info_plain": 404,
+    "path_info_tail_php": 404,
+    "probe": 404,
+    "probe_query": 404,
+    "root": 200,
+    "static": 404
+   },
+   "import": {
+    "code": null,
+    "domain_status": "active",
+    "import_status": "active",
+    "imported": [
+     "domain",
+     "files",
+     "mail",
+     "forwarders",
+     "dns",
+     "database:s4imp_app"
+    ],
+    "not_imported": [],
+    "status": 200,
+    "steps": [
+     {
+      "detail": "set4-import.test (id 6, site 6) → /var/www/celikpanel/subscriptions/2/sites/6/public_html",
+      "ok": true,
+      "step": "domain"
+     },
+     {
+      "detail": "2 files, 96 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+      "ok": true,
+      "step": "files"
+     },
+     {
+      "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+      "ok": true,
+      "step": "mail"
+     },
+     {
+      "detail": "1 forwarders",
+      "ok": true,
+      "step": "forwarders"
+     },
+     {
+      "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+      "ok": true,
+      "step": "dns"
+     },
+     {
+      "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+      "ok": true,
+      "step": "database:s4imp_app"
+     }
+    ]
+   },
+   "import_php_version": {
+    "imported-site": {
+     "domains_list_php_fields": {
+      "php_version": "8.3"
+     },
+     "installed_php_versions": [
+      "8.3"
+     ],
+     "php_fpm_programs": {
+      "php-fpm8.3": [
+       "PHP 8.3.6 (fpm-fcgi) (built: Sep  2 2026 12:56:02)"
+      ]
+     },
+     "php_version_of_the_page": "8.3.6",
+     "pool_file": "/etc/php/8.3/fpm/pool.d/site6.conf",
+     "pool_listen": "/var/run/php/php8.3-fpm-site6.sock",
+     "recorded_php_fpm_socket": "/var/run/php/php8.3-fpm-site6.sock",
+     "recorded_php_version": "8.3",
+     "socket": {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/run/php/php8.3-fpm-site6.sock"
+     },
+     "vhost_fastcgi_pass": "unix:/var/run/php/php8.3-fpm-site6.sock"
+    }
+   },
+   "import_served": {
+    "archive_index": [
+     62,
+     "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe"
+    ],
+    "index": {
+     "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+     "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+     "bytes": 62,
+     "error": null,
+     "headers": {
+      "content-length": "62",
+      "content-type": "text/html",
+      "server": "nginx/1.24.0 (Ubuntu)"
+     },
+     "status": 200
+    },
+    "root": {
+     "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+     "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+     "bytes": 62,
+     "error": null,
+     "headers": {
+      "content-length": "62",
+      "content-type": "text/html",
+      "server": "nginx/1.24.0 (Ubuntu)"
+     },
+     "status": 200
+    }
+   },
+   "import_site": {
+    "domain_id": 6,
+    "php_fpm_socket": "/var/run/php/php8.3-fpm-site6.sock",
+    "php_version": "8.3",
+    "project_type": "php"
+   },
+   "isolation": {
+    "acme_confirmed": true,
+    "before_the_acme_lines": {
+     "acme-staging-v02.api.letsencrypt.org": "",
+     "acme-v02.api.letsencrypt.org": "",
+     "celikpanel.net": "127.0.0.1       celikpanel.net"
+    },
+    "hosts_lines": [
+     "127.0.0.1 localhost",
+     "::1 ip6-localhost ip6-loopback",
+     "fe00::0 ip6-localnet",
+     "ff00::0 ip6-mcastprefix",
+     "ff02::1 ip6-allnodes",
+     "ff02::2 ip6-allrouters",
+     "ff02::3 ip6-allhosts",
+     "127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture",
+     "127.0.0.1 acme-v02.api.letsencrypt.org",
+     "::1 acme-v02.api.letsencrypt.org",
+     "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+     "::1 acme-staging-v02.api.letsencrypt.org"
+    ],
+    "how": "`getent -s files hosts NAME`: the guest's own hosts file only, no DNS question is sent",
+    "loopback_only": {
+     "acme-staging-v02.api.letsencrypt.org": true,
+     "acme-v02.api.letsencrypt.org": true,
+     "celikpanel.net": true
+    },
+    "resolves": {
+     "acme-staging-v02.api.letsencrypt.org": "::1             acme-staging-v02.api.letsencrypt.org",
+     "acme-v02.api.letsencrypt.org": "::1             acme-v02.api.letsencrypt.org",
+     "celikpanel.net": "127.0.0.1       celikpanel.net"
+    }
+   },
+   "owner_moved": {
+    "nginx_test_after_the_move": 0,
+    "nginx_test_before": 0
+   },
+   "php_answers": {
+    "dotfile": [
+     403,
+     "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1."
+    ],
+    "missing_script": [
+     404,
+     "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1."
+    ],
+    "missing_static": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "path_info_deep_tail_php": [
+     200,
+     "set4-php-executed:42:8.3.6:fpm-fcgi:set4_php_test\nPATH_INFO=[/a/b/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAM"
+    ],
+    "path_info_plain": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "path_info_tail_php": [
+     200,
+     "set4-php-executed:42:8.3.6:fpm-fcgi:set4_php_test\nPATH_INFO=[/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/"
+    ],
+    "probe": [
+     200,
+     "set4-php-executed:42:8.3.6:fpm-fcgi:set4_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/c"
+    ],
+    "probe_query": [
+     200,
+     "set4-php-executed:42:8.3.6:fpm-fcgi:set4_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/c"
+    ],
+    "root": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "static": [
+     200,
+     "set4 static file served by the web server\n"
+    ]
+   },
+   "php_path_info": {
+    "/set4-probe.php/a/b/tail.php?q=1": {
+     "PATH_INFO": "/a/b/tail.php",
+     "SCRIPT_NAME": "/set4-probe.php",
+     "executed": true
+    },
+    "/set4-probe.php/extra/info": {
+     "PATH_INFO": null,
+     "SCRIPT_NAME": null,
+     "executed": false
+    },
+    "/set4-probe.php/tail.php": {
+     "PATH_INFO": "/tail.php",
+     "SCRIPT_NAME": "/set4-probe.php",
+     "executed": true
+    }
+   },
+   "php_probe": {
+    "executed": true,
+    "php_version": "8.3.6",
+    "runs_as": "set4_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "php_version": {
+    "php-site": {
+     "domains_list_php_fields": {
+      "php_version": "8.3"
+     },
+     "installed_php_versions": [
+      "8.3"
+     ],
+     "php_fpm_programs": {
+      "php-fpm8.3": [
+       "PHP 8.3.6 (fpm-fcgi) (built: Sep  2 2026 12:56:02)"
+      ]
+     },
+     "php_version_of_the_page": "8.3.6",
+     "pool_file": "/etc/php/8.3/fpm/pool.d/site2.conf",
+     "pool_listen": "/var/run/php/php8.3-fpm-site2.sock",
+     "recorded_php_fpm_socket": "/var/run/php/php8.3-fpm-site2.sock",
+     "recorded_php_version": "8.3",
+     "socket": {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/run/php/php8.3-fpm-site2.sock"
+     },
+     "vhost_fastcgi_pass": "unix:/var/run/php/php8.3-fpm-site2.sock"
+    }
+   },
+   "platform": {
+    "etc_php_directories": [
+     "/etc/php/8.3"
+    ],
+    "kernel": "6.8.0-138-generic",
+    "nginx_version": "nginx version: nginx/1.24.0 (Ubuntu)",
+    "os_release": {
+     "ID": "ubuntu",
+     "PRETTY_NAME": "Ubuntu 24.04.4 LTS",
+     "VERSION_CODENAME": "noble",
+     "VERSION_ID": "24.04"
+    },
+    "package_manager": "dpkg",
+    "packages": {
+     "certbot": "2.9.0-1",
+     "dovecot-core": "1:2.3.21+dfsg1-2ubuntu6.5",
+     "mariadb-server": "1:10.11.14-0ubuntu0.24.04.1",
+     "nginx": "1.24.0-2ubuntu7.18",
+     "nginx-common": "1.24.0-2ubuntu7.18",
+     "php-fpm": "2:8.3+93ubuntu2",
+     "php8.3-fpm": "8.3.6-0ubuntu0.24.04.11",
+     "postfix": "3.8.6-1ubuntu0.1",
+     "postgresql": "16+257build1.1",
+     "postgresql-16": "16.15-0ubuntu0.24.04.1",
+     "systemd": "255.4-1ubuntu8.17"
+    },
+    "php_fpm_programs": {
+     "php-fpm8.3": [
+      "PHP 8.3.6 (fpm-fcgi) (built: Sep  2 2026 12:56:02)"
+     ]
+    }
+   },
+   "postfix_start": {
+    "answer": {
+     "applied": "started",
+     "outcome": "verified",
+     "success": true
+    },
+    "master_running": true,
+    "status": 200,
+    "units": {
+     "postfix.service": "active",
+     "postfix@-.service": "active"
+    }
+   },
+   "postfix_stop": {
+    "answer": {
+     "applied": "stopped",
+     "outcome": "verified",
+     "success": true
+    },
+    "master_running_after": false,
+    "reset_failed_in_the_product_journal": false,
+    "status": 200,
+    "unit_results_after": {
+     "postfix.service": "success",
+     "postfix@-.service": "exit-code"
+    },
+    "units_8s_later": {
+     "postfix.service": "inactive",
+     "postfix@-.service": "failed"
+    },
+    "units_after": {
+     "postfix.service": "inactive",
+     "postfix@-.service": "failed"
+    },
+    "units_before": {
+     "postfix.service": "active",
+     "postfix@-.service": "active"
+    }
+   },
+   "refused": {
+    "long-site-name": {
+     "autoincrement": [
+      {
+       "domains": 4,
+       "sites": 4
+      },
+      {
+       "domains": 5,
+       "sites": 5
+      }
+     ],
+     "code": "SITE_WEB_SERVER_REFUSED",
+     "details": [
+      "2026/10/09 11:26:10 [emerg] 47030#47030: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64"
+     ],
+     "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test",
+     "error_equals_the_documented_sentence": true,
+     "nginx_unit_pid": [
+      "11893",
+      "11893"
+     ],
+     "not_claimed_by_the_answer": {
+      "the certificate-validation directory": [
+       "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/5"
+      ]
+     },
+     "reason": "removed",
+     "status": 502,
+     "tables_naming_the_domain": {},
+     "vars": {
+      "command": "sudo nginx -t",
+      "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test"
+     },
+     "what_made_nginx_refuse": "no owner action; the site name has 58 characters",
+     "what_the_removed_answer_claims_and_whether_it_is_true": {
+      "its PHP pool": true,
+      "its files": true,
+      "its system account": true,
+      "its web server configuration": true,
+      "the domain and site rows": true
+     }
+    },
+    "owner-moved-file": {
+     "autoincrement": [
+      {
+       "domains": 2,
+       "sites": 2
+      },
+      {
+       "domains": 3,
+       "sites": 3
+      }
+     ],
+     "code": "SITE_WEB_SERVER_REFUSED",
+     "details": [
+      "2026/10/09 11:25:57 [emerg] 45828#45828: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31"
+     ],
+     "domain": "set4-refused.test",
+     "error_equals_the_documented_sentence": true,
+     "nginx_unit_pid": [
+      "11893",
+      "11893"
+     ],
+     "not_claimed_by_the_answer": {
+      "the certificate-validation directory": [
+       "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/3"
+      ]
+     },
+     "reason": "removed",
+     "status": 502,
+     "tables_naming_the_domain": {},
+     "vars": {
+      "command": "sudo nginx -t",
+      "domain": "set4-refused.test"
+     },
+     "what_made_nginx_refuse": "the owner renamed nginx's own /etc/nginx/fastcgi.conf, which the generated PHP vhost includes",
+     "what_the_removed_answer_claims_and_whether_it_is_true": {
+      "its PHP pool": true,
+      "its files": true,
+      "its system account": true,
+      "its web server configuration": true,
+      "the domain and site rows": true
+     }
+    }
+   },
+   "reload": {
+    "mariadb": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status mariadb",
+       "detail": "mariadb.service is inactive (dead); nothing was reloaded",
+       "unit": "mariadb"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "mariadb.service": []
+     },
+     "state_after": {
+      "mariadb.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "mariadb.service"
+     ]
+    },
+    "nginx": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status nginx",
+       "detail": "nginx.service is inactive (dead); nothing was reloaded",
+       "unit": "nginx"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "nginx.service": []
+     },
+     "state_after": {
+      "nginx.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "nginx.service"
+     ]
+    },
+    "postgresql": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status postgresql@16-main.service",
+       "detail": "none of the units behind postgresql.service is running (postgresql@16-main.service inactive (dead)); nothing was reloaded",
+       "owner_unit": "postgresql@16-main.service",
+       "unit": "postgresql"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "postgresql.service": [],
+      "postgresql@16-main.service": []
+     },
+     "state_after": {
+      "postgresql.service": "inactive",
+      "postgresql@16-main.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "postgresql.service",
+      "postgresql@16-main.service"
+     ]
+    }
+   },
+   "sections": {
+    "08-m0-prepare": [
+     "passed",
+     5,
+     0,
+     0,
+     null
+    ],
+    "09-m1-php-site": [
+     "passed",
+     12,
+     0,
+     0,
+     null
+    ],
+    "10-m6-site-refused": [
+     "passed",
+     13,
+     0,
+     0,
+     null
+    ],
+    "11-m2-import": [
+     "passed",
+     14,
+     0,
+     0,
+     null
+    ],
+    "12-m5-import-absolute": [
+     "passed",
+     10,
+     0,
+     0,
+     null
+    ],
+    "13-m10-postfix-stop": [
+     "failed",
+     8,
+     3,
+     0,
+     null
+    ],
+    "14-m4-reload-stopped": [
+     "passed",
+     21,
+     0,
+     0,
+     null
+    ]
+   },
+   "snippet": {
+    "bytes": 423,
+    "equals_the_pinned_digest": true,
+    "exists": true,
+    "owner_package": {
+     "answer": "nginx-common: /etc/nginx/snippets/fastcgi-php.conf",
+     "asked": "dpkg -S /etc/nginx/snippets/fastcgi-php.conf",
+     "exists": true,
+     "path": "/etc/nginx/snippets/fastcgi-php.conf",
+     "returncode": 0
+    },
+    "path": "/etc/nginx/snippets/fastcgi-php.conf",
+    "pinned_in_the_product_test": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "sha256": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "snippets_directory": {
+     "exists": true,
+     "group": "root",
+     "kind": "directory",
+     "mode": "0755",
+     "owner": "root",
+     "path": "/etc/nginx/snippets"
+    }
+   }
+  },
+  "set4-ubuntu/run-b": {
+   "absolute": {
+    "code": "IMPORT_PARTIAL",
+    "domain_status": "active",
+    "entries_outside": [],
+    "hostile_members": [
+     {
+      "name": "/etc/set3-escape-absolute.txt",
+      "type": "file"
+     }
+    ],
+    "import_status": "partial",
+    "imported": [
+     "domain",
+     "files",
+     "mail",
+     "forwarders",
+     "dns",
+     "database:s4abs_app"
+    ],
+    "message": "The import ended and every part that was chosen was imported; set4-absolute.test is in service. Imported: domain, files, mail, forwarders, dns, database:s4abs_app. Not imported: member:/etc/set3-escape-absolute.txt. These entries of the archive were refused by their names, and nothing was written for them; the reason of each is in its step below. If one of them is a file the site needs, add it with the file manager of set4-absolute.test. Importing the archive again refuses the same entries; nothing continues by itself.",
+    "not_imported": [
+     "member:/etc/set3-escape-absolute.txt"
+    ],
+    "request": {
+     "do_databases": true,
+     "do_dns": false,
+     "do_files": true,
+     "do_mail": true
+    },
+    "status": 200,
+    "steps": [
+     {
+      "detail": "set4-absolute.test (id 7, site 7) → /var/www/celikpanel/subscriptions/2/sites/7/public_html",
+      "ok": true,
+      "step": "domain"
+     },
+     {
+      "detail": "2 files, 98 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+      "ok": true,
+      "step": "files"
+     },
+     {
+      "detail": "not imported: the archive names this entry with an absolute path, and an import writes only below the site's own folder; nothing was written for it",
+      "ok": false,
+      "step": "member:/etc/set3-escape-absolute.txt"
+     },
+     {
+      "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+      "ok": true,
+      "step": "mail"
+     },
+     {
+      "detail": "1 forwarders",
+      "ok": true,
+      "step": "forwarders"
+     },
+     {
+      "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+      "ok": true,
+      "step": "dns"
+     },
+     {
+      "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+      "ok": true,
+      "step": "database:s4abs_app"
+     }
+    ]
+   },
+   "deleted": {
+    "account": null,
+    "acme_challenge_root": "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2",
+    "acme_challenge_root_left": true,
+    "delete_answer": {
+     "domain": "set4-php.test",
+     "status": "deleted"
+    },
+    "delete_status": 200,
+    "no_longer_listed": true,
+    "pool_files_left": [],
+    "probe_executed_after": false,
+    "site_home_left": false,
+    "socket_left": false,
+    "static_served_after": false,
+    "tables_still_naming_the_domain": {
+     "audit_logs": {
+      "action": 1
+     }
+    }
+   },
+   "deleted_answers_after": {
+    "dotfile": 404,
+    "missing_script": 404,
+    "missing_static": 404,
+    "path_info_deep_tail_php": 404,
+    "path_info_plain": 404,
+    "path_info_tail_php": 404,
+    "probe": 404,
+    "probe_query": 404,
+    "root": 200,
+    "static": 404
+   },
+   "import": {
+    "code": null,
+    "domain_status": "active",
+    "import_status": "active",
+    "imported": [
+     "domain",
+     "files",
+     "mail",
+     "forwarders",
+     "dns",
+     "database:s4imp_app"
+    ],
+    "not_imported": [],
+    "status": 200,
+    "steps": [
+     {
+      "detail": "set4-import.test (id 6, site 6) → /var/www/celikpanel/subscriptions/2/sites/6/public_html",
+      "ok": true,
+      "step": "domain"
+     },
+     {
+      "detail": "2 files, 96 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+      "ok": true,
+      "step": "files"
+     },
+     {
+      "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+      "ok": true,
+      "step": "mail"
+     },
+     {
+      "detail": "1 forwarders",
+      "ok": true,
+      "step": "forwarders"
+     },
+     {
+      "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+      "ok": true,
+      "step": "dns"
+     },
+     {
+      "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+      "ok": true,
+      "step": "database:s4imp_app"
+     }
+    ]
+   },
+   "import_php_version": {
+    "imported-site": {
+     "domains_list_php_fields": {
+      "php_version": "8.3"
+     },
+     "installed_php_versions": [
+      "8.3"
+     ],
+     "php_fpm_programs": {
+      "php-fpm8.3": [
+       "PHP 8.3.6 (fpm-fcgi) (built: Sep  2 2026 12:56:02)"
+      ]
+     },
+     "php_version_of_the_page": "8.3.6",
+     "pool_file": "/etc/php/8.3/fpm/pool.d/site6.conf",
+     "pool_listen": "/var/run/php/php8.3-fpm-site6.sock",
+     "recorded_php_fpm_socket": "/var/run/php/php8.3-fpm-site6.sock",
+     "recorded_php_version": "8.3",
+     "socket": {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/run/php/php8.3-fpm-site6.sock"
+     },
+     "vhost_fastcgi_pass": "unix:/var/run/php/php8.3-fpm-site6.sock"
+    }
+   },
+   "import_served": {
+    "archive_index": [
+     62,
+     "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe"
+    ],
+    "index": {
+     "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+     "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+     "bytes": 62,
+     "error": null,
+     "headers": {
+      "content-length": "62",
+      "content-type": "text/html",
+      "server": "nginx/1.24.0 (Ubuntu)"
+     },
+     "status": 200
+    },
+    "root": {
+     "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+     "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+     "bytes": 62,
+     "error": null,
+     "headers": {
+      "content-length": "62",
+      "content-type": "text/html",
+      "server": "nginx/1.24.0 (Ubuntu)"
+     },
+     "status": 200
+    }
+   },
+   "import_site": {
+    "domain_id": 6,
+    "php_fpm_socket": "/var/run/php/php8.3-fpm-site6.sock",
+    "php_version": "8.3",
+    "project_type": "php"
+   },
+   "isolation": {
+    "acme_confirmed": true,
+    "before_the_acme_lines": {
+     "acme-staging-v02.api.letsencrypt.org": "",
+     "acme-v02.api.letsencrypt.org": "",
+     "celikpanel.net": "127.0.0.1       celikpanel.net"
+    },
+    "hosts_lines": [
+     "127.0.0.1 localhost",
+     "::1 ip6-localhost ip6-loopback",
+     "fe00::0 ip6-localnet",
+     "ff00::0 ip6-mcastprefix",
+     "ff02::1 ip6-allnodes",
+     "ff02::2 ip6-allrouters",
+     "ff02::3 ip6-allhosts",
+     "127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture",
+     "127.0.0.1 acme-v02.api.letsencrypt.org",
+     "::1 acme-v02.api.letsencrypt.org",
+     "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+     "::1 acme-staging-v02.api.letsencrypt.org"
+    ],
+    "how": "`getent -s files hosts NAME`: the guest's own hosts file only, no DNS question is sent",
+    "loopback_only": {
+     "acme-staging-v02.api.letsencrypt.org": true,
+     "acme-v02.api.letsencrypt.org": true,
+     "celikpanel.net": true
+    },
+    "resolves": {
+     "acme-staging-v02.api.letsencrypt.org": "::1             acme-staging-v02.api.letsencrypt.org",
+     "acme-v02.api.letsencrypt.org": "::1             acme-v02.api.letsencrypt.org",
+     "celikpanel.net": "127.0.0.1       celikpanel.net"
+    }
+   },
+   "owner_moved": {
+    "nginx_test_after_the_move": 0,
+    "nginx_test_before": 0
+   },
+   "php_answers": {
+    "dotfile": [
+     403,
+     "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1."
+    ],
+    "missing_script": [
+     404,
+     "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1."
+    ],
+    "missing_static": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "path_info_deep_tail_php": [
+     200,
+     "set4-php-executed:42:8.3.6:fpm-fcgi:set4_php_test\nPATH_INFO=[/a/b/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAM"
+    ],
+    "path_info_plain": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "path_info_tail_php": [
+     200,
+     "set4-php-executed:42:8.3.6:fpm-fcgi:set4_php_test\nPATH_INFO=[/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/"
+    ],
+    "probe": [
+     200,
+     "set4-php-executed:42:8.3.6:fpm-fcgi:set4_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/c"
+    ],
+    "probe_query": [
+     200,
+     "set4-php-executed:42:8.3.6:fpm-fcgi:set4_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/c"
+    ],
+    "root": [
+     200,
+     "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initia"
+    ],
+    "static": [
+     200,
+     "set4 static file served by the web server\n"
+    ]
+   },
+   "php_path_info": {
+    "/set4-probe.php/a/b/tail.php?q=1": {
+     "PATH_INFO": "/a/b/tail.php",
+     "SCRIPT_NAME": "/set4-probe.php",
+     "executed": true
+    },
+    "/set4-probe.php/extra/info": {
+     "PATH_INFO": null,
+     "SCRIPT_NAME": null,
+     "executed": false
+    },
+    "/set4-probe.php/tail.php": {
+     "PATH_INFO": "/tail.php",
+     "SCRIPT_NAME": "/set4-probe.php",
+     "executed": true
+    }
+   },
+   "php_probe": {
+    "executed": true,
+    "php_version": "8.3.6",
+    "runs_as": "set4_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "php_version": {
+    "php-site": {
+     "domains_list_php_fields": {
+      "php_version": "8.3"
+     },
+     "installed_php_versions": [
+      "8.3"
+     ],
+     "php_fpm_programs": {
+      "php-fpm8.3": [
+       "PHP 8.3.6 (fpm-fcgi) (built: Sep  2 2026 12:56:02)"
+      ]
+     },
+     "php_version_of_the_page": "8.3.6",
+     "pool_file": "/etc/php/8.3/fpm/pool.d/site2.conf",
+     "pool_listen": "/var/run/php/php8.3-fpm-site2.sock",
+     "recorded_php_fpm_socket": "/var/run/php/php8.3-fpm-site2.sock",
+     "recorded_php_version": "8.3",
+     "socket": {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/run/php/php8.3-fpm-site2.sock"
+     },
+     "vhost_fastcgi_pass": "unix:/var/run/php/php8.3-fpm-site2.sock"
+    }
+   },
+   "platform": {
+    "etc_php_directories": [
+     "/etc/php/8.3"
+    ],
+    "kernel": "6.8.0-138-generic",
+    "nginx_version": "nginx version: nginx/1.24.0 (Ubuntu)",
+    "os_release": {
+     "ID": "ubuntu",
+     "PRETTY_NAME": "Ubuntu 24.04.4 LTS",
+     "VERSION_CODENAME": "noble",
+     "VERSION_ID": "24.04"
+    },
+    "package_manager": "dpkg",
+    "packages": {
+     "certbot": "2.9.0-1",
+     "dovecot-core": "1:2.3.21+dfsg1-2ubuntu6.5",
+     "mariadb-server": "1:10.11.14-0ubuntu0.24.04.1",
+     "nginx": "1.24.0-2ubuntu7.18",
+     "nginx-common": "1.24.0-2ubuntu7.18",
+     "php-fpm": "2:8.3+93ubuntu2",
+     "php8.3-fpm": "8.3.6-0ubuntu0.24.04.11",
+     "postfix": "3.8.6-1ubuntu0.1",
+     "postgresql": "16+257build1.1",
+     "postgresql-16": "16.15-0ubuntu0.24.04.1",
+     "systemd": "255.4-1ubuntu8.17"
+    },
+    "php_fpm_programs": {
+     "php-fpm8.3": [
+      "PHP 8.3.6 (fpm-fcgi) (built: Sep  2 2026 12:56:02)"
+     ]
+    }
+   },
+   "postfix_start": {
+    "answer": {
+     "applied": "started",
+     "outcome": "verified",
+     "success": true
+    },
+    "master_running": true,
+    "status": 200,
+    "units": {
+     "postfix.service": "active",
+     "postfix@-.service": "active"
+    }
+   },
+   "postfix_stop": {
+    "answer": {
+     "applied": "stopped",
+     "outcome": "verified",
+     "success": true
+    },
+    "master_running_after": false,
+    "reset_failed_in_the_product_journal": false,
+    "status": 200,
+    "unit_results_after": {
+     "postfix.service": "success",
+     "postfix@-.service": "exit-code"
+    },
+    "units_8s_later": {
+     "postfix.service": "inactive",
+     "postfix@-.service": "failed"
+    },
+    "units_after": {
+     "postfix.service": "inactive",
+     "postfix@-.service": "failed"
+    },
+    "units_before": {
+     "postfix.service": "active",
+     "postfix@-.service": "active"
+    }
+   },
+   "refused": {
+    "long-site-name": {
+     "autoincrement": [
+      {
+       "domains": 4,
+       "sites": 4
+      },
+      {
+       "domains": 5,
+       "sites": 5
+      }
+     ],
+     "code": "SITE_WEB_SERVER_REFUSED",
+     "details": [
+      "2026/10/09 13:11:06 [emerg] 46829#46829: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64"
+     ],
+     "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test",
+     "error_equals_the_documented_sentence": true,
+     "nginx_unit_pid": [
+      "12093",
+      "12093"
+     ],
+     "not_claimed_by_the_answer": {
+      "the certificate-validation directory": [
+       "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/5"
+      ]
+     },
+     "reason": "removed",
+     "status": 502,
+     "tables_naming_the_domain": {},
+     "vars": {
+      "command": "sudo nginx -t",
+      "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test"
+     },
+     "what_made_nginx_refuse": "no owner action; the site name has 58 characters",
+     "what_the_removed_answer_claims_and_whether_it_is_true": {
+      "its PHP pool": true,
+      "its files": true,
+      "its system account": true,
+      "its web server configuration": true,
+      "the domain and site rows": true
+     }
+    },
+    "owner-moved-file": {
+     "autoincrement": [
+      {
+       "domains": 2,
+       "sites": 2
+      },
+      {
+       "domains": 3,
+       "sites": 3
+      }
+     ],
+     "code": "SITE_WEB_SERVER_REFUSED",
+     "details": [
+      "2026/10/09 13:10:49 [emerg] 45609#45609: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31"
+     ],
+     "domain": "set4-refused.test",
+     "error_equals_the_documented_sentence": true,
+     "nginx_unit_pid": [
+      "12093",
+      "12093"
+     ],
+     "not_claimed_by_the_answer": {
+      "the certificate-validation directory": [
+       "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/3"
+      ]
+     },
+     "reason": "removed",
+     "status": 502,
+     "tables_naming_the_domain": {},
+     "vars": {
+      "command": "sudo nginx -t",
+      "domain": "set4-refused.test"
+     },
+     "what_made_nginx_refuse": "the owner renamed nginx's own /etc/nginx/fastcgi.conf, which the generated PHP vhost includes",
+     "what_the_removed_answer_claims_and_whether_it_is_true": {
+      "its PHP pool": true,
+      "its files": true,
+      "its system account": true,
+      "its web server configuration": true,
+      "the domain and site rows": true
+     }
+    }
+   },
+   "reload": {
+    "mariadb": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status mariadb",
+       "detail": "mariadb.service is inactive (dead); nothing was reloaded",
+       "unit": "mariadb"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "mariadb.service": []
+     },
+     "state_after": {
+      "mariadb.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "mariadb.service"
+     ]
+    },
+    "nginx": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status nginx",
+       "detail": "nginx.service is inactive (dead); nothing was reloaded",
+       "unit": "nginx"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "nginx.service": []
+     },
+     "state_after": {
+      "nginx.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "nginx.service"
+     ]
+    },
+    "postgresql": {
+     "answer": {
+      "answer": {
+       "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "code": "SERVICE_ACTION_FAILED",
+      "reason": "not_running",
+      "status": 409,
+      "vars": {
+       "action": "reload",
+       "command": "sudo systemctl status postgresql@16-main.service",
+       "detail": "none of the units behind postgresql.service is running (postgresql@16-main.service inactive (dead)); nothing was reloaded",
+       "owner_unit": "postgresql@16-main.service",
+       "unit": "postgresql"
+      }
+     },
+     "journal_pid1": [],
+     "journal_units": {
+      "postgresql.service": [],
+      "postgresql@16-main.service": []
+     },
+     "state_after": {
+      "postgresql.service": "inactive",
+      "postgresql@16-main.service": "inactive"
+     },
+     "stopped_by": "the Panel's Stop",
+     "unchanged": true,
+     "units": [
+      "postgresql.service",
+      "postgresql@16-main.service"
+     ]
+    }
+   },
+   "sections": {
+    "08-m0-prepare": [
+     "passed",
+     5,
+     0,
+     0,
+     null
+    ],
+    "09-m1-php-site": [
+     "passed",
+     12,
+     0,
+     0,
+     null
+    ],
+    "10-m6-site-refused": [
+     "passed",
+     13,
+     0,
+     0,
+     null
+    ],
+    "11-m2-import": [
+     "passed",
+     14,
+     0,
+     0,
+     null
+    ],
+    "12-m5-import-absolute": [
+     "passed",
+     10,
+     0,
+     0,
+     null
+    ],
+    "13-m10-postfix-stop": [
+     "failed",
+     8,
+     3,
+     0,
+     null
+    ],
+    "14-m4-reload-stopped": [
+     "passed",
+     21,
+     0,
+     0,
+     null
+    ]
+   },
+   "snippet": {
+    "bytes": 423,
+    "equals_the_pinned_digest": true,
+    "exists": true,
+    "owner_package": {
+     "answer": "nginx-common: /etc/nginx/snippets/fastcgi-php.conf",
+     "asked": "dpkg -S /etc/nginx/snippets/fastcgi-php.conf",
+     "exists": true,
+     "path": "/etc/nginx/snippets/fastcgi-php.conf",
+     "returncode": 0
+    },
+    "path": "/etc/nginx/snippets/fastcgi-php.conf",
+    "pinned_in_the_product_test": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "sha256": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "snippets_directory": {
+     "exists": true,
+     "group": "root",
+     "kind": "directory",
+     "mode": "0755",
+     "owner": "root",
+     "path": "/etc/nginx/snippets"
+    }
+   }
+  }
+ },
+ "update_good": {
+  "update-alpha81/upd1-debian13-good/run-a": {
+   "after_reason": "the save did not change the vhost file (nothing was rendered again)",
+   "after_verdict": "failed",
+   "before_verdict": "passed",
+   "changed_by_save": false,
+   "changed_by_update": true,
+   "compare_after_save": {
+    "dotfile": [
+     true,
+     [
+      403,
+      403
+     ]
+    ],
+    "missing_script": [
+     true,
+     [
+      404,
+      404
+     ]
+    ],
+    "missing_static": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_deep_tail_php": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_plain": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_tail_php": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "probe": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "probe_query": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "root": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "static": [
+     true,
+     [
+      200,
+      200
+     ]
+    ]
+   },
+   "compare_after_update": {
+    "dotfile": [
+     true,
+     [
+      403,
+      403
+     ]
+    ],
+    "missing_script": [
+     true,
+     [
+      404,
+      404
+     ]
+    ],
+    "missing_static": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_deep_tail_php": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_plain": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_tail_php": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "probe": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "probe_query": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "root": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "static": [
+     true,
+     [
+      200,
+      200
+     ]
+    ]
+   },
+   "nginx_journal_since_the_save": null,
+   "nginx_test": [
+    0,
+    0
+   ],
+   "platform": {
+    "nginx_version": "nginx version: nginx/1.26.3",
+    "os_release": {
+     "ID": "debian",
+     "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+     "VERSION_CODENAME": "trixie",
+     "VERSION_ID": "13"
+    },
+    "packages": {
+     "certbot": "4.0.0-2+deb13u1",
+     "dovecot-core": "1:2.4.1+dfsg1-6+deb13u7",
+     "mariadb-server": "1:11.8.6-0+deb13u1",
+     "nginx": "1.26.3-3+deb13u9",
+     "nginx-common": "1.26.3-3+deb13u9",
+     "php-fpm": "2:8.4+96",
+     "php8.4-fpm": "8.4.26-1~deb13u1",
+     "postfix": "3.10.13-0+deb13u1",
+     "systemd": "257.13-1~deb13u1"
+    },
+    "php_fpm_programs": {
+     "php-fpm8.4": [
+      "PHP 8.4.26 (fpm-fcgi) (built: Sep 24 2026 17:16:18) (NTS)"
+     ]
+    }
+   },
+   "probe_after": {
+    "executed": true,
+    "php_version": "8.4.26",
+    "runs_as": "set4_upd_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "probe_before": {
+    "executed": true,
+    "php_version": "8.4.26",
+    "runs_as": "set4_upd_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "recorded": {
+    "php_fpm_socket": "/var/run/php/php8.4-fpm-site2.sock",
+    "php_version": "8.4"
+   },
+   "render_action": {
+    "body": {
+     "status": "success"
+    },
+    "http": 200,
+    "read_http": 200,
+    "sent": {
+     "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "redirect_www": false,
+     "web_server": "nginx"
+    },
+    "what": "POST /api/v1/domains/{id}/general with the values GET /api/v1/domains/{id}/general answered (the site's General settings saved unchanged); cmd/panel/domain_general_handlers.go updateDomainGeneralSettings applies the vhost"
+   },
+   "save_seen": null,
+   "snippet": {
+    "exists": true,
+    "owner_package": {
+     "answer": "nginx-common: /etc/nginx/snippets/fastcgi-php.conf",
+     "asked": "dpkg -S /etc/nginx/snippets/fastcgi-php.conf",
+     "exists": true,
+     "path": "/etc/nginx/snippets/fastcgi-php.conf",
+     "returncode": 0
+    },
+    "pinned_in_the_product_test": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "sha256": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2"
+   },
+   "version_after": {
+    "agent_commit": "a8bd6124a99390246c978281992e6eaf48fbb377",
+    "agent_matches": true,
+    "commit": "a8bd6124a99390246c978281992e6eaf48fbb377",
+    "hostname": "dns-debian13",
+    "ipv4": "192.0.2.10",
+    "schema_version": 43,
+    "version": "v0.1.0-alpha.82"
+   },
+   "version_before": {
+    "agent_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+    "agent_matches": true,
+    "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+    "hostname": "dns-debian13",
+    "ipv4": "192.0.2.10",
+    "schema_version": 42,
+    "version": "v0.1.0-alpha.81"
+   },
+   "vhosts": {
+    "vhost_after_the_save": {
+     "includes": [
+      "fastcgi.conf",
+      "fastcgi_params"
+     ],
+     "inode": null,
+     "mtime_ns": null,
+     "names_the_php_snippet": false,
+     "php_location_lines": [
+      "fastcgi_split_path_info ^(.+?\\.php)(/.*)$;",
+      "try_files $fastcgi_script_name =404;",
+      "set $path_info $fastcgi_path_info;",
+      "fastcgi_param PATH_INFO $path_info;",
+      "fastcgi_index index.php;",
+      "include fastcgi.conf;",
+      "fastcgi_pass unix:/var/run/php/php8.4-fpm-site2.sock;",
+      "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+      "include fastcgi_params;"
+     ],
+     "sha256": "83bd07de34363e12ebe814437dfd219fe1ea4a2ab96760a6bb3411f7b1da5134"
+    },
+    "vhost_after_the_update_before_the_save": {
+     "includes": [
+      "fastcgi.conf",
+      "fastcgi_params"
+     ],
+     "inode": null,
+     "mtime_ns": null,
+     "names_the_php_snippet": false,
+     "php_location_lines": [
+      "fastcgi_split_path_info ^(.+?\\.php)(/.*)$;",
+      "try_files $fastcgi_script_name =404;",
+      "set $path_info $fastcgi_path_info;",
+      "fastcgi_param PATH_INFO $path_info;",
+      "fastcgi_index index.php;",
+      "include fastcgi.conf;",
+      "fastcgi_pass unix:/var/run/php/php8.4-fpm-site2.sock;",
+      "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+      "include fastcgi_params;"
+     ],
+     "sha256": "83bd07de34363e12ebe814437dfd219fe1ea4a2ab96760a6bb3411f7b1da5134"
+    },
+    "vhost_before_the_update": {
+     "includes": [
+      "snippets/fastcgi-php.conf",
+      "fastcgi_params"
+     ],
+     "inode": null,
+     "mtime_ns": null,
+     "names_the_php_snippet": true,
+     "php_location_lines": [
+      "include snippets/fastcgi-php.conf;",
+      "fastcgi_pass unix:/var/run/php/php8.4-fpm-site2.sock;",
+      "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+      "include fastcgi_params;"
+     ],
+     "sha256": "551945c219536b5deca6f56079d4a14c758dbc376e57a6a0ac3bdcc28833e579"
+    }
+   },
+   "written_again": null
+  },
+  "update-alpha81/upd1-debian13-good/run-b": {
+   "after_reason": null,
+   "after_verdict": "passed",
+   "before_verdict": "passed",
+   "changed_by_save": false,
+   "changed_by_update": true,
+   "compare_after_save": {
+    "dotfile": [
+     true,
+     [
+      403,
+      403
+     ]
+    ],
+    "missing_script": [
+     true,
+     [
+      404,
+      404
+     ]
+    ],
+    "missing_static": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_deep_tail_php": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_plain": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_tail_php": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "probe": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "probe_query": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "root": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "static": [
+     true,
+     [
+      200,
+      200
+     ]
+    ]
+   },
+   "compare_after_update": {
+    "dotfile": [
+     true,
+     [
+      403,
+      403
+     ]
+    ],
+    "missing_script": [
+     true,
+     [
+      404,
+      404
+     ]
+    ],
+    "missing_static": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_deep_tail_php": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_plain": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_tail_php": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "probe": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "probe_query": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "root": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "static": [
+     true,
+     [
+      200,
+      200
+     ]
+    ]
+   },
+   "nginx_journal_since_the_save": [
+    "2026-10-09T12:20:35.714678+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-09T12:20:35.748196+00:00 dns-debian13 nginx[41675]: 2026/10/09 12:20:35 [notice] 41675#41675: signal process started",
+    "2026-10-09T12:20:35.749167+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+   ],
+   "nginx_test": [
+    0,
+    0
+   ],
+   "platform": {
+    "nginx_version": "nginx version: nginx/1.26.3",
+    "os_release": {
+     "ID": "debian",
+     "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+     "VERSION_CODENAME": "trixie",
+     "VERSION_ID": "13"
+    },
+    "packages": {
+     "certbot": "4.0.0-2+deb13u1",
+     "dovecot-core": "1:2.4.1+dfsg1-6+deb13u7",
+     "mariadb-server": "1:11.8.6-0+deb13u1",
+     "nginx": "1.26.3-3+deb13u9",
+     "nginx-common": "1.26.3-3+deb13u9",
+     "php-fpm": "2:8.4+96",
+     "php8.4-fpm": "8.4.26-1~deb13u1",
+     "postfix": "3.10.13-0+deb13u1",
+     "systemd": "257.13-1~deb13u1"
+    },
+    "php_fpm_programs": {
+     "php-fpm8.4": [
+      "PHP 8.4.26 (fpm-fcgi) (built: Sep 24 2026 17:16:18) (NTS)"
+     ]
+    }
+   },
+   "probe_after": {
+    "executed": true,
+    "php_version": "8.4.26",
+    "runs_as": "set4_upd_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "probe_before": {
+    "executed": true,
+    "php_version": "8.4.26",
+    "runs_as": "set4_upd_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "recorded": {
+    "php_fpm_socket": "/var/run/php/php8.4-fpm-site2.sock",
+    "php_version": "8.4"
+   },
+   "render_action": {
+    "body": {
+     "status": "success"
+    },
+    "http": 200,
+    "read_http": 200,
+    "sent": {
+     "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "redirect_www": false,
+     "web_server": "nginx"
+    },
+    "what": "POST /api/v1/domains/{id}/general with the values GET /api/v1/domains/{id}/general answered (the site's General settings saved unchanged); cmd/panel/domain_general_handlers.go updateDomainGeneralSettings applies the vhost"
+   },
+   "save_seen": {
+    "file_written_again": true,
+    "nginx_reloaded_since_the_save": true
+   },
+   "snippet": {
+    "exists": true,
+    "owner_package": {
+     "answer": "nginx-common: /etc/nginx/snippets/fastcgi-php.conf",
+     "asked": "dpkg -S /etc/nginx/snippets/fastcgi-php.conf",
+     "exists": true,
+     "path": "/etc/nginx/snippets/fastcgi-php.conf",
+     "returncode": 0
+    },
+    "pinned_in_the_product_test": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "sha256": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2"
+   },
+   "version_after": {
+    "agent_commit": "a8bd6124a99390246c978281992e6eaf48fbb377",
+    "agent_matches": true,
+    "commit": "a8bd6124a99390246c978281992e6eaf48fbb377",
+    "hostname": "dns-debian13",
+    "ipv4": "192.0.2.10",
+    "schema_version": 43,
+    "version": "v0.1.0-alpha.82"
+   },
+   "version_before": {
+    "agent_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+    "agent_matches": true,
+    "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+    "hostname": "dns-debian13",
+    "ipv4": "192.0.2.10",
+    "schema_version": 42,
+    "version": "v0.1.0-alpha.81"
+   },
+   "vhosts": {
+    "vhost_after_the_save": {
+     "includes": [
+      "fastcgi.conf",
+      "fastcgi_params"
+     ],
+     "inode": 135271,
+     "mtime_ns": 1791548435675374946,
+     "names_the_php_snippet": false,
+     "php_location_lines": [
+      "fastcgi_split_path_info ^(.+?\\.php)(/.*)$;",
+      "try_files $fastcgi_script_name =404;",
+      "set $path_info $fastcgi_path_info;",
+      "fastcgi_param PATH_INFO $path_info;",
+      "fastcgi_index index.php;",
+      "include fastcgi.conf;",
+      "fastcgi_pass unix:/var/run/php/php8.4-fpm-site2.sock;",
+      "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+      "include fastcgi_params;"
+     ],
+     "sha256": "83bd07de34363e12ebe814437dfd219fe1ea4a2ab96760a6bb3411f7b1da5134"
+    },
+    "vhost_after_the_update_before_the_save": {
+     "includes": [
+      "fastcgi.conf",
+      "fastcgi_params"
+     ],
+     "inode": 141297,
+     "mtime_ns": 1791548330934909232,
+     "names_the_php_snippet": false,
+     "php_location_lines": [
+      "fastcgi_split_path_info ^(.+?\\.php)(/.*)$;",
+      "try_files $fastcgi_script_name =404;",
+      "set $path_info $fastcgi_path_info;",
+      "fastcgi_param PATH_INFO $path_info;",
+      "fastcgi_index index.php;",
+      "include fastcgi.conf;",
+      "fastcgi_pass unix:/var/run/php/php8.4-fpm-site2.sock;",
+      "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+      "include fastcgi_params;"
+     ],
+     "sha256": "83bd07de34363e12ebe814437dfd219fe1ea4a2ab96760a6bb3411f7b1da5134"
+    },
+    "vhost_before_the_update": {
+     "includes": [
+      "snippets/fastcgi-php.conf",
+      "fastcgi_params"
+     ],
+     "inode": 141303,
+     "mtime_ns": 1791548197870207677,
+     "names_the_php_snippet": true,
+     "php_location_lines": [
+      "include snippets/fastcgi-php.conf;",
+      "fastcgi_pass unix:/var/run/php/php8.4-fpm-site2.sock;",
+      "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+      "include fastcgi_params;"
+     ],
+     "sha256": "551945c219536b5deca6f56079d4a14c758dbc376e57a6a0ac3bdcc28833e579"
+    }
+   },
+   "written_again": {
+    "ctime_ns": [
+     1791548330942909275,
+     1791548435683374977
+    ],
+    "inode": [
+     141297,
+     135271
+    ],
+    "mtime_ns": [
+     1791548330934909232,
+     1791548435675374946
+    ]
+   }
+  },
+  "update-alpha81/upd1-ubuntu-good/run-a": {
+   "after_reason": null,
+   "after_verdict": "passed",
+   "before_verdict": "passed",
+   "changed_by_save": false,
+   "changed_by_update": true,
+   "compare_after_save": {
+    "dotfile": [
+     true,
+     [
+      403,
+      403
+     ]
+    ],
+    "missing_script": [
+     true,
+     [
+      404,
+      404
+     ]
+    ],
+    "missing_static": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_deep_tail_php": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_plain": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_tail_php": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "probe": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "probe_query": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "root": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "static": [
+     true,
+     [
+      200,
+      200
+     ]
+    ]
+   },
+   "compare_after_update": {
+    "dotfile": [
+     true,
+     [
+      403,
+      403
+     ]
+    ],
+    "missing_script": [
+     true,
+     [
+      404,
+      404
+     ]
+    ],
+    "missing_static": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_deep_tail_php": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_plain": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "path_info_tail_php": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "probe": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "probe_query": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "root": [
+     true,
+     [
+      200,
+      200
+     ]
+    ],
+    "static": [
+     true,
+     [
+      200,
+      200
+     ]
+    ]
+   },
+   "nginx_journal_since_the_save": [
+    "2026-10-09T11:47:53.555807+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-09T11:47:53.561551+00:00 dns-ubuntu nginx[62067]: 2026/10/09 11:47:53 [notice] 62067#62067: signal process started",
+    "2026-10-09T11:47:53.562541+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+   ],
+   "nginx_test": [
+    0,
+    0
+   ],
+   "platform": {
+    "nginx_version": "nginx version: nginx/1.24.0 (Ubuntu)",
+    "os_release": {
+     "ID": "ubuntu",
+     "PRETTY_NAME": "Ubuntu 24.04.4 LTS",
+     "VERSION_CODENAME": "noble",
+     "VERSION_ID": "24.04"
+    },
+    "packages": {
+     "certbot": "2.9.0-1",
+     "dovecot-core": "1:2.3.21+dfsg1-2ubuntu6.5",
+     "mariadb-server": "1:10.11.14-0ubuntu0.24.04.1",
+     "nginx": "1.24.0-2ubuntu7.18",
+     "nginx-common": "1.24.0-2ubuntu7.18",
+     "php-fpm": "2:8.3+93ubuntu2",
+     "php8.3-fpm": "8.3.6-0ubuntu0.24.04.11",
+     "postfix": "3.8.6-1ubuntu0.1",
+     "systemd": "255.4-1ubuntu8.17"
+    },
+    "php_fpm_programs": {
+     "php-fpm8.3": [
+      "PHP 8.3.6 (fpm-fcgi) (built: Sep  2 2026 12:56:02)"
+     ]
+    }
+   },
+   "probe_after": {
+    "executed": true,
+    "php_version": "8.3.6",
+    "runs_as": "set4_upd_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "probe_before": {
+    "executed": true,
+    "php_version": "8.3.6",
+    "runs_as": "set4_upd_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "recorded": {
+    "php_fpm_socket": "/var/run/php/php8.3-fpm-site2.sock",
+    "php_version": "8.3"
+   },
+   "render_action": {
+    "body": {
+     "status": "success"
+    },
+    "http": 200,
+    "read_http": 200,
+    "sent": {
+     "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "redirect_www": false,
+     "web_server": "nginx"
+    },
+    "what": "POST /api/v1/domains/{id}/general with the values GET /api/v1/domains/{id}/general answered (the site's General settings saved unchanged); cmd/panel/domain_general_handlers.go updateDomainGeneralSettings applies the vhost"
+   },
+   "save_seen": {
+    "file_written_again": true,
+    "nginx_reloaded_since_the_save": true
+   },
+   "snippet": {
+    "exists": true,
+    "owner_package": {
+     "answer": "nginx-common: /etc/nginx/snippets/fastcgi-php.conf",
+     "asked": "dpkg -S /etc/nginx/snippets/fastcgi-php.conf",
+     "exists": true,
+     "path": "/etc/nginx/snippets/fastcgi-php.conf",
+     "returncode": 0
+    },
+    "pinned_in_the_product_test": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "sha256": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2"
+   },
+   "version_after": {
+    "agent_commit": "a8bd6124a99390246c978281992e6eaf48fbb377",
+    "agent_matches": true,
+    "commit": "a8bd6124a99390246c978281992e6eaf48fbb377",
+    "hostname": "dns-ubuntu",
+    "ipv4": "192.0.2.12",
+    "schema_version": 43,
+    "version": "v0.1.0-alpha.82"
+   },
+   "version_before": {
+    "agent_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+    "agent_matches": true,
+    "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+    "hostname": "dns-ubuntu",
+    "ipv4": "192.0.2.12",
+    "schema_version": 42,
+    "version": "v0.1.0-alpha.81"
+   },
+   "vhosts": {
+    "vhost_after_the_save": {
+     "includes": [
+      "fastcgi.conf",
+      "fastcgi_params"
+     ],
+     "inode": 263653,
+     "mtime_ns": 1791546473512117942,
+     "names_the_php_snippet": false,
+     "php_location_lines": [
+      "fastcgi_split_path_info ^(.+?\\.php)(/.*)$;",
+      "try_files $fastcgi_script_name =404;",
+      "set $path_info $fastcgi_path_info;",
+      "fastcgi_param PATH_INFO $path_info;",
+      "fastcgi_index index.php;",
+      "include fastcgi.conf;",
+      "fastcgi_pass unix:/var/run/php/php8.3-fpm-site2.sock;",
+      "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+      "include fastcgi_params;"
+     ],
+     "sha256": "4cc697cff54bddd5bf77611ce0995fb1f0cb58c05762d2d1d21258b1b948b83c"
+    },
+    "vhost_after_the_update_before_the_save": {
+     "includes": [
+      "fastcgi.conf",
+      "fastcgi_params"
+     ],
+     "inode": 262668,
+     "mtime_ns": 1791546365300379126,
+     "names_the_php_snippet": false,
+     "php_location_lines": [
+      "fastcgi_split_path_info ^(.+?\\.php)(/.*)$;",
+      "try_files $fastcgi_script_name =404;",
+      "set $path_info $fastcgi_path_info;",
+      "fastcgi_param PATH_INFO $path_info;",
+      "fastcgi_index index.php;",
+      "include fastcgi.conf;",
+      "fastcgi_pass unix:/var/run/php/php8.3-fpm-site2.sock;",
+      "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+      "include fastcgi_params;"
+     ],
+     "sha256": "4cc697cff54bddd5bf77611ce0995fb1f0cb58c05762d2d1d21258b1b948b83c"
+    },
+    "vhost_before_the_update": {
+     "includes": [
+      "snippets/fastcgi-php.conf",
+      "fastcgi_params"
+     ],
+     "inode": 263748,
+     "mtime_ns": 1791546243101674087,
+     "names_the_php_snippet": true,
+     "php_location_lines": [
+      "include snippets/fastcgi-php.conf;",
+      "fastcgi_pass unix:/var/run/php/php8.3-fpm-site2.sock;",
+      "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+      "include fastcgi_params;"
+     ],
+     "sha256": "1a3928354ab43109a20fe5f8e052b1962199c7631a94d3893ba5638d28756fcd"
+    }
+   },
+   "written_again": {
+    "ctime_ns": [
+     1791546365308379107,
+     1791546473520117923
+    ],
+    "inode": [
+     262668,
+     263653
+    ],
+    "mtime_ns": [
+     1791546365300379126,
+     1791546473512117942
+    ]
+   }
+  }
+ },
+ "update_return": {
+  "update-alpha81/upd1-arch-defective/run-a": {
+   "catalogue_keys": {
+    "panelUpdate.previousAttempt.again": false,
+    "panelUpdate.previousAttempt.cause": true,
+    "panelUpdate.previousAttempt.noCause": false,
+    "panelUpdate.previousAttempt.recovered": true,
+    "panelUpdate.previousAttempt.rolledBackTitle": false,
+    "panelUpdate.previousAttempt.stoppedTitle": true,
+    "panelUpdate.previousAttempt.title": true
+   },
+   "catalogue_texts": {
+    "panelUpdate.previousAttempt.cause": {
+     "en": "Recorded cause: {cause}.",
+     "tr": "Kaydedilen neden: {cause}."
+    },
+    "panelUpdate.previousAttempt.recovered": {
+     "en": "v0.1.0-alpha.82 was tried on this server on 2026-10-09T11:58:37Z, and the server was returned to the previous version. Starting it again repeats the same update unless the cause has been fixed.",
+     "tr": "v0.1.0-alpha.82 bu sunucuda 2026-10-09T11:58:37Z tarihinde denendi ve sunucu önceki sürüme döndürüldü. Neden giderilmediyse yeniden başlatmak aynı güncellemeyi tekrarlar."
+    },
+    "panelUpdate.previousAttempt.stoppedTitle": {
+     "en": "An earlier update to this version stopped before changing the installed version",
+     "tr": "Bu sürüme yapılan önceki güncelleme kurulu sürümü değiştirmeden durdu"
+    },
+    "panelUpdate.previousAttempt.title": {
+     "en": "This version already failed on this server",
+     "tr": "Bu sürüm bu sunucuda daha önce başarısız oldu"
+    }
+   },
+   "heading_in_served_catalogue": false,
+   "heading_key": "panelUpdate.previousAttempt.rolledBackTitle",
+   "panel_process": {
+    "cwd": "/opt/celikpanel",
+    "exe": "/opt/celikpanel/bin/panel"
+   },
+   "previous_attempt": {
+    "finished_at": "2026-10-09T11:58:37Z",
+    "phase": "recovered",
+    "request_id": "80203f4d033d4a1a404e4265c3bb0673"
+   },
+   "reason": null,
+   "update_check": {
+    "body": {
+     "available": true,
+     "current_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "current_version": "v0.1.0-alpha.81",
+     "previous_attempt": {
+      "finished_at": "2026-10-09T11:58:37Z",
+      "phase": "recovered",
+      "request_id": "80203f4d033d4a1a404e4265c3bb0673"
+     },
+     "supported": true,
+     "target": {
+      "arch": "amd64",
+      "archive_sha256": "99a00422844f0ec376494cd17686e397373318a971d968ad2de06f5877761b29",
+      "archive_size": "65894854",
+      "commit": "c911b3083cb53aa539e6c25b720b7b86c2e08644",
+      "os": "linux",
+      "published_at": "2026-10-09T11:49:18Z",
+      "sequence": "82",
+      "version": "v0.1.0-alpha.82"
+     }
+    },
+    "http": 200,
+    "raw_bytes": 541,
+    "raw_sha256": "0735e8ba18f929265d74305fc7cf55026d59224c7144b206a34f1446b69c7070"
+   },
+   "verdict": "passed",
+   "version": {
+    "body": {
+     "agent_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "agent_matches": true,
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "hostname": "dns-arch",
+     "ipv4": "192.0.2.11",
+     "schema_version": 42,
+     "version": "v0.1.0-alpha.81"
+    },
+    "http": 200
+   },
+   "web_builds": [
+    {
+     "dist": "/root/celikpanel-release-recovery-lab/current-worker-baseline-source/web/dist",
+     "files_containing": {
+      "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 0,
+      "Starting it again runs the same update.": 0,
+      "The server recorded no more specific cause for that attempt.": 0,
+      "This version was already tried on this server and rolled back": 0
+     },
+     "files_read": 97
+    }
+   ]
+  },
+  "update-alpha81/upd1-arch-defective/run-b": {
+   "catalogue_keys": {
+    "panelUpdate.previousAttempt.again": false,
+    "panelUpdate.previousAttempt.cause": true,
+    "panelUpdate.previousAttempt.noCause": false,
+    "panelUpdate.previousAttempt.recovered": true,
+    "panelUpdate.previousAttempt.rolledBackTitle": false,
+    "panelUpdate.previousAttempt.stoppedTitle": true,
+    "panelUpdate.previousAttempt.title": true
+   },
+   "catalogue_texts": {
+    "panelUpdate.previousAttempt.cause": {
+     "en": "Recorded cause: {cause}.",
+     "tr": "Kaydedilen neden: {cause}."
+    },
+    "panelUpdate.previousAttempt.recovered": {
+     "en": "v0.1.0-alpha.82 was tried on this server on 2026-10-09T12:30:40Z, and the server was returned to the previous version. Starting it again repeats the same update unless the cause has been fixed.",
+     "tr": "v0.1.0-alpha.82 bu sunucuda 2026-10-09T12:30:40Z tarihinde denendi ve sunucu önceki sürüme döndürüldü. Neden giderilmediyse yeniden başlatmak aynı güncellemeyi tekrarlar."
+    },
+    "panelUpdate.previousAttempt.stoppedTitle": {
+     "en": "An earlier update to this version stopped before changing the installed version",
+     "tr": "Bu sürüme yapılan önceki güncelleme kurulu sürümü değiştirmeden durdu"
+    },
+    "panelUpdate.previousAttempt.title": {
+     "en": "This version already failed on this server",
+     "tr": "Bu sürüm bu sunucuda daha önce başarısız oldu"
+    }
+   },
+   "heading_in_served_catalogue": false,
+   "heading_key": "panelUpdate.previousAttempt.rolledBackTitle",
+   "panel_process": {
+    "cwd": "/opt/celikpanel",
+    "exe": "/opt/celikpanel/bin/panel"
+   },
+   "previous_attempt": {
+    "finished_at": "2026-10-09T12:30:40Z",
+    "phase": "recovered",
+    "request_id": "484a810a74a3e382072d094a45a5cbfb"
+   },
+   "reason": null,
+   "update_check": {
+    "body": {
+     "available": true,
+     "current_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "current_version": "v0.1.0-alpha.81",
+     "previous_attempt": {
+      "finished_at": "2026-10-09T12:30:40Z",
+      "phase": "recovered",
+      "request_id": "484a810a74a3e382072d094a45a5cbfb"
+     },
+     "supported": true,
+     "target": {
+      "arch": "amd64",
+      "archive_sha256": "99a00422844f0ec376494cd17686e397373318a971d968ad2de06f5877761b29",
+      "archive_size": "65894854",
+      "commit": "c911b3083cb53aa539e6c25b720b7b86c2e08644",
+      "os": "linux",
+      "published_at": "2026-10-09T12:21:51Z",
+      "sequence": "82",
+      "version": "v0.1.0-alpha.82"
+     }
+    },
+    "http": 200,
+    "raw_bytes": 541,
+    "raw_sha256": "7f9ac1c0855340ae607f83a4b583e97a5309de723cc91478ce3cbb1de2682b98"
+   },
+   "verdict": "passed",
+   "version": {
+    "body": {
+     "agent_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "agent_matches": true,
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "hostname": "dns-arch",
+     "ipv4": "192.0.2.11",
+     "schema_version": 42,
+     "version": "v0.1.0-alpha.81"
+    },
+    "http": 200
+   },
+   "web_builds": [
+    {
+     "dist": "/opt/celikpanel/web",
+     "files_containing": {
+      "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 0,
+      "Starting it again runs the same update.": 0,
+      "The server recorded no more specific cause for that attempt.": 0,
+      "This version was already tried on this server and rolled back": 0
+     },
+     "files_read": 97
+    },
+    {
+     "dist": "/root/celikpanel-release-recovery-lab/current-worker-baseline-source/web/dist",
+     "files_containing": {
+      "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 0,
+      "Starting it again runs the same update.": 0,
+      "The server recorded no more specific cause for that attempt.": 0,
+      "This version was already tried on this server and rolled back": 0
+     },
+     "files_read": 97
+    }
+   ]
+  },
+  "update-candidate-baseline/upd1-arch-defective/run-a": {
+   "catalogue_keys": {
+    "panelUpdate.previousAttempt.again": true,
+    "panelUpdate.previousAttempt.cause": true,
+    "panelUpdate.previousAttempt.noCause": true,
+    "panelUpdate.previousAttempt.recovered": true,
+    "panelUpdate.previousAttempt.rolledBackTitle": true,
+    "panelUpdate.previousAttempt.stoppedTitle": true,
+    "panelUpdate.previousAttempt.title": true
+   },
+   "catalogue_texts": {
+    "panelUpdate.previousAttempt.again": {
+     "en": "Starting it again runs the same update. If the cause was on this server and has been corrected, the result can differ; otherwise expect the same one. A corrected version, when it is published, is offered here as a newer version. The button below still starts v0.1.0-alpha.82.",
+     "tr": "Yeniden başlatmak aynı güncellemeyi çalıştırır. Neden bu sunucudaysa ve giderildiyse sonuç değişebilir; değilse aynı sonucu bekleyin. Düzeltilmiş bir sürüm yayımlandığında burada daha yeni bir sürüm olarak sunulur. Aşağıdaki düğme v0.1.0-alpha.82 sürümünü yine başlatır."
+    },
+    "panelUpdate.previousAttempt.cause": {
+     "en": "Recorded cause: {cause}.",
+     "tr": "Kaydedilen neden: {cause}."
+    },
+    "panelUpdate.previousAttempt.noCause": {
+     "en": "The server recorded no more specific cause for that attempt.",
+     "tr": "Sunucu o deneme için daha belirli bir neden kaydetmedi."
+    },
+    "panelUpdate.previousAttempt.recovered": {
+     "en": "v0.1.0-alpha.82 was started here on 2026-10-09T12:07:43Z. The update did not complete, and the server was returned to v0.1.0-alpha.81, which it runs now.",
+     "tr": "v0.1.0-alpha.82 burada 2026-10-09T12:07:43Z tarihinde başlatıldı. Güncelleme tamamlanmadı ve sunucu v0.1.0-alpha.81 sürümüne döndürüldü; şu an onu çalıştırıyor."
+    },
+    "panelUpdate.previousAttempt.rolledBackTitle": {
+     "en": "This version was already tried on this server and rolled back",
+     "tr": "Bu sürüm bu sunucuda daha önce denendi ve geri alındı"
+    },
+    "panelUpdate.previousAttempt.stoppedTitle": {
+     "en": "An earlier update to this version stopped before changing the installed version",
+     "tr": "Bu sürüme yapılan önceki güncelleme kurulu sürümü değiştirmeden durdu"
+    },
+    "panelUpdate.previousAttempt.title": {
+     "en": "This version already failed on this server",
+     "tr": "Bu sürüm bu sunucuda daha önce başarısız oldu"
+    }
+   },
+   "heading_in_served_catalogue": true,
+   "heading_key": "panelUpdate.previousAttempt.rolledBackTitle",
+   "panel_process": {
+    "cwd": "/opt/celikpanel",
+    "exe": "/opt/celikpanel/bin/panel"
+   },
+   "previous_attempt": {
+    "finished_at": "2026-10-09T12:07:43Z",
+    "phase": "recovered",
+    "request_id": "06acf6c45f86201439f599fd34127534"
+   },
+   "reason": null,
+   "update_check": {
+    "body": {
+     "available": true,
+     "current_commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+     "current_version": "v0.1.0-alpha.81",
+     "previous_attempt": {
+      "finished_at": "2026-10-09T12:07:43Z",
+      "phase": "recovered",
+      "request_id": "06acf6c45f86201439f599fd34127534"
+     },
+     "supported": true,
+     "target": {
+      "arch": "amd64",
+      "archive_sha256": "ea8f81c844c6bf0e08ffb6c628448bac2da56d1060b2f5cd32f19f6947eecf01",
+      "archive_size": "65895628",
+      "commit": "52208d415f61041dd9ec27bdb9cbe0b2d5c7eac4",
+      "os": "linux",
+      "published_at": "2026-10-09T11:59:59Z",
+      "sequence": "82",
+      "version": "v0.1.0-alpha.82"
+     }
+    },
+    "http": 200,
+    "raw_bytes": 541,
+    "raw_sha256": "13dc8199e0f544699635041b9fd19c79f2640b76c3760f2cc095cceebea96eba"
+   },
+   "verdict": "passed",
+   "version": {
+    "body": {
+     "agent_commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+     "agent_matches": true,
+     "commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+     "hostname": "dns-arch",
+     "ipv4": "192.0.2.11",
+     "schema_version": 43,
+     "version": "v0.1.0-alpha.81"
+    },
+    "http": 200
+   },
+   "web_builds": [
+    {
+     "dist": "/root/celikpanel-release-recovery-lab/current-worker-baseline-source/web/dist",
+     "files_containing": {
+      "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 1,
+      "Starting it again runs the same update.": 1,
+      "The server recorded no more specific cause for that attempt.": 1,
+      "This version was already tried on this server and rolled back": 1
+     },
+     "files_read": 111
+    }
+   ]
+  }
+ }
+}

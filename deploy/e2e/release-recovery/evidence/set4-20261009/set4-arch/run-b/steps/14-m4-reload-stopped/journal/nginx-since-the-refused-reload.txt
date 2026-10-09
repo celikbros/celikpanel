@@ -1,0 +1,8 @@
+##### nginx.service (journalctl -u nginx.service --since @1791549766)
+(no lines)
+##### systemd (PID 1) lines naming the unit
+(no lines)
+##### celikpanel-agent.service and celikpanel-panel.service
+2026-10-09T12:42:49.047543+00:00 dns-arch panel[424]: 2026/10/09 12:42:49 http: TLS handshake error from 127.0.0.1:33798: EOF
+2026-10-09T12:42:49.161186+00:00 dns-arch agent[412]: 2026/10/09 12:42:49 ERROR service reload nginx: failed not_running: nginx.service is inactive (dead); nothing was reloaded
+2026-10-09T12:42:50.318078+00:00 dns-arch panel[424]: 2026/10/09 12:42:50 [409][service action] reload nginx: SERVICE_ACTION_FAILED not_running: nginx.service is inactive (dead); nothing was reloaded

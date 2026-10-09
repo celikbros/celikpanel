@@ -1,0 +1,33 @@
+2026-10-09T13:19:02Z
+3.3G	/var/tmp/cp-set4-run
+921M	/var/tmp/cp-release-drill-s4-arch-a
+921M	/var/tmp/cp-release-drill-s4-arch-b
+922M	/var/tmp/cp-release-drill-s4-d13-a
+922M	/var/tmp/cp-release-drill-s4-d13-b
+921M	/var/tmp/cp-release-drill-s4-u12-arch-a
+921M	/var/tmp/cp-release-drill-s4-u12-arch-b
+921M	/var/tmp/cp-release-drill-s4-u12c-arch-a
+922M	/var/tmp/cp-release-drill-s4-u9-d13-a
+922M	/var/tmp/cp-release-drill-s4-u9-d13-b
+662M	/var/tmp/cp-release-drill-s4-u9-ub-a
+662M	/var/tmp/cp-release-drill-s4-ub-a
+662M	/var/tmp/cp-release-drill-s4-ub-b
+1013M	/var/tmp/cp-upd1-build/20261009t101529z
+1018M	/var/tmp/cp-upd1-build/20261009t102025z
+dist directories of this run's builds (the reused one is marked):
+970M /var/tmp/cp-pair-accept/dist/52208d415f61041dd9ec27bdb9cbe0b2d5c7eac4-acceptance-license 
+970M /var/tmp/cp-pair-accept/dist/75f0b8a487b8ae1d7fbaec63a739a364d661ac31-acceptance-license 
+970M /var/tmp/cp-pair-accept/dist/7fbbeaa6be50dd60aa225be02b71314c2e29aafb-acceptance-license 
+839M /var/tmp/cp-pair-accept/dist/a0beb7263d1f4ca72258f6b306f9111ba4e2a334-acceptance-license (built by set3, reused, not of this run)
+970M /var/tmp/cp-pair-accept/dist/a574cecdbec1c58e2a21bb838d49afbe3c0af37e-acceptance-license 
+970M /var/tmp/cp-pair-accept/dist/a8bd6124a99390246c978281992e6eaf48fbb377-acceptance-license 
+970M /var/tmp/cp-pair-accept/dist/b640eaeda3806f9f61b9de39cb9045e77dc8253a-acceptance-license 
+970M /var/tmp/cp-pair-accept/dist/c911b3083cb53aa539e6c25b720b7b86c2e08644-acceptance-license 
+970M /var/tmp/cp-pair-accept/dist/dc0841af9eb9023ead02393a70bf59968a74ae2f-acceptance-license 
+overlay disks still present in this run's labs:
+none
+no dry-run lab
+git local config key list fingerprint: b6f8491de6f4969250c85cd1d20d8607  -
+HEAD e2be8af30a9b9553d2c4aee1223681b1b6ce6e65
+__pycache__ under the run directory: 0
+directories of earlier runs (not touched): /var/tmp/cp-set1-run /var/tmp/cp-set2-run /var/tmp/cp-set3-run 

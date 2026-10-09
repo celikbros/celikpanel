@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 10,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T12:42:41Z",
+    "notes": [],
+    "started_at": "2026-10-09T12:42:37Z",
+    "substeps": {
+      "S1": "passed",
+      "item 5": "passed",
+      "section": "passed"
+    },
+    "title": "an archive with a member named by an absolute path (item 5)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T12:42:41Z",
+  "name": "M5-import-absolute",
+  "started_at": "2026-10-09T12:42:37Z",
+  "verdict": "passed"
+}

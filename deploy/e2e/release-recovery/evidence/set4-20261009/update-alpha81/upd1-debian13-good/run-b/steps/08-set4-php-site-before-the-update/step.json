@@ -1,0 +1,235 @@
+{
+  "checks": {
+    "answers": {
+      "dotfile": {
+        "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n",
+        "body_sha256": "32f2fa940d4b4fe19aca1e53a24e5aac29c57b7c5ee78588325b87f1b649c864",
+        "bytes": 146,
+        "error": null,
+        "headers": {
+          "content-length": "146",
+          "content-type": "text/html",
+          "server": "nginx"
+        },
+        "status": 403
+      },
+      "missing_script": {
+        "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n",
+        "body_sha256": "55f7d9e99b8e2d4e0e193b2f0275501e6d9c1ebd29cadbea6a0da48a8587e3e0",
+        "bytes": 146,
+        "error": null,
+        "headers": {
+          "content-length": "146",
+          "content-type": "text/html",
+          "server": "nginx"
+        },
+        "status": 404
+      },
+      "missing_static": {
+        "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set4-upd-php.test</title>\n<style>\n  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}\n  main{text-align:center;padding:2rem}\n  h1{font-weight:600}\n  p{color:#94a3b8}\n</style>\n</head>\n<body>\n<main>\n  <h1>set4-upd-php.test</h1>\n  <p>Bu site hazırlanıyor. / This site is being prepared.</p>\n  <p>CelikPanel · PHP 8.4.26 · 2026</p>\n</main>\n</body>\n</html>\n",
+        "body_sha256": "5f2c086aa3128ff97a6cbdb47430b1e1282e1a358372317ed037c487e1788101",
+        "bytes": 575,
+        "error": null,
+        "headers": {
+          "content-type": "text/html; charset=UTF-8",
+          "server": "nginx"
+        },
+        "status": 200
+      },
+      "path_info_deep_tail_php": {
+        "body": "set4-php-executed:42:8.4.26:fpm-fcgi:set4_upd_php_test\nPATH_INFO=[/a/b/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/2/public_html]\nREQUEST_URI=[/set4-probe.php/a/b/tail.php?q=1]\nQUERY_STRING=[q=1]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+        "body_sha256": "782e22fa34b81f1c7d746df4dad06d95f43d7d6cccf88ffab1fee34970110739",
+        "bytes": 395,
+        "error": null,
+        "headers": {
+          "content-type": "text/plain;charset=UTF-8",
+          "server": "nginx"
+        },
+        "status": 200
+      },
+      "path_info_plain": {
+        "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set4-upd-php.test</title>\n<style>\n  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}\n  main{text-align:center;padding:2rem}\n  h1{font-weight:600}\n  p{color:#94a3b8}\n</style>\n</head>\n<body>\n<main>\n  <h1>set4-upd-php.test</h1>\n  <p>Bu site hazırlanıyor. / This site is being prepared.</p>\n  <p>CelikPanel · PHP 8.4.26 · 2026</p>\n</main>\n</body>\n</html>\n",
+        "body_sha256": "5f2c086aa3128ff97a6cbdb47430b1e1282e1a358372317ed037c487e1788101",
+        "bytes": 575,
+        "error": null,
+        "headers": {
+          "content-type": "text/html; charset=UTF-8",
+          "server": "nginx"
+        },
+        "status": 200
+      },
+      "path_info_tail_php": {
+        "body": "set4-php-executed:42:8.4.26:fpm-fcgi:set4_upd_php_test\nPATH_INFO=[/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/2/public_html]\nREQUEST_URI=[/set4-probe.php/tail.php]\nQUERY_STRING=[]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+        "body_sha256": "c5d2c6f5ece3f23ff745125974419b36dd52c4190bdb5bfaf5b566beba0b1697",
+        "bytes": 380,
+        "error": null,
+        "headers": {
+          "content-type": "text/plain;charset=UTF-8",
+          "server": "nginx"
+        },
+        "status": 200
+      },
+      "probe": {
+        "body": "set4-php-executed:42:8.4.26:fpm-fcgi:set4_upd_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/2/public_html]\nREQUEST_URI=[/set4-probe.php]\nQUERY_STRING=[]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+        "body_sha256": "c4c00990f9c099d3ecf0fb79a963de79c9380e1b0cb858779f4edde96f84b399",
+        "bytes": 362,
+        "error": null,
+        "headers": {
+          "content-type": "text/plain;charset=UTF-8",
+          "server": "nginx"
+        },
+        "status": 200
+      },
+      "probe_query": {
+        "body": "set4-php-executed:42:8.4.26:fpm-fcgi:set4_upd_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/2/public_html]\nREQUEST_URI=[/set4-probe.php?x=1&y=two]\nQUERY_STRING=[x=1&y=two]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+        "body_sha256": "5c3986845763695bab0ce61cf19d68599c0f57275837ba4083b9c6a1bf6c5c2b",
+        "bytes": 381,
+        "error": null,
+        "headers": {
+          "content-type": "text/plain;charset=UTF-8",
+          "server": "nginx"
+        },
+        "status": 200
+      },
+      "root": {
+        "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set4-upd-php.test</title>\n<style>\n  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}\n  main{text-align:center;padding:2rem}\n  h1{font-weight:600}\n  p{color:#94a3b8}\n</style>\n</head>\n<body>\n<main>\n  <h1>set4-upd-php.test</h1>\n  <p>Bu site hazırlanıyor. / This site is being prepared.</p>\n  <p>CelikPanel · PHP 8.4.26 · 2026</p>\n</main>\n</body>\n</html>\n",
+        "body_sha256": "5f2c086aa3128ff97a6cbdb47430b1e1282e1a358372317ed037c487e1788101",
+        "bytes": 575,
+        "error": null,
+        "headers": {
+          "content-type": "text/html; charset=UTF-8",
+          "server": "nginx"
+        },
+        "status": 200
+      },
+      "static": {
+        "body": "set4 static file served by the web server\n",
+        "body_sha256": "027f7a0fc431eed3894f237433bd0db7888d8959469abe66602efa29d4bda904",
+        "bytes": 42,
+        "error": null,
+        "headers": {
+          "content-length": "42",
+          "content-type": "text/plain",
+          "server": "nginx"
+        },
+        "status": 200
+      }
+    },
+    "create": {
+      "body": {
+        "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "Domain": "set4-upd-php.test",
+        "DomainID": 2,
+        "FTPPassword": "[REDACTED]",
+        "FTPUser": "set4_upd_php_test",
+        "PHPVersion": "8.4",
+        "ProjectType": "php",
+        "SiteID": 2,
+        "TempDomain": ""
+      },
+      "http": 200
+    },
+    "domain": "set4-upd-php.test",
+    "domain_id": 2,
+    "nginx_php_snippet": {
+      "exists": true,
+      "owner_package": {
+        "answer": "nginx-common: /etc/nginx/snippets/fastcgi-php.conf",
+        "asked": "dpkg -S /etc/nginx/snippets/fastcgi-php.conf",
+        "exists": true,
+        "path": "/etc/nginx/snippets/fastcgi-php.conf",
+        "returncode": 0
+      },
+      "pinned_in_the_product_test": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+      "sha256": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2"
+    },
+    "nginx_test": {
+      "at": "2026-10-09T12:16:40Z",
+      "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "owner_action": "the owner uploaded set4-probe.php and set4-static.txt",
+    "panel_version": {
+      "agent_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+      "agent_matches": true,
+      "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+      "hostname": "dns-debian13",
+      "ipv4": "192.0.2.10",
+      "schema_version": 42,
+      "version": "v0.1.0-alpha.81"
+    },
+    "platform": {
+      "nginx_version": "nginx version: nginx/1.26.3",
+      "os_release": {
+        "ID": "debian",
+        "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+        "VERSION_CODENAME": "trixie",
+        "VERSION_ID": "13"
+      },
+      "packages": {
+        "certbot": "4.0.0-2+deb13u1",
+        "dovecot-core": "1:2.4.1+dfsg1-6+deb13u7",
+        "mariadb-server": "1:11.8.6-0+deb13u1",
+        "nginx": "1.26.3-3+deb13u9",
+        "nginx-common": "1.26.3-3+deb13u9",
+        "php-fpm": "2:8.4+96",
+        "php8.4-fpm": "8.4.26-1~deb13u1",
+        "postfix": "3.10.13-0+deb13u1",
+        "systemd": "257.13-1~deb13u1"
+      },
+      "php_fpm_programs": {
+        "php-fpm8.4": [
+          "PHP 8.4.26 (fpm-fcgi) (built: Sep 24 2026 17:16:18) (NTS)"
+        ]
+      }
+    },
+    "probe": {
+      "executed": true,
+      "php_version": "8.4.26",
+      "runs_as": "set4_upd_php_test",
+      "server_api": "fpm-fcgi",
+      "values": {
+        "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "DOCUMENT_URI": "/set4-probe.php",
+        "PATH_INFO": "",
+        "PATH_TRANSLATED": "(unset)",
+        "QUERY_STRING": "",
+        "REQUEST_URI": "/set4-probe.php",
+        "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+        "SCRIPT_NAME": "/set4-probe.php"
+      }
+    },
+    "recorded": {
+      "php_fpm_socket": "/var/run/php/php8.4-fpm-site2.sock",
+      "php_version": "8.4"
+    },
+    "site_account": "set4_upd_php_test",
+    "vhost": {
+      "bytes": 1063,
+      "ctime_ns": 1791548197878207694,
+      "fastcgi_pass": [
+        "unix:/var/run/php/php8.4-fpm-site2.sock"
+      ],
+      "includes": [
+        "snippets/fastcgi-php.conf",
+        "fastcgi_params"
+      ],
+      "inode": 141303,
+      "mtime_ns": 1791548197870207677,
+      "names_the_php_snippet": true,
+      "path": "/etc/nginx/sites-available/set4-upd-php.test.conf",
+      "php_location_lines": [
+        "include snippets/fastcgi-php.conf;",
+        "fastcgi_pass unix:/var/run/php/php8.4-fpm-site2.sock;",
+        "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+        "include fastcgi_params;"
+      ],
+      "sha256": "551945c219536b5deca6f56079d4a14c758dbc376e57a6a0ac3bdcc28833e579"
+    }
+  },
+  "finished_at": "2026-10-09T12:16:40Z",
+  "name": "set4-php-site-before-the-update",
+  "started_at": "2026-10-09T12:16:36Z",
+  "verdict": "passed"
+}

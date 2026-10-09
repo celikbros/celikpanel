@@ -1,0 +1,6 @@
+driver SHA256SUMS verified on the staged copy (332 files)
+2026-10-09T13:13:14Z removed /var/tmp/cp-release-drill-s4-ub-b/cells/a857dee94bd9648ae6dbc60e/ubuntu/overlay.qcow2 bytes=1696202752 (evidence staged at set4-20261009/set4-ubuntu/run-b, checksums verified)
+343
+overall: failed | native_evidence: False | outcome: set4-measured
+  step M10-postfix-stop failed | item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`; item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`; item 10: the note's sentence is the documented one for its reason
+  section M10-postfix-stop failed | failed: ['item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`', 'item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`', "item 10: the note's sentence is the documented one for its reason"] | unknown: [] | error: None

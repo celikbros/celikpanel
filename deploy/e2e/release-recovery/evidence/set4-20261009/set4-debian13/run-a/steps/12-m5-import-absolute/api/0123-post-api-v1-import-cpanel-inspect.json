@@ -1,0 +1,107 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "inspect the archive of set4-absolute.test (ImportPage preview)",
+  "request": {
+    "body": {
+      "path": "/var/lib/celikpanel-imports/cpmove-s4abs.tar.gz"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18521"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18521"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "ccbd31d3831acd275e4f8f441b56c4ba"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/import/cpanel/inspect"
+  },
+  "response": {
+    "elapsed_seconds": 0.015,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 10:48:04 GMT"
+      ],
+      [
+        "Content-Length",
+        "384"
+      ]
+    ],
+    "json": {
+      "databases": [
+        {
+          "dump_bytes": 7388,
+          "name": "s4abs_app"
+        }
+      ],
+      "dns_zones": {},
+      "domains": [
+        "set4-absolute.test"
+      ],
+      "forwarders": [
+        {
+          "destination": "info@set4-absolute.test",
+          "source": "sales@set4-absolute.test"
+        }
+      ],
+      "mail_accounts": [
+        {
+          "domain": "set4-absolute.test",
+          "has_password": true,
+          "quota_mb": 256,
+          "user": "info"
+        }
+      ],
+      "main_domain": "set4-absolute.test",
+      "public_html": true,
+      "site_bytes": 98,
+      "username": "s4abs"
+    },
+    "status": 200,
+    "text": null
+  }
+}

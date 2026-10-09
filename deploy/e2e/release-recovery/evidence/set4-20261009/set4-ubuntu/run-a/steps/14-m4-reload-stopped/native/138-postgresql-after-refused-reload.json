@@ -1,0 +1,73 @@
+{
+  "at": "2026-10-09T11:27:54Z",
+  "is_active": {
+    "postgresql.service": "inactive",
+    "postgresql@16-main.service": "inactive"
+  },
+  "is_failed": {
+    "postgresql.service": "inactive",
+    "postgresql@16-main.service": "inactive"
+  },
+  "journal": {
+    "postgresql.service": [],
+    "postgresql@16-main.service": []
+  },
+  "journal_product": [
+    "2026-10-09T11:27:49.757011+00:00 dns-ubuntu panel[7574]: 2026/10/09 11:27:49 http: TLS handshake error from 127.0.0.1:56990: EOF",
+    "2026-10-09T11:27:49.802686+00:00 dns-ubuntu sudo[53590]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on --no-align --tuples-only --quiet",
+    "2026-10-09T11:27:49.803861+00:00 dns-ubuntu sudo[53590]: pam_unix(sudo:session): session opened for user postgres(uid=111) by (uid=0)",
+    "2026-10-09T11:27:49.834062+00:00 dns-ubuntu sudo[53590]: pam_unix(sudo:session): session closed for user postgres",
+    "2026-10-09T11:27:49.899038+00:00 dns-ubuntu agent[7376]: 2026/10/09 11:27:49 ERROR service reload postgresql: failed not_running: none of the units behind postgresql.service is running (postgresql@16-main.service inactive (dead)); nothing was reloaded",
+    "2026-10-09T11:27:49.931696+00:00 dns-ubuntu cron[53608]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 800: Resource temporarily unavailable)",
+    "2026-10-09T11:27:51.643197+00:00 dns-ubuntu panel[7574]: 2026/10/09 11:27:51 [409][service action] reload postgresql: SERVICE_ACTION_FAILED not_running: none of the units behind postgresql.service is running (postgresql@16-main.service inactive (dead)); nothing was reloaded"
+  ],
+  "journal_systemd_manager": [],
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "since_epoch": 1791545267,
+  "units": {
+    "postgresql.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 11:13:53 UTC",
+      "ActiveExitTimestamp": "Fri 2026-10-09 11:27:41 UTC",
+      "ActiveState": "inactive",
+      "ExecMainPID": "20677",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 11:13:53 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postgresql.service",
+      "InactiveEnterTimestamp": "Fri 2026-10-09 11:27:41 UTC",
+      "InactiveExitTimestamp": "Fri 2026-10-09 11:13:53 UTC",
+      "InvocationID": "3a3ea203ea81461380bbd57ce53e767a",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 11:27:41 UTC",
+      "SubState": "dead",
+      "Type": "oneshot"
+    },
+    "postgresql@16-main.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 11:13:58 UTC",
+      "ActiveExitTimestamp": "Fri 2026-10-09 11:27:41 UTC",
+      "ActiveState": "inactive",
+      "ExecMainPID": "21548",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 11:13:58 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/bin/pg_ctlcluster ; argv[]=/usr/bin/pg_ctlcluster --skip-systemctl-redirect 16-main reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postgresql@.service",
+      "InactiveEnterTimestamp": "Fri 2026-10-09 11:27:42 UTC",
+      "InactiveExitTimestamp": "Fri 2026-10-09 11:13:56 UTC",
+      "InvocationID": "94267c5f54014b91a48d5dc74934922e",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 11:27:42 UTC",
+      "SubState": "dead",
+      "Type": "forking"
+    }
+  }
+}

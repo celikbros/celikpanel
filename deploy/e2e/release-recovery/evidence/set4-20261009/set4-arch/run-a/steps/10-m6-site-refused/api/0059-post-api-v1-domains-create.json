@@ -1,0 +1,91 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "M6 (owner-moved-file) create a PHP site (the owner renamed nginx's own /etc/nginx/fastcgi.conf, which the generated PHP vhost includes)",
+  "request": {
+    "body": {
+      "domain": "set4-refused.test",
+      "project_type": "php",
+      "ssl_type": "none"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18511"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18511"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "542f8e5081ae51de420a5dab4f970089"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/create"
+  },
+  "response": {
+    "elapsed_seconds": 2.114,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 10:36:10 GMT"
+      ],
+      [
+        "Content-Length",
+        "1076"
+      ]
+    ],
+    "json": {
+      "code": "SITE_WEB_SERVER_REFUSED",
+      "details": [
+        "2026/10/09 10:36:10 [emerg] 3310#3310: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31"
+      ],
+      "error": "The site set4-refused.test was not created: the web server (nginx) refused the configuration CelikPanel generated for it, so the site was never put into service. What had been created for it was removed again and the removal was confirmed: its web server configuration, its system account, its files and, for a PHP site, its PHP pool. nginx was reloaded with the configuration it had before. The server owner runs sudo nginx -t on the server. If it reports an error now, a file of the server's own nginx configuration is refused and is corrected first. If it passes, what nginx refused was in the configuration CelikPanel generated for this server; the line nginx printed names it and is shown to administrators. Then create the site again; nothing retries by itself.",
+      "reason": "removed",
+      "vars": {
+        "command": "sudo nginx -t",
+        "domain": "set4-refused.test"
+      }
+    },
+    "status": 502,
+    "text": null
+  }
+}

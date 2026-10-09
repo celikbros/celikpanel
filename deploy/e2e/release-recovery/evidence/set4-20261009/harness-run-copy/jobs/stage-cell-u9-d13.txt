@@ -1,0 +1,7 @@
+driver SHA256SUMS verified on the staged copy (282 files)
+2026-10-09T11:04:51Z removed /var/tmp/cp-release-drill-s4-u9-d13-a/cells/afe1b814e329ac2e3d8e7ab7/arch/overlay.qcow2 bytes=152764416 (evidence staged at set4-20261009/update-alpha81/upd1-debian13-good/run-a, checksums verified)
+2026-10-09T11:04:51Z removed /var/tmp/cp-release-drill-s4-u9-d13-a/cells/afe1b814e329ac2e3d8e7ab7/debian13/overlay.qcow2 bytes=1784938496 (evidence staged at set4-20261009/update-alpha81/upd1-debian13-good/run-a, checksums verified)
+295
+overall: failed | native_evidence: False | outcome: update-verified
+  step owner-continuation (required) skipped | None
+  step set4-php-site-after-the-update failed | the save did not change the vhost file (nothing was rendered again)

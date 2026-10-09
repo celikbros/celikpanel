@@ -1,0 +1,45 @@
+{
+  "at": "2026-10-09T10:36:49Z",
+  "is_active": {
+    "nginx.service": "inactive"
+  },
+  "is_failed": {
+    "nginx.service": "inactive"
+  },
+  "journal": {
+    "nginx.service": []
+  },
+  "journal_product": [
+    "2026-10-09T10:36:45.412254+00:00 dns-arch panel[420]: 2026/10/09 10:36:45 http: TLS handshake error from 127.0.0.1:43914: EOF",
+    "2026-10-09T10:36:45.543707+00:00 dns-arch agent[410]: 2026/10/09 10:36:45 ERROR service reload nginx: failed not_running: nginx.service is inactive (dead); nothing was reloaded",
+    "2026-10-09T10:36:46.853621+00:00 dns-arch panel[420]: 2026/10/09 10:36:46 [409][service action] reload nginx: SERVICE_ACTION_FAILED not_running: nginx.service is inactive (dead); nothing was reloaded"
+  ],
+  "journal_systemd_manager": [],
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "since_epoch": 1791542203,
+  "units": {
+    "nginx.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 10:33:01 UTC",
+      "ActiveExitTimestamp": "Fri 2026-10-09 10:36:38 UTC",
+      "ActiveState": "inactive",
+      "ExecMainPID": "1200",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 10:33:01 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 10:36:36 UTC] ; stop_time=[Fri 2026-10-09 10:36:36 UTC] ; pid=4063 ; code=exited ; status=0 }",
+      "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+      "InactiveEnterTimestamp": "Fri 2026-10-09 10:36:38 UTC",
+      "InactiveExitTimestamp": "Fri 2026-10-09 10:33:01 UTC",
+      "InvocationID": "13d6878b86744880b087b4862c25466d",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 10:36:38 UTC",
+      "SubState": "dead",
+      "Type": "forking"
+    }
+  }
+}

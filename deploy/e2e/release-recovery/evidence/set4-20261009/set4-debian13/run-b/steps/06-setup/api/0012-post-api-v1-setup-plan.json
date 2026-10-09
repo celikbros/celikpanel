@@ -1,0 +1,290 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "ServerSetup review (web_mail)",
+  "request": {
+    "body": {
+      "revision": 2
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18621"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18621"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "8884eaf4c3515ecea7177f4f62d16502"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/setup/plan"
+  },
+  "response": {
+    "elapsed_seconds": 0.669,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 12:45:15 GMT"
+      ],
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ]
+    ],
+    "json": {
+      "actor": {
+        "IP": "127.0.0.1",
+        "UserAgent": "",
+        "UserID": 2
+      },
+      "blockers": [],
+      "build_commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+      "can_start": true,
+      "components": [
+        {
+          "id": "postfix",
+          "installed": false,
+          "required": false,
+          "selected": true
+        },
+        {
+          "id": "dovecot",
+          "installed": false,
+          "required": false,
+          "selected": true
+        },
+        {
+          "id": "mariadb",
+          "installed": false,
+          "required": false,
+          "selected": true
+        },
+        {
+          "id": "nginx",
+          "installed": false,
+          "required": false,
+          "selected": true
+        },
+        {
+          "id": "php-fpm",
+          "installed": false,
+          "required": false,
+          "selected": true
+        },
+        {
+          "id": "postgresql",
+          "installed": false,
+          "required": false,
+          "selected": true
+        },
+        {
+          "id": "roundcube",
+          "installed": false,
+          "required": false,
+          "selected": true
+        },
+        {
+          "id": "rspamd",
+          "installed": false,
+          "required": false,
+          "selected": true
+        },
+        {
+          "id": "nftables",
+          "installed": true,
+          "required": true,
+          "selected": false
+        },
+        {
+          "id": "certbot",
+          "installed": false,
+          "required": true,
+          "selected": false
+        },
+        {
+          "id": "cron",
+          "installed": false,
+          "required": true,
+          "selected": false
+        }
+      ],
+      "contact_email": "labadmin@example.invalid",
+      "draft": {
+        "customization": {
+          "components": [
+            "dovecot",
+            "mariadb",
+            "nginx",
+            "php-fpm",
+            "postfix",
+            "postgresql",
+            "roundcube",
+            "rspamd"
+          ]
+        },
+        "database": "",
+        "dns_engine": "bind",
+        "dns_mode": "external",
+        "dns_role": "primary",
+        "local_ip": "192.0.2.10",
+        "mail_hostname": "mail-debian13.upd1-infra.test",
+        "node_version": "",
+        "ns1": "ns1.upd1-infra.test",
+        "ns2": "ns2.upd1-infra.test",
+        "panel_domain": "panel-debian13.upd1-infra.test",
+        "peer_ip": "",
+        "peer_ns": "",
+        "purpose": "web_mail",
+        "remote_dns_connection_id": ""
+      },
+      "id": "c32b47ae821bf211e77ab85a2a01b781",
+      "persist_firewall": true,
+      "preserve_ssh": true,
+      "purpose": "web_mail",
+      "revision": 2,
+      "server_ip": "192.0.2.10",
+      "steps": [
+        {
+          "id": "01-dns",
+          "kind": "dns",
+          "target": "external"
+        },
+        {
+          "id": "02-service",
+          "kind": "service",
+          "target": "mariadb"
+        },
+        {
+          "id": "03-service",
+          "kind": "service",
+          "target": "nginx"
+        },
+        {
+          "id": "04-service",
+          "kind": "service",
+          "target": "php-fpm"
+        },
+        {
+          "id": "05-service",
+          "kind": "service",
+          "target": "postgresql"
+        },
+        {
+          "id": "06-mail_profile",
+          "kind": "mail_profile",
+          "target": "webmail"
+        },
+        {
+          "id": "07-mail_profile",
+          "kind": "mail_profile",
+          "target": "protected-mail"
+        },
+        {
+          "id": "08-service",
+          "kind": "service",
+          "target": "cron"
+        },
+        {
+          "id": "09-service",
+          "kind": "service",
+          "target": "certbot"
+        },
+        {
+          "id": "10-firewall",
+          "kind": "firewall",
+          "target": "enable_and_persist"
+        },
+        {
+          "id": "11-access_dns",
+          "kind": "access_dns",
+          "qualifier": "192.0.2.10",
+          "target": "panel-debian13.upd1-infra.test"
+        },
+        {
+          "id": "12-panel_certificate",
+          "kind": "panel_certificate",
+          "target": "panel-debian13.upd1-infra.test"
+        },
+        {
+          "id": "13-access_dns",
+          "kind": "access_dns",
+          "qualifier": "192.0.2.10",
+          "target": "mail-debian13.upd1-infra.test"
+        },
+        {
+          "id": "14-mail_certificate",
+          "kind": "mail_certificate",
+          "target": "mail-debian13.upd1-infra.test"
+        },
+        {
+          "id": "15-mail_enrollment",
+          "kind": "mail_enrollment",
+          "qualifier": "a09f1007ce2cdf0444a9e5a7b72cf118350757591a45d063a53e8420f9d96853",
+          "target": "mail-renewal"
+        },
+        {
+          "id": "16-verify",
+          "kind": "verify",
+          "target": "web_mail"
+        }
+      ],
+      "tcp_ports": [
+        22,
+        25,
+        80,
+        110,
+        143,
+        443,
+        465,
+        587,
+        993,
+        995,
+        2083
+      ],
+      "udp_ports": [],
+      "version": 1
+    },
+    "status": 200,
+    "text": null
+  }
+}

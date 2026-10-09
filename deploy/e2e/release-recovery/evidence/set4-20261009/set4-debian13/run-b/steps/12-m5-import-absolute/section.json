@@ -1,0 +1,604 @@
+{
+  "absolute": {
+    "answer_keys": [
+      "code",
+      "domain",
+      "domain_id",
+      "domain_status",
+      "imported",
+      "message",
+      "not_imported",
+      "site_id",
+      "status",
+      "steps"
+    ],
+    "archive_files": [
+      "assets/site.css",
+      "index.html"
+    ],
+    "catalogue_texts": {
+      "import.detail.absoluteMember": {
+        "en": "Not imported: the archive names this entry with an absolute path, and an import writes only inside the site’s own folder. Nothing was written for it.",
+        "tr": "İçe aktarılmadı: arşiv bu girdiyi mutlak bir yolla adlandırıyor; içe aktarma yalnızca sitenin kendi klasörünün içine yazar. Bu girdi için hiçbir şey yazılmadı."
+      },
+      "import.part.member": {
+        "en": "Archive entry /etc/set3-escape-absolute.txt",
+        "tr": "Arşiv girdisi /etc/set3-escape-absolute.txt"
+      },
+      "import.part.moreMembers": {
+        "en": "/etc/set3-escape-absolute.txt more archive entries",
+        "tr": "/etc/set3-escape-absolute.txt arşiv girdisi daha"
+      },
+      "import.partial.entriesBody": {
+        "en": "The import has ended. Everything you chose was imported, and set4-absolute.test is in service. The archive entries listed as not imported were refused by their names; nothing was written for them.",
+        "tr": "İçe aktarma sona erdi. Seçtiğiniz her şey içe aktarıldı ve set4-absolute.test yayında. İçe aktarılmadı diye listelenen arşiv girdileri adları yüzünden reddedildi; onlar için hiçbir şey yazılmadı."
+      },
+      "import.partial.entriesNext": {
+        "en": "Nothing more is needed for set4-absolute.test. If one of these entries is a file the site needs, add it with the site’s file manager. Importing the archive again refuses the same entries.",
+        "tr": "set4-absolute.test için başka bir şey gerekmiyor. Bu girdilerden biri sitenin ihtiyaç duyduğu bir dosyaysa onu sitenin dosya yöneticisiyle ekleyin. Arşivi yeniden içe aktarmak aynı girdileri yine reddeder."
+      }
+    },
+    "code": "IMPORT_PARTIAL",
+    "docroot_files": [
+      "assets/site.css",
+      "index.html"
+    ],
+    "domain_status": "active",
+    "entries_outside": [],
+    "entries_outside_before": [],
+    "files_step": {
+      "detail": "2 files, 98 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+      "ok": true,
+      "step": "files"
+    },
+    "hostile_members": [
+      {
+        "name": "/etc/set3-escape-absolute.txt",
+        "type": "file"
+      }
+    ],
+    "import_status": "partial",
+    "imported": [
+      "domain",
+      "files",
+      "mail",
+      "forwarders",
+      "dns",
+      "database:s4abs_app"
+    ],
+    "member_steps": [
+      {
+        "detail": "not imported: the archive names this entry with an absolute path, and an import writes only below the site's own folder; nothing was written for it",
+        "ok": false,
+        "step": "member:/etc/set3-escape-absolute.txt"
+      }
+    ],
+    "message": "The import ended and every part that was chosen was imported; set4-absolute.test is in service. Imported: domain, files, mail, forwarders, dns, database:s4abs_app. Not imported: member:/etc/set3-escape-absolute.txt. These entries of the archive were refused by their names, and nothing was written for them; the reason of each is in its step below. If one of them is a file the site needs, add it with the file manager of set4-absolute.test. Importing the archive again refuses the same entries; nothing continues by itself.",
+    "native": {
+      "database_on_engine": true,
+      "database_row": [
+        "s4abs_app"
+      ],
+      "docroot_sha256": "b89c4cc426f256ac858e2380edaab821f8ebd3a4df25084bd92d8cf6f4373ada",
+      "domain_row": true,
+      "files": 2,
+      "forwardings": 1,
+      "mailboxes": [
+        "info@set4-absolute.test"
+      ],
+      "rows": "300",
+      "status": "active"
+    },
+    "not_imported": [
+      "member:/etc/set3-escape-absolute.txt"
+    ],
+    "request": {
+      "do_databases": true,
+      "do_dns": false,
+      "do_files": true,
+      "do_mail": true
+    },
+    "status": 200,
+    "steps": [
+      {
+        "detail": "set4-absolute.test (id 7, site 7) → /var/www/celikpanel/subscriptions/2/sites/7/public_html",
+        "ok": true,
+        "step": "domain"
+      },
+      {
+        "detail": "2 files, 98 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+        "ok": true,
+        "step": "files"
+      },
+      {
+        "detail": "not imported: the archive names this entry with an absolute path, and an import writes only below the site's own folder; nothing was written for it",
+        "ok": false,
+        "step": "member:/etc/set3-escape-absolute.txt"
+      },
+      {
+        "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+        "ok": true,
+        "step": "mail"
+      },
+      {
+        "detail": "1 forwarders",
+        "ok": true,
+        "step": "forwarders"
+      },
+      {
+        "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+        "ok": true,
+        "step": "dns"
+      },
+      {
+        "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+        "ok": true,
+        "step": "database:s4abs_app"
+      }
+    ]
+  },
+  "calls": [
+    {
+      "answer": {
+        "code": "IMPORT_PARTIAL"
+      },
+      "at": "2026-10-09T12:52:35Z",
+      "body_bytes": 1993,
+      "body_sha256": "f20c2010b9d78aee4da4b6051d268b86aae66e0b5220c184b4d5833636a364d4",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "0fe43a996e3b98d6370b95e394e34149"
+      },
+      "json": {
+        "code": "IMPORT_PARTIAL",
+        "domain": "set4-absolute.test",
+        "domain_id": 7,
+        "domain_status": "active",
+        "imported": [
+          "domain",
+          "files",
+          "mail",
+          "forwarders",
+          "dns",
+          "database:s4abs_app"
+        ],
+        "message": "The import ended and every part that was chosen was imported; set4-absolute.test is in service. Imported: domain, files, mail, forwarders, dns, database:s4abs_app. Not imported: member:/etc/set3-escape-absolute.txt. These entries of the archive were refused by their names, and nothing was written for them; the reason of each is in its step below. If one of them is a file the site needs, add it with the file manager of set4-absolute.test. Importing the archive again refuses the same entries; nothing continues by itself.",
+        "not_imported": [
+          "member:/etc/set3-escape-absolute.txt"
+        ],
+        "site_id": 7,
+        "status": "partial",
+        "steps": [
+          {
+            "detail": "set4-absolute.test (id 7, site 7) → /var/www/celikpanel/subscriptions/2/sites/7/public_html",
+            "ok": true,
+            "step": "domain"
+          },
+          {
+            "detail": "2 files, 98 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+            "ok": true,
+            "step": "files"
+          },
+          {
+            "detail": "not imported: the archive names this entry with an absolute path, and an import writes only below the site's own folder; nothing was written for it",
+            "ok": false,
+            "step": "member:/etc/set3-escape-absolute.txt"
+          },
+          {
+            "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+            "ok": true,
+            "step": "mail"
+          },
+          {
+            "detail": "1 forwarders",
+            "ok": true,
+            "step": "forwarders"
+          },
+          {
+            "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+            "ok": true,
+            "step": "dns"
+          },
+          {
+            "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+            "ok": true,
+            "step": "database:s4abs_app"
+          }
+        ]
+      },
+      "label": "import: an archive with a member named by an absolute path",
+      "n": 2,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": true,
+          "domain": "set4-absolute.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s4abs.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "0fe43a996e3b98d6370b95e394e34149",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 2.774,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "archive": "absolute",
+        "at": "2026-10-09T12:52:35Z",
+        "databases": [
+          "s4abs_app"
+        ],
+        "domains": [
+          "set4-absolute.test"
+        ],
+        "hash_shaped_values_in_the_raw_answer": 0,
+        "keys": [
+          "databases",
+          "dns_zones",
+          "domains",
+          "forwarders",
+          "mail_accounts",
+          "main_domain",
+          "public_html",
+          "site_bytes",
+          "username"
+        ],
+        "label": "inspect the archive of set4-absolute.test (ImportPage preview)",
+        "mail_accounts": [
+          {
+            "domain": "set4-absolute.test",
+            "has_password": true,
+            "quota_mb": 256,
+            "user": "info"
+          }
+        ],
+        "mailbox_keys": [
+          "domain",
+          "has_password",
+          "quota_mb",
+          "user"
+        ],
+        "public_html": true,
+        "raw_bytes": 384,
+        "status": 200
+      },
+      "name": "the preview of the absolute archive names its domain, its mailbox and its database",
+      "ok": true
+    },
+    {
+      "detail": {
+        "archive": "absolute",
+        "at": "2026-10-09T12:52:35Z",
+        "databases": [
+          "s4abs_app"
+        ],
+        "domains": [
+          "set4-absolute.test"
+        ],
+        "hash_shaped_values_in_the_raw_answer": 0,
+        "keys": [
+          "databases",
+          "dns_zones",
+          "domains",
+          "forwarders",
+          "mail_accounts",
+          "main_domain",
+          "public_html",
+          "site_bytes",
+          "username"
+        ],
+        "label": "inspect the archive of set4-absolute.test (ImportPage preview)",
+        "mail_accounts": [
+          {
+            "domain": "set4-absolute.test",
+            "has_password": true,
+            "quota_mb": 256,
+            "user": "info"
+          }
+        ],
+        "mailbox_keys": [
+          "domain",
+          "has_password",
+          "quota_mb",
+          "user"
+        ],
+        "public_html": true,
+        "raw_bytes": 384,
+        "status": 200
+      },
+      "name": "S1: the preview of the absolute archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only",
+      "ok": true
+    },
+    {
+      "detail": {
+        "expected_detail": "not imported: the archive names this entry with an absolute path, and an import writes only below the site's own folder; nothing was written for it",
+        "member_steps": [
+          {
+            "detail": "not imported: the archive names this entry with an absolute path, and an import writes only below the site's own folder; nothing was written for it",
+            "ok": false,
+            "step": "member:/etc/set3-escape-absolute.txt"
+          }
+        ]
+      },
+      "name": "item 5: the member named by an absolute path is listed in the import result as a step of its own (`member:<name>`, not ok) with the documented reason",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "IMPORT_PARTIAL",
+        "domain_status": "active",
+        "import_status": "partial",
+        "status": 200
+      },
+      "name": "item 5: the import answers 200 with status `partial`",
+      "ok": true
+    },
+    {
+      "detail": {
+        "domain_row_status": "active",
+        "domain_status": "active"
+      },
+      "name": "item 5 (declared deviation): a result that misses only refused entries keeps `domain_status: active`, and the domain's row is `active`",
+      "ok": true
+    },
+    {
+      "detail": {
+        "from_the_steps": [
+          [
+            "domain",
+            "files",
+            "mail",
+            "forwarders",
+            "dns",
+            "database:s4abs_app"
+          ],
+          [
+            "member:/etc/set3-escape-absolute.txt"
+          ]
+        ],
+        "imported": [
+          "domain",
+          "files",
+          "mail",
+          "forwarders",
+          "dns",
+          "database:s4abs_app"
+        ],
+        "not_imported": [
+          "member:/etc/set3-escape-absolute.txt"
+        ]
+      },
+      "name": "item 5: `imported` and `not_imported` are the steps' own results; the member is in `not_imported` and every chosen part is in `imported`",
+      "ok": true
+    },
+    {
+      "detail": {
+        "message": "The import ended and every part that was chosen was imported; set4-absolute.test is in service. Imported: domain, files, mail, forwarders, dns, database:s4abs_app. Not imported: member:/etc/set3-escape-absolute.txt. These entries of the archive were refused by their names, and nothing was written for them; the reason of each is in its step below. If one of them is a file the site needs, add it with the file manager of set4-absolute.test. Importing the archive again refuses the same entries; nothing continues by itself."
+      },
+      "name": "item 5: the message is the documented one (every chosen part imported, the domain in service, the entries refused by their names)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "database_on_engine": true,
+        "database_row": [
+          "s4abs_app"
+        ],
+        "docroot_sha256": "b89c4cc426f256ac858e2380edaab821f8ebd3a4df25084bd92d8cf6f4373ada",
+        "domain_row": true,
+        "files": 2,
+        "forwardings": 1,
+        "mailboxes": [
+          "info@set4-absolute.test"
+        ],
+        "rows": "300",
+        "status": "active"
+      },
+      "name": "item 5: the rest is imported: the document root's files equal the archive's site files, the database is on the engine with its rows, the mailbox exists",
+      "ok": true
+    },
+    {
+      "detail": {
+        "entries_outside": []
+      },
+      "name": "item 5: nothing was written for the member anywhere on the server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "body": "<h1>set4-absolute.test</h1>\n<p>imported by the set2 fixture</p>\n",
+        "body_sha256": "4356e006d113cdde4a2cf2fa8ebd2dee74fb95099c81620b39e7481ec005dd1c",
+        "bytes": 64,
+        "error": null,
+        "headers": {
+          "content-length": "64",
+          "content-type": "text/html",
+          "server": "nginx"
+        },
+        "status": 200
+      },
+      "name": "item 5: the imported site serves the archive's index page",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T12:52:39Z",
+  "fixture": {
+    "bytes": 2568,
+    "database": "s4abs_app",
+    "docroot_expected": {
+      "assets/site.css": [
+        34,
+        "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+      ],
+      "index.html": [
+        64,
+        "4356e006d113cdde4a2cf2fa8ebd2dee74fb95099c81620b39e7481ec005dd1c"
+      ]
+    },
+    "domain": "set4-absolute.test",
+    "hostile": "absolute",
+    "hostile_members": [
+      {
+        "name": "/etc/set3-escape-absolute.txt",
+        "type": "file"
+      }
+    ],
+    "mailbox_shadow": "the sha512-crypt hash (openssl passwd -6) of a password the lab chose; neither is recorded",
+    "megabytes": 0,
+    "members": [
+      {
+        "bytes": 52,
+        "name": "cpmove-s4abs/cp/s4abs"
+      },
+      {
+        "bytes": 64,
+        "name": "cpmove-s4abs/homedir/public_html/index.html"
+      },
+      {
+        "bytes": 34,
+        "name": "cpmove-s4abs/homedir/public_html/assets/site.css"
+      },
+      {
+        "bytes": 124,
+        "name": "cpmove-s4abs/homedir/etc/set4-absolute.test/shadow"
+      },
+      {
+        "bytes": 15,
+        "name": "cpmove-s4abs/homedir/etc/set4-absolute.test/quota"
+      },
+      {
+        "bytes": 50,
+        "name": "cpmove-s4abs/va/set4-absolute.test"
+      },
+      {
+        "bytes": 29,
+        "name": "cpmove-s4abs/mysql/s4abs_app.create"
+      },
+      {
+        "bytes": 7388,
+        "name": "cpmove-s4abs/mysql/s4abs_app.sql"
+      }
+    ],
+    "path": "/var/lib/celikpanel-imports/cpmove-s4abs.tar.gz",
+    "public_html_directory_member": true,
+    "sha256": "c372b76ff343bc02fae1b620325a7edfb8dee0860cf5b8b3825984fc3d3a8a9e",
+    "sleep_seconds": 0,
+    "user": "s4abs"
+  },
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/082-owner-cpmove-fixture-s4abs.json",
+      "lab_action": false,
+      "label": "owner-cpmove-fixture-s4abs",
+      "mode": "owner-cpmove-fixture",
+      "owner_action": true
+    },
+    {
+      "file": "native/083-absolute-before.json",
+      "lab_action": false,
+      "label": "absolute-before",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/084-absolute-before-engines.json",
+      "lab_action": false,
+      "label": "absolute-before-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/085-absolute-after.json",
+      "lab_action": false,
+      "label": "absolute-after",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/086-absolute-after-engines.json",
+      "lab_action": false,
+      "label": "absolute-after-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/087-absolute-http-index.json",
+      "label": "absolute-http-index",
+      "mode": "read-http",
+      "owner_action": false
+    }
+  ],
+  "node": "debian13",
+  "notes": [],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T12:52:35Z",
+      "label": "cpmove-fixture-s4abs",
+      "mode": "owner-cpmove-fixture"
+    }
+  ],
+  "previews": [
+    {
+      "archive": "absolute",
+      "at": "2026-10-09T12:52:35Z",
+      "databases": [
+        "s4abs_app"
+      ],
+      "domains": [
+        "set4-absolute.test"
+      ],
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "keys": [
+        "databases",
+        "dns_zones",
+        "domains",
+        "forwarders",
+        "mail_accounts",
+        "main_domain",
+        "public_html",
+        "site_bytes",
+        "username"
+      ],
+      "label": "inspect the archive of set4-absolute.test (ImportPage preview)",
+      "mail_accounts": [
+        {
+          "domain": "set4-absolute.test",
+          "has_password": true,
+          "quota_mb": 256,
+          "user": "info"
+        }
+      ],
+      "mailbox_keys": [
+        "domain",
+        "has_password",
+        "quota_mb",
+        "user"
+      ],
+      "public_html": true,
+      "raw_bytes": 384,
+      "status": 200
+    }
+  ],
+  "section": "M5-import-absolute",
+  "started_at": "2026-10-09T12:52:34Z",
+  "substeps": {
+    "S1": "passed",
+    "item 5": "passed",
+    "section": "passed"
+  },
+  "title": "an archive with a member named by an absolute path (item 5)",
+  "verdict": "passed"
+}

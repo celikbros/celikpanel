@@ -1,0 +1,35 @@
+{
+  "at": "2026-10-09T11:26:07Z",
+  "is_active": {
+    "nginx.service": "active"
+  },
+  "is_failed": {
+    "nginx.service": "active"
+  },
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "units": {
+    "nginx.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 11:12:52 UTC",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "active",
+      "ExecMainPID": "11893",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 11:12:53 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; master_process on; -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 11:26:01 UTC] ; stop_time=[Fri 2026-10-09 11:26:01 UTC] ; pid=46132 ; code=exited ; status=0 }",
+      "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "Fri 2026-10-09 11:12:52 UTC",
+      "InvocationID": "728fdf37c9534955b67a89dbf77ff3a5",
+      "LoadState": "loaded",
+      "MainPID": "11893",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 11:26:01 UTC",
+      "SubState": "running",
+      "Type": "forking"
+    }
+  }
+}

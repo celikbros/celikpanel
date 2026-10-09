@@ -1,0 +1,35 @@
+{
+  "at": "2026-10-09T12:43:11Z",
+  "is_active": {
+    "postgresql.service": "active"
+  },
+  "is_failed": {
+    "postgresql.service": "active"
+  },
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "units": {
+    "postgresql.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 12:39:36 UTC",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "active",
+      "ExecMainPID": "1783",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 12:39:35 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/bin/kill ; argv[]=/bin/kill -HUP ${MAINPID} ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postgresql.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "Fri 2026-10-09 12:39:35 UTC",
+      "InvocationID": "4403bfe204604fcb81cf9916163f46a8",
+      "LoadState": "loaded",
+      "MainPID": "1783",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 12:39:36 UTC",
+      "SubState": "running",
+      "Type": "notify"
+    }
+  }
+}

@@ -1,0 +1,212 @@
+{
+  "agreement": {
+    "known_sources": [
+      "api",
+      "cli"
+    ],
+    "phase": {
+      "api": "recovering",
+      "cli": "recovering"
+    },
+    "reasons": [],
+    "sources": [
+      "api",
+      "cli",
+      "shell"
+    ],
+    "verdict": "agree"
+  },
+  "cli": {
+    "boot_id": "97e4f788-250c-4109-8a25-b31906b85f6d",
+    "captured_at": "2026-10-09T12:07:43.555278Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update did not finish normally, and automatic recovery is running: the server is either being returned to the previous version or the update is being completed safely. Nothing to do now: check this same request again in a minute and do not start another update.\nRequest: 06acf6c45f86201439f599fd34127534\nRecorded at: 2026-10-09T12:07:31Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovering reason=recovery_running proof=none previous_failure=update_failed\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"06acf6c45f86201439f599fd34127534\",\"observation\":\"known\",\"phase\":\"recovering\",\"terminal_proof\":\"none\",\"reason\":\"recovery_running\",\"observed_at\":\"2026-10-09T12:07:31Z\",\"previous_failure\":\"update_failed\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme normal biçimde tamamlanmadı ve otomatik kurtarma çalışıyor: sunucu ya önceki sürüme döndürülüyor ya da güncelleme güvenle tamamlanıyor. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın ve başka güncelleme başlatmayın.\nİşlem: 06acf6c45f86201439f599fd34127534\nKayıt zamanı: 2026-10-09T12:07:31Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovering reason=recovery_running proof=none previous_failure=update_failed\n"
+    }
+  },
+  "guidance_api": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.recovering",
+      "recovery.next.recovering",
+      "recovery.previousFailure",
+      "recovery.reason.update_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "observation": {
+      "automatic_recovery": null,
+      "failure_code": null,
+      "first_failure_code": null,
+      "observation": "known",
+      "observed_at": "2026-10-09T12:07:31Z",
+      "panel_state": "ready",
+      "phase": "recovering",
+      "previous_failure": "update_failed",
+      "reason": "recovery_running",
+      "renewal_before_update": null,
+      "request_id": "06acf6c45f86201439f599fd34127534",
+      "terminal_proof": "none",
+      "waiting_for": null
+    },
+    "observation_unavailable": false,
+    "texts": {
+      "en": [
+        "Last recorded step: recovery in progress",
+        "The server last reported automatic recovery. Wait for a verified recovery result before starting another operation.",
+        "Previously recorded failure: Update failed"
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: kurtarma sürüyor",
+        "Sunucu son olarak otomatik kurtarma bildirdi. Başka bir işlem başlatmadan önce doğrulanmış kurtarma sonucunu bekleyin.",
+        "Önceden kaydedilmiş hata: Güncelleme başarısız oldu"
+      ]
+    }
+  },
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.recovering",
+      "recovery.next.recovering",
+      "recovery.previousFailure",
+      "recovery.reason.update_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "observation": {
+      "automatic_recovery": null,
+      "failure_code": null,
+      "first_failure_code": null,
+      "observation": "known",
+      "observed_at": "2026-10-09T12:07:31Z",
+      "panel_state": "ready",
+      "phase": "recovering",
+      "previous_failure": "update_failed",
+      "reason": "recovery_running",
+      "renewal_before_update": null,
+      "request_id": "06acf6c45f86201439f599fd34127534",
+      "terminal_proof": "none",
+      "waiting_for": null
+    },
+    "observation_unavailable": false,
+    "texts": {
+      "en": [
+        "Last recorded step: recovery in progress",
+        "The server last reported automatic recovery. Wait for a verified recovery result before starting another operation.",
+        "Previously recorded failure: Update failed"
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: kurtarma sürüyor",
+        "Sunucu son olarak otomatik kurtarma bildirdi. Başka bir işlem başlatmadan önce doğrulanmış kurtarma sonucunu bekleyin.",
+        "Önceden kaydedilmiş hata: Güncelleme başarısız oldu"
+      ]
+    }
+  },
+  "index": 19,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-10-09T12:07:31Z",
+    "phase": "recovering",
+    "previous_failure": "update_failed",
+    "reason": "recovery_running",
+    "request_id": "06acf6c45f86201439f599fd34127534",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "recovery_api": {
+    "body": {
+      "observation": "known",
+      "observed_at": "2026-10-09T12:07:31Z",
+      "panel_state": "ready",
+      "phase": "recovering",
+      "previous_failure": "update_failed",
+      "reason": "recovery_running",
+      "request_id": "06acf6c45f86201439f599fd34127534",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "none"
+    },
+    "http": 200
+  },
+  "t": 1791547662.8402169,
+  "update_card": {
+    "keys": [
+      "recovery.phase.recovering",
+      "recovery.next.recovering",
+      "panelUpdate.outcome.followsRecovery",
+      "panelUpdate.outcome.serverMessage"
+    ],
+    "missing_keys": [],
+    "observation_error": null,
+    "role": "baseline",
+    "server_message": "reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved",
+    "source": {
+      "observation": {
+        "path": "lib/recoveryObservation.ts",
+        "sha256": "511f922c36fe4bae5feddde6abc18580a7e767a63f9fbaca85bb6d33f3a2685d"
+      },
+      "outcome": {
+        "path": "lib/systemUpdateOutcome.ts",
+        "sha256": "7329a488a436f12637f3c46a60521bbe22027de032044c4963f5686b0a83f67c"
+      },
+      "screen": {
+        "path": "components/RecoveryAccess.tsx",
+        "sha256": "d5e44cfcd69ac883b817da07b9f09e6a987bc453af287ce0d5b6e1a4cca568f9"
+      },
+      "typed": {
+        "path": "lib/systemUpdateFailure.ts",
+        "sha256": "b12d9a0d2989bd70670e02481159128ba716bb21f15db5084b9631475a610af4"
+      }
+    },
+    "state": "recovery",
+    "texts": {
+      "en": [
+        "Last recorded step: recovery in progress",
+        "The server last reported automatic recovery. Wait for a verified recovery result before starting another operation.",
+        "This notice follows the server's recovery record for this update and refreshes by itself. It does not start anything.",
+        "The server reported: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved"
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: kurtarma sürüyor",
+        "Sunucu son olarak otomatik kurtarma bildirdi. Başka bir işlem başlatmadan önce doğrulanmış kurtarma sonucunu bekleyin.",
+        "Bu bildirim, sunucunun bu güncelleme için tuttuğu kurtarma kaydını izler ve kendiliğinden yenilenir. Hiçbir işlem başlatmaz.",
+        "Sunucunun İngilizce günlük satırı: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved"
+      ]
+    },
+    "unavailable": null
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-10-09T12:06:13.725286196Z",
+      "found": true,
+      "request_id": "06acf6c45f86201439f599fd34127534",
+      "status": "failed",
+      "summary": "reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "ea8f81c844c6bf0e08ffb6c628448bac2da56d1060b2f5cd32f19f6947eecf01",
+        "archive_size": "65895628",
+        "commit": "52208d415f61041dd9ec27bdb9cbe0b2d5c7eac4",
+        "os": "linux",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      },
+      "updated_at": "2026-10-09T12:06:43.671493774Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-10-09T12:07:42Z"
+}

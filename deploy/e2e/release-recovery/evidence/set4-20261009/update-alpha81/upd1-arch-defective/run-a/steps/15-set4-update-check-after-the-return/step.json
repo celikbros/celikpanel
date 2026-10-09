@@ -1,0 +1,116 @@
+{
+  "checks": {
+    "catalogue_of_the_installed_baseline": {
+      "panelUpdate.previousAttempt.again": false,
+      "panelUpdate.previousAttempt.cause": true,
+      "panelUpdate.previousAttempt.noCause": false,
+      "panelUpdate.previousAttempt.recovered": true,
+      "panelUpdate.previousAttempt.rolledBackTitle": false,
+      "panelUpdate.previousAttempt.stoppedTitle": true,
+      "panelUpdate.previousAttempt.title": true
+    },
+    "catalogue_texts_of_the_installed_baseline": {
+      "panelUpdate.previousAttempt.cause": {
+        "en": "Recorded cause: {cause}.",
+        "tr": "Kaydedilen neden: {cause}."
+      },
+      "panelUpdate.previousAttempt.recovered": {
+        "en": "v0.1.0-alpha.82 was tried on this server on 2026-10-09T11:58:37Z, and the server was returned to the previous version. Starting it again repeats the same update unless the cause has been fixed.",
+        "tr": "v0.1.0-alpha.82 bu sunucuda 2026-10-09T11:58:37Z tarihinde denendi ve sunucu önceki sürüme döndürüldü. Neden giderilmediyse yeniden başlatmak aynı güncellemeyi tekrarlar."
+      },
+      "panelUpdate.previousAttempt.stoppedTitle": {
+        "en": "An earlier update to this version stopped before changing the installed version",
+        "tr": "Bu sürüme yapılan önceki güncelleme kurulu sürümü değiştirmeden durdu"
+      },
+      "panelUpdate.previousAttempt.title": {
+        "en": "This version already failed on this server",
+        "tr": "Bu sürüm bu sunucuda daha önce başarısız oldu"
+      }
+    },
+    "heading_key_exists_in_the_served_build_catalogue": false,
+    "heading_key_the_candidate_card_would_choose_for_this_answer": "panelUpdate.previousAttempt.rolledBackTitle",
+    "previous_attempt": {
+      "finished_at": "2026-10-09T11:58:37Z",
+      "phase": "recovered",
+      "request_id": "80203f4d033d4a1a404e4265c3bb0673"
+    },
+    "served_web_build": {
+      "at": "2026-10-09T11:58:48Z",
+      "mode": "read-spa",
+      "needles": [
+        "This version was already tried on this server and rolled back",
+        "Bu sürüm bu sunucuda daha önce denendi ve geri alındı",
+        "The server recorded no more specific cause for that attempt.",
+        "Starting it again runs the same update."
+      ],
+      "owner_action": false,
+      "panel_process": {
+        "cwd": "/opt/celikpanel",
+        "exe": "/opt/celikpanel/bin/panel"
+      },
+      "panel_unit": {
+        "ActiveState": "active",
+        "ExecStart": "{ path=/opt/celikpanel/bin/panel ; argv[]=/opt/celikpanel/bin/panel $CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG $CELIKPANEL_PANEL_DEMO_FLAG ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "MainPID": "19395",
+        "WorkingDirectory": "/opt/celikpanel"
+      },
+      "schema": "celikpanel/set4-native/v1",
+      "web_builds": [
+        {
+          "dist": "/root/celikpanel-release-recovery-lab/current-worker-baseline-source/web/dist",
+          "files_containing": {
+            "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 0,
+            "Starting it again runs the same update.": 0,
+            "The server recorded no more specific cause for that attempt.": 0,
+            "This version was already tried on this server and rolled back": 0
+          },
+          "files_read": 97,
+          "index_sha256": "9f307e74ef7b3b2261412f0d49fa8bf0801a55efdbec696b80ac4349cfb8ffc8",
+          "real_path": "/root/celikpanel-release-recovery-lab/current-worker-baseline-source/web/dist"
+        }
+      ]
+    },
+    "update_check": {
+      "body": {
+        "available": true,
+        "current_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+        "current_version": "v0.1.0-alpha.81",
+        "previous_attempt": {
+          "finished_at": "2026-10-09T11:58:37Z",
+          "phase": "recovered",
+          "request_id": "80203f4d033d4a1a404e4265c3bb0673"
+        },
+        "supported": true,
+        "target": {
+          "arch": "amd64",
+          "archive_sha256": "99a00422844f0ec376494cd17686e397373318a971d968ad2de06f5877761b29",
+          "archive_size": "65894854",
+          "commit": "c911b3083cb53aa539e6c25b720b7b86c2e08644",
+          "os": "linux",
+          "published_at": "2026-10-09T11:49:18Z",
+          "sequence": "82",
+          "version": "v0.1.0-alpha.82"
+        }
+      },
+      "http": 200,
+      "raw_bytes": 541,
+      "raw_sha256": "0735e8ba18f929265d74305fc7cf55026d59224c7144b206a34f1446b69c7070"
+    },
+    "version": {
+      "body": {
+        "agent_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+        "agent_matches": true,
+        "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+        "hostname": "dns-arch",
+        "ipv4": "192.0.2.11",
+        "schema_version": 42,
+        "version": "v0.1.0-alpha.81"
+      },
+      "http": 200
+    }
+  },
+  "finished_at": "2026-10-09T11:58:48Z",
+  "name": "set4-update-check-after-the-return",
+  "started_at": "2026-10-09T11:58:47Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,35 @@
+{
+  "at": "2026-10-09T12:42:24Z",
+  "is_active": {
+    "nginx.service": "active"
+  },
+  "is_failed": {
+    "nginx.service": "active"
+  },
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "units": {
+    "nginx.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 12:39:11 UTC",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "active",
+      "ExecMainPID": "1174",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 12:39:11 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 12:42:19 UTC] ; stop_time=[Fri 2026-10-09 12:42:19 UTC] ; pid=3430 ; code=exited ; status=0 }",
+      "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "Fri 2026-10-09 12:39:11 UTC",
+      "InvocationID": "a569730df45544869a247bfef6ca9704",
+      "LoadState": "loaded",
+      "MainPID": "1174",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 12:42:19 UTC",
+      "SubState": "running",
+      "Type": "forking"
+    }
+  }
+}
