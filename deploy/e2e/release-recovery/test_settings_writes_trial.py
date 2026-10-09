@@ -27,7 +27,11 @@ ARTIFACT = {"version": "v0.1.0-alpha.81", "commit": "a" * 40, "sha256": "b" * 64
 
 class CellTests(unittest.TestCase):
     def test_cells_cover_the_three_platforms_and_mail_follows_the_catalogue(self):
-        self.assertEqual(sorted(trial.CELLS), ["set1-arch", "set1-debian13", "set1-ubuntu"])
+        self.assertEqual(sorted(trial.CELLS), ["set1-arch", "set1-debian13", "set1-ubuntu",
+                                               "set2-arch", "set2-debian13", "set2-ubuntu"])
+        for platform in ("arch", "debian13", "ubuntu"):
+            first, second = trial.CELLS["set1-" + platform], trial.CELLS["set2-" + platform]
+            self.assertEqual(dataclasses.replace(second, name=first.name), first)
         for name, cell in trial.CELLS.items():
             self.assertEqual(cell.name, name)
             self.assertIn("postgresql", cell.components)
@@ -50,10 +54,10 @@ class CellTests(unittest.TestCase):
         runs = {s["id"]: s["runs"] for s in plan["sections"]}
         self.assertEqual(runs, {"S1-cron": True, "S2-mail-policy": False, "S3-backup-schedule": True,
                                 "S4-postgresql": True, "S5-mariadb": True, "S6-catchall-queue": False,
-                                "S7-file-metadata": True})
+                                "S7-file-metadata": True, "S8-service-actions": True})
         self.assertEqual(plan["setup"]["customization"]["components"], ["mariadb", "nginx", "php-fpm", "postgresql"])
         self.assertTrue(all(trial.build_plan(trial.CELLS["set1-debian13"], {"baseline": ARTIFACT}, "/x", 1)["sections"][i]["runs"]
-                            for i in range(7)))
+                            for i in range(8)))
         json.dumps(plan)
 
     def test_site_username_follows_the_product_rule(self):
@@ -76,7 +80,7 @@ class ScreenKeyTests(unittest.TestCase):
         self.assertEqual(keys("cron", 409, {"code": "SETTINGS_CHANGED", "reason": "scheduled_tasks"}),
                          ["err.SETTINGS_CHANGED.scheduled_tasks", "err.SETTINGS_CHANGED", "cron.stale"])
         self.assertIn("backup.auto.stale", keys("backup", 409, {"code": "SETTINGS_VERSION_REQUIRED"}))
-        self.assertIn("postfix.queue.unknown", keys("queue", 502, {"code": "MAIL_QUEUE_UNREADABLE"}))
+        self.assertIn("postfix.queue.unreadable", keys("queue", 502, {"code": "MAIL_QUEUE_UNREADABLE"}))   # H37
         self.assertIn("mail.catchAll.stale", keys("catchall", 409, {"code": "SETTINGS_CHANGED"}))
         self.assertEqual(keys("mailpolicy", 200, {"dnsbl_locked": "variable"}),
                          ["mailpolicy.dnsblLocked.variable", "mailpolicy.dnsblLockedAction"])
@@ -229,7 +233,9 @@ class GuestHelperRuleTests(unittest.TestCase):
                 native.editable_path(path)
         self.assertEqual(native.unit_name("postfix"), "postfix.service")
         self.assertEqual(native.unit_name("postgresql@17-main.service"), "postgresql@17-main.service")
-        for unit in ("celikpanel-panel", "celikpanel-agent.service", "ssh", "nginx", "postgresql@17-main; reboot"):
+        for unit in ("dovecot", "nginx.service"):   # set2: the Services page's units
+            self.assertEqual(native.unit_name(unit), unit.removesuffix(".service") + ".service")
+        for unit in ("celikpanel-panel", "celikpanel-agent.service", "ssh", "sshd.service", "postgresql@17-main; reboot"):
             with self.assertRaises(native.Refused):
                 native.unit_name(unit)
         with self.assertRaises(native.Refused):
@@ -248,7 +254,8 @@ class GuestHelperRuleTests(unittest.TestCase):
     def test_every_mode_is_a_reader_or_a_named_owner_action(self):
         self.assertTrue(all(mode.startswith(("read-", "owner-")) for mode in native.MODES))
         self.assertEqual(sorted(m for m in native.MODES if m.startswith("owner-")),
-                         ["owner-cron-fault", "owner-crontab", "owner-edit", "owner-reload-hook", "owner-systemctl"])
+                         ["owner-cron-fault", "owner-crontab", "owner-edit", "owner-pg-reread", "owner-reload-hook",
+                          "owner-systemctl"])
         source = (HERE / "guest_settings_native.py").read_text(encoding="utf-8")
         for forbidden in ("celikpanel.net", "curl", "urllib", "http.client", "requests"):
             self.assertNotIn(forbidden, source)
@@ -260,6 +267,44 @@ class GuestHelperRuleTests(unittest.TestCase):
         self.assertNotIn("subprocess", source)
         self.assertEqual(hashlib.sha256(b"").hexdigest(), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
         self.assertTrue(dataclasses.is_dataclass(trial.SettingsCell))
+
+
+class Set2RuleTests(unittest.TestCase):
+    def test_the_agents_reread_batch_is_the_products_own(self):
+        product = (HERE.parents[2] / "cmd" / "agent" / "db_config.go").read_text(encoding="utf-8")
+        for statement in native.AGENT_REREAD_BATCH.strip().split("\n"):
+            head = statement.split(" FROM ")[0].split("'")[1]
+            self.assertIn(head, product, statement)
+        self.assertIn("pg_reload_conf()", native.AGENT_REREAD_BATCH)
+        self.assertIn("pg_conf_load_time()", native.AGENT_REREAD_BATCH)
+
+    def test_the_service_reader_reads_what_the_agent_reads(self):
+        product = (HERE.parents[2] / "cmd" / "agent" / "service_action_verify.go").read_text(encoding="utf-8")
+        for name in ("Type", "ExecStart", "Wants", "ConsistsOf", "PropagatesReloadTo", "ActiveState", "SubState", "MainPID",
+                     "Result", "ReloadResult", "ExecReload"):
+            self.assertIn("--property=" + name, product)
+            self.assertIn(name, native.SERVICE_PROPERTIES)
+        self.assertIn("read-service", native.MODES)
+
+    def test_every_service_has_reload_markers_and_the_refused_value_is_not_a_size(self):
+        self.assertEqual(sorted(trial.RELOAD_MARKERS), ["dovecot", "mariadb", "nginx", "postfix", "postgresql"])
+        self.assertFalse(trial.PG_REFUSED_VALUE[0].isdigit())
+        self.assertIn("unchanged_reloaded", (HERE / "settings_writes_trial.py").read_text(encoding="utf-8"))
+
+    def test_screen_keys_of_the_corrected_answers_are_the_screens_own(self):
+        keys = trial.screen_keys
+        self.assertIn("dbconf.reloadFailed.restored_unit_reload_failed",
+                      keys("config", 502, {"code": "CONFIG_RELOAD_FAILED", "reason": "restored_unit_reload_failed"}))
+        self.assertIn("dbconf.reloadFailed.notRestored", keys("config", 502, {"code": "CONFIG_RELOAD_FAILED", "reason": "not_restored"}))
+        self.assertIn("cron.unknown.cron_allow", keys("cron", 502, {"code": "CURRENT_SETTINGS_UNREADABLE", "reason": "scheduled_tasks",
+                                                                   "detail": "cron_allow"}))
+        neutral = keys("cron", 502, {"code": "CURRENT_SETTINGS_UNREADABLE", "reason": "scheduled_tasks"})
+        self.assertIn("cron.unknown", neutral)
+        self.assertIn("cron.unknown.said", neutral)
+        self.assertIn("postfix.queue.unreadable.postfix_config", keys("queue", 502, {"code": "MAIL_QUEUE_UNREADABLE", "reason": "postfix_config"}))
+        self.assertIn("mailpolicy.postfixSaid", keys("mailpolicy", 502, {"code": "MAIL_POLICY_NOT_RELOADED", "reason": "check"}))
+        components = (HERE.parents[2] / "web" / "src" / "components" / "ConfigFileNotices.tsx").read_text(encoding="utf-8")
+        self.assertIn("'dbconf.reloadFailed.restored_unit_reload_failed'", components)
 
 
 if __name__ == "__main__":
