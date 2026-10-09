@@ -106,6 +106,16 @@ use_web() {     # place one saved web/dist into the clone for build-dist.sh
 build() {
     local commit=$1 version=$2 dist_json
     dist_json=/var/tmp/cp-pair-accept/dist/$commit-acceptance-license/dist.json
+    # set4: an explicit reuse of ONE dist an earlier run built, named by its full commit in
+    # UPD1_REUSE_DIST_OF_COMMIT (the published v0.1.0-alpha.81 baseline, whose dist directory an earlier run
+    # left and this run may not remove). Never implicit: any other commit, or a missing dist.json, is built or
+    # refused as before. The reuse is said in the build log and in the artifacts document; `run-upd1.sh prove`
+    # verifies the reused archive against the commit's own blobs.
+    if [[ -n ${UPD1_REUSE_DIST_OF_COMMIT:-} && ${UPD1_REUSE_DIST_OF_COMMIT} == "$commit" && -s $dist_json ]]; then
+        echo "BUILD-UPD1-REUSED: the dist of $commit ($version) at ${dist_json%/dist.json}, left by an earlier build, is"             "used unchanged because UPD1_REUSE_DIST_OF_COMMIT names exactly this commit; it was NOT built by this run." >&2
+        echo "$dist_json"
+        return 0
+    fi
     if ! CELIKPANEL_REPO=$clone CELIKPANEL_DIST_VERSION=$version CELIKPANEL_ACCEPTANCE_GUARD=$GUARD \
         bash "$BUILD_DIST" --acceptance-license "$commit" >&2; then
         echo "BUILD-UPD1-FAILED: the dist build of $commit ($version) failed or was refused; an archive that an earlier" \
@@ -258,6 +268,10 @@ if r:
     document["realstart"] = item(r, c_seq, good)
     document["realstart"]["defect"] = "cmd/panel main() exits before its listener; the start check never reaches it"
 document["defective"]["defect"] = "cmd/panel --migrate-only exits 1 after migrating the isolated copy"
+import os
+for role in ("baseline", "good", "defective", "startcheck", "realstart"):
+    if role in document and os.environ.get("UPD1_REUSE_DIST_OF_COMMIT") == document[role]["commit"]:
+        document[role]["reused_dist"] = "built by an earlier run, used unchanged (UPD1_REUSE_DIST_OF_COMMIT)"
 if ref:
     spec = importlib.util.spec_from_file_location("upd7_driver", driver)
     module = importlib.util.module_from_spec(spec); sys.modules["upd7_driver"] = module; spec.loader.exec_module(module)
