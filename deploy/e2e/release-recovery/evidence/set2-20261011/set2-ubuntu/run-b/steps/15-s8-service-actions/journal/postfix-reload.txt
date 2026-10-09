@@ -1,0 +1,6 @@
+2026-10-09T04:10:39.628369+00:00 dns-ubuntu postfix/master[57255]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-09T04:10:39.541366+00:00 dns-ubuntu postfix/postfix-script[64530]: the Postfix mail system is running: PID: 57255
+2026-10-09T04:10:39.622508+00:00 dns-ubuntu postfix/postfix-script[64548]: refreshing the Postfix mail system
+2026-10-09T04:10:39.628369+00:00 dns-ubuntu postfix/master[57255]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-09T04:10:40.087956+00:00 dns-ubuntu postfix/postfix-script[64567]: the Postfix mail system is running: PID: 57255
+2026-10-09T04:10:42.171906+00:00 dns-ubuntu postfix/postfix-script[64678]: the Postfix mail system is running: PID: 57255

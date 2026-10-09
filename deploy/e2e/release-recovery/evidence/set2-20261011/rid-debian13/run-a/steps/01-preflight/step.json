@@ -1,0 +1,93 @@
+{
+  "checks": {
+    "guest_fresh": true,
+    "helpers": {
+      "guest_bound_worker.py": "1ebff5e14d87761e72dbb3ca30c6f1aaad5a2aa5df7971f23ab81ae305bc3ea1",
+      "guest_owner_port_hold.py": "81c3ccc9ed21edaa3429546a3abcbef81ac8a738c182bee752bb7486490a8bde",
+      "guest_owner_update_observer.py": "263ed14c59f24956aaf0e21ece5b74b9f81dbfe19ad652d89a87ea6e25f731af",
+      "guest_port_fault.py": "be8eb7008d50b343c1194bef8c32c14335fa750cd7be61c43a7c1e52b2d6efc6",
+      "guest_probe.py": "af1158f777b4f35e5b429ecb9b4fe5ecaf643b1491e793fdad7e50cafb0d4f79",
+      "guest_recovery_fault.py": "4d9ae59bcbc2fdb4a6f42ade529c1b6b1f6366b726f92ba37058957b7696da50",
+      "guest_recovery_handoff.py": "21dfaa3bc76b56f463a706f50f8b6413a5325ebba978b113a0b4a59d2be4c0cf",
+      "guest_request_identity_native.py": "fa3306a404d861d703581f3a81979369795463ef2ca0cb0df5e21248ea9d2202",
+      "guest_settings_native.py": "ac21451a3a797d2ac7d32c7bbf969dabc7a01bf8f02c01eab50069d0fe0f660c",
+      "guest_upd1_workload.py": "3d2f218f298b3ded3228b0089155b45e1e81c8dce9a8b8783e5face05287b8cf",
+      "guest_update_kill.py": "f996f1cedf3777ef12b1f44282dcb3208c61400f76f27c4ed3fe4e290f95cd26"
+    },
+    "origin_name_before": {
+      "hosts_mappings": [],
+      "nsswitch_hosts": "hosts:          files myhostname resolve [!UNAVAIL=return] dns",
+      "resolver_queried": false
+    },
+    "proofs": {
+      "baseline": {
+        "agent_sha256": "1291ea814b407616799e026fd898271ca082260f581c8baaf969749a872a7a10",
+        "commit": "c00645036feb4210a04b357ffffc15cc215d010a",
+        "dns_owner_tools": [
+          "dns-owner-tools/README.md",
+          "dns-owner-tools/bind-peer-inspect",
+          "dns-owner-tools/dns-peer-enroll",
+          "dns-owner-tools/pdns-peer-inspect"
+        ],
+        "files": 209,
+        "panel_sha256": "4674f56ff19173b0320b9c3304509ff3883a95aa4043cfc3202335bcf71d9c38",
+        "release_policy": {
+          "current": 81,
+          "format": "celikpanel-release-sequence-policy-v1",
+          "previous": 80,
+          "previous_commit": "bd14d97efc5cfd19acd70ddf0edb9c6343317e2b",
+          "previous_version": "v0.1.0-alpha.80",
+          "sha256": "c5305d7bec6540bcabbe1c4c11fb021cb314d00f9a4148e6273892cb53444731",
+          "version": "v0.1.0-alpha.81"
+        },
+        "source_proof": {
+          "acceptance_notice_sha256": "5bd918799db9d91dac1b4b63570c93d01425100e43ddfd3488f404ed81e961c8",
+          "commit": "c00645036feb4210a04b357ffffc15cc215d010a",
+          "exempted_from_git_proof": [
+            "ACCEPTANCE-LICENSE-BUILD.txt"
+          ],
+          "method": "real Git commit/tree and every packaged static source blob",
+          "tree": "1b464cd7e4bc51f7b791938e150dc4ec05f2bf47",
+          "verified_static_files": 62
+        },
+        "tree": "1b464cd7e4bc51f7b791938e150dc4ec05f2bf47"
+      },
+      "good": {
+        "agent_sha256": "738f44904c4528c3867ad596d014395224295021ef391398787a80b7e85ac7da",
+        "commit": "13d83c01d13e0725fe6b53afbcc878d51f5c68f8",
+        "dns_owner_tools": [
+          "dns-owner-tools/README.md",
+          "dns-owner-tools/bind-peer-inspect",
+          "dns-owner-tools/dns-peer-enroll",
+          "dns-owner-tools/pdns-peer-inspect"
+        ],
+        "files": 209,
+        "panel_sha256": "0dec047d4f2778cf6cf683385f7a174f3a10e0c7f716f14a8ffcc8e4d147a78e",
+        "release_policy": {
+          "current": 82,
+          "format": "celikpanel-release-sequence-policy-v1",
+          "previous": 81,
+          "previous_commit": "c00645036feb4210a04b357ffffc15cc215d010a",
+          "previous_version": "v0.1.0-alpha.81",
+          "sha256": "19dd1bdc5f99a47b96cb5b043e759b88c547f3047ccf8620f3935ec79402f5fe",
+          "version": "v0.1.0-alpha.82"
+        },
+        "source_proof": {
+          "acceptance_notice_sha256": "a95eb5b9498a556318723e52b774338a64a6e60905e078ec50b9b3f93dcb8a8f",
+          "commit": "13d83c01d13e0725fe6b53afbcc878d51f5c68f8",
+          "exempted_from_git_proof": [
+            "ACCEPTANCE-LICENSE-BUILD.txt"
+          ],
+          "method": "real Git commit/tree and every packaged static source blob",
+          "tree": "4099185513f46ced9a29e585ce9f4c5c5a0e1632",
+          "verified_static_files": 62
+        },
+        "tree": "4099185513f46ced9a29e585ce9f4c5c5a0e1632"
+      }
+    }
+  },
+  "finished_at": "2026-10-09T04:07:39Z",
+  "name": "preflight",
+  "started_at": "2026-10-09T04:07:35Z",
+  "verdict": "passed"
+}

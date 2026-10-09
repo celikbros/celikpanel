@@ -1,0 +1,33 @@
+{
+  "at": "2026-10-09T04:16:51Z",
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791519410",
+      "-n",
+      "2000",
+      "-u",
+      "celikpanel-panel.service",
+      "-u",
+      "celikpanel-agent.service"
+    ],
+    "at": "2026-10-09T04:16:51Z",
+    "returncode": 0,
+    "seconds": 0.007,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T04:16:50.349734+00:00 dns-debian13 panel[5214]: 2026/10/09 04:16:50 http: TLS handshake error from 127.0.0.1:52558: EOF\n"
+  },
+  "lab_action": false,
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service"
+  ]
+}

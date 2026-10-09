@@ -1,0 +1,6 @@
+#!/bin/bash
+# set2 read-only: explicit process statements for host-leftovers.txt
+n=$(pgrep -c qemu); echo "qemu processes: ${n:-0}"
+m=$(ps -eo args | grep -E "settings_writes_trial|request_identity_trial|run-set2|run-upd1|lab.py|watch.sh|tail -n 0 -F|sleep 28800|debug_rid" | grep -vc grep); echo "set2 job, watcher or keep-alive processes: $m"
+ls -d /var/tmp/cp-release-drill-rid-ub-a/evidence/ubuntu/upd1/rid-debug-* 2>/dev/null | sed 's/^/debugging session output (not evidence): /'
+cmp <(cd /var/tmp/cp-set2-run/harness-e && sha256sum deploy/e2e/release-recovery/{settings_writes_trial.py,guest_settings_native.py,test_settings_writes_trial.py,request_identity_trial.py,guest_request_identity_native.py,test_request_identity_trial.py,run-set2.sh}) <(cd '/mnt/c/CELIKBROS PROJECTS/celikpanel' && for f in settings_writes_trial.py guest_settings_native.py test_settings_writes_trial.py request_identity_trial.py guest_request_identity_native.py test_request_identity_trial.py run-set2.sh; do printf '%s  deploy/e2e/release-recovery/%s\n' "$(sed 's/\r$//' deploy/e2e/release-recovery/$f | sha256sum | cut -d' ' -f1)" $f; done) && echo "run copy e holds exactly the working tree's seven harness files (SHA-256 equal, line endings normalized)"

@@ -1,0 +1,30 @@
+{
+  "checks": {
+    "checks": 38,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T04:08:50Z",
+    "notes": [
+      "the owner's one-restriction-per-line layout in main.cf was rewritten as a single line by the save (`postconf -e`); the elements and their order are the owner's",
+      "while main.cf is refused, `postfix status` itself exits non-zero with Postfix's fatal line and does not say whether the master runs"
+    ],
+    "started_at": "2026-10-09T04:08:00Z",
+    "substeps": {
+      "a": "passed",
+      "b": "passed",
+      "c": "passed",
+      "d": "passed",
+      "e": "passed",
+      "f": "passed",
+      "g": "passed",
+      "h": "passed"
+    },
+    "title": "server mail policy: the owner's main.cf",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T04:08:50Z",
+  "name": "S2-mail-policy",
+  "started_at": "2026-10-09T04:08:00Z",
+  "verdict": "passed"
+}

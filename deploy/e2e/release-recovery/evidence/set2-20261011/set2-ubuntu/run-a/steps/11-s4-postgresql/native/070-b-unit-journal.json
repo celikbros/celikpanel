@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T03:45:24Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791517522",
+      "-n",
+      "400",
+      "-u",
+      "postgresql@16-main.service"
+    ],
+    "at": "2026-10-09T03:45:24Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T03:45:23.446490+00:00 dns-ubuntu systemd[1]: Reloading postgresql@16-main.service - PostgreSQL Cluster 16-main...\n2026-10-09T03:45:23.488763+00:00 dns-ubuntu systemd[1]: Reloaded postgresql@16-main.service - PostgreSQL Cluster 16-main.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791517522,
+  "units": [
+    "postgresql@16-main.service"
+  ]
+}

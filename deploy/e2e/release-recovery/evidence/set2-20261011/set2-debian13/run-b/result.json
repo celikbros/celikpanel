@@ -1,0 +1,411 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "c00645036feb4210a04b357ffffc15cc215d010a",
+      "sha256": "795ac99bde17490b5ca13b1685e197fc7314410839292b0e92d3e611a0d9f8d0",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "cell": {
+    "components": [
+      "nginx",
+      "php-fpm",
+      "mariadb",
+      "postfix",
+      "dovecot",
+      "roundcube",
+      "rspamd",
+      "postgresql"
+    ],
+    "mail": true,
+    "name": "set2-debian13",
+    "node": "debian13",
+    "purpose": "web_mail"
+  },
+  "cell_kind": "settings-writes",
+  "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['12-panel_certificate', '13-access_dns', '14-mail_certificate', '15-mail_enrollment', '16-verify']"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__7538c4df843e9126",
+    "node": "debian13",
+    "vm_uuid": "a8d6f8b4-a8f4-516d-ba1d-df9235ddcc39"
+  },
+  "native_evidence": false,
+  "note": "settings-writes: observations for the owner's review; no update is started and no P0 row is judged.",
+  "outcome": {
+    "classification": "settings-writes-measured",
+    "final_status": null
+  },
+  "overall": "failed",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "sections": {
+    "S1-cron": {
+      "checks": 35,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T04:01:26Z",
+      "notes": [],
+      "started_at": "2026-10-09T04:01:21Z",
+      "substeps": {
+        "a": "passed",
+        "b": "passed",
+        "c": "passed",
+        "d": "passed",
+        "e": "passed",
+        "f": "passed"
+      },
+      "title": "scheduled tasks: the owner's crontab",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "S2-mail-policy": {
+      "checks": 38,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T04:02:14Z",
+      "notes": [
+        "the owner's one-restriction-per-line layout in main.cf was rewritten as a single line by the save (`postconf -e`); the elements and their order are the owner's",
+        "while main.cf is refused, `postfix status` itself exits non-zero with Postfix's fatal line and does not say whether the master runs"
+      ],
+      "started_at": "2026-10-09T04:01:26Z",
+      "substeps": {
+        "a": "passed",
+        "b": "passed",
+        "c": "passed",
+        "d": "passed",
+        "e": "passed",
+        "f": "passed",
+        "g": "passed",
+        "h": "passed"
+      },
+      "title": "server mail policy: the owner's main.cf",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "S3-backup-schedule": {
+      "checks": 10,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T04:02:15Z",
+      "notes": [
+        "only 0 scheduled copies exist, so no copy would be pruned; the prune itself was not exercised"
+      ],
+      "started_at": "2026-10-09T04:02:14Z",
+      "substeps": {
+        "section": "passed"
+      },
+      "title": "automatic backup schedule",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "S4-postgresql": {
+      "checks": 37,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T04:02:35Z",
+      "notes": [],
+      "started_at": "2026-10-09T04:02:15Z",
+      "substeps": {
+        "a": "passed",
+        "b": "passed",
+        "c": "passed",
+        "d": "passed",
+        "e": "passed",
+        "f": "passed",
+        "g": "passed"
+      },
+      "title": "postgresql.conf and pg_hba.conf",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "S5-mariadb": {
+      "checks": 21,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T04:02:44Z",
+      "notes": [],
+      "started_at": "2026-10-09T04:02:35Z",
+      "substeps": {
+        "a": "passed",
+        "b": "passed",
+        "c": "passed",
+        "d": "passed",
+        "e": "passed",
+        "end": "passed"
+      },
+      "title": "the MariaDB option file",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "S6-catchall-queue": {
+      "checks": 15,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T04:02:54Z",
+      "notes": [
+        "with Postfix stopped root's `postqueue -j` still reads the queue directly, so the queue is known; the Panel's answer is judged against that"
+      ],
+      "started_at": "2026-10-09T04:02:45Z",
+      "substeps": {
+        "catch-all": "passed",
+        "end": "passed",
+        "queue": "passed"
+      },
+      "title": "catch-all and mail queue",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "S7-file-metadata": {
+      "checks": 9,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T04:02:55Z",
+      "notes": [],
+      "started_at": "2026-10-09T04:02:54Z",
+      "substeps": {
+        "/etc/mysql/mariadb.conf.d/50-server.cnf": "passed",
+        "/etc/postfix/main.cf": "passed",
+        "/etc/postgresql/17/main/pg_hba.conf": "passed",
+        "/etc/postgresql/17/main/postgresql.conf": "passed",
+        "O5": "passed"
+      },
+      "title": "owner, group and mode of the files the Panel wrote",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "S8-service-actions": {
+      "checks": 54,
+      "error": null,
+      "failed": [
+        "postgresql (reload hook): the answer does not say the server keeps its previous settings when the server did read its files again"
+      ],
+      "finished_at": "2026-10-09T04:05:23Z",
+      "notes": [],
+      "started_at": "2026-10-09T04:02:55Z",
+      "substeps": {
+        "S8 dovecot reload": "passed",
+        "S8 dovecot restart": "passed",
+        "S8 dovecot start": "passed",
+        "S8 dovecot stop": "passed",
+        "S8 mariadb reload": "passed",
+        "S8 mariadb restart": "passed",
+        "S8 mariadb start": "passed",
+        "S8 mariadb stop": "passed",
+        "S8 nginx reload": "passed",
+        "S8 nginx restart": "passed",
+        "S8 nginx start": "passed",
+        "S8 nginx stop": "passed",
+        "S8 postfix reload": "passed",
+        "S8 postfix restart": "passed",
+        "S8 postfix start": "passed",
+        "S8 postfix stop": "inconclusive",
+        "S8 postgresql reload": "passed",
+        "S8 postgresql restart": "passed",
+        "S8 postgresql start": "passed",
+        "S8 postgresql stop": "passed",
+        "dovecot": "passed",
+        "mariadb": "passed",
+        "nginx": "passed",
+        "postfix": "passed",
+        "postgresql": "failed"
+      },
+      "title": "service actions on the real units (the Services page's route)",
+      "unknown": [
+        "S8 postfix stop (main.cf holds a line Postfix refuses): the answer (unknown, SERVICE_ACTION_UNKNOWN/None) matches what the service shows"
+      ],
+      "verdict": "failed"
+    }
+  },
+  "setup": {
+    "components": [
+      "dovecot",
+      "mariadb",
+      "nginx",
+      "php-fpm",
+      "postfix",
+      "postgresql",
+      "roundcube",
+      "rspamd"
+    ],
+    "purpose": "web_mail",
+    "step": {
+      "finished_at": "2026-10-09T04:01:18Z",
+      "reason": null,
+      "started_at": "2026-10-09T03:53:19Z",
+      "verdict": "observed"
+    },
+    "waiting": {
+      "code": "server_setup_access_dns_required",
+      "mail_steps_reached": true,
+      "not_run": [
+        "12-panel_certificate",
+        "13-access_dns",
+        "14-mail_certificate",
+        "15-mail_enrollment",
+        "16-verify"
+      ],
+      "phase": "access_dns",
+      "polls": 25,
+      "stable_wait_seconds": 122.3,
+      "steps": {
+        "01-dns": "succeeded",
+        "02-service": "succeeded",
+        "03-service": "succeeded",
+        "04-service": "succeeded",
+        "05-service": "succeeded",
+        "06-mail_profile": "succeeded",
+        "07-mail_profile": "succeeded",
+        "08-service": "succeeded",
+        "09-service": "succeeded",
+        "10-firewall": "succeeded",
+        "11-access_dns": "running",
+        "12-panel_certificate": "pending",
+        "13-access_dns": "pending",
+        "14-mail_certificate": "pending",
+        "15-mail_enrollment": "pending",
+        "16-verify": "pending"
+      }
+    }
+  },
+  "site": {
+    "config_files": {
+      "listed": {
+        "mariadb": [
+          "/etc/mysql/mariadb.cnf",
+          "/etc/mysql/mariadb.conf.d/50-server.cnf"
+        ],
+        "postgresql": [
+          "/etc/postgresql/17/main/postgresql.conf",
+          "/etc/postgresql/17/main/pg_hba.conf"
+        ]
+      },
+      "mariadb_conf": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+      "pg_conf": "/etc/postgresql/17/main/postgresql.conf",
+      "pg_hba": "/etc/postgresql/17/main/pg_hba.conf"
+    },
+    "domain_id": 1,
+    "mailbox": "owner@set1-owner.test",
+    "site_user": "set1_owner_test"
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-09T03:52:36Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-09T03:52:32Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T03:52:44Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-09T03:52:36Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T03:53:18Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-09T03:52:44Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T03:53:19Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-09T03:53:18Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T03:53:19Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-09T03:53:19Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T04:01:18Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-09T03:53:19Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-09T04:01:21Z",
+      "name": "site",
+      "reason": null,
+      "started_at": "2026-10-09T04:01:18Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T04:01:26Z",
+      "name": "S1-cron",
+      "reason": null,
+      "started_at": "2026-10-09T04:01:21Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T04:02:14Z",
+      "name": "S2-mail-policy",
+      "reason": null,
+      "started_at": "2026-10-09T04:01:26Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T04:02:15Z",
+      "name": "S3-backup-schedule",
+      "reason": null,
+      "started_at": "2026-10-09T04:02:14Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T04:02:35Z",
+      "name": "S4-postgresql",
+      "reason": null,
+      "started_at": "2026-10-09T04:02:15Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T04:02:44Z",
+      "name": "S5-mariadb",
+      "reason": null,
+      "started_at": "2026-10-09T04:02:35Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T04:02:54Z",
+      "name": "S6-catchall-queue",
+      "reason": null,
+      "started_at": "2026-10-09T04:02:45Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T04:02:55Z",
+      "name": "S7-file-metadata",
+      "reason": null,
+      "started_at": "2026-10-09T04:02:54Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T04:05:23Z",
+      "name": "S8-service-actions",
+      "reason": "postgresql (reload hook): the answer does not say the server keeps its previous settings when the server did read its files again",
+      "started_at": "2026-10-09T04:02:55Z",
+      "verdict": "failed"
+    },
+    {
+      "finished_at": "2026-10-09T04:05:24Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-09T04:05:23Z",
+      "verdict": "passed"
+    }
+  ]
+}

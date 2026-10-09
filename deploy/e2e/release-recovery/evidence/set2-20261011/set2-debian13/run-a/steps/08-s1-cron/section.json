@@ -1,0 +1,1129 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-09T03:39:54Z",
+      "json": {
+        "jobs": [],
+        "version": "ct1-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "label": "S1a list with no crontab",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:39:54Z",
+      "json": {
+        "success": true
+      },
+      "label": "S1b add a task",
+      "request": {
+        "body": {
+          "command": "/usr/bin/true set1-panel-job",
+          "schedule": "*/15 * * * *",
+          "version": "ct1-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:39:54Z",
+      "json": {
+        "jobs": [
+          {
+            "command": "/usr/bin/true set1-panel-job",
+            "enabled": true,
+            "id": "5141b578186f8e81",
+            "schedule": "*/15 * * * *"
+          }
+        ],
+        "version": "ct1-2c912f07686c21f41dfc2e565fe19fb79fbfce6fe73434a6f24bb8bf348af62a"
+      },
+      "label": "S1b list after add",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CRON_JOB_DUPLICATE",
+        "error": "A scheduled task with the same schedule and command already exists, so nothing was added. Change the existing task instead, or enable it if it is disabled."
+      },
+      "at": "2026-10-09T03:39:54Z",
+      "catalogue_texts": {
+        "err.CRON_JOB_DUPLICATE": {
+          "en": "A task with the same schedule and command already exists, so nothing was added. Change the existing task instead, or enable it if it is disabled.",
+          "tr": "Aynı zamanlama ve komutla bir görev zaten var; bu yüzden hiçbir şey eklenmedi. Var olan görevi değiştirin ya da devre dışıysa etkinleştirin."
+        }
+      },
+      "json": {
+        "code": "CRON_JOB_DUPLICATE",
+        "error": "A scheduled task with the same schedule and command already exists, so nothing was added. Change the existing task instead, or enable it if it is disabled."
+      },
+      "label": "S1c add the identical task",
+      "request": {
+        "body": {
+          "command": "/usr/bin/true set1-panel-job",
+          "schedule": "*/15 * * * *",
+          "version": "ct1-2c912f07686c21f41dfc2e565fe19fb79fbfce6fe73434a6f24bb8bf348af62a"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "scheduled_tasks"
+      },
+      "at": "2026-10-09T03:39:55Z",
+      "catalogue_texts": {
+        "cron.stale": {
+          "en": "The scheduled tasks changed on the server after this list loaded, so nothing was changed. Reload the list, then try again; a task you were typing stays in the form.",
+          "tr": "Zamanlanmış görevler bu liste yüklendikten sonra sunucuda değişti; bu yüzden hiçbir şey değiştirilmedi. Listeyi yeniden yükleyin, sonra tekrar deneyin; yazmakta olduğunuz görev formda kalır."
+        }
+      },
+      "json": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "scheduled_tasks"
+      },
+      "label": "S1d add with the version from before the owner's edit",
+      "request": {
+        "body": {
+          "command": "/usr/bin/true set1-stale-job",
+          "schedule": "5 4 * * *",
+          "version": "ct1-2c912f07686c21f41dfc2e565fe19fb79fbfce6fe73434a6f24bb8bf348af62a"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:39:55Z",
+      "json": {
+        "jobs": [
+          {
+            "command": "/usr/bin/true set1-panel-job",
+            "enabled": true,
+            "id": "5141b578186f8e81",
+            "schedule": "*/15 * * * *"
+          },
+          {
+            "command": "/usr/bin/true set1-owner-job",
+            "comment": "set1 owner note: keep this line",
+            "enabled": true,
+            "id": "5d4bab156b6ba6de",
+            "schedule": "17 3 * * *"
+          }
+        ],
+        "version": "ct1-6d43ffa496928c8ebe42625b691d7e13fb5292a77f2c3b21308251e974a279a3"
+      },
+      "label": "S1d reload",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:39:55Z",
+      "json": {
+        "success": true
+      },
+      "label": "S1e disable",
+      "request": {
+        "body": {
+          "command": "/usr/bin/true set1-panel-job",
+          "enabled": false,
+          "id": "5141b578186f8e81",
+          "schedule": "*/15 * * * *",
+          "version": "ct1-6d43ffa496928c8ebe42625b691d7e13fb5292a77f2c3b21308251e974a279a3"
+        },
+        "method": "PUT",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:39:56Z",
+      "json": {
+        "jobs": [
+          {
+            "command": "/usr/bin/true set1-panel-job",
+            "enabled": false,
+            "id": "5141b578186f8e81",
+            "schedule": "*/15 * * * *"
+          },
+          {
+            "command": "/usr/bin/true set1-owner-job",
+            "comment": "set1 owner note: keep this line",
+            "enabled": true,
+            "id": "5d4bab156b6ba6de",
+            "schedule": "17 3 * * *"
+          }
+        ],
+        "version": "ct1-c5bf1d0b14eb2dadfcc12ff12bea65ec9ab9f582d1d1fff066964b43055ecc88"
+      },
+      "label": "S1e list after disable",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:39:56Z",
+      "json": {
+        "success": true
+      },
+      "label": "S1e edit (disabled task)",
+      "request": {
+        "body": {
+          "command": "/usr/bin/true set1-panel-job",
+          "enabled": false,
+          "id": "5141b578186f8e81",
+          "schedule": "*/20 * * * *",
+          "version": "ct1-c5bf1d0b14eb2dadfcc12ff12bea65ec9ab9f582d1d1fff066964b43055ecc88"
+        },
+        "method": "PUT",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:39:56Z",
+      "json": {
+        "jobs": [
+          {
+            "command": "/usr/bin/true set1-panel-job",
+            "enabled": false,
+            "id": "525938d5161ae428",
+            "schedule": "*/20 * * * *"
+          },
+          {
+            "command": "/usr/bin/true set1-owner-job",
+            "comment": "set1 owner note: keep this line",
+            "enabled": true,
+            "id": "5d4bab156b6ba6de",
+            "schedule": "17 3 * * *"
+          }
+        ],
+        "version": "ct1-b23fbdce600dd3842d39f4893b40acf31c92cde5200b1d47c10ebb09bc08d4ef"
+      },
+      "label": "S1e list after edit",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:39:56Z",
+      "json": {
+        "success": true
+      },
+      "label": "S1e enable",
+      "request": {
+        "body": {
+          "command": "/usr/bin/true set1-panel-job",
+          "enabled": true,
+          "id": "525938d5161ae428",
+          "schedule": "*/20 * * * *",
+          "version": "ct1-b23fbdce600dd3842d39f4893b40acf31c92cde5200b1d47c10ebb09bc08d4ef"
+        },
+        "method": "PUT",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:39:56Z",
+      "json": {
+        "jobs": [
+          {
+            "command": "/usr/bin/true set1-panel-job",
+            "enabled": true,
+            "id": "525938d5161ae428",
+            "schedule": "*/20 * * * *"
+          },
+          {
+            "command": "/usr/bin/true set1-owner-job",
+            "comment": "set1 owner note: keep this line",
+            "enabled": true,
+            "id": "5d4bab156b6ba6de",
+            "schedule": "17 3 * * *"
+          }
+        ],
+        "version": "ct1-8a61a4f7c109c2b63d0794327fd1254705415bdfb5eba52246439eaf2147eac7"
+      },
+      "label": "S1e list after enable",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:39:56Z",
+      "json": {
+        "success": true
+      },
+      "label": "S1e delete",
+      "request": {
+        "body": null,
+        "method": "DELETE",
+        "path": "/api/v1/domains/1/cron?id=525938d5161ae428&version=ct1-8a61a4f7c109c2b63d0794327fd1254705415bdfb5eba52246439eaf2147eac7"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:39:57Z",
+      "json": {
+        "jobs": [
+          {
+            "command": "/usr/bin/true set1-owner-job",
+            "comment": "set1 owner note: keep this line",
+            "enabled": true,
+            "id": "5d4bab156b6ba6de",
+            "schedule": "17 3 * * *"
+          }
+        ],
+        "version": "ct1-c3e1e91abab07c9f999835ad8038092e9c8bf36768b978074dcea9afb89ce263"
+      },
+      "label": "S1e list after delete",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CURRENT_SETTINGS_UNREADABLE",
+        "error": "CelikPanel cannot read or change this site user's scheduled tasks: this server restricts crontab with /etc/cron.allow, and the user is not listed in it. Nothing was changed, and the tasks already on the server are untouched. While the server restricts crontab this way, CelikPanel cannot manage this user's tasks. The server owner adds the site user's name on its own line in /etc/cron.allow, then reloads this page.",
+        "reason": "scheduled_tasks",
+        "vars": {
+          "detail": "The user set1_owner_test cannot use this program (crontab)"
+        }
+      },
+      "at": "2026-10-09T03:39:57Z",
+      "catalogue_texts": {
+        "cron.unknown": {
+          "en": "The scheduled tasks of this domain could not be read from the server, so the list is not shown and tasks cannot be added or changed here. Nothing was changed; the tasks already on the server are untouched. Try again.",
+          "tr": "Bu domain'in zamanlanmış görevleri sunucudan okunamadı; bu yüzden liste gösterilmiyor ve buradan görev eklenemiyor ya da değiştirilemiyor. Hiçbir şey değiştirilmedi; sunucudaki görevlere dokunulmadı. Tekrar deneyin."
+        },
+        "err.CURRENT_SETTINGS_UNREADABLE": {
+          "en": "CelikPanel could not read what is currently set on the server, so nothing was changed. Reload the page and try again.",
+          "tr": "CelikPanel sunucuda şu an neyin ayarlı olduğunu okuyamadı; bu yüzden hiçbir şey değiştirilmedi. Sayfayı yenileyip tekrar deneyin."
+        }
+      },
+      "json": {
+        "code": "CURRENT_SETTINGS_UNREADABLE",
+        "detail": "cron_allow",
+        "error": "CelikPanel cannot read or change this site user's scheduled tasks: this server restricts crontab with /etc/cron.allow, and the user is not listed in it. Nothing was changed, and the tasks already on the server are untouched. While the server restricts crontab this way, CelikPanel cannot manage this user's tasks. The server owner adds the site user's name on its own line in /etc/cron.allow, then reloads this page.",
+        "reason": "scheduled_tasks",
+        "vars": {
+          "detail": "The user set1_owner_test cannot use this program (crontab)"
+        }
+      },
+      "label": "S1f list under the owner's cron-allow",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 502,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CURRENT_SETTINGS_UNREADABLE",
+        "error": "CelikPanel cannot read or change this site user's scheduled tasks: this server restricts crontab with /etc/cron.allow, and the user is not listed in it. Nothing was changed, and the tasks already on the server are untouched. While the server restricts crontab this way, CelikPanel cannot manage this user's tasks. The server owner adds the site user's name on its own line in /etc/cron.allow, then reloads this page.",
+        "reason": "scheduled_tasks",
+        "vars": {
+          "detail": "The user set1_owner_test cannot use this program (crontab)"
+        }
+      },
+      "at": "2026-10-09T03:39:57Z",
+      "catalogue_texts": {
+        "cron.unknown": {
+          "en": "The scheduled tasks of this domain could not be read from the server, so the list is not shown and tasks cannot be added or changed here. Nothing was changed; the tasks already on the server are untouched. Try again.",
+          "tr": "Bu domain'in zamanlanmış görevleri sunucudan okunamadı; bu yüzden liste gösterilmiyor ve buradan görev eklenemiyor ya da değiştirilemiyor. Hiçbir şey değiştirilmedi; sunucudaki görevlere dokunulmadı. Tekrar deneyin."
+        },
+        "err.CURRENT_SETTINGS_UNREADABLE": {
+          "en": "CelikPanel could not read what is currently set on the server, so nothing was changed. Reload the page and try again.",
+          "tr": "CelikPanel sunucuda şu an neyin ayarlı olduğunu okuyamadı; bu yüzden hiçbir şey değiştirilmedi. Sayfayı yenileyip tekrar deneyin."
+        }
+      },
+      "json": {
+        "code": "CURRENT_SETTINGS_UNREADABLE",
+        "detail": "cron_allow",
+        "error": "CelikPanel cannot read or change this site user's scheduled tasks: this server restricts crontab with /etc/cron.allow, and the user is not listed in it. Nothing was changed, and the tasks already on the server are untouched. While the server restricts crontab this way, CelikPanel cannot manage this user's tasks. The server owner adds the site user's name on its own line in /etc/cron.allow, then reloads this page.",
+        "reason": "scheduled_tasks",
+        "vars": {
+          "detail": "The user set1_owner_test cannot use this program (crontab)"
+        }
+      },
+      "label": "S1f add under the owner's cron-allow",
+      "request": {
+        "body": {
+          "command": "/usr/bin/true set1-fault-job",
+          "schedule": "7 7 * * *",
+          "version": "ct1-c3e1e91abab07c9f999835ad8038092e9c8bf36768b978074dcea9afb89ce263"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 502,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CURRENT_SETTINGS_UNREADABLE",
+        "error": "CelikPanel could not read this site user's scheduled tasks from the server, so the list is not shown and nothing was changed. This does not mean the user has no tasks. CelikPanel has not established why; what the server's crontab program said is shown with this message when it said anything. Reload the page to read the tasks again. If it keeps failing, the server owner runs sudo crontab -u <site user> -l on the server, which prints the same reason.",
+        "reason": "scheduled_tasks",
+        "vars": {
+          "detail": "crontabs: No such file or directory"
+        }
+      },
+      "at": "2026-10-09T03:39:58Z",
+      "catalogue_texts": {
+        "cron.unknown": {
+          "en": "The scheduled tasks of this domain could not be read from the server, so the list is not shown and tasks cannot be added or changed here. Nothing was changed; the tasks already on the server are untouched. Try again.",
+          "tr": "Bu domain'in zamanlanmış görevleri sunucudan okunamadı; bu yüzden liste gösterilmiyor ve buradan görev eklenemiyor ya da değiştirilemiyor. Hiçbir şey değiştirilmedi; sunucudaki görevlere dokunulmadı. Tekrar deneyin."
+        },
+        "err.CURRENT_SETTINGS_UNREADABLE": {
+          "en": "CelikPanel could not read what is currently set on the server, so nothing was changed. Reload the page and try again.",
+          "tr": "CelikPanel sunucuda şu an neyin ayarlı olduğunu okuyamadı; bu yüzden hiçbir şey değiştirilmedi. Sayfayı yenileyip tekrar deneyin."
+        }
+      },
+      "json": {
+        "code": "CURRENT_SETTINGS_UNREADABLE",
+        "error": "CelikPanel could not read this site user's scheduled tasks from the server, so the list is not shown and nothing was changed. This does not mean the user has no tasks. CelikPanel has not established why; what the server's crontab program said is shown with this message when it said anything. Reload the page to read the tasks again. If it keeps failing, the server owner runs sudo crontab -u <site user> -l on the server, which prints the same reason.",
+        "reason": "scheduled_tasks",
+        "vars": {
+          "detail": "crontabs: No such file or directory"
+        }
+      },
+      "label": "S1f list under the owner's spool-relocated",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 502,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CURRENT_SETTINGS_UNREADABLE",
+        "error": "CelikPanel could not read this site user's scheduled tasks from the server, so the list is not shown and nothing was changed. This does not mean the user has no tasks. CelikPanel has not established why; what the server's crontab program said is shown with this message when it said anything. Reload the page to read the tasks again. If it keeps failing, the server owner runs sudo crontab -u <site user> -l on the server, which prints the same reason.",
+        "reason": "scheduled_tasks",
+        "vars": {
+          "detail": "crontabs: No such file or directory"
+        }
+      },
+      "at": "2026-10-09T03:39:58Z",
+      "catalogue_texts": {
+        "cron.unknown": {
+          "en": "The scheduled tasks of this domain could not be read from the server, so the list is not shown and tasks cannot be added or changed here. Nothing was changed; the tasks already on the server are untouched. Try again.",
+          "tr": "Bu domain'in zamanlanmış görevleri sunucudan okunamadı; bu yüzden liste gösterilmiyor ve buradan görev eklenemiyor ya da değiştirilemiyor. Hiçbir şey değiştirilmedi; sunucudaki görevlere dokunulmadı. Tekrar deneyin."
+        },
+        "err.CURRENT_SETTINGS_UNREADABLE": {
+          "en": "CelikPanel could not read what is currently set on the server, so nothing was changed. Reload the page and try again.",
+          "tr": "CelikPanel sunucuda şu an neyin ayarlı olduğunu okuyamadı; bu yüzden hiçbir şey değiştirilmedi. Sayfayı yenileyip tekrar deneyin."
+        }
+      },
+      "json": {
+        "code": "CURRENT_SETTINGS_UNREADABLE",
+        "error": "CelikPanel could not read this site user's scheduled tasks from the server, so the list is not shown and nothing was changed. This does not mean the user has no tasks. CelikPanel has not established why; what the server's crontab program said is shown with this message when it said anything. Reload the page to read the tasks again. If it keeps failing, the server owner runs sudo crontab -u <site user> -l on the server, which prints the same reason.",
+        "reason": "scheduled_tasks",
+        "vars": {
+          "detail": "crontabs: No such file or directory"
+        }
+      },
+      "label": "S1f add under the owner's spool-relocated",
+      "request": {
+        "body": {
+          "command": "/usr/bin/true set1-fault-job",
+          "schedule": "7 7 * * *",
+          "version": "ct1-c3e1e91abab07c9f999835ad8038092e9c8bf36768b978074dcea9afb89ce263"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 502,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:39:59Z",
+      "json": {
+        "jobs": [
+          {
+            "command": "/usr/bin/true set1-owner-job",
+            "comment": "set1 owner note: keep this line",
+            "enabled": true,
+            "id": "5d4bab156b6ba6de",
+            "schedule": "17 3 * * *"
+          }
+        ],
+        "version": "ct1-c3e1e91abab07c9f999835ad8038092e9c8bf36768b978074dcea9afb89ce263"
+      },
+      "label": "S1f list after restore",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/cron"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "crontab_binary": "/usr/bin/crontab",
+        "package": "cron: /usr/bin/crontab",
+        "returncode": 1,
+        "stderr": "no crontab for set1_owner_test\n",
+        "stdout": ""
+      },
+      "name": "a: the site user has no crontab (native `crontab -u <user> -l` did not print one)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "crontab_binary": "/usr/bin/crontab",
+        "package": "cron: /usr/bin/crontab",
+        "returncode": 1,
+        "stderr": "no crontab for set1_owner_test\n",
+        "stdout": ""
+      },
+      "name": "a: this platform's answer is the one the product recognises (exit 1, no output, exactly `no crontab for <user>` on standard error)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "body": {
+          "code": null,
+          "jobs": [],
+          "reason": null,
+          "version": "ct1-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "status": 200
+      },
+      "name": "a: the list answers 200 with a known empty list and a version (not an error)",
+      "ok": true
+    },
+    {
+      "detail": "ct1-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "name": "a: the version is that of an empty crontab",
+      "ok": true
+    },
+    {
+      "detail": 200,
+      "name": "b: add answers 200",
+      "ok": true
+    },
+    {
+      "detail": "*/15 * * * * /usr/bin/true set1-panel-job\n",
+      "name": "b: the crontab holds exactly the one line",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CRON_JOB_DUPLICATE",
+        "error": "A scheduled task with the same schedule and command already exists, so nothing was added. Change the existing task instead, or enable it if it is disabled.",
+        "reason": null,
+        "status": 409,
+        "vars": null
+      },
+      "name": "c: the identical task is refused 409 CRON_JOB_DUPLICATE",
+      "ok": true
+    },
+    {
+      "detail": "*/15 * * * * /usr/bin/true set1-panel-job\n",
+      "name": "c: the crontab is unchanged",
+      "ok": true
+    },
+    {
+      "detail": {
+        "argv": [
+          "crontab",
+          "-u",
+          "set1_owner_test",
+          "-"
+        ],
+        "at": "2026-10-09T03:39:55Z",
+        "returncode": 0,
+        "seconds": 0.01,
+        "status": "ok",
+        "stderr": "",
+        "stdout": ""
+      },
+      "name": "d: the owner's `crontab -u <user> <file>` succeeded",
+      "ok": true
+    },
+    {
+      "detail": "*/15 * * * * /usr/bin/true set1-panel-job\n# set1 owner note: keep this line\n17 3 * * * /usr/bin/true set1-owner-job\n",
+      "name": "d: `crontab -l` prints the owner's crontab byte for byte",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "scheduled_tasks",
+        "status": 409,
+        "vars": null
+      },
+      "name": "d: a write with the old version is refused 409 SETTINGS_CHANGED (scheduled_tasks)",
+      "ok": true
+    },
+    {
+      "detail": "*/15 * * * * /usr/bin/true set1-panel-job\n# set1 owner note: keep this line\n17 3 * * * /usr/bin/true set1-owner-job\n",
+      "name": "d: nothing changed",
+      "ok": true
+    },
+    {
+      "detail": {
+        "jobs": [
+          {
+            "command": "/usr/bin/true set1-panel-job",
+            "enabled": true,
+            "id": "5141b578186f8e81",
+            "schedule": "*/15 * * * *"
+          },
+          {
+            "command": "/usr/bin/true set1-owner-job",
+            "comment": "set1 owner note: keep this line",
+            "enabled": true,
+            "id": "5d4bab156b6ba6de",
+            "schedule": "17 3 * * *"
+          }
+        ],
+        "version": "ct1-6d43ffa496928c8ebe42625b691d7e13fb5292a77f2c3b21308251e974a279a3"
+      },
+      "name": "d: after a reload both the Panel's task and the owner's task are listed, with a new version",
+      "ok": true
+    },
+    {
+      "detail": {
+        "command": "/usr/bin/true set1-owner-job",
+        "comment": "set1 owner note: keep this line",
+        "enabled": true,
+        "id": "5d4bab156b6ba6de",
+        "schedule": "17 3 * * *"
+      },
+      "name": "d: the owner's comment is shown with the owner's task",
+      "ok": true
+    },
+    {
+      "detail": 200,
+      "name": "e: disable answers 200",
+      "ok": true
+    },
+    {
+      "detail": {
+        "expected": "# DISABLED: */15 * * * * /usr/bin/true set1-panel-job\n# set1 owner note: keep this line\n17 3 * * * /usr/bin/true set1-owner-job\n",
+        "got": "# DISABLED: */15 * * * * /usr/bin/true set1-panel-job\n# set1 owner note: keep this line\n17 3 * * * /usr/bin/true set1-owner-job\n"
+      },
+      "name": "e: after disable only the Panel's line differs; the owner's comment and task are byte-identical",
+      "ok": true
+    },
+    {
+      "detail": {
+        "command": "/usr/bin/true set1-panel-job",
+        "enabled": false,
+        "id": "5141b578186f8e81",
+        "schedule": "*/15 * * * *"
+      },
+      "name": "e: the disabled task is listed as disabled with the same id",
+      "ok": true
+    },
+    {
+      "detail": 200,
+      "name": "e: edit answers 200",
+      "ok": true
+    },
+    {
+      "detail": {
+        "expected": "# DISABLED: */20 * * * * /usr/bin/true set1-panel-job\n# set1 owner note: keep this line\n17 3 * * * /usr/bin/true set1-owner-job\n",
+        "got": "# DISABLED: */20 * * * * /usr/bin/true set1-panel-job\n# set1 owner note: keep this line\n17 3 * * * /usr/bin/true set1-owner-job\n"
+      },
+      "name": "e: after edit only the Panel's line differs; the owner's comment and task are byte-identical",
+      "ok": true
+    },
+    {
+      "detail": 200,
+      "name": "e: enable answers 200",
+      "ok": true
+    },
+    {
+      "detail": {
+        "expected": "*/20 * * * * /usr/bin/true set1-panel-job\n# set1 owner note: keep this line\n17 3 * * * /usr/bin/true set1-owner-job\n",
+        "got": "*/20 * * * * /usr/bin/true set1-panel-job\n# set1 owner note: keep this line\n17 3 * * * /usr/bin/true set1-owner-job\n"
+      },
+      "name": "e: after enable only the Panel's line differs; the owner's comment and task are byte-identical",
+      "ok": true
+    },
+    {
+      "detail": 200,
+      "name": "e: delete answers 200",
+      "ok": true
+    },
+    {
+      "detail": {
+        "expected": "# set1 owner note: keep this line\n17 3 * * * /usr/bin/true set1-owner-job\n",
+        "got": "# set1 owner note: keep this line\n17 3 * * * /usr/bin/true set1-owner-job\n"
+      },
+      "name": "e: after delete only the Panel's line differs; the owner's comment and task are byte-identical",
+      "ok": true
+    },
+    {
+      "detail": [
+        {
+          "command": "/usr/bin/true set1-owner-job",
+          "comment": "set1 owner note: keep this line",
+          "enabled": true,
+          "id": "5d4bab156b6ba6de",
+          "schedule": "17 3 * * *"
+        }
+      ],
+      "name": "e: after the delete only the owner's task is listed",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CURRENT_SETTINGS_UNREADABLE",
+        "error": "CelikPanel cannot read or change this site user's scheduled tasks: this server restricts crontab with /etc/cron.allow, and the user is not listed in it. Nothing was changed, and the tasks already on the server are untouched. While the server restricts crontab this way, CelikPanel cannot manage this user's tasks. The server owner adds the site user's name on its own line in /etc/cron.allow, then reloads this page.",
+        "reason": "scheduled_tasks",
+        "status": 502,
+        "vars": {
+          "detail": "The user set1_owner_test cannot use this program (crontab)"
+        }
+      },
+      "name": "f (cron-allow): the list answers 502 CURRENT_SETTINGS_UNREADABLE (scheduled_tasks), not an empty list",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CURRENT_SETTINGS_UNREADABLE",
+        "error": "CelikPanel cannot read or change this site user's scheduled tasks: this server restricts crontab with /etc/cron.allow, and the user is not listed in it. Nothing was changed, and the tasks already on the server are untouched. While the server restricts crontab this way, CelikPanel cannot manage this user's tasks. The server owner adds the site user's name on its own line in /etc/cron.allow, then reloads this page.",
+        "reason": "scheduled_tasks",
+        "vars": {
+          "detail": "The user set1_owner_test cannot use this program (crontab)"
+        }
+      },
+      "name": "f (cron-allow): Add is refused",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CURRENT_SETTINGS_UNREADABLE",
+        "error": "CelikPanel cannot read or change this site user's scheduled tasks: this server restricts crontab with /etc/cron.allow, and the user is not listed in it. Nothing was changed, and the tasks already on the server are untouched. While the server restricts crontab this way, CelikPanel cannot manage this user's tasks. The server owner adds the site user's name on its own line in /etc/cron.allow, then reloads this page.",
+        "reason": "scheduled_tasks",
+        "status": 502,
+        "vars": {
+          "detail": "The user set1_owner_test cannot use this program (crontab)"
+        }
+      },
+      "name": "f (cron-allow): Add answers 502 CURRENT_SETTINGS_UNREADABLE (scheduled_tasks)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "crontab_printed": "The user set1_owner_test cannot use this program (crontab)",
+        "detail": "cron_allow",
+        "vars.detail": "The user set1_owner_test cannot use this program (crontab)"
+      },
+      "name": "f (cron-allow): the answer carries the recognised cause (detail = cron_allow) and crontab's own line",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CURRENT_SETTINGS_UNREADABLE",
+        "error": "CelikPanel could not read this site user's scheduled tasks from the server, so the list is not shown and nothing was changed. This does not mean the user has no tasks. CelikPanel has not established why; what the server's crontab program said is shown with this message when it said anything. Reload the page to read the tasks again. If it keeps failing, the server owner runs sudo crontab -u <site user> -l on the server, which prints the same reason.",
+        "reason": "scheduled_tasks",
+        "status": 502,
+        "vars": {
+          "detail": "crontabs: No such file or directory"
+        }
+      },
+      "name": "f (spool-relocated): the list answers 502 CURRENT_SETTINGS_UNREADABLE (scheduled_tasks), not an empty list",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CURRENT_SETTINGS_UNREADABLE",
+        "error": "CelikPanel could not read this site user's scheduled tasks from the server, so the list is not shown and nothing was changed. This does not mean the user has no tasks. CelikPanel has not established why; what the server's crontab program said is shown with this message when it said anything. Reload the page to read the tasks again. If it keeps failing, the server owner runs sudo crontab -u <site user> -l on the server, which prints the same reason.",
+        "reason": "scheduled_tasks",
+        "vars": {
+          "detail": "crontabs: No such file or directory"
+        }
+      },
+      "name": "f (spool-relocated): Add is refused",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CURRENT_SETTINGS_UNREADABLE",
+        "error": "CelikPanel could not read this site user's scheduled tasks from the server, so the list is not shown and nothing was changed. This does not mean the user has no tasks. CelikPanel has not established why; what the server's crontab program said is shown with this message when it said anything. Reload the page to read the tasks again. If it keeps failing, the server owner runs sudo crontab -u <site user> -l on the server, which prints the same reason.",
+        "reason": "scheduled_tasks",
+        "status": 502,
+        "vars": {
+          "detail": "crontabs: No such file or directory"
+        }
+      },
+      "name": "f (spool-relocated): Add answers 502 CURRENT_SETTINGS_UNREADABLE (scheduled_tasks)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "crontab_printed": "crontabs: No such file or directory",
+        "detail": null,
+        "vars.detail": "crontabs: No such file or directory"
+      },
+      "name": "f (spool-relocated): the answer names no cause (neutral) and carries the tool's own line",
+      "ok": true
+    },
+    {
+      "detail": [
+        {
+          "add_status": 502,
+          "answer_cause": "cron_allow",
+          "answer_said": "The user set1_owner_test cannot use this program (crontab)",
+          "applied": {
+            "created": "/etc/cron.allow",
+            "kind": "cron-allow"
+          },
+          "kind": "cron-allow",
+          "list_code": "CURRENT_SETTINGS_UNREADABLE",
+          "list_status": 502,
+          "native": "failed",
+          "native_again": "failed",
+          "returncode": 1,
+          "stderr": "The user set1_owner_test cannot use this program (crontab)\n",
+          "stderr_again": "The user set1_owner_test cannot use this program (crontab)\n"
+        },
+        {
+          "add_status": 502,
+          "answer_cause": null,
+          "answer_said": "crontabs: No such file or directory",
+          "applied": {
+            "kind": "spool-relocated",
+            "moved": [
+              "/var/spool/cron/crontabs",
+              "/var/spool/cron/crontabs.set1-moved-aside"
+            ],
+            "symlink": [
+              "/var/spool/cron/crontabs",
+              "/mnt/set1-data-volume/cron-spool"
+            ]
+          },
+          "kind": "spool-relocated",
+          "list_code": "CURRENT_SETTINGS_UNREADABLE",
+          "list_status": 502,
+          "native": "failed",
+          "native_again": "failed",
+          "returncode": 1,
+          "stderr": "crontabs: No such file or directory\ncrontabs: mkdir: File exists\n",
+          "stderr_again": "crontabs: No such file or directory\ncrontabs: mkdir: File exists\n"
+        }
+      ],
+      "name": "f: one of the owner's realistic causes made the native crontab read fail",
+      "ok": true
+    },
+    {
+      "detail": "# set1 owner note: keep this line\n17 3 * * * /usr/bin/true set1-owner-job\n",
+      "name": "f: after the restore the crontab is the owner's, unchanged",
+      "ok": true
+    },
+    {
+      "detail": {
+        "jobs": [
+          {
+            "command": "/usr/bin/true set1-owner-job",
+            "comment": "set1 owner note: keep this line",
+            "enabled": true,
+            "id": "5d4bab156b6ba6de",
+            "schedule": "17 3 * * *"
+          }
+        ],
+        "version": "ct1-c3e1e91abab07c9f999835ad8038092e9c8bf36768b978074dcea9afb89ce263"
+      },
+      "name": "f: the list is known again with the version from before the fault",
+      "ok": true
+    }
+  ],
+  "cron_faults": [
+    {
+      "add_status": 502,
+      "answer_cause": "cron_allow",
+      "answer_said": "The user set1_owner_test cannot use this program (crontab)",
+      "applied": {
+        "created": "/etc/cron.allow",
+        "kind": "cron-allow"
+      },
+      "kind": "cron-allow",
+      "list_code": "CURRENT_SETTINGS_UNREADABLE",
+      "list_status": 502,
+      "native": "failed",
+      "native_again": "failed",
+      "returncode": 1,
+      "stderr": "The user set1_owner_test cannot use this program (crontab)\n",
+      "stderr_again": "The user set1_owner_test cannot use this program (crontab)\n"
+    },
+    {
+      "add_status": 502,
+      "answer_cause": null,
+      "answer_said": "crontabs: No such file or directory",
+      "applied": {
+        "kind": "spool-relocated",
+        "moved": [
+          "/var/spool/cron/crontabs",
+          "/var/spool/cron/crontabs.set1-moved-aside"
+        ],
+        "symlink": [
+          "/var/spool/cron/crontabs",
+          "/mnt/set1-data-volume/cron-spool"
+        ]
+      },
+      "kind": "spool-relocated",
+      "list_code": "CURRENT_SETTINGS_UNREADABLE",
+      "list_status": 502,
+      "native": "failed",
+      "native_again": "failed",
+      "returncode": 1,
+      "stderr": "crontabs: No such file or directory\ncrontabs: mkdir: File exists\n",
+      "stderr_again": "crontabs: No such file or directory\ncrontabs: mkdir: File exists\n"
+    }
+  ],
+  "cron_faults_judged": [
+    "cron-allow",
+    "spool-relocated"
+  ],
+  "cron_texts": {
+    "cron-allow": {
+      "cron.unknown": {
+        "en": "The scheduled tasks of this domain could not be read from the server, so the list is not shown and tasks cannot be added or changed here. Nothing was changed; the tasks already on the server are untouched. Try again.",
+        "tr": "Bu domain'in zamanlanmış görevleri sunucudan okunamadı; bu yüzden liste gösterilmiyor ve buradan görev eklenemiyor ya da değiştirilemiyor. Hiçbir şey değiştirilmedi; sunucudaki görevlere dokunulmadı. Tekrar deneyin."
+      },
+      "cron.unknown.cron_allow": {
+        "en": "CelikPanel cannot read or change this domain’s scheduled tasks: this server restricts crontab with /etc/cron.allow, and the site’s system user is not listed in it. Nothing was changed; the tasks already on the server are untouched. While the server restricts crontab this way, CelikPanel cannot manage this user’s tasks. The server owner adds the user’s name on its own line in /etc/cron.allow, then this list can be read again.",
+        "tr": "CelikPanel bu domain’in zamanlanmış görevlerini okuyamıyor ve değiştiremiyor: bu sunucu crontab kullanımını /etc/cron.allow ile kısıtlıyor ve sitenin sistem kullanıcısı o dosyada yok. Hiçbir şey değiştirilmedi; sunucudaki görevlere dokunulmadı. Sunucu crontab’ı bu şekilde kısıtladığı sürece CelikPanel bu kullanıcının görevlerini yönetemez. Sunucu sahibi kullanıcının adını /etc/cron.allow dosyasına ayrı bir satır olarak ekler; sonra bu liste yeniden okunabilir."
+      },
+      "cron.unknown.said": {
+        "en": "The server’s crontab program said: The user set1_owner_test cannot use this program (crontab)",
+        "tr": "Sunucunun crontab programının yanıtı: The user set1_owner_test cannot use this program (crontab)"
+      }
+    },
+    "spool-relocated": {
+      "cron.unknown": {
+        "en": "The scheduled tasks of this domain could not be read from the server, so the list is not shown and tasks cannot be added or changed here. Nothing was changed; the tasks already on the server are untouched. Try again.",
+        "tr": "Bu domain'in zamanlanmış görevleri sunucudan okunamadı; bu yüzden liste gösterilmiyor ve buradan görev eklenemiyor ya da değiştirilemiyor. Hiçbir şey değiştirilmedi; sunucudaki görevlere dokunulmadı. Tekrar deneyin."
+      },
+      "cron.unknown.said": {
+        "en": "The server’s crontab program said: crontabs: No such file or directory",
+        "tr": "Sunucunun crontab programının yanıtı: crontabs: No such file or directory"
+      }
+    }
+  },
+  "finished_at": "2026-10-09T03:39:59Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/006-a-crontab-none.json",
+      "label": "a-crontab-none",
+      "mode": "read-crontab",
+      "owner_action": false
+    },
+    {
+      "file": "native/007-b-crontab-after-add.json",
+      "label": "b-crontab-after-add",
+      "mode": "read-crontab",
+      "owner_action": false
+    },
+    {
+      "file": "native/008-c-crontab-after-duplicate.json",
+      "label": "c-crontab-after-duplicate",
+      "mode": "read-crontab",
+      "owner_action": false
+    },
+    {
+      "file": "native/009-owner-d-crontab-edit.json",
+      "label": "owner-d-crontab-edit",
+      "mode": "owner-crontab",
+      "owner_action": true
+    },
+    {
+      "file": "native/010-d-crontab-after-owner-edit.json",
+      "label": "d-crontab-after-owner-edit",
+      "mode": "read-crontab",
+      "owner_action": false
+    },
+    {
+      "file": "native/011-d-crontab-after-stale-write.json",
+      "label": "d-crontab-after-stale-write",
+      "mode": "read-crontab",
+      "owner_action": false
+    },
+    {
+      "file": "native/012-e-crontab-after-disable.json",
+      "label": "e-crontab-after-disable",
+      "mode": "read-crontab",
+      "owner_action": false
+    },
+    {
+      "file": "native/013-e-crontab-after-edit.json",
+      "label": "e-crontab-after-edit",
+      "mode": "read-crontab",
+      "owner_action": false
+    },
+    {
+      "file": "native/014-e-crontab-after-enable.json",
+      "label": "e-crontab-after-enable",
+      "mode": "read-crontab",
+      "owner_action": false
+    },
+    {
+      "file": "native/015-e-crontab-after-delete.json",
+      "label": "e-crontab-after-delete",
+      "mode": "read-crontab",
+      "owner_action": false
+    },
+    {
+      "file": "native/016-owner-f-fault-cron-allow.json",
+      "label": "owner-f-fault-cron-allow",
+      "mode": "owner-cron-fault",
+      "owner_action": true
+    },
+    {
+      "file": "native/017-f-crontab-under-cron-allow.json",
+      "label": "f-crontab-under-cron-allow",
+      "mode": "read-crontab",
+      "owner_action": false
+    },
+    {
+      "file": "native/018-f-crontab-under-cron-allow-again.json",
+      "label": "f-crontab-under-cron-allow-again",
+      "mode": "read-crontab",
+      "owner_action": false
+    },
+    {
+      "file": "native/019-owner-f-restore-cron-allow.json",
+      "label": "owner-f-restore-cron-allow",
+      "mode": "owner-cron-fault",
+      "owner_action": true
+    },
+    {
+      "file": "native/020-owner-f-fault-spool-relocated.json",
+      "label": "owner-f-fault-spool-relocated",
+      "mode": "owner-cron-fault",
+      "owner_action": true
+    },
+    {
+      "file": "native/021-f-crontab-under-spool-relocated.json",
+      "label": "f-crontab-under-spool-relocated",
+      "mode": "read-crontab",
+      "owner_action": false
+    },
+    {
+      "file": "native/022-f-crontab-under-spool-relocated-again.json",
+      "label": "f-crontab-under-spool-relocated-again",
+      "mode": "read-crontab",
+      "owner_action": false
+    },
+    {
+      "file": "native/023-owner-f-restore-spool-relocated.json",
+      "label": "owner-f-restore-spool-relocated",
+      "mode": "owner-cron-fault",
+      "owner_action": true
+    },
+    {
+      "file": "native/024-f-crontab-after-restore.json",
+      "label": "f-crontab-after-restore",
+      "mode": "read-crontab",
+      "owner_action": false
+    }
+  ],
+  "no_crontab_answer": {
+    "crontab_binary": "/usr/bin/crontab",
+    "package": "cron: /usr/bin/crontab",
+    "returncode": 1,
+    "stderr": "no crontab for set1_owner_test\n",
+    "stdout": ""
+  },
+  "node": "debian13",
+  "notes": [],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T03:39:55Z",
+      "label": "d-crontab-edit",
+      "mode": "owner-crontab"
+    },
+    {
+      "at": "2026-10-09T03:39:57Z",
+      "label": "f-fault-cron-allow",
+      "mode": "owner-cron-fault"
+    },
+    {
+      "at": "2026-10-09T03:39:58Z",
+      "label": "f-restore-cron-allow",
+      "mode": "owner-cron-fault"
+    },
+    {
+      "at": "2026-10-09T03:39:58Z",
+      "label": "f-fault-spool-relocated",
+      "mode": "owner-cron-fault"
+    },
+    {
+      "at": "2026-10-09T03:39:59Z",
+      "label": "f-restore-spool-relocated",
+      "mode": "owner-cron-fault"
+    }
+  ],
+  "section": "S1-cron",
+  "started_at": "2026-10-09T03:39:54Z",
+  "substeps": {
+    "a": "passed",
+    "b": "passed",
+    "c": "passed",
+    "d": "passed",
+    "e": "passed",
+    "f": "passed"
+  },
+  "title": "scheduled tasks: the owner's crontab",
+  "verdict": "passed"
+}

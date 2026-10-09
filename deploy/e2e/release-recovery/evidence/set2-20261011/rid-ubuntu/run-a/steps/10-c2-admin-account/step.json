@@ -1,0 +1,31 @@
+{
+  "checks": {
+    "checks": 8,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T03:44:42Z",
+    "notes": [],
+    "started_at": "2026-10-09T03:44:42Z",
+    "substeps": {
+      "admin-account-mariadb": "inconclusive",
+      "admin-account-postgresql": "inconclusive"
+    },
+    "title": "the Panel's own account on each database engine",
+    "unknown": [
+      "admin-account-mariadb (i): reached",
+      "admin-account-mariadb (ii): reached",
+      "admin-account-mariadb (iii): reached",
+      "admin-account-mariadb (iv): reached",
+      "admin-account-postgresql (i): reached",
+      "admin-account-postgresql (ii): reached",
+      "admin-account-postgresql (iii): reached",
+      "admin-account-postgresql (iv): reached"
+    ],
+    "verdict": "inconclusive"
+  },
+  "finished_at": "2026-10-09T03:44:42Z",
+  "name": "C2-admin-account",
+  "reason": "not established: admin-account-mariadb (i): reached; admin-account-mariadb (ii): reached; admin-account-mariadb (iii): reached; admin-account-mariadb (iv): reached; admin-account-postgresql (i): reached; admin-account-postgresql (ii): reached; admin-account-postgresql (iii): reached; admin-account-postgresql (iv): reached",
+  "started_at": "2026-10-09T03:44:42Z",
+  "verdict": "inconclusive"
+}

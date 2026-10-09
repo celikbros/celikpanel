@@ -1,0 +1,45 @@
+{
+  "at": "2026-10-09T03:45:59Z",
+  "epoch": 1791517559.1813896,
+  "mariadb": {
+    "answers": true,
+    "server_alive": true,
+    "server_pid": 10968,
+    "stderr": "",
+    "version": "10.11.14-MariaDB-0ubuntu0.24.04.1"
+  },
+  "mode": "read-service",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "mariadb.service": {
+      "cat": "# /usr/lib/systemd/system/mariadb.service\n# It's not recommended to modify this file in-place, because it will be\n# overwritten during package upgrades.  If you want to customize, the\n# best way is to create a file \"/etc/systemd/system/mariadb.service\",\n# containing\n#\t.include /usr/lib/systemd/system/mariadb.service\n#\t...make your changes here...\n# or create a file \"/etc/systemd/system/mariadb.service.d/foo.conf\",\n# which doesn't need to include \".include\" call and which will be parsed\n# after the file mariadb.service itself is parsed.\n#\n# For more info about custom unit files, see systemd.unit(5) or\n# https://mariadb.com/kb/en/mariadb/systemd/\n#\n# Copyright notice:\n#\n# This file is free software; you can redistribute it and/or modify it\n# under the terms of the GNU Lesser General Public License as published by\n# the Free Software Foundation; either version 2.1 of the License, or\n# (at your option) any later version.\n\n[Unit]\nDescription=MariaDB 10.11.14 database server\nDocumentation=man:mariadbd(8)\nDocumentation=https://mariadb.com/kb/en/library/systemd/\nAfter=network.target\n\n[Install]\nWantedBy=multi-user.target\n\n\n[Service]\n\n##############################################################################\n## Core requirements\n##\n\nType=notify\n\n# Setting this to true can break replication and the Type=notify settings\n# See also bind-address mariadbd option.\nPrivateNetwork=false\n\n##############################################################################\n## Package maintainers\n##\n\nUser=mysql\nGroup=mysql\n\n# CAP_IPC_LOCK To allow memlock to be used as non-root user\n# These are enabled by default\nAmbientCapabilities=CAP_IPC_LOCK\n\n# PrivateDevices=true implies NoNewPrivileges=true and\n# SUID auth_pam_tool suddenly doesn't do setuid anymore\nPrivateDevices=false\n\n# Prevent writes to /usr, /boot, and /etc\nProtectSystem=full\n\n\n\n# Doesn't yet work properly with SELinux enabled\n# NoNewPrivileges=true\n\n# Prevent accessing /home, /root and /run/user\nProtectHome=true\n\n# Execute pre and post scripts as root, otherwise it does it as User=\nPermissionsStartOnly=true\n\nExecStartPre=/usr/bin/install -m 755 -o mysql -g root -d /var/run/mysqld\n\n# Perform automatic wsrep recovery. When server is started without wsrep,\n# galera_recovery simply returns an empty string. In any case, however,\n# the script is not expected to return with a non-zero status.\n# It is always safe to unset _WSREP_START_POSITION environment variable.\n# Do not panic if galera_recovery script is not available. (MDEV-10538)\nExecStartPre=/bin/sh -c \"systemctl unset-environment _WSREP_START_POSITION\"\nExecStartPre=/bin/sh -c \"[ ! -e /usr/bin/galera_recovery ] && VAR= || \\\n VAR=`/usr/bin/galera_recovery`; [ $? -eq 0 ] \\\n && systemctl set-environment _WSREP_START_POSITION=$VAR || exit 1\"\n\n# Needed to create system tables etc.\n# ExecStartPre=/usr/bin/mariadb-install-db -u mysql\n\n# Start main service\n# MYSQLD_OPTS here is for users to set in /etc/systemd/system/mariadb.service.d/MY_SPECIAL.conf\n# Use the [Service] section and Environment=\"MYSQLD_OPTS=...\".\n# This isn't a replacement for my.cnf.\n# _WSREP_NEW_CLUSTER is for the exclusive use of the script galera_new_cluster\nExecStart=/usr/sbin/mariadbd $MYSQLD_OPTS $_WSREP_NEW_CLUSTER $_WSREP_START_POSITION\n\n# Unset _WSREP_START_POSITION environment variable.\nExecStartPost=/bin/sh -c \"systemctl unset-environment _WSREP_START_POSITION\"\n\nExecStartPost=/etc/mysql/debian-start\n\nKillSignal=SIGTERM\n\n# Don't want to see an automated SIGKILL ever\nSendSIGKILL=no\n\n# Restart crashed server only, on-failure would also restart, for example, when\n# my.cnf contains unknown option\nRestart=on-abnormal\nRestartSec=5s\n\nUMask=007\n\n##############################################################################\n## USERs can override\n##\n##\n## by creating a file in /etc/systemd/system/mariadb.service.d/MY_SPECIAL.conf\n## and adding/setting the following under [Service] will override this file's\n## settings.\n\n# Useful options not previously available in [mysqld_safe]\n\n# Kernels like killing mariadbd when out of memory because its big.\n# Lets temper that preference a little.\n# OOMScoreAdjust=-600\n\n# Explicitly start with high IO priority\n# BlockIOWeight=1000\n\n# If you don't use the /tmp directory for SELECT ... OUTFILE and\n# LOAD DATA INFILE you can enable PrivateTmp=true for a little more security.\nPrivateTmp=false\n\n# Set an explicit Start and Stop timeout of 900 seconds (15 minutes!)\n# this is the same value as used in SysV init scripts in the past\n# Galera might need a longer timeout, check the KB if you want to change this:\n# https://mariadb.com/kb/en/library/systemd/#configuring-the-systemd-service-timeout\nTimeoutStartSec=900\nTimeoutStopSec=900\n\n# Set the maximium number of tasks (threads) to 99% of what the system can\n# handle as set by the kernel, reserve the 1% for a remote ssh connection,\n# some monitoring, or that backup cron job. Without the directive this would\n# be 15% (see DefaultTasksMax in systemd man pages).\nTasksMax=99%\n\n##\n## Options previously available to be set via [mysqld_safe]\n## that now needs to be set by systemd config files as mysqld_safe\n## isn't executed.\n##\n\n# Number of files limit. previously [mysqld_safe] open-files-limit\nLimitNOFILE=32768\n# For liburing and io_uring_setup()\nLimitMEMLOCK=524288\n# Maximium core size. previously [mysqld_safe] core-file-size\n# LimitCore=\n\n# Nice priority. previously [mysqld_safe] nice\n# Nice=-5\n\n# Timezone. previously [mysqld_safe] timezone\n# Environment=\"TZ=UTC\"\n\n# Library substitutions. previously [mysqld_safe] malloc-lib with explicit paths\n# (in LD_LIBRARY_PATH) and library name (in LD_PRELOAD).\n# Environment=\"LD_LIBRARY_PATH=/path1 /path2\" \"LD_PRELOAD=\n\n# Flush caches. previously [mysqld_safe] flush-caches=1\n# ExecStartPre=sync\n# ExecStartPre=sysctl -q -w vm.drop_caches=3\n\n# numa-interleave=1 equalivant\n# Change ExecStart=numactl --interleave=all /usr/sbin/mariadbd......\n\n# crash-script equalivent\n# FailureAction=\n",
+      "is_active": "active",
+      "properties": {
+        "ActiveEnterTimestamp": "Fri 2026-10-09 03:34:31 UTC",
+        "ActiveState": "active",
+        "ConsistsOf": "",
+        "DropInPaths": "",
+        "ExecMainPID": "10968",
+        "ExecMainStartTimestamp": "Fri 2026-10-09 03:34:31 UTC",
+        "ExecStart": "{ path=/usr/sbin/mariadbd ; argv[]=/usr/sbin/mariadbd $MYSQLD_OPTS $_WSREP_NEW_CLUSTER $_WSREP_START_POSITION ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "FragmentPath": "/usr/lib/systemd/system/mariadb.service",
+        "InactiveEnterTimestamp": "",
+        "LoadState": "loaded",
+        "MainPID": "10968",
+        "NRestarts": "0",
+        "PartOf": "",
+        "PropagatesReloadTo": "",
+        "ReloadPropagatedFrom": "",
+        "ReloadResult": "success",
+        "RemainAfterExit": "no",
+        "Result": "success",
+        "SubState": "running",
+        "Type": "notify",
+        "WantedBy": "multi-user.target",
+        "Wants": ""
+      },
+      "returncode": 0
+    }
+  }
+}

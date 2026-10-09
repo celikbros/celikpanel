@@ -1,0 +1,30 @@
+{
+  "at": "2026-10-09T04:16:54Z",
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791519410",
+      "-n",
+      "2000",
+      "-u",
+      "nginx.service"
+    ],
+    "at": "2026-10-09T04:16:54Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T04:16:51.535471+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...\n2026-10-09T04:16:51.571323+00:00 dns-debian13 nginx[32318]: 2026/10/09 04:16:51 [notice] 32318#32318: signal process started\n2026-10-09T04:16:51.574219+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.\n2026-10-09T04:16:52.639856+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...\n2026-10-09T04:16:52.680212+00:00 dns-debian13 nginx[32325]: 2026/10/09 04:16:52 [notice] 32325#32325: signal process started\n2026-10-09T04:16:52.685729+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.\n"
+  },
+  "lab_action": false,
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "units": [
+    "nginx.service"
+  ]
+}

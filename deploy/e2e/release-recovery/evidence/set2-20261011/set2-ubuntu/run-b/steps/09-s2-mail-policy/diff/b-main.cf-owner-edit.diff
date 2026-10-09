@@ -1,0 +1,11 @@
+--- before
++++ after
+@@ -61,2 +61,8 @@
+ smtpd_tls_loglevel = 1
+ tls_server_sni_maps = 
++smtpd_recipient_restrictions =
++    permit_mynetworks,
++    permit_sasl_authenticated,
++    reject_unauth_destination,
++    reject_unknown_sender_domain,
++    check_policy_service unix:private/policyd-spf

@@ -1,0 +1,17 @@
+2026-10-09T03:43:33.969592+00:00 dns-debian13 systemd[1]: postgresql.service: Deactivated successfully.
+2026-10-09T03:43:33.969979+00:00 dns-debian13 systemd[1]: Stopped postgresql.service - PostgreSQL RDBMS.
+2026-10-09T03:43:33.970052+00:00 dns-debian13 systemd[1]: Stopping postgresql.service - PostgreSQL RDBMS...
+2026-10-09T03:43:33.971152+00:00 dns-debian13 systemd[1]: Stopping postgresql@17-main.service - PostgreSQL Cluster 17-main...
+2026-10-09T03:43:34.137782+00:00 dns-debian13 systemd[1]: postgresql@17-main.service: Deactivated successfully.
+2026-10-09T03:43:34.138061+00:00 dns-debian13 systemd[1]: Stopped postgresql@17-main.service - PostgreSQL Cluster 17-main.
+2026-10-09T03:43:34.140830+00:00 dns-debian13 systemd[1]: Starting postgresql@17-main.service - PostgreSQL Cluster 17-main...
+2026-10-09T03:43:34.303679+00:00 dns-debian13 postgresql@17-main[45161]: Error: /usr/lib/postgresql/17/bin/pg_ctl /usr/lib/postgresql/17/bin/pg_ctl start -D /var/lib/postgresql/17/main -l /var/log/postgresql/postgresql-17-main.log -s -o  -c config_file="/etc/postgresql/17/main/postgresql.conf"  exited with status 1:
+2026-10-09T03:43:34.304143+00:00 dns-debian13 postgresql@17-main[45161]: 2026-10-09 03:43:34.211 GMT [45166] LOG:  invalid value for parameter "work_mem": "eight-megabytes"
+2026-10-09T03:43:34.304143+00:00 dns-debian13 postgresql@17-main[45161]: 2026-10-09 03:43:34.211 UTC [45166] FATAL:  configuration file "/etc/postgresql/17/main/postgresql.conf" contains errors
+2026-10-09T03:43:34.304143+00:00 dns-debian13 postgresql@17-main[45161]: pg_ctl: could not start server
+2026-10-09T03:43:34.304143+00:00 dns-debian13 postgresql@17-main[45161]: Examine the log output.
+2026-10-09T03:43:34.306209+00:00 dns-debian13 systemd[1]: postgresql@17-main.service: Can't open PID file '/run/postgresql/17-main.pid' (yet?) after start: No such file or directory
+2026-10-09T03:43:34.306436+00:00 dns-debian13 systemd[1]: postgresql@17-main.service: Failed with result 'protocol'.
+2026-10-09T03:43:34.307583+00:00 dns-debian13 systemd[1]: Failed to start postgresql@17-main.service - PostgreSQL Cluster 17-main.
+2026-10-09T03:43:34.309970+00:00 dns-debian13 systemd[1]: Starting postgresql.service - PostgreSQL RDBMS...
+2026-10-09T03:43:34.340507+00:00 dns-debian13 systemd[1]: Finished postgresql.service - PostgreSQL RDBMS.

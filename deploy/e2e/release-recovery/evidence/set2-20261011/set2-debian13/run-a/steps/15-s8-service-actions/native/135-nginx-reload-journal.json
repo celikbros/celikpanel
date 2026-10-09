@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T03:41:27Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791517285",
+      "-n",
+      "400",
+      "-u",
+      "nginx.service"
+    ],
+    "at": "2026-10-09T03:41:27Z",
+    "returncode": 0,
+    "seconds": 0.006,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T03:41:25.841933+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...\n2026-10-09T03:41:25.860986+00:00 dns-debian13 nginx[37971]: 2026/10/09 03:41:25 [notice] 37971#37971: signal process started\n2026-10-09T03:41:25.862088+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791517285,
+  "units": [
+    "nginx.service"
+  ]
+}

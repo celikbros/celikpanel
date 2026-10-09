@@ -1,0 +1,65 @@
+##### systemctl cat dovecot.service
+# /usr/lib/systemd/system/dovecot.service
+# This file is part of Dovecot
+#
+# DO NOT CUSTOMIZE THIS FILE, INSTEAD
+# create the file:
+#	`/etc/systemd/system/dovecot.service.d/service.conf'.
+# or copy this as
+#	`/etc/systemd/system/dovecot.service` and edit then
+# and put your changes there
+
+[Unit]
+Description=Dovecot IMAP/POP3 email server
+Documentation=man:dovecot(1)
+Documentation=https://doc.dovecot.org/
+After=local-fs.target network-online.target remote-fs.target time-sync.target
+
+[Service]
+Type=notify
+ExecStart=/usr/sbin/dovecot -F
+ExecReload=/usr/bin/doveadm reload
+ExecStop=/usr/bin/doveadm stop
+PrivateTmp=true
+NonBlocking=yes
+ProtectSystem=full
+ProtectHome=no
+PrivateDevices=true
+OOMPolicy=continue
+
+# You can add environment variables with e.g.:
+#Environment='CORE_OUTOFMEM=1'
+# If you have trouble with `Too many open files', increase
+LimitNOFILE=65535
+# If you want to allow the Dovecot services to produce core dumps, use:
+#LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
+
+##### systemctl show dovecot.service
+{
+ "ActiveEnterTimestamp": "Fri 2026-10-09 03:58:38 UTC",
+ "ActiveState": "active",
+ "ConsistsOf": "",
+ "DropInPaths": "",
+ "ExecMainPID": "28217",
+ "ExecMainStartTimestamp": "Fri 2026-10-09 03:58:38 UTC",
+ "ExecReload": "{ path=/usr/bin/doveadm ; argv[]=/usr/bin/doveadm reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+ "ExecStart": "{ path=/usr/sbin/dovecot ; argv[]=/usr/sbin/dovecot -F ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+ "FragmentPath": "/usr/lib/systemd/system/dovecot.service",
+ "InactiveEnterTimestamp": "Fri 2026-10-09 03:58:38 UTC",
+ "LoadState": "loaded",
+ "MainPID": "28217",
+ "NRestarts": "0",
+ "PartOf": "",
+ "PropagatesReloadTo": "",
+ "ReloadPropagatedFrom": "",
+ "ReloadResult": "success",
+ "RemainAfterExit": "no",
+ "Result": "success",
+ "SubState": "running",
+ "Type": "notify",
+ "WantedBy": "multi-user.target",
+ "Wants": "-.mount tmp.mount"
+}

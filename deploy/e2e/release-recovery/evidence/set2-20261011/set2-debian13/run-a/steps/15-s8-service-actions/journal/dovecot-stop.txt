@@ -1,0 +1,4 @@
+2026-10-09T03:42:02.688561+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T03:42:02.723007+00:00 dns-debian13 dovecot[39860]: master: Warning: Killed with signal 15 (by pid=39991 uid=0 code=kill)
+2026-10-09T03:42:02.739797+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T03:42:02.740068+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.

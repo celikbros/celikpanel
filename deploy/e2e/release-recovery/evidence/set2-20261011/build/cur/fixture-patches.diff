@@ -1,0 +1,18 @@
+### baseline fixture commit c00645036feb4210a04b357ffffc15cc215d010a against the source faa5ef085
+### good fixture commit 13d83c01d13e0725fe6b53afbcc878d51f5c68f8 against the baseline
+diff --git a/deploy/release-sequence-policy b/deploy/release-sequence-policy
+index 3066bb17a..87478da3d 100644
+--- a/deploy/release-sequence-policy
++++ b/deploy/release-sequence-policy
+@@ -1,6 +1,6 @@
+ format=celikpanel-release-sequence-policy-v1
+-version=v0.1.0-alpha.81
+-current=81
+-previous=80
+-previous_version=v0.1.0-alpha.80
+-previous_commit=bd14d97efc5cfd19acd70ddf0edb9c6343317e2b
++version=v0.1.0-alpha.82
++current=82
++previous=81
++previous_version=v0.1.0-alpha.81
++previous_commit=c00645036feb4210a04b357ffffc15cc215d010a

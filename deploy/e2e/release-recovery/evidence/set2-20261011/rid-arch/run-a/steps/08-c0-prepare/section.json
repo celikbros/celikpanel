@@ -1,0 +1,206 @@
+{
+  "acme_isolation": {
+    "resolves": {
+      "acme-staging-v02.api.letsencrypt.org": "2606:4700:60:0:f41b:d4fe:4325:6026 56a5f4b0bc8146689ec3e272c43525f9.pacloudflare.com",
+      "acme-v02.api.letsencrypt.org": "2606:4700:60:0:f53d:5624:85c7:3a2c ca80a1adb12a4fbdac5ffcbc944e9a61.pacloudflare.com"
+    },
+    "what": "lab isolation: the two Let's Encrypt directory names resolve to this guest's own loopback, where nothing answers for them"
+  },
+  "calls": [
+    {
+      "at": "2026-10-09T04:21:56Z",
+      "json": [
+        {
+          "admin_username": "celikpanel_admin",
+          "created_at": "2026-10-09T04:21:56Z",
+          "host": "localhost",
+          "id": 1,
+          "is_default": true,
+          "is_local": true,
+          "name": "MariaDB",
+          "port": 3306,
+          "status": "active",
+          "type_icon": "🦭",
+          "type_id": 2,
+          "type_name": "MariaDB",
+          "version": "VERSION()"
+        },
+        {
+          "admin_username": "celikpanel_admin",
+          "created_at": "2026-10-09T04:21:56Z",
+          "host": "localhost",
+          "id": 2,
+          "is_default": false,
+          "is_local": true,
+          "name": "PostgreSQL",
+          "port": 5432,
+          "status": "active",
+          "type_icon": "🐘",
+          "type_id": 1,
+          "type_name": "PostgreSQL",
+          "version": "18.6"
+        }
+      ],
+      "label": "C0 database servers (the Databases page)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/database-servers"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "id": 1,
+        "name": "set1-owner.test",
+        "status": "active",
+        "subscription_id": 2
+      },
+      "name": "the Panel's database names the site's domain and its subscription",
+      "ok": true
+    },
+    {
+      "detail": {
+        "mariadb": 1,
+        "postgresql": 2
+      },
+      "name": "the Databases page lists a MariaDB and a PostgreSQL server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "acme-staging-v02.api.letsencrypt.org": "2606:4700:60:0:f41b:d4fe:4325:6026 56a5f4b0bc8146689ec3e272c43525f9.pacloudflare.com",
+        "acme-v02.api.letsencrypt.org": "2606:4700:60:0:f53d:5624:85c7:3a2c ca80a1adb12a4fbdac5ffcbc944e9a61.pacloudflare.com"
+      },
+      "name": "lab isolation: the Let's Encrypt directory names resolve to this guest's loopback",
+      "ok": false
+    },
+    {
+      "detail": {
+        "bytes": 201330137,
+        "exists": true,
+        "files": 9,
+        "mode": "2750",
+        "names": [
+          "index.html",
+          "data/blob-00.bin",
+          "data/blob-01.bin",
+          "data/blob-02.bin",
+          "pages/page-1.html",
+          "pages/page-2.html",
+          "pages/page-3.html",
+          "pages/page-4.html",
+          "pages/page-5.html"
+        ],
+        "newest_mtime": 1791519717,
+        "owner_uid": 1002,
+        "root": "/var/www/celikpanel/subscriptions/2/sites/1/public_html",
+        "sha256": "3de64663dec7ab1b86b9cebe73335642eb684f6d6752991464e1590bf1f1b7e2"
+      },
+      "name": "the owner's site is in the document root",
+      "ok": true
+    },
+    {
+      "detail": {},
+      "name": "request_identities exists and is empty before the first guarded request",
+      "ok": true
+    }
+  ],
+  "database_servers": [
+    {
+      "host": "localhost",
+      "id": 1,
+      "name": "MariaDB",
+      "port": 3306,
+      "status": "active",
+      "type_name": "MariaDB",
+      "version": "VERSION()"
+    },
+    {
+      "host": "localhost",
+      "id": 2,
+      "name": "PostgreSQL",
+      "port": 5432,
+      "status": "active",
+      "type_name": "PostgreSQL",
+      "version": "18.6"
+    }
+  ],
+  "finished_at": "2026-10-09T04:21:58Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/005-panel-state-before.json",
+      "lab_action": false,
+      "label": "panel-state-before",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/006-lab-isolate-acme.json",
+      "lab_action": true,
+      "label": "lab-isolate-acme",
+      "mode": "lab-isolate-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/007-owner-seed-site.json",
+      "lab_action": false,
+      "label": "owner-seed-site",
+      "mode": "owner-seed-site",
+      "owner_action": true
+    },
+    {
+      "file": "native/008-identities-before.json",
+      "lab_action": false,
+      "label": "identities-before",
+      "mode": "read-identities",
+      "owner_action": false
+    },
+    {
+      "file": "native/009-units-before.json",
+      "lab_action": false,
+      "label": "units-before",
+      "mode": "read-units",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T04:21:58Z",
+      "label": "seed-site",
+      "mode": "owner-seed-site"
+    }
+  ],
+  "section": "C0-prepare",
+  "started_at": "2026-10-09T04:21:56Z",
+  "substeps": {
+    "lab isolation": "failed",
+    "section": "passed"
+  },
+  "title": "the owner's site, the engines and the lab's isolation",
+  "units_before": {
+    "celikpanel-agent.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 04:17:55 UTC",
+      "ActiveState": "active",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 04:17:55 UTC",
+      "MainPID": "409",
+      "NRestarts": "0",
+      "SubState": "running"
+    },
+    "celikpanel-panel.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 04:17:55 UTC",
+      "ActiveState": "active",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 04:17:55 UTC",
+      "MainPID": "420",
+      "NRestarts": "0",
+      "SubState": "running"
+    }
+  },
+  "verdict": "failed"
+}

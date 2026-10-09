@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T03:41:44Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791517301",
+      "-n",
+      "400",
+      "-u",
+      "mariadb.service"
+    ],
+    "at": "2026-10-09T03:41:44Z",
+    "returncode": 0,
+    "seconds": 0.007,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T03:41:41.927332+00:00 dns-debian13 systemd[1]: Stopping mariadb.service - MariaDB 11.8.6 database server...\n2026-10-09T03:41:41.927520+00:00 dns-debian13 mariadbd[6565]: 2026-10-09  3:41:41 0 [Note] /usr/sbin/mariadbd (initiated by: unknown): Normal shutdown\n2026-10-09T03:41:41.928052+00:00 dns-debian13 mariadbd[6565]: 2026-10-09  3:41:41 0 [Note] InnoDB: FTS optimize thread exiting.\n2026-10-09T03:41:41.937138+00:00 dns-debian13 mariadbd[6565]: 2026-10-09  3:41:41 0 [Note] InnoDB: Starting shutdown...\n2026-10-09T03:41:41.975018+00:00 dns-debian13 mariadbd[6565]: 2026-10-09  3:41:41 0 [Note] InnoDB: Dumping buffer pool(s) to /var/lib/mysql/ib_buffer_pool\n2026-10-09T03:41:41.975290+00:00 dns-debian13 mariadbd[6565]: 2026-10-09  3:41:41 0 [Note] InnoDB: Buffer pool(s) dump completed at 261009  3:41:41\n2026-10-09T03:41:42.178594+00:00 dns-debian13 mariadbd[6565]: 2026-10-09  3:41:42 0 [Note] InnoDB: Removed temporary tablespace data file: \"./ibtmp1\"\n2026-10-09T03:41:42.178594+00:00 dns-debian13 mariadbd[6565]: 2026-10-09  3:41:42 0 [Note] InnoDB: Shutdown completed; log sequence number 45482; transaction id 15\n2026-10-09T03:41:42.193964+00:00 dns-debian13 mariadbd[6565]: 2026-10-09  3:41:42 0 [Note] /usr/sbin/mariadbd: Shutdown complete\n2026-10-09T03:41:42.200783+00:00 dns-debian13 systemd[1]: mariadb.service: Deactivated successfully.\n2026-10-09T03:41:42.201202+00:00 dns-debian13 systemd[1]: Stopped mariadb.service - MariaDB 11.8.6 database server.\n2026-10-09T03:41:42.201336+00:00 dns-debian13 systemd[1]: mariadb.service: Consumed 1.901s CPU time, 129M memory peak.\n2026-10-09T03:41:42.204607+00:00 dns-debian13 systemd[1]: Starting mariadb.service - MariaDB 11.8.6 database server...\n2026-10-09T03:41:42.289562+00:00 dns-debian13 (mariadbd)[38888]: mariadb.service: Referenced but unset environment variable evaluates to an empty string: MYSQLD_OPTS, _WSREP_NEW_CLUSTER\n2026-10-09T03:41:42.327133+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] Starting MariaDB 11.8.6-MariaDB-0+deb13u1 from Debian source revision 9bfea48ce1214cc4470f6f6f8a4e30352cef84e7 server_uid ewHC0iXTbxcy4rWctYmifQ9FJtc= as process 38888\n2026-10-09T03:41:42.355551+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: Compressed tables use zlib 1.3.1\n2026-10-09T03:41:42.357461+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: Number of transaction pools: 1\n2026-10-09T03:41:42.357525+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions\n2026-10-09T03:41:42.357835+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: Using io_uring\n2026-10-09T03:41:42.358254+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: innodb_buffer_pool_size_max=128m, innodb_buffer_pool_size=128m\n2026-10-09T03:41:42.371719+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: Initialized memory pressure event listener\n2026-10-09T03:41:42.371719+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: Completed initialization of buffer pool\n2026-10-09T03:41:42.372383+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: File system buffers for log disabled (block size=512 bytes)\n2026-10-09T03:41:42.388458+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: End of log at LSN=45482\n2026-10-09T03:41:42.447320+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: Opened 3 undo tablespaces\n2026-10-09T03:41:42.447320+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.\n2026-10-09T03:41:42.447566+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...\n2026-10-09T03:41:42.447607+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.\n2026-10-09T03:41:42.448614+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: log sequence number 45482; transaction id 14\n2026-10-09T03:41:42.448855+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] Plugin 'FEEDBACK' is disabled.\n2026-10-09T03:41:42.448855+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] Plugin 'wsrep-provider' is disabled.\n2026-10-09T03:41:42.448972+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool\n2026-10-09T03:41:42.456928+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:42 0 [Note] InnoDB: Buffer pool(s) load completed at 261009  3:41:42\n2026-10-09T03:41:43.072572+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:43 0 [Note] Server socket created on IP: '127.0.0.1', port: '3306'.\n2026-10-09T03:41:43.077932+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:43 0 [Note] mariadbd: Event Scheduler: Loaded 0 events\n2026-10-09T03:41:43.078887+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:43 0 [Note] /usr/sbin/mariadbd: ready for connections.\n2026-10-09T03:41:43.078887+00:00 dns-debian13 mariadbd[38888]: Version: '11.8.6-MariaDB-0+deb13u1 from Debian'  socket: '/run/mysqld/mysqld.sock'  port: 3306  -- Please help get to 10k stars at https://github.com/MariaDB/Server\n2026-10-09T03:41:43.127739+00:00 dns-debian13 systemd[1]: Started mariadb.service - MariaDB 11.8.6 database server.\n2026-10-09T03:41:43.129354+00:00 dns-debian13 /etc/mysql/debian-start[38905]: Upgrading MariaDB tables if necessary.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791517301,
+  "units": [
+    "mariadb.service"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "at": "2026-10-09T04:12:08Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791519123",
+      "-n",
+      "400",
+      "-u",
+      "postgresql.service",
+      "-u",
+      "postgresql@16-main.service"
+    ],
+    "at": "2026-10-09T04:12:08Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T04:12:04.108038+00:00 dns-ubuntu systemd[1]: postgresql.service: Deactivated successfully.\n2026-10-09T04:12:04.108461+00:00 dns-ubuntu systemd[1]: Stopped postgresql.service - PostgreSQL RDBMS.\n2026-10-09T04:12:04.108526+00:00 dns-ubuntu systemd[1]: Stopping postgresql.service - PostgreSQL RDBMS...\n2026-10-09T04:12:04.114667+00:00 dns-ubuntu systemd[1]: Stopping postgresql@16-main.service - PostgreSQL Cluster 16-main...\n2026-10-09T04:12:04.252221+00:00 dns-ubuntu systemd[1]: postgresql@16-main.service: Deactivated successfully.\n2026-10-09T04:12:04.252525+00:00 dns-ubuntu systemd[1]: Stopped postgresql@16-main.service - PostgreSQL Cluster 16-main.\n2026-10-09T04:12:04.258543+00:00 dns-ubuntu systemd[1]: Starting postgresql@16-main.service - PostgreSQL Cluster 16-main...\n2026-10-09T04:12:06.460040+00:00 dns-ubuntu systemd[1]: Started postgresql@16-main.service - PostgreSQL Cluster 16-main.\n2026-10-09T04:12:06.471150+00:00 dns-ubuntu systemd[1]: Starting postgresql.service - PostgreSQL RDBMS...\n2026-10-09T04:12:06.472345+00:00 dns-ubuntu systemd[1]: Finished postgresql.service - PostgreSQL RDBMS.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791519123,
+  "units": [
+    "postgresql.service",
+    "postgresql@16-main.service"
+  ]
+}

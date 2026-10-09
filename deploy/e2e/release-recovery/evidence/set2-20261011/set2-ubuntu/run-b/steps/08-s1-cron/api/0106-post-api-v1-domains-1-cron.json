@@ -1,0 +1,83 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S1c add the identical task",
+  "request": {
+    "body": {
+      "command": "/usr/bin/true set1-panel-job",
+      "schedule": "*/15 * * * *",
+      "version": "ct1-2c912f07686c21f41dfc2e565fe19fb79fbfce6fe73434a6f24bb8bf348af62a"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18456"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18456"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "6b57ae7a124819450d72a9bceab0efad"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/1/cron"
+  },
+  "response": {
+    "elapsed_seconds": 0.006,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 04:07:54 GMT"
+      ],
+      [
+        "Content-Length",
+        "196"
+      ]
+    ],
+    "json": {
+      "code": "CRON_JOB_DUPLICATE",
+      "error": "A scheduled task with the same schedule and command already exists, so nothing was added. Change the existing task instead, or enable it if it is disabled."
+    },
+    "status": 409,
+    "text": null
+  }
+}

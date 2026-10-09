@@ -1,0 +1,27 @@
+2026-10-09T04:41:39Z
+3.8G	/var/tmp/cp-set2-run
+924M	/var/tmp/cp-release-drill-set2-d13-a
+925M	/var/tmp/cp-release-drill-set2-d13-b
+665M	/var/tmp/cp-release-drill-set2-ub-a
+664M	/var/tmp/cp-release-drill-set2-ub-b
+921M	/var/tmp/cp-release-drill-rid-arch-a
+922M	/var/tmp/cp-release-drill-rid-arch-b
+923M	/var/tmp/cp-release-drill-rid-d13-a
+665M	/var/tmp/cp-release-drill-rid-ub-a
+663M	/var/tmp/cp-release-drill-rid-ub-b
+902M	/var/tmp/cp-upd1-build/20261009t030455z
+866M	/var/tmp/cp-pair-accept/dist/13d83c01d13e0725fe6b53afbcc878d51f5c68f8-acceptance-license
+866M	/var/tmp/cp-pair-accept/dist/86ca40cf2f5e6bafb05575f54deee170f14c2818-acceptance-license
+866M	/var/tmp/cp-pair-accept/dist/aea3ca16ff108cb0db105abcb34454bab50f1b16-acceptance-license
+866M	/var/tmp/cp-pair-accept/dist/c00645036feb4210a04b357ffffc15cc215d010a-acceptance-license
+866M	/var/tmp/cp-pair-accept/dist/e16497df8a9b054e246cba45bb95735fec542559-acceptance-license
+overlay disks still present in set2 labs:
+none
+no dry-run lab
+git local config key list fingerprint: b6f8491de6f4969250c85cd1d20d8607  -
+HEAD faa5ef085571fa5183f436fa7150844041f873eb
+qemu processes: 0
+set2 job, watcher or keep-alive processes: 0
+debugging session output (not evidence): /var/tmp/cp-release-drill-rid-ub-a/evidence/ubuntu/upd1/rid-debug-20261009t035510z
+debugging session output (not evidence): /var/tmp/cp-release-drill-rid-ub-a/evidence/ubuntu/upd1/rid-debug-20261009t035950z
+run copy e holds exactly the working tree's seven harness files (SHA-256 equal, line endings normalized)

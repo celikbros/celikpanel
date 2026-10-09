@@ -1,0 +1,25 @@
+Formatting '/var/tmp/cp-release-drill-rid-ub-a/cells/ba0d23317e1a0db9f0c5dec6/ubuntu/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-rid-ub-a/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-rid-ub-a", "cell_id": "release-recovery__f40ba512a87a3417", "ssh_ports": [4141, 4142]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-rid-ub-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-rid-ub-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "site", "verdict": "passed", "reason": null}
+{"step": "C0-prepare", "verdict": "failed", "reason": "the Databases page lists a MariaDB and a PostgreSQL server"}
+{"step": "C1-domain-databases", "verdict": "failed", "reason": "domain-database-postgresql (i): three arrivals in a row of one identity left one native effect; domain-database-postgresql (ii): three arrivals at once of one identity left one native effect"}
+{"step": "C2-admin-account", "verdict": "inconclusive", "reason": "not established: admin-account-mariadb (i): reached; admin-account-mariadb (ii): reached; admin-account-mariadb (iii): reached; admin-account-mariadb (iv): reached; admin-account-postgresql (i): reached; admin-account-postgresql (ii): reached; admin-account-postgresql (iii): reached; admin-account-postgresql (iv): reached"}
+{"step": "C3-server-databases", "verdict": "inconclusive", "reason": "not established: server-database-mariadb (i): reached; server-database-mariadb (ii): reached; server-database-mariadb (iii): reached; server-database-mariadb (iv): reached; server-database-postgresql (i): reached; server-database-postgresql (ii): reached; server-database-postgresql (iii): reached; server-database-postgresql (iv): reached"}
+{"step": "C4-backup", "verdict": "passed", "reason": null}
+{"step": "C5-letsencrypt", "verdict": "passed", "reason": null}
+{"step": "C6-vpn-peer", "verdict": "passed", "reason": null}
+{"step": "C7-import", "verdict": "failed", "reason": "import (i): three arrivals in a row of one identity left one native effect; import (ii): three arrivals at once of one identity left one native effect; import (v): the server finished the import after the client was gone (row done; the whole site is there)"}
+{"step": "C8-restore", "verdict": "inconclusive", "reason": "TypeError: RequestIdentityTrial.owner2() got multiple values for argument 'label'"}
+{"step": "C9-identities", "verdict": "failed", "reason": "rows (vii): the one interrupted row is the restore the Panel restart cut"}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"cell_kind": "request-identity", "matrix": {"admin-account-mariadb": {"i": "not established", "ii": "not established", "iii": "not established", "iv": "not established"}, "admin-account-postgresql": {"i": "not established", "ii": "not established", "iii": "not established", "iv": "not established"}, "backup": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "domain-database-mariadb": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "domain-database-postgresql": {"i": "FAIL", "ii": "FAIL", "iii": "pass", "iv": "pass"}, "import": {"i": "FAIL", "ii": "FAIL", "iii": "pass", "iv": "pass", "v": "FAIL"}, "letsencrypt": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "restore": {}, "rows": {"vii": "FAIL"}, "server-database-mariadb": {"i": "not established", "ii": "not established", "iii": "not established", "iv": "not established"}, "server-database-postgresql": {"i": "not established", "ii": "not established", "iii": "not established", "iv": "not established"}, "vpn-peer": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}}, "overall": "failed", "sections": {"C0-prepare": "failed", "C1-domain-databases": "failed", "C2-admin-account": "inconclusive", "C3-server-databases": "inconclusive", "C4-backup": "passed", "C5-letsencrypt": "passed", "C6-vpn-peer": "passed", "C7-import": "failed", "C8-restore": "inconclusive", "C9-identities": "failed"}}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-rid-ub-a", "evidence_retained": true}
+SET2 cell=rid-ubuntu lab=/var/tmp/cp-release-drill-rid-ub-a driver_exit=1 evidence=/var/tmp/cp-release-drill-rid-ub-a/evidence/*/upd1

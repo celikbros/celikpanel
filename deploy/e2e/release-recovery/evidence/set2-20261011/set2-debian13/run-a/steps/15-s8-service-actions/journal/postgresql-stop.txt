@@ -1,0 +1,5 @@
+2026-10-09T03:42:39.508301+00:00 dns-debian13 systemd[1]: postgresql.service: Deactivated successfully.
+2026-10-09T03:42:39.508921+00:00 dns-debian13 systemd[1]: Stopped postgresql.service - PostgreSQL RDBMS.
+2026-10-09T03:42:39.509871+00:00 dns-debian13 systemd[1]: Stopping postgresql@17-main.service - PostgreSQL Cluster 17-main...
+2026-10-09T03:42:39.674375+00:00 dns-debian13 systemd[1]: postgresql@17-main.service: Deactivated successfully.
+2026-10-09T03:42:39.674722+00:00 dns-debian13 systemd[1]: Stopped postgresql@17-main.service - PostgreSQL Cluster 17-main.

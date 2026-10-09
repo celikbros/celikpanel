@@ -1,0 +1,26 @@
+{
+  "checks": {
+    "checks": 16,
+    "error": null,
+    "failed": [
+      "an archive that holds the directory member `homedir/public_html/` as tar writes it has its site files imported"
+    ],
+    "finished_at": "2026-10-09T04:17:58Z",
+    "notes": [
+      "no sample cPanel archive exists in the repository, so the lab built a minimal one from the rules of the import parser (cmd/agent/cpmove_rpc.go): account file, public_html, one mailbox, one forwarder, one database dump; the dropped import's dump ends with DO SLEEP so that the import lasts long enough to drop. The archives of the arrivals i, ii and v leave out the one directory member `homedir/public_html/` (H34); the archive `tar` holds it"
+    ],
+    "started_at": "2026-10-09T04:17:13Z",
+    "substeps": {
+      "import": "passed",
+      "section": "failed"
+    },
+    "title": "cPanel import",
+    "unknown": [],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-09T04:17:58Z",
+  "name": "C7-import",
+  "reason": "an archive that holds the directory member `homedir/public_html/` as tar writes it has its site files imported",
+  "started_at": "2026-10-09T04:17:13Z",
+  "verdict": "failed"
+}

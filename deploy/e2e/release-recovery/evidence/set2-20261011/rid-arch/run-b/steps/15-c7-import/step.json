@@ -1,0 +1,30 @@
+{
+  "checks": {
+    "checks": 16,
+    "error": null,
+    "failed": [
+      "an archive that holds the directory member `homedir/public_html/` as tar writes it has its site files imported",
+      "import (i): three arrivals in a row of one identity left one native effect",
+      "import (ii): three arrivals at once of one identity left one native effect",
+      "import (v): the request was still running when the connection was dropped",
+      "import (v): the server finished the import after the client was gone (row done; the whole site is there)"
+    ],
+    "finished_at": "2026-10-09T04:33:40Z",
+    "notes": [
+      "no sample cPanel archive exists in the repository, so the lab built a minimal one from the rules of the import parser (cmd/agent/cpmove_rpc.go): account file, public_html, one mailbox, one forwarder, one database dump; the dropped import's dump ends with DO SLEEP so that the import lasts long enough to drop. The archives of the arrivals i, ii and v leave out the one directory member `homedir/public_html/` (H34); the archive `tar` holds it"
+    ],
+    "started_at": "2026-10-09T04:33:19Z",
+    "substeps": {
+      "import": "failed",
+      "section": "failed"
+    },
+    "title": "cPanel import",
+    "unknown": [],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-09T04:33:40Z",
+  "name": "C7-import",
+  "reason": "an archive that holds the directory member `homedir/public_html/` as tar writes it has its site files imported; import (i): three arrivals in a row of one identity left one native effect; import (ii): three arrivals at once of one identity left one native effect; import (v): the request was still running when the connection was dropped; import (v): the server finished the import after the client was gone (row done; the whole site is there)",
+  "started_at": "2026-10-09T04:33:19Z",
+  "verdict": "failed"
+}

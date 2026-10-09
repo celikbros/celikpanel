@@ -1,0 +1,178 @@
+{
+  "answers": {
+    "file_errors": {
+      "argv": [
+        "sudo",
+        "-u",
+        "postgres",
+        "psql",
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=on",
+        "--no-align",
+        "--tuples-only",
+        "--quiet",
+        "--field-separator",
+        "\t"
+      ],
+      "at": "2026-10-09T03:40:47Z",
+      "returncode": 0,
+      "seconds": 0.038,
+      "status": "ok",
+      "stderr": "",
+      "stdout": ""
+    },
+    "files": {
+      "argv": [
+        "sudo",
+        "-u",
+        "postgres",
+        "psql",
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=on",
+        "--no-align",
+        "--tuples-only",
+        "--quiet",
+        "--field-separator",
+        "\t"
+      ],
+      "at": "2026-10-09T03:40:47Z",
+      "returncode": 0,
+      "seconds": 0.038,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "/etc/postgresql/17/main/postgresql.conf\t/etc/postgresql/17/main/pg_hba.conf\t/var/lib/postgresql/17/main\t17.11 (Debian 17.11-0+deb13u1)\n"
+    },
+    "hba": {
+      "argv": [
+        "sudo",
+        "-u",
+        "postgres",
+        "psql",
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=on",
+        "--no-align",
+        "--tuples-only",
+        "--quiet",
+        "--field-separator",
+        "\t"
+      ],
+      "at": "2026-10-09T03:40:47Z",
+      "returncode": 0,
+      "seconds": 0.04,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "118\tlocal\tall\tpostgres\t\t\tpeer\t\n123\tlocal\tall\tall\t\t\tpeer\t\n125\thost\tall\tall\t127.0.0.1\t255.255.255.255\tscram-sha-256\t\n127\thost\tall\tall\t::1\tffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff\tscram-sha-256\t\n130\tlocal\treplication\tall\t\t\tpeer\t\n131\thost\treplication\tall\t127.0.0.1\t255.255.255.255\tscram-sha-256\t\n132\thost\treplication\tall\t::1\tffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff\tscram-sha-256\t\n"
+    },
+    "load": {
+      "argv": [
+        "sudo",
+        "-u",
+        "postgres",
+        "psql",
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=on",
+        "--no-align",
+        "--tuples-only",
+        "--quiet",
+        "--field-separator",
+        "\t"
+      ],
+      "at": "2026-10-09T03:40:47Z",
+      "returncode": 0,
+      "seconds": 0.038,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "2026-10-09 03:34:55.369212+00\t2026-10-09 03:40:47.12283+00\n"
+    },
+    "pending_restart": {
+      "argv": [
+        "sudo",
+        "-u",
+        "postgres",
+        "psql",
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=on",
+        "--no-align",
+        "--tuples-only",
+        "--quiet",
+        "--field-separator",
+        "\t"
+      ],
+      "at": "2026-10-09T03:40:47Z",
+      "returncode": 0,
+      "seconds": 0.039,
+      "status": "ok",
+      "stderr": "",
+      "stdout": ""
+    },
+    "settings": {
+      "argv": [
+        "sudo",
+        "-u",
+        "postgres",
+        "psql",
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=on",
+        "--no-align",
+        "--tuples-only",
+        "--quiet",
+        "--field-separator",
+        "\t"
+      ],
+      "at": "2026-10-09T03:40:47Z",
+      "returncode": 0,
+      "seconds": 0.039,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "work_mem\t8192\tkB\tconfiguration file\t/etc/postgresql/17/main/postgresql.conf\t140\n"
+    },
+    "show_work_mem": {
+      "argv": [
+        "sudo",
+        "-u",
+        "postgres",
+        "psql",
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=on",
+        "--no-align",
+        "--tuples-only",
+        "--quiet",
+        "--field-separator",
+        "\t"
+      ],
+      "at": "2026-10-09T03:40:47Z",
+      "returncode": 0,
+      "seconds": 0.038,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "8MB\n"
+    }
+  },
+  "at": "2026-10-09T03:40:47Z",
+  "mode": "read-postgres",
+  "owner_action": false,
+  "postmaster_pid": 15737,
+  "schema": "celikpanel/set1-native/v1",
+  "unit": "postgresql@17-main.service",
+  "units": {
+    "postgresql@17-main.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 03:34:57 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 03:34:55 UTC",
+      "FragmentPath": "/usr/lib/systemd/system/postgresql@.service",
+      "LoadState": "loaded",
+      "MainPID": "15737",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "running"
+    }
+  }
+}

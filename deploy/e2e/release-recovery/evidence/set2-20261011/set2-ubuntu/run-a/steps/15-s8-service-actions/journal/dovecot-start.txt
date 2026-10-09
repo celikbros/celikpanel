@@ -1,0 +1,3 @@
+2026-10-09T03:46:55.860734+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T03:46:55.878342+00:00 dns-ubuntu dovecot[63177]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T03:46:55.889002+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.

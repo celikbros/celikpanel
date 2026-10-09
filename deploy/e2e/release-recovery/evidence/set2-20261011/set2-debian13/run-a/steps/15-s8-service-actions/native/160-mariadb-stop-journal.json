@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T03:41:47Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791517305",
+      "-n",
+      "400",
+      "-u",
+      "mariadb.service"
+    ],
+    "at": "2026-10-09T03:41:47Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T03:41:45.427642+00:00 dns-debian13 systemd[1]: Stopping mariadb.service - MariaDB 11.8.6 database server...\n2026-10-09T03:41:45.427910+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:45 0 [Note] /usr/sbin/mariadbd (initiated by: unknown): Normal shutdown\n2026-10-09T03:41:45.429839+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:45 0 [Note] InnoDB: FTS optimize thread exiting.\n2026-10-09T03:41:45.436445+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:45 0 [Note] InnoDB: Starting shutdown...\n2026-10-09T03:41:45.470067+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:45 0 [Note] InnoDB: Dumping buffer pool(s) to /var/lib/mysql/ib_buffer_pool\n2026-10-09T03:41:45.470523+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:45 0 [Note] InnoDB: Buffer pool(s) dump completed at 261009  3:41:45\n2026-10-09T03:41:45.671922+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:45 0 [Note] InnoDB: Removed temporary tablespace data file: \"./ibtmp1\"\n2026-10-09T03:41:45.671922+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:45 0 [Note] InnoDB: Shutdown completed; log sequence number 45482; transaction id 15\n2026-10-09T03:41:45.684977+00:00 dns-debian13 mariadbd[38888]: 2026-10-09  3:41:45 0 [Note] /usr/sbin/mariadbd: Shutdown complete\n2026-10-09T03:41:45.690624+00:00 dns-debian13 systemd[1]: mariadb.service: Deactivated successfully.\n2026-10-09T03:41:45.690887+00:00 dns-debian13 systemd[1]: Stopped mariadb.service - MariaDB 11.8.6 database server.\n2026-10-09T03:41:45.691349+00:00 dns-debian13 systemd[1]: mariadb.service: Consumed 1.478s CPU time, 128.1M memory peak.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791517305,
+  "units": [
+    "mariadb.service"
+  ]
+}

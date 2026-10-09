@@ -1,0 +1,17 @@
+-- PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit
+-- batch (cmd/agent/db_config.go dbConfigPostgreSQLRereadVerified):
+SELECT 'file=' || current_setting('config_file');
+SELECT 'before=' || extract(epoch from clock_timestamp());
+SELECT 'signal=' || pg_reload_conf();
+SELECT 'waited=' || count(*) FROM (SELECT pg_sleep(1)) AS waited;
+SELECT 'loaded=' || extract(epoch from pg_conf_load_time());
+SELECT 'error=' || sourceline || ':' || coalesce(name, '') || ':' || error FROM pg_file_settings WHERE error IS NOT NULL AND coalesce(name, '') NOT IN (SELECT name FROM pg_settings WHERE pending_restart) ORDER BY seqno LIMIT 1;
+
+-- raw stdout:
+file=/etc/postgresql/16/main/postgresql.conf
+before=1791518948.383809
+signal=true
+waited=1
+loaded=1791518948.386346
+
+-- stderr:

@@ -1,0 +1,18 @@
+{
+  "action": "lab-isolate-acme",
+  "at": "2026-10-09T04:21:57Z",
+  "hosts_lines": [
+    "127.0.0.1 acme-v02.api.letsencrypt.org",
+    "::1 acme-v02.api.letsencrypt.org",
+    "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+    "::1 acme-staging-v02.api.letsencrypt.org"
+  ],
+  "lab_action": true,
+  "mode": "lab-isolate-acme",
+  "owner_action": false,
+  "resolves": {
+    "acme-staging-v02.api.letsencrypt.org": "2606:4700:60:0:f41b:d4fe:4325:6026 56a5f4b0bc8146689ec3e272c43525f9.pacloudflare.com",
+    "acme-v02.api.letsencrypt.org": "2606:4700:60:0:f53d:5624:85c7:3a2c ca80a1adb12a4fbdac5ffcbc944e9a61.pacloudflare.com"
+  },
+  "schema": "celikpanel/set2-request-identity-native/v1"
+}

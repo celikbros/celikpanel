@@ -1,0 +1,34 @@
+{
+  "at": "2026-10-09T04:01:36Z",
+  "identifiers": [
+    "postfix/master",
+    "postfix/postfix-script"
+  ],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791518492",
+      "-n",
+      "400",
+      "-t",
+      "postfix/master",
+      "-t",
+      "postfix/postfix-script"
+    ],
+    "at": "2026-10-09T04:01:36Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T04:01:34.756907+00:00 dns-debian13 postfix/postfix-script[32107]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf\n2026-10-09T04:01:34.804041+00:00 dns-debian13 postfix/postfix-script[32132]: the Postfix mail system is running: PID: 28494\n2026-10-09T04:01:34.839585+00:00 dns-debian13 postfix/postfix-script[32141]: refreshing the Postfix mail system\n2026-10-09T04:01:34.844845+00:00 dns-debian13 postfix/master[28494]: reload -- version 3.10.13, configuration /etc/postfix\n2026-10-09T04:01:35.285219+00:00 dns-debian13 postfix/postfix-script[32155]: the Postfix mail system is running: PID: 28494\n2026-10-09T04:01:35.888444+00:00 dns-debian13 postfix/postfix-script[32268]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf\n2026-10-09T04:01:35.941753+00:00 dns-debian13 postfix/postfix-script[32293]: the Postfix mail system is running: PID: 28494\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791518492,
+  "units": []
+}

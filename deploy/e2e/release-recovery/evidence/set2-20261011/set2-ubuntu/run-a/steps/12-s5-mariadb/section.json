@@ -1,0 +1,768 @@
+{
+  "adjusted_value": {
+    "mariadbd_resulting_max_connections": "10",
+    "mariadbd_returncode_on_that_text": 0,
+    "mariadbd_stderr_lines": [
+      "2026-10-09  3:45:44 0 [Warning] Buffered warning: option 'max_connections': unsigned value 0 adjusted to 10"
+    ],
+    "panel_answer": {
+      "code": "CONFIG_INVALID",
+      "error": "Nothing is changed: the service's own program read the new file and refused it. Correct what it names below and save again.",
+      "reason": "daemon",
+      "vars": {
+        "detail": "option 'max_connections': unsigned value 0 adjusted to 10",
+        "name": "max_connections"
+      }
+    },
+    "panel_applied": null,
+    "panel_daemon_check": null,
+    "panel_status": 422,
+    "value": "plenty",
+    "written": false
+  },
+  "calls": [
+    {
+      "at": "2026-10-09T03:45:40Z",
+      "json": {
+        "Content": {
+          "bytes": 3759,
+          "sha256": "46ff21371d6b0f01e2419a04c87b5e3c2fae944653dc32cb1db7e43db8f9cd4f"
+        },
+        "Parsed": "",
+        "Version": "cf1-46ff21371d6b0f01e2419a04c87b5e3c2fae944653dc32cb1db7e43db8f9cd4f"
+      },
+      "label": "S5a read the option file",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/config?path=/etc/mysql/mariadb.conf.d/50-server.cnf"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:40Z",
+      "catalogue_texts": {
+        "dbconf.saved.backup": {
+          "en": "The previous file is kept on the server as",
+          "tr": "Önceki dosya sunucuda şu adla duruyor:"
+        },
+        "dbconf.saved.restartRequired": {
+          "en": "Saved. MariaDB checked the file and accepts it. MariaDB reads this file only when it starts, so the change takes effect after its next restart. Restart it from the top of this page when it suits you.",
+          "tr": "Kaydedildi. MariaDB dosyayı denetledi ve kabul ediyor. MariaDB bu dosyayı yalnız başlarken okur; bu yüzden değişiklik bir sonraki yeniden başlatmadan sonra geçerli olur. Size uygun olduğunda bu sayfanın üstünden yeniden başlatın."
+        }
+      },
+      "json": {
+        "applied": "restart_required",
+        "backup": "/etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261009T034540Z",
+        "daemon_check": "accepted",
+        "restart_required": [],
+        "success": true,
+        "unchanged": false,
+        "version": "cf1-6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+      },
+      "label": "S5b set max_connections = 173",
+      "request": {
+        "body": {
+          "content": {
+            "bytes": 3758,
+            "sha256": "6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+          },
+          "path": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+          "version": "cf1-46ff21371d6b0f01e2419a04c87b5e3c2fae944653dc32cb1db7e43db8f9cd4f"
+        },
+        "method": "POST",
+        "path": "/api/v1/config"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:41Z",
+      "json": {
+        "Content": {
+          "bytes": 3758,
+          "sha256": "6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+        },
+        "Parsed": "",
+        "Version": "cf1-6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+      },
+      "label": "S5c read",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/config?path=/etc/mysql/mariadb.conf.d/50-server.cnf"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing is changed: the service's own program read the new file and refused it. Correct what it names below and save again.",
+        "reason": "daemon",
+        "vars": {
+          "detail": "unknown variable 'set1_unknown_option=1'",
+          "name": "set1_unknown_option"
+        }
+      },
+      "at": "2026-10-09T03:45:42Z",
+      "catalogue_texts": {
+        "dbconf.refused.daemon": {
+          "en": "Nothing is changed: MariaDB read the new file and does not accept it. Correct what it names and save again.",
+          "tr": "Hiçbir şey değişmedi: MariaDB yeni dosyayı okudu ve kabul etmiyor. Adını verdiği yeri düzeltip yeniden kaydedin."
+        }
+      },
+      "json": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing is changed: the service's own program read the new file and refused it. Correct what it names below and save again.",
+        "reason": "daemon",
+        "vars": {
+          "detail": "unknown variable 'set1_unknown_option=1'",
+          "name": "set1_unknown_option"
+        }
+      },
+      "label": "S5c add an unknown variable",
+      "request": {
+        "body": {
+          "content": {
+            "bytes": 3782,
+            "sha256": "645003961715aacc2f4adafbc14c75075ec7baaa5dc229cc77512acd7ecf7f29"
+          },
+          "path": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+          "version": "cf1-6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+        },
+        "method": "POST",
+        "path": "/api/v1/config"
+      },
+      "status": 422,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:42Z",
+      "json": {
+        "Content": {
+          "bytes": 3758,
+          "sha256": "6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+        },
+        "Parsed": "",
+        "Version": "cf1-6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+      },
+      "label": "S5c read again",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/config?path=/etc/mysql/mariadb.conf.d/50-server.cnf"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing is changed: the service's own program read the new file and refused it. Correct what it names below and save again.",
+        "reason": "daemon",
+        "vars": {
+          "detail": "Unknown suffix 'u' used for variable 'max_connections' (value 'unlimited'). Legal suffix characters are: K, M, G, T, P, E",
+          "name": "max_connections"
+        }
+      },
+      "at": "2026-10-09T03:45:43Z",
+      "catalogue_texts": {
+        "dbconf.refused.daemon": {
+          "en": "Nothing is changed: MariaDB read the new file and does not accept it. Correct what it names and save again.",
+          "tr": "Hiçbir şey değişmedi: MariaDB yeni dosyayı okudu ve kabul etmiyor. Adını verdiği yeri düzeltip yeniden kaydedin."
+        }
+      },
+      "json": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing is changed: the service's own program read the new file and refused it. Correct what it names below and save again.",
+        "reason": "daemon",
+        "vars": {
+          "detail": "Unknown suffix 'u' used for variable 'max_connections' (value 'unlimited'). Legal suffix characters are: K, M, G, T, P, E",
+          "name": "max_connections"
+        }
+      },
+      "label": "S5c set max_connections to a value MariaDB refuses",
+      "request": {
+        "body": {
+          "content": {
+            "bytes": 3764,
+            "sha256": "0fc49c9edb571ba3cbf62474f52f3e671156fa262ec4f48c18df7720dad3f552"
+          },
+          "path": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+          "version": "cf1-6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+        },
+        "method": "POST",
+        "path": "/api/v1/config"
+      },
+      "status": 422,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:43Z",
+      "json": {
+        "Content": {
+          "bytes": 3758,
+          "sha256": "6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+        },
+        "Parsed": "",
+        "Version": "cf1-6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+      },
+      "label": "S5c read (adjusted value)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/config?path=/etc/mysql/mariadb.conf.d/50-server.cnf"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing is changed: the service's own program read the new file and refused it. Correct what it names below and save again.",
+        "reason": "daemon",
+        "vars": {
+          "detail": "option 'max_connections': unsigned value 0 adjusted to 10",
+          "name": "max_connections"
+        }
+      },
+      "at": "2026-10-09T03:45:44Z",
+      "catalogue_texts": {
+        "dbconf.refused.daemon": {
+          "en": "Nothing is changed: MariaDB read the new file and does not accept it. Correct what it names and save again.",
+          "tr": "Hiçbir şey değişmedi: MariaDB yeni dosyayı okudu ve kabul etmiyor. Adını verdiği yeri düzeltip yeniden kaydedin."
+        }
+      },
+      "json": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing is changed: the service's own program read the new file and refused it. Correct what it names below and save again.",
+        "reason": "daemon",
+        "vars": {
+          "detail": "option 'max_connections': unsigned value 0 adjusted to 10",
+          "name": "max_connections"
+        }
+      },
+      "label": "S5c set max_connections = plenty",
+      "request": {
+        "body": {
+          "content": {
+            "bytes": 3761,
+            "sha256": "bcb693bdc970b737302bd230addd2ff480c55a34152b7c9b54c317dce74842cc"
+          },
+          "path": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+          "version": "cf1-6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+        },
+        "method": "POST",
+        "path": "/api/v1/config"
+      },
+      "status": 422,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:45Z",
+      "json": {
+        "Content": {
+          "bytes": 3758,
+          "sha256": "6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+        },
+        "Parsed": "",
+        "Version": "cf1-6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+      },
+      "label": "S5d read",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/config?path=/etc/mysql/mariadb.conf.d/50-server.cnf"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing was saved: the new content is empty, and CelikPanel does not replace a configuration file with nothing. Reload the page to read the file again, then make the change.",
+        "reason": "empty"
+      },
+      "at": "2026-10-09T03:45:45Z",
+      "catalogue_texts": {
+        "dbconf.refused.empty": {
+          "en": "Nothing was saved: the new content is empty, and CelikPanel does not replace a configuration file with nothing. Reload the file, then make the change again.",
+          "tr": "Hiçbir şey kaydedilmedi: yeni içerik boş ve CelikPanel bir yapılandırma dosyasını boş içerikle değiştirmez. Dosyayı yeniden yükleyin, sonra değişikliği tekrar yapın."
+        }
+      },
+      "json": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing was saved: the new content is empty, and CelikPanel does not replace a configuration file with nothing. Reload the page to read the file again, then make the change.",
+        "reason": "empty"
+      },
+      "label": "S5d save empty content",
+      "request": {
+        "body": {
+          "content": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "path": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+          "version": "cf1-6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+        },
+        "method": "POST",
+        "path": "/api/v1/config"
+      },
+      "status": 422,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:46Z",
+      "json": {
+        "Content": {
+          "bytes": 3758,
+          "sha256": "6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+        },
+        "Parsed": "",
+        "Version": "cf1-6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+      },
+      "label": "S5e read before the owner's edit",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/config?path=/etc/mysql/mariadb.conf.d/50-server.cnf"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "config_file"
+      },
+      "at": "2026-10-09T03:45:46Z",
+      "catalogue_texts": {
+        "dbconf.stale": {
+          "en": "50-server.cnf changed on the server after this page read it, so nothing was saved. What you changed is still shown below. Reload the file, then make your change again.",
+          "tr": "50-server.cnf, bu sayfa onu okuduktan sonra sunucuda değişti; bu yüzden hiçbir şey kaydedilmedi. Değiştirdikleriniz aşağıda duruyor. Dosyayı yeniden yükleyin, sonra değişikliğinizi tekrar yapın."
+        }
+      },
+      "json": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "config_file"
+      },
+      "label": "S5e save with the version from before the owner's edit",
+      "request": {
+        "body": {
+          "content": {
+            "bytes": 3758,
+            "sha256": "d5b3475bbce2599b6bcb4332b0b662b2f65934733233f2d171505cf28f7357f2"
+          },
+          "path": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+          "version": "cf1-6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+        },
+        "method": "POST",
+        "path": "/api/v1/config"
+      },
+      "status": 409,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": [
+        200,
+        "cf1-46ff21371d6b0f01e2419a04c87b5e3c2fae944653dc32cb1db7e43db8f9cd4f",
+        "46ff21371d6b0f01e2419a04c87b5e3c2fae944653dc32cb1db7e43db8f9cd4f"
+      ],
+      "name": "a: the read answers the file's own bytes with their version",
+      "ok": true
+    },
+    {
+      "detail": {
+        "identity": [
+          "10968",
+          "Fri 2026-10-09 03:34:31 UTC",
+          "0",
+          10968
+        ],
+        "max_connections": "151"
+      },
+      "name": "a: MariaDB is running and answers",
+      "ok": true
+    },
+    {
+      "detail": {
+        "applied": "restart_required",
+        "backup": "/etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261009T034540Z",
+        "daemon_check": "accepted",
+        "restart_required": [],
+        "success": true,
+        "unchanged": false
+      },
+      "name": "b: the save answers 200 and says a restart is required (applied = restart_required)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "added": [
+          "max_connections        = 173"
+        ],
+        "file": "diff/b-mariadb-option-file.diff",
+        "removed": [
+          "#max_connections        = 100"
+        ]
+      },
+      "name": "b: the file differs only on the option's line",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backup": "/etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261009T034540Z",
+        "kept": {
+          "group": "root",
+          "mode": "0644",
+          "owner": "root",
+          "sha256": "46ff21371d6b0f01e2419a04c87b5e3c2fae944653dc32cb1db7e43db8f9cd4f"
+        },
+        "previous": {
+          "group": "root",
+          "mode": "0644",
+          "owner": "root",
+          "sha256": "46ff21371d6b0f01e2419a04c87b5e3c2fae944653dc32cb1db7e43db8f9cd4f"
+        }
+      },
+      "name": "b: a timestamped backup of the previous file exists next to it, with the previous bytes and the file's owner, group and mode",
+      "ok": true
+    },
+    {
+      "detail": [],
+      "name": "b: no validation copy is left next to the file",
+      "ok": true
+    },
+    {
+      "detail": {
+        "differences": {},
+        "equal": true
+      },
+      "name": "b: the file keeps its owner, group and mode",
+      "ok": true
+    },
+    {
+      "detail": {
+        "identity": [
+          [
+            "10968",
+            "Fri 2026-10-09 03:34:31 UTC",
+            "0",
+            10968
+          ],
+          [
+            "10968",
+            "Fri 2026-10-09 03:34:31 UTC",
+            "0",
+            10968
+          ]
+        ],
+        "max_connections": [
+          "151",
+          "151"
+        ]
+      },
+      "name": "b: the Panel did not restart MariaDB (same process, same start, no restart counted) and the running value is the old one",
+      "ok": true
+    },
+    {
+      "detail": [
+        "cf1-6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c",
+        "cf1-6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+      ],
+      "name": "b: the version the save answered is the version of the file now on the server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing is changed: the service's own program read the new file and refused it. Correct what it names below and save again.",
+        "reason": "daemon",
+        "status": 422,
+        "vars": {
+          "detail": "unknown variable 'set1_unknown_option=1'",
+          "name": "set1_unknown_option"
+        }
+      },
+      "name": "c: an unknown variable is refused 422 CONFIG_INVALID (daemon)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          1,
+          1
+        ],
+        "candidates_left": [],
+        "sha256": [
+          "6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c",
+          "6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+        ]
+      },
+      "name": "c (unknown variable): the file is unchanged, no backup was added and no validation copy is left",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing is changed: the service's own program read the new file and refused it. Correct what it names below and save again.",
+        "reason": "daemon",
+        "status": 422,
+        "vars": {
+          "detail": "Unknown suffix 'u' used for variable 'max_connections' (value 'unlimited'). Legal suffix characters are: K, M, G, T, P, E",
+          "name": "max_connections"
+        }
+      },
+      "name": "c: an unusable value is refused 422 CONFIG_INVALID (daemon)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          1,
+          1
+        ],
+        "candidates_left": [],
+        "sha256": [
+          "6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c",
+          "6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+        ]
+      },
+      "name": "c (unusable value): the file is unchanged, no backup was added and no validation copy is left",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing is changed: the service's own program read the new file and refused it. Correct what it names below and save again.",
+        "reason": "daemon",
+        "status": 422,
+        "vars": {
+          "detail": "option 'max_connections': unsigned value 0 adjusted to 10",
+          "name": "max_connections"
+        }
+      },
+      "name": "c (adjusted value): `max_connections = plenty` is refused 422 CONFIG_INVALID (daemon)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "mariadbd_printed": [
+          "2026-10-09  3:45:44 0 [Warning] Buffered warning: option 'max_connections': unsigned value 0 adjusted to 10"
+        ],
+        "vars": {
+          "detail": "option 'max_connections': unsigned value 0 adjusted to 10",
+          "name": "max_connections"
+        }
+      },
+      "name": "c (adjusted value): the answer carries MariaDB's own line (the adjustment) and the option's name",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          1,
+          1
+        ],
+        "candidates_left": [],
+        "sha256": [
+          "6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c",
+          "6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+        ]
+      },
+      "name": "c (adjusted value): the file is unchanged, no backup was added and no validation copy is left",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing was saved: the new content is empty, and CelikPanel does not replace a configuration file with nothing. Reload the page to read the file again, then make the change.",
+        "reason": "empty",
+        "status": 422,
+        "vars": null
+      },
+      "name": "d: empty content is refused 422 CONFIG_INVALID (empty)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          1,
+          1
+        ],
+        "candidates_left": [],
+        "sha256": [
+          "6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c",
+          "6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+        ]
+      },
+      "name": "d: the file is unchanged, no backup was added and no validation copy is left",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "config_file",
+        "status": 409,
+        "vars": null
+      },
+      "name": "e: the stale write is refused 409 SETTINGS_CHANGED (config_file)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          1,
+          1
+        ],
+        "candidates_left": [],
+        "sha256": [
+          "cdbf9da333ed698e05067344f172e51034f540ec7ef67442aafa72bb8d696bb9",
+          "cdbf9da333ed698e05067344f172e51034f540ec7ef67442aafa72bb8d696bb9"
+        ]
+      },
+      "name": "e: the file is unchanged, no backup was added and no validation copy is left",
+      "ok": true
+    },
+    {
+      "detail": [
+        [
+          "10968",
+          "Fri 2026-10-09 03:34:31 UTC",
+          "0",
+          10968
+        ],
+        [
+          "10968",
+          "Fri 2026-10-09 03:34:31 UTC",
+          "0",
+          10968
+        ]
+      ],
+      "name": "end: MariaDB is still the same process",
+      "ok": true
+    }
+  ],
+  "file": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+  "finished_at": "2026-10-09T03:45:47Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/090-a-file-before.json",
+      "label": "a-file-before",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/091-a-server-before.json",
+      "label": "a-server-before",
+      "mode": "read-mariadb",
+      "owner_action": false
+    },
+    {
+      "file": "native/092-b-file-after.json",
+      "label": "b-file-after",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/093-b-server-after.json",
+      "label": "b-server-after",
+      "mode": "read-mariadb",
+      "owner_action": false
+    },
+    {
+      "file": "native/094-c-file-after-unknown.json",
+      "label": "c-file-after-unknown",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/095-c-file-after-bad-value.json",
+      "label": "c-file-after-bad-value",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/096-c-mariadbd-own-reading.json",
+      "label": "c-mariadbd-own-reading",
+      "mode": "read-mariadb-check",
+      "owner_action": false
+    },
+    {
+      "file": "native/097-c-file-after-adjusted-value.json",
+      "label": "c-file-after-adjusted-value",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/098-d-file-after-empty.json",
+      "label": "d-file-after-empty",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/099-owner-e-option-file-note.json",
+      "label": "owner-e-option-file-note",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/100-e-file-after-owner-edit.json",
+      "label": "e-file-after-owner-edit",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/101-e-file-after-stale.json",
+      "label": "e-file-after-stale",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/102-e-server-end.json",
+      "label": "e-server-end",
+      "mode": "read-mariadb",
+      "owner_action": false
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [],
+  "option_edit": {
+    "how": "commented-default",
+    "value": "173"
+  },
+  "owner_actions": [
+    {
+      "at": "2026-10-09T03:45:46Z",
+      "label": "e-option-file-note",
+      "mode": "owner-edit"
+    }
+  ],
+  "owner_waited_for_idle": {
+    "at": "2026-10-09T03:45:39Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.2
+  },
+  "section": "S5-mariadb",
+  "started_at": "2026-10-09T03:45:38Z",
+  "substeps": {
+    "a": "passed",
+    "b": "passed",
+    "c": "passed",
+    "d": "passed",
+    "e": "passed",
+    "end": "passed"
+  },
+  "title": "the MariaDB option file",
+  "verdict": "passed"
+}

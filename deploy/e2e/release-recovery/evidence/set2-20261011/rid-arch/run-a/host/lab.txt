@@ -1,0 +1,3 @@
+lab=/var/tmp/cp-release-drill-rid-arch-a
+rid-arch-20261009t041545z
+stopped by hand before the result was written (see README)

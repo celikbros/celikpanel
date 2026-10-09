@@ -1,0 +1,24 @@
+Formatting '/var/tmp/cp-release-drill-set2-d13-b/cells/03cab687cbd74aa2c01dc89d/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-set2-d13-b/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-set2-d13-b/cells/03cab687cbd74aa2c01dc89d/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-set2-d13-b/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-set2-d13-b", "cell_id": "release-recovery__7538c4df843e9126", "ssh_ports": [4151, 4152]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-set2-d13-b", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-set2-d13-b", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "site", "verdict": "passed", "reason": null}
+{"step": "S1-cron", "verdict": "passed", "reason": null}
+{"step": "S2-mail-policy", "verdict": "passed", "reason": null}
+{"step": "S3-backup-schedule", "verdict": "passed", "reason": null}
+{"step": "S4-postgresql", "verdict": "passed", "reason": null}
+{"step": "S5-mariadb", "verdict": "passed", "reason": null}
+{"step": "S6-catchall-queue", "verdict": "passed", "reason": null}
+{"step": "S7-file-metadata", "verdict": "passed", "reason": null}
+{"step": "S8-service-actions", "verdict": "failed", "reason": "postgresql (reload hook): the answer does not say the server keeps its previous settings when the server did read its files again"}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"cell_kind": "settings-writes", "overall": "failed", "sections": {"S1-cron": "passed", "S2-mail-policy": "passed", "S3-backup-schedule": "passed", "S4-postgresql": "passed", "S5-mariadb": "passed", "S6-catchall-queue": "passed", "S7-file-metadata": "passed", "S8-service-actions": "failed"}}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-set2-d13-b", "evidence_retained": true}
+SET2 cell=set2-debian13 lab=/var/tmp/cp-release-drill-set2-d13-b driver_exit=1 evidence=/var/tmp/cp-release-drill-set2-d13-b/evidence/*/upd1

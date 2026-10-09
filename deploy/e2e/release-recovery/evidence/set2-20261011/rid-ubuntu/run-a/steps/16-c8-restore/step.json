@@ -1,0 +1,21 @@
+{
+  "checks": {
+    "checks": 0,
+    "error": "TypeError: RequestIdentityTrial.owner2() got multiple values for argument 'label'",
+    "failed": [],
+    "finished_at": "2026-10-09T03:51:14Z",
+    "notes": [
+      "the site as it is now is the site both manual backups hold: nothing changed it since C4"
+    ],
+    "started_at": "2026-10-09T03:51:13Z",
+    "substeps": {},
+    "title": "domain restore, with a dropped connection and a Panel restart",
+    "unknown": [],
+    "verdict": "inconclusive"
+  },
+  "finished_at": "2026-10-09T03:51:14Z",
+  "name": "C8-restore",
+  "reason": "TypeError: RequestIdentityTrial.owner2() got multiple values for argument 'label'",
+  "started_at": "2026-10-09T03:51:13Z",
+  "verdict": "inconclusive"
+}

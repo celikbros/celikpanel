@@ -1,0 +1,38 @@
+{
+  "at": "2026-10-09T04:10:29Z",
+  "epoch": 1791519029.6222882,
+  "mode": "read-service",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "dovecot.service": {
+      "is_active": "inactive",
+      "properties": {
+        "ActiveEnterTimestamp": "Fri 2026-10-09 04:10:19 UTC",
+        "ActiveState": "inactive",
+        "ConsistsOf": "",
+        "DropInPaths": "",
+        "ExecMainPID": "62550",
+        "ExecMainStartTimestamp": "Fri 2026-10-09 04:10:19 UTC",
+        "ExecReload": "{ path=/usr/bin/doveadm ; argv[]=/usr/bin/doveadm reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "ExecStart": "{ path=/usr/sbin/dovecot ; argv[]=/usr/sbin/dovecot -F ; ignore_errors=no ; start_time=[Fri 2026-10-09 04:10:19 UTC] ; stop_time=[Fri 2026-10-09 04:10:24 UTC] ; pid=62550 ; code=exited ; status=0 }",
+        "FragmentPath": "/usr/lib/systemd/system/dovecot.service",
+        "InactiveEnterTimestamp": "Fri 2026-10-09 04:10:24 UTC",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "NRestarts": "0",
+        "PartOf": "",
+        "PropagatesReloadTo": "",
+        "ReloadPropagatedFrom": "",
+        "ReloadResult": "success",
+        "RemainAfterExit": "no",
+        "Result": "success",
+        "SubState": "dead",
+        "Type": "notify",
+        "WantedBy": "multi-user.target",
+        "Wants": "tmp.mount"
+      },
+      "returncode": 0
+    }
+  }
+}

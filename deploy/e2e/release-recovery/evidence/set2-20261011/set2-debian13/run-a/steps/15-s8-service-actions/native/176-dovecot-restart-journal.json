@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T03:42:02Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791517319",
+      "-n",
+      "400",
+      "-u",
+      "dovecot.service"
+    ],
+    "at": "2026-10-09T03:42:02Z",
+    "returncode": 0,
+    "seconds": 0.006,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T03:41:59.291464+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...\n2026-10-09T03:41:59.348270+00:00 dns-debian13 dovecot[28141]: master: Warning: Killed with signal 15 (by pid=39854 uid=0 code=kill)\n2026-10-09T03:41:59.365550+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.\n2026-10-09T03:41:59.366014+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.\n2026-10-09T03:41:59.369880+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...\n2026-10-09T03:41:59.412499+00:00 dns-debian13 dovecot[39860]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)\n2026-10-09T03:41:59.424526+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791517319,
+  "units": [
+    "dovecot.service"
+  ]
+}

@@ -1,0 +1,3 @@
+2026-10-09T04:10:14.309428+00:00 dns-ubuntu systemd[1]: Reloading dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T04:10:14.319249+00:00 dns-ubuntu dovecot[38510]: master: Warning: SIGHUP received - reloading configuration
+2026-10-09T04:10:14.329393+00:00 dns-ubuntu systemd[1]: Reloaded dovecot.service - Dovecot IMAP/POP3 email server.

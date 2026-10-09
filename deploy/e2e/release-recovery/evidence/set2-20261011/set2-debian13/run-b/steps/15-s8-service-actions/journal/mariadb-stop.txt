@@ -1,0 +1,12 @@
+2026-10-09T04:03:19.740804+00:00 dns-debian13 mariadbd[39416]: 2026-10-09  4:03:19 0 [Note] /usr/sbin/mariadbd (initiated by: unknown): Normal shutdown
+2026-10-09T04:03:19.741266+00:00 dns-debian13 systemd[1]: Stopping mariadb.service - MariaDB 11.8.6 database server...
+2026-10-09T04:03:19.762861+00:00 dns-debian13 mariadbd[39416]: 2026-10-09  4:03:19 0 [Note] InnoDB: FTS optimize thread exiting.
+2026-10-09T04:03:19.770521+00:00 dns-debian13 mariadbd[39416]: 2026-10-09  4:03:19 0 [Note] InnoDB: Starting shutdown...
+2026-10-09T04:03:19.799479+00:00 dns-debian13 mariadbd[39416]: 2026-10-09  4:03:19 0 [Note] InnoDB: Dumping buffer pool(s) to /var/lib/mysql/ib_buffer_pool
+2026-10-09T04:03:19.799967+00:00 dns-debian13 mariadbd[39416]: 2026-10-09  4:03:19 0 [Note] InnoDB: Buffer pool(s) dump completed at 261009  4:03:19
+2026-10-09T04:03:20.001355+00:00 dns-debian13 mariadbd[39416]: 2026-10-09  4:03:20 0 [Note] InnoDB: Removed temporary tablespace data file: "./ibtmp1"
+2026-10-09T04:03:20.001355+00:00 dns-debian13 mariadbd[39416]: 2026-10-09  4:03:20 0 [Note] InnoDB: Shutdown completed; log sequence number 45516; transaction id 15
+2026-10-09T04:03:20.014033+00:00 dns-debian13 mariadbd[39416]: 2026-10-09  4:03:20 0 [Note] /usr/sbin/mariadbd: Shutdown complete
+2026-10-09T04:03:20.019281+00:00 dns-debian13 systemd[1]: mariadb.service: Deactivated successfully.
+2026-10-09T04:03:20.019542+00:00 dns-debian13 systemd[1]: Stopped mariadb.service - MariaDB 11.8.6 database server.
+2026-10-09T04:03:20.020254+00:00 dns-debian13 systemd[1]: mariadb.service: Consumed 1.006s CPU time, 128.1M memory peak.

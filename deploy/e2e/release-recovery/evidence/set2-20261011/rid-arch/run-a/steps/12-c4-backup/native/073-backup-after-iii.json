@@ -1,0 +1,16 @@
+{
+  "archives": 0,
+  "at": "2026-10-09T04:22:24Z",
+  "directory": "/var/backups/celikpanel/subscriptions/2/domains/1",
+  "entries": [],
+  "epoch": 1791519744.9059286,
+  "exists": false,
+  "lab_action": false,
+  "manifests_read": 0,
+  "mode": "read-backups",
+  "origins": {},
+  "owner_action": false,
+  "partial_files": [],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "tree": []
+}

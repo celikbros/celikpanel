@@ -1,0 +1,57 @@
+{
+  "action": "owner-cpmove-fixture",
+  "at": "2026-10-09T04:33:20Z",
+  "bytes": 16785555,
+  "database": "s2impdrop_app",
+  "directory": {
+    "mode": "0700",
+    "uid": 0
+  },
+  "domain": "set2-import-drop.test",
+  "lab_action": false,
+  "members": [
+    {
+      "bytes": 59,
+      "name": "cpmove-s2impdrop/cp/s2impdrop"
+    },
+    {
+      "bytes": 67,
+      "name": "cpmove-s2impdrop/homedir/public_html/index.html"
+    },
+    {
+      "bytes": 34,
+      "name": "cpmove-s2impdrop/homedir/public_html/assets/site.css"
+    },
+    {
+      "bytes": 119,
+      "name": "cpmove-s2impdrop/homedir/etc/set2-import-drop.test/shadow"
+    },
+    {
+      "bytes": 15,
+      "name": "cpmove-s2impdrop/homedir/etc/set2-import-drop.test/quota"
+    },
+    {
+      "bytes": 56,
+      "name": "cpmove-s2impdrop/va/set2-import-drop.test"
+    },
+    {
+      "bytes": 33,
+      "name": "cpmove-s2impdrop/mysql/s2impdrop_app.create"
+    },
+    {
+      "bytes": 7402,
+      "name": "cpmove-s2impdrop/mysql/s2impdrop_app.sql"
+    },
+    {
+      "bytes": 16777216,
+      "name": "cpmove-s2impdrop/homedir/public_html/assets/blob.bin"
+    }
+  ],
+  "mode": "owner-cpmove-fixture",
+  "owner_action": true,
+  "path": "/var/lib/celikpanel-imports/cpmove-s2impdrop.tar.gz",
+  "public_html_directory_member": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "sha256": "721d716ca6c3627a9e86335fb4c948da37a713157cb0888bd759c7781f6306a8",
+  "user": "s2impdrop"
+}

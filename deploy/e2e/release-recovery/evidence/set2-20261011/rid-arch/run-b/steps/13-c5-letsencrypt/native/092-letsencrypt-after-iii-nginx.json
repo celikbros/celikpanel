@@ -1,0 +1,30 @@
+{
+  "at": "2026-10-09T04:32:58Z",
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791520373",
+      "-n",
+      "2000",
+      "-u",
+      "nginx.service"
+    ],
+    "at": "2026-10-09T04:32:58Z",
+    "returncode": 0,
+    "seconds": 0.003,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T04:32:54.972788+00:00 dns-arch systemd[1]: Reloading nginx web server...\n2026-10-09T04:32:54.995397+00:00 dns-arch nginx[4080]: 2026/10/09 04:32:54 [warn] 4080#4080: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\n2026-10-09T04:32:54.998939+00:00 dns-arch nginx[4080]: 2026/10/09 04:32:54 [notice] 4080#4080: signal process started\n2026-10-09T04:32:55.000531+00:00 dns-arch systemd[1]: Reloaded nginx web server.\n2026-10-09T04:32:55.365310+00:00 dns-arch systemd[1]: Reloading nginx web server...\n2026-10-09T04:32:55.388660+00:00 dns-arch nginx[4086]: 2026/10/09 04:32:55 [warn] 4086#4086: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\n2026-10-09T04:32:55.392222+00:00 dns-arch nginx[4086]: 2026/10/09 04:32:55 [notice] 4086#4086: signal process started\n2026-10-09T04:32:55.395176+00:00 dns-arch systemd[1]: Reloaded nginx web server.\n"
+  },
+  "lab_action": false,
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "units": [
+    "nginx.service"
+  ]
+}

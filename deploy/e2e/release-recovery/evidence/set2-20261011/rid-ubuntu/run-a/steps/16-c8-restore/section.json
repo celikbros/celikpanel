@@ -1,0 +1,73 @@
+{
+  "calls": [],
+  "checks": [],
+  "error": "TypeError: RequestIdentityTrial.owner2() got multiple values for argument 'label'",
+  "finished_at": "2026-10-09T03:51:14Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/104-reference-docroot.json",
+      "lab_action": false,
+      "label": "reference-docroot",
+      "mode": "read-docroot",
+      "owner_action": false
+    },
+    {
+      "file": "native/105-reference-rows.json",
+      "lab_action": false,
+      "label": "reference-rows",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/106-reference-backups.json",
+      "lab_action": false,
+      "label": "reference-backups",
+      "mode": "read-backups",
+      "owner_action": false
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [
+    {
+      "detail": {
+        "archives": [
+          "full-20261009T034447.899358506Z-0b5fd21aaa67f7e7.cpbak",
+          "full-20261009T034457.098924685Z-a8c91d9e157a20d9.cpbak"
+        ],
+        "docroot": "2dbe26b2abf25c045504a72156d0660ec6e64b0935249d4dafb0cffe05ed2108",
+        "files": 9,
+        "rows": [
+          "20000",
+          "200010000"
+        ]
+      },
+      "note": "the site as it is now is the site both manual backups hold: nothing changed it since C4"
+    }
+  ],
+  "owner_actions": [],
+  "owner_waited_for_idle": {
+    "at": "2026-10-09T03:51:13Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.2
+  },
+  "reference": {
+    "archives": [
+      "full-20261009T034447.899358506Z-0b5fd21aaa67f7e7.cpbak",
+      "full-20261009T034457.098924685Z-a8c91d9e157a20d9.cpbak"
+    ],
+    "docroot": "2dbe26b2abf25c045504a72156d0660ec6e64b0935249d4dafb0cffe05ed2108",
+    "files": 9,
+    "rows": [
+      "20000",
+      "200010000"
+    ]
+  },
+  "section": "C8-restore",
+  "started_at": "2026-10-09T03:51:13Z",
+  "substeps": {},
+  "title": "domain restore, with a dropped connection and a Panel restart",
+  "verdict": "inconclusive"
+}

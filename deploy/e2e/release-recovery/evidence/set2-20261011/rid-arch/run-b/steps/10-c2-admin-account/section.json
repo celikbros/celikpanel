@@ -1,0 +1,1203 @@
+{
+  "calls": [
+    {
+      "answer": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "at": "2026-10-09T04:32:20Z",
+      "body_bytes": 354,
+      "body_sha256": "7493044ee0ab05fdc18ae1bd147cae25a5bf4de689629b9df545994dd58da413",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REQUIRED": {
+          "en": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again.",
+          "tr": "Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json"
+      },
+      "json": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "label": "admin-account-mariadb (iii) without the header",
+      "n": 17,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": null,
+        "header_sent": false,
+        "identity": null,
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/admin-account"
+      },
+      "seconds": 0.003,
+      "status": 428,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:32:20Z",
+      "body_bytes": 55,
+      "body_sha256": "0db4e7c27c87e7edba4a2872b8acc94b9c034066219b132738cb7811a74bd735",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "f779d7027fd4767b9c3ad259af45f01b"
+      },
+      "json": {
+        "status": "provisioned",
+        "username": "celikpanel_admin"
+      },
+      "label": "admin-account-mariadb (i) sequential arrival 1 of 3",
+      "n": 18,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": null,
+        "header_sent": true,
+        "identity": "f779d7027fd4767b9c3ad259af45f01b",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/admin-account"
+      },
+      "seconds": 0.105,
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "f779d7027fd4767b9c3ad259af45f01b"
+        }
+      },
+      "at": "2026-10-09T04:32:21Z",
+      "body_bytes": 361,
+      "body_sha256": "c16ad798b34f427f6e3ef3ec713ede3871a73e28f2a5584b5a08535afb760f40",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "f779d7027fd4767b9c3ad259af45f01b"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "f779d7027fd4767b9c3ad259af45f01b"
+        }
+      },
+      "label": "admin-account-mariadb (i) sequential arrival 2 of 3",
+      "n": 19,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": null,
+        "header_sent": true,
+        "identity": "f779d7027fd4767b9c3ad259af45f01b",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/admin-account"
+      },
+      "seconds": 0.003,
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "f779d7027fd4767b9c3ad259af45f01b"
+        }
+      },
+      "at": "2026-10-09T04:32:21Z",
+      "body_bytes": 361,
+      "body_sha256": "c16ad798b34f427f6e3ef3ec713ede3871a73e28f2a5584b5a08535afb760f40",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "f779d7027fd4767b9c3ad259af45f01b"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "f779d7027fd4767b9c3ad259af45f01b"
+        }
+      },
+      "label": "admin-account-mariadb (i) sequential arrival 3 of 3",
+      "n": 20,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": null,
+        "header_sent": true,
+        "identity": "f779d7027fd4767b9c3ad259af45f01b",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/admin-account"
+      },
+      "seconds": 0.003,
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "f779d7027fd4767b9c3ad259af45f01b"
+        }
+      },
+      "at": "2026-10-09T04:32:21Z",
+      "body_bytes": 256,
+      "body_sha256": "8d214e02c28580373148b4b9691256f2948b5f4bee82df4be942c0fcc04a9295",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REUSED": {
+          "en": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+          "tr": "Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "f779d7027fd4767b9c3ad259af45f01b"
+      },
+      "json": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "f779d7027fd4767b9c3ad259af45f01b"
+        }
+      },
+      "label": "admin-account-mariadb (iv) the same identity with a different body",
+      "n": 21,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "again": true
+        },
+        "header_sent": true,
+        "identity": "f779d7027fd4767b9c3ad259af45f01b",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/admin-account"
+      },
+      "seconds": 0.004,
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "38cd5bcdbec1f07a718d6c550a510630"
+        }
+      },
+      "at": "2026-10-09T04:32:22Z",
+      "body_bytes": 361,
+      "body_sha256": "55d30e5d4bad7dc511d25b21a1c63b53a5a8fcecd1a92236f54a188cf0870926",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "38cd5bcdbec1f07a718d6c550a510630"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "38cd5bcdbec1f07a718d6c550a510630"
+        }
+      },
+      "label": "admin-account-mariadb (ii) concurrent arrival 1 of 3",
+      "n": 22,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": null,
+        "header_sent": true,
+        "identity": "38cd5bcdbec1f07a718d6c550a510630",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/admin-account"
+      },
+      "seconds": 0.093,
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:32:22Z",
+      "body_bytes": 55,
+      "body_sha256": "0db4e7c27c87e7edba4a2872b8acc94b9c034066219b132738cb7811a74bd735",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "38cd5bcdbec1f07a718d6c550a510630"
+      },
+      "json": {
+        "status": "provisioned",
+        "username": "celikpanel_admin"
+      },
+      "label": "admin-account-mariadb (ii) concurrent arrival 2 of 3",
+      "n": 23,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": null,
+        "header_sent": true,
+        "identity": "38cd5bcdbec1f07a718d6c550a510630",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/admin-account"
+      },
+      "seconds": 0.093,
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "38cd5bcdbec1f07a718d6c550a510630"
+        }
+      },
+      "at": "2026-10-09T04:32:22Z",
+      "body_bytes": 361,
+      "body_sha256": "55d30e5d4bad7dc511d25b21a1c63b53a5a8fcecd1a92236f54a188cf0870926",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "38cd5bcdbec1f07a718d6c550a510630"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "38cd5bcdbec1f07a718d6c550a510630"
+        }
+      },
+      "label": "admin-account-mariadb (ii) concurrent arrival 3 of 3",
+      "n": 24,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": null,
+        "header_sent": true,
+        "identity": "38cd5bcdbec1f07a718d6c550a510630",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/admin-account"
+      },
+      "seconds": 0.093,
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "at": "2026-10-09T04:32:23Z",
+      "body_bytes": 354,
+      "body_sha256": "7493044ee0ab05fdc18ae1bd147cae25a5bf4de689629b9df545994dd58da413",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REQUIRED": {
+          "en": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again.",
+          "tr": "Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json"
+      },
+      "json": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "label": "admin-account-postgresql (iii) without the header",
+      "n": 25,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": null,
+        "header_sent": false,
+        "identity": null,
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/admin-account"
+      },
+      "seconds": 0.003,
+      "status": 428,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:32:24Z",
+      "body_bytes": 55,
+      "body_sha256": "0db4e7c27c87e7edba4a2872b8acc94b9c034066219b132738cb7811a74bd735",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "23f32055334598dcdb8b13f643a122d8"
+      },
+      "json": {
+        "status": "provisioned",
+        "username": "celikpanel_admin"
+      },
+      "label": "admin-account-postgresql (i) sequential arrival 1 of 3",
+      "n": 26,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": null,
+        "header_sent": true,
+        "identity": "23f32055334598dcdb8b13f643a122d8",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/admin-account"
+      },
+      "seconds": 0.113,
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "23f32055334598dcdb8b13f643a122d8"
+        }
+      },
+      "at": "2026-10-09T04:32:24Z",
+      "body_bytes": 361,
+      "body_sha256": "f5caf5f83fcd3df03d7fca32cd42dfefce64b1ee99e5aa5ce155984563cb482c",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "23f32055334598dcdb8b13f643a122d8"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "23f32055334598dcdb8b13f643a122d8"
+        }
+      },
+      "label": "admin-account-postgresql (i) sequential arrival 2 of 3",
+      "n": 27,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": null,
+        "header_sent": true,
+        "identity": "23f32055334598dcdb8b13f643a122d8",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/admin-account"
+      },
+      "seconds": 0.003,
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "23f32055334598dcdb8b13f643a122d8"
+        }
+      },
+      "at": "2026-10-09T04:32:24Z",
+      "body_bytes": 361,
+      "body_sha256": "f5caf5f83fcd3df03d7fca32cd42dfefce64b1ee99e5aa5ce155984563cb482c",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "23f32055334598dcdb8b13f643a122d8"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "23f32055334598dcdb8b13f643a122d8"
+        }
+      },
+      "label": "admin-account-postgresql (i) sequential arrival 3 of 3",
+      "n": 28,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": null,
+        "header_sent": true,
+        "identity": "23f32055334598dcdb8b13f643a122d8",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/admin-account"
+      },
+      "seconds": 0.003,
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "23f32055334598dcdb8b13f643a122d8"
+        }
+      },
+      "at": "2026-10-09T04:32:25Z",
+      "body_bytes": 256,
+      "body_sha256": "2dea459620a2584ed9da49af0bc5932e96cc15a92d2fd24232fda8714f1e0246",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REUSED": {
+          "en": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+          "tr": "Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "23f32055334598dcdb8b13f643a122d8"
+      },
+      "json": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "23f32055334598dcdb8b13f643a122d8"
+        }
+      },
+      "label": "admin-account-postgresql (iv) the same identity with a different body",
+      "n": 29,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "again": true
+        },
+        "header_sent": true,
+        "identity": "23f32055334598dcdb8b13f643a122d8",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/admin-account"
+      },
+      "seconds": 0.003,
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "d851a3d001c7d22aacd552c6af250f17"
+        }
+      },
+      "at": "2026-10-09T04:32:26Z",
+      "body_bytes": 361,
+      "body_sha256": "09fc3cd9a57f08b7824ddb987e8e82658d7fd2389e862d45b98ac8c89568b736",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "d851a3d001c7d22aacd552c6af250f17"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "d851a3d001c7d22aacd552c6af250f17"
+        }
+      },
+      "label": "admin-account-postgresql (ii) concurrent arrival 1 of 3",
+      "n": 30,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": null,
+        "header_sent": true,
+        "identity": "d851a3d001c7d22aacd552c6af250f17",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/admin-account"
+      },
+      "seconds": 0.106,
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "d851a3d001c7d22aacd552c6af250f17"
+        }
+      },
+      "at": "2026-10-09T04:32:26Z",
+      "body_bytes": 361,
+      "body_sha256": "09fc3cd9a57f08b7824ddb987e8e82658d7fd2389e862d45b98ac8c89568b736",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "d851a3d001c7d22aacd552c6af250f17"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "d851a3d001c7d22aacd552c6af250f17"
+        }
+      },
+      "label": "admin-account-postgresql (ii) concurrent arrival 2 of 3",
+      "n": 31,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": null,
+        "header_sent": true,
+        "identity": "d851a3d001c7d22aacd552c6af250f17",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/admin-account"
+      },
+      "seconds": 0.107,
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:32:26Z",
+      "body_bytes": 55,
+      "body_sha256": "0db4e7c27c87e7edba4a2872b8acc94b9c034066219b132738cb7811a74bd735",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "d851a3d001c7d22aacd552c6af250f17"
+      },
+      "json": {
+        "status": "provisioned",
+        "username": "celikpanel_admin"
+      },
+      "label": "admin-account-postgresql (ii) concurrent arrival 3 of 3",
+      "n": 32,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": null,
+        "header_sent": true,
+        "identity": "d851a3d001c7d22aacd552c6af250f17",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/admin-account"
+      },
+      "seconds": 0.106,
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.003,
+        "status": 428
+      },
+      "name": "admin-account-mariadb (iii): without the header the answer is 428 REQUEST_ID_REQUIRED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 0,
+          "stored_value_generation": 1,
+          "username": "celikpanel_admin"
+        },
+        "before": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 0,
+          "stored_value_generation": 1,
+          "username": "celikpanel_admin"
+        }
+      },
+      "name": "admin-account-mariadb (iii): and nothing changed on the server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 1,
+          "stored_value_generation": 2,
+          "username": "celikpanel_admin"
+        },
+        "answer": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.105,
+          "status": 200
+        },
+        "before": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 0,
+          "stored_value_generation": 1,
+          "username": "celikpanel_admin"
+        },
+        "login": {
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "celikpanel_admin@localhost\n"
+        },
+        "login_with_what_the_panel_stores": true
+      },
+      "name": "admin-account-mariadb (i): three arrivals in a row of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "first": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.105,
+          "status": 200
+        },
+        "later": [
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.003,
+            "status": 409
+          },
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.003,
+            "status": 409
+          }
+        ]
+      },
+      "name": "admin-account-mariadb (i): the three answers are the handler's own answer once, then the status-only refusal",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REUSED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.004,
+        "status": 409
+      },
+      "name": "admin-account-mariadb (iv): the same identity with a different body is refused 409 REQUEST_ID_REUSED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 1,
+          "stored_value_generation": 2,
+          "username": "celikpanel_admin"
+        },
+        "before": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 1,
+          "stored_value_generation": 2,
+          "username": "celikpanel_admin"
+        }
+      },
+      "name": "admin-account-mariadb (iv): and there is no second effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 2,
+          "stored_value_generation": 3,
+          "username": "celikpanel_admin"
+        },
+        "answer": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.093,
+          "status": 200
+        },
+        "before": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 1,
+          "stored_value_generation": 2,
+          "username": "celikpanel_admin"
+        },
+        "login": {
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "celikpanel_admin@localhost\n"
+        },
+        "login_with_what_the_panel_stores": true
+      },
+      "name": "admin-account-mariadb (ii): three arrivals at once of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answers": [
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.093,
+            "status": 409
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.093,
+            "status": 200
+          },
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.093,
+            "status": 409
+          }
+        ],
+        "in_progress": 0
+      },
+      "name": "admin-account-mariadb (ii): the answers are the handler's own answer for exactly one arrival; the others the status-only refusal or REQUEST_IN_PROGRESS",
+      "ok": true
+    },
+    {
+      "detail": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "celikpanel_admin@localhost\n"
+      },
+      "name": "admin-account-mariadb (ii): after the concurrent arrivals a login with the password the Panel stores succeeds on the engine",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.003,
+        "status": 428
+      },
+      "name": "admin-account-postgresql (iii): without the header the answer is 428 REQUEST_ID_REQUIRED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 2,
+          "stored_value_generation": 4,
+          "username": "celikpanel_admin"
+        },
+        "before": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 2,
+          "stored_value_generation": 4,
+          "username": "celikpanel_admin"
+        }
+      },
+      "name": "admin-account-postgresql (iii): and nothing changed on the server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 3,
+          "stored_value_generation": 5,
+          "username": "celikpanel_admin"
+        },
+        "answer": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.113,
+          "status": 200
+        },
+        "before": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 2,
+          "stored_value_generation": 4,
+          "username": "celikpanel_admin"
+        },
+        "login": {
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "celikpanel_admin\n"
+        },
+        "login_with_what_the_panel_stores": true
+      },
+      "name": "admin-account-postgresql (i): three arrivals in a row of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "first": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.113,
+          "status": 200
+        },
+        "later": [
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.003,
+            "status": 409
+          },
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.003,
+            "status": 409
+          }
+        ]
+      },
+      "name": "admin-account-postgresql (i): the three answers are the handler's own answer once, then the status-only refusal",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REUSED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.003,
+        "status": 409
+      },
+      "name": "admin-account-postgresql (iv): the same identity with a different body is refused 409 REQUEST_ID_REUSED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 3,
+          "stored_value_generation": 5,
+          "username": "celikpanel_admin"
+        },
+        "before": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 3,
+          "stored_value_generation": 5,
+          "username": "celikpanel_admin"
+        }
+      },
+      "name": "admin-account-postgresql (iv): and there is no second effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 4,
+          "stored_value_generation": 6,
+          "username": "celikpanel_admin"
+        },
+        "answer": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.106,
+          "status": 200
+        },
+        "before": {
+          "failed_provision_audit_entries": 0,
+          "provision_audit_entries": 3,
+          "stored_value_generation": 5,
+          "username": "celikpanel_admin"
+        },
+        "login": {
+          "returncode": 0,
+          "stderr": "",
+          "stdout": "celikpanel_admin\n"
+        },
+        "login_with_what_the_panel_stores": true
+      },
+      "name": "admin-account-postgresql (ii): three arrivals at once of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answers": [
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.106,
+            "status": 409
+          },
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.107,
+            "status": 409
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.106,
+            "status": 200
+          }
+        ],
+        "in_progress": 0
+      },
+      "name": "admin-account-postgresql (ii): the answers are the handler's own answer for exactly one arrival; the others the status-only refusal or REQUEST_IN_PROGRESS",
+      "ok": true
+    },
+    {
+      "detail": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "celikpanel_admin\n"
+      },
+      "name": "admin-account-postgresql (ii): after the concurrent arrivals a login with the password the Panel stores succeeds on the engine",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T04:32:26Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/031-admin-account-mariadb-before-login.json",
+      "lab_action": false,
+      "label": "admin-account-mariadb-before-login",
+      "mode": "read-login",
+      "owner_action": false
+    },
+    {
+      "file": "native/032-admin-account-mariadb-before-rows.json",
+      "lab_action": false,
+      "label": "admin-account-mariadb-before-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/033-admin-account-mariadb-after-iii-login.json",
+      "lab_action": false,
+      "label": "admin-account-mariadb-after-iii-login",
+      "mode": "read-login",
+      "owner_action": false
+    },
+    {
+      "file": "native/034-admin-account-mariadb-after-iii-rows.json",
+      "lab_action": false,
+      "label": "admin-account-mariadb-after-iii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/035-admin-account-mariadb-after-i-login.json",
+      "lab_action": false,
+      "label": "admin-account-mariadb-after-i-login",
+      "mode": "read-login",
+      "owner_action": false
+    },
+    {
+      "file": "native/036-admin-account-mariadb-after-i-rows.json",
+      "lab_action": false,
+      "label": "admin-account-mariadb-after-i-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/037-admin-account-mariadb-after-iv-login.json",
+      "lab_action": false,
+      "label": "admin-account-mariadb-after-iv-login",
+      "mode": "read-login",
+      "owner_action": false
+    },
+    {
+      "file": "native/038-admin-account-mariadb-after-iv-rows.json",
+      "lab_action": false,
+      "label": "admin-account-mariadb-after-iv-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/039-admin-account-mariadb-after-ii-login.json",
+      "lab_action": false,
+      "label": "admin-account-mariadb-after-ii-login",
+      "mode": "read-login",
+      "owner_action": false
+    },
+    {
+      "file": "native/040-admin-account-mariadb-after-ii-rows.json",
+      "lab_action": false,
+      "label": "admin-account-mariadb-after-ii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/041-admin-account-postgresql-before-login.json",
+      "lab_action": false,
+      "label": "admin-account-postgresql-before-login",
+      "mode": "read-login",
+      "owner_action": false
+    },
+    {
+      "file": "native/042-admin-account-postgresql-before-rows.json",
+      "lab_action": false,
+      "label": "admin-account-postgresql-before-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/043-admin-account-postgresql-after-iii-login.json",
+      "lab_action": false,
+      "label": "admin-account-postgresql-after-iii-login",
+      "mode": "read-login",
+      "owner_action": false
+    },
+    {
+      "file": "native/044-admin-account-postgresql-after-iii-rows.json",
+      "lab_action": false,
+      "label": "admin-account-postgresql-after-iii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/045-admin-account-postgresql-after-i-login.json",
+      "lab_action": false,
+      "label": "admin-account-postgresql-after-i-login",
+      "mode": "read-login",
+      "owner_action": false
+    },
+    {
+      "file": "native/046-admin-account-postgresql-after-i-rows.json",
+      "lab_action": false,
+      "label": "admin-account-postgresql-after-i-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/047-admin-account-postgresql-after-iv-login.json",
+      "lab_action": false,
+      "label": "admin-account-postgresql-after-iv-login",
+      "mode": "read-login",
+      "owner_action": false
+    },
+    {
+      "file": "native/048-admin-account-postgresql-after-iv-rows.json",
+      "lab_action": false,
+      "label": "admin-account-postgresql-after-iv-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/049-admin-account-postgresql-after-ii-login.json",
+      "lab_action": false,
+      "label": "admin-account-postgresql-after-ii-login",
+      "mode": "read-login",
+      "owner_action": false
+    },
+    {
+      "file": "native/050-admin-account-postgresql-after-ii-rows.json",
+      "lab_action": false,
+      "label": "admin-account-postgresql-after-ii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [],
+  "owner_actions": [],
+  "section": "C2-admin-account",
+  "started_at": "2026-10-09T04:32:19Z",
+  "substeps": {
+    "admin-account-mariadb": "passed",
+    "admin-account-postgresql": "passed"
+  },
+  "title": "the Panel's own account on each database engine",
+  "verdict": "passed"
+}

@@ -1,0 +1,123 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "Backups panel list while the Panel comes back (restart)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18459"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/1/backups"
+  },
+  "response": {
+    "elapsed_seconds": 0.006,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 04:34:58 GMT"
+      ],
+      [
+        "Content-Length",
+        "1292"
+      ]
+    ],
+    "json": {
+      "backups": [
+        {
+          "created_at": "2026-10-09T04:34:46.064357893Z",
+          "name": "full-20261009T043450.229397316Z-e6bddb243d2cf600.cpbak",
+          "origin": "pre_restore",
+          "restorable": true,
+          "size": 201460710,
+          "type": "full"
+        },
+        {
+          "created_at": "2026-10-09T04:34:30.173702598Z",
+          "name": "full-20261009T043434.322534990Z-0ace6f78b7f967f5.cpbak",
+          "origin": "pre_restore",
+          "restorable": true,
+          "size": 201460627,
+          "type": "full"
+        },
+        {
+          "created_at": "2026-10-09T04:34:16.301952549Z",
+          "name": "full-20261009T043420.142367592Z-85f3534e35290b70.cpbak",
+          "origin": "pre_restore",
+          "restorable": true,
+          "size": 201460672,
+          "type": "full"
+        },
+        {
+          "created_at": "2026-10-09T04:34:01.791098519Z",
+          "name": "full-20261009T043405.760202510Z-0a8252900e657f6a.cpbak",
+          "origin": "pre_restore",
+          "restorable": true,
+          "size": 201460699,
+          "type": "full"
+        },
+        {
+          "created_at": "2026-10-09T04:33:45.539656239Z",
+          "name": "full-20261009T043349.378783752Z-765112520e99414e.cpbak",
+          "origin": "pre_restore",
+          "restorable": true,
+          "size": 201460689,
+          "type": "full"
+        },
+        {
+          "created_at": "2026-10-09T04:32:44.918921845Z",
+          "name": "full-20261009T043248.811039870Z-0946c7a49396c561.cpbak",
+          "origin": "manual",
+          "restorable": true,
+          "size": 201463289,
+          "type": "full"
+        },
+        {
+          "created_at": "2026-10-09T04:32:36.357736549Z",
+          "name": "full-20261009T043240.333160147Z-f84f426cb89b3f0c.cpbak",
+          "origin": "manual",
+          "restorable": true,
+          "size": 201463305,
+          "type": "full"
+        }
+      ]
+    },
+    "status": 200,
+    "text": null
+  }
+}

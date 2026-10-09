@@ -1,0 +1,24 @@
+{
+  "checks": {
+    "checks": 5,
+    "error": null,
+    "failed": [
+      "the Databases page lists a MariaDB and a PostgreSQL server"
+    ],
+    "finished_at": "2026-10-09T03:44:33Z",
+    "notes": [],
+    "started_at": "2026-10-09T03:44:30Z",
+    "substeps": {
+      "lab isolation": "passed",
+      "section": "failed"
+    },
+    "title": "the owner's site, the engines and the lab's isolation",
+    "unknown": [],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-09T03:44:33Z",
+  "name": "C0-prepare",
+  "reason": "the Databases page lists a MariaDB and a PostgreSQL server",
+  "started_at": "2026-10-09T03:44:30Z",
+  "verdict": "failed"
+}

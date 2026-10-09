@@ -1,0 +1,845 @@
+{
+  "answer_without_acme": {
+    "json": {
+      "code": "INTERNAL",
+      "error": "internal server error"
+    },
+    "seconds": 0.547,
+    "status": 500,
+    "text": null
+  },
+  "calls": [
+    {
+      "answer": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "at": "2026-10-09T03:45:02Z",
+      "body_bytes": 52,
+      "body_sha256": "50ee3acb90e021661ca90f66f6387be28cbe48925a965cdebb2b7c9c290b186c",
+      "catalogue_texts": {
+        "err.INTERNAL": {
+          "en": "The server hit an internal error. Try again; if it persists, check the panel logs.",
+          "tr": "Sunucuda bir iç hata oluştu. Yeniden deneyin; sürerse panel günlüklerine bakın."
+        }
+      },
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "72714583dc262e30791e5822a1ead93e"
+      },
+      "json": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "label": "letsencrypt: one request with an identity of its own (what one entry leaves)",
+      "n": 25,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "72714583dc262e30791e5822a1ead93e",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.964,
+      "status": 500,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "at": "2026-10-09T03:45:06Z",
+      "body_bytes": 354,
+      "body_sha256": "7493044ee0ab05fdc18ae1bd147cae25a5bf4de689629b9df545994dd58da413",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REQUIRED": {
+          "en": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again.",
+          "tr": "Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json"
+      },
+      "json": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "label": "letsencrypt (iii) without the header",
+      "n": 26,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": false,
+        "identity": null,
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.003,
+      "status": 428,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "at": "2026-10-09T03:45:07Z",
+      "body_bytes": 52,
+      "body_sha256": "50ee3acb90e021661ca90f66f6387be28cbe48925a965cdebb2b7c9c290b186c",
+      "catalogue_texts": {
+        "err.INTERNAL": {
+          "en": "The server hit an internal error. Try again; if it persists, check the panel logs.",
+          "tr": "Sunucuda bir iç hata oluştu. Yeniden deneyin; sürerse panel günlüklerine bakın."
+        }
+      },
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "f08c19f813141870b0614cdefdeb1162"
+      },
+      "json": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "label": "letsencrypt (i) sequential arrival 1 of 3",
+      "n": 27,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "f08c19f813141870b0614cdefdeb1162",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.547,
+      "status": 500,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "at": "2026-10-09T03:45:08Z",
+      "body_bytes": 52,
+      "body_sha256": "50ee3acb90e021661ca90f66f6387be28cbe48925a965cdebb2b7c9c290b186c",
+      "catalogue_texts": {
+        "err.INTERNAL": {
+          "en": "The server hit an internal error. Try again; if it persists, check the panel logs.",
+          "tr": "Sunucuda bir iç hata oluştu. Yeniden deneyin; sürerse panel günlüklerine bakın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "f08c19f813141870b0614cdefdeb1162",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "label": "letsencrypt (i) sequential arrival 2 of 3",
+      "n": 28,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "f08c19f813141870b0614cdefdeb1162",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.004,
+      "status": 500,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "at": "2026-10-09T03:45:08Z",
+      "body_bytes": 52,
+      "body_sha256": "50ee3acb90e021661ca90f66f6387be28cbe48925a965cdebb2b7c9c290b186c",
+      "catalogue_texts": {
+        "err.INTERNAL": {
+          "en": "The server hit an internal error. Try again; if it persists, check the panel logs.",
+          "tr": "Sunucuda bir iç hata oluştu. Yeniden deneyin; sürerse panel günlüklerine bakın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "f08c19f813141870b0614cdefdeb1162",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "label": "letsencrypt (i) sequential arrival 3 of 3",
+      "n": 29,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "f08c19f813141870b0614cdefdeb1162",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.003,
+      "status": 500,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "f08c19f813141870b0614cdefdeb1162"
+        }
+      },
+      "at": "2026-10-09T03:45:09Z",
+      "body_bytes": 256,
+      "body_sha256": "26368cda0e70fbe789b18965dc7d6dc8fae4dee9cb2d0ea9002714ae8ec5d2c3",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REUSED": {
+          "en": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+          "tr": "Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "f08c19f813141870b0614cdefdeb1162"
+      },
+      "json": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "f08c19f813141870b0614cdefdeb1162"
+        }
+      },
+      "label": "letsencrypt (iv) the same identity with a different body",
+      "n": 30,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "auto_renew": false,
+          "email": "other@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "f08c19f813141870b0614cdefdeb1162",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.004,
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "at": "2026-10-09T03:45:10Z",
+      "body_bytes": 52,
+      "body_sha256": "50ee3acb90e021661ca90f66f6387be28cbe48925a965cdebb2b7c9c290b186c",
+      "catalogue_texts": {
+        "err.INTERNAL": {
+          "en": "The server hit an internal error. Try again; if it persists, check the panel logs.",
+          "tr": "Sunucuda bir iç hata oluştu. Yeniden deneyin; sürerse panel günlüklerine bakın."
+        }
+      },
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "93564bacde45b4d3f7b947d74d1410ed"
+      },
+      "json": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "label": "letsencrypt (ii) concurrent arrival 1 of 3",
+      "n": 31,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "93564bacde45b4d3f7b947d74d1410ed",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.607,
+      "status": 500,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "at": "2026-10-09T03:45:10Z",
+      "body_bytes": 52,
+      "body_sha256": "50ee3acb90e021661ca90f66f6387be28cbe48925a965cdebb2b7c9c290b186c",
+      "catalogue_texts": {
+        "err.INTERNAL": {
+          "en": "The server hit an internal error. Try again; if it persists, check the panel logs.",
+          "tr": "Sunucuda bir iç hata oluştu. Yeniden deneyin; sürerse panel günlüklerine bakın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "93564bacde45b4d3f7b947d74d1410ed",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "label": "letsencrypt (ii) concurrent arrival 2 of 3",
+      "n": 32,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "93564bacde45b4d3f7b947d74d1410ed",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.606,
+      "status": 500,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "at": "2026-10-09T03:45:10Z",
+      "body_bytes": 52,
+      "body_sha256": "50ee3acb90e021661ca90f66f6387be28cbe48925a965cdebb2b7c9c290b186c",
+      "catalogue_texts": {
+        "err.INTERNAL": {
+          "en": "The server hit an internal error. Try again; if it persists, check the panel logs.",
+          "tr": "Sunucuda bir iç hata oluştu. Yeniden deneyin; sürerse panel günlüklerine bakın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "93564bacde45b4d3f7b947d74d1410ed",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "code": "INTERNAL",
+        "error": "internal server error"
+      },
+      "label": "letsencrypt (ii) concurrent arrival 3 of 3",
+      "n": 33,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "93564bacde45b4d3f7b947d74d1410ed",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.608,
+      "status": 500,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "answer": {
+          "code": "INTERNAL",
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.964,
+          "status": 500
+        },
+        "delta": {
+          "certbot_logs": 0,
+          "nginx_reload_lines": 4,
+          "panel_and_agent_lines": 1
+        },
+        "lines": [
+          "2026-10-09T03:45:03.966965+00:00 dns-ubuntu panel[7419]: 2026/10/09 03:45:03 [500][agent] certbot failed: exit status 1 Output: Saving debug log to /var/log/celikpanel/certbot/letsencrypt.log An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'acme-v02.api.letsencrypt.org'. (_ssl.c:1000)\"))) Ask for help or search for soluti…"
+        ]
+      },
+      "name": "one entry into the handler leaves a trace that can be counted (journal lines, certbot logs or reloads)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.003,
+        "status": 428
+      },
+      "name": "letsencrypt (iii): without the header the answer is 428 REQUEST_ID_REQUIRED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "certbot_logs": 0,
+          "certificates": 0,
+          "nginx_reload_lines": 4,
+          "panel_and_agent_lines": 1
+        },
+        "before": {
+          "certbot_logs": 0,
+          "certificates": 0,
+          "nginx_reload_lines": 4,
+          "panel_and_agent_lines": 1
+        }
+      },
+      "name": "letsencrypt (iii): and nothing changed on the server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "code": "INTERNAL",
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.547,
+          "status": 500
+        },
+        "delta": {
+          "certbot_logs": 0,
+          "nginx_reload_lines": 4,
+          "panel_and_agent_lines": 1
+        },
+        "one_entry_leaves": {
+          "certbot_logs": 0,
+          "nginx_reload_lines": 4,
+          "panel_and_agent_lines": 1
+        },
+        "what_counts": "journal lines of the Panel and the Agent about the issuance, certbot's log files, and nginx reloads for the validation virtual host, each compared with what one entry left"
+      },
+      "name": "letsencrypt (i): three arrivals in a row of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "replays_marked": true,
+        "same_bytes": true,
+        "statuses": [
+          500,
+          500,
+          500
+        ]
+      },
+      "name": "letsencrypt (i): the three answers are the same bytes, the later two marked as replays",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REUSED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.004,
+        "status": 409
+      },
+      "name": "letsencrypt (iv): the same identity with a different body is refused 409 REQUEST_ID_REUSED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "certbot_logs": 0,
+          "certificates": 0,
+          "nginx_reload_lines": 8,
+          "panel_and_agent_lines": 2
+        },
+        "before": {
+          "certbot_logs": 0,
+          "certificates": 0,
+          "nginx_reload_lines": 8,
+          "panel_and_agent_lines": 2
+        }
+      },
+      "name": "letsencrypt (iv): and there is no second effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "code": "INTERNAL",
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.607,
+          "status": 500
+        },
+        "delta": {
+          "certbot_logs": 0,
+          "nginx_reload_lines": 4,
+          "panel_and_agent_lines": 1
+        },
+        "one_entry_leaves": {
+          "certbot_logs": 0,
+          "nginx_reload_lines": 4,
+          "panel_and_agent_lines": 1
+        },
+        "what_counts": "journal lines of the Panel and the Agent about the issuance, certbot's log files, and nginx reloads for the validation virtual host, each compared with what one entry left"
+      },
+      "name": "letsencrypt (ii): three arrivals at once of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answers": [
+          {
+            "code": "INTERNAL",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.607,
+            "status": 500
+          },
+          {
+            "code": "INTERNAL",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 0.606,
+            "status": 500
+          },
+          {
+            "code": "INTERNAL",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 0.608,
+            "status": 500
+          }
+        ],
+        "in_progress": 0
+      },
+      "name": "letsencrypt (ii): the answers are the same bytes, or REQUEST_IN_PROGRESS for a waiter",
+      "ok": true
+    },
+    {
+      "detail": {
+        "certbot_logs": 0,
+        "certificates": 0,
+        "nginx_reload_lines": 12,
+        "panel_and_agent_lines": 3
+      },
+      "name": "no certificate was recorded for the domain",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T03:45:12Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/037-letsencrypt-one-entry-before-acme.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-before-acme",
+      "mode": "read-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/038-letsencrypt-one-entry-before-journal.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-before-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/039-letsencrypt-one-entry-before-nginx.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-before-nginx",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/040-letsencrypt-one-entry-before-rows.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-before-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/041-letsencrypt-one-entry-after-acme.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-after-acme",
+      "mode": "read-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/042-letsencrypt-one-entry-after-journal.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-after-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/043-letsencrypt-one-entry-after-nginx.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-after-nginx",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/044-letsencrypt-one-entry-after-rows.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-after-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/045-letsencrypt-before-acme.json",
+      "lab_action": false,
+      "label": "letsencrypt-before-acme",
+      "mode": "read-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/046-letsencrypt-before-journal.json",
+      "lab_action": false,
+      "label": "letsencrypt-before-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/047-letsencrypt-before-nginx.json",
+      "lab_action": false,
+      "label": "letsencrypt-before-nginx",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/048-letsencrypt-before-rows.json",
+      "lab_action": false,
+      "label": "letsencrypt-before-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/049-letsencrypt-after-iii-acme.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iii-acme",
+      "mode": "read-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/050-letsencrypt-after-iii-journal.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iii-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/051-letsencrypt-after-iii-nginx.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iii-nginx",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/052-letsencrypt-after-iii-rows.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/053-letsencrypt-after-i-acme.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-i-acme",
+      "mode": "read-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/054-letsencrypt-after-i-journal.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-i-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/055-letsencrypt-after-i-nginx.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-i-nginx",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/056-letsencrypt-after-i-rows.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-i-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/057-letsencrypt-after-iv-acme.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iv-acme",
+      "mode": "read-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/058-letsencrypt-after-iv-journal.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iv-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/059-letsencrypt-after-iv-nginx.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iv-nginx",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/060-letsencrypt-after-iv-rows.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iv-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/061-letsencrypt-after-ii-acme.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-ii-acme",
+      "mode": "read-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/062-letsencrypt-after-ii-journal.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-ii-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/063-letsencrypt-after-ii-nginx.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-ii-nginx",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/064-letsencrypt-after-ii-rows.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-ii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [
+    {
+      "detail": {
+        "json": {
+          "code": "INTERNAL",
+          "error": "internal server error"
+        },
+        "seconds": 0.547,
+        "status": 500,
+        "text": null
+      },
+      "note": "no certificate authority is reachable from this guest, so no issuance was attempted against one; the route's answer without ACME is recorded and only the guard is judged"
+    }
+  ],
+  "one_entry_leaves": {
+    "answer": {
+      "code": "INTERNAL",
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": null,
+      "seconds": 0.964,
+      "status": 500
+    },
+    "delta": {
+      "certbot_logs": 0,
+      "nginx_reload_lines": 4,
+      "panel_and_agent_lines": 1
+    },
+    "lines": [
+      "2026-10-09T03:45:03.966965+00:00 dns-ubuntu panel[7419]: 2026/10/09 03:45:03 [500][agent] certbot failed: exit status 1 Output: Saving debug log to /var/log/celikpanel/certbot/letsencrypt.log An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'acme-v02.api.letsencrypt.org'. (_ssl.c:1000)\"))) Ask for help or search for soluti…"
+    ]
+  },
+  "owner_actions": [],
+  "owner_waited_for_idle": {
+    "at": "2026-10-09T03:45:01Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.2
+  },
+  "section": "C5-letsencrypt",
+  "started_at": "2026-10-09T03:45:01Z",
+  "substeps": {
+    "letsencrypt": "passed",
+    "section": "passed"
+  },
+  "title": "Let's Encrypt reissue: the guard only",
+  "verdict": "passed"
+}

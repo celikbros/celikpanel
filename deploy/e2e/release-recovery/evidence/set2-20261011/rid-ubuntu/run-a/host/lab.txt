@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-rid-ub-a
+rid-ubuntu-20261009t032824z

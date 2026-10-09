@@ -1,0 +1,27 @@
+{
+  "checks": {
+    "checks": 10,
+    "error": null,
+    "failed": [
+      "letsencrypt (i): three arrivals in a row of one identity left one native effect",
+      "letsencrypt (ii): three arrivals at once of one identity left one native effect"
+    ],
+    "finished_at": "2026-10-09T04:33:03Z",
+    "notes": [
+      "no certificate authority is reachable from this guest, so no issuance was attempted against one; the route's answer without ACME is recorded and only the guard is judged"
+    ],
+    "started_at": "2026-10-09T04:32:52Z",
+    "substeps": {
+      "letsencrypt": "failed",
+      "section": "passed"
+    },
+    "title": "Let's Encrypt reissue: the guard only",
+    "unknown": [],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-09T04:33:03Z",
+  "name": "C5-letsencrypt",
+  "reason": "letsencrypt (i): three arrivals in a row of one identity left one native effect; letsencrypt (ii): three arrivals at once of one identity left one native effect",
+  "started_at": "2026-10-09T04:32:52Z",
+  "verdict": "failed"
+}

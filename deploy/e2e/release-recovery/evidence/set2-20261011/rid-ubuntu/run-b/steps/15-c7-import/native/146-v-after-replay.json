@@ -1,0 +1,53 @@
+{
+  "at": "2026-10-09T04:30:03Z",
+  "databases_v2": [
+    {
+      "name": "s2impdrop_app",
+      "server_id": 1
+    }
+  ],
+  "docroot": {
+    "bytes": 16777317,
+    "exists": true,
+    "files": 3,
+    "mode": "0750",
+    "names": [
+      "index.html",
+      "assets/blob.bin",
+      "assets/site.css"
+    ],
+    "newest_mtime": 1791520175,
+    "owner_uid": 5005,
+    "root": "/var/www/celikpanel/subscriptions/2/sites/5/public_html",
+    "sha256": "866a6f0e982f5cb56a68a84b11196882be450c2ec65f3a4b8dcde750fa86f854"
+  },
+  "domain": "set2-import-drop.test",
+  "email_accounts": [
+    {
+      "address": "info@set2-import-drop.test",
+      "quota_mb": 256
+    }
+  ],
+  "email_forwardings": [
+    {
+      "destination": "info@set2-import-drop.test",
+      "source": "sales@set2-import-drop.test"
+    }
+  ],
+  "lab_action": false,
+  "mode": "read-imported",
+  "owner_action": false,
+  "rows": [
+    {
+      "id": 5,
+      "name": "set2-import-drop.test",
+      "status": "active",
+      "subscription_id": 2
+    }
+  ],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "site_account": {
+    "home": "/var/www/celikpanel/subscriptions/2/sites/5",
+    "uid": 5005
+  }
+}

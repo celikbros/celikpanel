@@ -1,0 +1,53 @@
+{
+  "action": "owner-cpmove-fixture",
+  "at": "2026-10-09T04:29:16Z",
+  "bytes": 2376,
+  "database": "s2impcon_app",
+  "directory": {
+    "mode": "0700",
+    "uid": 0
+  },
+  "domain": "set2-import-con.test",
+  "lab_action": false,
+  "members": [
+    {
+      "bytes": 57,
+      "name": "cpmove-s2impcon/cp/s2impcon"
+    },
+    {
+      "bytes": 66,
+      "name": "cpmove-s2impcon/homedir/public_html/index.html"
+    },
+    {
+      "bytes": 34,
+      "name": "cpmove-s2impcon/homedir/public_html/assets/site.css"
+    },
+    {
+      "bytes": 119,
+      "name": "cpmove-s2impcon/homedir/etc/set2-import-con.test/shadow"
+    },
+    {
+      "bytes": 15,
+      "name": "cpmove-s2impcon/homedir/etc/set2-import-con.test/quota"
+    },
+    {
+      "bytes": 54,
+      "name": "cpmove-s2impcon/va/set2-import-con.test"
+    },
+    {
+      "bytes": 32,
+      "name": "cpmove-s2impcon/mysql/s2impcon_app.create"
+    },
+    {
+      "bytes": 7388,
+      "name": "cpmove-s2impcon/mysql/s2impcon_app.sql"
+    }
+  ],
+  "mode": "owner-cpmove-fixture",
+  "owner_action": true,
+  "path": "/var/lib/celikpanel-imports/cpmove-s2impcon.tar.gz",
+  "public_html_directory_member": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "sha256": "8c4e4dbbcf4f250fdd45e3fd14e2db3aef264974404fd7a49ef8bfd22031dc09",
+  "user": "s2impcon"
+}

@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-09T04:33:28Z",
+  "databases_v2": [],
+  "domain": "set2-import-seq.test",
+  "email_accounts": [],
+  "email_forwardings": [],
+  "lab_action": false,
+  "mode": "read-imported",
+  "owner_action": false,
+  "rows": [],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "site_account": null
+}

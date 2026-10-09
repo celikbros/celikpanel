@@ -1,0 +1,25 @@
+Formatting '/var/tmp/cp-release-drill-rid-ub-b/cells/e07f077fa6f97acac9e43bf2/ubuntu/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-rid-ub-b/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-rid-ub-b", "cell_id": "release-recovery__e79d9a8d7ec6c65e", "ssh_ports": [4171, 4172]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-rid-ub-b", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-rid-ub-b", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "site", "verdict": "passed", "reason": null}
+{"step": "C0-prepare", "verdict": "passed", "reason": null}
+{"step": "C1-domain-databases", "verdict": "passed", "reason": null}
+{"step": "C2-admin-account", "verdict": "passed", "reason": null}
+{"step": "C3-server-databases", "verdict": "passed", "reason": null}
+{"step": "C4-backup", "verdict": "passed", "reason": null}
+{"step": "C5-letsencrypt", "verdict": "passed", "reason": null}
+{"step": "C6-vpn-peer", "verdict": "passed", "reason": null}
+{"step": "C7-import", "verdict": "failed", "reason": "an archive that holds the directory member `homedir/public_html/` as tar writes it has its site files imported"}
+{"step": "C8-restore", "verdict": "passed", "reason": null}
+{"step": "C9-identities", "verdict": "passed", "reason": null}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"cell_kind": "request-identity", "matrix": {"admin-account-mariadb": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "admin-account-postgresql": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "backup": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "domain-database-mariadb": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "domain-database-postgresql": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "import": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass", "v": "pass"}, "letsencrypt": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "restore": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass", "v": "pass", "vi": "pass"}, "rows": {"vii": "pass"}, "server-database-mariadb": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "server-database-postgresql": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "vpn-peer": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}}, "overall": "failed", "sections": {"C0-prepare": "passed", "C1-domain-databases": "passed", "C2-admin-account": "passed", "C3-server-databases": "passed", "C4-backup": "passed", "C5-letsencrypt": "passed", "C6-vpn-peer": "passed", "C7-import": "failed", "C8-restore": "passed", "C9-identities": "passed"}}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-rid-ub-b", "evidence_retained": true}
+SET2 cell=rid-ubuntu lab=/var/tmp/cp-release-drill-rid-ub-b driver_exit=1 evidence=/var/tmp/cp-release-drill-rid-ub-b/evidence/*/upd1

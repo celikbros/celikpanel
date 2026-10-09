@@ -1,0 +1,31 @@
+{
+  "identity": "4734e13582e1fd95f7137320a67db579",
+  "row": {
+    "actor_user_id": 2,
+    "body": {
+      "bytes": 52,
+      "code": "INTERNAL",
+      "json_keys": [
+        "code",
+        "error"
+      ],
+      "sensitive_values_of_this_run_found": 0,
+      "sensitive_words_found": [],
+      "sha256": "50ee3acb90e021661ca90f66f6387be28cbe48925a965cdebb2b7c9c290b186c",
+      "stored": true
+    },
+    "created_at": 1791520415,
+    "expires_at": 1791606815,
+    "finished_at": 1791520417,
+    "id": "4734e13582e1fd95f7137320a67db579",
+    "lifetime_seconds": 86400,
+    "method": "POST",
+    "request_sha256": "5115145a73d8e1ca8e2c8bb0b00cb407f8490ee85adbc762db67daa9c83a4b2f",
+    "response_content_type": "application/json",
+    "response_retained": 1,
+    "response_status": 500,
+    "route": "/api/v1/import/cpanel/apply",
+    "status": "done"
+  },
+  "waited_seconds": 0.3
+}

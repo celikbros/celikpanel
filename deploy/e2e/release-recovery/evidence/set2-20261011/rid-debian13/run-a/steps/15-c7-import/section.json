@@ -1,0 +1,1940 @@
+{
+  "archive_as_tar_writes_it": {
+    "import_status": "pending",
+    "native": {
+      "database_on_engine": true,
+      "database_row": [
+        "s2imptar_app"
+      ],
+      "docroot_sha256": "54a82083d7f24c8c92eeebf40c3283c030d2430feb38b4d7baf798f2700f7348",
+      "domain_row": true,
+      "files": 1,
+      "forwardings": 1,
+      "mailboxes": [
+        "info@set2-import-tar.test"
+      ],
+      "rows": "300",
+      "status": "pending"
+    },
+    "status": 202,
+    "steps": [
+      {
+        "detail": "set2-import-tar.test (id 2, site 2) → /var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "ok": true,
+        "step": "domain"
+      },
+      {
+        "detail": "unsafe cpmove member path",
+        "ok": false,
+        "step": "files"
+      },
+      {
+        "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+        "ok": true,
+        "step": "mail"
+      },
+      {
+        "detail": "1 forwarders",
+        "ok": true,
+        "step": "forwarders"
+      },
+      {
+        "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+        "ok": true,
+        "step": "dns"
+      },
+      {
+        "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+        "ok": true,
+        "step": "database:s2imptar_app"
+      }
+    ]
+  },
+  "calls": [
+    {
+      "at": "2026-10-09T04:17:15Z",
+      "json": {
+        "databases": [
+          {
+            "dump_bytes": 7388,
+            "name": "s2impseq_app"
+          }
+        ],
+        "dns_zones": {},
+        "domains": [
+          "set2-import-seq.test"
+        ],
+        "forwarders": [
+          {
+            "destination": "info@set2-import-seq.test",
+            "source": "sales@set2-import-seq.test"
+          }
+        ],
+        "mail_accounts": [
+          {
+            "crypt_hash": "[REDACTED fixture crypt_hash]",
+            "domain": "set2-import-seq.test",
+            "quota_mb": 256,
+            "user": "info"
+          }
+        ],
+        "main_domain": "set2-import-seq.test",
+        "public_html": true,
+        "site_bytes": 100,
+        "username": "s2impseq"
+      },
+      "label": "C7 inspect the archive of set2-import-seq.test (ImportPage preview)",
+      "request": {
+        "body": {
+          "path": "/var/lib/celikpanel-imports/cpmove-s2impseq.tar.gz"
+        },
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/inspect"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:17:15Z",
+      "json": {
+        "databases": [
+          {
+            "dump_bytes": 7388,
+            "name": "s2impcon_app"
+          }
+        ],
+        "dns_zones": {},
+        "domains": [
+          "set2-import-con.test"
+        ],
+        "forwarders": [
+          {
+            "destination": "info@set2-import-con.test",
+            "source": "sales@set2-import-con.test"
+          }
+        ],
+        "mail_accounts": [
+          {
+            "crypt_hash": "[REDACTED fixture crypt_hash]",
+            "domain": "set2-import-con.test",
+            "quota_mb": 256,
+            "user": "info"
+          }
+        ],
+        "main_domain": "set2-import-con.test",
+        "public_html": true,
+        "site_bytes": 100,
+        "username": "s2impcon"
+      },
+      "label": "C7 inspect the archive of set2-import-con.test (ImportPage preview)",
+      "request": {
+        "body": {
+          "path": "/var/lib/celikpanel-imports/cpmove-s2impcon.tar.gz"
+        },
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/inspect"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:17:15Z",
+      "json": {
+        "databases": [
+          {
+            "dump_bytes": 7402,
+            "name": "s2impdrop_app"
+          }
+        ],
+        "dns_zones": {},
+        "domains": [
+          "set2-import-drop.test"
+        ],
+        "forwarders": [
+          {
+            "destination": "info@set2-import-drop.test",
+            "source": "sales@set2-import-drop.test"
+          }
+        ],
+        "mail_accounts": [
+          {
+            "crypt_hash": "[REDACTED fixture crypt_hash]",
+            "domain": "set2-import-drop.test",
+            "quota_mb": 256,
+            "user": "info"
+          }
+        ],
+        "main_domain": "set2-import-drop.test",
+        "public_html": true,
+        "site_bytes": 16777317,
+        "username": "s2impdrop"
+      },
+      "label": "C7 inspect the archive of set2-import-drop.test (ImportPage preview)",
+      "request": {
+        "body": {
+          "path": "/var/lib/celikpanel-imports/cpmove-s2impdrop.tar.gz"
+        },
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/inspect"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:17:15Z",
+      "json": {
+        "databases": [
+          {
+            "dump_bytes": 7388,
+            "name": "s2imptar_app"
+          }
+        ],
+        "dns_zones": {},
+        "domains": [
+          "set2-import-tar.test"
+        ],
+        "forwarders": [
+          {
+            "destination": "info@set2-import-tar.test",
+            "source": "sales@set2-import-tar.test"
+          }
+        ],
+        "mail_accounts": [
+          {
+            "crypt_hash": "[REDACTED fixture crypt_hash]",
+            "domain": "set2-import-tar.test",
+            "quota_mb": 256,
+            "user": "info"
+          }
+        ],
+        "main_domain": "set2-import-tar.test",
+        "public_html": true,
+        "site_bytes": 100,
+        "username": "s2imptar"
+      },
+      "label": "C7 inspect the archive of set2-import-tar.test (ImportPage preview)",
+      "request": {
+        "body": {
+          "path": "/var/lib/celikpanel-imports/cpmove-s2imptar.tar.gz"
+        },
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/inspect"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:17:15Z",
+      "body_bytes": 698,
+      "body_sha256": "f7b0d09e4c76e652b7b904628e492bad4d0c665efaad423e2103d8f28274528f",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "6d62f0ca249ebbf5d44e6ec51e100f0e"
+      },
+      "json": {
+        "domain_id": 2,
+        "site_id": 2,
+        "status": "pending",
+        "steps": [
+          {
+            "detail": "set2-import-tar.test (id 2, site 2) → /var/www/celikpanel/subscriptions/2/sites/2/public_html",
+            "ok": true,
+            "step": "domain"
+          },
+          {
+            "detail": "unsafe cpmove member path",
+            "ok": false,
+            "step": "files"
+          },
+          {
+            "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+            "ok": true,
+            "step": "mail"
+          },
+          {
+            "detail": "1 forwarders",
+            "ok": true,
+            "step": "forwarders"
+          },
+          {
+            "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+            "ok": true,
+            "step": "dns"
+          },
+          {
+            "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+            "ok": true,
+            "step": "database:s2imptar_app"
+          }
+        ]
+      },
+      "label": "import: an archive that holds the public_html directory member as tar writes it",
+      "n": 76,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": true,
+          "domain": "set2-import-tar.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s2imptar.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "6d62f0ca249ebbf5d44e6ec51e100f0e",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 2.135,
+      "status": 202,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "at": "2026-10-09T04:17:19Z",
+      "body_bytes": 354,
+      "body_sha256": "7493044ee0ab05fdc18ae1bd147cae25a5bf4de689629b9df545994dd58da413",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REQUIRED": {
+          "en": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again.",
+          "tr": "Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json"
+      },
+      "json": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "label": "import (iii) without the header",
+      "n": 77,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": true,
+          "domain": "set2-import-seq.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s2impseq.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": false,
+        "identity": null,
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 0.004,
+      "status": 428,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:17:20Z",
+      "body_bytes": 689,
+      "body_sha256": "380ec54b032de60be78dd6fbd81b9badaf3b00a591c861b1cfcac400e3d1cc9b",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "cf29c2fef512b7e4f83eeedecb59fa09"
+      },
+      "json": {
+        "domain_id": 3,
+        "site_id": 3,
+        "status": "active",
+        "steps": [
+          {
+            "detail": "set2-import-seq.test (id 3, site 3) → /var/www/celikpanel/subscriptions/2/sites/3/public_html",
+            "ok": true,
+            "step": "domain"
+          },
+          {
+            "detail": "2 files, 100 bytes",
+            "ok": true,
+            "step": "files"
+          },
+          {
+            "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+            "ok": true,
+            "step": "mail"
+          },
+          {
+            "detail": "1 forwarders",
+            "ok": true,
+            "step": "forwarders"
+          },
+          {
+            "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+            "ok": true,
+            "step": "dns"
+          },
+          {
+            "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+            "ok": true,
+            "step": "database:s2impseq_app"
+          }
+        ]
+      },
+      "label": "import (i) sequential arrival 1 of 3",
+      "n": 78,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": true,
+          "domain": "set2-import-seq.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s2impseq.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "cf29c2fef512b7e4f83eeedecb59fa09",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 1.9,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:17:22Z",
+      "body_bytes": 689,
+      "body_sha256": "380ec54b032de60be78dd6fbd81b9badaf3b00a591c861b1cfcac400e3d1cc9b",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "cf29c2fef512b7e4f83eeedecb59fa09",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "domain_id": 3,
+        "site_id": 3,
+        "status": "active",
+        "steps": [
+          {
+            "detail": "set2-import-seq.test (id 3, site 3) → /var/www/celikpanel/subscriptions/2/sites/3/public_html",
+            "ok": true,
+            "step": "domain"
+          },
+          {
+            "detail": "2 files, 100 bytes",
+            "ok": true,
+            "step": "files"
+          },
+          {
+            "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+            "ok": true,
+            "step": "mail"
+          },
+          {
+            "detail": "1 forwarders",
+            "ok": true,
+            "step": "forwarders"
+          },
+          {
+            "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+            "ok": true,
+            "step": "dns"
+          },
+          {
+            "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+            "ok": true,
+            "step": "database:s2impseq_app"
+          }
+        ]
+      },
+      "label": "import (i) sequential arrival 2 of 3",
+      "n": 79,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": true,
+          "domain": "set2-import-seq.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s2impseq.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "cf29c2fef512b7e4f83eeedecb59fa09",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 0.004,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:17:22Z",
+      "body_bytes": 689,
+      "body_sha256": "380ec54b032de60be78dd6fbd81b9badaf3b00a591c861b1cfcac400e3d1cc9b",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "cf29c2fef512b7e4f83eeedecb59fa09",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "domain_id": 3,
+        "site_id": 3,
+        "status": "active",
+        "steps": [
+          {
+            "detail": "set2-import-seq.test (id 3, site 3) → /var/www/celikpanel/subscriptions/2/sites/3/public_html",
+            "ok": true,
+            "step": "domain"
+          },
+          {
+            "detail": "2 files, 100 bytes",
+            "ok": true,
+            "step": "files"
+          },
+          {
+            "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+            "ok": true,
+            "step": "mail"
+          },
+          {
+            "detail": "1 forwarders",
+            "ok": true,
+            "step": "forwarders"
+          },
+          {
+            "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+            "ok": true,
+            "step": "dns"
+          },
+          {
+            "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+            "ok": true,
+            "step": "database:s2impseq_app"
+          }
+        ]
+      },
+      "label": "import (i) sequential arrival 3 of 3",
+      "n": 80,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": true,
+          "domain": "set2-import-seq.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s2impseq.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "cf29c2fef512b7e4f83eeedecb59fa09",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 0.004,
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "cf29c2fef512b7e4f83eeedecb59fa09"
+        }
+      },
+      "at": "2026-10-09T04:17:23Z",
+      "body_bytes": 256,
+      "body_sha256": "30b145903452d6a2b49016b0b572ce726d53494cea42d30d0eb729221ff9840b",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REUSED": {
+          "en": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+          "tr": "Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "cf29c2fef512b7e4f83eeedecb59fa09"
+      },
+      "json": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "cf29c2fef512b7e4f83eeedecb59fa09"
+        }
+      },
+      "label": "import (iv) the same identity with a different body",
+      "n": 81,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": false,
+          "do_mail": true,
+          "domain": "set2-import-seq.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s2impseq.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "cf29c2fef512b7e4f83eeedecb59fa09",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 0.004,
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:17:24Z",
+      "body_bytes": 689,
+      "body_sha256": "c141e7cdca6406d4fb7001823ff98e26809cf4cdbcb7b228ff1879ce6ec51463",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "a7eaf3b7336c81631bf48fd35a696aa3",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "domain_id": 4,
+        "site_id": 4,
+        "status": "active",
+        "steps": [
+          {
+            "detail": "set2-import-con.test (id 4, site 4) → /var/www/celikpanel/subscriptions/2/sites/4/public_html",
+            "ok": true,
+            "step": "domain"
+          },
+          {
+            "detail": "2 files, 100 bytes",
+            "ok": true,
+            "step": "files"
+          },
+          {
+            "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+            "ok": true,
+            "step": "mail"
+          },
+          {
+            "detail": "1 forwarders",
+            "ok": true,
+            "step": "forwarders"
+          },
+          {
+            "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+            "ok": true,
+            "step": "dns"
+          },
+          {
+            "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+            "ok": true,
+            "step": "database:s2impcon_app"
+          }
+        ]
+      },
+      "label": "import (ii) concurrent arrival 1 of 3",
+      "n": 82,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": true,
+          "domain": "set2-import-con.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s2impcon.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "a7eaf3b7336c81631bf48fd35a696aa3",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 1.862,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:17:24Z",
+      "body_bytes": 689,
+      "body_sha256": "c141e7cdca6406d4fb7001823ff98e26809cf4cdbcb7b228ff1879ce6ec51463",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "a7eaf3b7336c81631bf48fd35a696aa3"
+      },
+      "json": {
+        "domain_id": 4,
+        "site_id": 4,
+        "status": "active",
+        "steps": [
+          {
+            "detail": "set2-import-con.test (id 4, site 4) → /var/www/celikpanel/subscriptions/2/sites/4/public_html",
+            "ok": true,
+            "step": "domain"
+          },
+          {
+            "detail": "2 files, 100 bytes",
+            "ok": true,
+            "step": "files"
+          },
+          {
+            "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+            "ok": true,
+            "step": "mail"
+          },
+          {
+            "detail": "1 forwarders",
+            "ok": true,
+            "step": "forwarders"
+          },
+          {
+            "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+            "ok": true,
+            "step": "dns"
+          },
+          {
+            "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+            "ok": true,
+            "step": "database:s2impcon_app"
+          }
+        ]
+      },
+      "label": "import (ii) concurrent arrival 2 of 3",
+      "n": 83,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": true,
+          "domain": "set2-import-con.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s2impcon.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "a7eaf3b7336c81631bf48fd35a696aa3",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 1.861,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:17:24Z",
+      "body_bytes": 689,
+      "body_sha256": "c141e7cdca6406d4fb7001823ff98e26809cf4cdbcb7b228ff1879ce6ec51463",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "a7eaf3b7336c81631bf48fd35a696aa3",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "domain_id": 4,
+        "site_id": 4,
+        "status": "active",
+        "steps": [
+          {
+            "detail": "set2-import-con.test (id 4, site 4) → /var/www/celikpanel/subscriptions/2/sites/4/public_html",
+            "ok": true,
+            "step": "domain"
+          },
+          {
+            "detail": "2 files, 100 bytes",
+            "ok": true,
+            "step": "files"
+          },
+          {
+            "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+            "ok": true,
+            "step": "mail"
+          },
+          {
+            "detail": "1 forwarders",
+            "ok": true,
+            "step": "forwarders"
+          },
+          {
+            "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+            "ok": true,
+            "step": "dns"
+          },
+          {
+            "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+            "ok": true,
+            "step": "database:s2impcon_app"
+          }
+        ]
+      },
+      "label": "import (ii) concurrent arrival 3 of 3",
+      "n": 84,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": true,
+          "domain": "set2-import-con.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s2impcon.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "a7eaf3b7336c81631bf48fd35a696aa3",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 1.862,
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer_bytes_received_before_the_drop": 0,
+      "at": "2026-10-09T04:17:28Z",
+      "dropped_after_seconds": 3.679,
+      "held": {
+        "after_seconds": 3.4,
+        "seen": "the Panel's database names the domain: the import is under way"
+      },
+      "label": "import (v) the connection is dropped while the import runs",
+      "n": 85,
+      "outcome": "connection-dropped-by-the-client",
+      "request": {
+        "body": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": true,
+          "domain": "set2-import-drop.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s2impdrop.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "75146c9363ac3c6fa08d984aa1b3358b",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "status": null
+    },
+    {
+      "at": "2026-10-09T04:17:57Z",
+      "body_bytes": 696,
+      "body_sha256": "44719127fa439501567126c1159314307fe9cea312fe1c19e36622c0983c3de6",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "75146c9363ac3c6fa08d984aa1b3358b",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "domain_id": 5,
+        "site_id": 5,
+        "status": "active",
+        "steps": [
+          {
+            "detail": "set2-import-drop.test (id 5, site 5) → /var/www/celikpanel/subscriptions/2/sites/5/public_html",
+            "ok": true,
+            "step": "domain"
+          },
+          {
+            "detail": "3 files, 16777317 bytes",
+            "ok": true,
+            "step": "files"
+          },
+          {
+            "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+            "ok": true,
+            "step": "mail"
+          },
+          {
+            "detail": "1 forwarders",
+            "ok": true,
+            "step": "forwarders"
+          },
+          {
+            "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+            "ok": true,
+            "step": "dns"
+          },
+          {
+            "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+            "ok": true,
+            "step": "database:s2impdrop_app"
+          }
+        ]
+      },
+      "label": "import (v) the same identity again after the drop",
+      "n": 86,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": true,
+          "domain": "set2-import-drop.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s2impdrop.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "75146c9363ac3c6fa08d984aa1b3358b",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 0.004,
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": [
+        "databases",
+        "dns_zones",
+        "domains",
+        "forwarders",
+        "mail_accounts",
+        "main_domain",
+        "public_html",
+        "site_bytes",
+        "username"
+      ],
+      "name": "the preview of the i archive names its domain, its mailbox and its database",
+      "ok": true
+    },
+    {
+      "detail": [
+        "databases",
+        "dns_zones",
+        "domains",
+        "forwarders",
+        "mail_accounts",
+        "main_domain",
+        "public_html",
+        "site_bytes",
+        "username"
+      ],
+      "name": "the preview of the ii archive names its domain, its mailbox and its database",
+      "ok": true
+    },
+    {
+      "detail": [
+        "databases",
+        "dns_zones",
+        "domains",
+        "forwarders",
+        "mail_accounts",
+        "main_domain",
+        "public_html",
+        "site_bytes",
+        "username"
+      ],
+      "name": "the preview of the v archive names its domain, its mailbox and its database",
+      "ok": true
+    },
+    {
+      "detail": [
+        "databases",
+        "dns_zones",
+        "domains",
+        "forwarders",
+        "mail_accounts",
+        "main_domain",
+        "public_html",
+        "site_bytes",
+        "username"
+      ],
+      "name": "the preview of the tar archive names its domain, its mailbox and its database",
+      "ok": true
+    },
+    {
+      "detail": {
+        "import_status": "pending",
+        "native": {
+          "database_on_engine": true,
+          "database_row": [
+            "s2imptar_app"
+          ],
+          "docroot_sha256": "54a82083d7f24c8c92eeebf40c3283c030d2430feb38b4d7baf798f2700f7348",
+          "domain_row": true,
+          "files": 1,
+          "forwardings": 1,
+          "mailboxes": [
+            "info@set2-import-tar.test"
+          ],
+          "rows": "300",
+          "status": "pending"
+        },
+        "status": 202,
+        "steps": [
+          {
+            "detail": "set2-import-tar.test (id 2, site 2) → /var/www/celikpanel/subscriptions/2/sites/2/public_html",
+            "ok": true,
+            "step": "domain"
+          },
+          {
+            "detail": "unsafe cpmove member path",
+            "ok": false,
+            "step": "files"
+          },
+          {
+            "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+            "ok": true,
+            "step": "mail"
+          },
+          {
+            "detail": "1 forwarders",
+            "ok": true,
+            "step": "forwarders"
+          },
+          {
+            "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+            "ok": true,
+            "step": "dns"
+          },
+          {
+            "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+            "ok": true,
+            "step": "database:s2imptar_app"
+          }
+        ]
+      },
+      "name": "an archive that holds the directory member `homedir/public_html/` as tar writes it has its site files imported",
+      "ok": false
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.004,
+        "status": 428
+      },
+      "name": "import (iii): without the header the answer is 428 REQUEST_ID_REQUIRED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "con": {
+            "database_on_engine": false,
+            "database_row": [],
+            "docroot_sha256": null,
+            "domain_row": false,
+            "files": null,
+            "forwardings": 0,
+            "mailboxes": [],
+            "rows": null,
+            "status": null
+          },
+          "seq": {
+            "database_on_engine": false,
+            "database_row": [],
+            "docroot_sha256": null,
+            "domain_row": false,
+            "files": null,
+            "forwardings": 0,
+            "mailboxes": [],
+            "rows": null,
+            "status": null
+          }
+        },
+        "before": {
+          "con": {
+            "database_on_engine": false,
+            "database_row": [],
+            "docroot_sha256": null,
+            "domain_row": false,
+            "files": null,
+            "forwardings": 0,
+            "mailboxes": [],
+            "rows": null,
+            "status": null
+          },
+          "seq": {
+            "database_on_engine": false,
+            "database_row": [],
+            "docroot_sha256": null,
+            "domain_row": false,
+            "files": null,
+            "forwardings": 0,
+            "mailboxes": [],
+            "rows": null,
+            "status": null
+          }
+        }
+      },
+      "name": "import (iii): and nothing changed on the server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer_status": 200,
+        "expected_files": 2,
+        "expected_rows": "300",
+        "import_status": "active",
+        "native": {
+          "database_on_engine": true,
+          "database_row": [
+            "s2impseq_app"
+          ],
+          "docroot_sha256": "176539e6461df9b0922899ab1677602569e851d66b4758021a9b420a335b71b5",
+          "domain_row": true,
+          "files": 2,
+          "forwardings": 1,
+          "mailboxes": [
+            "info@set2-import-seq.test"
+          ],
+          "rows": "300",
+          "status": "active"
+        },
+        "steps": [
+          {
+            "code": null,
+            "ok": true,
+            "step": "domain"
+          },
+          {
+            "code": null,
+            "ok": true,
+            "step": "files"
+          },
+          {
+            "code": null,
+            "ok": true,
+            "step": "mail"
+          },
+          {
+            "code": null,
+            "ok": true,
+            "step": "forwarders"
+          },
+          {
+            "code": null,
+            "ok": true,
+            "step": "dns"
+          },
+          {
+            "code": null,
+            "ok": true,
+            "step": "database:s2impseq_app"
+          }
+        ],
+        "the_other_domain_unchanged": true
+      },
+      "name": "import (i): three arrivals in a row of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "replays_marked": true,
+        "same_bytes": true,
+        "statuses": [
+          200,
+          200,
+          200
+        ]
+      },
+      "name": "import (i): the three answers are the same bytes, the later two marked as replays",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REUSED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.004,
+        "status": 409
+      },
+      "name": "import (iv): the same identity with a different body is refused 409 REQUEST_ID_REUSED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "con": {
+            "database_on_engine": false,
+            "database_row": [],
+            "docroot_sha256": null,
+            "domain_row": false,
+            "files": null,
+            "forwardings": 0,
+            "mailboxes": [],
+            "rows": null,
+            "status": null
+          },
+          "seq": {
+            "database_on_engine": true,
+            "database_row": [
+              "s2impseq_app"
+            ],
+            "docroot_sha256": "176539e6461df9b0922899ab1677602569e851d66b4758021a9b420a335b71b5",
+            "domain_row": true,
+            "files": 2,
+            "forwardings": 1,
+            "mailboxes": [
+              "info@set2-import-seq.test"
+            ],
+            "rows": "300",
+            "status": "active"
+          }
+        },
+        "before": {
+          "con": {
+            "database_on_engine": false,
+            "database_row": [],
+            "docroot_sha256": null,
+            "domain_row": false,
+            "files": null,
+            "forwardings": 0,
+            "mailboxes": [],
+            "rows": null,
+            "status": null
+          },
+          "seq": {
+            "database_on_engine": true,
+            "database_row": [
+              "s2impseq_app"
+            ],
+            "docroot_sha256": "176539e6461df9b0922899ab1677602569e851d66b4758021a9b420a335b71b5",
+            "domain_row": true,
+            "files": 2,
+            "forwardings": 1,
+            "mailboxes": [
+              "info@set2-import-seq.test"
+            ],
+            "rows": "300",
+            "status": "active"
+          }
+        }
+      },
+      "name": "import (iv): and there is no second effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer_status": 200,
+        "expected_files": 2,
+        "expected_rows": "300",
+        "import_status": "active",
+        "native": {
+          "database_on_engine": true,
+          "database_row": [
+            "s2impcon_app"
+          ],
+          "docroot_sha256": "94f48d5110d297bf6849c8bb3fcea41673f7ad39af6f478f2784bfe506eab4c7",
+          "domain_row": true,
+          "files": 2,
+          "forwardings": 1,
+          "mailboxes": [
+            "info@set2-import-con.test"
+          ],
+          "rows": "300",
+          "status": "active"
+        },
+        "steps": [
+          {
+            "code": null,
+            "ok": true,
+            "step": "domain"
+          },
+          {
+            "code": null,
+            "ok": true,
+            "step": "files"
+          },
+          {
+            "code": null,
+            "ok": true,
+            "step": "mail"
+          },
+          {
+            "code": null,
+            "ok": true,
+            "step": "forwarders"
+          },
+          {
+            "code": null,
+            "ok": true,
+            "step": "dns"
+          },
+          {
+            "code": null,
+            "ok": true,
+            "step": "database:s2impcon_app"
+          }
+        ],
+        "the_other_domain_unchanged": true
+      },
+      "name": "import (ii): three arrivals at once of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answers": [
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 1.862,
+            "status": 200
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 1.861,
+            "status": 200
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 1.862,
+            "status": 200
+          }
+        ],
+        "in_progress": 0
+      },
+      "name": "import (ii): the answers are the same bytes, or REQUEST_IN_PROGRESS for a waiter",
+      "ok": true
+    },
+    {
+      "detail": {
+        "dropped": {
+          "answer_bytes_received_before_the_drop": 0,
+          "dropped_after_seconds": 3.679,
+          "held": {
+            "after_seconds": 3.4,
+            "seen": "the Panel's database names the domain: the import is under way"
+          }
+        },
+        "row_at_drop": {
+          "actor_user_id": 2,
+          "body": {
+            "sensitive_values_of_this_run_found": 0,
+            "sensitive_words_found": [],
+            "stored": false
+          },
+          "created_at": 1791519448,
+          "expires_at": 1791605848,
+          "finished_at": 0,
+          "id": "75146c9363ac3c6fa08d984aa1b3358b",
+          "lifetime_seconds": 86400,
+          "method": "POST",
+          "request_sha256": "a1d5f760b47636326350b4a7815b3356cde86ab25cb6ea7da02c2a6ce0a488ea",
+          "response_content_type": "",
+          "response_retained": 0,
+          "response_status": 0,
+          "route": "/api/v1/import/cpanel/apply",
+          "status": "running"
+        }
+      },
+      "name": "import (v): the request was still running when the connection was dropped",
+      "ok": true
+    },
+    {
+      "detail": {
+        "before": {
+          "database_on_engine": false,
+          "database_row": [],
+          "docroot_sha256": null,
+          "domain_row": false,
+          "files": null,
+          "forwardings": 0,
+          "mailboxes": [],
+          "rows": null,
+          "status": null
+        },
+        "import": {
+          "answer_status": null,
+          "expected_files": 3,
+          "expected_rows": "300",
+          "import_status": null,
+          "native": {
+            "database_on_engine": true,
+            "database_row": [
+              "s2impdrop_app"
+            ],
+            "docroot_sha256": "ccd633716d029b7e052fc118cdb4e66953de731f109e265308d79a0eadddd367",
+            "domain_row": true,
+            "files": 3,
+            "forwardings": 1,
+            "mailboxes": [
+              "info@set2-import-drop.test"
+            ],
+            "rows": "300",
+            "status": "active"
+          },
+          "steps": []
+        },
+        "row": {
+          "actor_user_id": 2,
+          "body": {
+            "bytes": 696,
+            "code": null,
+            "json_keys": [
+              "domain_id",
+              "site_id",
+              "status",
+              "steps"
+            ],
+            "sensitive_values_of_this_run_found": 0,
+            "sensitive_words_found": [],
+            "sha256": "44719127fa439501567126c1159314307fe9cea312fe1c19e36622c0983c3de6",
+            "stored": true
+          },
+          "created_at": 1791519448,
+          "expires_at": 1791605848,
+          "finished_at": 1791519475,
+          "id": "75146c9363ac3c6fa08d984aa1b3358b",
+          "lifetime_seconds": 86400,
+          "method": "POST",
+          "request_sha256": "a1d5f760b47636326350b4a7815b3356cde86ab25cb6ea7da02c2a6ce0a488ea",
+          "response_content_type": "application/json",
+          "response_retained": 1,
+          "response_status": 200,
+          "route": "/api/v1/import/cpanel/apply",
+          "status": "done"
+        },
+        "waited_seconds": 24.6
+      },
+      "name": "import (v): the server finished the import after the client was gone (row done; the whole site is there)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "import_status": "active",
+        "replay": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": "1",
+          "seconds": 0.004,
+          "status": 200
+        },
+        "replay_sha256": "44719127fa439501567126c1159314307fe9cea312fe1c19e36622c0983c3de6",
+        "stored_sha256": "44719127fa439501567126c1159314307fe9cea312fe1c19e36622c0983c3de6",
+        "unchanged": true
+      },
+      "name": "import (v): the replay gets the stored answer (the first run's bytes, marked as a replay) and imports nothing again",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T04:17:58Z",
+  "fixtures": {
+    "i": {
+      "bytes": 2376,
+      "database": "s2impseq_app",
+      "domain": "set2-import-seq.test",
+      "megabytes": 0,
+      "members": [
+        {
+          "bytes": 57,
+          "name": "cpmove-s2impseq/cp/s2impseq"
+        },
+        {
+          "bytes": 66,
+          "name": "cpmove-s2impseq/homedir/public_html/index.html"
+        },
+        {
+          "bytes": 34,
+          "name": "cpmove-s2impseq/homedir/public_html/assets/site.css"
+        },
+        {
+          "bytes": 119,
+          "name": "cpmove-s2impseq/homedir/etc/set2-import-seq.test/shadow"
+        },
+        {
+          "bytes": 15,
+          "name": "cpmove-s2impseq/homedir/etc/set2-import-seq.test/quota"
+        },
+        {
+          "bytes": 54,
+          "name": "cpmove-s2impseq/va/set2-import-seq.test"
+        },
+        {
+          "bytes": 32,
+          "name": "cpmove-s2impseq/mysql/s2impseq_app.create"
+        },
+        {
+          "bytes": 7388,
+          "name": "cpmove-s2impseq/mysql/s2impseq_app.sql"
+        }
+      ],
+      "path": "/var/lib/celikpanel-imports/cpmove-s2impseq.tar.gz",
+      "public_html_directory_member": false,
+      "sha256": "bb63271c6433dc1460ecaad25ed475cd36aad13eb519531ae632c37e782e9bd6",
+      "sleep_seconds": 0,
+      "user": "s2impseq"
+    },
+    "ii": {
+      "bytes": 2376,
+      "database": "s2impcon_app",
+      "domain": "set2-import-con.test",
+      "megabytes": 0,
+      "members": [
+        {
+          "bytes": 57,
+          "name": "cpmove-s2impcon/cp/s2impcon"
+        },
+        {
+          "bytes": 66,
+          "name": "cpmove-s2impcon/homedir/public_html/index.html"
+        },
+        {
+          "bytes": 34,
+          "name": "cpmove-s2impcon/homedir/public_html/assets/site.css"
+        },
+        {
+          "bytes": 119,
+          "name": "cpmove-s2impcon/homedir/etc/set2-import-con.test/shadow"
+        },
+        {
+          "bytes": 15,
+          "name": "cpmove-s2impcon/homedir/etc/set2-import-con.test/quota"
+        },
+        {
+          "bytes": 54,
+          "name": "cpmove-s2impcon/va/set2-import-con.test"
+        },
+        {
+          "bytes": 32,
+          "name": "cpmove-s2impcon/mysql/s2impcon_app.create"
+        },
+        {
+          "bytes": 7388,
+          "name": "cpmove-s2impcon/mysql/s2impcon_app.sql"
+        }
+      ],
+      "path": "/var/lib/celikpanel-imports/cpmove-s2impcon.tar.gz",
+      "public_html_directory_member": false,
+      "sha256": "8c4e4dbbcf4f250fdd45e3fd14e2db3aef264974404fd7a49ef8bfd22031dc09",
+      "sleep_seconds": 0,
+      "user": "s2impcon"
+    },
+    "tar": {
+      "bytes": 2473,
+      "database": "s2imptar_app",
+      "domain": "set2-import-tar.test",
+      "megabytes": 0,
+      "members": [
+        {
+          "bytes": 57,
+          "name": "cpmove-s2imptar/cp/s2imptar"
+        },
+        {
+          "bytes": 66,
+          "name": "cpmove-s2imptar/homedir/public_html/index.html"
+        },
+        {
+          "bytes": 34,
+          "name": "cpmove-s2imptar/homedir/public_html/assets/site.css"
+        },
+        {
+          "bytes": 119,
+          "name": "cpmove-s2imptar/homedir/etc/set2-import-tar.test/shadow"
+        },
+        {
+          "bytes": 15,
+          "name": "cpmove-s2imptar/homedir/etc/set2-import-tar.test/quota"
+        },
+        {
+          "bytes": 54,
+          "name": "cpmove-s2imptar/va/set2-import-tar.test"
+        },
+        {
+          "bytes": 32,
+          "name": "cpmove-s2imptar/mysql/s2imptar_app.create"
+        },
+        {
+          "bytes": 7388,
+          "name": "cpmove-s2imptar/mysql/s2imptar_app.sql"
+        }
+      ],
+      "path": "/var/lib/celikpanel-imports/cpmove-s2imptar.tar.gz",
+      "public_html_directory_member": true,
+      "sha256": "a9b2fd67451050a4e33d6c1b03f43c95f353817bc30c8a7a65996f140644b1af",
+      "sleep_seconds": 0,
+      "user": "s2imptar"
+    },
+    "v": {
+      "bytes": 16785552,
+      "database": "s2impdrop_app",
+      "domain": "set2-import-drop.test",
+      "megabytes": 16,
+      "members": [
+        {
+          "bytes": 59,
+          "name": "cpmove-s2impdrop/cp/s2impdrop"
+        },
+        {
+          "bytes": 67,
+          "name": "cpmove-s2impdrop/homedir/public_html/index.html"
+        },
+        {
+          "bytes": 34,
+          "name": "cpmove-s2impdrop/homedir/public_html/assets/site.css"
+        },
+        {
+          "bytes": 119,
+          "name": "cpmove-s2impdrop/homedir/etc/set2-import-drop.test/shadow"
+        },
+        {
+          "bytes": 15,
+          "name": "cpmove-s2impdrop/homedir/etc/set2-import-drop.test/quota"
+        },
+        {
+          "bytes": 56,
+          "name": "cpmove-s2impdrop/va/set2-import-drop.test"
+        },
+        {
+          "bytes": 33,
+          "name": "cpmove-s2impdrop/mysql/s2impdrop_app.create"
+        },
+        {
+          "bytes": 7402,
+          "name": "cpmove-s2impdrop/mysql/s2impdrop_app.sql"
+        },
+        {
+          "bytes": 16777216,
+          "name": "cpmove-s2impdrop/homedir/public_html/assets/blob.bin"
+        }
+      ],
+      "path": "/var/lib/celikpanel-imports/cpmove-s2impdrop.tar.gz",
+      "public_html_directory_member": false,
+      "sha256": "67dae864bb7d69dea3d055c44f750fec6e82f06d476a6bd7665b5a6b0acfe557",
+      "sleep_seconds": 25,
+      "user": "s2impdrop"
+    }
+  },
+  "import_answer": {
+    "domain_id": 3,
+    "site_id": 3,
+    "status": "active",
+    "steps": [
+      {
+        "detail": "set2-import-seq.test (id 3, site 3) → /var/www/celikpanel/subscriptions/2/sites/3/public_html",
+        "ok": true,
+        "step": "domain"
+      },
+      {
+        "detail": "2 files, 100 bytes",
+        "ok": true,
+        "step": "files"
+      },
+      {
+        "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+        "ok": true,
+        "step": "mail"
+      },
+      {
+        "detail": "1 forwarders",
+        "ok": true,
+        "step": "forwarders"
+      },
+      {
+        "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+        "ok": true,
+        "step": "dns"
+      },
+      {
+        "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+        "ok": true,
+        "step": "database:s2impseq_app"
+      }
+    ]
+  },
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/116-owner-cpmove-fixture-seq.json",
+      "lab_action": false,
+      "label": "owner-cpmove-fixture-seq",
+      "mode": "owner-cpmove-fixture",
+      "owner_action": true
+    },
+    {
+      "file": "native/117-owner-cpmove-fixture-con.json",
+      "lab_action": false,
+      "label": "owner-cpmove-fixture-con",
+      "mode": "owner-cpmove-fixture",
+      "owner_action": true
+    },
+    {
+      "file": "native/118-owner-cpmove-fixture-drop.json",
+      "lab_action": false,
+      "label": "owner-cpmove-fixture-drop",
+      "mode": "owner-cpmove-fixture",
+      "owner_action": true
+    },
+    {
+      "file": "native/119-owner-cpmove-fixture-tar.json",
+      "lab_action": false,
+      "label": "owner-cpmove-fixture-tar",
+      "mode": "owner-cpmove-fixture",
+      "owner_action": true
+    },
+    {
+      "file": "native/120-tar-archive-after.json",
+      "lab_action": false,
+      "label": "tar-archive-after",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/121-tar-archive-after-engines.json",
+      "lab_action": false,
+      "label": "tar-archive-after-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/122-import-before-seq.json",
+      "lab_action": false,
+      "label": "import-before-seq",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/123-import-before-seq-engines.json",
+      "lab_action": false,
+      "label": "import-before-seq-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/124-import-before-con.json",
+      "lab_action": false,
+      "label": "import-before-con",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/125-import-before-con-engines.json",
+      "lab_action": false,
+      "label": "import-before-con-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/126-import-after-iii-seq.json",
+      "lab_action": false,
+      "label": "import-after-iii-seq",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/127-import-after-iii-seq-engines.json",
+      "lab_action": false,
+      "label": "import-after-iii-seq-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/128-import-after-iii-con.json",
+      "lab_action": false,
+      "label": "import-after-iii-con",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/129-import-after-iii-con-engines.json",
+      "lab_action": false,
+      "label": "import-after-iii-con-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/130-import-after-i-seq.json",
+      "lab_action": false,
+      "label": "import-after-i-seq",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/131-import-after-i-seq-engines.json",
+      "lab_action": false,
+      "label": "import-after-i-seq-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/132-import-after-i-con.json",
+      "lab_action": false,
+      "label": "import-after-i-con",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/133-import-after-i-con-engines.json",
+      "lab_action": false,
+      "label": "import-after-i-con-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/134-import-after-iv-seq.json",
+      "lab_action": false,
+      "label": "import-after-iv-seq",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/135-import-after-iv-seq-engines.json",
+      "lab_action": false,
+      "label": "import-after-iv-seq-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/136-import-after-iv-con.json",
+      "lab_action": false,
+      "label": "import-after-iv-con",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/137-import-after-iv-con-engines.json",
+      "lab_action": false,
+      "label": "import-after-iv-con-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/138-import-after-ii-seq.json",
+      "lab_action": false,
+      "label": "import-after-ii-seq",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/139-import-after-ii-seq-engines.json",
+      "lab_action": false,
+      "label": "import-after-ii-seq-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/140-import-after-ii-con.json",
+      "lab_action": false,
+      "label": "import-after-ii-con",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/141-import-after-ii-con-engines.json",
+      "lab_action": false,
+      "label": "import-after-ii-con-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/142-v-before.json",
+      "lab_action": false,
+      "label": "v-before",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/143-v-before-engines.json",
+      "lab_action": false,
+      "label": "v-before-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/144-v-after.json",
+      "lab_action": false,
+      "label": "v-after",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/145-v-after-engines.json",
+      "lab_action": false,
+      "label": "v-after-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/146-v-after-replay.json",
+      "lab_action": false,
+      "label": "v-after-replay",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/147-v-after-replay-engines.json",
+      "lab_action": false,
+      "label": "v-after-replay-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    }
+  ],
+  "node": "debian13",
+  "notes": [
+    {
+      "detail": null,
+      "note": "no sample cPanel archive exists in the repository, so the lab built a minimal one from the rules of the import parser (cmd/agent/cpmove_rpc.go): account file, public_html, one mailbox, one forwarder, one database dump; the dropped import's dump ends with DO SLEEP so that the import lasts long enough to drop. The archives of the arrivals i, ii and v leave out the one directory member `homedir/public_html/` (H34); the archive `tar` holds it"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T04:17:14Z",
+      "label": "cpmove-fixture-seq",
+      "mode": "owner-cpmove-fixture"
+    },
+    {
+      "at": "2026-10-09T04:17:14Z",
+      "label": "cpmove-fixture-con",
+      "mode": "owner-cpmove-fixture"
+    },
+    {
+      "at": "2026-10-09T04:17:15Z",
+      "label": "cpmove-fixture-drop",
+      "mode": "owner-cpmove-fixture"
+    },
+    {
+      "at": "2026-10-09T04:17:15Z",
+      "label": "cpmove-fixture-tar",
+      "mode": "owner-cpmove-fixture"
+    }
+  ],
+  "section": "C7-import",
+  "started_at": "2026-10-09T04:17:13Z",
+  "substeps": {
+    "import": "passed",
+    "section": "failed"
+  },
+  "title": "cPanel import",
+  "verdict": "failed"
+}

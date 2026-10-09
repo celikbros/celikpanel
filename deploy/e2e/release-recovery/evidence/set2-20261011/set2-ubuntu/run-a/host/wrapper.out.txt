@@ -1,0 +1,23 @@
+Formatting '/var/tmp/cp-release-drill-set2-ub-a/cells/5f966cf0cc7eef07a4e894e9/ubuntu/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-set2-ub-a/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-set2-ub-a", "cell_id": "release-recovery__18ffcae7c50f6ff0", "ssh_ports": [4121, 4122]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-set2-ub-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-set2-ub-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "site", "verdict": "passed", "reason": null}
+{"step": "S1-cron", "verdict": "passed", "reason": null}
+{"step": "S2-mail-policy", "verdict": "failed", "reason": "f: the value is written in main.cf (46) and Postfix keeps running with its previous process"}
+{"step": "S3-backup-schedule", "verdict": "passed", "reason": null}
+{"step": "S4-postgresql", "verdict": "passed", "reason": null}
+{"step": "S5-mariadb", "verdict": "passed", "reason": null}
+{"step": "S6-catchall-queue", "verdict": "passed", "reason": null}
+{"step": "S7-file-metadata", "verdict": "passed", "reason": null}
+{"step": "S8-service-actions", "verdict": "failed", "reason": "postfix: mail is accepted on 25 and 587 answers at the end; postgresql (reload hook): the answer does not say the server keeps its previous settings when the server did read its files again"}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"cell_kind": "settings-writes", "overall": "failed", "sections": {"S1-cron": "passed", "S2-mail-policy": "failed", "S3-backup-schedule": "passed", "S4-postgresql": "passed", "S5-mariadb": "passed", "S6-catchall-queue": "passed", "S7-file-metadata": "passed", "S8-service-actions": "failed"}}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-set2-ub-a", "evidence_retained": true}
+SET2 cell=set2-ubuntu lab=/var/tmp/cp-release-drill-set2-ub-a driver_exit=1 evidence=/var/tmp/cp-release-drill-set2-ub-a/evidence/*/upd1

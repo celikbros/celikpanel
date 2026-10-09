@@ -1,0 +1,1188 @@
+{
+  "agent_queries": {
+    "batch": "SELECT 'file=' || current_setting('config_file');\nSELECT 'before=' || extract(epoch from clock_timestamp());\nSELECT 'signal=' || pg_reload_conf();\nSELECT 'waited=' || count(*) FROM (SELECT pg_sleep(1)) AS waited;\nSELECT 'loaded=' || extract(epoch from pg_conf_load_time());\nSELECT 'error=' || sourceline || ':' || coalesce(name, '') || ':' || error FROM pg_file_settings WHERE error IS NOT NULL AND coalesce(name, '') NOT IN (SELECT name FROM pg_settings WHERE pending_restart) ORDER BY seqno LIMIT 1;\n",
+    "postgresql_version": "PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit",
+    "returncode": 0,
+    "stderr": "",
+    "stdout": "file=/etc/postgresql/16/main/postgresql.conf\nbefore=1791517536.340592\nsignal=true\nwaited=1\nloaded=1791517536.343437\n"
+  },
+  "calls": [
+    {
+      "at": "2026-10-09T03:45:22Z",
+      "json": {
+        "Content": {
+          "bytes": 30223,
+          "sha256": "3ab07ae81c8b026ac74d0b41203e421dae5757337e9972da42ae79fceed4a4e2"
+        },
+        "Parsed": "",
+        "Version": "cf1-3ab07ae81c8b026ac74d0b41203e421dae5757337e9972da42ae79fceed4a4e2"
+      },
+      "label": "S4a read postgresql.conf",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/config?path=/etc/postgresql/16/main/postgresql.conf"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:22Z",
+      "json": {
+        "Content": {
+          "bytes": 5924,
+          "sha256": "ad0df9635890926d79a12d5627b68af6b85b6254fa23cace2bbe077838969c9e"
+        },
+        "Parsed": "",
+        "Version": "cf1-ad0df9635890926d79a12d5627b68af6b85b6254fa23cace2bbe077838969c9e"
+      },
+      "label": "S4a read pg_hba.conf",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/config?path=/etc/postgresql/16/main/pg_hba.conf"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:23Z",
+      "catalogue_texts": {
+        "dbconf.saved.backup": {
+          "en": "The previous file is kept on the server as",
+          "tr": "Önceki dosya sunucuda şu adla duruyor:"
+        },
+        "dbconf.saved.reloaded": {
+          "en": "Saved. PostgreSQL read the file again.",
+          "tr": "Kaydedildi. PostgreSQL dosyayı yeniden okudu."
+        }
+      },
+      "json": {
+        "applied": "reloaded",
+        "backup": "/etc/postgresql/16/main/postgresql.conf.celikpanel-backup-20261009T034523Z",
+        "daemon_check": "accepted",
+        "restart_required": [],
+        "success": true,
+        "unchanged": false,
+        "version": "cf1-5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a"
+      },
+      "label": "S4b set work_mem = 8MB",
+      "request": {
+        "body": {
+          "content": {
+            "bytes": 30222,
+            "sha256": "5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a"
+          },
+          "path": "/etc/postgresql/16/main/postgresql.conf",
+          "version": "cf1-3ab07ae81c8b026ac74d0b41203e421dae5757337e9972da42ae79fceed4a4e2"
+        },
+        "method": "POST",
+        "path": "/api/v1/config"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:24Z",
+      "json": {
+        "Content": {
+          "bytes": 30222,
+          "sha256": "5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a"
+        },
+        "Parsed": "",
+        "Version": "cf1-5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a"
+      },
+      "label": "S4c read",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/config?path=/etc/postgresql/16/main/postgresql.conf"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing is changed: the service's own program read the new file and refused it. Correct what it names below and save again.",
+        "reason": "daemon",
+        "vars": {
+          "detail": "invalid value for parameter \"work_mem\": \"eight-megabytes\"",
+          "name": "work_mem"
+        }
+      },
+      "at": "2026-10-09T03:45:25Z",
+      "catalogue_texts": {
+        "dbconf.refused.daemon": {
+          "en": "Nothing is changed: PostgreSQL read the new file and does not accept it. Correct what it names and save again.",
+          "tr": "Hiçbir şey değişmedi: PostgreSQL yeni dosyayı okudu ve kabul etmiyor. Adını verdiği yeri düzeltip yeniden kaydedin."
+        }
+      },
+      "json": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing is changed: the service's own program read the new file and refused it. Correct what it names below and save again.",
+        "reason": "daemon",
+        "vars": {
+          "detail": "invalid value for parameter \"work_mem\": \"eight-megabytes\"",
+          "name": "work_mem"
+        }
+      },
+      "label": "S4c set work_mem to a value PostgreSQL refuses",
+      "request": {
+        "body": {
+          "content": {
+            "bytes": 30234,
+            "sha256": "8c20523ce823340c0c0e1481c0c669d6b21d5482b4a4f79b3fd2dde2be4ec10e"
+          },
+          "path": "/etc/postgresql/16/main/postgresql.conf",
+          "version": "cf1-5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a"
+        },
+        "method": "POST",
+        "path": "/api/v1/config"
+      },
+      "status": 422,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:26Z",
+      "json": {
+        "Content": {
+          "bytes": 30222,
+          "sha256": "5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a"
+        },
+        "Parsed": "",
+        "Version": "cf1-5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a"
+      },
+      "label": "S4d read",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/config?path=/etc/postgresql/16/main/postgresql.conf"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing was saved: the new content is empty, and CelikPanel does not replace a configuration file with nothing. Reload the page to read the file again, then make the change.",
+        "reason": "empty"
+      },
+      "at": "2026-10-09T03:45:26Z",
+      "catalogue_texts": {
+        "dbconf.refused.empty": {
+          "en": "Nothing was saved: the new content is empty, and CelikPanel does not replace a configuration file with nothing. Reload the file, then make the change again.",
+          "tr": "Hiçbir şey kaydedilmedi: yeni içerik boş ve CelikPanel bir yapılandırma dosyasını boş içerikle değiştirmez. Dosyayı yeniden yükleyin, sonra değişikliği tekrar yapın."
+        }
+      },
+      "json": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing was saved: the new content is empty, and CelikPanel does not replace a configuration file with nothing. Reload the page to read the file again, then make the change.",
+        "reason": "empty"
+      },
+      "label": "S4d save empty content",
+      "request": {
+        "body": {
+          "content": {
+            "bytes": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "path": "/etc/postgresql/16/main/postgresql.conf",
+          "version": "cf1-5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a"
+        },
+        "method": "POST",
+        "path": "/api/v1/config"
+      },
+      "status": 422,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:27Z",
+      "catalogue_texts": {
+        "dbconf.saved.backup": {
+          "en": "The previous file is kept on the server as",
+          "tr": "Önceki dosya sunucuda şu adla duruyor:"
+        },
+        "dbconf.saved.reloaded": {
+          "en": "Saved. PostgreSQL read the file again.",
+          "tr": "Kaydedildi. PostgreSQL dosyayı yeniden okudu."
+        }
+      },
+      "json": {
+        "applied": "reloaded",
+        "backup": "/etc/postgresql/16/main/pg_hba.conf.celikpanel-backup-20261009T034527Z",
+        "daemon_check": "accepted",
+        "restart_required": [],
+        "success": true,
+        "unchanged": false,
+        "version": "cf1-d2c66d4e97c3d5ac81ec40d1b81df450b84007624cf4eeac92be7357b2a3dc8f"
+      },
+      "label": "S4e add a host rule to pg_hba.conf",
+      "request": {
+        "body": {
+          "content": {
+            "bytes": 6002,
+            "sha256": "d2c66d4e97c3d5ac81ec40d1b81df450b84007624cf4eeac92be7357b2a3dc8f"
+          },
+          "path": "/etc/postgresql/16/main/pg_hba.conf",
+          "version": "cf1-ad0df9635890926d79a12d5627b68af6b85b6254fa23cace2bbe077838969c9e"
+        },
+        "method": "POST",
+        "path": "/api/v1/config"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:28Z",
+      "json": {
+        "Content": {
+          "bytes": 6002,
+          "sha256": "d2c66d4e97c3d5ac81ec40d1b81df450b84007624cf4eeac92be7357b2a3dc8f"
+        },
+        "Parsed": "",
+        "Version": "cf1-d2c66d4e97c3d5ac81ec40d1b81df450b84007624cf4eeac92be7357b2a3dc8f"
+      },
+      "label": "S4e read pg_hba.conf",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/config?path=/etc/postgresql/16/main/pg_hba.conf"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing was saved: a line that was changed or added is not one the service accepts. Correct the line named below and save again.",
+        "reason": "syntax",
+        "vars": {
+          "detail": "end-of-line before authentication method",
+          "line": "134"
+        }
+      },
+      "at": "2026-10-09T03:45:29Z",
+      "catalogue_texts": {
+        "dbconf.refused.syntax": {
+          "en": "Nothing was saved: a rule you changed or added is not one PostgreSQL accepts. Correct the rule marked below and save again.",
+          "tr": "Hiçbir şey kaydedilmedi: değiştirdiğiniz ya da eklediğiniz bir kural PostgreSQL tarafından kabul edilen bir kural değil. Aşağıda işaretlenen kuralı düzeltip yeniden kaydedin."
+        }
+      },
+      "json": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing was saved: a line that was changed or added is not one the service accepts. Correct the line named below and save again.",
+        "reason": "syntax",
+        "vars": {
+          "detail": "end-of-line before authentication method",
+          "line": "134"
+        }
+      },
+      "label": "S4e add a rule without a method",
+      "request": {
+        "body": {
+          "content": {
+            "bytes": 6055,
+            "sha256": "643796d65c891cd946222414cbacb14ea7a43a281fb8dcecdf25b5150f2cbc2a"
+          },
+          "path": "/etc/postgresql/16/main/pg_hba.conf",
+          "version": "cf1-d2c66d4e97c3d5ac81ec40d1b81df450b84007624cf4eeac92be7357b2a3dc8f"
+        },
+        "method": "POST",
+        "path": "/api/v1/config"
+      },
+      "status": 422,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:29Z",
+      "json": {
+        "Content": {
+          "bytes": 6002,
+          "sha256": "d2c66d4e97c3d5ac81ec40d1b81df450b84007624cf4eeac92be7357b2a3dc8f"
+        },
+        "Parsed": "",
+        "Version": "cf1-d2c66d4e97c3d5ac81ec40d1b81df450b84007624cf4eeac92be7357b2a3dc8f"
+      },
+      "label": "S4e read pg_hba.conf again",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/config?path=/etc/postgresql/16/main/pg_hba.conf"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing was saved: this change would take away the local administrator access to PostgreSQL (the rule that lets the server's own postgres account connect over the local socket). CelikPanel and the owner's console both use it. Keep a `local all postgres peer` rule above any rule that would refuse it, then save again.",
+        "reason": "lockout",
+        "vars": {
+          "name": "denied"
+        }
+      },
+      "at": "2026-10-09T03:45:30Z",
+      "catalogue_texts": {
+        "dbconf.refused.lockout": {
+          "en": "Nothing was saved: this change would take away the local administrator access to PostgreSQL, the rule that lets the server’s own postgres account connect over the local socket. CelikPanel and your own console both use it. Keep a “local all postgres peer” rule above any rule that would refuse it, then save again.",
+          "tr": "Hiçbir şey kaydedilmedi: bu değişiklik PostgreSQL’e yerel yönetici erişimini, yani sunucunun kendi postgres hesabının yerel soket üzerinden bağlanmasını sağlayan kuralı kaldırırdı. Onu hem CelikPanel hem de sizin konsolunuz kullanır. Onu reddedecek her kuralın üstünde bir “local all postgres peer” kuralı bırakın, sonra yeniden kaydedin."
+        }
+      },
+      "json": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing was saved: this change would take away the local administrator access to PostgreSQL (the rule that lets the server's own postgres account connect over the local socket). CelikPanel and the owner's console both use it. Keep a `local all postgres peer` rule above any rule that would refuse it, then save again.",
+        "reason": "lockout",
+        "vars": {
+          "name": "denied"
+        }
+      },
+      "label": "S4e remove the local rules (local administrator access)",
+      "request": {
+        "body": {
+          "content": {
+            "bytes": 5795,
+            "sha256": "7d98da95436ec63ed7a4a3d0d76711f83d10fcd857eb89306a168dca6ec05598"
+          },
+          "path": "/etc/postgresql/16/main/pg_hba.conf",
+          "version": "cf1-d2c66d4e97c3d5ac81ec40d1b81df450b84007624cf4eeac92be7357b2a3dc8f"
+        },
+        "method": "POST",
+        "path": "/api/v1/config"
+      },
+      "status": 422,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:30Z",
+      "json": {
+        "Content": {
+          "bytes": 30222,
+          "sha256": "5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a"
+        },
+        "Parsed": "",
+        "Version": "cf1-5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a"
+      },
+      "label": "S4f read before the owner's edit",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/config?path=/etc/postgresql/16/main/postgresql.conf"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "config_file"
+      },
+      "at": "2026-10-09T03:45:31Z",
+      "catalogue_texts": {
+        "dbconf.stale": {
+          "en": "postgresql.conf changed on the server after this page read it, so nothing was saved. What you changed is still shown below. Reload the file, then make your change again.",
+          "tr": "postgresql.conf, bu sayfa onu okuduktan sonra sunucuda değişti; bu yüzden hiçbir şey kaydedilmedi. Değiştirdikleriniz aşağıda duruyor. Dosyayı yeniden yükleyin, sonra değişikliğinizi tekrar yapın."
+        }
+      },
+      "json": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "config_file"
+      },
+      "label": "S4f save with the version from before the owner's edit",
+      "request": {
+        "body": {
+          "content": {
+            "bytes": 30223,
+            "sha256": "54e706ea6fda3a0d95252c57861543fb29ea821f908ea3e0500f71bc62a52d5a"
+          },
+          "path": "/etc/postgresql/16/main/postgresql.conf",
+          "version": "cf1-5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a"
+        },
+        "method": "POST",
+        "path": "/api/v1/config"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:32Z",
+      "json": {
+        "Content": {
+          "bytes": 30270,
+          "sha256": "d4778cb945b449bf29c4ae8832c229093c0bc3f3e77a51edd174ece717cc3d77"
+        },
+        "Parsed": "",
+        "Version": "cf1-d4778cb945b449bf29c4ae8832c229093c0bc3f3e77a51edd174ece717cc3d77"
+      },
+      "label": "S4f read again",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/config?path=/etc/postgresql/16/main/postgresql.conf"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CONFIG_RELOAD_FAILED",
+        "error": "The change was not kept, and the previous file is back in place. The service's systemd unit could not reload, with the new file and again with the previous one, so CelikPanel asked the server directly: it read the previous file again and is running with the settings it had before your change. What the unit's reload said is below. It failed with the previous file too, so the cause is not only this change. The server owner runs sudo systemctl reload postgresql@16-main on the server, corrects what it reports, and then saves the change here again.",
+        "reason": "restored_unit_reload_failed",
+        "vars": {
+          "detail": "Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.",
+          "unit": "postgresql@16-main"
+        }
+      },
+      "at": "2026-10-09T03:45:34Z",
+      "catalogue_texts": {
+        "dbconf.reloadFailed.notRestored": {
+          "en": "PostgreSQL could not reload with the new file, and CelikPanel could not put the previous file back with certainty. What the server holds now is shown below. Check the file on the server, reload PostgreSQL there, then reload this page. The other version is kept on the server as:",
+          "tr": "PostgreSQL yeni dosyayla yeniden yüklenemedi ve CelikPanel önceki dosyayı kesin olarak geri koyamadı. Sunucunun şu an tuttuğu dosya aşağıda gösteriliyor. Dosyayı sunucuda denetleyin, PostgreSQL hizmetini orada yeniden yükleyin, sonra bu sayfayı yenileyin. Diğer sürüm sunucuda şu adla duruyor:"
+        }
+      },
+      "json": {
+        "code": "CONFIG_RELOAD_FAILED",
+        "error": "The change was not kept, and the previous file is back in place. The service's systemd unit could not reload, with the new file and again with the previous one, so CelikPanel asked the server directly: it read the previous file again and is running with the settings it had before your change. What the unit's reload said is below. It failed with the previous file too, so the cause is not only this change. The server owner runs sudo systemctl reload postgresql@16-main on the server, corrects what it reports, and then saves the change here again.",
+        "reason": "restored_unit_reload_failed",
+        "vars": {
+          "detail": "Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.",
+          "unit": "postgresql@16-main"
+        }
+      },
+      "label": "S4g save while the unit's reload fails",
+      "request": {
+        "body": {
+          "content": {
+            "bytes": 30271,
+            "sha256": "f6e364ae3d52d4cd7d97f7fcf845ece68e03281ec1a8fe163c82f0d9c96dc999"
+          },
+          "path": "/etc/postgresql/16/main/postgresql.conf",
+          "version": "cf1-d4778cb945b449bf29c4ae8832c229093c0bc3f3e77a51edd174ece717cc3d77"
+        },
+        "method": "POST",
+        "path": "/api/v1/config"
+      },
+      "status": 502,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "conf": [
+          200,
+          "cf1-3ab07ae81c8b026ac74d0b41203e421dae5757337e9972da42ae79fceed4a4e2",
+          "3ab07ae81c8b026ac74d0b41203e421dae5757337e9972da42ae79fceed4a4e2"
+        ],
+        "hba": [
+          200,
+          "cf1-ad0df9635890926d79a12d5627b68af6b85b6254fa23cace2bbe077838969c9e",
+          "ad0df9635890926d79a12d5627b68af6b85b6254fa23cace2bbe077838969c9e"
+        ]
+      },
+      "name": "a: both reads answer the file's own bytes with the version of those bytes",
+      "ok": true
+    },
+    {
+      "detail": {
+        "postmaster_pid": 21574,
+        "unit": {
+          "postgresql@16-main.service": {
+            "ActiveEnterTimestamp": "Fri 2026-10-09 03:35:46 UTC",
+            "ActiveState": "active",
+            "DropInPaths": "",
+            "ExecMainStartTimestamp": "Fri 2026-10-09 03:35:46 UTC",
+            "FragmentPath": "/usr/lib/systemd/system/postgresql@.service",
+            "LoadState": "loaded",
+            "MainPID": "21574",
+            "NRestarts": "0",
+            "Result": "success",
+            "SubState": "running"
+          }
+        },
+        "work_mem": "4MB"
+      },
+      "name": "a: PostgreSQL is running and answers over the local socket",
+      "ok": true
+    },
+    {
+      "detail": {
+        "applied": "reloaded",
+        "backup": "/etc/postgresql/16/main/postgresql.conf.celikpanel-backup-20261009T034523Z",
+        "daemon_check": "accepted",
+        "restart_required": [],
+        "success": true,
+        "unchanged": false
+      },
+      "name": "b: the save answers 200, applied = reloaded",
+      "ok": true
+    },
+    {
+      "detail": {
+        "added": [
+          "work_mem = 8MB\t\t\t\t# min 64kB"
+        ],
+        "file": "diff/b-postgresql.conf.diff",
+        "removed": [
+          "#work_mem = 4MB\t\t\t\t# min 64kB"
+        ]
+      },
+      "name": "b: the file differs only on the setting's line",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backup": "/etc/postgresql/16/main/postgresql.conf.celikpanel-backup-20261009T034523Z",
+        "kept": {
+          "group": "postgres",
+          "mode": "0644",
+          "owner": "postgres",
+          "sha256": "3ab07ae81c8b026ac74d0b41203e421dae5757337e9972da42ae79fceed4a4e2"
+        },
+        "previous": {
+          "group": "postgres",
+          "mode": "0644",
+          "owner": "postgres",
+          "sha256": "3ab07ae81c8b026ac74d0b41203e421dae5757337e9972da42ae79fceed4a4e2"
+        }
+      },
+      "name": "b: a timestamped backup of the previous file exists next to it, with the previous bytes and the file's owner, group and mode",
+      "ok": true
+    },
+    {
+      "detail": [],
+      "name": "b: no validation copy is left next to the file",
+      "ok": true
+    },
+    {
+      "detail": {
+        "differences": {},
+        "equal": true
+      },
+      "name": "b: the file keeps its owner, group and mode",
+      "ok": true
+    },
+    {
+      "detail": [
+        "4MB",
+        "8MB"
+      ],
+      "name": "b: the running server shows the new value (`SHOW work_mem` = 8MB)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "load_time": [
+          "2026-10-09 03:35:43.982484+00",
+          "2026-10-09 03:45:23.490904+00"
+        ],
+        "postmaster_pid": [
+          21574,
+          21574
+        ],
+        "start_time": [
+          "2026-10-09 03:35:44.024561+00",
+          "2026-10-09 03:35:44.024561+00"
+        ],
+        "unit_main_pid": [
+          "21574",
+          "21574"
+        ]
+      },
+      "name": "b: the server re-read its files (configuration load time moved) and was not restarted (same postmaster PID, same start time)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "cf1-5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a",
+        "cf1-5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a"
+      ],
+      "name": "b: the version the save answered is the version of the file now on the server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing is changed: the service's own program read the new file and refused it. Correct what it names below and save again.",
+        "reason": "daemon",
+        "status": 422,
+        "vars": {
+          "detail": "invalid value for parameter \"work_mem\": \"eight-megabytes\"",
+          "name": "work_mem"
+        }
+      },
+      "name": "c: refused 422 CONFIG_INVALID (daemon)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "detail": "invalid value for parameter \"work_mem\": \"eight-megabytes\"",
+        "name": "work_mem"
+      },
+      "name": "c: the answer carries the server's own message",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          1,
+          1
+        ],
+        "candidates_left": [],
+        "sha256": [
+          "5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a",
+          "5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a"
+        ]
+      },
+      "name": "c: the file is unchanged, no backup was added and no validation copy is left",
+      "ok": true
+    },
+    {
+      "detail": null,
+      "name": "c: the server still runs with 8MB",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing was saved: the new content is empty, and CelikPanel does not replace a configuration file with nothing. Reload the page to read the file again, then make the change.",
+        "reason": "empty",
+        "status": 422,
+        "vars": null
+      },
+      "name": "d: empty content is refused 422 CONFIG_INVALID (empty)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          1,
+          1
+        ],
+        "candidates_left": [],
+        "sha256": [
+          "5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a",
+          "5e223a669b0b4331d13ab433e7c2ad2815c165b4af00f0e0d219380583b46f9a"
+        ]
+      },
+      "name": "d: the file is unchanged, no backup was added and no validation copy is left",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "applied": "reloaded",
+          "backup": "/etc/postgresql/16/main/pg_hba.conf.celikpanel-backup-20261009T034527Z",
+          "daemon_check": "accepted",
+          "restart_required": [],
+          "success": true,
+          "unchanged": false,
+          "version": "cf1-d2c66d4e97c3d5ac81ec40d1b81df450b84007624cf4eeac92be7357b2a3dc8f"
+        },
+        "changes": {
+          "added": [
+            "host    all             all             10.99.0.0/24            scram-sha-256"
+          ],
+          "file": "diff/e-pg_hba.conf.diff",
+          "removed": []
+        }
+      },
+      "name": "e: the valid rule is applied (200, reloaded) and the file differs by that one line",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backup": "/etc/postgresql/16/main/pg_hba.conf.celikpanel-backup-20261009T034527Z",
+        "kept": {
+          "group": "postgres",
+          "mode": "0640",
+          "owner": "postgres",
+          "sha256": "ad0df9635890926d79a12d5627b68af6b85b6254fa23cace2bbe077838969c9e"
+        },
+        "previous": {
+          "group": "postgres",
+          "mode": "0640",
+          "owner": "postgres",
+          "sha256": "ad0df9635890926d79a12d5627b68af6b85b6254fa23cace2bbe077838969c9e"
+        }
+      },
+      "name": "e: a timestamped backup of the previous file exists next to it, with the previous bytes and the file's owner, group and mode",
+      "ok": true
+    },
+    {
+      "detail": [],
+      "name": "e: no validation copy is left next to the file",
+      "ok": true
+    },
+    {
+      "detail": {
+        "differences": {},
+        "equal": true
+      },
+      "name": "e: the file keeps its owner, group and mode",
+      "ok": true
+    },
+    {
+      "detail": {
+        "errors": [],
+        "rule": [
+          {
+            "address": "10.99.0.0",
+            "database": "all",
+            "error": "",
+            "line": "133",
+            "method": "scram-sha-256",
+            "netmask": "255.255.255.0",
+            "type": "host",
+            "user": "all"
+          }
+        ]
+      },
+      "name": "e: the running server lists the rule in pg_hba_file_rules and reports no error in the file",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing was saved: a line that was changed or added is not one the service accepts. Correct the line named below and save again.",
+        "reason": "syntax",
+        "status": 422,
+        "vars": {
+          "detail": "end-of-line before authentication method",
+          "line": "134"
+        }
+      },
+      "name": "e: a syntactically bad rule is refused 422 CONFIG_INVALID (syntax)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          1,
+          1
+        ],
+        "candidates_left": [],
+        "sha256": [
+          "d2c66d4e97c3d5ac81ec40d1b81df450b84007624cf4eeac92be7357b2a3dc8f",
+          "d2c66d4e97c3d5ac81ec40d1b81df450b84007624cf4eeac92be7357b2a3dc8f"
+        ]
+      },
+      "name": "e (bad rule): the file is unchanged, no backup was added and no validation copy is left",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CONFIG_INVALID",
+        "error": "Nothing was saved: this change would take away the local administrator access to PostgreSQL (the rule that lets the server's own postgres account connect over the local socket). CelikPanel and the owner's console both use it. Keep a `local all postgres peer` rule above any rule that would refuse it, then save again.",
+        "reason": "lockout",
+        "status": 422,
+        "vars": {
+          "name": "denied"
+        }
+      },
+      "name": "e: a file without the local postgres access is refused 422 CONFIG_INVALID (lockout)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          1,
+          1
+        ],
+        "candidates_left": [],
+        "sha256": [
+          "d2c66d4e97c3d5ac81ec40d1b81df450b84007624cf4eeac92be7357b2a3dc8f",
+          "d2c66d4e97c3d5ac81ec40d1b81df450b84007624cf4eeac92be7357b2a3dc8f"
+        ]
+      },
+      "name": "e (lockout): the file is unchanged, no backup was added and no validation copy is left",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "config_file",
+        "status": 409,
+        "vars": null
+      },
+      "name": "f: the stale write is refused 409 SETTINGS_CHANGED (config_file)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          1,
+          1
+        ],
+        "candidates_left": [],
+        "sha256": [
+          "d4778cb945b449bf29c4ae8832c229093c0bc3f3e77a51edd174ece717cc3d77",
+          "d4778cb945b449bf29c4ae8832c229093c0bc3f3e77a51edd174ece717cc3d77"
+        ]
+      },
+      "name": "f: the file is unchanged, no backup was added and no validation copy is left",
+      "ok": true
+    },
+    {
+      "detail": null,
+      "name": "f: the file is the owner's",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CONFIG_RELOAD_FAILED",
+        "error": "The change was not kept, and the previous file is back in place. The service's systemd unit could not reload, with the new file and again with the previous one, so CelikPanel asked the server directly: it read the previous file again and is running with the settings it had before your change. What the unit's reload said is below. It failed with the previous file too, so the cause is not only this change. The server owner runs sudo systemctl reload postgresql@16-main on the server, corrects what it reports, and then saves the change here again.",
+        "reason": "restored_unit_reload_failed",
+        "status": 502,
+        "vars": {
+          "detail": "Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.",
+          "unit": "postgresql@16-main"
+        }
+      },
+      "name": "g: the save answers 502 CONFIG_RELOAD_FAILED with the reason restored_unit_reload_failed",
+      "ok": true
+    },
+    {
+      "detail": {
+        "sha256": [
+          "d4778cb945b449bf29c4ae8832c229093c0bc3f3e77a51edd174ece717cc3d77",
+          "d4778cb945b449bf29c4ae8832c229093c0bc3f3e77a51edd174ece717cc3d77"
+        ]
+      },
+      "name": "g: the previous file is back in place, byte for byte",
+      "ok": true
+    },
+    {
+      "detail": {
+        "differences": {},
+        "equal": true
+      },
+      "name": "g: the file keeps its owner, group and mode",
+      "ok": true
+    },
+    {
+      "detail": {
+        "detail": "Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.",
+        "unit": "postgresql@16-main"
+      },
+      "name": "g: the answer names no copy",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          1,
+          1
+        ],
+        "candidates_left": []
+      },
+      "name": "g: no copy was left next to the file (as many kept copies as before this save; no validation copy)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "detail": "Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.",
+        "unit": "postgresql@16-main"
+      },
+      "name": "g: the answer names the unit whose reload fails",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups_after": 1,
+        "backups_before": 1,
+        "candidates_left": [],
+        "error": "The change was not kept, and the previous file is back in place. The service's systemd unit could not reload, with the new file and again with the previous one, so CelikPanel asked the server directly: it read the previous file again and is running with the settings it had before your change. What the unit's reload said is below. It failed with the previous file too, so the cause is not only this change. The server owner runs sudo systemctl reload postgresql@16-main on the server, corrects what it reports, and then saves the change here again.",
+        "file_is_previous": true,
+        "named_copy": null,
+        "named_copy_exists": false,
+        "postgresql_version": "16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)",
+        "postmaster_pid": [
+          21574,
+          21574
+        ],
+        "reason": "restored_unit_reload_failed",
+        "vars": {
+          "detail": "Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.",
+          "unit": "postgresql@16-main"
+        },
+        "work_mem_after": "8MB"
+      },
+      "name": "g: `SHOW work_mem` is the previous value (8MB) and the server was not restarted (same postmaster PID)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "before": "1791517536.340592",
+        "file": "/etc/postgresql/16/main/postgresql.conf",
+        "loaded": "1791517536.343437",
+        "signal": "true",
+        "waited": "1"
+      },
+      "name": "g: asked the same way, PostgreSQL confirms it (this file, signal sent, load time after the signal, no error in the files)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "reload": {
+          "argv": [
+            "systemctl",
+            "reload",
+            "postgresql@16-main.service"
+          ],
+          "at": "2026-10-09T03:45:38Z",
+          "returncode": 0,
+          "seconds": 0.047,
+          "status": "ok",
+          "stderr": "",
+          "stdout": ""
+        },
+        "work_mem": "8MB"
+      },
+      "name": "g: with the hook removed `systemctl reload` of the unit succeeds and the server answers",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T03:45:38Z",
+  "hba_local_rules_removed": [
+    "local   all             postgres                                peer",
+    "local   all             all                                     peer",
+    "local   replication     all                                     peer"
+  ],
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/065-a-conf-before.json",
+      "label": "a-conf-before",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/066-a-hba-before.json",
+      "label": "a-hba-before",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/067-a-server-before.json",
+      "label": "a-server-before",
+      "mode": "read-postgres",
+      "owner_action": false
+    },
+    {
+      "file": "native/068-b-conf-after.json",
+      "label": "b-conf-after",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/069-b-server-after.json",
+      "label": "b-server-after",
+      "mode": "read-postgres",
+      "owner_action": false
+    },
+    {
+      "file": "native/070-b-unit-journal.json",
+      "label": "b-unit-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/071-c-conf-after-invalid.json",
+      "label": "c-conf-after-invalid",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/072-c-server-after-invalid.json",
+      "label": "c-server-after-invalid",
+      "mode": "read-postgres",
+      "owner_action": false
+    },
+    {
+      "file": "native/073-d-conf-after-empty.json",
+      "label": "d-conf-after-empty",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/074-e-hba-after-add.json",
+      "label": "e-hba-after-add",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/075-e-server-after-hba.json",
+      "label": "e-server-after-hba",
+      "mode": "read-postgres",
+      "owner_action": false
+    },
+    {
+      "file": "native/076-e-hba-after-bad-rule.json",
+      "label": "e-hba-after-bad-rule",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/077-e-hba-after-lockout.json",
+      "label": "e-hba-after-lockout",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/078-owner-f-postgresql.conf-note.json",
+      "label": "owner-f-postgresql.conf-note",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/079-f-conf-after-owner-edit.json",
+      "label": "f-conf-after-owner-edit",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/080-f-conf-after-stale.json",
+      "label": "f-conf-after-stale",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/081-owner-g-reload-hook.json",
+      "label": "owner-g-reload-hook",
+      "mode": "owner-reload-hook",
+      "owner_action": true
+    },
+    {
+      "file": "native/082-g-conf-after-failed-reload.json",
+      "label": "g-conf-after-failed-reload",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/083-g-server-after-failed-reload.json",
+      "label": "g-server-after-failed-reload",
+      "mode": "read-postgres",
+      "owner_action": false
+    },
+    {
+      "file": "native/084-g-unit-journal.json",
+      "label": "g-unit-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/085-owner-g-agent-reread-batch.json",
+      "label": "owner-g-agent-reread-batch",
+      "mode": "owner-pg-reread",
+      "owner_action": true
+    },
+    {
+      "file": "native/086-owner-g-reload-hook-removed.json",
+      "label": "owner-g-reload-hook-removed",
+      "mode": "owner-reload-hook",
+      "owner_action": true
+    },
+    {
+      "file": "native/087-owner-g-owner-reload.json",
+      "label": "owner-g-owner-reload",
+      "mode": "owner-systemctl",
+      "owner_action": true
+    },
+    {
+      "file": "native/088-g-server-end.json",
+      "label": "g-server-end",
+      "mode": "read-postgres",
+      "owner_action": false
+    },
+    {
+      "file": "native/089-g-conf-end.json",
+      "label": "g-conf-end",
+      "mode": "read-file",
+      "owner_action": false
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T03:45:31Z",
+      "label": "f-postgresql.conf-note",
+      "mode": "owner-edit"
+    },
+    {
+      "at": "2026-10-09T03:45:33Z",
+      "label": "g-reload-hook",
+      "mode": "owner-reload-hook"
+    },
+    {
+      "at": "2026-10-09T03:45:37Z",
+      "label": "g-agent-reread-batch",
+      "mode": "owner-pg-reread"
+    },
+    {
+      "at": "2026-10-09T03:45:37Z",
+      "label": "g-reload-hook-removed",
+      "mode": "owner-reload-hook"
+    },
+    {
+      "at": "2026-10-09T03:45:38Z",
+      "label": "g-owner-reload",
+      "mode": "owner-systemctl"
+    }
+  ],
+  "owner_waited_for_idle": {
+    "at": "2026-10-09T03:45:20Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.2
+  },
+  "reload_failed": {
+    "backups_after": 1,
+    "backups_before": 1,
+    "candidates_left": [],
+    "error": "The change was not kept, and the previous file is back in place. The service's systemd unit could not reload, with the new file and again with the previous one, so CelikPanel asked the server directly: it read the previous file again and is running with the settings it had before your change. What the unit's reload said is below. It failed with the previous file too, so the cause is not only this change. The server owner runs sudo systemctl reload postgresql@16-main on the server, corrects what it reports, and then saves the change here again.",
+    "file_is_previous": true,
+    "named_copy": null,
+    "named_copy_exists": false,
+    "postgresql_version": "16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)",
+    "postmaster_pid": [
+      21574,
+      21574
+    ],
+    "reason": "restored_unit_reload_failed",
+    "vars": {
+      "detail": "Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.",
+      "unit": "postgresql@16-main"
+    },
+    "work_mem_after": "8MB"
+  },
+  "reload_hook": {
+    "applied": {
+      "dropin": "/etc/systemd/system/postgresql@16-main.service.d/set1-owner-reload-hook.conf",
+      "script": "/usr/local/sbin/set1-owner-reload-hook",
+      "unit": "postgresql@16-main.service"
+    },
+    "exec_reload": "ExecReload={ path=/usr/local/sbin/set1-owner-reload-hook ; argv[]=/usr/local/sbin/set1-owner-reload-hook ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n",
+    "realism": "an owner's own unit drop-in; no failure of the packaged unit's reload was found that an owner causes"
+  },
+  "section": "S4-postgresql",
+  "started_at": "2026-10-09T03:45:20Z",
+  "substeps": {
+    "a": "passed",
+    "b": "passed",
+    "c": "passed",
+    "d": "passed",
+    "e": "passed",
+    "f": "passed",
+    "g": "passed"
+  },
+  "title": "postgresql.conf and pg_hba.conf",
+  "unit": "postgresql@16-main.service",
+  "verdict": "passed",
+  "work_mem_edit": "commented-default"
+}

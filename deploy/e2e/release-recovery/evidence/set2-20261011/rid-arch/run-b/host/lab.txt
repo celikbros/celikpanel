@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-rid-arch-b
+rid-arch-20261009t042551z

@@ -1,0 +1,23 @@
+{
+  "checks": {
+    "checks": 10,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T03:45:12Z",
+    "notes": [
+      "no certificate authority is reachable from this guest, so no issuance was attempted against one; the route's answer without ACME is recorded and only the guard is judged"
+    ],
+    "started_at": "2026-10-09T03:45:01Z",
+    "substeps": {
+      "letsencrypt": "passed",
+      "section": "passed"
+    },
+    "title": "Let's Encrypt reissue: the guard only",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T03:45:12Z",
+  "name": "C5-letsencrypt",
+  "started_at": "2026-10-09T03:45:01Z",
+  "verdict": "passed"
+}

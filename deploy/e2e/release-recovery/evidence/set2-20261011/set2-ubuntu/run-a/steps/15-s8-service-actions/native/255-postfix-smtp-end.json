@@ -1,0 +1,16 @@
+{
+  "25": {
+    "error": "ConnectionRefusedError",
+    "ok": false,
+    "port": 25
+  },
+  "587": {
+    "error": "ConnectionRefusedError",
+    "ok": false,
+    "port": 587
+  },
+  "at": "2026-10-09T03:48:19Z",
+  "mode": "read-smtp",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1"
+}
