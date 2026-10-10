@@ -56,12 +56,16 @@ Sahip 10 Ekim 2026'da düzeltmenin bir sonraki sürüme girmesine karar verdi:
    sonraki üretimlerin onlara dokunması gerekmez. (Adım 1b, 2026-10-10,
    planlayıcı kararı:) Şablon ayrıca Panel'e ait ikinci bir include dizini
    (`/etc/nginx/celikpanel-managed.d/<alan adı>/`) kazanır; ACME HTTP-01
-   konumu oraya yazılır, sanal konağa değil. Bu satırı taşıyan korunmuş bir
+   konumu oraya yazılır, sanal konağa değil. Bu satırı (ve `mail.<alan adı>`
+   gibi adlar için, onların yalnız doğrulama server bloğunu CelikPanel'in
+   yazdığı biçimde ve değişmemiş doğrulama dosyasını) taşıyan korunmuş bir
    dosyada sertifika dosyaya dokunmadan alınır ya da yenilenir ve sahip
    CelikPanel'in metnini alana ya da sertifika satırlarını değiştirene dek
-   eski sertifika sunulur (`waiting_for_owner`); satırı taşımayan dosyada alım
-   hiçbir şey istenmeden tipli bir retle durur, yenileme başarısız değil
-   "sahibi bekliyor" olur.
+   dosyanın gösterdiği sertifika, varsa, sunulur (`waiting_for_owner`); buna
+   izin vermeyen korunmuş dosyada alım hiçbir şey istenmeden tipli bir retle
+   durur, yenileme başarısız değil "sahibi bekliyor" olur. Bu madde şunları
+   kapsamaz: takma ad sertifikası yolu ve satırın 80 numaralı bağlantı noktası
+   server bloğunda olup olmadığı.
 5. Yazma kip ve sahibi korur, sembolik bağları reddeder; bir sitenin hatası
    diğerlerini düşürmez; açılış satırı yazılan, değişmeyen, korunan, yabancı
    ve okunamayanı ayrı ayrı sayar.

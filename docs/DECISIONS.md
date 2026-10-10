@@ -56,11 +56,15 @@ The owner decided on 2026-10-10 that the correction enters the next release:
    2026-10-10, planner's decision:) it also gains a second, Panel-owned
    include directory (`/etc/nginx/celikpanel-managed.d/<domain>/`) that holds
    the ACME HTTP-01 location instead of the vhost. On a kept file that still
-   has that line a certificate is issued or renewed without touching the file,
-   and the old certificate is served until the owner takes CelikPanel's text
-   or updates the certificate lines (`waiting_for_owner`); on a kept file
-   without it issuance stops with a typed refusal before anything is
-   requested, and renewal waits for the owner instead of failing.
+   has that line (and, for names such as `mail.<domain>`, their validation-only
+   server block exactly as CelikPanel writes it, and an unchanged challenge
+   file) a certificate is issued or renewed without touching the file, and the
+   certificate the file names, if any, is served until the owner takes
+   CelikPanel's text or updates the certificate lines (`waiting_for_owner`);
+   on a kept file that does not allow this, issuance stops with a typed refusal
+   before anything is requested, and renewal waits for the owner instead of
+   failing. Not covered by this point: the alias-certificate path, and
+   whether the line sits in the port-80 server block.
 5. Writes preserve mode and owner, refuse symlinks, and one site's failure
    does not fail the others; the start line counts written, unchanged, kept,
    foreign and unreadable separately.

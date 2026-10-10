@@ -980,7 +980,10 @@ only over or after a mounted page.
   flight the page shows `recovery.checkingTitle` with `recovery.checkingHelp`
   (EN "Confirming your session and panel readiness. This check does not start a
   server operation." · TR "Oturumunuz ve panelin hazır olma durumu doğrulanıyor.
-  Bu kontrol sunucuda bir işlem başlatmaz."). `recovery.availabilityTitle`
+  Bu kontrol sunucuda bir işlem başlatmaz."; **since 2026-10-10 a first read
+  that has not answered shows the quiet surface and then `recovery.waitingHelp`
+  instead, and this sentence only while the page reads again without a verified
+  session, see the entries of that date below**). `recovery.availabilityTitle`
   ("Panel readiness could not be checked" / "Panelin hazır olma durumu kontrol
   edilemedi") needs a read that failed. These pages read again by themselves
   (session and readiness every 10 s, the license result every 5 s) and now say
@@ -5597,12 +5600,14 @@ and the contract items are in the
   anything." · TR "Panel henüz yanıt vermedi. Yanıt verir vermez CelikPanel
   açılır; bir şey yapmanız gerekmiyor."; the check button (busy,
   `recovery.checking`, while a read is in flight). "Reload CelikPanel" is no
-  longer offered at once; after half a minute (counted from the end of the
-  quiet time, by the page that shows the wait: a page that continues another
-  page's explained wait counts its own half minute): new `recovery.waitingProlonged`, EN "This has taken longer
-  than half a minute. CelikPanel keeps checking by itself; you can also reload
-  it." · TR "Bu, yarım dakikadan uzun sürdü. CelikPanel kendiliğinden kontrol
-  etmeyi sürdürür; dilerseniz yeniden de yükleyebilirsiniz." with
+  longer offered at once; after half a minute (this entry first counted it from
+  the end of the quiet time, by the page that shows the wait; **superseded on
+  2026-10-10, see "After the ninth native record" below: the half minute is
+  counted from the page load for the page's first wait, and the sentence was
+  reworded**): new `recovery.waitingProlonged`, first worded EN "This has taken
+  longer than half a minute. CelikPanel keeps checking by itself; you can also
+  reload it." · TR "Bu, yarım dakikadan uzun sürdü. CelikPanel kendiliğinden
+  kontrol etmeyi sürdürür; dilerseniz yeniden de yükleyebilirsiniz." with
   `app.reload`. Before, the page said `recovery.checkingHelp` ("Confirming your
   session and panel readiness…") with "Checking…" and "Reload CelikPanel" from
   its first frame.
@@ -5735,15 +5740,34 @@ the reload; `recovery.waitingProlonged` never appeared. Corrected in the source:
   EN "The Panel answered, but this page could not read the answer. Reloading
   CelikPanel loads the interface that matches the Panel." · TR "Panel yanıt
   verdi, ancak bu sayfa yanıtı okuyamadı. CelikPanel’i yeniden yüklemek,
-  Panel’e uyan arayüzü yükler." "Your session could not be checked" and "Panel
-  readiness could not be checked" remain only for such an answered failure;
-  `recovery.checkingHelp` remains only while that page reads again without a
-  verified session, and as the hold layer's fallback when its wording has not
-  loaded yet.
-- *What did not change:* once a read has answered, a later read that reaches
-  its limit keeps the known page and the cause last read; the hold layer over
-  mounted pages, the reads, their limits and intervals are unchanged; no
-  request was added.
+  Panel’e uyan arayüzü yükler." Which one: a request that itself failed (a
+  `TypeError` from `fetch`: refused, closed, unreachable, or a certificate the
+  browser rejects) is `network`; an HTTP error status is `status` (`api.me`
+  throws `ApiResponseError`; `usePanelSession.ts:14-18`, `:55-58`); anything
+  else, a body that is not the expected JSON included, is `invalid`. `network`
+  therefore also covers causes the sentence does not name. "Your session could
+  not be checked" and "Panel readiness could not be checked" are meant to remain only for such an answered
+  failure (one exception, **open**, in the next item); `recovery.checkingHelp`
+  remains only while that page reads again without a verified session
+  (`RecoveryAccess.tsx:188`, `waiting`), and as the hold layer's fallback when
+  its wording has not loaded yet (`AccessHold.tsx:147`).
+- ***Open, not fixed here (D-025 invariant 2): unknown shown as negative after
+  an earlier answer.*** Once any read of the access check has answered
+  (`answered`, `web/src/auth/usePanelSession.ts:32-36`; a sign-in resets it,
+  `:95`), a later read that reaches its own 15 s limit (`:66`) is no longer
+  `unanswered` (`:136`). `retry` then sets `auth_unavailable` without recording
+  a failure, because an abort is not an answer (`:74-77`), its `finally` sets
+  `auth_unavailable` or `availability_unavailable` (`:83-86`; the sign-in path
+  `:104`), and both parents pass the known cause (`App.tsx:471-474` and
+  `:501-503`), so `RecoveryAccess` draws the known negative (`:187-188`, "Your
+  session could not be checked" or "Panel readiness could not be checked") with
+  the cause of the *earlier* answered read (`failure`, `:190`) or none. That
+  read has not answered; the page says it failed, and names an old cause.
+  Reachable when a page without mounted pages (the recovery route, or a load
+  whose first read answered, for example "starting" or a failure) reads again and the Panel then stops
+  answering. Not tested, not measured, and the sequence above does not cover it.
+- *What did not change:* the hold layer over mounted pages, the reads, their
+  limits and intervals; no request was added.
 
 Evidence: `web/tests/recovery-access-runtime.test.mjs` (the 15 s and 30 s
 stages, a re-read that restarts nothing and starts no second read, the answered
@@ -5774,7 +5798,16 @@ settle it: in the lab browser, after a full load, call the registration
 explicitly and record the rejection's name and message, the registrations with
 their installing/waiting/active state, and the status and type of
 `/recovery-worker.js`; repeat with a certificate the browser trusts without a
-pin (a lab authority in the trust store).
+pin (a lab authority in the trust store). The ninth record's intake adds one
+fact that the record does not tie to any of the three causes (it neither
+explains nor excludes them): the three no-session loads of cell
+4a (a new browser context) *were* controlled by a service worker
+(`negative/loads.jsonl`, `where.sw_controlled: true`; for `/` and
+`/settings?section=updates` the document and `recoveryObservation-*.js` came
+from the worker, `sw: true`), while no page of the signed-in contexts was. Why
+the worker registered in one context and not in the other was not determined,
+and cell 4c was not repeated in a context that has one: the stopped-Panel
+behaviour with a registered worker stays **not measured**.
 
 ### A site configuration file the owner changed is kept and named; the owner chooses (2026-10-10)
 
@@ -5904,13 +5937,22 @@ with CelikPanel) and with it every render that writes a file.
 of CelikPanel's text, the validation-only block of mail names and the plain-HTTP
 redirect block included, also holds `include
 /etc/nginx/celikpanel-managed.d/<domain>/*.conf;`. That directory is
-CelikPanel's (created 0755 with the vhost, removed with the site when it holds
-only CelikPanel's file); the ACME HTTP-01 location
+CelikPanel's (created 0755 with the vhost); the ACME HTTP-01 location
 (`location ^~ /.well-known/acme-challenge/` with the root-owned challenge root)
 is written there as `acme-http-01.conf`, under the same render header, and no
-longer into the vhost. The file stays as long as the site exists, like the
-location did; certbot's own tokens in the challenge root still come and go with
-each validation. A changed challenge file is kept, not replaced (D-022). The
+longer into the vhost. Lifecycle: written in the same operation as the vhost
+whenever the vhost afterwards reads the directory (CelikPanel's text written or
+unchanged, or a kept file that still has the include line; not for a kept file
+without it); put back together with the vhost when nginx refuses the
+configuration or cannot reload; removed with the site (the challenge file when
+it is still CelikPanel's unchanged text, then the directory if that leaves it
+empty; anything else in the directory stays). The file stays as long as the
+site exists, like the location did; certbot's own tokens in the challenge root
+still come and go with each validation. A changed challenge file is kept, not
+replaced (D-022). A kept file counts as including the directory when one
+non-comment line of it is the include line (spacing aside); which server block
+holds that line is not checked, so a line only in the port-443 block passes the
+check though the validation runs on port 80 (open). The
 page says: "CelikPanel writes its own parts of this site (certificate
 validation) in {dir}. Keep the lines of this file that include it."
 (`siteConfig.managedDir`). The owner's additions still go to
@@ -6023,6 +6065,7 @@ include directories are left in place. When this release runs again it
 recognises the older release's text byte for byte and adopts it; an owner's
 edit made while the older release ran and before its next start is kept and
 shown. The release notes say this.
+
 **Certificates on a kept file (step 1b, 2026-10-10).** Issuance and renewal
 publish the validation through CelikPanel's own include directory, so a kept
 file that still includes it is not touched:
@@ -6030,12 +6073,24 @@ file that still includes it is not touched:
 - *Issuance, the file has the line:* the certificate is requested, installed in
   CelikPanel's certificate store and activated in the ledger; the site's TLS
   block becomes CelikPanel's text held beside the file; the file keeps naming
-  the certificate it named, and that one is served until the owner acts. The
-  answer is `200 {"status":"waiting_for_owner","pending_reason":"certificate"}`;
-  the certificate's renewal status is `waiting_for_owner`, the ledger reason
-  `certificate`. The SSL tab says "The certificate was issued, but this site’s
-  nginx configuration file was changed outside CelikPanel and still uses the
-  previous one. Open the Configuration file page to choose." The page: "New
+  the certificate it named, and that one is served until the owner acts (a site
+  that had none stays without TLS, and the page then has no "certificate in
+  use" line). Mail TLS, when the certificate secures mail, follows the new
+  certificate at once (read from the source); only the website waits. The
+  answer is `200 {"status":"waiting_for_owner","expires_at":…,
+  "pending_reason":"certificate"}`; the certificate's renewal status is
+  `waiting_for_owner`, the ledger reason `certificate`. The SSL tab shows the
+  issuance as a warning, not a success: "The certificate was issued, but this
+  site’s nginx configuration file was changed outside CelikPanel and still uses
+  the previous one. Open the Configuration file page to choose." and, for as
+  long as the wait lasts, the certificate card's state
+  (`ssl.status.waitingForOwner`, "Not in use yet: waiting for your choice on
+  the site’s configuration file"), the renewal line
+  (`ssl.renewal.waitingForOwner`) and the paragraph `ssl.waitingForOwner`
+  ("This site’s nginx configuration file was changed outside CelikPanel, so this
+  certificate is not in use yet, or its renewal could not start. Choose on the
+  Configuration file page (Hosting tab).") from the certificate object's
+  `waiting_for_owner`. The page: "New
   certificate ready, not in use yet" — "CelikPanel obtained a new certificate
   for this site, but your configuration file still names the previous one, and
   nginx keeps serving that one until you act. Take CelikPanel’s text below, or
@@ -6043,8 +6098,10 @@ file that still includes it is not touched:
   check and reload nginx yourself and choose Keep mine to record it.", the two
   lines (`ssl_certificate …;`, `ssl_certificate_key …;`) and "The certificate in
   use expires on {date} ({days} days left)." (of the previous certificate). The
-  state ends when the file is CelikPanel's text again or a render, a start or
-  "keep mine" finds `ssl_certificate <new path>;` in the kept file.
+  `certificate` reason and the certificate's `waiting_for_owner` end together,
+  when the file is CelikPanel's text again or a render, a start or "keep mine"
+  finds `ssl_certificate <new path>;` in the kept file
+  (`observeSiteFileCertificate`).
 - *Issuance, the file lacks the line* (or the server block of `mail.<domain>`
   when that name is asked for, or CelikPanel's challenge file was changed):
   refused before anything is requested (`SITE_CONFIG_OWNER_EDITED`,
@@ -6055,20 +6112,60 @@ file that still includes it is not touched:
   the file. Take CelikPanel’s text below, or add the line shown here to the
   server block of your file that listens on port 80; then check and reload nginx
   yourself." with the line, and "CelikPanel’s regular renewal check looks at
-  this file again about every 12 hours; nothing else is retried."
+  this file again about every 12 hours; nothing else is retried." That last
+  sentence holds only for a certificate that already exists, is Let’s Encrypt
+  with automatic renewal and is within 30 days of expiring; a first request
+  from the SSL tab is not retried by anything (open: the sentence is shown
+  whatever the case). A file that is missing or unreadable is not "kept":
+  issuance then answers `409` with that file’s own code (`SITE_CONFIG_MISSING`,
+  `SITE_CONFIG_UNWRITABLE`), where the earlier release gave an untyped
+  sentence. The `certificate_validation` reason ends only when CelikPanel’s text
+  is in place or a later certificate operation replaces it. **Open:** adding the
+  line to the file does not end it, so the notice above the tabs, the Domains
+  badge and the dashboard keep saying that the certificate "cannot be requested
+  or renewed" while the page’s card, read from the file at that moment
+  (`validation` `ready`), already says "Your file now lets the validation run".
+  The reason’s ending is tested only for `certificate`.
 - *Renewal:* the same two paths. A renewal the file stops (kept without the
-  line, missing, unreadable) is recorded as `waiting_for_owner`, not `failed`;
-  nothing retries it except the 12-hourly schedule, which reads the file again.
-  A renewed certificate the kept file does not name waits as for issuance. The
+  line, missing, unreadable) is recorded as `waiting_for_owner`, not `failed`,
+  before anything is requested; nothing retries it except the schedule (every
+  12 hours and once at Panel start, for Let’s Encrypt certificates with
+  automatic renewal that expire within 30 days), which reads the file again. A
+  renewal that went ahead on a kept file with the line installs the renewed
+  certificate and waits as for issuance; that certificate is not near expiry,
+  so no further renewal is due and only the owner’s action ends the wait. For a
+  missing or unreadable file no ledger reason is written, so restoring the file
+  does not end the waiting status; the next completed renewal does. The
   dashboard's attention list carries each waiting certificate whatever its
-  days, with the days left on the certificate in use: "{domain}: a certificate
-  is waiting for your choice on the site’s configuration file; the one in use
-  has {days} days left".
+  days, first in the list, with the days left on the certificate in use:
+  "{domain}: a certificate is waiting for your choice on the site’s
+  configuration file; the one in use has {days} days left" (`expiring_certs`
+  carries `waiting_for_owner`, `served_days_left`, `domain_id`; the list shows
+  six entries at most; a certificate in use that has expired is worded with a
+  negative number of days, open).
 
 A file kept from before step 1b (an alpha.81/82 edit, unknown origin) has no
 include line: its certificate waits until the owner takes CelikPanel's text or
-adds the line. The PHP-FPM pool and the application unit are not covered yet
-(the second step). The difference's two captions are drawn in the page's
+adds the line. *Not changed:* the certificate path for alias names
+(`cmd/panel/alias_certificates.go:292`) still renders the site’s file first, so
+on a kept file it stops there with the held-file error wrapped in "prepare alias
+certificate validation vhost: …", with no typed answer and no pointer to the
+Configuration file page (what its caller shows was not traced here); open.
+*Open, read from the source:* (1) the Configuration file page is for
+administrators (`403` otherwise), but the SSL tab can also be drawn for a hosting
+customer (`canView(d, 'ssl')`), whose `ssl.waitingForOwner`, `ssl.issuedWaitingForOwner` and the 409
+sentence send them to a page they cannot open and do not say that the server
+administrator acts; (2) the waiting state outranks the expired, invalid and
+untrusted states in the certificate tier (`web/src/lib/sslTier.ts`, before
+`invalid`; its own comment says the opposite order), so a certificate in use
+that has expired or is untrusted is shown as waiting; (3) one flag,
+`waiting_for_owner`, covers two different things (a new certificate not in use
+yet; a renewal that could not start), and the SSL tab’s sentence says "or". The
+PHP-FPM pool and the application unit are not covered yet (the second step). On
+a narrow screen the Domains list wraps the badges below the domain name instead
+of cutting them off (`Domains.tsx`); the harness records `pageOverflowX` for
+each state, and whether that run was made at phone width is not recorded
+here. The difference's two captions are drawn in the page's
 language ("(on this server)" / "(bu sunucuda)", "CelikPanel’s text" /
 "CelikPanel’in metni"). Component-tested and mock browser; not measured on a
 real system; the measurement cells are the audit's §9.
@@ -6082,8 +6179,9 @@ REQUEST_ID_REQUIRED` without it, `400` if malformed); the same identity with
 the same body is answered from the stored answer (`X-CelikPanel-Request-Replayed:
 1`), with a different body `409 REQUEST_ID_REUSED`, while running `409
 REQUEST_IN_PROGRESS`, after a Panel restart `409 REQUEST_OUTCOME_UNKNOWN`.
-Errors are `{"error": <English sentence>, "code": …, "reason"?: …, "details"?:
-[…]}`; screens translate by `code`.
+Errors are `{"error": <English sentence>, "code": …, "reason"?: …, "detail"?:
+<one machine token>, "vars"?: {…}, "details"?: […]}`; screens translate by
+`code`.
 
 - `GET /api/v1/domains/{id}/site-config` (reads the Agent; writes nothing) → 200
   ```json
@@ -6115,13 +6213,23 @@ Errors are `{"error": <English sentence>, "code": …, "reason"?: …, "details"
   a comment line with such a word is replaced entirely. A credential that does
   not use those words is not hidden; the field is for administrators only.
   `decision.current` is true only while the file still has the digest the
-  decision was made on. Step 1b adds `managed_dir`, `managed_include`,
-  `challenge_file` (`written`, `unchanged`, `kept`, `failed`, `absent`,
-  `differs`), `validation` (kept files: `ready`, `include_missing`,
-  `names_missing`, `challenge_kept`, `challenge_failed`), `pending_reason`
-  (`certificate`, `certificate_validation`) and `certificate`
-  (`{cert_path, key_path, expires_at, served_expires_at, served_days_left,
-  referenced}`), each only when known. Failure: `502 SITE_CONFIG_NOT_READ`.
+  decision was made on. Step 1b adds `managed_dir`, `managed_include` (the
+  exact line a vhost needs), `challenge_file` (`absent`, `unchanged`,
+  `differs`, `kept` in the GET; `written` and `failed` appear in the answer of
+  an operation that wrote), `validation` (kept files only; what a certificate
+  operation would find now: `ready`, `include_missing`, `names_missing`,
+  `challenge_kept`, `challenge_failed`), `pending_reason` (the ledger's
+  certificate reason: `certificate`, `certificate_validation`) and
+  `certificate` (only with a `pending_reason`: `{cert_path, key_path,
+  expires_at, served_expires_at, served_days_left, referenced}`; `cert_path`
+  and `key_path` are the active certificate in CelikPanel’s store, `expires_at`
+  is its expiry, `served_*` is the certificate the kept file most likely still
+  serves — the previous one for `certificate`, the active one for
+  `certificate_validation` — and may be absent, `served_days_left` is negative
+  once it has expired, `referenced` says the kept file names the active
+  certificate), each only when known. The `take` and `recreate` answers carry
+  `managed_dir`, `managed_include` and `challenge_file`. Failure: `502
+  SITE_CONFIG_NOT_READ`.
 - `POST …/keep` body `{"file_sha256":"<64 hex from the GET>"}` (required; any
   `render_sha256` is ignored) → 200, the same object as the GET after the
   decision. `400` (missing or malformed digest), `409 SITE_CONFIG_NOT_APPLICABLE`,
@@ -6151,6 +6259,28 @@ Errors are `{"error": <English sentence>, "code": …, "reason"?: …, "details"
   `site_config: {"state":…,"adopted_from"?:…,"kept_by_choice"?:true,"pending_reason"?:…}` from the
   Panel's last recorded observation (`missing` is a stored state; the GET above
   never returns it, it returns `absent`).
+- Certificate issuance, `POST /api/v1/domains/{id}/ssl/letsencrypt` (step 1b).
+  Added answers for a site whose file CelikPanel keeps: `200
+  {"status":"waiting_for_owner","expires_at":"…","pending_reason":"certificate"}`
+  (issued and stored, not served yet; an ordinary success is `{"status":"success",
+  "expires_at":"…"}`), and, before anything is requested, `409
+  {"code":"SITE_CONFIG_OWNER_EDITED","reason":"certificate_validation",
+  "detail":"include_missing"|"names_missing"|"challenge_kept"|"challenge_failed",
+  "vars":{"include":"include /etc/nginx/celikpanel-managed.d/<domain>/*.conf;"}}`
+  (`vars` only when the Agent named the line). A missing or unreadable file
+  answers `409 SITE_CONFIG_MISSING` / `SITE_CONFIG_UNWRITABLE` (`reason` as
+  above) where the earlier release gave an untyped `409`. An Agent that does not
+  say whether the validation can be published is answered as `include_missing`.
+- `GET /api/v1/domains/{id}/ssl`: each certificate object carries
+  `waiting_for_owner` (bool) and `renewal_status`, one of `` (none), `expiring`,
+  `current`, `renewed`, `failed`, `activation_pending`, `dependents_pending`,
+  `waiting_for_owner`. The last is new in step 1b: the kept file does not use the
+  certificate yet, or stopped its renewal; it ends as described above and is
+  set only by the issuance, renewal and ledger paths there, never by a read.
+- `GET /api/v1/dashboard`: `expiring_certs[]` entries may carry
+  `waiting_for_owner: true`, `domain_id` and `served_days_left` (the days left
+  on the certificate in use; `days_left` is then the active certificate’s); such
+  entries are listed whatever their days, before the others.
 - Other operations that render the file answer `409` with
   `SITE_CONFIG_OWNER_EDITED` (`reason` = the state), `SITE_CONFIG_MISSING` or
   `SITE_CONFIG_UNWRITABLE` (`reason` as above); site creation and import answer

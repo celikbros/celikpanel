@@ -3860,8 +3860,10 @@ arayüzü değişmedi). 2026-10-10 saat tarihidir.
   ekrandayken beklemeye başlayan bileşen onu sürdürür. `RecoveryAccess` ilk
   bekleme sırasında (`checking` ve oturumu doğrulanmış ama arayüzü yolda olan
   durum için yeni `loading`) yalnızca sayfa zeminini, sonra açıklanmış beklemeyi
-  ve 30 sn sonra yeniden yüklemeyi çizer; diğer her neden eskisi gibi, hemen
-  çizilir. `LicenseOnboarding` ilk erişim okuması için aynısını yapar ve her
+  ve 30 sn sonra yeniden yüklemeyi çizer (**dokuzuncu kayıttan, 2026-10-10,
+  beri: 15 sn'de "Şimdi kontrol et" ve 30 sn'de yeniden yükleme, ikisi de sayfa
+  yüklemesinden sayılır; aşağıdaki o tarihli girdiye bakın**); diğer her neden
+  eskisi gibi, hemen çizilir. `LicenseOnboarding` ilk erişim okuması için aynısını yapar ve her
   okumanın gösterdiği nedeni kaydeder (`AccessReadCause`: yanıt yok ya da
   Panel'den gelmeyen bir ret → `availability`; `PANEL_STARTING` → `starting`;
   lisans sonucu kullanılamayan bir yanıt ya da bir isteğin lisans reddi →
@@ -3938,15 +3940,30 @@ arayüzü değişmedi). 2026-10-10 saat tarihidir.
   sn tutma, EN ve TR; 1,6, 15,2, 25,2 ve 31 sn ekran görüntülerine bakıldı).
   15 sn/30 sn yolu bileşen testli ve taklit tarayıcılı; gerçek bir sistemde
   yeniden ölçülmedi. **Gözlem (değiştirilmedi):** kurtarma hizmet çalışanı
-  kaydın tarayıcısında kayıtlı değildi (hücre 4c ve set7); bu yüzden durmuş
-  Panel'de Chrome'un kendi hata sayfası göründü; olası nedenler ve neyin
-  ölçülmesi gerektiği aynı tarihli işlem rehberi girdisindedir.
+  kaydın oturum açılmış tarayıcı bağlamlarında kayıtlı değildi (hücre 4c ve
+  set7); bu yüzden durmuş Panel'de Chrome'un kendi hata sayfası göründü; hücre
+  4a'nın oturumsuz üç yüklemesini (yeni bir bağlam) ise bir çalışan denetliyordu
+  (`sw_controlled: true`) ve nedeni belirlenmedi. Olası nedenler kanıtlanmadı;
+  onlar ve neyin ölçülmesi gerektiği aynı tarihli işlem rehberi girdisindedir.
+- **Açık (ilke 2): daha önceki bir yanıttan sonra bilinmeyenin olumsuz
+  gösterilmesi.** Erişim denetiminin herhangi bir okuması yanıt verdikten sonra,
+  kendi 15 sn sınırına ulaşan sonraki okuma bekleme olarak değil, son okunan
+  nedenle bilinen olumsuz sonuç olarak çizilir:
+  `web/src/auth/usePanelSession.ts:32-36` (`answered`), `:66` (sınır), `:74-77`
+  ve `:83-86` (kesme `auth_unavailable` ya da `availability_unavailable`
+  yapar ve hata kaydetmez), `:136` (`answered` olunca `unanswered` yanlıştır),
+  `web/src/App.tsx:471-474` ve `:501-503` (bilinen neden geçirilir),
+  `web/src/components/RecoveryAccess.tsx:187-190` (başlık, cümle ve eski neden).
+  Okuma yanıt vermedi; sayfa başarısız olduğunu söylüyor. Bu değişiklikle
+  düzeltilmedi, sınanmadı, ölçülmedi.
 - **Açık.** 15 sn/30 sn yolunun konukta gerçek sistem yeniden ölçümü (soğuk
   yüklemenin kendisini dokuzuncu kayıt ölçtü) ve her kurulu sunucu; HTTP
   önbelleği açıkken yükleme; gerçek bir güncelleme sırasında bekletme
   katmanının sözcükleri; yükleme başına iki oturum okuması (burada
-  değiştirilmedi); kurtarma hizmet çalışanının laboratuvar tarayıcısında neden
-  kaydolmadığı; mandal listesinin kalan 30 dosyası.
+  değiştirilmedi); kurtarma hizmet çalışanının laboratuvar tarayıcısının oturum açılmış
+  bağlamlarında neden kaydolmadığı, oysa dokuzuncu kaydın oturumsuz yüklemelerini
+  bir çalışan denetliyordu (`sw_controlled: true`, hücre 4a; hücre 4c böyle bir
+  bağlamda tekrarlanmadı); mandal listesinin kalan 30 dosyası.
 
 ### Kurulum sayfasının son denetimi ve güncelleme bildirimi: durmuş çalışma sürmüyordur, kurulu hedefte süren güncelleme "doğrulanıyor"dur (P0.2 alanı; ilke 2 ve 6; D-024; 2026-10-10)
 
@@ -4128,18 +4145,41 @@ hücreleri (denetim §9) sonra gelir. 2026-10-10 saat tarihidir.
     `prepareCertificateValidation`) dosyaya dokunmadan sertifikayı ister; son
     üretim korunur, bu yüzden sertifika defterde etkinleşir ve CelikPanel'in
     bekleyen metninde tutulur; defter nedeni `certificate`, yenileme durumu
-    `waiting_for_owner`, yanıt `200 {"status":"waiting_for_owner"}`; site
-    kapatılmaz ve dosyanın sertifikası sunulmayı sürdürür. Hazır olmayan korunan
+    `waiting_for_owner`, yanıt `200
+    {"status":"waiting_for_owner","expires_at":…,"pending_reason":"certificate"}`;
+    site kapatılmaz ve dosyanın sertifikası, varsa, sunulmayı sürdürür (hiç
+    sertifikası olmayan site TLS'siz kalır); posta TLS'i yeni sertifikayı
+    hemen izler. Hazır olmayan korunan
     dosya hiçbir istekten önce reddedilir: `409 SITE_CONFIG_OWNER_EDITED`,
     `reason` `certificate_validation`, `detail` doğrulama durumu,
     `vars.include`; defter nedeni `certificate_validation`. Yenileme
     (`cmd/panel/cert_renewal.go`) aynı iki yolu izler; dosyanın durdurduğu
-    yenileme `failed` değil `waiting_for_owner` olur ve yalnız 12 saatlik
-    zamanlama yeniden dener. Sertifika nedenleri `state_reason` içinde durur ve
-    dosya korundukça sonraki üretimlerde kalır (`RecordSiteFileResult`);
+    yenileme hiçbir istekten önce `failed` değil `waiting_for_owner` olur ve
+    yalnız zamanlama yeniden dener (`runDueCertRenewals`: 12 saatte bir ve
+    başlarken, otomatik yenilemeli Let's Encrypt, 30 gün içinde dolacaklar; ilk
+    alım ve hazır korunan dosyada yenilenen sertifika yeniden denenmez).
+    Sertifika nedenleri `state_reason` içinde durur ve dosya korundukça sonraki
+    üretimlerde kalır (`RecordSiteFileResult`). `certificate` nedeni,
     CelikPanel'in metni yerine geçince ya da korunan dosya etkin sertifikayı
-    gösterince biter ve bu `waiting_for_owner`ı da bitirir. Pano bekleyen her
-    sertifikayı kullanılan sertifikanın kalan günüyle listeler.
+    gösterince biter (`observeSiteFileCertificate`) ve bu `waiting_for_owner`ı
+    da bitirir; `certificate_validation` nedeni yalnız CelikPanel'in metniyle ya
+    da sonraki bir sertifika işlemiyle biter (**açık:** sahibin ekleme satırını
+    eklemesi onu bitirmez; bildirim, rozet ve pano sürerken sayfanın kartı
+    canlı okuyarak `ready` der; eksik ya da okunamayan dosya neden yazmaz, bu
+    yüzden onu geri koymak bir yenilemenin koyduğu `waiting_for_owner`ı bir
+    sonraki yenileme tamamlanana dek bitirmez). Pano bekleyen her sertifikayı,
+    başta ve gün sayısı ne olursa olsun, kullanılan sertifikanın kalan günüyle
+    listeler (en çok altı kayıt; süresi dolunca eksi, açık). Takma ad sertifikası
+    yolu (`cmd/panel/alias_certificates.go:292`) değişmedi ve korunan dosyada
+    hâlâ tutulan-dosya hatasında durur (açık). "Hazır" denetimi, ekleme
+    satırının dosyanın herhangi bir yerinde bulunmasıdır, 80 numaralı bağlantı
+    noktası bloğunda değil (açık). Ayrıca açık: yalnız yöneticilerin
+    açabildiği sayfayı açamayan barındırma müşterilerine SSL sekmesinin
+    `ssl.waitingForOwner`, `ssl.issuedWaitingForOwner` ve ret cümlesi
+    gösterilir; sertifika kademesi (`web/src/lib/sslTier.ts`) `waitingForOwner`ı
+    `invalid`, `untrusted` ve `expired`dan önce koyar, bu yüzden kullanılan
+    sertifikanın doğrulanmış bir hatası bekliyor diye gösterilir (ilke 2'ye ve
+    dosyanın kendi yorumuna aykırı).
   - *Sahibin seçimleri* (`cmd/panel/site_config.go`): `GET …/site-config`
     (salt okunur; sunucuda hesaplanan, taraf başına ≤ 4000 satır ve 64 KiB ile
     sınırlı birleşik fark; `authorization|password|passwd|secret|token|api[_-]?key|

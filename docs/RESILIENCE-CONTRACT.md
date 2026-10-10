@@ -4549,7 +4549,9 @@ that replaced the page is not changed). 2026-10-10 is the clock date.
   explained wait is on screen continues it. `RecoveryAccess` draws only the page
   background during a first wait (`checking`, and the new `loading` for a
   confirmed session whose interface is still on its way), then the explained
-  wait with the reload after 30 s; every other cause renders as before, at once.
+  wait with the reload after 30 s (**since the ninth record, 2026-10-10: "Check
+  now" at 15 s and the reload at 30 s, both counted from the page load; see the
+  entry of that date below**); every other cause renders as before, at once.
   `LicenseOnboarding` does the same for its first access read, and records the
   cause each read showed (`AccessReadCause`: no answer or a non-Panel refusal →
   `availability`; `PANEL_STARTING` → `starting`; an answer whose license result
@@ -4625,15 +4627,29 @@ that replaced the page is not changed). 2026-10-10 is the clock date.
   mock browser `coldslow35` (35 s hold, EN and TR, screenshots at 1.6, 15.2,
   25.2 and 31 s looked at). The 15 s/30 s path is component-tested and mock
   browser; not re-measured on a real system. **Observation (not changed):**
-  the recovery service worker was not registered in the record's browser
-  (cells 4c, and set7), so a stopped Panel showed Chrome's own error page;
-  likely causes and what must be measured are in the operation guidance entry
-  of the same date.
+  the recovery service worker was not registered in the signed-in
+  browser contexts of the record (cell 4c, and set7), so a stopped Panel showed
+  Chrome's own error page; the three no-session loads of cell 4a (a new
+  context) were controlled by one (`sw_controlled: true`) and why was not
+  determined. The likely causes are not established; they and what must be
+  measured are in the operation guidance entry of the same date.
+- **Open (invariant 2): unknown shown as negative after an earlier answer.**
+  Once any read of the access check has answered, a later read that reaches its
+  own 15 s limit is drawn as the known negative with the cause last read, not
+  as a wait: `web/src/auth/usePanelSession.ts:32-36` (`answered`), `:66` (the
+  limit), `:74-77` and `:83-86` (the abort sets `auth_unavailable` or
+  `availability_unavailable` and records no failure), `:136` (`unanswered` is
+  false once `answered`), `web/src/App.tsx:471-474` and `:501-503` (the known
+  cause is passed), `web/src/components/RecoveryAccess.tsx:187-190` (title,
+  sentence and the old cause). The read has not answered; the page says it
+  failed. Not fixed by this change, not tested, not measured.
 - **Open.** The real-system re-measurement of the 15 s/30 s path on a guest
   (the cold load itself was measured by the ninth record) and any installed
   server; a load with the HTTP cache enabled; the hold layer's words during a
   real update; the two session reads per load (not changed here); why the
-  recovery service worker is not registered in the lab browser; the remaining
+  recovery service worker is not registered in the signed-in contexts of the lab
+  browser though the ninth record's no-session loads were controlled by one
+  (`sw_controlled: true`, cell 4a; cell 4c not repeated in such a context); the remaining
   30 files of the ratchet list.
 
 ### The setup page's final check and the update notice: a stopped run is not in progress, a running update on the installed target is "being verified" (P0.2 area; invariants 2 and 6; D-024; 2026-10-10)
@@ -4826,18 +4842,40 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
     the final render is kept, so the certificate is activated in the ledger
     and held in CelikPanel's pending text, the ledger reason is `certificate`,
     the renewal status `waiting_for_owner` and the answer `200
-    {"status":"waiting_for_owner"}`; the site is not disabled and the file's
-    certificate keeps being served. A kept file that is not ready is refused
+    {"status":"waiting_for_owner","expires_at":…,"pending_reason":"certificate"}`;
+    the site is not disabled and the file's certificate keeps being served (a
+    site that had none stays without TLS); mail TLS follows the new certificate
+    at once. A kept file that is not ready is refused
     before any request: `409 SITE_CONFIG_OWNER_EDITED`, `reason`
     `certificate_validation`, `detail` the validation state, `vars.include`;
     ledger reason `certificate_validation`. Renewal (`cmd/panel/cert_renewal.go`)
     follows the same two paths; a renewal the file stops is
-    `waiting_for_owner`, not `failed`, and only the 12-hourly schedule tries
-    again. The certificate reasons live in `state_reason` and survive later
-    renders while the file stays kept (`RecordSiteFileResult`); they end when
-    CelikPanel's text is in place or a kept file names the active certificate,
-    which also ends `waiting_for_owner`. The dashboard lists each waiting
-    certificate with the days left on the one in use.
+    `waiting_for_owner`, not `failed`, before any request, and only the
+    schedule tries again (`runDueCertRenewals`: every 12 hours and at start,
+    Let's Encrypt with automatic renewal, expiring within 30 days; a first
+    issuance and a certificate renewed on a ready kept file are not retried).
+    The certificate reasons live in `state_reason` and survive later renders
+    while the file stays kept (`RecordSiteFileResult`). The `certificate` reason
+    ends when CelikPanel's text is in place or a kept file names the active
+    certificate (`observeSiteFileCertificate`), which also ends
+    `waiting_for_owner`; the `certificate_validation` reason ends only with
+    CelikPanel's text or a later certificate operation (**open:** the owner
+    adding the include line does not end it, so the notice, the badge and the
+    dashboard stay while the page's own card, read live, says `ready`; a missing
+    or unreadable file writes no reason, so restoring it does not end a
+    `waiting_for_owner` set by a renewal until the next renewal completes). The
+    dashboard lists each waiting certificate, first and whatever its days, with
+    the days left on the one in use (six entries at most; negative once it has
+    expired, open). The certificate path for alias names
+    (`cmd/panel/alias_certificates.go:292`) is not changed and still stops at
+    the held-file error on a kept file (open). The "ready" check is the presence
+    of the include line anywhere in the file, not in the port-80 block (open).
+    Further open, shown to hosting customers who cannot open the
+    administrators-only page: the SSL tab's `ssl.waitingForOwner`,
+    `ssl.issuedWaitingForOwner` and the refusal sentence; and the certificate
+    tier (`web/src/lib/sslTier.ts`) puts `waitingForOwner` before `invalid`,
+    `untrusted` and `expired`, so a verified failure of the certificate in use
+    is shown as waiting (against invariant 2 and the file's own comment).
   - *The owner's choices* (`cmd/panel/site_config.go`): `GET
     /api/v1/domains/{id}/site-config` (read-only: the Agent's classification and a
     unified diff computed on the server, ≤ 4000 lines per side and 64 KiB;
