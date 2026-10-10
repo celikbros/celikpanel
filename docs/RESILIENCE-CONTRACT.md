@@ -4808,7 +4808,8 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
     `RecordedSHA256`, `ExpectedFileSHA256`, `ExpectedRenderSHA256`;
     `ApplyVhostResponse.File`, `ApplyVhostsResponse.Items/Counts`,
     `CreateSiteRequest.ServerNames`, `CreateSiteResponse.SiteFile`, the error
-    code `site_config_exists`, and the read-only RPC `Agent.InspectSiteFile`
+    code `site_config_exists`, and the RPC `Agent.InspectSiteFile` (read-only
+    unless the request sets `probe_validation`, below)
     (`internal/transport/site_files.go`). A Panel that receives no `File`/`Items`
     (an Agent that predates them) records the state `unknown` with reason
     `agent_does_not_report` and never reads it as unchanged; a missing
@@ -4855,9 +4856,10 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
     (`internal/services/managed_vhost_probe.go`). `validation`: `ready` (every
     name served the body), `include_missing` (a site name not served),
     `names_missing` (a validation-only name not served), `challenge_kept`,
-    `challenge_failed`, or `unknown` (no answer on port 80, or the probe file
-    could not be written; never "not ready"), with the first name and nginx's
-    HTTP status. Issuance (`cmd/panel/domain_ssl_handlers.go`,
+    `challenge_failed`, or `unknown` (no answer on port 80 for a name, even when
+    an earlier name was not served; the challenge directory missing; or the
+    probe file could not be created; never "not ready"), with the first name and
+    nginx's HTTP status. Issuance (`cmd/panel/domain_ssl_handlers.go`,
     `prepareCertificateValidation`) on a ready kept file requests the
     certificate without touching the file; the final render is kept, so the
     certificate is activated in the ledger and held in CelikPanel's pending
@@ -4905,7 +4907,11 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
     browser; the probe has not asked a real nginx; not measured on a real
     system.
   - *The owner's choices* (`cmd/panel/site_config.go`): `GET
-    /api/v1/domains/{id}/site-config` (read-only: the Agent's classification and a
+    /api/v1/domains/{id}/site-config` (read-only, except that while the ledger
+    reason is `certificate_validation` it runs the probe: a probe file in the
+    challenge root, CelikPanel's challenge file and one nginx check and reload
+    when that file is absent or out of date, and a measured `ready` ends the
+    reason; it returns the Agent's classification and a
     unified diff computed on the server, ≤ 4000 lines per side and 64 KiB;
     a line matching `authorization|password|passwd|secret|token|api[_-]?key|
     private[_-]?key|cookie` (case-insensitive) keeps its directive and its value
@@ -5034,7 +5040,21 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
   `managed_vhost_certificate_test.go`, the mounted test and the mock browser);
   not measured on a real system: no real certbot validation through the Panel's
   include directory, no real nginx with a kept file. A file kept from before
-  step 1b has no include line and waits for the owner. The domains list line is
+  step 1b has no include line and waits for the owner. **Open after the second
+  round of step 1b (none fixed):** (1) the probe asks 127.0.0.1 only, so a
+  port-80 block bound to one address is not reached there (`unknown` when
+  nothing else listens on port 80 on the loopback; another block on the
+  wildcard address would answer instead, possibly as `include_missing`: read
+  from nginx's rule, not measured); (2) at the site-config read a failed
+  `nginx -t` or reload while CelikPanel publishes its challenge file is
+  reported as `challenge_failed`, though the cause may be an unrelated file;
+  (3) a missing or unreadable file writes no reason, so a renewal it stopped
+  ends its waiting state only at the next completed renewal; (4) the SSL
+  tab's expiry detail prints negative days for an expired certificate
+  (`ssl.days`); (5) no browser run is recorded in a real hosting-customer
+  session; (6) a ready probe shows that nginx serves the path from the
+  loopback, not that DNS or the firewall lets the certificate authority in;
+  nothing was measured against a real nginx. The domains list line is
   computed from the owner's decisions: drawn while an unknown-origin file has
   no current "keep mine" decision, gone once each has one; it is not drawn when
   nothing was left alone. Schema: none (the reasons use the existing

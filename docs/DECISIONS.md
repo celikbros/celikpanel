@@ -87,6 +87,14 @@ database restore from before the header; keep-mine then certificate issue;
 take-CelikPanel's with its backup; owner include directory survives renewals
 and switches; removed file not recreated; pool directives survive). The PHP
 pool and the application unit follow in a second step under the same rule.
+Open in the probe of the second round (2026-10-10), none fixed: a port-80
+block bound to one address is not reached from the loopback; a failed
+`nginx -t` or reload at the Configuration file page's read is reported as
+`challenge_failed`; a missing or unreadable file writes no reason, so a
+renewal it stopped waits until the next completed renewal; the SSL tab prints
+negative days for an expired certificate; no real hosting-customer session was
+drawn; a ready probe does not show that DNS or the firewall lets the
+certificate authority in. The probe has never asked a real nginx.
 
 ---
 

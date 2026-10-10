@@ -5917,7 +5917,8 @@ verilmez. Doğrulama konumu (`location ^~ /.well-known/acme-challenge/ { root
 konan yeni bir dosya yeniden yükleme gerektirmez. Yoklama
 (`internal/services/managed_vhost_probe.go`, `probeValidation`): Agent oraya
 rastgele adlı (`celikpanel-probe-<32 onaltılık>`) ve rastgele içerikli bir
-dosyayı dışlayıcı biçimde yazar (var olan ad ya da bağ reddedilir),
+dosyayı (doğrulama kökünde; sitenin dosyasına ya da `celikpanel-managed.d`
+dizinine değil) dışlayıcı biçimde yazar (var olan ad ya da bağ reddedilir),
 127.0.0.1'in 80 numaralı bağlantı noktasındaki nginx'e
 `/.well-known/acme-challenge/<ad>` yolunu her doğrulama adını Host olarak
 vererek sorar (önce sitenin adları, sonra `mail.<alan adı>` gibi yalnız
@@ -5927,8 +5928,13 @@ her ad tam o içerikle 200 yanıtı verdi. Sunulmayan bir site adı
 `include_missing`, sunulmayan bir yalnız doğrulama adı `names_missing`dir (site
 adı önce gelir); ilk böyle ad ve nginx'in HTTP kodu onunla birlikte gelir. 80
 numaralı bağlantı noktasında hiç yanıt olmaması (bağlantı reddedildi, istek
-başına 5 sn sınır) ya da yoklama dosyasının yazılamaması, sınırlı bir ayrıntıyla
-`unknown` olur, asla "hazır değil" değil. CelikPanel'in değiştirilmiş ya da
+başına 5 sn sınır), doğrulama dizininin eksik ya da dizin olmaması veya yoklama
+dosyasının oluşturulamaması (kip 0644, `O_EXCL`), sınırlı bir ayrıntıyla
+`unknown` olur, asla "hazır değil" değil; sorma, yanıt vermeyen ilk adda durur,
+bu yüzden daha önceki bir ad sunulmamış olsa bile sonuç `unknown`dır. Hazır bir
+yoklama, bu sunucudaki nginx'in yolu her ad altında geri döngüden sunduğunu
+gösterir; adın bu sunucuya çözüldüğünü ya da 80 numaralı bağlantı noktasının
+sertifika otoritesine açık olduğunu göstermez. CelikPanel'in değiştirilmiş ya da
 yazılamayan doğrulama dosyası, yoklamadan önce `challenge_kept` /
 `challenge_failed` olarak kalır. Yoklama istendiğinde CelikPanel önce korunmuş
 dosya için kendi doğrulama dosyasını, yoksa ya da başka girdileri taşıyorsa,
@@ -6171,7 +6177,7 @@ yoklamayla ölçülür:
   Alan adları rozeti nedenle birlikte gider. O neden olmadan yapılan okuma
   yoklama istemez. Eksik ya da okunamayan dosya hâlâ neden yazmaz; bu yüzden
   dosyayı geri koymak bir yenilemenin bekleme durumunu ancak bir sonraki
-  tamamlanan yenilemede bitirir.
+  tamamlanan yenilemede bitirir (açık).
 - *Yenileme:* aynı yollar. Dosyanın durdurduğu bir yenileme (yoklama
   sunulmadı, eksik, okunamaz) hiçbir şey istenmeden `failed` değil
   `waiting_for_owner` olarak kaydedilir; yoklaması yanıt almayan bir yenileme
@@ -6224,6 +6230,24 @@ Türkçe; ekran görüntülerine bakıldı). Bileşen testli ve taklit tarayıc�
 gerçek sistemde ölçülmedi (yoklama hiç gerçek bir nginx'e sormadı); ölçüm
 hücreleri denetimin §9'udur.
 
+*İkinci turdan sonra açık kalanlar (hiçbiri giderilmedi).* (1) Yoklama yalnız
+127.0.0.1'e sorar: 80 numaralı bağlantı noktası bloğu tek bir adrese
+(`listen <adres>:80;`) bağlı bir siteye orada ulaşılmaz. Geri döngüde 80'i
+dinleyen başka bir şey yoksa yanıt `unknown`dır; başka bir blok joker adreste
+dinliyorsa nginx o bloğun yanıtını verir, bu da `include_missing` gibi
+okunabilir (nginx'in kuralından okundu, ölçülmedi). (2) Yapılandırma dosyası
+sayfasının okumasında CelikPanel kendi doğrulama dosyasını yayımlarken başarısız
+olan bir `nginx -t` ya da yeniden yükleme, neden ilgisiz bir dosya olsa bile
+`challenge_failed` olarak bildirilir; bilinmiyor olarak çizilmez. (3) Eksik ya
+da okunamayan dosya defter nedeni yazmaz; bu yüzden durdurduğu yenileme bekleme
+durumunu ancak bir sonraki tamamlanan yenilemede bitirir (yukarıda). (4) SSL
+sekmesinin süre ayrıntısı günü olduğu gibi yazar; süresi dolmuş bir sertifika
+"(-3 gün)" okunur (`DomainSSLSettings.tsx` ve `DomainSSLOverviewCard.tsx`,
+`ssl.days`); yalnız pano düzeltildi. (5) Bu sayfaları gerçek bir barındırma
+müşterisi oturumunda çizen bir tarayıcı koşusu kayıtlı değildir; müşterinin
+erişebildiği cümleler yalnız katalogdan okunur. (6) Hiçbir şey gerçek bir nginx
+ya da gerçek bir sertifika otoritesine karşı ölçülmedi.
+
 **Entegratörler için: API (sürüm notlarına dek başvuru).** Tüm rotalar yönetici
 içindir (aksi hâlde `403 {"error":"administrator access is required"}`);
 barındırılan sitesi olmayan alan adı `404`. Üç POST rotası D-029'un istek
@@ -6238,8 +6262,10 @@ biçimindedir; ekranlar `code`'a göre çevirir.
 
 - `GET /api/v1/domains/{id}/site-config` (Agent'ı okur; hiçbir şey yazmaz,
   yalnız defterin nedeni `certificate_validation` iken yoklama ister: doğrulama
-  kökünde yeniden kaldırılan bir yoklama dosyası, yoksa CelikPanel'in doğrulama
-  dosyası yayımlanır ve ölçülen `ready` o nedeni temizler) → 200
+  kökünde yeniden kaldırılan bir yoklama dosyası, yoksa ya da eskiyse
+  CelikPanel'in doğrulama dosyası (bir `nginx -t` ve bir yeniden yükleme)
+  yayımlanır ve ölçülen `ready` o nedeni temizler; böyle her okuma yoklamayı
+  yineler) → 200
   ```json
   {"domain_id":12,"domain":"example.test","kind":"nginx_vhost",
    "path":"/etc/nginx/sites-available/example.test.conf",

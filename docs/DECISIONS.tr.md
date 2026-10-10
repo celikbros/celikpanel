@@ -88,6 +88,15 @@ yüklemesi; benimkini-koru sonra sertifika alma; CelikPanel'inkini-al ve
 yedeği; sahibin include dizini yenileme ve geçişlerden sağ çıkıyor;
 kaldırılan dosya yeniden yaratılmıyor; havuz yönergeleri korunuyor). PHP
 havuzu ve uygulama birimi aynı kural altında ikinci adımda gelir.
+İkinci turun yoklamasında açık kalanlar (2026-10-10), hiçbiri giderilmedi: tek
+bir adrese bağlı 80 numaralı bağlantı noktası bloğuna geri döngüden
+ulaşılmaz; Yapılandırma dosyası sayfasının okumasında başarısız bir `nginx -t`
+ya da yeniden yükleme `challenge_failed` olarak bildirilir; eksik ya da
+okunamayan dosya neden yazmaz, bu yüzden durdurduğu yenileme bir sonraki
+tamamlanan yenilemeye dek bekler; SSL sekmesi süresi dolmuş sertifika için
+eksi gün yazar; gerçek bir barındırma müşterisi oturumu çizilmedi; hazır bir
+yoklama, DNS'in ya da güvenlik duvarının sertifika otoritesini içeri
+aldığını göstermez. Yoklama hiç gerçek bir nginx'e sormadı.
 
 ---
 

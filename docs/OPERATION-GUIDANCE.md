@@ -5983,7 +5983,8 @@ in its text. The challenge location (`location ^~ /.well-known/acme-challenge/
 `<challenge root>/.well-known/acme-challenge/` at the time of a request, so a
 new file there needs no reload. The probe
 (`internal/services/managed_vhost_probe.go`, `probeValidation`): the Agent
-writes one file there with a random name (`celikpanel-probe-<32 hex>`) and a
+writes one file there (in the challenge root, not in the site's file or in
+`celikpanel-managed.d`) with a random name (`celikpanel-probe-<32 hex>`) and a
 random body, created exclusively (an existing name or link is refused), asks
 nginx on 127.0.0.1 port 80 for `/.well-known/acme-challenge/<name>` with each
 validation name as the Host (the site's names, then validation-only names such
@@ -5993,8 +5994,13 @@ removes the file. Ready: every name answered 200 with exactly that body. A site
 name not served is `include_missing`, a validation-only name not served is
 `names_missing` (a site name outranks it); the first such name and nginx's HTTP
 status travel with it. No answer on port 80 at all (connection refused, time
-limit of 5 s per request), or a probe file that cannot be written, is
-`unknown` with a bounded detail, never "not ready". CelikPanel's changed or
+limit of 5 s per request), a challenge directory that is missing or not a
+directory, or a probe file that cannot be created (mode 0644, `O_EXCL`), is
+`unknown` with a bounded detail, never "not ready"; asking stops at the first
+name that gets no answer, so that is `unknown` even when an earlier name was
+not served. A ready probe shows that nginx on this server serves the path
+under each name from the loopback; it does not show that the name resolves to
+this server or that port 80 is open to the certificate authority. CelikPanel's changed or
 unwritable challenge file stays `challenge_kept` / `challenge_failed` before
 any probe. When it asks for the probe, CelikPanel first publishes its own
 challenge file for the kept file if it is absent or holds other inputs: one
@@ -6231,7 +6237,7 @@ Whether it does is measured by the probe above, before anything is requested:
   happens to the file; then request the certificate again.") and the Domains
   badge go with the reason. A read without that reason asks for no probe.
   A missing or unreadable file still writes no reason, so restoring it ends a
-  renewal's waiting state only at the next completed renewal.
+  renewal's waiting state only at the next completed renewal (open).
 - *Renewal:* the same paths. A renewal the file stops (probe not served,
   missing, unreadable) is recorded as `waiting_for_owner`, not `failed`, before
   anything is requested; a renewal whose probe gets no answer records nothing
@@ -6286,6 +6292,24 @@ loopback HTTP request, `cmd/panel/site_config_probe_test.go`,
 at). Component-tested and mock browser; not measured on a real system (the
 probe has never asked a real nginx); the measurement cells are the audit's §9.
 
+*Open after the second round (none of these is fixed).* (1) The probe asks
+127.0.0.1 only: a site whose port-80 block is bound to one address
+(`listen <address>:80;`) is not reached there. With nothing else listening on
+port 80 on the loopback the answer is `unknown`; if another block listens on
+the wildcard address, nginx would give that block's answer, which could read
+as `include_missing` (read from nginx's rule, not measured). (2) At the
+Configuration file page's read, a failed `nginx -t` or reload while CelikPanel
+publishes its challenge file is reported as `challenge_failed`, although the
+cause may be an unrelated file; it is not drawn as unknown. (3) A missing or
+unreadable file writes no ledger reason, so a renewal it stopped ends its
+waiting state only at the next completed renewal (above). (4) The SSL tab's
+expiry detail still prints the days as they are, so an expired certificate
+reads "(-3 days)" (`DomainSSLSettings.tsx` and `DomainSSLOverviewCard.tsx`,
+`ssl.days`); only the dashboard was corrected. (5) No browser run is
+recorded as drawing these pages in a real hosting-customer session; the
+sentences a customer can reach are checked in the catalogue only. (6) Nothing
+here was measured against a real nginx or a real certificate authority.
+
 **For integrators: the API (reference until the release notes).** All routes
 are for an administrator (`403 {"error":"administrator access is required"}`
 otherwise); a domain without a hosted site is `404`. The three POST routes are
@@ -6302,8 +6326,9 @@ Errors are `{"error": <English sentence>, "code": …, "reason"?: …, "detail"?
 - `GET /api/v1/domains/{id}/site-config` (reads the Agent; writes nothing, except
   that while the ledger's reason is `certificate_validation` it asks for the
   probe: a probe file in the challenge root, removed again, CelikPanel's
-  challenge file published if absent, and a measured `ready` clears that
-  reason) → 200
+  challenge file published if absent or out of date (one `nginx -t` and one
+  reload), and a measured `ready` clears that reason; each such read repeats
+  the probe) → 200
   ```json
   {"domain_id":12,"domain":"example.test","kind":"nginx_vhost",
    "path":"/etc/nginx/sites-available/example.test.conf",

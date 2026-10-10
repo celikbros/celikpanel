@@ -4117,8 +4117,9 @@ hücreleri (denetim §9) sonra gelir. 2026-10-10 saat tarihidir.
   - *Tipli yanıtlar, eklemeli:* `FileTrigger`, `RecordedSHA256`,
     `ExpectedFileSHA256`, `ExpectedRenderSHA256`; `ApplyVhostResponse.File`,
     `ApplyVhostsResponse.Items/Counts`, `CreateSiteRequest.ServerNames`,
-    `CreateSiteResponse.SiteFile`, `site_config_exists` kodu ve salt okunur
-    `Agent.InspectSiteFile`. Bunları göndermeyen eski bir Agent'tan gelen yanıt
+    `CreateSiteResponse.SiteFile`, `site_config_exists` kodu ve
+    `Agent.InspectSiteFile` (istek `probe_validation` koymadıkça salt okunur;
+    aşağıda). Bunları göndermeyen eski bir Agent'tan gelen yanıt
     `unknown` (`agent_does_not_report`) olarak kaydedilir; asla "değişmedi"
     okunmaz.
   - *Başlangıçta site başına yalıtım:* girdisi hazırlanamayan site yalnız
@@ -4160,8 +4161,9 @@ hücreleri (denetim §9) sonra gelir. 2026-10-10 saat tarihidir.
     (`internal/services/managed_vhost_probe.go`). `validation`: `ready` (her ad
     içeriği sundu), `include_missing` (bir site adı sunulmadı), `names_missing`
     (yalnız doğrulama adı sunulmadı), `challenge_kept`, `challenge_failed` ya da
-    `unknown` (80 numaralı bağlantı noktasında yanıt yok ya da yoklama dosyası
-    yazılamadı; asla "hazır değil" değil), ilk ad ve nginx'in HTTP koduyla.
+    `unknown` (bir ad için 80 numaralı bağlantı noktasında yanıt yok, daha önceki
+    bir ad sunulmamış olsa bile; doğrulama dizini eksik; ya da yoklama dosyası
+    oluşturulamadı; asla "hazır değil" değil), ilk ad ve nginx'in HTTP koduyla.
     Hazır korunan dosyada alım (`cmd/panel/domain_ssl_handlers.go`,
     `prepareCertificateValidation`) dosyaya dokunmadan sertifikayı ister; son
     üretim korunur, bu yüzden sertifika defterde etkinleşir ve CelikPanel'in
@@ -4209,8 +4211,12 @@ hücreleri (denetim §9) sonra gelir. 2026-10-10 saat tarihidir.
     gelir. Bileşen testli ve taklit tarayıcılı; yoklama gerçek bir nginx'e
     sormadı; gerçek sistemde ölçülmedi.
   - *Sahibin seçimleri* (`cmd/panel/site_config.go`): `GET …/site-config`
-    (salt okunur; sunucuda hesaplanan, taraf başına ≤ 4000 satır ve 64 KiB ile
-    sınırlı birleşik fark; `authorization|password|passwd|secret|token|api[_-]?key|
+    (salt okunur; yalnız defter nedeni `certificate_validation` iken yoklamayı
+    çalıştırır: doğrulama kökünde bir yoklama dosyası, CelikPanel'in doğrulama
+    dosyası yoksa ya da eskiyse o dosya ve bir `nginx` denetimi ile yeniden
+    yükleme; ölçülen `ready` nedeni bitirir; Agent'ın sınıflandırmasını ve
+    sunucuda hesaplanan, taraf başına ≤ 4000 satır ve 64 KiB ile
+    sınırlı birleşik farkı döndürür; `authorization|password|passwd|secret|token|api[_-]?key|
     private[_-]?key|cookie` ile (büyük/küçük harf fark etmez) eşleşen satır
     yönergesini korur ve değeri gizlenir, yorum satırı değiştirilir; başka kimlik
     bilgileri tanınmaz); `POST
@@ -4298,7 +4304,22 @@ hücreleri (denetim §9) sonra gelir. 2026-10-10 saat tarihidir.
   `managed_vhost_certificate_test.go` hizmet testleri, bağlı test ve sahte
   sunucuda tarayıcı); gerçek sistemde ölçülmedi: Panel'in ekleme dizini
   üzerinden gerçek certbot doğrulaması ve korunan dosyalı gerçek nginx yok. Adım
-  1b'den önce korunmuş bir dosyada ekleme satırı yoktur ve sahibi bekler. Alan
+  1b'den önce korunmuş bir dosyada ekleme satırı yoktur ve sahibi bekler.
+  **Adım 1b'nin ikinci turundan sonra açık kalanlar (hiçbiri giderilmedi):**
+  (1) yoklama yalnız 127.0.0.1'e sorar; tek bir adrese bağlı 80 numaralı
+  bağlantı noktası bloğuna orada ulaşılmaz (geri döngüde 80'i dinleyen başka
+  bir şey yoksa `unknown`; joker adreste dinleyen başka bir blok onun yerine
+  yanıt verir, belki `include_missing` olarak: nginx'in kuralından okundu,
+  ölçülmedi); (2) site-config okumasında CelikPanel kendi doğrulama dosyasını
+  yayımlarken başarısız olan `nginx -t` ya da yeniden yükleme, neden ilgisiz
+  bir dosya olsa bile `challenge_failed` bildirilir; (3) eksik ya da okunamayan
+  dosya neden yazmaz, bu yüzden durdurduğu yenileme bekleme durumunu ancak
+  bir sonraki tamamlanan yenilemede bitirir; (4) SSL sekmesinin süre ayrıntısı
+  süresi dolmuş sertifika için eksi gün yazar (`ssl.days`); (5) gerçek bir
+  barındırma müşterisi oturumunda çizen tarayıcı koşusu kayıtlı değildir; (6)
+  hazır bir yoklama nginx'in yolu geri döngüden sunduğunu gösterir, DNS'in ya
+  da güvenlik duvarının sertifika otoritesini içeri aldığını göstermez; hiçbir
+  şey gerçek bir nginx'e karşı ölçülmedi. Alan
   adları listesi satırı sahibin kararlarından hesaplanır: kökeni bilinmeyen bir
   dosyanın şimdiki "benimkini koru" kararı yokken çizilir, hepsinin kararı
   olunca kalkar; hiçbir şey olduğu gibi bırakılmadıysa çizilmez. Şema: yok
