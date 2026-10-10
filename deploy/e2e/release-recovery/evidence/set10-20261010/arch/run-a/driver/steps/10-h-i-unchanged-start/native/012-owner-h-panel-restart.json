@@ -1,0 +1,68 @@
+{
+  "action": "owner-panel",
+  "after": {
+    "ActiveEnterTimestamp": "Sat 2026-10-10 20:34:38 UTC",
+    "ActiveExitTimestamp": "Sat 2026-10-10 20:34:38 UTC",
+    "ActiveState": "active",
+    "ExecMainPID": "3057",
+    "ExecMainStartTimestamp": "Sat 2026-10-10 20:34:38 UTC",
+    "ExecMainStatus": "0",
+    "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+    "InactiveEnterTimestamp": "Sat 2026-10-10 20:34:38 UTC",
+    "InactiveExitTimestamp": "Sat 2026-10-10 20:34:38 UTC",
+    "InvocationID": "cf043d428d7c4e60b4226f3279dbbdea",
+    "LoadState": "loaded",
+    "MainPID": "3057",
+    "NRestarts": "0",
+    "ReloadResult": "success",
+    "Result": "success",
+    "StateChangeTimestamp": "Sat 2026-10-10 20:34:38 UTC",
+    "SubState": "running",
+    "Type": "simple"
+  },
+  "at": "2026-10-10T20:34:38Z",
+  "before": {
+    "ActiveEnterTimestamp": "Sat 2026-10-10 20:29:58 UTC",
+    "ActiveExitTimestamp": "",
+    "ActiveState": "active",
+    "ExecMainPID": "422",
+    "ExecMainStartTimestamp": "Sat 2026-10-10 20:29:58 UTC",
+    "ExecMainStatus": "0",
+    "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+    "InactiveEnterTimestamp": "",
+    "InactiveExitTimestamp": "Sat 2026-10-10 20:29:58 UTC",
+    "InvocationID": "e0785d9e8332478cb921b25498d71dc3",
+    "LoadState": "loaded",
+    "MainPID": "422",
+    "NRestarts": "0",
+    "ReloadResult": "success",
+    "Result": "success",
+    "StateChangeTimestamp": "Sat 2026-10-10 20:29:58 UTC",
+    "SubState": "running",
+    "Type": "simple"
+  },
+  "epoch": 1791664478.512937,
+  "finished_at": "2026-10-10T20:34:40Z",
+  "is_active": "active",
+  "mode": "owner-panel",
+  "owner_action": true,
+  "reconcile_lines_seen": [
+    "2026-10-10T20:34:38.886107+00:00 dns-arch panel[3057]: 2026/10/10 20:34:38 site configuration files at start: 0 written, 3 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+  ],
+  "schema": "celikpanel/set10-native/v1",
+  "systemctl": {
+    "argv": [
+      "systemctl",
+      "restart",
+      "celikpanel-panel.service"
+    ],
+    "at": "2026-10-10T20:34:38Z",
+    "returncode": 0,
+    "seconds": 0.1,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "waited_seconds": 2.1,
+  "what": "restart"
+}

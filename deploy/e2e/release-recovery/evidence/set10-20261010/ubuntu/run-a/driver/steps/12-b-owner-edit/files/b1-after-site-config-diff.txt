@@ -1,0 +1,12 @@
+--- /etc/nginx/sites-available/set10-a.test.conf (on this server)
++++ CelikPanel's text
+@@ -21,7 +21,8 @@
+     }
+ 
+     root /var/www/celikpanel/subscriptions/2/sites/2/public_html;
+-    index set8-owner-index.html index.php index.html index.htm;
++    index index.php index.html index.htm;
++
+     location / {
+ 
+         try_files $uri $uri/ /index.php?$query_string;

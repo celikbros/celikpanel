@@ -1,0 +1,72 @@
+{
+  "at": "2026-10-10T21:41:47Z",
+  "domain": "set4-upd-php.test",
+  "files": [
+    {
+      "bytes": 1926,
+      "ctime_ns": 1791668403484053741,
+      "fastcgi_pass": [
+        "unix:/var/run/php/php8.3-fpm-site5.sock"
+      ],
+      "includes": [
+        "fastcgi.conf",
+        "fastcgi_params",
+        "/etc/nginx/celikpanel-sites.d/set4-upd-php.test/*.conf"
+      ],
+      "inode": 263787,
+      "kind": "file",
+      "mtime_ns": 1791668403475053715,
+      "names_the_php_snippet": false,
+      "path": "/etc/nginx/sites-available/set4-upd-php.test.conf",
+      "php_location_lines": [
+        "fastcgi_split_path_info ^(.+?\\.php)(/.*)$;",
+        "try_files $fastcgi_script_name =404;",
+        "set $path_info $fastcgi_path_info;",
+        "fastcgi_param PATH_INFO $path_info;",
+        "fastcgi_index index.php;",
+        "include fastcgi.conf;",
+        "fastcgi_pass unix:/var/run/php/php8.3-fpm-site5.sock;",
+        "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+        "include fastcgi_params;"
+      ],
+      "sha256": "29cd389210386440c26ad20005a3d01d9973910b3605f269f4234e748bbf3b83",
+      "text": "# celikpanel-render v2 sha256=6efa75924df695693117de72302406be6b48d4100763b2ec5178192e60504c7c\n# Nginx vhost for set4-upd-php.test\n# Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set4-upd-php.test/*.conf;\n# CelikPanel never writes there. If you change this file, CelikPanel keeps\n# your file and asks you before it replaces it.\n# CelikPanel yazdı. Kendi eklemeleriniz /etc/nginx/celikpanel-sites.d/set4-upd-php.test/*.conf içine;\n# CelikPanel oraya hiç yazmaz. Bu dosyayı değiştirirseniz CelikPanel\n# dosyanızı korur ve değiştirmeden önce size sorar.\n# Site ID: 5 · Project type: php\nserver {\n    listen 80;\n    listen [::]:80;\n    server_name set4-upd-php.test www.set4-upd-php.test;\n\n    access_log /var/log/nginx/set4-upd-php.test-access.log;\n    error_log /var/log/nginx/set4-upd-php.test-error.log;\n\n    # Root-owned validation content only; never tenant public_html.\n    location ^~ /.well-known/acme-challenge/ {\n        root /var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/5;\n        try_files $uri =404;\n    }\n\n    root /var/www/celikpanel/subscriptions/2/sites/5/public_html;\n    index index.php index.html index.htm;\n\n    location / {\n\n        try_files $uri $uri/ /index.php?$query_string;\n    }\n    location ~ \\.php$ {\n        fastcgi_split_path_info ^(.+?\\.php)(/.*)$;\n        try_files $fastcgi_script_name =404;\n        set $path_info $fastcgi_path_info;\n        fastcgi_param PATH_INFO $path_info;\n        fastcgi_index index.php;\n        include fastcgi.conf;\n        fastcgi_pass unix:/var/run/php/php8.3-fpm-site5.sock;\n        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\n        include fastcgi_params;\n    }\n    location ~ /\\.(?!well-known).* {\n        deny all;\n    }\n\n    # Your additions for this site (server context) / Bu site için eklemeleriniz\n    include /etc/nginx/celikpanel-sites.d/set4-upd-php.test/*.conf;\n}\n"
+    },
+    {
+      "kind": "symlink",
+      "path": "/etc/nginx/sites-enabled/set4-upd-php.test.conf",
+      "target": "/etc/nginx/sites-available/set4-upd-php.test.conf",
+      "target_exists": true
+    }
+  ],
+  "mode": "read-nginx",
+  "nginx_test": {
+    "at": "2026-10-10T21:41:47Z",
+    "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "unit": {
+    "ActiveEnterTimestamp": "Sat 2026-10-10 21:27:45 UTC",
+    "ActiveExitTimestamp": "",
+    "ActiveState": "active",
+    "ExecMainPID": "11105",
+    "ExecMainStartTimestamp": "Sat 2026-10-10 21:27:46 UTC",
+    "ExecMainStatus": "0",
+    "ExecReload": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; master_process on; -s reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+    "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+    "InactiveEnterTimestamp": "",
+    "InactiveExitTimestamp": "Sat 2026-10-10 21:27:45 UTC",
+    "InvocationID": "a2384c965a4344a683e17ab69b6ce157",
+    "LoadState": "loaded",
+    "MainPID": "11105",
+    "NRestarts": "0",
+    "ReloadResult": "success",
+    "Result": "success",
+    "StateChangeTimestamp": "Sat 2026-10-10 21:40:03 UTC",
+    "SubState": "running",
+    "Type": "forking"
+  }
+}

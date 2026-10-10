@@ -1,0 +1,23 @@
+{
+  "backups": [],
+  "candidates_left": [],
+  "file": {
+    "exists": true,
+    "gid": 0,
+    "group": "root",
+    "inode": 84107,
+    "mode": "0644",
+    "mtime_ns": 1789979029000000000,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/my.cnf",
+    "sha256": "888e33ad5f5370d8f441bdd065965cf4d682d5b151ab11c04be6061cf48401e6",
+    "size": 193,
+    "text": "#\n# This group is read both by the client and the server\n# use it for options that affect everything\n#\n[client-server]\n\n#\n# include *.cnf from the config directory\n#\n!includedir /etc/my.cnf.d\n\n",
+    "type": "regular",
+    "uid": 0
+  },
+  "mode": "read-file",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1"
+}

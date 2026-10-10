@@ -1,0 +1,79 @@
+{
+  "checks": {
+    "before": {
+      "guidance": "undecided",
+      "required": true,
+      "revision": 0,
+      "status": "new"
+    },
+    "dns": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "draft_choices": {
+      "dns_mode": "external",
+      "peer_ip": "",
+      "peer_ns": ""
+    },
+    "execution": {
+      "error": {
+        "code": "HOST_MUTATION_BUSY",
+        "message": "This server's package manager is busy — a package task is still running on this server. Wait for it to finish, then try again."
+      },
+      "phase": "05-mail_profile",
+      "status": "failed"
+    },
+    "owner_attempts": [
+      {
+        "attempt": 1,
+        "error": {
+          "code": "HOST_MUTATION_BUSY",
+          "message": "This server's package manager is busy — a package task is still running on this server. Wait for it to finish, then try again."
+        },
+        "owner_texts": {
+          "api_message": "This server's package manager is busy — a package task is still running on this server. Wait for it to finish, then try again.",
+          "code": "HOST_MUTATION_BUSY",
+          "err.HOST_MUTATION_BUSY": {
+            "en": "Another server change or operating-system package task is still running. Wait for it to finish, then try again.",
+            "tr": "Başka bir sunucu değişikliği veya işletim sistemi paket işlemi hâlâ sürüyor. Tamamlanmasını bekleyip yeniden deneyin."
+          }
+        },
+        "phase": "05-mail_profile",
+        "purpose": "web_mail",
+        "request_id": "e8b7ba9e002bc09f14494c019d7f01e5",
+        "status": "failed",
+        "steps": {
+          "01-dns": "succeeded",
+          "02-service": "succeeded",
+          "03-service": "succeeded",
+          "04-service": "succeeded",
+          "05-mail_profile": "failed",
+          "06-mail_profile": "pending",
+          "07-service": "pending",
+          "08-service": "pending",
+          "09-firewall": "pending",
+          "10-access_dns": "pending",
+          "11-panel_certificate": "pending",
+          "12-access_dns": "pending",
+          "13-mail_certificate": "pending",
+          "14-mail_enrollment": "pending",
+          "15-verify": "pending"
+        }
+      }
+    ],
+    "owner_model": "ordinary owner: the reviewed setup plan is started once; no wait for the package manager and no newly reviewed plan after a stop (H19 off)",
+    "plan_web_mail": {
+      "blockers": [],
+      "can_start": true,
+      "http": 200,
+      "id": "04773b3a60f510eee4cb40f4caf09db2"
+    },
+    "start_http": 202
+  },
+  "finished_at": "2026-10-10T21:00:09Z",
+  "name": "setup",
+  "reason": "server setup did not succeed: {'status': 'failed', 'phase': '05-mail_profile', 'error': {'code': 'HOST_MUTATION_BUSY', 'message': \"This server's package manager is busy — a package task is still running on this server. Wait for it to finish, then try again.\"}}",
+  "started_at": "2026-10-10T20:58:15Z",
+  "verdict": "failed"
+}

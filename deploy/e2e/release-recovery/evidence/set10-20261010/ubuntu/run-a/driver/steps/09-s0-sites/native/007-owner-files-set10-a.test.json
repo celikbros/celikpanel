@@ -1,0 +1,22 @@
+{
+  "action": "owner-files",
+  "at": "2026-10-10T20:14:56Z",
+  "docroot_entries": [
+    "index.php",
+    "set4-probe.php",
+    "set4-static.txt",
+    "set8-ini.php",
+    "set8-owner-index.html"
+  ],
+  "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+  "domain": {
+    "id": 2,
+    "name": "set10-a.test",
+    "status": "active",
+    "subscription_id": 2
+  },
+  "mode": "owner-files",
+  "owner_action": true,
+  "schema": "celikpanel/set8-native/v1",
+  "site_account": "set10_a_test"
+}

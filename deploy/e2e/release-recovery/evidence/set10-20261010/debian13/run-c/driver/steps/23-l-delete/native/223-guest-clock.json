@@ -1,0 +1,184 @@
+{
+  "at": "2026-10-10T19:57:00Z",
+  "epoch": 1791662220.4368389,
+  "ledger": {
+    "database": "/var/lib/celikpanel/celikpanel.db",
+    "domains": [
+      {
+        "id": 1,
+        "name": "set1-owner.test"
+      },
+      {
+        "id": 2,
+        "name": "set10-a.test"
+      },
+      {
+        "id": 3,
+        "name": "set10-b.test"
+      },
+      {
+        "id": 4,
+        "name": "set10-c.test"
+      },
+      {
+        "id": 5,
+        "name": "set10-d.test"
+      }
+    ],
+    "ledger_last": [
+      42,
+      43,
+      44
+    ],
+    "ledger_rows": 44,
+    "managed_site_files": [
+      {
+        "adopted_from": "",
+        "backup_path": "",
+        "body_sha256": "80fb9190764fa27a9c58f42f6fa204333d5ccec68113847880012d893c24064c",
+        "decided_at": 0,
+        "decided_by": null,
+        "decision": "",
+        "decision_file_sha256": "",
+        "domain_id": 1,
+        "file_format": "celikpanel-render v2",
+        "file_sha256": "aa7679d801a7bd8e4d008283c4e248e96809875e83f4f6d38e742bde6999dc18",
+        "id": 1,
+        "kind": "nginx_vhost",
+        "observed_at": 1791662195,
+        "path": "/etc/nginx/sites-available/set1-owner.test.conf",
+        "pending_path": "",
+        "pending_sha256": "",
+        "site_id": 1,
+        "state": "managed_unchanged",
+        "state_reason": "",
+        "written_at": 1791662159,
+        "written_release": "v0.1.0-alpha.81 0684f2703b66"
+      },
+      {
+        "adopted_from": "",
+        "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T195501Z",
+        "body_sha256": "c6b2e3d40b5505ed47a94ae3d87ba4ddcfb84724cb183a1322c0219a388916c5",
+        "decided_at": 1791662124,
+        "decided_by": 2,
+        "decision": "recreate",
+        "decision_file_sha256": "937abb023dd9cc64b903ab48a059e74409424e3ef43879d1a8cc8f082d7ee943",
+        "domain_id": 2,
+        "file_format": "celikpanel-render v2",
+        "file_sha256": "",
+        "id": 2,
+        "kind": "nginx_vhost",
+        "observed_at": 1791662195,
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "pending_path": "",
+        "pending_sha256": "",
+        "site_id": 2,
+        "state": "unreadable",
+        "state_reason": "symlink",
+        "written_at": 1791662176,
+        "written_release": "v0.1.0-alpha.81 0684f2703b66"
+      },
+      {
+        "adopted_from": "",
+        "backup_path": "",
+        "body_sha256": "766dbc994baac002e8da831fd78f4a386d682a390d682da9b9b0b8fade6ed1b8",
+        "decided_at": 0,
+        "decided_by": null,
+        "decision": "",
+        "decision_file_sha256": "",
+        "domain_id": 3,
+        "file_format": "celikpanel-render v2",
+        "file_sha256": "09e799124dbd9d55e912693ce49a4f4c350e550c4e3ccec50f959c6c0af4b91d",
+        "id": 3,
+        "kind": "nginx_vhost",
+        "observed_at": 1791662195,
+        "path": "/etc/nginx/sites-available/set10-b.test.conf",
+        "pending_path": "",
+        "pending_sha256": "",
+        "site_id": 3,
+        "state": "managed_unchanged",
+        "state_reason": "",
+        "written_at": 1791662159,
+        "written_release": "v0.1.0-alpha.81 0684f2703b66"
+      },
+      {
+        "adopted_from": "",
+        "backup_path": "",
+        "body_sha256": "0d56798918063e2f0a93d641efa3d56c38446ad4c9a6f639251443720787c095",
+        "decided_at": 0,
+        "decided_by": null,
+        "decision": "",
+        "decision_file_sha256": "",
+        "domain_id": 4,
+        "file_format": "celikpanel-render v2",
+        "file_sha256": "d2e0b6a6805d0277167da992e4d20b95e4fb75d847149a319d10194904e406c9",
+        "id": 70,
+        "kind": "nginx_vhost",
+        "observed_at": 1791662217,
+        "path": "/etc/nginx/sites-available/set10-c.test.conf",
+        "pending_path": "",
+        "pending_sha256": "",
+        "site_id": 4,
+        "state": "managed_unchanged",
+        "state_reason": "",
+        "written_at": 1791662217,
+        "written_release": "v0.1.0-alpha.81 0684f2703b66"
+      },
+      {
+        "adopted_from": "",
+        "backup_path": "",
+        "body_sha256": "910f085d7c37be78006f0a7edc0c5412725e9966599cc0c6c5906a207f235e4f",
+        "decided_at": 0,
+        "decided_by": null,
+        "decision": "",
+        "decision_file_sha256": "",
+        "domain_id": 5,
+        "file_format": "celikpanel-render v2",
+        "file_sha256": "9bfadf15f6f52343b4005b9865b04918c0d417db6911d05b86188e71add998ef",
+        "id": 71,
+        "kind": "nginx_vhost",
+        "observed_at": 1791662218,
+        "path": "/etc/nginx/sites-available/set10-d.test.conf",
+        "pending_path": "",
+        "pending_sha256": "",
+        "site_id": 5,
+        "state": "managed_unchanged",
+        "state_reason": "",
+        "written_at": 1791662218,
+        "written_release": "v0.1.0-alpha.81 0684f2703b66"
+      }
+    ],
+    "managed_site_files_table": true,
+    "schema_version": 44,
+    "sites": [
+      {
+        "domain_id": 1,
+        "id": 1,
+        "project_type": "static"
+      },
+      {
+        "domain_id": 2,
+        "id": 2,
+        "project_type": "php"
+      },
+      {
+        "domain_id": 3,
+        "id": 3,
+        "project_type": "php"
+      },
+      {
+        "domain_id": 4,
+        "id": 4,
+        "project_type": "php"
+      },
+      {
+        "domain_id": 5,
+        "id": 5,
+        "project_type": "php"
+      }
+    ]
+  },
+  "mode": "read-ledger",
+  "owner_action": false,
+  "schema": "celikpanel/set10-native/v1"
+}

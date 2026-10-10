@@ -1,0 +1,18 @@
+Formatting '/var/tmp/cp-release-drill-s10-d13d-a/cells/6f5f52980bd91adee349c713/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-s10-d13d-a/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-s10-d13d-a/cells/6f5f52980bd91adee349c713/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-s10-d13d-a/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-s10-d13d-a", "cell_id": "release-recovery__83c0e2984faa25cc", "ssh_ports": [4865, 4866]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s10-d13d-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s10-d13d-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"step": "set6-name-pinning", "verdict": "passed", "reason": null}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "failed", "reason": "server setup did not succeed: {'status': 'failed', 'phase': '05-mail_profile', 'error': {'code': 'HOST_MUTATION_BUSY', 'message': \"This server's package manager is busy \u2014 a package task is still running on this server. Wait for it to finish, then try again.\"}}"}
+{"step": "set6-headers-after-the-update", "verdict": "failed", "reason": "B: every HTTPS answer of the running Panel carries Strict-Transport-Security exactly `max-age=31536000` (one header line, that value); B: no HTTPS answer names includeSubDomains or preload in Strict-Transport-Security; B: the Panel that answered is the build this reading is about (the commit its own version route names)"}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"step": "set6-name-pinning-at-the-end", "verdict": "passed", "reason": null}
+{"outcome": "not-terminal", "overall": "failed", "steps": {"arm": "not-run", "baseline-install": "passed", "collect": "passed", "deferred-mail-watch": "not-run", "license": "passed", "origin": "passed", "owner-continuation (required)": "not-run", "owner-login": "passed", "owner-start": "not-run", "post-return-facts": "not-run", "pre-state": "not-run", "preflight": "passed", "seed": "not-run", "set10-site-files-after-the-update": "not-run", "set10-sites-before-the-update": "not-run", "set6-headers-after-the-update": "failed", "set6-headers-before-the-update": "not-run", "set6-name-pinning": "passed", "set6-name-pinning-at-the-end": "passed", "setup": "failed", "terminal": "not-run", "track": "not-run", "verdicts": "not-run"}}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-s10-d13d-a", "evidence_retained": true}
+SET10 cell=upd1-debian13-defective lab=/var/tmp/cp-release-drill-s10-d13d-a driver_exit=1 evidence=/var/tmp/cp-release-drill-s10-d13d-a/evidence/*/upd1

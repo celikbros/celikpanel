@@ -1,0 +1,453 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-10T20:25:07Z",
+      "json": {
+        "actions": [],
+        "decision": {
+          "current": false,
+          "decided_at": "2026-10-10T20:23:28Z",
+          "kind": "recreate"
+        },
+        "domain": "set10-a.test",
+        "domain_id": 2,
+        "enabled": "link",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "kind": "nginx_vhost",
+        "ledger": {
+          "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202259Z",
+          "observed_at": "2026-10-10T20:24:47Z",
+          "written_at": "2026-10-10T20:24:24Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "reason": "symlink",
+        "render_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd",
+        "state": "unreadable"
+      },
+      "label": "k after the start: GET site-config",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/site-config"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:25:07Z",
+      "json": [
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:14:58Z",
+          "disk_usage": 0,
+          "domain_name": "set10-b.test",
+          "id": 3,
+          "php_version": "8.3",
+          "project_type": "php",
+          "site_config": {
+            "state": "managed_unchanged"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:14:55Z",
+          "disk_usage": 0,
+          "domain_name": "set10-a.test",
+          "id": 2,
+          "php_version": "8.3",
+          "project_type": "php",
+          "site_config": {
+            "state": "unreadable"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:14:47Z",
+          "disk_usage": 0,
+          "domain_name": "set1-owner.test",
+          "id": 1,
+          "php_version": "",
+          "project_type": "static",
+          "site_config": {
+            "state": "managed_unchanged"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        }
+      ],
+      "label": "k after the start: GET /api/v1/domains (Domains list)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "cells": {
+    "k": {
+      "detail": null,
+      "expectations": [
+        {
+          "expectation": "the owner's symlink was in service",
+          "held": true,
+          "measured": {
+            "at": "2026-10-10T20:24:45Z",
+            "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+            "returncode": 0,
+            "status": "ok"
+          }
+        },
+        {
+          "expectation": "the Panel started",
+          "held": true,
+          "measured": {
+            "api": {
+              "answering": true,
+              "seconds": 14.2,
+              "status": 200
+            },
+            "epoch": 1791663887.2156203,
+            "file": "steps/22-k-symlink/native/213-owner-k-panel-start.json",
+            "is_active": "active",
+            "kind": "owner: systemctl start celikpanel-panel",
+            "ok": true,
+            "reconcile_lines_seen": [
+              "2026-10-10T20:24:47.712460+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:47 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 1 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+            ],
+            "session": {
+              "status": 200
+            },
+            "waited_seconds": 2.1
+          }
+        },
+        {
+          "expectation": "the vhost path is still the same symlink",
+          "held": true,
+          "measured": {
+            "after": {
+              "ctime_ns": 1791663885960329995,
+              "exists": true,
+              "first_line": null,
+              "gid": 0,
+              "group": "root",
+              "header": null,
+              "immutable": null,
+              "inode": 262701,
+              "kind": "symlink",
+              "link_target": "/etc/nginx/owner/set10-a.test-own-vhost.conf",
+              "lsattr": null,
+              "mode": "0777",
+              "mtime_ns": 1791663885960329995,
+              "owner": "root",
+              "sha256": null,
+              "size": 44,
+              "uid": 0
+            },
+            "before": {
+              "ctime_ns": 1791663885960329995,
+              "exists": true,
+              "first_line": null,
+              "gid": 0,
+              "group": "root",
+              "header": null,
+              "immutable": null,
+              "inode": 262701,
+              "kind": "symlink",
+              "link_target": "/etc/nginx/owner/set10-a.test-own-vhost.conf",
+              "lsattr": null,
+              "mode": "0777",
+              "mtime_ns": 1791663885960329995,
+              "owner": "root",
+              "sha256": null,
+              "size": 44,
+              "uid": 0
+            }
+          }
+        },
+        {
+          "expectation": "the link's target was not written (sha256, inode)",
+          "held": true,
+          "measured": {
+            "inode": [
+              531915,
+              531915
+            ],
+            "path": [
+              "/etc/nginx/owner/set10-a.test-own-vhost.conf",
+              "/etc/nginx/owner/set10-a.test-own-vhost.conf"
+            ],
+            "sha256": [
+              "ec26b23b845268893cae80323f631dd76cc0b27a9087ae69045619b52474a69a",
+              "ec26b23b845268893cae80323f631dd76cc0b27a9087ae69045619b52474a69a"
+            ]
+          }
+        },
+        {
+          "expectation": "a journal line says kept, not replaced (unreadable symlink)",
+          "held": true,
+          "measured": [
+            "2026-10-10T20:24:47.682157+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:47 site configuration set10-a.test (startup): kept, not replaced (unreadable symlink)"
+          ]
+        },
+        {
+          "expectation": "site-config answers unreadable with the reason symlink",
+          "held": true,
+          "measured": {
+            "actions": [],
+            "reason": "symlink",
+            "state": "unreadable"
+          }
+        },
+        {
+          "expectation": "the Domains row says unreadable",
+          "held": true,
+          "measured": {
+            "state": "unreadable"
+          }
+        },
+        {
+          "expectation": "the owner's content through the link is still served",
+          "held": true,
+          "measured": "owner-link"
+        }
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "checks": [
+    {
+      "detail": {
+        "at": "2026-10-10T20:24:45Z",
+        "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+        "returncode": 0,
+        "status": "ok"
+      },
+      "name": "k: the owner's symlink was in service",
+      "ok": true
+    },
+    {
+      "detail": {
+        "api": {
+          "answering": true,
+          "seconds": 14.2,
+          "status": 200
+        },
+        "epoch": 1791663887.2156203,
+        "file": "steps/22-k-symlink/native/213-owner-k-panel-start.json",
+        "is_active": "active",
+        "kind": "owner: systemctl start celikpanel-panel",
+        "ok": true,
+        "reconcile_lines_seen": [
+          "2026-10-10T20:24:47.712460+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:47 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 1 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+        ],
+        "session": {
+          "status": 200
+        },
+        "waited_seconds": 2.1
+      },
+      "name": "k: the Panel started",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "ctime_ns": 1791663885960329995,
+          "exists": true,
+          "first_line": null,
+          "gid": 0,
+          "group": "root",
+          "header": null,
+          "immutable": null,
+          "inode": 262701,
+          "kind": "symlink",
+          "link_target": "/etc/nginx/owner/set10-a.test-own-vhost.conf",
+          "lsattr": null,
+          "mode": "0777",
+          "mtime_ns": 1791663885960329995,
+          "owner": "root",
+          "sha256": null,
+          "size": 44,
+          "uid": 0
+        },
+        "before": {
+          "ctime_ns": 1791663885960329995,
+          "exists": true,
+          "first_line": null,
+          "gid": 0,
+          "group": "root",
+          "header": null,
+          "immutable": null,
+          "inode": 262701,
+          "kind": "symlink",
+          "link_target": "/etc/nginx/owner/set10-a.test-own-vhost.conf",
+          "lsattr": null,
+          "mode": "0777",
+          "mtime_ns": 1791663885960329995,
+          "owner": "root",
+          "sha256": null,
+          "size": 44,
+          "uid": 0
+        }
+      },
+      "name": "k: the vhost path is still the same symlink",
+      "ok": true
+    },
+    {
+      "detail": {
+        "inode": [
+          531915,
+          531915
+        ],
+        "path": [
+          "/etc/nginx/owner/set10-a.test-own-vhost.conf",
+          "/etc/nginx/owner/set10-a.test-own-vhost.conf"
+        ],
+        "sha256": [
+          "ec26b23b845268893cae80323f631dd76cc0b27a9087ae69045619b52474a69a",
+          "ec26b23b845268893cae80323f631dd76cc0b27a9087ae69045619b52474a69a"
+        ]
+      },
+      "name": "k: the link's target was not written (sha256, inode)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "2026-10-10T20:24:47.682157+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:47 site configuration set10-a.test (startup): kept, not replaced (unreadable symlink)"
+      ],
+      "name": "k: a journal line says kept, not replaced (unreadable symlink)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "actions": [],
+        "reason": "symlink",
+        "state": "unreadable"
+      },
+      "name": "k: site-config answers unreadable with the reason symlink",
+      "ok": true
+    },
+    {
+      "detail": {
+        "state": "unreadable"
+      },
+      "name": "k: the Domains row says unreadable",
+      "ok": true
+    },
+    {
+      "detail": "owner-link",
+      "name": "k: the owner's content through the link is still served",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-10T20:25:08Z",
+  "lab_preparation": [
+    {
+      "domain": "set10-a.test",
+      "file": "steps/22-k-symlink/native/208-k-lab-restore-set10-a.test.json",
+      "label": "k",
+      "sha256_matches": true
+    }
+  ],
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/208-k-lab-restore-set10-a.test.json",
+      "label": "k-lab-restore-set10-a.test",
+      "mode": "lab-restore",
+      "owner_action": false
+    },
+    {
+      "file": "native/209-owner-k-panel-stop.json",
+      "label": "owner-k-panel-stop",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/210-owner-k-symlink.json",
+      "label": "owner-k-symlink",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/211-k-1-symlink-read.json",
+      "label": "k-1-symlink-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/212-guest-clock.json",
+      "label": "guest-clock",
+      "mode": "read-ledger",
+      "owner_action": false
+    },
+    {
+      "file": "native/213-owner-k-panel-start.json",
+      "label": "owner-k-panel-start",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/214-k-2-after-the-start-read.json",
+      "label": "k-2-after-the-start-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/215-k-journal.json",
+      "label": "k-journal",
+      "mode": "read-window",
+      "owner_action": false
+    },
+    {
+      "file": "native/216-http-k-2-set10-a.test_owner-link_.json",
+      "label": "http-k-2-set10-a.test_owner-link_",
+      "mode": "read-http",
+      "owner_action": false
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [
+    {
+      "detail": [],
+      "note": "k: PASS"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-10T20:24:45Z",
+      "label": "k-panel-stop",
+      "mode": "owner-panel"
+    },
+    {
+      "at": "2026-10-10T20:24:45Z",
+      "label": "k-symlink",
+      "mode": "owner-vhost10"
+    },
+    {
+      "at": "2026-10-10T20:24:47Z",
+      "label": "k-panel-start",
+      "mode": "owner-panel"
+    }
+  ],
+  "owner_waited_for_idle": {
+    "at": "2026-10-10T20:24:44Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.3
+  },
+  "section": "k-symlink",
+  "started_at": "2026-10-10T20:24:44Z",
+  "substeps": {
+    "k": "passed"
+  },
+  "title": "A's vhost replaced by a symlink to the owner's file",
+  "verdict": "passed"
+}

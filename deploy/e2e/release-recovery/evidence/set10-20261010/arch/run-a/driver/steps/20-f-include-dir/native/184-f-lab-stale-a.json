@@ -1,0 +1,60 @@
+{
+  "action": "lab-stale-managed",
+  "at": "2026-10-10T20:40:09Z",
+  "mode": "lab-stale-managed",
+  "nginx_test": {
+    "at": "2026-10-10T20:40:09Z",
+    "output": "2026/10/10 20:40:09 [warn] 6831#6831: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": false,
+  "reload": {
+    "argv": [
+      "systemctl",
+      "reload",
+      "nginx.service"
+    ],
+    "at": "2026-10-10T20:40:09Z",
+    "returncode": 0,
+    "seconds": 0.045,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "schema": "celikpanel/set10-native/v1",
+  "sites": {
+    "set10-a.test": {
+      "after": {
+        "ctime_ns": 1791664809030436376,
+        "exists": true,
+        "first_line": "# celikpanel-render v2 sha256=9d433187fd2a2823a4f73be5ff7712f2ff7cca8daa1e8b8489f37d37750fab2b",
+        "gid": 969,
+        "group": "celikpanel",
+        "header": {
+          "body_bytes": 1896,
+          "body_sha256": "9d433187fd2a2823a4f73be5ff7712f2ff7cca8daa1e8b8489f37d37750fab2b",
+          "declared": "9d433187fd2a2823a4f73be5ff7712f2ff7cca8daa1e8b8489f37d37750fab2b",
+          "present": true,
+          "valid": true
+        },
+        "immutable": false,
+        "inode": 92278,
+        "kind": "file",
+        "lsattr": "----------------------",
+        "mode": "0644",
+        "mtime_ns": 1791664809025851798,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "sha256": "c6a5220d1384e6af2894b4e31e4698d85331fcedd760d3d75d1458dc7061b2eb",
+        "size": 1991,
+        "uid": 0
+      },
+      "before": {
+        "inode": 92272,
+        "sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770"
+      }
+    }
+  }
+}

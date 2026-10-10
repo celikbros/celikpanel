@@ -1,0 +1,84 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "b3: General settings saved unchanged (renders the vhost)",
+  "request": {
+    "body": {
+      "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+      "redirect_www": false,
+      "web_server": "nginx"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18863"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18863"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "f95618769306c10b967ca9ea2ef3c3c3"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/2/general"
+  },
+  "response": {
+    "elapsed_seconds": 0.034,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 10 Oct 2026 20:37:00 GMT"
+      ],
+      [
+        "Content-Length",
+        "375"
+      ]
+    ],
+    "json": {
+      "code": "SITE_CONFIG_OWNER_EDITED",
+      "error": "The site's nginx configuration file is not CelikPanel's unchanged text, so CelikPanel kept it and did not apply this change to it. Nothing else was changed. Open the domain's Configuration file section: keep your file, take CelikPanel's text (your file is kept as a dated copy), or merge the two by hand.",
+      "reason": "owner_edited"
+    },
+    "status": 409,
+    "text": null
+  }
+}

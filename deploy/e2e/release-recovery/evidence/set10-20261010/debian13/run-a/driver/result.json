@@ -1,0 +1,315 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "0684f2703b665e68828ff329ed6e56eb9c7d4771",
+      "sha256": "320c39e3ee0f5e89d21393694ac470cf1030d390746b25fda33cb355c36a23ae",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "cell": {
+    "components": [
+      "nginx",
+      "php-fpm",
+      "mariadb",
+      "postfix",
+      "dovecot",
+      "roundcube",
+      "rspamd",
+      "postgresql"
+    ],
+    "mail": true,
+    "name": "set10-debian13",
+    "node": "debian13",
+    "purpose": "web_mail"
+  },
+  "cell_kind": "set10-d031-fresh-install",
+  "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['12-panel_certificate', '13-access_dns', '14-mail_certificate', '15-mail_enrollment', '16-verify']"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__eacfa464a7dbaf56",
+    "node": "debian13",
+    "vm_uuid": "fa4999be-55fc-53c1-b27c-f88e0ff4a54f"
+  },
+  "native_evidence": false,
+  "note": "set10: a measurement of D-031 on the fresh install; no update is started and no P0 row is judged.",
+  "outcome": {
+    "classification": "set10-measured",
+    "final_status": null
+  },
+  "overall": "failed",
+  "provenance": {
+    "what": "set10: the D-031 code installed fresh; no update"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "sections": {
+    "S0-sites": {
+      "checks": 16,
+      "error": null,
+      "failed": [
+        "S0: set10-a.test: the include directory exists, is empty and 0755",
+        "S0: set10-b.test: the include directory exists, is empty and 0755",
+        "S0: set1-owner.test: the include directory exists, is empty and 0755"
+      ],
+      "finished_at": "2026-10-10T19:15:29Z",
+      "notes": [
+        "S0: FAIL"
+      ],
+      "started_at": "2026-10-10T19:15:22Z",
+      "substeps": {
+        "S0": "failed",
+        "section": "passed"
+      },
+      "title": "two PHP sites; header, digest, ledger row, include directory, nginx -T",
+      "unknown": [],
+      "verdict": "failed"
+    }
+  },
+  "set10": {
+    "creation": {
+      "set1-owner.test": {
+        "inode": 135511,
+        "mtime_ns": 1791659720541371517,
+        "sha256": "aa7679d801a7bd8e4d008283c4e248e96809875e83f4f6d38e742bde6999dc18"
+      },
+      "set10-a.test": {
+        "inode": 135517,
+        "mtime_ns": 1791659725357307966,
+        "sha256": "937abb023dd9cc64b903ab48a059e74409424e3ef43879d1a8cc8f082d7ee943"
+      },
+      "set10-b.test": {
+        "inode": 135523,
+        "mtime_ns": 1791659728033272653,
+        "sha256": "09e799124dbd9d55e912693ce49a4f4c350e550c4e3ccec50f959c6c0af4b91d"
+      }
+    },
+    "ids": {
+      "set1-owner.test": 1,
+      "set10-a.test": 2,
+      "set10-b.test": 3
+    }
+  },
+  "setup": {
+    "components": [
+      "dovecot",
+      "mariadb",
+      "nginx",
+      "php-fpm",
+      "postfix",
+      "postgresql",
+      "roundcube",
+      "rspamd"
+    ],
+    "purpose": "web_mail",
+    "waiting": {
+      "code": "server_setup_access_dns_required",
+      "mail_steps_reached": true,
+      "not_run": [
+        "12-panel_certificate",
+        "13-access_dns",
+        "14-mail_certificate",
+        "15-mail_enrollment",
+        "16-verify"
+      ],
+      "phase": "access_dns",
+      "polls": 25,
+      "stable_wait_seconds": 123.8,
+      "steps": {
+        "01-dns": "succeeded",
+        "02-service": "succeeded",
+        "03-service": "succeeded",
+        "04-service": "succeeded",
+        "05-service": "succeeded",
+        "06-mail_profile": "succeeded",
+        "07-mail_profile": "succeeded",
+        "08-service": "succeeded",
+        "09-service": "succeeded",
+        "10-firewall": "succeeded",
+        "11-access_dns": "running",
+        "12-panel_certificate": "pending",
+        "13-access_dns": "pending",
+        "14-mail_certificate": "pending",
+        "15-mail_enrollment": "pending",
+        "16-verify": "pending"
+      }
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-10T19:02:28Z",
+      "name": "set6-name-pinning",
+      "reason": null,
+      "started_at": "2026-10-10T19:02:23Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T19:02:34Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-10T19:02:28Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T19:02:44Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-10T19:02:34Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T19:04:28Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-10T19:02:44Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T19:04:32Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-10T19:04:28Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T19:04:32Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-10T19:04:32Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T19:15:18Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-10T19:04:32Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-10T19:15:22Z",
+      "name": "site",
+      "reason": null,
+      "started_at": "2026-10-10T19:15:18Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T19:15:29Z",
+      "name": "S0-sites",
+      "reason": "S0: set10-a.test: the include directory exists, is empty and 0755; S0: set10-b.test: the include directory exists, is empty and 0755; S0: set1-owner.test: the include directory exists, is empty and 0755",
+      "started_at": "2026-10-10T19:15:22Z",
+      "verdict": "failed"
+    },
+    {
+      "finished_at": null,
+      "name": "h-i-unchanged-start",
+      "reason": "a required earlier step did not pass: S0-sites",
+      "started_at": "2026-10-10T19:15:29Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "a-owner-edit",
+      "reason": "a required earlier step did not pass: S0-sites",
+      "started_at": "2026-10-10T19:15:30Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "b-owner-edit",
+      "reason": "a required earlier step did not pass: S0-sites",
+      "started_at": "2026-10-10T19:15:30Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "c-owner-edit",
+      "reason": "a required earlier step did not pass: S0-sites",
+      "started_at": "2026-10-10T19:15:31Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "d-owner-edit",
+      "reason": "a required earlier step did not pass: S0-sites",
+      "started_at": "2026-10-10T19:15:32Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "keep",
+      "reason": "a required earlier step did not pass: S0-sites",
+      "started_at": "2026-10-10T19:15:32Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "take-j",
+      "reason": "a required earlier step did not pass: S0-sites",
+      "started_at": "2026-10-10T19:15:33Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "take-stale",
+      "reason": "a required earlier step did not pass: S0-sites",
+      "started_at": "2026-10-10T19:15:34Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "take-refused",
+      "reason": "a required earlier step did not pass: S0-sites",
+      "started_at": "2026-10-10T19:15:35Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "e-removed",
+      "reason": "a required earlier step did not pass: S0-sites",
+      "started_at": "2026-10-10T19:15:36Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "f-include-dir",
+      "reason": "a required earlier step did not pass: S0-sites",
+      "started_at": "2026-10-10T19:15:38Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "g-immutable",
+      "reason": "a required earlier step did not pass: S0-sites",
+      "started_at": "2026-10-10T19:15:39Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "k-symlink",
+      "reason": "a required earlier step did not pass: S0-sites",
+      "started_at": "2026-10-10T19:15:40Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": null,
+      "name": "l-delete",
+      "reason": "a required earlier step did not pass: S0-sites",
+      "started_at": "2026-10-10T19:15:41Z",
+      "verdict": "not-run"
+    },
+    {
+      "finished_at": "2026-10-10T19:15:43Z",
+      "name": "set6-name-pinning-at-the-end",
+      "reason": null,
+      "started_at": "2026-10-10T19:15:42Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T19:15:46Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-10T19:15:44Z",
+      "verdict": "passed"
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "action": "owner-include",
+  "at": "2026-10-10T20:23:04Z",
+  "directory_after": {
+    "entries": [],
+    "exists": true,
+    "gid": 988,
+    "group": "celikpanel",
+    "inode": 533505,
+    "kind": "directory",
+    "mode": "0750",
+    "mode_octal": "0o750",
+    "mtime_ns": 1791663784118645485,
+    "owner": "root",
+    "path": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+    "uid": 0
+  },
+  "directory_before": {
+    "entries": [
+      {
+        "ctime_ns": 1791663778244606004,
+        "exists": true,
+        "first_line": "# set10: an owner's file that conflicts with CelikPanel's text (a second root in the same server block)",
+        "gid": 0,
+        "group": "root",
+        "header": {
+          "first_line": "# set10: an owner's file that conflicts with CelikPanel's text (a second root in the same server block)",
+          "present": false
+        },
+        "immutable": false,
+        "inode": 533527,
+        "kind": "file",
+        "lsattr": "--------------e-------",
+        "mode": "0644",
+        "mtime_ns": 1791663778244606004,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/nginx/celikpanel-sites.d/set10-a.test/set10-dup-root.conf",
+        "sha256": "9381e0c6b1b5d3e623ed4af4ab5e03ebefecb5fcef15479783ebbfb52a25d473",
+        "size": 132,
+        "text": "# set10: an owner's file that conflicts with CelikPanel's text (a second root in the same server block)\nroot /srv/set10-owner-root;\n",
+        "uid": 0
+      }
+    ],
+    "exists": true,
+    "gid": 988,
+    "group": "celikpanel",
+    "inode": 533505,
+    "kind": "directory",
+    "mode": "0750",
+    "mode_octal": "0o750",
+    "mtime_ns": 1791663778243605998,
+    "owner": "root",
+    "path": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+    "uid": 0
+  },
+  "domain": "set10-a.test",
+  "mode": "owner-include",
+  "nginx_test": {
+    "at": "2026-10-10T20:23:04Z",
+    "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": true,
+  "path": "/etc/nginx/celikpanel-sites.d/set10-a.test/set10-dup-root.conf",
+  "removed": true,
+  "schema": "celikpanel/set10-native/v1"
+}

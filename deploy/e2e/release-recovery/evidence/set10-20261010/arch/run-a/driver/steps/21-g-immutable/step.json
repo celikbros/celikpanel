@@ -1,0 +1,27 @@
+{
+  "checks": {
+    "checks": 11,
+    "error": null,
+    "failed": [
+      "g: site-config for A names the reason (unreadable/write_refused or EPERM)"
+    ],
+    "finished_at": "2026-10-10T20:40:36Z",
+    "notes": [
+      "g: FAIL",
+      "g-resume: PASS"
+    ],
+    "started_at": "2026-10-10T20:40:21Z",
+    "substeps": {
+      "g": "failed",
+      "g-resume": "passed"
+    },
+    "title": "A locked while A, B and the static site need a render",
+    "unknown": [],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-10T20:40:36Z",
+  "name": "g-immutable",
+  "reason": "g: site-config for A names the reason (unreadable/write_refused or EPERM)",
+  "started_at": "2026-10-10T20:40:21Z",
+  "verdict": "failed"
+}

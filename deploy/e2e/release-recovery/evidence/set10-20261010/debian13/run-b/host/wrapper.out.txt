@@ -1,0 +1,18 @@
+Formatting '/var/tmp/cp-release-drill-s10-d13-b/cells/cf05c7bc8c72ad88a076e586/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-s10-d13-b/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-s10-d13-b/cells/cf05c7bc8c72ad88a076e586/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-s10-d13-b/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-s10-d13-b", "cell_id": "release-recovery__fce3518978c0c1f4", "ssh_ports": [4861, 4862]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s10-d13-b", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s10-d13-b", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"step": "set6-name-pinning", "verdict": "passed", "reason": null}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "site", "verdict": "passed", "reason": null}
+{"step": "S0-sites", "verdict": "failed", "reason": "S0: set10-a.test: the include directory exists, is empty and 0755; S0: set10-b.test: the include directory exists, is empty and 0755; S0: set1-owner.test: the include directory exists, is empty and 0755"}
+{"step": "h-i-unchanged-start", "verdict": "passed", "reason": null}
+{"step": "a-owner-edit", "verdict": "inconclusive", "reason": "not established: a1: the run completed; a2: the run completed; a3: the run completed"}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-s10-d13-b", "evidence_retained": true}
+SET10 cell=set10-debian13 lab=/var/tmp/cp-release-drill-s10-d13-b driver_exit=143 evidence=/var/tmp/cp-release-drill-s10-d13-b/evidence/*/upd1

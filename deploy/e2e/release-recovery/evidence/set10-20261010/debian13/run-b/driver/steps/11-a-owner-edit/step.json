@@ -1,0 +1,27 @@
+{
+  "checks": {
+    "checks": 3,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T19:34:26Z",
+    "notes": [],
+    "started_at": "2026-10-10T19:32:49Z",
+    "substeps": {
+      "a1": "inconclusive",
+      "a2": "inconclusive",
+      "a3": "inconclusive"
+    },
+    "title": "the owner adds a location (start, restart, General save)",
+    "unknown": [
+      "a1: the run completed",
+      "a2: the run completed",
+      "a3: the run completed"
+    ],
+    "verdict": "inconclusive"
+  },
+  "finished_at": "2026-10-10T19:34:26Z",
+  "name": "a-owner-edit",
+  "reason": "not established: a1: the run completed; a2: the run completed; a3: the run completed",
+  "started_at": "2026-10-10T19:32:49Z",
+  "verdict": "inconclusive"
+}

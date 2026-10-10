@@ -1,0 +1,1542 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-10T20:37:14Z",
+      "json": {
+        "actions": [
+          "keep",
+          "take",
+          "merge"
+        ],
+        "diff": "--- /etc/nginx/sites-available/set10-a.test.conf (on this server)\n+++ CelikPanel's text\n@@ -1,9 +1,47 @@\n-# set10: the server owner's own vhost for set10-a.test, written by hand\n+# Nginx vhost for set10-a.test\n+# Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n+# CelikPanel never writes there. If you change this file, CelikPanel keeps\n+# your file and asks you before it replaces it.\n+# CelikPanel yazdı. Kendi eklemeleriniz /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf içine;\n+# CelikPanel oraya hiç yazmaz. Bu dosyayı değiştirirseniz CelikPanel\n+# dosyanızı korur ve değiştirmeden önce size sorar.\n+# Site ID: 2 · Project type: php\n server {\n     listen 80;\n     listen [::]:80;\n-    server_name set10-a.test;\n+    server_name set10-a.test www.set10-a.test;\n+\n+    access_log /var/log/nginx/set10-a.test-access.log;\n+    error_log /var/log/nginx/set10-a.test-error.log;\n+\n+    # Root-owned validation content only; never tenant public_html.\n+    location ^~ /.well-known/acme-challenge/ {\n+        root /var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2;\n+        try_files $uri =404;\n+    }\n+\n+    root /var/www/celikpanel/subscriptions/2/sites/2/public_html;\n+    index index.php index.html index.htm;\n+\n     location / {\n-        return 200 \"owner-replaced\\n\";\n+\n+        try_files $uri $uri/ /index.php?$query_string;\n     }\n+    location ~ \\.php$ {\n+        fastcgi_split_path_info ^(.+?\\.php)(/.*)$;\n+        try_files $fastcgi_script_name =404;\n+        set $path_info $fastcgi_path_info;\n+        fastcgi_param PATH_INFO $path_info;\n+        fastcgi_index index.php;\n+        include fastcgi.conf;\n+        fastcgi_pass unix:/run/php-fpm/php8.5-fpm-site2.sock;\n+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\n+        include fastcgi_params;\n+    }\n+    location ~ /\\.(?!well-known).* {\n+        deny all;\n+    }\n+\n+    # Your additions for this site (server context) / Bu site için eklemeleriniz\n+    include /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n }\n",
+        "domain": "set10-a.test",
+        "domain_id": 2,
+        "enabled": "link",
+        "file_sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "kind": "nginx_vhost",
+        "ledger": {
+          "observed_at": "2026-10-10T20:37:08Z",
+          "written_at": "2026-10-10T20:34:32Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "pending_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+        "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+        "state": "foreign"
+      },
+      "label": "c1 after: GET site-config",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/site-config"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:37:14Z",
+      "json": [
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:34:35Z",
+          "disk_usage": 0,
+          "domain_name": "set10-b.test",
+          "id": 3,
+          "php_version": "8.5",
+          "project_type": "php",
+          "site_config": {
+            "state": "managed_unchanged"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:34:32Z",
+          "disk_usage": 0,
+          "domain_name": "set10-a.test",
+          "id": 2,
+          "php_version": "8.5",
+          "project_type": "php",
+          "site_config": {
+            "state": "foreign"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:34:28Z",
+          "disk_usage": 0,
+          "domain_name": "set1-owner.test",
+          "id": 1,
+          "php_version": "",
+          "project_type": "static",
+          "site_config": {
+            "state": "managed_unchanged"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        }
+      ],
+      "label": "c1 after: GET /api/v1/domains (Domains list)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:37:45Z",
+      "json": {
+        "actions": [
+          "keep",
+          "take",
+          "merge"
+        ],
+        "diff": "--- /etc/nginx/sites-available/set10-a.test.conf (on this server)\n+++ CelikPanel's text\n@@ -1,9 +1,47 @@\n-# set10: the server owner's own vhost for set10-a.test, written by hand\n+# Nginx vhost for set10-a.test\n+# Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n+# CelikPanel never writes there. If you change this file, CelikPanel keeps\n+# your file and asks you before it replaces it.\n+# CelikPanel yazdı. Kendi eklemeleriniz /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf içine;\n+# CelikPanel oraya hiç yazmaz. Bu dosyayı değiştirirseniz CelikPanel\n+# dosyanızı korur ve değiştirmeden önce size sorar.\n+# Site ID: 2 · Project type: php\n server {\n     listen 80;\n     listen [::]:80;\n-    server_name set10-a.test;\n+    server_name set10-a.test www.set10-a.test;\n+\n+    access_log /var/log/nginx/set10-a.test-access.log;\n+    error_log /var/log/nginx/set10-a.test-error.log;\n+\n+    # Root-owned validation content only; never tenant public_html.\n+    location ^~ /.well-known/acme-challenge/ {\n+        root /var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2;\n+        try_files $uri =404;\n+    }\n+\n+    root /var/www/celikpanel/subscriptions/2/sites/2/public_html;\n+    index index.php index.html index.htm;\n+\n     location / {\n-        return 200 \"owner-replaced\\n\";\n+\n+        try_files $uri $uri/ /index.php?$query_string;\n     }\n+    location ~ \\.php$ {\n+        fastcgi_split_path_info ^(.+?\\.php)(/.*)$;\n+        try_files $fastcgi_script_name =404;\n+        set $path_info $fastcgi_path_info;\n+        fastcgi_param PATH_INFO $path_info;\n+        fastcgi_index index.php;\n+        include fastcgi.conf;\n+        fastcgi_pass unix:/run/php-fpm/php8.5-fpm-site2.sock;\n+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\n+        include fastcgi_params;\n+    }\n+    location ~ /\\.(?!well-known).* {\n+        deny all;\n+    }\n+\n+    # Your additions for this site (server context) / Bu site için eklemeleriniz\n+    include /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n }\n",
+        "domain": "set10-a.test",
+        "domain_id": 2,
+        "enabled": "link",
+        "file_sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "kind": "nginx_vhost",
+        "ledger": {
+          "observed_at": "2026-10-10T20:37:38Z",
+          "written_at": "2026-10-10T20:34:32Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "pending_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+        "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+        "state": "foreign"
+      },
+      "label": "c2 after: GET site-config",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/site-config"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:37:45Z",
+      "json": [
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:34:35Z",
+          "disk_usage": 0,
+          "domain_name": "set10-b.test",
+          "id": 3,
+          "php_version": "8.5",
+          "project_type": "php",
+          "site_config": {
+            "state": "managed_unchanged"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:34:32Z",
+          "disk_usage": 0,
+          "domain_name": "set10-a.test",
+          "id": 2,
+          "php_version": "8.5",
+          "project_type": "php",
+          "site_config": {
+            "state": "foreign"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:34:28Z",
+          "disk_usage": 0,
+          "domain_name": "set1-owner.test",
+          "id": 1,
+          "php_version": "",
+          "project_type": "static",
+          "site_config": {
+            "state": "managed_unchanged"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        }
+      ],
+      "label": "c2 after: GET /api/v1/domains (Domains list)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:38:07Z",
+      "json": {
+        "aliases": [],
+        "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "domain_id": 2,
+        "domain_name": "set10-a.test",
+        "redirect_https": false,
+        "redirect_www": false,
+        "redirect_www_available": true,
+        "web_server": "nginx"
+      },
+      "label": "c3: General settings read",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/general"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SITE_CONFIG_OWNER_EDITED",
+        "error": "The site's nginx configuration file is not CelikPanel's unchanged text, so CelikPanel kept it and did not apply this change to it. Nothing else was changed. Open the domain's Configuration file section: keep your file, take CelikPanel's text (your file is kept as a dated copy), or merge the two by hand.",
+        "reason": "foreign"
+      },
+      "at": "2026-10-10T20:38:07Z",
+      "catalogue_texts": {
+        "err.SITE_CONFIG_OWNER_EDITED": {
+          "en": "This site’s nginx configuration file is not CelikPanel’s unchanged text, so CelikPanel kept it and did not apply this change to it. Nothing else was changed. On the domain’s Configuration file page, keep your file, take CelikPanel’s text (your file is kept as a dated copy), or merge the two by hand.",
+          "tr": "Bu sitenin nginx yapılandırma dosyası CelikPanel’in değişmemiş metni değil; bu yüzden CelikPanel onu korudu ve bu değişikliği ona uygulamadı. Başka hiçbir şey değiştirilmedi. Alan adının Yapılandırma dosyası sayfasında dosyanızı koruyun, CelikPanel’in metnini alın (dosyanız tarihli bir kopya olarak saklanır) ya da ikisini elle birleştirin."
+        }
+      },
+      "json": {
+        "code": "SITE_CONFIG_OWNER_EDITED",
+        "error": "The site's nginx configuration file is not CelikPanel's unchanged text, so CelikPanel kept it and did not apply this change to it. Nothing else was changed. Open the domain's Configuration file section: keep your file, take CelikPanel's text (your file is kept as a dated copy), or merge the two by hand.",
+        "reason": "foreign"
+      },
+      "label": "c3: General settings saved unchanged (renders the vhost)",
+      "request": {
+        "body": {
+          "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+          "redirect_www": false,
+          "web_server": "nginx"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/2/general"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:38:12Z",
+      "json": {
+        "actions": [
+          "keep",
+          "take",
+          "merge"
+        ],
+        "diff": "--- /etc/nginx/sites-available/set10-a.test.conf (on this server)\n+++ CelikPanel's text\n@@ -1,9 +1,47 @@\n-# set10: the server owner's own vhost for set10-a.test, written by hand\n+# Nginx vhost for set10-a.test\n+# Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n+# CelikPanel never writes there. If you change this file, CelikPanel keeps\n+# your file and asks you before it replaces it.\n+# CelikPanel yazdı. Kendi eklemeleriniz /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf içine;\n+# CelikPanel oraya hiç yazmaz. Bu dosyayı değiştirirseniz CelikPanel\n+# dosyanızı korur ve değiştirmeden önce size sorar.\n+# Site ID: 2 · Project type: php\n server {\n     listen 80;\n     listen [::]:80;\n-    server_name set10-a.test;\n+    server_name set10-a.test www.set10-a.test;\n+\n+    access_log /var/log/nginx/set10-a.test-access.log;\n+    error_log /var/log/nginx/set10-a.test-error.log;\n+\n+    # Root-owned validation content only; never tenant public_html.\n+    location ^~ /.well-known/acme-challenge/ {\n+        root /var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2;\n+        try_files $uri =404;\n+    }\n+\n+    root /var/www/celikpanel/subscriptions/2/sites/2/public_html;\n+    index index.php index.html index.htm;\n+\n     location / {\n-        return 200 \"owner-replaced\\n\";\n+\n+        try_files $uri $uri/ /index.php?$query_string;\n     }\n+    location ~ \\.php$ {\n+        fastcgi_split_path_info ^(.+?\\.php)(/.*)$;\n+        try_files $fastcgi_script_name =404;\n+        set $path_info $fastcgi_path_info;\n+        fastcgi_param PATH_INFO $path_info;\n+        fastcgi_index index.php;\n+        include fastcgi.conf;\n+        fastcgi_pass unix:/run/php-fpm/php8.5-fpm-site2.sock;\n+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\n+        include fastcgi_params;\n+    }\n+    location ~ /\\.(?!well-known).* {\n+        deny all;\n+    }\n+\n+    # Your additions for this site (server context) / Bu site için eklemeleriniz\n+    include /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n }\n",
+        "domain": "set10-a.test",
+        "domain_id": 2,
+        "enabled": "link",
+        "file_sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "kind": "nginx_vhost",
+        "ledger": {
+          "observed_at": "2026-10-10T20:38:07Z",
+          "written_at": "2026-10-10T20:34:32Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "pending_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+        "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+        "state": "foreign"
+      },
+      "label": "c3 after: GET site-config",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/site-config"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:38:12Z",
+      "json": [
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:34:35Z",
+          "disk_usage": 0,
+          "domain_name": "set10-b.test",
+          "id": 3,
+          "php_version": "8.5",
+          "project_type": "php",
+          "site_config": {
+            "state": "managed_unchanged"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:34:32Z",
+          "disk_usage": 0,
+          "domain_name": "set10-a.test",
+          "id": 2,
+          "php_version": "8.5",
+          "project_type": "php",
+          "site_config": {
+            "state": "foreign"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:34:28Z",
+          "disk_usage": 0,
+          "domain_name": "set1-owner.test",
+          "id": 1,
+          "php_version": "",
+          "project_type": "static",
+          "site_config": {
+            "state": "managed_unchanged"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        }
+      ],
+      "label": "c3 after: GET /api/v1/domains (Domains list)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "cells": {
+    "c1": {
+      "detail": {
+        "files": {
+          "after": {
+            "pending": "steps/13-c-owner-edit/files/c1-2-after-set10-a.test.conf.celikpanel-pending.txt",
+            "vhost": "steps/13-c-owner-edit/files/c1-2-after-set10-a.test.conf.txt"
+          },
+          "edited": {
+            "pending": "steps/13-c-owner-edit/files/c1-1-edited-set10-a.test.conf.celikpanel-pending.txt",
+            "vhost": "steps/13-c-owner-edit/files/c1-1-edited-set10-a.test.conf.txt"
+          }
+        },
+        "journal": "steps/13-c-owner-edit/native/085-c1-journal.json"
+      },
+      "expectations": [
+        {
+          "expectation": "the owner's change was in service before the trigger (nginx -t passed, reloaded, served)",
+          "held": true,
+          "measured": {
+            "nginx_test": 0,
+            "served": true
+          }
+        },
+        {
+          "expectation": "the trigger ran (Panel active and answering)",
+          "held": true,
+          "measured": {
+            "api": {
+              "answering": true,
+              "seconds": 0.0,
+              "status": 200
+            },
+            "epoch": 1791664628.443111,
+            "is_active": "active",
+            "kind": "owner: systemctl start celikpanel-panel",
+            "ok": true,
+            "reconcile_lines_seen": [
+              "2026-10-10T20:37:08.721568+00:00 dns-arch panel[4560]: 2026/10/10 20:37:08 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 1 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+            ],
+            "session": {
+              "status": 200
+            },
+            "waited_seconds": 2.1
+          }
+        },
+        {
+          "expectation": "the file is kept byte for byte (same SHA-256, same inode)",
+          "held": true,
+          "measured": {
+            "after": {
+              "inode": 92117,
+              "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89"
+            },
+            "edited": {
+              "inode": 92117,
+              "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89"
+            }
+          }
+        },
+        {
+          "expectation": "<file>.celikpanel-pending holds the Panel's text (equal to the Panel's own file of this site)",
+          "held": true,
+          "measured": {
+            "panel_text_sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770",
+            "pending": {
+              "exists": true,
+              "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+              "sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770"
+            }
+          }
+        },
+        {
+          "expectation": "a journal line names the site and says kept (foreign)",
+          "held": true,
+          "measured": [
+            "2026-10-10T20:37:08.708562+00:00 dns-arch panel[4560]: 2026/10/10 20:37:08 site configuration set10-a.test (startup): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending"
+          ]
+        },
+        {
+          "expectation": "GET site-config answers state foreign with a difference and the three choices",
+          "held": true,
+          "measured": {
+            "actions": [
+              "keep",
+              "take",
+              "merge"
+            ],
+            "diff_lines": 53,
+            "enabled": "link",
+            "file_sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+            "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+            "pending_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+            "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+            "state": "foreign",
+            "status": 200
+          }
+        },
+        {
+          "expectation": "the Domains list row says foreign",
+          "held": true,
+          "measured": {
+            "state": "foreign"
+          }
+        },
+        {
+          "expectation": "nginx was not reloaded after the trigger (worker PIDs unchanged, no `Reloaded` line)",
+          "held": true,
+          "measured": {
+            "reload_lines": [],
+            "workers": [
+              [
+                "4485"
+              ],
+              [
+                "4485"
+              ]
+            ]
+          }
+        },
+        {
+          "expectation": "the owner's content is still served after the trigger",
+          "held": true,
+          "measured": {
+            "body": "owner-replaced\n",
+            "status": 200
+          }
+        },
+        {
+          "expectation": "the other two sites' files were not touched (inode)",
+          "held": true,
+          "measured": {
+            "set1-owner.test": [
+              91932,
+              91932
+            ],
+            "set10-b.test": [
+              92008,
+              92008
+            ]
+          }
+        }
+      ],
+      "verdict": "PASS"
+    },
+    "c2": {
+      "detail": {
+        "files": {
+          "after": {
+            "pending": "steps/13-c-owner-edit/files/c2-2-after-set10-a.test.conf.celikpanel-pending.txt",
+            "vhost": "steps/13-c-owner-edit/files/c2-2-after-set10-a.test.conf.txt"
+          },
+          "edited": {
+            "pending": "steps/13-c-owner-edit/files/c2-1-edited-set10-a.test.conf.celikpanel-pending.txt",
+            "vhost": "steps/13-c-owner-edit/files/c2-1-edited-set10-a.test.conf.txt"
+          }
+        },
+        "journal": "steps/13-c-owner-edit/native/095-c2-journal.json"
+      },
+      "expectations": [
+        {
+          "expectation": "the owner's change was in service before the trigger (nginx -t passed, reloaded, served)",
+          "held": true,
+          "measured": {
+            "nginx_test": 0,
+            "served": true
+          }
+        },
+        {
+          "expectation": "the trigger ran (Panel active and answering)",
+          "held": true,
+          "measured": {
+            "api": {
+              "answering": true,
+              "seconds": 0.0,
+              "status": 200
+            },
+            "epoch": 1791664658.0860348,
+            "is_active": "active",
+            "kind": "owner: systemctl restart celikpanel-panel",
+            "ok": true,
+            "reconcile_lines_seen": [
+              "2026-10-10T20:37:38.416204+00:00 dns-arch panel[4789]: 2026/10/10 20:37:38 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 1 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+            ],
+            "session": {
+              "status": 200
+            },
+            "waited_seconds": 2.2
+          }
+        },
+        {
+          "expectation": "the file is kept byte for byte (same SHA-256, same inode)",
+          "held": true,
+          "measured": {
+            "after": {
+              "inode": 92133,
+              "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89"
+            },
+            "edited": {
+              "inode": 92133,
+              "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89"
+            }
+          }
+        },
+        {
+          "expectation": "<file>.celikpanel-pending holds the Panel's text (equal to the Panel's own file of this site)",
+          "held": true,
+          "measured": {
+            "panel_text_sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770",
+            "pending": {
+              "exists": true,
+              "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+              "sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770"
+            }
+          }
+        },
+        {
+          "expectation": "a journal line names the site and says kept (foreign)",
+          "held": true,
+          "measured": [
+            "2026-10-10T20:37:38.399961+00:00 dns-arch panel[4789]: 2026/10/10 20:37:38 site configuration set10-a.test (startup): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending"
+          ]
+        },
+        {
+          "expectation": "GET site-config answers state foreign with a difference and the three choices",
+          "held": true,
+          "measured": {
+            "actions": [
+              "keep",
+              "take",
+              "merge"
+            ],
+            "diff_lines": 53,
+            "enabled": "link",
+            "file_sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+            "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+            "pending_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+            "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+            "state": "foreign",
+            "status": 200
+          }
+        },
+        {
+          "expectation": "the Domains list row says foreign",
+          "held": true,
+          "measured": {
+            "state": "foreign"
+          }
+        },
+        {
+          "expectation": "nginx was not reloaded after the trigger (worker PIDs unchanged, no `Reloaded` line)",
+          "held": true,
+          "measured": {
+            "reload_lines": [],
+            "workers": [
+              [
+                "4720"
+              ],
+              [
+                "4720"
+              ]
+            ]
+          }
+        },
+        {
+          "expectation": "the owner's content is still served after the trigger",
+          "held": true,
+          "measured": {
+            "body": "owner-replaced\n",
+            "status": 200
+          }
+        },
+        {
+          "expectation": "the other two sites' files were not touched (inode)",
+          "held": true,
+          "measured": {
+            "set1-owner.test": [
+              91932,
+              91932
+            ],
+            "set10-b.test": [
+              92008,
+              92008
+            ]
+          }
+        }
+      ],
+      "verdict": "PASS"
+    },
+    "c3": {
+      "detail": {
+        "files": {
+          "after": {
+            "pending": "steps/13-c-owner-edit/files/c3-2-after-set10-a.test.conf.celikpanel-pending.txt",
+            "vhost": "steps/13-c-owner-edit/files/c3-2-after-set10-a.test.conf.txt"
+          },
+          "edited": {
+            "pending": "steps/13-c-owner-edit/files/c3-1-edited-set10-a.test.conf.celikpanel-pending.txt",
+            "vhost": "steps/13-c-owner-edit/files/c3-1-edited-set10-a.test.conf.txt"
+          }
+        },
+        "journal": "steps/13-c-owner-edit/native/104-c3-journal.json"
+      },
+      "expectations": [
+        {
+          "expectation": "the owner's change was in service before the trigger (nginx -t passed, reloaded, served)",
+          "held": true,
+          "measured": {
+            "nginx_test": 0,
+            "served": true
+          }
+        },
+        {
+          "expectation": "the trigger ran (the save was answered)",
+          "held": true,
+          "measured": {
+            "code": "SITE_CONFIG_OWNER_EDITED",
+            "error": "The site's nginx configuration file is not CelikPanel's unchanged text, so CelikPanel kept it and did not apply this change to it. Nothing else was changed. Open the domain's Configuration file section: keep your file, take CelikPanel's text (your file is kept as a dated copy), or merge the two by hand.",
+            "ok": true,
+            "read_status": 200,
+            "reason": "foreign",
+            "sent": {
+              "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+              "redirect_www": false,
+              "web_server": "nginx"
+            },
+            "status": 409
+          }
+        },
+        {
+          "expectation": "the file is kept byte for byte (same SHA-256, same inode)",
+          "held": true,
+          "measured": {
+            "after": {
+              "inode": 92148,
+              "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89"
+            },
+            "edited": {
+              "inode": 92148,
+              "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89"
+            }
+          }
+        },
+        {
+          "expectation": "<file>.celikpanel-pending holds the Panel's text (equal to the Panel's own file of this site)",
+          "held": true,
+          "measured": {
+            "panel_text_sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770",
+            "pending": {
+              "exists": true,
+              "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+              "sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770"
+            }
+          }
+        },
+        {
+          "expectation": "a journal line names the site and says kept (foreign)",
+          "held": true,
+          "measured": [
+            "2026-10-10T20:38:07.780341+00:00 dns-arch panel[4789]: 2026/10/10 20:38:07 site configuration set10-a.test (change): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+            "2026-10-10T20:38:07.795114+00:00 dns-arch panel[4789]: 2026/10/10 20:38:07 site configuration set10-a.test (change): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending"
+          ]
+        },
+        {
+          "expectation": "GET site-config answers state foreign with a difference and the three choices",
+          "held": true,
+          "measured": {
+            "actions": [
+              "keep",
+              "take",
+              "merge"
+            ],
+            "diff_lines": 53,
+            "enabled": "link",
+            "file_sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+            "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+            "pending_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+            "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+            "state": "foreign",
+            "status": 200
+          }
+        },
+        {
+          "expectation": "the Domains list row says foreign",
+          "held": true,
+          "measured": {
+            "state": "foreign"
+          }
+        },
+        {
+          "expectation": "nginx was not reloaded after the trigger (worker PIDs unchanged, no `Reloaded` line)",
+          "held": true,
+          "measured": {
+            "reload_lines": [],
+            "workers": [
+              [
+                "4951"
+              ],
+              [
+                "4951"
+              ]
+            ]
+          }
+        },
+        {
+          "expectation": "the owner's content is still served after the trigger",
+          "held": true,
+          "measured": {
+            "body": "owner-replaced\n",
+            "status": 200
+          }
+        },
+        {
+          "expectation": "the other two sites' files were not touched (inode)",
+          "held": true,
+          "measured": {
+            "set1-owner.test": [
+              91932,
+              91932
+            ],
+            "set10-b.test": [
+              92008,
+              92008
+            ]
+          }
+        },
+        {
+          "expectation": "the save answers 409 SITE_CONFIG_OWNER_EDITED",
+          "held": true,
+          "measured": {
+            "code": "SITE_CONFIG_OWNER_EDITED",
+            "error": "The site's nginx configuration file is not CelikPanel's unchanged text, so CelikPanel kept it and did not apply this change to it. Nothing else was changed. Open the domain's Configuration file section: keep your file, take CelikPanel's text (your file is kept as a dated copy), or merge the two by hand.",
+            "reason": "foreign",
+            "status": 409
+          }
+        }
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "checks": [
+    {
+      "detail": {
+        "nginx_test": 0,
+        "served": true
+      },
+      "name": "c1: the owner's change was in service before the trigger (nginx -t passed, reloaded, served)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "api": {
+          "answering": true,
+          "seconds": 0.0,
+          "status": 200
+        },
+        "epoch": 1791664628.443111,
+        "is_active": "active",
+        "kind": "owner: systemctl start celikpanel-panel",
+        "ok": true,
+        "reconcile_lines_seen": [
+          "2026-10-10T20:37:08.721568+00:00 dns-arch panel[4560]: 2026/10/10 20:37:08 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 1 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+        ],
+        "session": {
+          "status": 200
+        },
+        "waited_seconds": 2.1
+      },
+      "name": "c1: the trigger ran (Panel active and answering)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "inode": 92117,
+          "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89"
+        },
+        "edited": {
+          "inode": 92117,
+          "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89"
+        }
+      },
+      "name": "c1: the file is kept byte for byte (same SHA-256, same inode)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "panel_text_sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770",
+        "pending": {
+          "exists": true,
+          "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+          "sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770"
+        }
+      },
+      "name": "c1: <file>.celikpanel-pending holds the Panel's text (equal to the Panel's own file of this site)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "2026-10-10T20:37:08.708562+00:00 dns-arch panel[4560]: 2026/10/10 20:37:08 site configuration set10-a.test (startup): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending"
+      ],
+      "name": "c1: a journal line names the site and says kept (foreign)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "actions": [
+          "keep",
+          "take",
+          "merge"
+        ],
+        "diff_lines": 53,
+        "enabled": "link",
+        "file_sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "pending_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+        "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+        "state": "foreign",
+        "status": 200
+      },
+      "name": "c1: GET site-config answers state foreign with a difference and the three choices",
+      "ok": true
+    },
+    {
+      "detail": {
+        "state": "foreign"
+      },
+      "name": "c1: the Domains list row says foreign",
+      "ok": true
+    },
+    {
+      "detail": {
+        "reload_lines": [],
+        "workers": [
+          [
+            "4485"
+          ],
+          [
+            "4485"
+          ]
+        ]
+      },
+      "name": "c1: nginx was not reloaded after the trigger (worker PIDs unchanged, no `Reloaded` line)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "body": "owner-replaced\n",
+        "status": 200
+      },
+      "name": "c1: the owner's content is still served after the trigger",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set1-owner.test": [
+          91932,
+          91932
+        ],
+        "set10-b.test": [
+          92008,
+          92008
+        ]
+      },
+      "name": "c1: the other two sites' files were not touched (inode)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "nginx_test": 0,
+        "served": true
+      },
+      "name": "c2: the owner's change was in service before the trigger (nginx -t passed, reloaded, served)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "api": {
+          "answering": true,
+          "seconds": 0.0,
+          "status": 200
+        },
+        "epoch": 1791664658.0860348,
+        "is_active": "active",
+        "kind": "owner: systemctl restart celikpanel-panel",
+        "ok": true,
+        "reconcile_lines_seen": [
+          "2026-10-10T20:37:38.416204+00:00 dns-arch panel[4789]: 2026/10/10 20:37:38 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 1 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+        ],
+        "session": {
+          "status": 200
+        },
+        "waited_seconds": 2.2
+      },
+      "name": "c2: the trigger ran (Panel active and answering)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "inode": 92133,
+          "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89"
+        },
+        "edited": {
+          "inode": 92133,
+          "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89"
+        }
+      },
+      "name": "c2: the file is kept byte for byte (same SHA-256, same inode)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "panel_text_sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770",
+        "pending": {
+          "exists": true,
+          "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+          "sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770"
+        }
+      },
+      "name": "c2: <file>.celikpanel-pending holds the Panel's text (equal to the Panel's own file of this site)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "2026-10-10T20:37:38.399961+00:00 dns-arch panel[4789]: 2026/10/10 20:37:38 site configuration set10-a.test (startup): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending"
+      ],
+      "name": "c2: a journal line names the site and says kept (foreign)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "actions": [
+          "keep",
+          "take",
+          "merge"
+        ],
+        "diff_lines": 53,
+        "enabled": "link",
+        "file_sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "pending_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+        "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+        "state": "foreign",
+        "status": 200
+      },
+      "name": "c2: GET site-config answers state foreign with a difference and the three choices",
+      "ok": true
+    },
+    {
+      "detail": {
+        "state": "foreign"
+      },
+      "name": "c2: the Domains list row says foreign",
+      "ok": true
+    },
+    {
+      "detail": {
+        "reload_lines": [],
+        "workers": [
+          [
+            "4720"
+          ],
+          [
+            "4720"
+          ]
+        ]
+      },
+      "name": "c2: nginx was not reloaded after the trigger (worker PIDs unchanged, no `Reloaded` line)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "body": "owner-replaced\n",
+        "status": 200
+      },
+      "name": "c2: the owner's content is still served after the trigger",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set1-owner.test": [
+          91932,
+          91932
+        ],
+        "set10-b.test": [
+          92008,
+          92008
+        ]
+      },
+      "name": "c2: the other two sites' files were not touched (inode)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "nginx_test": 0,
+        "served": true
+      },
+      "name": "c3: the owner's change was in service before the trigger (nginx -t passed, reloaded, served)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SITE_CONFIG_OWNER_EDITED",
+        "error": "The site's nginx configuration file is not CelikPanel's unchanged text, so CelikPanel kept it and did not apply this change to it. Nothing else was changed. Open the domain's Configuration file section: keep your file, take CelikPanel's text (your file is kept as a dated copy), or merge the two by hand.",
+        "ok": true,
+        "read_status": 200,
+        "reason": "foreign",
+        "sent": {
+          "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+          "redirect_www": false,
+          "web_server": "nginx"
+        },
+        "status": 409
+      },
+      "name": "c3: the trigger ran (the save was answered)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "inode": 92148,
+          "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89"
+        },
+        "edited": {
+          "inode": 92148,
+          "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89"
+        }
+      },
+      "name": "c3: the file is kept byte for byte (same SHA-256, same inode)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "panel_text_sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770",
+        "pending": {
+          "exists": true,
+          "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+          "sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770"
+        }
+      },
+      "name": "c3: <file>.celikpanel-pending holds the Panel's text (equal to the Panel's own file of this site)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "2026-10-10T20:38:07.780341+00:00 dns-arch panel[4789]: 2026/10/10 20:38:07 site configuration set10-a.test (change): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+        "2026-10-10T20:38:07.795114+00:00 dns-arch panel[4789]: 2026/10/10 20:38:07 site configuration set10-a.test (change): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending"
+      ],
+      "name": "c3: a journal line names the site and says kept (foreign)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "actions": [
+          "keep",
+          "take",
+          "merge"
+        ],
+        "diff_lines": 53,
+        "enabled": "link",
+        "file_sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "pending_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+        "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+        "state": "foreign",
+        "status": 200
+      },
+      "name": "c3: GET site-config answers state foreign with a difference and the three choices",
+      "ok": true
+    },
+    {
+      "detail": {
+        "state": "foreign"
+      },
+      "name": "c3: the Domains list row says foreign",
+      "ok": true
+    },
+    {
+      "detail": {
+        "reload_lines": [],
+        "workers": [
+          [
+            "4951"
+          ],
+          [
+            "4951"
+          ]
+        ]
+      },
+      "name": "c3: nginx was not reloaded after the trigger (worker PIDs unchanged, no `Reloaded` line)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "body": "owner-replaced\n",
+        "status": 200
+      },
+      "name": "c3: the owner's content is still served after the trigger",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set1-owner.test": [
+          91932,
+          91932
+        ],
+        "set10-b.test": [
+          92008,
+          92008
+        ]
+      },
+      "name": "c3: the other two sites' files were not touched (inode)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SITE_CONFIG_OWNER_EDITED",
+        "error": "The site's nginx configuration file is not CelikPanel's unchanged text, so CelikPanel kept it and did not apply this change to it. Nothing else was changed. Open the domain's Configuration file section: keep your file, take CelikPanel's text (your file is kept as a dated copy), or merge the two by hand.",
+        "reason": "foreign",
+        "status": 409
+      },
+      "name": "c3: the save answers 409 SITE_CONFIG_OWNER_EDITED",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-10T20:38:12Z",
+  "lab_preparation": [
+    {
+      "domain": "set10-a.test",
+      "file": "steps/13-c-owner-edit/native/075-c1-lab-restore-set10-a.test.json",
+      "label": "c1",
+      "sha256_matches": true
+    },
+    {
+      "domain": "set10-a.test",
+      "file": "steps/13-c-owner-edit/native/086-c2-lab-restore-set10-a.test.json",
+      "label": "c2",
+      "sha256_matches": true
+    },
+    {
+      "domain": "set10-a.test",
+      "file": "steps/13-c-owner-edit/native/096-c3-lab-restore-set10-a.test.json",
+      "label": "c3",
+      "sha256_matches": true
+    }
+  ],
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/075-c1-lab-restore-set10-a.test.json",
+      "label": "c1-lab-restore-set10-a.test",
+      "mode": "lab-restore",
+      "owner_action": false
+    },
+    {
+      "file": "native/076-c1-0-restored-read.json",
+      "label": "c1-0-restored-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/077-owner-c1-panel-stop.json",
+      "label": "owner-c1-panel-stop",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/078-owner-c1-edit.json",
+      "label": "owner-c1-edit",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/079-c1-1-edited-read.json",
+      "label": "c1-1-edited-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/080-http-c1-1-edited-set10-a.test_.json",
+      "label": "http-c1-1-edited-set10-a.test_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/081-guest-clock.json",
+      "label": "guest-clock",
+      "mode": "read-ledger",
+      "owner_action": false
+    },
+    {
+      "file": "native/082-owner-c1-panel-start.json",
+      "label": "owner-c1-panel-start",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/083-c1-2-after-read.json",
+      "label": "c1-2-after-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/084-http-c1-2-after-set10-a.test_.json",
+      "label": "http-c1-2-after-set10-a.test_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/085-c1-journal.json",
+      "label": "c1-journal",
+      "mode": "read-window",
+      "owner_action": false
+    },
+    {
+      "file": "native/086-c2-lab-restore-set10-a.test.json",
+      "label": "c2-lab-restore-set10-a.test",
+      "mode": "lab-restore",
+      "owner_action": false
+    },
+    {
+      "file": "native/087-c2-0-restored-read.json",
+      "label": "c2-0-restored-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/088-owner-c2-edit.json",
+      "label": "owner-c2-edit",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/089-c2-1-edited-read.json",
+      "label": "c2-1-edited-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/090-http-c2-1-edited-set10-a.test_.json",
+      "label": "http-c2-1-edited-set10-a.test_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/091-guest-clock.json",
+      "label": "guest-clock",
+      "mode": "read-ledger",
+      "owner_action": false
+    },
+    {
+      "file": "native/092-owner-c2-panel-restart.json",
+      "label": "owner-c2-panel-restart",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/093-c2-2-after-read.json",
+      "label": "c2-2-after-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/094-http-c2-2-after-set10-a.test_.json",
+      "label": "http-c2-2-after-set10-a.test_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/095-c2-journal.json",
+      "label": "c2-journal",
+      "mode": "read-window",
+      "owner_action": false
+    },
+    {
+      "file": "native/096-c3-lab-restore-set10-a.test.json",
+      "label": "c3-lab-restore-set10-a.test",
+      "mode": "lab-restore",
+      "owner_action": false
+    },
+    {
+      "file": "native/097-c3-0-restored-read.json",
+      "label": "c3-0-restored-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/098-owner-c3-edit.json",
+      "label": "owner-c3-edit",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/099-c3-1-edited-read.json",
+      "label": "c3-1-edited-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/100-http-c3-1-edited-set10-a.test_.json",
+      "label": "http-c3-1-edited-set10-a.test_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/101-guest-clock.json",
+      "label": "guest-clock",
+      "mode": "read-ledger",
+      "owner_action": false
+    },
+    {
+      "file": "native/102-c3-2-after-read.json",
+      "label": "c3-2-after-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/103-http-c3-2-after-set10-a.test_.json",
+      "label": "http-c3-2-after-set10-a.test_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/104-c3-journal.json",
+      "label": "c3-journal",
+      "mode": "read-window",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [
+    {
+      "detail": [],
+      "note": "c1: PASS"
+    },
+    {
+      "detail": [],
+      "note": "c2: PASS"
+    },
+    {
+      "detail": [],
+      "note": "c3: PASS"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-10T20:37:06Z",
+      "label": "c1-panel-stop",
+      "mode": "owner-panel"
+    },
+    {
+      "at": "2026-10-10T20:37:06Z",
+      "label": "c1-edit",
+      "mode": "owner-vhost10"
+    },
+    {
+      "at": "2026-10-10T20:37:08Z",
+      "label": "c1-panel-start",
+      "mode": "owner-panel"
+    },
+    {
+      "at": "2026-10-10T20:37:16Z",
+      "label": "c2-edit",
+      "mode": "owner-vhost10"
+    },
+    {
+      "at": "2026-10-10T20:37:38Z",
+      "label": "c2-panel-restart",
+      "mode": "owner-panel"
+    },
+    {
+      "at": "2026-10-10T20:37:46Z",
+      "label": "c3-edit",
+      "mode": "owner-vhost10"
+    }
+  ],
+  "runs": [
+    {
+      "files": {
+        "pending": "steps/13-c-owner-edit/files/c1-2-after-set10-a.test.conf.celikpanel-pending.txt",
+        "vhost": "steps/13-c-owner-edit/files/c1-2-after-set10-a.test.conf.txt"
+      },
+      "finished_at": "2026-10-10T20:37:14Z",
+      "journal": "steps/13-c-owner-edit/native/085-c1-journal.json",
+      "owner_action": "replace",
+      "panel_lines": [
+        "2026-10-10T20:37:08.708562+00:00 dns-arch panel[4560]: 2026/10/10 20:37:08 site configuration set10-a.test (startup): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending"
+      ],
+      "panel_stop": {
+        "epoch": 1791664626.0735188,
+        "file": "steps/13-c-owner-edit/native/077-owner-c1-panel-stop.json",
+        "is_active": "inactive",
+        "kind": "owner: systemctl stop celikpanel-panel",
+        "reconcile_lines_seen": [],
+        "waited_seconds": null
+      },
+      "panel_stopped_while_the_owner_edits": true,
+      "pending_before_the_run": {
+        "exists": true,
+        "sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770"
+      },
+      "run": "c1",
+      "scenario": "c",
+      "start_lines": [
+        "2026-10-10T20:37:08.721568+00:00 dns-arch panel[4560]: 2026/10/10 20:37:08 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 1 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+      ],
+      "started_at": "2026-10-10T20:37:04Z",
+      "state": "foreign",
+      "trigger": {
+        "api": {
+          "answering": true,
+          "seconds": 0.0,
+          "status": 200
+        },
+        "epoch": 1791664628.443111,
+        "is_active": "active",
+        "kind": "owner: systemctl start celikpanel-panel",
+        "ok": true,
+        "reconcile_lines_seen": [
+          "2026-10-10T20:37:08.721568+00:00 dns-arch panel[4560]: 2026/10/10 20:37:08 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 1 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+        ],
+        "session": {
+          "status": 200
+        },
+        "waited_seconds": 2.1
+      },
+      "verdict": "PASS"
+    },
+    {
+      "files": {
+        "pending": "steps/13-c-owner-edit/files/c2-2-after-set10-a.test.conf.celikpanel-pending.txt",
+        "vhost": "steps/13-c-owner-edit/files/c2-2-after-set10-a.test.conf.txt"
+      },
+      "finished_at": "2026-10-10T20:37:45Z",
+      "journal": "steps/13-c-owner-edit/native/095-c2-journal.json",
+      "owner_action": "replace",
+      "panel_lines": [
+        "2026-10-10T20:37:38.399961+00:00 dns-arch panel[4789]: 2026/10/10 20:37:38 site configuration set10-a.test (startup): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending"
+      ],
+      "panel_stopped_while_the_owner_edits": false,
+      "pending_before_the_run": {
+        "exists": true,
+        "sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770"
+      },
+      "run": "c2",
+      "scenario": "c",
+      "start_lines": [
+        "2026-10-10T20:37:38.416204+00:00 dns-arch panel[4789]: 2026/10/10 20:37:38 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 1 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+      ],
+      "started_at": "2026-10-10T20:37:14Z",
+      "state": "foreign",
+      "trigger": {
+        "api": {
+          "answering": true,
+          "seconds": 0.0,
+          "status": 200
+        },
+        "epoch": 1791664658.0860348,
+        "is_active": "active",
+        "kind": "owner: systemctl restart celikpanel-panel",
+        "ok": true,
+        "reconcile_lines_seen": [
+          "2026-10-10T20:37:38.416204+00:00 dns-arch panel[4789]: 2026/10/10 20:37:38 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 1 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+        ],
+        "session": {
+          "status": 200
+        },
+        "waited_seconds": 2.2
+      },
+      "verdict": "PASS"
+    },
+    {
+      "files": {
+        "pending": "steps/13-c-owner-edit/files/c3-2-after-set10-a.test.conf.celikpanel-pending.txt",
+        "vhost": "steps/13-c-owner-edit/files/c3-2-after-set10-a.test.conf.txt"
+      },
+      "finished_at": "2026-10-10T20:38:12Z",
+      "journal": "steps/13-c-owner-edit/native/104-c3-journal.json",
+      "owner_action": "replace",
+      "panel_lines": [
+        "2026-10-10T20:38:07.780341+00:00 dns-arch panel[4789]: 2026/10/10 20:38:07 site configuration set10-a.test (change): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+        "2026-10-10T20:38:07.795114+00:00 dns-arch panel[4789]: 2026/10/10 20:38:07 site configuration set10-a.test (change): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending"
+      ],
+      "panel_stopped_while_the_owner_edits": false,
+      "pending_before_the_run": {
+        "exists": true,
+        "sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770"
+      },
+      "run": "c3",
+      "scenario": "c",
+      "start_lines": [],
+      "started_at": "2026-10-10T20:37:45Z",
+      "state": "foreign",
+      "trigger": {
+        "code": "SITE_CONFIG_OWNER_EDITED",
+        "error": "The site's nginx configuration file is not CelikPanel's unchanged text, so CelikPanel kept it and did not apply this change to it. Nothing else was changed. Open the domain's Configuration file section: keep your file, take CelikPanel's text (your file is kept as a dated copy), or merge the two by hand.",
+        "ok": true,
+        "read_status": 200,
+        "reason": "foreign",
+        "sent": {
+          "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+          "redirect_www": false,
+          "web_server": "nginx"
+        },
+        "status": 409
+      },
+      "verdict": "PASS"
+    }
+  ],
+  "section": "c-owner-edit",
+  "started_at": "2026-10-10T20:37:04Z",
+  "substeps": {
+    "c1": "passed",
+    "c2": "passed",
+    "c3": "passed"
+  },
+  "title": "the owner replaces the file (start, restart, General save)",
+  "verdict": "passed"
+}

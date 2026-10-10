@@ -1,0 +1,148 @@
+{
+  "candidate": {
+    "commit": "0684f2703b665e68828ff329ed6e56eb9c7d4771",
+    "sha256": "320c39e3ee0f5e89d21393694ac470cf1030d390746b25fda33cb355c36a23ae",
+    "version": "v0.1.0-alpha.81"
+  },
+  "cell": "set10-debian13",
+  "cell_kind": "set10-d031-fresh-install",
+  "local_port": 18443,
+  "native_evidence": false,
+  "pinned_names": [
+    "celikpanel.net",
+    "acme-v02.api.letsencrypt.org",
+    "acme-staging-v02.api.letsencrypt.org",
+    "acme.zerossl.com",
+    "dv.acme-v02.api.pki.goog"
+  ],
+  "rule": "the driver calls only the Panel's HTTP API as the logged-in owner; every native fact is an SSH reading; owner actions and lab preparation on the guest are recorded as such; no certificate authority and no licence service is contacted by the driver",
+  "runs": [
+    {
+      "owner_action": "append-location",
+      "panel_stopped_while_the_owner_edits": true,
+      "run": "a1",
+      "scenario": "a",
+      "trigger": "start"
+    },
+    {
+      "owner_action": "append-location",
+      "panel_stopped_while_the_owner_edits": false,
+      "run": "a2",
+      "scenario": "a",
+      "trigger": "restart"
+    },
+    {
+      "owner_action": "append-location",
+      "panel_stopped_while_the_owner_edits": false,
+      "run": "a3",
+      "scenario": "a",
+      "trigger": "save"
+    },
+    {
+      "owner_action": "change-index",
+      "panel_stopped_while_the_owner_edits": true,
+      "run": "b1",
+      "scenario": "b",
+      "trigger": "start"
+    },
+    {
+      "owner_action": "change-index",
+      "panel_stopped_while_the_owner_edits": false,
+      "run": "b2",
+      "scenario": "b",
+      "trigger": "restart"
+    },
+    {
+      "owner_action": "change-index",
+      "panel_stopped_while_the_owner_edits": false,
+      "run": "b3",
+      "scenario": "b",
+      "trigger": "save"
+    },
+    {
+      "owner_action": "replace",
+      "panel_stopped_while_the_owner_edits": true,
+      "run": "c1",
+      "scenario": "c",
+      "trigger": "start"
+    },
+    {
+      "owner_action": "replace",
+      "panel_stopped_while_the_owner_edits": false,
+      "run": "c2",
+      "scenario": "c",
+      "trigger": "restart"
+    },
+    {
+      "owner_action": "replace",
+      "panel_stopped_while_the_owner_edits": false,
+      "run": "c3",
+      "scenario": "c",
+      "trigger": "save"
+    },
+    {
+      "owner_action": "add-include",
+      "panel_stopped_while_the_owner_edits": true,
+      "run": "d1",
+      "scenario": "d",
+      "trigger": "start"
+    },
+    {
+      "owner_action": "add-include",
+      "panel_stopped_while_the_owner_edits": false,
+      "run": "d2",
+      "scenario": "d",
+      "trigger": "restart"
+    },
+    {
+      "owner_action": "add-include",
+      "panel_stopped_while_the_owner_edits": false,
+      "run": "d3",
+      "scenario": "d",
+      "trigger": "save"
+    }
+  ],
+  "schema": "celikpanel/set10-plan/v1",
+  "setup": {
+    "components": [
+      "dovecot",
+      "mariadb",
+      "nginx",
+      "php-fpm",
+      "postfix",
+      "postgresql",
+      "roundcube",
+      "rspamd"
+    ],
+    "dns_mode": "external",
+    "purpose": "web_mail"
+  },
+  "steps": [
+    "set6-name-pinning",
+    "preflight",
+    "origin",
+    "baseline-install",
+    "owner-login",
+    "license",
+    "setup",
+    "site",
+    "S0-sites",
+    "h-i-unchanged-start",
+    "a-owner-edit",
+    "b-owner-edit",
+    "c-owner-edit",
+    "d-owner-edit",
+    "keep",
+    "take-j",
+    "take-stale",
+    "take-refused",
+    "e-removed",
+    "f-include-dir",
+    "g-immutable",
+    "k-symlink",
+    "l-delete",
+    "set6-name-pinning-at-the-end",
+    "collect"
+  ],
+  "work_root": "/var/tmp/cp-release-drill-dry-set10-debian13"
+}

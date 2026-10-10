@@ -1,0 +1,38 @@
+{
+  "at": "2026-10-10T20:40:07Z",
+  "by_unit": {
+    "celikpanel-agent.service": [],
+    "celikpanel-panel.service": [
+      "2026-10-10T20:40:02.257777+00:00 dns-arch panel[6617]: 2026/10/10 20:40:02 http: TLS handshake error from 127.0.0.1:54866: EOF",
+      "2026-10-10T20:40:02.274049+00:00 dns-arch panel[6617]: 2026/10/10 20:40:02 http: TLS handshake error from 127.0.0.1:54884: EOF",
+      "2026-10-10T20:40:02.287434+00:00 dns-arch panel[6617]: 2026/10/10 20:40:02 http: TLS handshake error from 127.0.0.1:54900: EOF",
+      "2026-10-10T20:40:02.298804+00:00 dns-arch panel[6617]: 2026/10/10 20:40:02 http: TLS handshake error from 127.0.0.1:54918: EOF",
+      "2026-10-10T20:40:02.312753+00:00 dns-arch panel[6617]: 2026/10/10 20:40:02 site configuration set10-a.test (change): missing, not recreated",
+      "2026-10-10T20:40:02.326695+00:00 dns-arch panel[6617]: 2026/10/10 20:40:02 site configuration set10-a.test (change): missing, not recreated",
+      "2026-10-10T20:40:02.331085+00:00 dns-arch panel[6617]: 2026/10/10 20:40:02 [409] apply general settings vhost: site configuration of set10-a.test not applied: missing (absent ); vhost restore: site configuration of set10-a.test not applied: missing (absent )",
+      "2026-10-10T20:40:02.887514+00:00 dns-arch panel[6617]: 2026/10/10 20:40:02 http: TLS handshake error from 127.0.0.1:54926: EOF",
+      "2026-10-10T20:40:03.071286+00:00 dns-arch panel[6617]: 2026/10/10 20:40:03 site configuration set10-a.test (recreate): recreated"
+    ],
+    "nginx.service": [
+      "2026-10-10T20:40:03.035407+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+      "2026-10-10T20:40:03.060609+00:00 dns-arch nginx[6688]: 2026/10/10 20:40:03 [warn] 6688#6688: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+      "2026-10-10T20:40:03.066105+00:00 dns-arch nginx[6688]: 2026/10/10 20:40:03 [notice] 6688#6688: signal process started",
+      "2026-10-10T20:40:03.068805+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+    ],
+    "php-fpm.service": []
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set10-native/v1",
+  "since_epoch": 1791664801,
+  "systemd_manager": [
+    "2026-10-10T20:40:03.035407+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+    "2026-10-10T20:40:03.068805+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php-fpm.service"
+  ]
+}

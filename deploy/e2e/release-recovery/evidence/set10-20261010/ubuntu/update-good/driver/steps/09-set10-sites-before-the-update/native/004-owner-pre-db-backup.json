@@ -1,0 +1,20 @@
+{
+  "action": "owner-db-backup",
+  "at": "2026-10-10T21:38:05Z",
+  "backup": {
+    "exists": true,
+    "group": "root",
+    "kind": "file",
+    "mode": "0600",
+    "owner": "root",
+    "path": "/root/set10-panel-db-before-the-update.db",
+    "size": 851968
+  },
+  "backup_has_managed_site_files": false,
+  "backup_schema_version": 42,
+  "mode": "owner-db-backup",
+  "owner_action": true,
+  "panel": "active",
+  "path": "/root/set10-panel-db-before-the-update.db",
+  "schema": "celikpanel/set10-native/v1"
+}

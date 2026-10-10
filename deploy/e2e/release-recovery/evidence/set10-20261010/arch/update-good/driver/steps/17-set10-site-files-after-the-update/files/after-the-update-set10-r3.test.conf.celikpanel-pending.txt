@@ -1,0 +1,40 @@
+# celikpanel-render v2 sha256=159b501aa53aa626e5e107ffa9c660a76c38000b180774c4274697a085f20977
+# Nginx vhost for set10-r3.test
+# Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set10-r3.test/*.conf;
+# CelikPanel never writes there. If you change this file, CelikPanel keeps
+# your file and asks you before it replaces it.
+# CelikPanel yazdı. Kendi eklemeleriniz /etc/nginx/celikpanel-sites.d/set10-r3.test/*.conf içine;
+# CelikPanel oraya hiç yazmaz. Bu dosyayı değiştirirseniz CelikPanel
+# dosyanızı korur ve değiştirmeden önce size sorar.
+# Site ID: 3 · Project type: static
+server {
+    listen 80;
+    listen [::]:80;
+    server_name set10-r3.test www.set10-r3.test;
+
+    access_log /var/log/nginx/set10-r3.test-access.log;
+    error_log /var/log/nginx/set10-r3.test-error.log;
+
+    # Root-owned validation content only; never tenant public_html.
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/3;
+        try_files $uri =404;
+    }
+
+    root /var/www/celikpanel/subscriptions/2/sites/3/public_html;
+    index index.html index.htm;
+
+    location / {
+
+        try_files $uri $uri/ =404;
+    }
+    location ~ \.(php|phtml|phps|php[0-9])$ {
+        deny all;
+    }
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+
+    # Your additions for this site (server context) / Bu site için eklemeleriniz
+    include /etc/nginx/celikpanel-sites.d/set10-r3.test/*.conf;
+}

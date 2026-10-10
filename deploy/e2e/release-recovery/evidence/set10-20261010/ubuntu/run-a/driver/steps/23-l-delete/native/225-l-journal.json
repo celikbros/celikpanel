@@ -1,0 +1,76 @@
+{
+  "at": "2026-10-10T20:25:21Z",
+  "by_unit": {
+    "celikpanel-agent.service": [
+      "2026-10-10T20:25:16.138196+00:00 dns-ubuntu agent[7573]: 2026/10/10 20:25:16 DeleteSite set10-c.test: the vhost was not CelikPanel's unchanged text; a copy is kept as /etc/nginx/sites-available/set10-c.test.conf.celikpanel-backup-20261010T202516Z",
+      "2026-10-10T20:25:16.327862+00:00 dns-ubuntu userdel[78738]: delete user 'set10_c_test'",
+      "2026-10-10T20:25:16.328857+00:00 dns-ubuntu userdel[78738]: removed group 'set10_c_test' owned by 'set10_c_test'",
+      "2026-10-10T20:25:16.328884+00:00 dns-ubuntu userdel[78738]: removed shadow group 'set10_c_test' owned by 'set10_c_test'",
+      "2026-10-10T20:25:16.752154+00:00 dns-ubuntu userdel[78769]: delete user 'set10_d_test'",
+      "2026-10-10T20:25:16.753877+00:00 dns-ubuntu userdel[78769]: removed group 'set10_d_test' owned by 'set10_d_test'",
+      "2026-10-10T20:25:16.753968+00:00 dns-ubuntu userdel[78769]: removed shadow group 'set10_d_test' owned by 'set10_d_test'"
+    ],
+    "celikpanel-panel.service": [
+      "2026-10-10T20:25:16.007722+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:25:16 http: TLS handshake error from 127.0.0.1:38410: EOF",
+      "2026-10-10T20:25:16.480738+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:25:16 http: TLS handshake error from 127.0.0.1:38422: EOF"
+    ],
+    "nginx.service": [
+      "2026-10-10T20:25:14.350599+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T20:25:14.359221+00:00 dns-ubuntu nginx[78476]: 2026/10/10 20:25:14 [notice] 78476#78476: signal process started",
+      "2026-10-10T20:25:14.361388+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T20:25:14.719608+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T20:25:14.728829+00:00 dns-ubuntu nginx[78537]: 2026/10/10 20:25:14 [notice] 78537#78537: signal process started",
+      "2026-10-10T20:25:14.731020+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T20:25:15.052142+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T20:25:15.060313+00:00 dns-ubuntu nginx[78599]: 2026/10/10 20:25:15 [notice] 78599#78599: signal process started",
+      "2026-10-10T20:25:15.062048+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T20:25:16.127029+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T20:25:16.133615+00:00 dns-ubuntu nginx[78728]: 2026/10/10 20:25:16 [notice] 78728#78728: signal process started",
+      "2026-10-10T20:25:16.135019+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T20:25:16.581266+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T20:25:16.588856+00:00 dns-ubuntu nginx[78759]: 2026/10/10 20:25:16 [notice] 78759#78759: signal process started",
+      "2026-10-10T20:25:16.589038+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+    ],
+    "php8.3-fpm.service": [
+      "2026-10-10T20:25:16.224203+00:00 dns-ubuntu systemd[1]: Reloading php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager...",
+      "2026-10-10T20:25:16.230412+00:00 dns-ubuntu systemd[1]: Reloaded php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager.",
+      "2026-10-10T20:25:16.298701+00:00 dns-ubuntu php-fpm8.3[30858]: [10-Oct-2026 20:25:16] NOTICE: using inherited socket fd=8, \"/run/php/php8.3-fpm.sock\"",
+      "2026-10-10T20:25:16.298701+00:00 dns-ubuntu php-fpm8.3[30858]: [10-Oct-2026 20:25:16] NOTICE: using inherited socket fd=9, \"/var/run/php/php8.3-fpm-site2.sock\"",
+      "2026-10-10T20:25:16.298701+00:00 dns-ubuntu php-fpm8.3[30858]: [10-Oct-2026 20:25:16] NOTICE: using inherited socket fd=10, \"/var/run/php/php8.3-fpm-site3.sock\"",
+      "2026-10-10T20:25:16.298701+00:00 dns-ubuntu php-fpm8.3[30858]: [10-Oct-2026 20:25:16] NOTICE: using inherited socket fd=11, \"/var/run/php/php8.3-fpm-site4.sock\"",
+      "2026-10-10T20:25:16.298701+00:00 dns-ubuntu php-fpm8.3[30858]: [10-Oct-2026 20:25:16] NOTICE: using inherited socket fd=12, \"/var/run/php/php8.3-fpm-site5.sock\"",
+      "2026-10-10T20:25:16.657150+00:00 dns-ubuntu systemd[1]: Reloading php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager...",
+      "2026-10-10T20:25:16.664022+00:00 dns-ubuntu systemd[1]: Reloaded php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager.",
+      "2026-10-10T20:25:16.722218+00:00 dns-ubuntu php-fpm8.3[30858]: [10-Oct-2026 20:25:16] NOTICE: using inherited socket fd=8, \"/run/php/php8.3-fpm.sock\"",
+      "2026-10-10T20:25:16.722218+00:00 dns-ubuntu php-fpm8.3[30858]: [10-Oct-2026 20:25:16] NOTICE: using inherited socket fd=9, \"/var/run/php/php8.3-fpm-site2.sock\"",
+      "2026-10-10T20:25:16.722218+00:00 dns-ubuntu php-fpm8.3[30858]: [10-Oct-2026 20:25:16] NOTICE: using inherited socket fd=10, \"/var/run/php/php8.3-fpm-site3.sock\"",
+      "2026-10-10T20:25:16.722218+00:00 dns-ubuntu php-fpm8.3[30858]: [10-Oct-2026 20:25:16] NOTICE: using inherited socket fd=12, \"/var/run/php/php8.3-fpm-site5.sock\""
+    ]
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set10-native/v1",
+  "since_epoch": 1791663914,
+  "systemd_manager": [
+    "2026-10-10T20:25:14.350599+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T20:25:14.361388+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T20:25:14.719608+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T20:25:14.731020+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T20:25:15.052142+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T20:25:15.062048+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T20:25:16.127029+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T20:25:16.135019+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T20:25:16.224203+00:00 dns-ubuntu systemd[1]: Reloading php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager...",
+    "2026-10-10T20:25:16.230412+00:00 dns-ubuntu systemd[1]: Reloaded php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager.",
+    "2026-10-10T20:25:16.581266+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T20:25:16.589038+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T20:25:16.657150+00:00 dns-ubuntu systemd[1]: Reloading php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager...",
+    "2026-10-10T20:25:16.664022+00:00 dns-ubuntu systemd[1]: Reloaded php8.3-fpm.service - The PHP 8.3 FastCGI Process Manager."
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php8.3-fpm.service"
+  ]
+}

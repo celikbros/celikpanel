@@ -1,0 +1,33 @@
+Formatting '/var/tmp/cp-release-drill-s10-arch-a/cells/4e15a57efdc6a2e4cf1cbb27/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-s10-arch-a/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-s10-arch-a/cells/4e15a57efdc6a2e4cf1cbb27/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-s10-arch-a/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-s10-arch-a", "cell_id": "release-recovery__b944ae265f731a0d", "ssh_ports": [4863, 4864]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s10-arch-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s10-arch-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"step": "set6-name-pinning", "verdict": "passed", "reason": null}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "site", "verdict": "passed", "reason": null}
+{"step": "S0-sites", "verdict": "failed", "reason": "S0: set10-a.test: the include directory exists, is empty and 0755; S0: set10-b.test: the include directory exists, is empty and 0755; S0: set1-owner.test: the include directory exists, is empty and 0755"}
+{"step": "h-i-unchanged-start", "verdict": "passed", "reason": null}
+{"step": "a-owner-edit", "verdict": "passed", "reason": null}
+{"step": "b-owner-edit", "verdict": "passed", "reason": null}
+{"step": "c-owner-edit", "verdict": "passed", "reason": null}
+{"step": "d-owner-edit", "verdict": "passed", "reason": null}
+{"step": "keep", "verdict": "passed", "reason": null}
+{"step": "take-j", "verdict": "passed", "reason": null}
+{"step": "take-stale", "verdict": "passed", "reason": null}
+{"step": "take-refused", "verdict": "passed", "reason": null}
+{"step": "e-removed", "verdict": "passed", "reason": null}
+{"step": "f-include-dir", "verdict": "inconclusive", "reason": "not established: f: a PHP version switch keeps the owner's file"}
+{"step": "g-immutable", "verdict": "failed", "reason": "g: site-config for A names the reason (unreadable/write_refused or EPERM)"}
+{"step": "k-symlink", "verdict": "passed", "reason": null}
+{"step": "l-delete", "verdict": "passed", "reason": null}
+{"step": "set6-name-pinning-at-the-end", "verdict": "passed", "reason": null}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"cell_kind": "set10-d031-fresh-install", "overall": "failed", "sections": {"S0-sites": "failed", "a-owner-edit": "passed", "b-owner-edit": "passed", "c-owner-edit": "passed", "d-owner-edit": "passed", "e-removed": "passed", "f-include-dir": "inconclusive", "g-immutable": "failed", "h-i-unchanged-start": "passed", "k-symlink": "passed", "keep": "passed", "l-delete": "passed", "take-j": "passed", "take-refused": "passed", "take-stale": "passed"}}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-s10-arch-a", "evidence_retained": true}
+SET10 cell=set10-arch lab=/var/tmp/cp-release-drill-s10-arch-a driver_exit=1 evidence=/var/tmp/cp-release-drill-s10-arch-a/evidence/*/upd1

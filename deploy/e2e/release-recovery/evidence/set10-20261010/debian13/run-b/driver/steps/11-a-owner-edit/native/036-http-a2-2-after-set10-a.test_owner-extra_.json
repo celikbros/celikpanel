@@ -1,0 +1,18 @@
+{
+  "at": "2026-10-10T19:33:57Z",
+  "body": "owner",
+  "body_sha256": "4c1029697ee358715d3a14a2add817c4b01651440de808371f78165ac90dc581",
+  "bytes": 5,
+  "headers": {
+    "content-length": "5",
+    "content-type": "application/octet-stream",
+    "server": "nginx"
+  },
+  "host": "set10-a.test",
+  "mode": "read-http",
+  "owner_action": false,
+  "path": "/owner-extra/",
+  "schema": "celikpanel/set10-native/v1",
+  "status": 200,
+  "status_line": "HTTP/1.1 200 OK"
+}

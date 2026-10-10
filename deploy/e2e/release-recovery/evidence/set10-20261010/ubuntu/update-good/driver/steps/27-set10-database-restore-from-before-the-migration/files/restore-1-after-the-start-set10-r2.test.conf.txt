@@ -1,0 +1,48 @@
+# celikpanel-render v2 sha256=2cb1a432f8013241c7c8a8d5cd6d5890a36975ed6f2e57dd3b2a4335e7778fca
+# Nginx vhost for set10-r2.test
+# Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set10-r2.test/*.conf;
+# CelikPanel never writes there. If you change this file, CelikPanel keeps
+# your file and asks you before it replaces it.
+# CelikPanel yazdı. Kendi eklemeleriniz /etc/nginx/celikpanel-sites.d/set10-r2.test/*.conf içine;
+# CelikPanel oraya hiç yazmaz. Bu dosyayı değiştirirseniz CelikPanel
+# dosyanızı korur ve değiştirmeden önce size sorar.
+# Site ID: 2 · Project type: php
+server {
+    listen 80;
+    listen [::]:80;
+    server_name set10-r2.test www.set10-r2.test;
+
+    access_log /var/log/nginx/set10-r2.test-access.log;
+    error_log /var/log/nginx/set10-r2.test-error.log;
+
+    # Root-owned validation content only; never tenant public_html.
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2;
+        try_files $uri =404;
+    }
+
+    root /var/www/celikpanel/subscriptions/2/sites/2/public_html;
+    index index.php index.html index.htm;
+
+    location / {
+
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+    location ~ \.php$ {
+        fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+        try_files $fastcgi_script_name =404;
+        set $path_info $fastcgi_path_info;
+        fastcgi_param PATH_INFO $path_info;
+        fastcgi_index index.php;
+        include fastcgi.conf;
+        fastcgi_pass unix:/var/run/php/php8.3-fpm-site2.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+
+    # Your additions for this site (server context) / Bu site için eklemeleriniz
+    include /etc/nginx/celikpanel-sites.d/set10-r2.test/*.conf;
+}

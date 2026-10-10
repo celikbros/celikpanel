@@ -1,0 +1,69 @@
+{
+  "account": {
+    "gid": 5001,
+    "home": "/var/www/celikpanel/subscriptions/2/sites/1",
+    "uid": 5001
+  },
+  "cron_allow": {
+    "error": "FileNotFoundError",
+    "exists": false,
+    "path": "/etc/cron.allow"
+  },
+  "cron_deny": {
+    "error": "FileNotFoundError",
+    "exists": false,
+    "path": "/etc/cron.deny"
+  },
+  "crontab_binary": "/usr/bin/crontab",
+  "crontab_package": "cron: /usr/bin/crontab",
+  "list": {
+    "argv": [
+      "/usr/bin/crontab",
+      "-u",
+      "set1_owner_test",
+      "-l"
+    ],
+    "at": "2026-10-10T20:14:47Z",
+    "returncode": 1,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "no crontab for set1_owner_test\n",
+    "stdout": ""
+  },
+  "list_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "mode": "read-crontab",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "spool": [],
+  "spool_directories": [
+    {
+      "exists": true,
+      "gid": 997,
+      "group": "crontab",
+      "inode": 84626,
+      "mode": "1730",
+      "mtime_ns": 1711843587000000000,
+      "nlink": 2,
+      "owner": "root",
+      "path": "/var/spool/cron/crontabs",
+      "size": 4096,
+      "type": "directory",
+      "uid": 0
+    },
+    {
+      "exists": true,
+      "gid": 0,
+      "group": "root",
+      "inode": 84625,
+      "mode": "0755",
+      "mtime_ns": 1787748898127996882,
+      "nlink": 3,
+      "owner": "root",
+      "path": "/var/spool/cron",
+      "size": 4096,
+      "type": "directory",
+      "uid": 0
+    }
+  ],
+  "user": "set1_owner_test"
+}

@@ -1,0 +1,723 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-10T20:22:41Z",
+      "json": {
+        "actions": [
+          "keep",
+          "take",
+          "merge"
+        ],
+        "decision": {
+          "current": true,
+          "decided_at": "2026-10-10T20:21:51Z",
+          "kind": "keep_mine"
+        },
+        "diff": "--- /etc/nginx/sites-available/set10-a.test.conf (on this server)\n+++ CelikPanel's text\n@@ -44,9 +44,4 @@\n \n     # Your additions for this site (server context) / Bu site için eklemeleriniz\n     include /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n-\n-    # set10: added by the server owner by hand\n-    location /owner-extra/ {\n-        return 200 \"owner\";\n-    }\n }\n",
+        "domain": "set10-a.test",
+        "domain_id": 2,
+        "enabled": "link",
+        "file_sha256": "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "kind": "nginx_vhost",
+        "ledger": {
+          "observed_at": "2026-10-10T20:22:19Z",
+          "written_at": "2026-10-10T20:14:55Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "pending_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+        "render_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd",
+        "state": "owner_edited"
+      },
+      "label": "take shown: GET site-config",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/site-config"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:22:43Z",
+      "json": {
+        "actions": [],
+        "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+        "decision": {
+          "current": true,
+          "decided_at": "2026-10-10T20:22:43Z",
+          "kind": "take_celikpanel"
+        },
+        "domain": "set10-a.test",
+        "domain_id": 2,
+        "enabled": "link",
+        "file_sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "kind": "nginx_vhost",
+        "ledger": {
+          "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+          "observed_at": "2026-10-10T20:22:43Z",
+          "written_at": "2026-10-10T20:22:43Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "outcome": "taken",
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "render_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd",
+        "state": "managed_unchanged"
+      },
+      "label": "take with a request identity",
+      "request": {
+        "body": {
+          "file_sha256": "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba",
+          "render_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/2/site-config/take",
+        "x_celikpanel_request_id": "2bcf0f0744f61485865e00cce5506072"
+      },
+      "seconds": 0.29,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:22:50Z",
+      "json": {
+        "actions": [],
+        "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+        "decision": {
+          "current": true,
+          "decided_at": "2026-10-10T20:22:43Z",
+          "kind": "take_celikpanel"
+        },
+        "domain": "set10-a.test",
+        "domain_id": 2,
+        "enabled": "link",
+        "file_sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "kind": "nginx_vhost",
+        "ledger": {
+          "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+          "observed_at": "2026-10-10T20:22:43Z",
+          "written_at": "2026-10-10T20:22:43Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "outcome": "taken",
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "render_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd",
+        "state": "managed_unchanged"
+      },
+      "label": "take: the same request identity sent again",
+      "request": {
+        "body": {
+          "file_sha256": "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba",
+          "render_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/2/site-config/take",
+        "x_celikpanel_request_id": "2bcf0f0744f61485865e00cce5506072"
+      },
+      "seconds": 0.02,
+      "status": 200,
+      "text": null
+    }
+  ],
+  "cells": {
+    "j-kept": {
+      "detail": null,
+      "expectations": [
+        {
+          "expectation": "the owner's root:root 0640 file is still root:root 0640 (and the same bytes) after a Panel start",
+          "held": true,
+          "measured": {
+            "gid": [
+              0,
+              0
+            ],
+            "inode": [
+              262702,
+              262702
+            ],
+            "mode": [
+              "0640",
+              "0640"
+            ],
+            "sha256": [
+              "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba",
+              "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba"
+            ],
+            "uid": [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "verdict": "PASS"
+    },
+    "take": {
+      "detail": {
+        "files": {
+          "backup-0": "steps/16-take-j/files/take-3-after-take-set10-a.test.conf.backup-0.txt",
+          "pending": null,
+          "vhost": "steps/16-take-j/files/take-3-after-take-set10-a.test.conf.txt"
+        },
+        "journal": "steps/16-take-j/native/155-take-journal.json"
+      },
+      "expectations": [
+        {
+          "expectation": "POST take answers 200 with outcome taken and the backup path",
+          "held": true,
+          "measured": {
+            "at": "2026-10-10T20:22:43Z",
+            "json": {
+              "actions": [],
+              "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+              "decision": {
+                "current": true,
+                "decided_at": "2026-10-10T20:22:43Z",
+                "kind": "take_celikpanel"
+              },
+              "domain": "set10-a.test",
+              "domain_id": 2,
+              "enabled": "link",
+              "file_sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+              "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+              "kind": "nginx_vhost",
+              "ledger": {
+                "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+                "observed_at": "2026-10-10T20:22:43Z",
+                "written_at": "2026-10-10T20:22:43Z",
+                "written_release": "v0.1.0-alpha.81 0684f2703b66"
+              },
+              "outcome": "taken",
+              "path": "/etc/nginx/sites-available/set10-a.test.conf",
+              "render_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd",
+              "state": "managed_unchanged"
+            },
+            "label": "take with a request identity",
+            "request": {
+              "body": {
+                "file_sha256": "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba",
+                "render_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd"
+              },
+              "method": "POST",
+              "path": "/api/v1/domains/2/site-config/take",
+              "x_celikpanel_request_id": "2bcf0f0744f61485865e00cce5506072"
+            },
+            "seconds": 0.29,
+            "status": 200,
+            "text": null
+          }
+        },
+        {
+          "expectation": "a dated <file>.celikpanel-backup-<UTC> holds the owner's bytes, mode, owner and group",
+          "held": true,
+          "measured": {
+            "backup": {
+              "gid": 0,
+              "mode": "0640",
+              "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+              "sha256": "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba",
+              "uid": 0
+            },
+            "owner_file_sha256": "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba"
+          }
+        },
+        {
+          "expectation": "the file is now the Panel's text (equal to the Panel's own file of this site)",
+          "held": true,
+          "measured": {
+            "after": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+            "panel_text": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d"
+          }
+        },
+        {
+          "expectation": "the new file keeps owner, group and mode (root:root 0640)",
+          "held": true,
+          "measured": {
+            "gid": 0,
+            "group": "root",
+            "mode": "0640",
+            "owner": "root",
+            "uid": 0
+          }
+        },
+        {
+          "expectation": "nginx was reloaded (worker PIDs changed, a `Reloaded` line after the POST)",
+          "held": true,
+          "measured": {
+            "reload_lines": [
+              "2026-10-10T20:22:43.155050+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+            ],
+            "workers": [
+              [
+                "64818",
+                "64819"
+              ],
+              [
+                "66570",
+                "66571"
+              ]
+            ]
+          }
+        },
+        {
+          "expectation": "the served content is the Panel's (the owner's /owner-extra/ answer is gone; the PHP probe runs)",
+          "held": true,
+          "measured": {
+            "owner_extra": {
+              "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewp",
+              "status": 200
+            },
+            "probe": {
+              "executed": true,
+              "php_version": "8.3.6",
+              "runs_as": "set10_a_test",
+              "server_api": "fpm-fcgi",
+              "values": {
+                "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+                "DOCUMENT_URI": "/set4-probe.php",
+                "PATH_INFO": "",
+                "PATH_TRANSLATED": "(unset)",
+                "QUERY_STRING": "",
+                "REQUEST_URI": "/set4-probe.php",
+                "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+                "SCRIPT_NAME": "/set4-probe.php"
+              }
+            }
+          }
+        },
+        {
+          "expectation": "the ledger records take_celikpanel, managed_unchanged and the backup path",
+          "held": true,
+          "measured": {
+            "adopted_from": "",
+            "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+            "body_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd",
+            "decided_at": 1791663763,
+            "decided_by": 2,
+            "decision": "take_celikpanel",
+            "decision_file_sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+            "domain_id": 2,
+            "file_format": "celikpanel-render v2",
+            "file_sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+            "id": 2,
+            "kind": "nginx_vhost",
+            "observed_at": 1791663763,
+            "path": "/etc/nginx/sites-available/set10-a.test.conf",
+            "pending_path": "",
+            "pending_sha256": "",
+            "site_id": 2,
+            "state": "managed_unchanged",
+            "state_reason": "",
+            "written_at": 1791663763,
+            "written_release": "v0.1.0-alpha.81 0684f2703b66"
+          }
+        },
+        {
+          "expectation": "the same identity again runs nothing (same answer, no second backup, the file unchanged)",
+          "held": true,
+          "measured": {
+            "backups": 1,
+            "replay": {
+              "at": "2026-10-10T20:22:50Z",
+              "json": {
+                "actions": [],
+                "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+                "decision": {
+                  "current": true,
+                  "decided_at": "2026-10-10T20:22:43Z",
+                  "kind": "take_celikpanel"
+                },
+                "domain": "set10-a.test",
+                "domain_id": 2,
+                "enabled": "link",
+                "file_sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+                "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+                "kind": "nginx_vhost",
+                "ledger": {
+                  "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+                  "observed_at": "2026-10-10T20:22:43Z",
+                  "written_at": "2026-10-10T20:22:43Z",
+                  "written_release": "v0.1.0-alpha.81 0684f2703b66"
+                },
+                "outcome": "taken",
+                "path": "/etc/nginx/sites-available/set10-a.test.conf",
+                "render_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd",
+                "state": "managed_unchanged"
+              },
+              "label": "take: the same request identity sent again",
+              "request": {
+                "body": {
+                  "file_sha256": "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba",
+                  "render_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd"
+                },
+                "method": "POST",
+                "path": "/api/v1/domains/2/site-config/take",
+                "x_celikpanel_request_id": "2bcf0f0744f61485865e00cce5506072"
+              },
+              "seconds": 0.02,
+              "status": 200,
+              "text": null
+            }
+          }
+        }
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "checks": [
+    {
+      "detail": {
+        "gid": [
+          0,
+          0
+        ],
+        "inode": [
+          262702,
+          262702
+        ],
+        "mode": [
+          "0640",
+          "0640"
+        ],
+        "sha256": [
+          "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba",
+          "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba"
+        ],
+        "uid": [
+          0,
+          0
+        ]
+      },
+      "name": "j-kept: the owner's root:root 0640 file is still root:root 0640 (and the same bytes) after a Panel start",
+      "ok": true
+    },
+    {
+      "detail": {
+        "at": "2026-10-10T20:22:43Z",
+        "json": {
+          "actions": [],
+          "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+          "decision": {
+            "current": true,
+            "decided_at": "2026-10-10T20:22:43Z",
+            "kind": "take_celikpanel"
+          },
+          "domain": "set10-a.test",
+          "domain_id": 2,
+          "enabled": "link",
+          "file_sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+          "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+          "kind": "nginx_vhost",
+          "ledger": {
+            "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+            "observed_at": "2026-10-10T20:22:43Z",
+            "written_at": "2026-10-10T20:22:43Z",
+            "written_release": "v0.1.0-alpha.81 0684f2703b66"
+          },
+          "outcome": "taken",
+          "path": "/etc/nginx/sites-available/set10-a.test.conf",
+          "render_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd",
+          "state": "managed_unchanged"
+        },
+        "label": "take with a request identity",
+        "request": {
+          "body": {
+            "file_sha256": "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba",
+            "render_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd"
+          },
+          "method": "POST",
+          "path": "/api/v1/domains/2/site-config/take",
+          "x_celikpanel_request_id": "2bcf0f0744f61485865e00cce5506072"
+        },
+        "seconds": 0.29,
+        "status": 200,
+        "text": null
+      },
+      "name": "take: POST take answers 200 with outcome taken and the backup path",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backup": {
+          "gid": 0,
+          "mode": "0640",
+          "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+          "sha256": "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba",
+          "uid": 0
+        },
+        "owner_file_sha256": "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba"
+      },
+      "name": "take: a dated <file>.celikpanel-backup-<UTC> holds the owner's bytes, mode, owner and group",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+        "panel_text": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d"
+      },
+      "name": "take: the file is now the Panel's text (equal to the Panel's own file of this site)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "gid": 0,
+        "group": "root",
+        "mode": "0640",
+        "owner": "root",
+        "uid": 0
+      },
+      "name": "take: the new file keeps owner, group and mode (root:root 0640)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "reload_lines": [
+          "2026-10-10T20:22:43.155050+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+        ],
+        "workers": [
+          [
+            "64818",
+            "64819"
+          ],
+          [
+            "66570",
+            "66571"
+          ]
+        ]
+      },
+      "name": "take: nginx was reloaded (worker PIDs changed, a `Reloaded` line after the POST)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "owner_extra": {
+          "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewp",
+          "status": 200
+        },
+        "probe": {
+          "executed": true,
+          "php_version": "8.3.6",
+          "runs_as": "set10_a_test",
+          "server_api": "fpm-fcgi",
+          "values": {
+            "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+            "DOCUMENT_URI": "/set4-probe.php",
+            "PATH_INFO": "",
+            "PATH_TRANSLATED": "(unset)",
+            "QUERY_STRING": "",
+            "REQUEST_URI": "/set4-probe.php",
+            "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+            "SCRIPT_NAME": "/set4-probe.php"
+          }
+        }
+      },
+      "name": "take: the served content is the Panel's (the owner's /owner-extra/ answer is gone; the PHP probe runs)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "adopted_from": "",
+        "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+        "body_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd",
+        "decided_at": 1791663763,
+        "decided_by": 2,
+        "decision": "take_celikpanel",
+        "decision_file_sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+        "domain_id": 2,
+        "file_format": "celikpanel-render v2",
+        "file_sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+        "id": 2,
+        "kind": "nginx_vhost",
+        "observed_at": 1791663763,
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "pending_path": "",
+        "pending_sha256": "",
+        "site_id": 2,
+        "state": "managed_unchanged",
+        "state_reason": "",
+        "written_at": 1791663763,
+        "written_release": "v0.1.0-alpha.81 0684f2703b66"
+      },
+      "name": "take: the ledger records take_celikpanel, managed_unchanged and the backup path",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": 1,
+        "replay": {
+          "at": "2026-10-10T20:22:50Z",
+          "json": {
+            "actions": [],
+            "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+            "decision": {
+              "current": true,
+              "decided_at": "2026-10-10T20:22:43Z",
+              "kind": "take_celikpanel"
+            },
+            "domain": "set10-a.test",
+            "domain_id": 2,
+            "enabled": "link",
+            "file_sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+            "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+            "kind": "nginx_vhost",
+            "ledger": {
+              "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+              "observed_at": "2026-10-10T20:22:43Z",
+              "written_at": "2026-10-10T20:22:43Z",
+              "written_release": "v0.1.0-alpha.81 0684f2703b66"
+            },
+            "outcome": "taken",
+            "path": "/etc/nginx/sites-available/set10-a.test.conf",
+            "render_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd",
+            "state": "managed_unchanged"
+          },
+          "label": "take: the same request identity sent again",
+          "request": {
+            "body": {
+              "file_sha256": "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba",
+              "render_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd"
+            },
+            "method": "POST",
+            "path": "/api/v1/domains/2/site-config/take",
+            "x_celikpanel_request_id": "2bcf0f0744f61485865e00cce5506072"
+          },
+          "seconds": 0.02,
+          "status": 200,
+          "text": null
+        }
+      },
+      "name": "take: the same identity again runs nothing (same answer, no second backup, the file unchanged)",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-10T20:22:52Z",
+  "lab_preparation": [
+    {
+      "domain": "set10-a.test",
+      "file": "steps/16-take-j/native/144-take-lab-restore-set10-a.test.json",
+      "label": "take",
+      "sha256_matches": true
+    }
+  ],
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/144-take-lab-restore-set10-a.test.json",
+      "label": "take-lab-restore-set10-a.test",
+      "mode": "lab-restore",
+      "owner_action": false
+    },
+    {
+      "file": "native/145-owner-take-edit.json",
+      "label": "owner-take-edit",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/146-owner-take-chown.json",
+      "label": "owner-take-chown",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/147-take-1-owner-file-root-root-0640-read.json",
+      "label": "take-1-owner-file-root-root-0640-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/148-owner-take-j-start-panel-restart.json",
+      "label": "owner-take-j-start-panel-restart",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/149-take-2-after-a-start-read.json",
+      "label": "take-2-after-a-start-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/150-guest-clock.json",
+      "label": "guest-clock",
+      "mode": "read-ledger",
+      "owner_action": false
+    },
+    {
+      "file": "native/151-take-3-after-take-read.json",
+      "label": "take-3-after-take-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/152-http-take-3-after-set10-a.test_owner-extra_.json",
+      "label": "http-take-3-after-set10-a.test_owner-extra_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/153-http-take-3-after-probe-set10-a.test_set4-probe.php.json",
+      "label": "http-take-3-after-probe-set10-a.test_set4-probe.php",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/154-take-4-after-the-replay-read.json",
+      "label": "take-4-after-the-replay-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/155-take-journal.json",
+      "label": "take-journal",
+      "mode": "read-window",
+      "owner_action": false
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [
+    {
+      "detail": [],
+      "note": "j-kept: PASS"
+    },
+    {
+      "detail": [],
+      "note": "take: PASS"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-10T20:22:17Z",
+      "label": "take-edit",
+      "mode": "owner-vhost10"
+    },
+    {
+      "at": "2026-10-10T20:22:18Z",
+      "label": "take-chown",
+      "mode": "owner-vhost10"
+    },
+    {
+      "at": "2026-10-10T20:22:19Z",
+      "label": "take-j-start-panel-restart",
+      "mode": "owner-panel"
+    }
+  ],
+  "owner_waited_for_idle": {
+    "at": "2026-10-10T20:22:15Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.7
+  },
+  "section": "take-j",
+  "started_at": "2026-10-10T20:22:15Z",
+  "substeps": {
+    "j-kept": "passed",
+    "take": "passed"
+  },
+  "title": "take CelikPanel's on a root:root 0640 file kept at a start; its backup; its replay",
+  "verdict": "passed"
+}

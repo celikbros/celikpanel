@@ -1,0 +1,24 @@
+{
+  "checks": {
+    "checks": 10,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T20:40:07Z",
+    "notes": [
+      "e: PASS",
+      "e-recreate: PASS"
+    ],
+    "started_at": "2026-10-10T20:39:53Z",
+    "substeps": {
+      "e": "passed",
+      "e-recreate": "passed"
+    },
+    "title": "the owner removes the vhost and its link; start; recreate",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T20:40:07Z",
+  "name": "e-removed",
+  "started_at": "2026-10-10T20:39:53Z",
+  "verdict": "passed"
+}

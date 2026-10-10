@@ -1,0 +1,231 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-10T19:54:58Z",
+      "json": {
+        "actions": [
+          "keep",
+          "take",
+          "merge"
+        ],
+        "decision": {
+          "current": false,
+          "decided_at": "2026-10-10T19:54:53Z",
+          "kind": "take_celikpanel"
+        },
+        "diff": "--- /etc/nginx/sites-available/set10-a.test.conf (on this server)\n+++ CelikPanel's text\n@@ -44,9 +44,4 @@\n \n     # Your additions for this site (server context) / Bu site için eklemeleriniz\n     include /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n-\n-    # set10: added by the server owner by hand\n-    location /owner-extra/ {\n-        return 200 \"owner\";\n-    }\n }\n",
+        "domain": "set10-a.test",
+        "domain_id": 2,
+        "enabled": "link",
+        "file_sha256": "a39089f8d890b9221f01a6cbbb97df160247dd521987f767f49d885dbf305795",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "kind": "nginx_vhost",
+        "ledger": {
+          "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T195453Z",
+          "observed_at": "2026-10-10T19:54:53Z",
+          "written_at": "2026-10-10T19:54:53Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "render_sha256": "c6b2e3d40b5505ed47a94ae3d87ba4ddcfb84724cb183a1322c0219a388916c5",
+        "state": "owner_edited"
+      },
+      "label": "stale shown: GET site-config",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/site-config"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T19:54:59Z",
+      "json": {
+        "code": "SITE_CONFIG_CHANGED",
+        "error": "The configuration file or CelikPanel's text changed after the page showed them, so nothing was done. Read the file's state again, then choose again."
+      },
+      "label": "take with the digests shown before the second edit",
+      "request": {
+        "body": {
+          "file_sha256": "a39089f8d890b9221f01a6cbbb97df160247dd521987f767f49d885dbf305795",
+          "render_sha256": "c6b2e3d40b5505ed47a94ae3d87ba4ddcfb84724cb183a1322c0219a388916c5"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/2/site-config/take",
+        "x_celikpanel_request_id": "d883a3e4b24e7de19637fbde56a578ea"
+      },
+      "seconds": 0.04,
+      "status": 409,
+      "text": null
+    }
+  ],
+  "cells": {
+    "take-stale": {
+      "detail": null,
+      "expectations": [
+        {
+          "expectation": "the second edit changed the file after the read",
+          "held": true,
+          "measured": [
+            "a39089f8d890b9221f01a6cbbb97df160247dd521987f767f49d885dbf305795",
+            "a65d7f72f705c2b5af08b4c2a3cdf8e44a8ce7c88618bd4d0103b128225b9fd2"
+          ]
+        },
+        {
+          "expectation": "POST take answers 409 SITE_CONFIG_CHANGED",
+          "held": true,
+          "measured": {
+            "at": "2026-10-10T19:54:59Z",
+            "json": {
+              "code": "SITE_CONFIG_CHANGED",
+              "error": "The configuration file or CelikPanel's text changed after the page showed them, so nothing was done. Read the file's state again, then choose again."
+            },
+            "label": "take with the digests shown before the second edit",
+            "request": {
+              "body": {
+                "file_sha256": "a39089f8d890b9221f01a6cbbb97df160247dd521987f767f49d885dbf305795",
+                "render_sha256": "c6b2e3d40b5505ed47a94ae3d87ba4ddcfb84724cb183a1322c0219a388916c5"
+              },
+              "method": "POST",
+              "path": "/api/v1/domains/2/site-config/take",
+              "x_celikpanel_request_id": "d883a3e4b24e7de19637fbde56a578ea"
+            },
+            "seconds": 0.04,
+            "status": 409,
+            "text": null
+          }
+        },
+        {
+          "expectation": "nothing was done: the file is the owner's second edit (sha256, inode), no new backup",
+          "held": true,
+          "measured": {
+            "backups": [
+              1,
+              1
+            ]
+          }
+        }
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "checks": [
+    {
+      "detail": [
+        "a39089f8d890b9221f01a6cbbb97df160247dd521987f767f49d885dbf305795",
+        "a65d7f72f705c2b5af08b4c2a3cdf8e44a8ce7c88618bd4d0103b128225b9fd2"
+      ],
+      "name": "take-stale: the second edit changed the file after the read",
+      "ok": true
+    },
+    {
+      "detail": {
+        "at": "2026-10-10T19:54:59Z",
+        "json": {
+          "code": "SITE_CONFIG_CHANGED",
+          "error": "The configuration file or CelikPanel's text changed after the page showed them, so nothing was done. Read the file's state again, then choose again."
+        },
+        "label": "take with the digests shown before the second edit",
+        "request": {
+          "body": {
+            "file_sha256": "a39089f8d890b9221f01a6cbbb97df160247dd521987f767f49d885dbf305795",
+            "render_sha256": "c6b2e3d40b5505ed47a94ae3d87ba4ddcfb84724cb183a1322c0219a388916c5"
+          },
+          "method": "POST",
+          "path": "/api/v1/domains/2/site-config/take",
+          "x_celikpanel_request_id": "d883a3e4b24e7de19637fbde56a578ea"
+        },
+        "seconds": 0.04,
+        "status": 409,
+        "text": null
+      },
+      "name": "take-stale: POST take answers 409 SITE_CONFIG_CHANGED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          1,
+          1
+        ]
+      },
+      "name": "take-stale: nothing was done: the file is the owner's second edit (sha256, inode), no new backup",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-10T19:55:00Z",
+  "lab_preparation": [
+    {
+      "domain": "set10-a.test",
+      "file": "steps/17-take-stale/native/156-stale-lab-restore-set10-a.test.json",
+      "label": "stale",
+      "sha256_matches": true
+    }
+  ],
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/156-stale-lab-restore-set10-a.test.json",
+      "label": "stale-lab-restore-set10-a.test",
+      "mode": "lab-restore",
+      "owner_action": false
+    },
+    {
+      "file": "native/157-owner-stale-edit.json",
+      "label": "owner-stale-edit",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/158-stale-1-shown-read.json",
+      "label": "stale-1-shown-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/159-owner-stale-edit-again.json",
+      "label": "owner-stale-edit-again",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/160-stale-2-edited-again-read.json",
+      "label": "stale-2-edited-again-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/161-stale-3-after-read.json",
+      "label": "stale-3-after-read",
+      "mode": "read-site10",
+      "owner_action": false
+    }
+  ],
+  "node": "debian13",
+  "notes": [
+    {
+      "detail": [],
+      "note": "take-stale: PASS"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-10T19:54:58Z",
+      "label": "stale-edit",
+      "mode": "owner-vhost10"
+    },
+    {
+      "at": "2026-10-10T19:54:59Z",
+      "label": "stale-edit-again",
+      "mode": "owner-vhost10"
+    }
+  ],
+  "section": "take-stale",
+  "started_at": "2026-10-10T19:54:57Z",
+  "substeps": {
+    "take-stale": "passed"
+  },
+  "title": "take with the digests of a file the owner changed again after the read",
+  "verdict": "passed"
+}

@@ -1,0 +1,555 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "0684f2703b665e68828ff329ed6e56eb9c7d4771",
+      "sha256": "320c39e3ee0f5e89d21393694ac470cf1030d390746b25fda33cb355c36a23ae",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "cell": {
+    "components": [
+      "nginx",
+      "php-fpm",
+      "mariadb",
+      "postgresql"
+    ],
+    "mail": false,
+    "name": "set10-arch",
+    "node": "arch",
+    "purpose": "web"
+  },
+  "cell_kind": "set10-d031-fresh-install",
+  "findings": [
+    "arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-verify']"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__b944ae265f731a0d",
+    "node": "arch",
+    "vm_uuid": "7b4351c2-feff-5784-93a9-edcd8e9b10c1"
+  },
+  "native_evidence": false,
+  "note": "set10: a measurement of D-031 on the fresh install; no update is started and no P0 row is judged.",
+  "outcome": {
+    "classification": "set10-measured",
+    "final_status": null
+  },
+  "overall": "failed",
+  "provenance": {
+    "what": "set10: the D-031 code installed fresh; no update"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "sections": {
+    "S0-sites": {
+      "checks": 16,
+      "error": null,
+      "failed": [
+        "S0: set10-a.test: the include directory exists, is empty and 0755",
+        "S0: set10-b.test: the include directory exists, is empty and 0755",
+        "S0: set1-owner.test: the include directory exists, is empty and 0755"
+      ],
+      "finished_at": "2026-10-10T20:34:37Z",
+      "notes": [
+        "S0: FAIL"
+      ],
+      "started_at": "2026-10-10T20:34:29Z",
+      "substeps": {
+        "S0": "failed",
+        "section": "passed"
+      },
+      "title": "two PHP sites; header, digest, ledger row, include directory, nginx -T",
+      "unknown": [],
+      "verdict": "failed"
+    },
+    "a-owner-edit": {
+      "checks": 31,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T20:35:54Z",
+      "notes": [
+        "a1: PASS",
+        "a2: PASS",
+        "a3: PASS"
+      ],
+      "started_at": "2026-10-10T20:34:45Z",
+      "substeps": {
+        "a1": "passed",
+        "a2": "passed",
+        "a3": "passed"
+      },
+      "title": "the owner adds a location (start, restart, General save)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "b-owner-edit": {
+      "checks": 31,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T20:37:04Z",
+      "notes": [
+        "b1: PASS",
+        "b2: PASS",
+        "b3: PASS"
+      ],
+      "started_at": "2026-10-10T20:35:54Z",
+      "substeps": {
+        "b1": "passed",
+        "b2": "passed",
+        "b3": "passed"
+      },
+      "title": "the owner changes a template directive (start, restart, General save)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "c-owner-edit": {
+      "checks": 31,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T20:38:12Z",
+      "notes": [
+        "c1: PASS",
+        "c2: PASS",
+        "c3: PASS"
+      ],
+      "started_at": "2026-10-10T20:37:04Z",
+      "substeps": {
+        "c1": "passed",
+        "c2": "passed",
+        "c3": "passed"
+      },
+      "title": "the owner replaces the file (start, restart, General save)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "d-owner-edit": {
+      "checks": 31,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T20:39:22Z",
+      "notes": [
+        "d1: PASS",
+        "d2: PASS",
+        "d3: PASS"
+      ],
+      "started_at": "2026-10-10T20:38:12Z",
+      "substeps": {
+        "d1": "passed",
+        "d2": "passed",
+        "d3": "passed"
+      },
+      "title": "the owner adds an include of their own (start, restart, General save)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "e-removed": {
+      "checks": 10,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T20:40:07Z",
+      "notes": [
+        "e: PASS",
+        "e-recreate: PASS"
+      ],
+      "started_at": "2026-10-10T20:39:53Z",
+      "substeps": {
+        "e": "passed",
+        "e-recreate": "passed"
+      },
+      "title": "the owner removes the vhost and its link; start; recreate",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "f-include-dir": {
+      "checks": 5,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T20:40:20Z",
+      "notes": [
+        "f: NOT-MEASURED"
+      ],
+      "started_at": "2026-10-10T20:40:07Z",
+      "substeps": {
+        "f": "inconclusive"
+      },
+      "title": "an owner .conf in the include directory across a rewrite, a save and a PHP switch",
+      "unknown": [
+        "f: a PHP version switch keeps the owner's file"
+      ],
+      "verdict": "inconclusive"
+    },
+    "g-immutable": {
+      "checks": 11,
+      "error": null,
+      "failed": [
+        "g: site-config for A names the reason (unreadable/write_refused or EPERM)"
+      ],
+      "finished_at": "2026-10-10T20:40:36Z",
+      "notes": [
+        "g: FAIL",
+        "g-resume: PASS"
+      ],
+      "started_at": "2026-10-10T20:40:21Z",
+      "substeps": {
+        "g": "failed",
+        "g-resume": "passed"
+      },
+      "title": "A locked while A, B and the static site need a render",
+      "unknown": [],
+      "verdict": "failed"
+    },
+    "h-i-unchanged-start": {
+      "checks": 7,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T20:34:45Z",
+      "notes": [
+        "h: PASS",
+        "i: PASS"
+      ],
+      "started_at": "2026-10-10T20:34:37Z",
+      "substeps": {
+        "h": "passed",
+        "i": "passed"
+      },
+      "title": "a restart with every site unchanged; the creation text is the start text",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "k-symlink": {
+      "checks": 8,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T20:40:46Z",
+      "notes": [
+        "k: PASS"
+      ],
+      "started_at": "2026-10-10T20:40:36Z",
+      "substeps": {
+        "k": "passed"
+      },
+      "title": "A's vhost replaced by a symlink to the owner's file",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "keep": {
+      "checks": 7,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T20:39:31Z",
+      "notes": [
+        "keep: PASS"
+      ],
+      "started_at": "2026-10-10T20:39:22Z",
+      "substeps": {
+        "keep": "passed"
+      },
+      "title": "keep mine, with and without a request identity, and its replay",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "l-delete": {
+      "checks": 7,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T20:40:58Z",
+      "notes": [
+        "l: PASS"
+      ],
+      "started_at": "2026-10-10T20:40:47Z",
+      "substeps": {
+        "l": "passed",
+        "section": "passed"
+      },
+      "title": "deleting an owner-edited site and an unchanged one",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "take-j": {
+      "checks": 9,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T20:39:45Z",
+      "notes": [
+        "j-kept: PASS",
+        "take: PASS"
+      ],
+      "started_at": "2026-10-10T20:39:31Z",
+      "substeps": {
+        "j-kept": "passed",
+        "take": "passed"
+      },
+      "title": "take CelikPanel's on a root:root 0640 file kept at a start; its backup; its replay",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "take-refused": {
+      "checks": 4,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T20:39:53Z",
+      "notes": [
+        "take-refused: PASS"
+      ],
+      "started_at": "2026-10-10T20:39:47Z",
+      "substeps": {
+        "take-refused": "passed"
+      },
+      "title": "take refused by nginx because of an owner's file in the include directory",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "take-stale": {
+      "checks": 3,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T20:39:47Z",
+      "notes": [
+        "take-stale: PASS"
+      ],
+      "started_at": "2026-10-10T20:39:45Z",
+      "substeps": {
+        "take-stale": "passed"
+      },
+      "title": "take with the digests of a file the owner changed again after the read",
+      "unknown": [],
+      "verdict": "passed"
+    }
+  },
+  "set10": {
+    "creation": {
+      "set1-owner.test": {
+        "inode": 91932,
+        "mtime_ns": 1791664468576677384,
+        "sha256": "aa7679d801a7bd8e4d008283c4e248e96809875e83f4f6d38e742bde6999dc18"
+      },
+      "set10-a.test": {
+        "inode": 91970,
+        "mtime_ns": 1791664472549674439,
+        "sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770"
+      },
+      "set10-b.test": {
+        "inode": 92008,
+        "mtime_ns": 1791664475404673592,
+        "sha256": "7d6c6ae2c9b0628188a852c1d5872e8dce0189d7f43fd2a7a974da676c28e09b"
+      }
+    },
+    "ids": {
+      "set1-owner.test": 1,
+      "set10-a.test": 2,
+      "set10-b.test": 3,
+      "set10-c.test": 4,
+      "set10-d.test": 5
+    },
+    "mode_written_by_the_panel_on_take": "0640"
+  },
+  "setup": {
+    "components": [
+      "mariadb",
+      "nginx",
+      "php-fpm",
+      "postgresql"
+    ],
+    "purpose": "web",
+    "waiting": {
+      "code": "server_setup_access_dns_required",
+      "mail_steps_reached": true,
+      "not_run": [
+        "10-panel_certificate",
+        "11-verify"
+      ],
+      "phase": "access_dns",
+      "polls": 25,
+      "stable_wait_seconds": 123.4,
+      "steps": {
+        "01-dns": "succeeded",
+        "02-service": "succeeded",
+        "03-service": "succeeded",
+        "04-service": "succeeded",
+        "05-service": "succeeded",
+        "06-service": "succeeded",
+        "07-service": "succeeded",
+        "08-firewall": "succeeded",
+        "09-access_dns": "running",
+        "10-panel_certificate": "pending",
+        "11-verify": "pending"
+      }
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-10T20:27:08Z",
+      "name": "set6-name-pinning",
+      "reason": null,
+      "started_at": "2026-10-10T20:27:03Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:27:15Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-10T20:27:08Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:27:29Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-10T20:27:15Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:30:33Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-10T20:27:29Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:30:34Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-10T20:30:33Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:30:34Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-10T20:30:34Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:34:26Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-10T20:30:34Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-10T20:34:29Z",
+      "name": "site",
+      "reason": null,
+      "started_at": "2026-10-10T20:34:26Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:34:37Z",
+      "name": "S0-sites",
+      "reason": "S0: set10-a.test: the include directory exists, is empty and 0755; S0: set10-b.test: the include directory exists, is empty and 0755; S0: set1-owner.test: the include directory exists, is empty and 0755",
+      "started_at": "2026-10-10T20:34:29Z",
+      "verdict": "failed"
+    },
+    {
+      "finished_at": "2026-10-10T20:34:45Z",
+      "name": "h-i-unchanged-start",
+      "reason": null,
+      "started_at": "2026-10-10T20:34:37Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:35:54Z",
+      "name": "a-owner-edit",
+      "reason": null,
+      "started_at": "2026-10-10T20:34:45Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:37:04Z",
+      "name": "b-owner-edit",
+      "reason": null,
+      "started_at": "2026-10-10T20:35:54Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:38:12Z",
+      "name": "c-owner-edit",
+      "reason": null,
+      "started_at": "2026-10-10T20:37:04Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:39:22Z",
+      "name": "d-owner-edit",
+      "reason": null,
+      "started_at": "2026-10-10T20:38:12Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:39:31Z",
+      "name": "keep",
+      "reason": null,
+      "started_at": "2026-10-10T20:39:22Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:39:45Z",
+      "name": "take-j",
+      "reason": null,
+      "started_at": "2026-10-10T20:39:31Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:39:47Z",
+      "name": "take-stale",
+      "reason": null,
+      "started_at": "2026-10-10T20:39:45Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:39:53Z",
+      "name": "take-refused",
+      "reason": null,
+      "started_at": "2026-10-10T20:39:47Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:40:07Z",
+      "name": "e-removed",
+      "reason": null,
+      "started_at": "2026-10-10T20:39:53Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:40:20Z",
+      "name": "f-include-dir",
+      "reason": "not established: f: a PHP version switch keeps the owner's file",
+      "started_at": "2026-10-10T20:40:07Z",
+      "verdict": "inconclusive"
+    },
+    {
+      "finished_at": "2026-10-10T20:40:36Z",
+      "name": "g-immutable",
+      "reason": "g: site-config for A names the reason (unreadable/write_refused or EPERM)",
+      "started_at": "2026-10-10T20:40:21Z",
+      "verdict": "failed"
+    },
+    {
+      "finished_at": "2026-10-10T20:40:47Z",
+      "name": "k-symlink",
+      "reason": null,
+      "started_at": "2026-10-10T20:40:36Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:40:58Z",
+      "name": "l-delete",
+      "reason": null,
+      "started_at": "2026-10-10T20:40:47Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:40:58Z",
+      "name": "set6-name-pinning-at-the-end",
+      "reason": null,
+      "started_at": "2026-10-10T20:40:58Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T20:41:00Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-10T20:40:58Z",
+      "verdict": "passed"
+    }
+  ]
+}

@@ -1,0 +1,514 @@
+{
+  "checks": {
+    "answers_after_the_save": {
+      "dotfile": {
+        "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+        "body_sha256": "2de2499f4e5f896995ee7ebaa527a39b75f520f98e12110ec6c156a2433dbe75",
+        "bytes": 162,
+        "error": null,
+        "headers": {
+          "content-length": "162",
+          "content-type": "text/html",
+          "server": "nginx/1.24.0 (Ubuntu)"
+        },
+        "status": 403
+      },
+      "missing_script": {
+        "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+        "body_sha256": "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+        "bytes": 162,
+        "error": null,
+        "headers": {
+          "content-length": "162",
+          "content-type": "text/html",
+          "server": "nginx/1.24.0 (Ubuntu)"
+        },
+        "status": 404
+      },
+      "missing_static": {
+        "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set4-upd-php.test</title>\n<style>\n  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}\n  main{text-align:center;padding:2rem}\n  h1{font-weight:600}\n  p{color:#94a3b8}\n</style>\n</head>\n<body>\n<main>\n  <h1>set4-upd-php.test</h1>\n  <p>Bu site hazırlanıyor. / This site is being prepared.</p>\n  <p>CelikPanel · PHP 8.3.6 · 2026</p>\n</main>\n</body>\n</html>\n",
+        "body_sha256": "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52",
+        "bytes": 574,
+        "error": null,
+        "headers": {
+          "content-type": "text/html; charset=UTF-8",
+          "server": "nginx/1.24.0 (Ubuntu)"
+        },
+        "status": 200
+      },
+      "path_info_deep_tail_php": {
+        "body": "set4-php-executed:42:8.3.6:fpm-fcgi:set4_upd_php_test\nPATH_INFO=[/a/b/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/5/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/5/public_html]\nREQUEST_URI=[/set4-probe.php/a/b/tail.php?q=1]\nQUERY_STRING=[q=1]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+        "body_sha256": "86245f3dd4b776fb057a1c8753f9c93f451bbe3b580a7cc6b175592e481ccaf1",
+        "bytes": 394,
+        "error": null,
+        "headers": {
+          "content-type": "text/plain;charset=UTF-8",
+          "server": "nginx/1.24.0 (Ubuntu)"
+        },
+        "status": 200
+      },
+      "path_info_plain": {
+        "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set4-upd-php.test</title>\n<style>\n  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}\n  main{text-align:center;padding:2rem}\n  h1{font-weight:600}\n  p{color:#94a3b8}\n</style>\n</head>\n<body>\n<main>\n  <h1>set4-upd-php.test</h1>\n  <p>Bu site hazırlanıyor. / This site is being prepared.</p>\n  <p>CelikPanel · PHP 8.3.6 · 2026</p>\n</main>\n</body>\n</html>\n",
+        "body_sha256": "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52",
+        "bytes": 574,
+        "error": null,
+        "headers": {
+          "content-type": "text/html; charset=UTF-8",
+          "server": "nginx/1.24.0 (Ubuntu)"
+        },
+        "status": 200
+      },
+      "path_info_tail_php": {
+        "body": "set4-php-executed:42:8.3.6:fpm-fcgi:set4_upd_php_test\nPATH_INFO=[/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/5/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/5/public_html]\nREQUEST_URI=[/set4-probe.php/tail.php]\nQUERY_STRING=[]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+        "body_sha256": "43487469017556234911551e54b60489a7dbe39569b288db113f1b3f86b6bec2",
+        "bytes": 379,
+        "error": null,
+        "headers": {
+          "content-type": "text/plain;charset=UTF-8",
+          "server": "nginx/1.24.0 (Ubuntu)"
+        },
+        "status": 200
+      },
+      "probe": {
+        "body": "set4-php-executed:42:8.3.6:fpm-fcgi:set4_upd_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/5/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/5/public_html]\nREQUEST_URI=[/set4-probe.php]\nQUERY_STRING=[]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+        "body_sha256": "a6716e7b474201dcc57883b6af616e529b789d6d6d8b8f97fb4d744c5de4b58b",
+        "bytes": 361,
+        "error": null,
+        "headers": {
+          "content-type": "text/plain;charset=UTF-8",
+          "server": "nginx/1.24.0 (Ubuntu)"
+        },
+        "status": 200
+      },
+      "probe_query": {
+        "body": "set4-php-executed:42:8.3.6:fpm-fcgi:set4_upd_php_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/5/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/5/public_html]\nREQUEST_URI=[/set4-probe.php?x=1&y=two]\nQUERY_STRING=[x=1&y=two]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+        "body_sha256": "8bc9ad8abbfba6f1907518c48eeacefd92676bdad85da7be7a32e6ed47045ed2",
+        "bytes": 380,
+        "error": null,
+        "headers": {
+          "content-type": "text/plain;charset=UTF-8",
+          "server": "nginx/1.24.0 (Ubuntu)"
+        },
+        "status": 200
+      },
+      "root": {
+        "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set4-upd-php.test</title>\n<style>\n  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}\n  main{text-align:center;padding:2rem}\n  h1{font-weight:600}\n  p{color:#94a3b8}\n</style>\n</head>\n<body>\n<main>\n  <h1>set4-upd-php.test</h1>\n  <p>Bu site hazırlanıyor. / This site is being prepared.</p>\n  <p>CelikPanel · PHP 8.3.6 · 2026</p>\n</main>\n</body>\n</html>\n",
+        "body_sha256": "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52",
+        "bytes": 574,
+        "error": null,
+        "headers": {
+          "content-type": "text/html; charset=UTF-8",
+          "server": "nginx/1.24.0 (Ubuntu)"
+        },
+        "status": 200
+      },
+      "static": {
+        "body": "set4 static file served by the web server\n",
+        "body_sha256": "027f7a0fc431eed3894f237433bd0db7888d8959469abe66602efa29d4bda904",
+        "bytes": 42,
+        "error": null,
+        "headers": {
+          "content-length": "42",
+          "content-type": "text/plain",
+          "server": "nginx/1.24.0 (Ubuntu)"
+        },
+        "status": 200
+      }
+    },
+    "answers_before_the_update_and_after_it": {
+      "dotfile": {
+        "body_sha256": [
+          "2de2499f4e5f896995ee7ebaa527a39b75f520f98e12110ec6c156a2433dbe75",
+          "2de2499f4e5f896995ee7ebaa527a39b75f520f98e12110ec6c156a2433dbe75"
+        ],
+        "equal": true,
+        "status": [
+          403,
+          403
+        ]
+      },
+      "missing_script": {
+        "body_sha256": [
+          "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+          "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07"
+        ],
+        "equal": true,
+        "status": [
+          404,
+          404
+        ]
+      },
+      "missing_static": {
+        "body_sha256": [
+          "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52",
+          "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      },
+      "path_info_deep_tail_php": {
+        "body_sha256": [
+          "86245f3dd4b776fb057a1c8753f9c93f451bbe3b580a7cc6b175592e481ccaf1",
+          "86245f3dd4b776fb057a1c8753f9c93f451bbe3b580a7cc6b175592e481ccaf1"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      },
+      "path_info_plain": {
+        "body_sha256": [
+          "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52",
+          "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      },
+      "path_info_tail_php": {
+        "body_sha256": [
+          "43487469017556234911551e54b60489a7dbe39569b288db113f1b3f86b6bec2",
+          "43487469017556234911551e54b60489a7dbe39569b288db113f1b3f86b6bec2"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      },
+      "probe": {
+        "body_sha256": [
+          "a6716e7b474201dcc57883b6af616e529b789d6d6d8b8f97fb4d744c5de4b58b",
+          "a6716e7b474201dcc57883b6af616e529b789d6d6d8b8f97fb4d744c5de4b58b"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      },
+      "probe_query": {
+        "body_sha256": [
+          "8bc9ad8abbfba6f1907518c48eeacefd92676bdad85da7be7a32e6ed47045ed2",
+          "8bc9ad8abbfba6f1907518c48eeacefd92676bdad85da7be7a32e6ed47045ed2"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      },
+      "root": {
+        "body_sha256": [
+          "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52",
+          "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      },
+      "static": {
+        "body_sha256": [
+          "027f7a0fc431eed3894f237433bd0db7888d8959469abe66602efa29d4bda904",
+          "027f7a0fc431eed3894f237433bd0db7888d8959469abe66602efa29d4bda904"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      }
+    },
+    "answers_before_the_update_and_after_the_save": {
+      "dotfile": {
+        "body_sha256": [
+          "2de2499f4e5f896995ee7ebaa527a39b75f520f98e12110ec6c156a2433dbe75",
+          "2de2499f4e5f896995ee7ebaa527a39b75f520f98e12110ec6c156a2433dbe75"
+        ],
+        "equal": true,
+        "status": [
+          403,
+          403
+        ]
+      },
+      "missing_script": {
+        "body_sha256": [
+          "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07",
+          "766c1d6bcb81d3e983fb7adbc19c616d7fc01dafb7893738edc242e2adc59c07"
+        ],
+        "equal": true,
+        "status": [
+          404,
+          404
+        ]
+      },
+      "missing_static": {
+        "body_sha256": [
+          "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52",
+          "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      },
+      "path_info_deep_tail_php": {
+        "body_sha256": [
+          "86245f3dd4b776fb057a1c8753f9c93f451bbe3b580a7cc6b175592e481ccaf1",
+          "86245f3dd4b776fb057a1c8753f9c93f451bbe3b580a7cc6b175592e481ccaf1"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      },
+      "path_info_plain": {
+        "body_sha256": [
+          "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52",
+          "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      },
+      "path_info_tail_php": {
+        "body_sha256": [
+          "43487469017556234911551e54b60489a7dbe39569b288db113f1b3f86b6bec2",
+          "43487469017556234911551e54b60489a7dbe39569b288db113f1b3f86b6bec2"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      },
+      "probe": {
+        "body_sha256": [
+          "a6716e7b474201dcc57883b6af616e529b789d6d6d8b8f97fb4d744c5de4b58b",
+          "a6716e7b474201dcc57883b6af616e529b789d6d6d8b8f97fb4d744c5de4b58b"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      },
+      "probe_query": {
+        "body_sha256": [
+          "8bc9ad8abbfba6f1907518c48eeacefd92676bdad85da7be7a32e6ed47045ed2",
+          "8bc9ad8abbfba6f1907518c48eeacefd92676bdad85da7be7a32e6ed47045ed2"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      },
+      "root": {
+        "body_sha256": [
+          "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52",
+          "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      },
+      "static": {
+        "body_sha256": [
+          "027f7a0fc431eed3894f237433bd0db7888d8959469abe66602efa29d4bda904",
+          "027f7a0fc431eed3894f237433bd0db7888d8959469abe66602efa29d4bda904"
+        ],
+        "equal": true,
+        "status": [
+          200,
+          200
+        ]
+      }
+    },
+    "domain": "set4-upd-php.test",
+    "domain_id": 5,
+    "nginx_journal_since_the_save": [],
+    "nginx_test_after_the_save": {
+      "at": "2026-10-10T21:41:56Z",
+      "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "nginx_test_after_the_update": {
+      "at": "2026-10-10T21:41:47Z",
+      "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "panel_version": {
+      "agent_commit": "e0c88113f717850a74a0b25baafd4a21f23e1069",
+      "agent_matches": true,
+      "commit": "e0c88113f717850a74a0b25baafd4a21f23e1069",
+      "hostname": "dns-ubuntu",
+      "ipv4": "192.0.2.12",
+      "schema_version": 44,
+      "version": "v0.1.0-alpha.82"
+    },
+    "probe_after_the_save": {
+      "executed": true,
+      "php_version": "8.3.6",
+      "runs_as": "set4_upd_php_test",
+      "server_api": "fpm-fcgi",
+      "values": {
+        "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/5/public_html",
+        "DOCUMENT_URI": "/set4-probe.php",
+        "PATH_INFO": "",
+        "PATH_TRANSLATED": "(unset)",
+        "QUERY_STRING": "",
+        "REQUEST_URI": "/set4-probe.php",
+        "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/5/public_html/set4-probe.php",
+        "SCRIPT_NAME": "/set4-probe.php"
+      }
+    },
+    "product_journal_since_the_save": [
+      "2026-10-10T21:41:49.263212+00:00 dns-ubuntu panel[57127]: 2026/10/10 21:41:49 http: TLS handshake error from 127.0.0.1:50422: EOF",
+      "2026-10-10T21:41:49.553199+00:00 dns-ubuntu panel[57127]: 2026/10/10 21:41:49 http: TLS handshake error from 127.0.0.1:50430: EOF",
+      "2026-10-10T21:41:49.571895+00:00 dns-ubuntu panel[57127]: 2026/10/10 21:41:49 site configuration set4-upd-php.test (change): unchanged"
+    ],
+    "render_action": {
+      "body": {
+        "status": "success"
+      },
+      "http": 200,
+      "read_http": 200,
+      "sent": {
+        "document_root": "/var/www/celikpanel/subscriptions/2/sites/5/public_html",
+        "redirect_www": false,
+        "web_server": "nginx"
+      },
+      "shown": {
+        "aliases": [],
+        "document_root": "/var/www/celikpanel/subscriptions/2/sites/5/public_html",
+        "domain_id": 5,
+        "domain_name": "set4-upd-php.test",
+        "redirect_https": false,
+        "redirect_www": false,
+        "redirect_www_available": true,
+        "web_server": "nginx"
+      },
+      "what": "POST /api/v1/domains/{id}/general with the values GET /api/v1/domains/{id}/general answered (the site's General settings saved unchanged); cmd/panel/domain_general_handlers.go updateDomainGeneralSettings applies the vhost"
+    },
+    "the_save_rendered_the_vhost_again": {
+      "file_written_again": false,
+      "nginx_reloaded_since_the_save": false
+    },
+    "vhost_after_the_save": {
+      "bytes": 1926,
+      "ctime_ns": 1791668403484053741,
+      "fastcgi_pass": [
+        "unix:/var/run/php/php8.3-fpm-site5.sock"
+      ],
+      "includes": [
+        "fastcgi.conf",
+        "fastcgi_params",
+        "/etc/nginx/celikpanel-sites.d/set4-upd-php.test/*.conf"
+      ],
+      "inode": 263787,
+      "mtime_ns": 1791668403475053715,
+      "names_the_php_snippet": false,
+      "path": "/etc/nginx/sites-available/set4-upd-php.test.conf",
+      "php_location_lines": [
+        "fastcgi_split_path_info ^(.+?\\.php)(/.*)$;",
+        "try_files $fastcgi_script_name =404;",
+        "set $path_info $fastcgi_path_info;",
+        "fastcgi_param PATH_INFO $path_info;",
+        "fastcgi_index index.php;",
+        "include fastcgi.conf;",
+        "fastcgi_pass unix:/var/run/php/php8.3-fpm-site5.sock;",
+        "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+        "include fastcgi_params;"
+      ],
+      "sha256": "29cd389210386440c26ad20005a3d01d9973910b3605f269f4234e748bbf3b83"
+    },
+    "vhost_after_the_update_before_the_save": {
+      "bytes": 1926,
+      "ctime_ns": 1791668403484053741,
+      "fastcgi_pass": [
+        "unix:/var/run/php/php8.3-fpm-site5.sock"
+      ],
+      "includes": [
+        "fastcgi.conf",
+        "fastcgi_params",
+        "/etc/nginx/celikpanel-sites.d/set4-upd-php.test/*.conf"
+      ],
+      "inode": 263787,
+      "mtime_ns": 1791668403475053715,
+      "names_the_php_snippet": false,
+      "path": "/etc/nginx/sites-available/set4-upd-php.test.conf",
+      "php_location_lines": [
+        "fastcgi_split_path_info ^(.+?\\.php)(/.*)$;",
+        "try_files $fastcgi_script_name =404;",
+        "set $path_info $fastcgi_path_info;",
+        "fastcgi_param PATH_INFO $path_info;",
+        "fastcgi_index index.php;",
+        "include fastcgi.conf;",
+        "fastcgi_pass unix:/var/run/php/php8.3-fpm-site5.sock;",
+        "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+        "include fastcgi_params;"
+      ],
+      "sha256": "29cd389210386440c26ad20005a3d01d9973910b3605f269f4234e748bbf3b83"
+    },
+    "vhost_before_the_update": {
+      "bytes": 1063,
+      "ctime_ns": 1791668287345912269,
+      "fastcgi_pass": [
+        "unix:/var/run/php/php8.3-fpm-site5.sock"
+      ],
+      "includes": [
+        "snippets/fastcgi-php.conf",
+        "fastcgi_params"
+      ],
+      "inode": 263800,
+      "mtime_ns": 1791668287334912142,
+      "names_the_php_snippet": true,
+      "path": "/etc/nginx/sites-available/set4-upd-php.test.conf",
+      "php_location_lines": [
+        "include snippets/fastcgi-php.conf;",
+        "fastcgi_pass unix:/var/run/php/php8.3-fpm-site5.sock;",
+        "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+        "include fastcgi_params;"
+      ],
+      "sha256": "2dd5f6d8215c3c96a40543861ecd4c36a36fa67c361e5a087158c78cfa6ce1f2"
+    },
+    "vhost_file_changed_by_the_save": false,
+    "vhost_file_changed_by_the_update_itself": true,
+    "vhost_file_written_again_by_the_save": {
+      "ctime_ns": [
+        1791668403484053741,
+        1791668403484053741
+      ],
+      "inode": [
+        263787,
+        263787
+      ],
+      "mtime_ns": [
+        1791668403475053715,
+        1791668403475053715
+      ]
+    }
+  },
+  "finished_at": "2026-10-10T21:41:55Z",
+  "name": "set4-php-site-after-the-update",
+  "reason": "neither the vhost file nor nginx's journal shows that the save rendered the vhost again",
+  "started_at": "2026-10-10T21:41:43Z",
+  "verdict": "failed"
+}

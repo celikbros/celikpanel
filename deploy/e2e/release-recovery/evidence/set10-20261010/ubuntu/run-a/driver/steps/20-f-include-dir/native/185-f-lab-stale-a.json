@@ -1,0 +1,60 @@
+{
+  "action": "lab-stale-managed",
+  "at": "2026-10-10T20:23:34Z",
+  "mode": "lab-stale-managed",
+  "nginx_test": {
+    "at": "2026-10-10T20:23:34Z",
+    "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": false,
+  "reload": {
+    "argv": [
+      "systemctl",
+      "reload",
+      "nginx.service"
+    ],
+    "at": "2026-10-10T20:23:34Z",
+    "returncode": 0,
+    "seconds": 0.021,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "schema": "celikpanel/set10-native/v1",
+  "sites": {
+    "set10-a.test": {
+      "after": {
+        "ctime_ns": 1791663814658850753,
+        "exists": true,
+        "first_line": "# celikpanel-render v2 sha256=757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004",
+        "gid": 988,
+        "group": "celikpanel",
+        "header": {
+          "body_bytes": 1896,
+          "body_sha256": "757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004",
+          "declared": "757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004",
+          "present": true,
+          "valid": true
+        },
+        "immutable": false,
+        "inode": 262705,
+        "kind": "file",
+        "lsattr": "--------------e-------",
+        "mode": "0644",
+        "mtime_ns": 1791663814648850686,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "sha256": "37da4a2eaeaa7f657f48c1822d9e24101923b04aa61369b19bde458d28af486d",
+        "size": 1991,
+        "uid": 0
+      },
+      "before": {
+        "inode": 263369,
+        "sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d"
+      }
+    }
+  }
+}

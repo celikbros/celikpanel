@@ -1,0 +1,82 @@
+{
+  "action": "owner-include",
+  "at": "2026-10-10T19:55:55Z",
+  "directory_after": {
+    "entries": [],
+    "exists": true,
+    "gid": 989,
+    "group": "celikpanel",
+    "inode": 271058,
+    "kind": "directory",
+    "mode": "0750",
+    "mode_octal": "0o750",
+    "mtime_ns": 1791662155864687624,
+    "owner": "root",
+    "path": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+    "uid": 0
+  },
+  "directory_before": {
+    "entries": [
+      {
+        "ctime_ns": 1791662129372540209,
+        "exists": true,
+        "first_line": "# set10: the server owner's own addition for set10-a.test, in the site's include directory",
+        "gid": 0,
+        "group": "root",
+        "header": {
+          "first_line": "# set10: the server owner's own addition for set10-a.test, in the site's include directory",
+          "present": false
+        },
+        "immutable": false,
+        "inode": 269853,
+        "kind": "file",
+        "lsattr": "--------------e-------",
+        "mode": "0644",
+        "mtime_ns": 1791662129372540209,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/nginx/celikpanel-sites.d/set10-a.test/set10-owner-dir.conf",
+        "sha256": "ce0eb0428f13c0a81b39fa8755d704bf75e74881e0e13e005cd03dac8dee827c",
+        "size": 144,
+        "text": "# set10: the server owner's own addition for set10-a.test, in the site's include directory\nlocation /owner-dir/ {\n    return 200 \"owner-dir\";\n}\n",
+        "uid": 0
+      }
+    ],
+    "exists": true,
+    "gid": 989,
+    "group": "celikpanel",
+    "inode": 271058,
+    "kind": "directory",
+    "mode": "0750",
+    "mode_octal": "0o750",
+    "mtime_ns": 1791662129372540209,
+    "owner": "root",
+    "path": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+    "uid": 0
+  },
+  "domain": "set10-a.test",
+  "mode": "owner-include",
+  "nginx_test": {
+    "at": "2026-10-10T19:55:55Z",
+    "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": true,
+  "path": "/etc/nginx/celikpanel-sites.d/set10-a.test/set10-owner-dir.conf",
+  "reload": {
+    "argv": [
+      "systemctl",
+      "reload",
+      "nginx.service"
+    ],
+    "at": "2026-10-10T19:55:55Z",
+    "returncode": 0,
+    "seconds": 0.06,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "removed": true,
+  "schema": "celikpanel/set10-native/v1"
+}

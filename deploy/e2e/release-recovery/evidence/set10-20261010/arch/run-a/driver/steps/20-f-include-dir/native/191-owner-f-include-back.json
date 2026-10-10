@@ -1,0 +1,82 @@
+{
+  "action": "owner-include",
+  "at": "2026-10-10T20:40:20Z",
+  "directory_after": {
+    "entries": [],
+    "exists": true,
+    "gid": 969,
+    "group": "celikpanel",
+    "inode": 91969,
+    "kind": "directory",
+    "mode": "0750",
+    "mode_octal": "0o750",
+    "mtime_ns": 1791664820715498468,
+    "owner": "root",
+    "path": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+    "uid": 0
+  },
+  "directory_before": {
+    "entries": [
+      {
+        "ctime_ns": 1791664807901960084,
+        "exists": true,
+        "first_line": "# set10: the server owner's own addition for set10-a.test, in the site's include directory",
+        "gid": 0,
+        "group": "root",
+        "header": {
+          "first_line": "# set10: the server owner's own addition for set10-a.test, in the site's include directory",
+          "present": false
+        },
+        "immutable": false,
+        "inode": 92274,
+        "kind": "file",
+        "lsattr": "----------------------",
+        "mode": "0644",
+        "mtime_ns": 1791664807901960084,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/nginx/celikpanel-sites.d/set10-a.test/set10-owner-dir.conf",
+        "sha256": "ce0eb0428f13c0a81b39fa8755d704bf75e74881e0e13e005cd03dac8dee827c",
+        "size": 144,
+        "text": "# set10: the server owner's own addition for set10-a.test, in the site's include directory\nlocation /owner-dir/ {\n    return 200 \"owner-dir\";\n}\n",
+        "uid": 0
+      }
+    ],
+    "exists": true,
+    "gid": 969,
+    "group": "celikpanel",
+    "inode": 91969,
+    "kind": "directory",
+    "mode": "0750",
+    "mode_octal": "0o750",
+    "mtime_ns": 1791664807901430487,
+    "owner": "root",
+    "path": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+    "uid": 0
+  },
+  "domain": "set10-a.test",
+  "mode": "owner-include",
+  "nginx_test": {
+    "at": "2026-10-10T20:40:20Z",
+    "output": "2026/10/10 20:40:20 [warn] 7035#7035: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": true,
+  "path": "/etc/nginx/celikpanel-sites.d/set10-a.test/set10-owner-dir.conf",
+  "reload": {
+    "argv": [
+      "systemctl",
+      "reload",
+      "nginx.service"
+    ],
+    "at": "2026-10-10T20:40:20Z",
+    "returncode": 0,
+    "seconds": 0.041,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "removed": true,
+  "schema": "celikpanel/set10-native/v1"
+}

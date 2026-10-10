@@ -1,0 +1,1893 @@
+--- /dev/null
++++ b/deploy/e2e/release-recovery/set10_trial.py
+@@ -0,0 +1,1292 @@
++#!/usr/bin/env python3
++"""set10: the native measurement of D-031 (a site configuration file the owner changed is kept and named, never
++overwritten by a render) as implemented in commit cd46ca595, on disposable QEMU guests (lab.py).
++
++Two cell kinds, built on set8's and set6's drivers and changing none of their steps.
++
++``set10-debian13`` | ``set10-ubuntu`` | ``set10-arch`` (``Set10Trial`` over ``set8_trial.Set8Trial``): the D-031 code
++installed FRESH (set6's steps: the names pinned first, preflight, origin, install, owner, licence fixture, setup, set1's
++static site). Then, as the logged-in owner and as the owner on the server's shell, sections in this order:
++
++  S0      two PHP sites A ``set10-a.test`` and B ``set10-b.test`` created; every vhost's header, its digest, the ledger
++          row (managed_site_files), the include directory, ``nginx -T``.
++  h-i     a Panel restart with every site unchanged: no write (inode, mtime), no reload, the start line; the file
++          written at creation is the start's text byte for byte (nothing is written at the start).
++  a,b,c,d set8's four owner edits of A's vhost (an added location, a changed template directive, a replaced file, an
++          own include), each with three triggers: Panel start (stopped while editing), restart, General save.
++  keep    "keep mine" through POST /site-config/keep (no identity: 428; with one; the same identity again).
++  take    "take CelikPanel's" on a file the owner set to root:root 0640 (kept at a start first), with its replay.
++  take-stale  the file edited again between the read and the POST: 409 SITE_CONFIG_CHANGED.
++  take-refused  CelikPanel's text refused by ``nginx -t`` because of an owner's file in the include directory: the
++          owner's file put back.
++  e       vhost and link removed: not recreated at start; "missing"; recreate.
++  f       an owner ``.conf`` in the include directory across a start that rewrites A, a General save, a PHP switch.
++  g       A locked (``chattr +i``) while A, B and the static site all need a render: A refused, the other two written
++          with one reload; then unlocked and started again.
++  k       A's vhost replaced by a symlink to the owner's file: classified, refused, not followed.
++  l       deletion of an owner-edited site (a dated copy first) and of an unchanged one; the include directories.
++
++``upd1-<platform>-good`` | ``upd1-<platform>-defective`` (``Set10UpdateTrial`` over ``set6_trial.Set6UpdateTrial``):
++set6's update cells (set5's, with set6's pinning) from the published v0.1.0-alpha.81. Added: before the update, as the
++owner on alpha.81, three sites (R1 created and never restarted, R2 created before a Panel restart, R3 created before it
++and edited by the owner after it); in the good cell a backup of the Panel database (SQLite's online backup) just before
++the update. After the terminal state: the ledger, every vhost, the start lines, the Domains list, the site-config
++state of each site, and the three new POST routes without a request identity (a page loaded before the update). Good
++cell, after its verdicts: the Panel stopped, the backup put back, the Panel started (it migrates again) and read again.
++
++The driver calls only the Panel's HTTP API; every native fact is read over SSH; owner actions and lab preparation on
++the guest are recorded as such. No certificate authority and no licence service is contacted by the driver. Every
++result carries ``native_evidence: false``.
++
++  set10_trial.py plan --cell set10-debian13 --artifacts A.json --work-root /var/tmp/cp-release-drill-X [--dry-run]
++  set10_trial.py run  --cell set10-debian13 --artifacts A.json --work-root /var/tmp/cp-release-drill-X --execute
++"""
++from __future__ import annotations
++
++import argparse
++import base64
++import dataclasses
++from datetime import datetime
++import hashlib
++import json
++from pathlib import Path
++import re
++import secrets
++import sys
++import time
++from typing import Any
++
++HERE = Path(__file__).resolve().parent
++if str(HERE) not in sys.path:
++    sys.path.insert(0, str(HERE))
++import set8_trial as s8  # noqa: E402
++
++s6, s4, sw, base = s8.s6, s8.s4, s8.sw, s8.base
++s5 = s6.s5
++# set8's methods read these module names at call time: the sites of this run are named set10.
++s8.DOMAIN_A, s8.DOMAIN_B = "set10-a.test", "set10-b.test"
++DOMAIN_A, DOMAIN_B = s8.DOMAIN_A, s8.DOMAIN_B
++DOMAIN_C, DOMAIN_D = "set10-c.test", "set10-d.test"
++STATIC = sw.SITE_DOMAIN
++R1, R2, R3 = "set10-r1.test", "set10-r2.test", "set10-r3.test"
++HELPER8, HELPER10 = s8.HELPER8, "guest_set10_native.py"
++CELL_KIND, UPDATE_KIND = "set10-d031-fresh-install", "set10-d031-update"
++CELLS = {
++    "set10-debian13": sw.SettingsCell("set10-debian13", "debian13", "web_mail", sw.MAIL_PRESET + ("postgresql",), True),
++    "set10-ubuntu": sw.SettingsCell("set10-ubuntu", "ubuntu", "web_mail", sw.MAIL_PRESET + ("postgresql",), True),
++    "set10-arch": sw.SettingsCell("set10-arch", "arch", "web", sw.WEB_PRESET + ("postgresql",), False),
++}
++UPDATE_CELLS = ("upd1-arch-defective", "upd1-arch-good", "upd1-debian13-defective", "upd1-debian13-good",
++                "upd1-ubuntu-defective", "upd1-ubuntu-good")
++# (run, scenario, owner action, trigger, Panel stopped while the owner edits)
++RUNS = tuple((f"{k}{n}", k, action, trigger, trigger == "start")
++             for k, action in (("a", "append-location"), ("b", "change-index"), ("c", "replace"), ("d", "add-include"))
++             for n, trigger in ((1, "start"), (2, "restart"), (3, "save")))
++# D-031's class of each owner edit: a header whose digest no longer matches is owner_edited; a file without the
++# header that the ledger knows the Panel wrote is foreign.
++KEPT_STATE = {"append-location": "owner_edited", "change-index": "owner_edited", "replace": "foreign",
++              "add-include": "owner_edited"}
++OWNER_PATHS = dict(s8.OWNER_PATHS)
++OWNER_PATHS.update({"symlink": ("/owner-link/", "owner-link"), "include-dir": ("/owner-dir/", "owner-dir")})
++PROBE_PATH = s8.PROBE_PATH
++SETTLE = 3.0
++RUNNING_EDIT_WAIT = 20.0
++INCLUDE_BASE = "/etc/nginx/celikpanel-sites.d"
++SECTIONS = (
++    ("S0-sites", "two PHP sites; header, digest, ledger row, include directory, nginx -T"),
++    ("h-i-unchanged-start", "a restart with every site unchanged; the creation text is the start text"),
++    ("a-owner-edit", "the owner adds a location (start, restart, General save)"),
++    ("b-owner-edit", "the owner changes a template directive (start, restart, General save)"),
++    ("c-owner-edit", "the owner replaces the file (start, restart, General save)"),
++    ("d-owner-edit", "the owner adds an include of their own (start, restart, General save)"),
++    ("keep", "keep mine, with and without a request identity, and its replay"),
++    ("take-j", "take CelikPanel's on a root:root 0640 file kept at a start; its backup; its replay"),
++    ("take-stale", "take with the digests of a file the owner changed again after the read"),
++    ("take-refused", "take refused by nginx because of an owner's file in the include directory"),
++    ("e-removed", "the owner removes the vhost and its link; start; recreate"),
++    ("f-include-dir", "an owner .conf in the include directory across a rewrite, a save and a PHP switch"),
++    ("g-immutable", "A locked while A, B and the static site need a render"),
++    ("k-symlink", "A's vhost replaced by a symlink to the owner's file"),
++    ("l-delete", "deleting an owner-edited site and an unchanged one"),
++)
++
++
++# -- pure rules (covered offline by test_set10_trial) ---------------------------------------------------------------
++
++def journal_epoch(line: str) -> float | None:
++    """The time of one ``journalctl -o short-iso-precise`` line."""
++    try:
++        return datetime.fromisoformat(line.split()[0]).timestamp()
++    except (ValueError, IndexError):
++        return None
++
++
++def lines_after(lines: list, epoch: float | None, needle: str) -> list:
++    return [l for l in lines or [] if needle in l and (epoch is None or (journal_epoch(l) or 0) >= epoch)]
++
++
++def site_lines(lines: list, domain: str) -> list:
++    return [l for l in lines or [] if f"site configuration {domain} " in l]
++
++
++def start_lines(lines: list) -> list:
++    return [l for l in lines or [] if "site configuration files at start:" in l
++            or "certificate startup reconcile: restored" in l or "restore hosted vhost batch" in l]
++
++
++def kept_word(state: str) -> str:
++    return "kept (" + state.replace("_", "-") + ")"
++
++
++def verdict_of(checks: list) -> str:
++    """PASS when every expectation was measured and held; FAIL when one was measured and did not hold;
++    NOT-MEASURED when none failed and one could not be measured."""
++    if any(c[1] is False for c in checks):
++        return "FAIL"
++    if any(c[1] is None for c in checks):
++        return "NOT-MEASURED"
++    return "PASS"
++
++
++def b64(text: str | bytes) -> str:
++    return base64.b64encode(text.encode() if isinstance(text, str) else text).decode()
++
++
++def safe_name(label: str) -> str:
++    """An evidence file name from a label (the evidence writer refuses spaces and other characters)."""
++    return re.sub(r"[^A-Za-z0-9._-]+", "-", label).strip("-") or "x"
++
++
++def body_of(sealed: str | None) -> str | None:
++    if not sealed or "\n" not in sealed:
++        return None
++    return sealed.split("\n", 1)[1]
++
++
++class D031:
++    """Readers, owner actions and API calls shared by both cell kinds."""
++
++    wait_api = s8.Set8Trial.wait_api
++
++    def native10(self, mode: str, **arguments: Any) -> dict:
++        payload = base64.b64encode(json.dumps(arguments).encode()).decode()
++        return self.helper(HELPER10, mode, "--args-b64", payload, timeout=420)
++
++    def snap10(self, label: str, mode: str, **arguments: Any) -> dict:
++        value = self.native10(mode, **arguments)
++        dump = value.pop("nginx_dump", None)
++        if isinstance(dump, dict):
++            name = f"nginx-T/{dump['sha256'][:16]}.txt"
++            seen = self.state.setdefault("set10_dumps", {})
++            if dump["sha256"] not in seen:
++                seen[dump["sha256"]] = self.ev.write_text(name, dump.pop("text") or "")
++            dump.pop("text", None)
++            dump["file"] = name
++            value["nginx_dump"] = dump
++        self.native_sequence += 1
++        name = f"native/{self.native_sequence:03d}-{safe_name(label)}.json"
++        self.record_json(name, value)
++        self.current.setdefault("natives", []).append({"label": label, "mode": mode, "file": name,
++                                                       "owner_action": mode.startswith("owner-")})
++        value["_file"] = f"{self.step_dir}/{name}"
++        return value
++
++    def owner10(self, label: str, mode: str, **arguments: Any) -> dict:
++        value = self.snap10("owner-" + label, mode, **arguments)
++        self.current.setdefault("owner_actions", []).append({"label": label, "mode": mode, "at": value.get("at")})
++        return value
++
++    def keep10(self, label: str, record: dict | None) -> str | None:
++        if not isinstance(record, dict) or not record.get("exists") or record.get("text") is None:
++            return None
++        name = f"files/{safe_name(label)}.txt"
++        self.keep_text(name, record["text"])
++        return f"{self.step_dir}/{name}"
++
++    def read10(self, label: str, domains: list | None = None, dump: bool = False) -> dict:
++        domains = domains or self.site_domains()
++        value = self.snap10(f"{label}-read", "read-site10", domains=domains, dump=dump)
++        kept = {}
++        for domain in domains:
++            site = value["sites"][domain]
++            files = {"vhost": self.keep10(f"{label}-{domain}.conf", site["vhost"]),
++                     "pending": self.keep10(f"{label}-{domain}.conf.celikpanel-pending", site["side_files"]["pending"])}
++            for index, backup in enumerate(site["side_files"]["backups"]):
++                files[f"backup-{index}"] = self.keep10(f"{label}-{domain}.conf.backup-{index}", backup)
++            if site.get("symlink_target"):
++                files["symlink_target"] = self.keep10(f"{label}-{domain}-symlink-target.conf", site["symlink_target"])
++            kept[domain] = files
++        value["_kept"] = kept
++        return value
++
++    def site_domains(self) -> list:
++        return [DOMAIN_A, DOMAIN_B, STATIC]
++
++    def panel10(self, label: str, action: str) -> dict:
++        """The owner stops, starts or restarts the Panel's unit (after a start: waits for the start line)."""
++        acted = self.owner10(f"{label}-panel-{action}", "owner-panel", action=action, wait=150)
++        out = {"kind": f"owner: systemctl {action} celikpanel-panel", "file": acted["_file"],
++               "is_active": acted.get("is_active"), "epoch": acted.get("epoch"),
++               "reconcile_lines_seen": acted.get("reconcile_lines_seen"), "waited_seconds": acted.get("waited_seconds")}
++        if action != "stop":
++            out["api"] = self.wait_api()
++            out["ok"] = acted.get("is_active") == "active" and out["api"]["answering"]
++            out["session"] = self.ensure_session()
++        return out
++
++    def ensure_session(self) -> dict:
++        """The owner's session still answers /api/v1/auth/me; otherwise the owner signs in again (a database put back
++        from a backup can hold an older session table)."""
++        try:
++            me = self.api("GET", "/api/v1/auth/me", purpose="set10: is the owner's session accepted", timeout=30)
++            if me.status == 401 and getattr(self, "_password", None):
++                self.panel_client().login(self.state["username"], self._password)
++                return {"status": 401, "signed_in_again": True}
++            return {"status": me.status}
++        except Exception as exc:  # noqa: BLE001 - recorded; the next call shows what the Panel answers
++            return {"error": type(exc).__name__}
++
++    def guest_epoch(self) -> float:
++        return float(self.snap10("guest-clock", "read-ledger")["epoch"])
++
++    def window(self, label: str, since: float) -> dict:
++        return self.snap10(f"{label}-journal", "read-window", since_epoch=int(since))
++
++    def http10(self, label: str, domain: str, path: str) -> dict:
++        return self.snap10(f"http-{label}-{domain}{path.replace('/', '_')}", "read-http", domain=domain, path=path)
++
++    def site_config(self, label: str, domain_id: int) -> dict:
++        entry = self.call(f"{label}: GET site-config", "GET", f"/api/v1/domains/{domain_id}/site-config", timeout=120)
++        body = entry["_parsed"] if isinstance(entry["_parsed"], dict) else {}
++        if body.get("diff"):
++            self.keep_text(f"files/{safe_name(label)}-site-config-diff.txt", body["diff"])
++        return {"status": entry["status"], "body": body}
++
++    def domains_rows(self, label: str) -> dict:
++        entry = self.call(f"{label}: GET /api/v1/domains (Domains list)", "GET", "/api/v1/domains", timeout=120)
++        rows = entry["_parsed"] if isinstance(entry["_parsed"], list) else []
++        return {r.get("domain_name"): r.get("site_config") for r in rows if isinstance(r, dict)}
++
++    def post_raw(self, label: str, path: str, body: Any, identity: str | None) -> dict:
++        """A POST sent as a page sends it: with ``identity`` as X-CelikPanel-Request-Id, or without one (a page that
++        was loaded before the update)."""
++        started = time.time()
++        response = self.bare_post(path, body, identity, timeout=420)
++        parsed = response.json()
++        entry = {"label": label, "at": base.utc_now(), "request": {"method": "POST", "path": path, "body": body,
++                                                                 "x_celikpanel_request_id": identity},
++                 "status": response.status, "json": self.redactor.value(parsed) if parsed is not None else None,
++                 "text": None if parsed is not None else self.redactor.text(response.text[:600]),
++                 "seconds": round(time.time() - started, 2)}
++        self.current.setdefault("calls", []).append(entry)
++        return {"status": response.status, "body": parsed if isinstance(parsed, dict) else {}, "entry": entry}
++
++    def general_save10(self, label: str, domain_id: int) -> dict:
++        shown = self.call(f"{label}: General settings read", "GET", f"/api/v1/domains/{domain_id}/general")
++        body = shown["_parsed"] if isinstance(shown["_parsed"], dict) else {}
++        sent = {"document_root": body.get("document_root"), "web_server": body.get("web_server") or "nginx",
++                "redirect_www": bool(body.get("redirect_www"))}
++        saved = self.call(f"{label}: General settings saved unchanged (renders the vhost)", "POST",
++                          f"/api/v1/domains/{domain_id}/general", sent, timeout=300)
++        parsed = saved["_parsed"] if isinstance(saved["_parsed"], dict) else {}
++        return {"read_status": shown["status"], "sent": sent, "status": saved["status"], "code": parsed.get("code"),
++                "reason": parsed.get("reason"), "error": parsed.get("error")}
++
++    @staticmethod
++    def brief(site: dict) -> dict:
++        v, l = site.get("vhost") or {}, site.get("enabled") or {}
++        return {"vhost": {k: v.get(k) for k in ("exists", "kind", "sha256", "size", "inode", "mode", "owner", "group",
++                                                 "uid", "gid", "lsattr", "immutable", "mtime_ns", "ctime_ns", "link_target",
++                                                 "header", "first_line")},
++                "enabled": {k: l.get(k) for k in ("exists", "kind", "link_target", "inode")},
++                "pending": {k: (site.get("side_files") or {}).get("pending", {}).get(k) for k in ("exists", "sha256", "mode")},
++                "backups": [{k: b.get(k) for k in ("path", "sha256", "mode", "owner", "group", "uid", "gid")}
++                            for b in (site.get("side_files") or {}).get("backups") or []],
++                "include_dir": {k: (site.get("include_dir") or {}).get(k) for k in ("exists", "kind", "mode_octal", "uid", "gid", "owner", "group")}
++                | {"entries": [e.get("path") for e in (site.get("include_dir") or {}).get("entries") or []]}}
++
++    @staticmethod
++    def ledger_row(reading: dict, domain_id: int | None) -> dict | None:
++        rows = ((reading.get("ledger") or {}).get("managed_site_files") or [])
++        return next((r for r in rows if r.get("domain_id") == domain_id), None)
++
++    def judge(self, name: str, checks: list, detail: Any = None) -> str:
++        """One cell's D-031 verdict from its expectations; every expectation is also a check of the section."""
++        for text, ok, data in checks:
++            self.check(f"{name}: {text}", ok, data)
++        verdict = verdict_of(checks)
++        self.current.setdefault("cells", {})[name] = {"verdict": verdict, "expectations": [
++            {"expectation": text, "held": ok, "measured": data} for text, ok, data in checks], "detail": detail}
++        self.note(f"{name}: {verdict}", [text for text, ok, _ in checks if ok is not True])
++        return verdict
++
++
++class Set10Trial(D031, s8.Set8Trial):
++    def upload_helpers(self) -> dict:
++        helpers = super().upload_helpers()
++        helpers[HELPER10] = self.lab.put_file(self.root, self.record, self.plan, self.node_name, HERE / HELPER10, HELPER10)[1]
++        return helpers
++
++    # -- state of this cell -------------------------------------------------------------------------------------
++
++    @property
++    def s10(self) -> dict:
++        return self.state.setdefault("set10", {})
++
++    def ids(self) -> dict:
++        return self.s10.setdefault("ids", {})
++
++    def restore10(self, label: str, domain: str = DOMAIN_A) -> dict:
++        """Lab preparation: the site's vhost back to the Panel's text recorded after S0's restart (set8's restore)."""
++        ref = self.s10["ref"][domain]
++        value = self.snap10(f"{label}-lab-restore-{domain}", "lab-restore", domain=domain, content_b64=b64(ref["text"]),
++                            uid=ref["uid"], gid=ref["gid"], file_mode=ref["mode"])
++        self.current.setdefault("lab_preparation", []).append({"label": label, "domain": domain, "file": value["_file"],
++                                                              "sha256_matches": value.get("sha256_matches")})
++        return value
++
++    # -- S0 -----------------------------------------------------------------------------------------------------
++
++    def create_php(self, domain: str) -> int:
++        created = self.call(f"create PHP site {domain}", "POST", "/api/v1/domains/create",
++                            {"domain": domain, "project_type": "php", "ssl_type": "none"}, timeout=600)
++        answer = created["_parsed"] if isinstance(created["_parsed"], dict) else {}
++        domain_id = answer.get("DomainID") or answer.get("domain_id")
++        self.check(f"the PHP site {domain} is created through the Panel (200 with its id)",
++                   created["status"] == 200 and isinstance(domain_id, int), created.get("answer") or answer)
++        if not isinstance(domain_id, int):
++            raise base.StepFailed(f"{domain} was not created")
++        self.owner8(f"files-{domain}", "owner-files", domain_id=domain_id)
++        self.ids()[domain] = domain_id
++        return domain_id
++
++    def s0_sites(self) -> None:
++        platform = self.snap4("platform", "read-platform")
++        self.current["platform"] = {k: platform.get(k) for k in ("os_release", "kernel", "packages", "nginx_version",
++                                                                  "php_fpm_programs")}
++        self.ids()[STATIC] = self.state.get("domain_id")
++        for domain in (DOMAIN_A, DOMAIN_B):
++            self.create_php(domain)
++        reading = self.read10("s0-after-creation", dump=True)
++        text_dump = Path(self.ev.directory, reading["nginx_dump"]["file"]).read_text() if reading.get("nginx_dump") else ""
++        refs, cells = {}, []
++        for domain in self.site_domains():
++            site = reading["sites"][domain]
++            vhost = site["vhost"]
++            head = vhost.get("header") or {}
++            row = self.ledger_row(reading, self.ids().get(domain))
++            directory = site["include_dir"]
++            include_line = f"include {INCLUDE_BASE}/{domain}/*.conf;"
++            refs[domain] = {"text": vhost.get("text"), "sha256": vhost.get("sha256"), "uid": vhost.get("uid"),
++                            "gid": vhost.get("gid"), "mode": vhost.get("mode"), "inode": vhost.get("inode"),
++                            "mtime_ns": vhost.get("mtime_ns")}
++            cells += [(f"{domain}: the first line is the render header and its digest is the body's digest",
++                       bool(head.get("present") and head.get("valid")), {"header": head, "first_line": vhost.get("first_line")}),
++                      (f"{domain}: one ledger row, state managed_unchanged, body digest = the header's, file digest = the file's",
++                       bool(row) and row.get("state") == "managed_unchanged" and row.get("body_sha256") == head.get("declared")
++                       and row.get("file_sha256") == vhost.get("sha256"), row),
++                      (f"{domain}: the include directory exists, is empty and 0755",
++                       directory.get("kind") == "directory" and directory.get("entries") == [] and directory.get("mode_octal") == "0o755",
++                       {k: directory.get(k) for k in ("path", "kind", "mode_octal", "uid", "gid", "entries")}),
++                      (f"{domain}: the vhost includes the site's include directory and nginx -T shows it",
++                       include_line in (vhost.get("text") or "") and include_line in text_dump, include_line)]
++        cells.append(("`nginx -t` passes", (reading.get("nginx_test") or {}).get("returncode") == 0, reading.get("nginx_test")))
++        self.s10["ref"] = refs
++        self.s10["creation"] = {d: {k: refs[d][k] for k in ("sha256", "inode", "mtime_ns")} for d in refs}
++        page = {d: s4.parse_probe(self.http10("s0", d, PROBE_PATH)) for d in (DOMAIN_A, DOMAIN_B)}
++        cells.append(("both PHP sites execute their probe page", all(p["executed"] for p in page.values()), page))
++        self.current["ledger"] = reading.get("ledger")
++        self.current["sites"] = {d: self.brief(reading["sites"][d]) for d in self.site_domains()}
++        self.current["files"] = reading["_kept"]
++        self.judge("S0", cells)
++
++    # -- h and i ------------------------------------------------------------------------------------------------
++
++    def h_i(self) -> None:
++        before = self.read10("h-0-before")
++        since = float(before["epoch"]) - 2
++        fired = self.panel10("h", "restart")
++        time.sleep(SETTLE)
++        after = self.read10("h-1-after-the-restart", dump=True)
++        window = self.window("h", since)
++        panel = window["by_unit"].get("celikpanel-panel.service") or []
++        nginx = window["by_unit"].get("nginx.service") or []
++        same = {d: {k: [before["sites"][d]["vhost"].get(k), after["sites"][d]["vhost"].get(k)] for k in ("sha256", "inode", "mtime_ns")}
++                for d in self.site_domains()}
++        untouched = all(v[0] == v[1] for d in same for v in same[d].values())
++        reloads = lines_after(nginx, fired.get("epoch"), "Reloaded")
++        starts = start_lines(panel)
++        n = len(self.site_domains())
++        self.judge("h", [
++            ("the Panel restarted and answers", bool(fired.get("ok")), fired),
++            ("no vhost was written (sha256, inode and mtime unchanged for every site)", untouched, same),
++            ("nginx was not reloaded (worker PIDs unchanged; no `Reloaded` line after the restart)",
++             (before.get("nginx") or {}).get("workers") == (after.get("nginx") or {}).get("workers") and not reloads,
++             {"workers": [(before.get("nginx") or {}).get("workers"), (after.get("nginx") or {}).get("workers")], "reload_lines": reloads}),
++            (f"the start line counts {n} unchanged and 0 written",
++             any(f"0 written, {n} unchanged" in l for l in starts), starts),
++            ("one line per site saying unchanged", all(any("(startup): unchanged" in l for l in site_lines(panel, d))
++                                                     for d in self.site_domains()),
++             {d: site_lines(panel, d) for d in self.site_domains()})], {"journal": window["_file"]})
++        creation = self.s10["creation"]
++        self.judge("i", [
++            ("the file written at creation is unchanged by the start (the start's text is the creation text byte for byte)",
++             all(after["sites"][d]["vhost"].get("sha256") == creation[d]["sha256"]
++                 and after["sites"][d]["vhost"].get("inode") == creation[d]["inode"] for d in (DOMAIN_A, DOMAIN_B)),
++             {d: {"creation": creation[d], "after_the_restart": {k: after["sites"][d]["vhost"].get(k) for k in ("sha256", "inode")}}
++              for d in (DOMAIN_A, DOMAIN_B)}),
++            ("A's server_name as created names the www. alias (the start's text)",
++             f"server_name {DOMAIN_A} www.{DOMAIN_A};" in (after["sites"][DOMAIN_A]["vhost"].get("text") or ""),
++             [l.strip() for l in (after["sites"][DOMAIN_A]["vhost"].get("text") or "").splitlines() if "server_name" in l])])
++        refs = self.s10["ref"]
++        for d in self.site_domains():
++            v = after["sites"][d]["vhost"]
++            refs[d].update(text=v.get("text"), sha256=v.get("sha256"), uid=v.get("uid"), gid=v.get("gid"), mode=v.get("mode"))
++
++    # -- a, b, c, d ---------------------------------------------------------------------------------------------
++
++    def run_case(self, run: str, scenario: str, action: str, trigger: str, stopped: bool) -> dict:
++        ids = self.ids()
++        record = {"run": run, "scenario": scenario, "owner_action": action, "trigger": trigger,
++                  "panel_stopped_while_the_owner_edits": stopped, "started_at": base.utc_now()}
++        self.restore10(run)
++        pre = self.read10(f"{run}-0-restored")
++        since = float(pre["epoch"]) - 2
++        record["pending_before_the_run"] = {k: pre["sites"][DOMAIN_A]["side_files"]["pending"].get(k) for k in ("exists", "sha256")}
++        if stopped:
++            record["panel_stop"] = self.panel10(run, "stop")
++        edit = self.owner10(f"{run}-edit", "owner-vhost10", domain=DOMAIN_A, action=action, reload=True)
++        edited = self.read10(f"{run}-1-edited")
++        path, wanted = OWNER_PATHS[action]
++        http_edited = self.http10(f"{run}-1-edited", DOMAIN_A, path)
++        if not stopped:
++            time.sleep(RUNNING_EDIT_WAIT)
++        trigger_epoch = self.guest_epoch()
++        if trigger == "save":
++            fired = self.general_save10(run, ids[DOMAIN_A])
++            fired["ok"] = fired["status"] is not None
++        else:
++            fired = self.panel10(run, trigger)
++        time.sleep(SETTLE)
++        after = self.read10(f"{run}-2-after", dump=True)
++        http_after = self.http10(f"{run}-2-after", DOMAIN_A, path)
++        window = self.window(run, since)
++        shown = self.site_config(f"{run} after", ids[DOMAIN_A])
++        rows = self.domains_rows(f"{run} after")
++        record.update(self.judge_kept(run, action, trigger, edit, edited, after, http_edited, http_after, wanted, fired,
++                                      window, shown, rows, trigger_epoch))
++        record["finished_at"] = base.utc_now()
++        return record
++
++    def judge_kept(self, run, action, trigger, edit, edited, after, http_edited, http_after, wanted, fired, window,
++                   shown, rows, trigger_epoch) -> dict:
++        state = KEPT_STATE[action]
++        e_v, a_v = edited["sites"][DOMAIN_A], after["sites"][DOMAIN_A]
++        ref = self.s10["ref"][DOMAIN_A]
++        panel = window["by_unit"].get("celikpanel-panel.service") or []
++        nginx = window["by_unit"].get("nginx.service") or []
++        lines = site_lines(panel, DOMAIN_A)
++        word = "startup" if trigger in ("start", "restart") else "change"
++        pending = a_v["side_files"]["pending"]
++        body = shown["body"]
++        reloads = lines_after(nginx, trigger_epoch, "Reloaded")
++        others = {d: [edited["sites"][d]["vhost"].get("inode"), after["sites"][d]["vhost"].get("inode")]
++                  for d in (DOMAIN_B, STATIC)}
++        served_edited = wanted in str(http_edited.get("body") or "")
++        served_after = wanted in str(http_after.get("body") or "")
++        checks = [
++            ("the owner's change was in service before the trigger (nginx -t passed, reloaded, served)",
++             (edit.get("nginx_test") or {}).get("returncode") == 0 and served_edited,
++             {"nginx_test": (edit.get("nginx_test") or {}).get("returncode"), "served": served_edited}),
++            ("the trigger ran" + (" (Panel active and answering)" if trigger != "save" else " (the save was answered)"),
++             bool(fired.get("ok")), {k: v for k, v in fired.items() if k != "file"}),
++            ("the file is kept byte for byte (same SHA-256, same inode)",
++             a_v["vhost"].get("sha256") == e_v["vhost"].get("sha256") and a_v["vhost"].get("inode") == e_v["vhost"].get("inode"),
++             {"edited": {k: e_v["vhost"].get(k) for k in ("sha256", "inode")}, "after": {k: a_v["vhost"].get(k) for k in ("sha256", "inode")}}),
++            ("<file>.celikpanel-pending holds the Panel's text (equal to the Panel's own file of this site)",
++             bool(pending.get("exists")) and pending.get("sha256") == ref["sha256"],
++             {"pending": {k: pending.get(k) for k in ("path", "exists", "sha256")}, "panel_text_sha256": ref["sha256"]}),
++            (f"a journal line names the site and says {kept_word(state)}",
++             any(f"({word}): {kept_word(state)}" in l for l in lines), lines),
++            (f"GET site-config answers state {state} with a difference and the three choices",
++             shown["status"] == 200 and body.get("state") == state and bool(body.get("diff"))
++             and body.get("actions") == ["keep", "take", "merge"],
++             {k: body.get(k) for k in ("state", "actions", "pending_path", "file_sha256", "render_sha256", "include_dir", "enabled")}
++             | {"status": shown["status"], "diff_lines": len((body.get("diff") or "").splitlines())}),
++            (f"the Domains list row says {state}", (rows.get(DOMAIN_A) or {}).get("state") == state, rows.get(DOMAIN_A)),
++            ("nginx was not reloaded after the trigger (worker PIDs unchanged, no `Reloaded` line)",
++             (edited.get("nginx") or {}).get("workers") == (after.get("nginx") or {}).get("workers") and not reloads,
++             {"workers": [(edited.get("nginx") or {}).get("workers"), (after.get("nginx") or {}).get("workers")],
++              "reload_lines": reloads}),
++            ("the owner's content is still served after the trigger", served_after,
++             {"status": http_after.get("status"), "body": str(http_after.get("body") or "")[:120]}),
++            ("the other two sites' files were not touched (inode)", all(v[0] == v[1] for v in others.values()), others)]
++        if trigger == "save":
++            checks.append(("the save answers 409 SITE_CONFIG_OWNER_EDITED", fired.get("status") == 409
++                           and fired.get("code") == "SITE_CONFIG_OWNER_EDITED",
++                           {k: fired.get(k) for k in ("status", "code", "reason", "error")}))
++        verdict = self.judge(run, checks, {"files": {"edited": edited["_kept"][DOMAIN_A], "after": after["_kept"][DOMAIN_A]},
++                                           "journal": window["_file"]})
++        return {"verdict": verdict, "state": body.get("state"), "files": after["_kept"][DOMAIN_A],
++                "journal": window["_file"], "panel_lines": lines, "start_lines": start_lines(panel),
++                "trigger": {k: v for k, v in fired.items() if k != "file"}}
++
++    def scenario10(self, key: str) -> None:
++        self.current["runs"] = []
++        for spec in [r for r in RUNS if r[1] == key]:
++            try:
++                self.current["runs"].append(self.run_case(*spec))
++            except Exception as exc:  # noqa: BLE001 - one run's harness error never hides the other runs
++                self.current["runs"].append({"run": spec[0], "error": self.error_text(exc)})
++                self.check(f"{spec[0]}: the run completed", None, self.error_text(exc))
++                self.recover10(spec[0])
++
++    def error_text(self, exc: Exception) -> str:
++        error = self.redactor.text(f"{type(exc).__name__}: {exc}")[:1200]
++        stderr = getattr(exc, "stderr", None)
++        if stderr:
++            error += " | guest stderr: " + (stderr if isinstance(stderr, str) else stderr.decode("utf-8", "replace"))[-600:]
++        return error
++
++    def recover10(self, label: str) -> None:
++        """Lab recovery after a harness error inside a run: the Panel unit started again if it is not active."""
++        try:
++            state = self.snap10(f"{label}-lab-panel-state", "read-site10", domains=[DOMAIN_A])
++            if (state["units"].get("celikpanel-panel.service") or {}).get("ActiveState") != "active":
++                self.snap10(f"{label}-lab-panel-start", "owner-panel", action="start", wait=150)
++                self.current.setdefault("lab_preparation", []).append({"label": label, "what": "Panel unit started again"})
++            self.wait_api()
++        except Exception as exc:  # noqa: BLE001
++            self.current.setdefault("lab_preparation", []).append({"label": label, "recovery_error": type(exc).__name__})
++
++    # -- keep -----------------------------------------------------------------------------------------------------
++
++    def keep_section(self) -> None:
++        a_id = self.ids()[DOMAIN_A]
++        self.restore10("keep")
++        self.owner10("keep-edit", "owner-vhost10", domain=DOMAIN_A, action="append-location", reload=True)
++        edited = self.read10("keep-1-edited")
++        shown = self.site_config("keep shown", a_id)
++        path = f"/api/v1/domains/{a_id}/site-config/keep"
++        body = {"file_sha256": shown["body"].get("file_sha256")}
++        no_id = self.post_raw("keep without a request identity", path, body, None)
++        identity = secrets.token_hex(16)
++        first = self.post_raw("keep with a request identity", path, body, identity)
++        after_first = self.read10("keep-2-after-keep")
++        replay = self.post_raw("keep: the same request identity sent again", path, body, identity)
++        after_replay = self.read10("keep-3-after-the-replay")
++        row1, row2 = self.ledger_row(after_first, a_id) or {}, self.ledger_row(after_replay, a_id) or {}
++        e, k = edited["sites"][DOMAIN_A]["vhost"], after_first["sites"][DOMAIN_A]["vhost"]
++        since = float(after_replay["epoch"]) - 1
++        fired = self.panel10("keep-restart", "restart")
++        time.sleep(SETTLE)
++        later = self.read10("keep-4-after-a-restart")
++        window = self.window("keep", since)
++        panel = window["by_unit"].get("celikpanel-panel.service") or []
++        shown_later = self.site_config("keep after the restart", a_id)
++        rows = self.domains_rows("keep after the restart")
++        saved = self.general_save10("keep save", a_id)
++        l_v = later["sites"][DOMAIN_A]["vhost"]
++        self.judge("keep", [
++            ("POST keep without X-CelikPanel-Request-Id answers 428 REQUEST_ID_REQUIRED",
++             no_id["status"] == 428 and no_id["body"].get("code") == "REQUEST_ID_REQUIRED", no_id["entry"]),
++            ("POST keep with an identity answers 200", first["status"] == 200, first["entry"]),
++            ("the ledger records keep_mine with the file's digest", row1.get("decision") == "keep_mine"
++             and row1.get("decision_file_sha256") == e.get("sha256"), row1),
++            ("the file's bytes are untouched (sha256, inode) and its header is not rewritten (first line unchanged, its digest still not the body's)",
++             k.get("sha256") == e.get("sha256") and k.get("inode") == e.get("inode") and k.get("first_line") == e.get("first_line")
++             and (k.get("header") or {}).get("valid") is False, {"edited": {x: e.get(x) for x in ("sha256", "inode", "first_line", "header")},
++                                                                 "after": {x: k.get(x) for x in ("sha256", "inode", "first_line", "header")}}),
++            ("the same identity again is answered without running again (same status, decision time unchanged)",
++             replay["status"] == first["status"] and row2.get("decided_at") == row1.get("decided_at"),
++             {"replay": replay["entry"], "decided_at": [row1.get("decided_at"), row2.get("decided_at")]}),
++            ("a later Panel start still keeps the file (sha256, inode) and says kept",
++             bool(fired.get("ok")) and l_v.get("sha256") == e.get("sha256") and l_v.get("inode") == e.get("inode")
++             and any("(startup): kept (owner-edited)" in l for l in site_lines(panel, DOMAIN_A)),
++             {"lines": site_lines(panel, DOMAIN_A), "after": {x: l_v.get(x) for x in ("sha256", "inode")}}),
++            ("site-config shows the decision as current; the Domains row says kept by choice",
++             (shown_later["body"].get("decision") or {}).get("kind") == "keep_mine"
++             and (shown_later["body"].get("decision") or {}).get("current") is True
++             and (rows.get(DOMAIN_A) or {}).get("kept_by_choice") is True,
++             {"decision": shown_later["body"].get("decision"), "row": rows.get(DOMAIN_A)})],
++            {"general_save_after_keep": saved, "journal": window["_file"]})
++        self.current["general_save_after_keep"] = saved
++
++    # -- take (with j) --------------------------------------------------------------------------------------------
++
++    def take_section(self) -> None:
++        a_id = self.ids()[DOMAIN_A]
++        ref = self.s10["ref"][DOMAIN_A]
++        self.restore10("take")
++        self.owner10("take-edit", "owner-vhost10", domain=DOMAIN_A, action="append-location", reload=True)
++        self.owner10("take-chown", "owner-vhost10", domain=DOMAIN_A, action="chown", uid=0, gid=0, file_mode="0640",
++                     reload=False)
++        owned = self.read10("take-1-owner-file-root-root-0640")
++        o = owned["sites"][DOMAIN_A]["vhost"]
++        fired = self.panel10("take-j-start", "restart")
++        time.sleep(SETTLE)
++        started = self.read10("take-2-after-a-start")
++        s_v = started["sites"][DOMAIN_A]["vhost"]
++        self.judge("j-kept", [
++            ("the owner's root:root 0640 file is still root:root 0640 (and the same bytes) after a Panel start",
++             bool(fired.get("ok")) and (s_v.get("uid"), s_v.get("gid"), s_v.get("mode")) == (0, 0, "0640")
++             and s_v.get("sha256") == o.get("sha256"), {k: [o.get(k), s_v.get(k)] for k in ("uid", "gid", "mode", "sha256", "inode")})])
++        shown = self.site_config("take shown", a_id)
++        body = {"file_sha256": shown["body"].get("file_sha256"), "render_sha256": shown["body"].get("render_sha256")}
++        path = f"/api/v1/domains/{a_id}/site-config/take"
++        before_epoch = self.guest_epoch()
++        identity = secrets.token_hex(16)
++        taken = self.post_raw("take with a request identity", path, body, identity)
++        time.sleep(SETTLE)
++        after = self.read10("take-3-after-take", dump=True)
++        http = self.http10("take-3-after", DOMAIN_A, "/owner-extra/")
++        probe = s4.parse_probe(self.http10("take-3-after-probe", DOMAIN_A, PROBE_PATH))
++        replay = self.post_raw("take: the same request identity sent again", path, body, identity)
++        after_replay = self.read10("take-4-after-the-replay")
++        window = self.window("take", before_epoch - 1)
++        nginx = window["by_unit"].get("nginx.service") or []
++        a = after["sites"][DOMAIN_A]
++        backups = a["side_files"]["backups"]
++        backup = backups[-1] if backups else {}
++        row = self.ledger_row(after, a_id) or {}
++        new = a["vhost"]
++        self.judge("take", [
++            ("POST take answers 200 with outcome taken and the backup path", taken["status"] == 200
++             and taken["body"].get("outcome") == "taken" and bool(taken["body"].get("backup_path")), taken["entry"]),
++            ("a dated <file>.celikpanel-backup-<UTC> holds the owner's bytes, mode, owner and group",
++             len(backups) >= 1 and backup.get("sha256") == o.get("sha256") and backup.get("mode") == "0640"
++             and (backup.get("uid"), backup.get("gid")) == (0, 0) and ".celikpanel-backup-" in str(backup.get("path")),
++             {"backup": {k: backup.get(k) for k in ("path", "sha256", "mode", "uid", "gid")}, "owner_file_sha256": o.get("sha256")}),
++            ("the file is now the Panel's text (equal to the Panel's own file of this site)",
++             new.get("sha256") == ref["sha256"], {"after": new.get("sha256"), "panel_text": ref["sha256"]}),
++            ("the new file keeps owner, group and mode (root:root 0640)",
++             (new.get("uid"), new.get("gid"), new.get("mode")) == (0, 0, "0640"),
++             {k: new.get(k) for k in ("uid", "gid", "mode", "owner", "group")}),
++            ("nginx was reloaded (worker PIDs changed, a `Reloaded` line after the POST)",
++             (started.get("nginx") or {}).get("workers") != (after.get("nginx") or {}).get("workers")
++             and bool(lines_after(nginx, before_epoch, "Reloaded")),
++             {"workers": [(started.get("nginx") or {}).get("workers"), (after.get("nginx") or {}).get("workers")],
++              "reload_lines": lines_after(nginx, before_epoch, "Reloaded")}),
++            ("the served content is the Panel's (the owner's /owner-extra/ answer is gone; the PHP probe runs)",
++             str(http.get("body") or "").strip() != "owner" and probe["executed"],
++             {"owner_extra": {"status": http.get("status"), "body": str(http.get("body") or "")[:80]}, "probe": probe}),
++            ("the ledger records take_celikpanel, managed_unchanged and the backup path",
++             row.get("decision") == "take_celikpanel" and row.get("state") == "managed_unchanged"
++             and row.get("backup_path") == backup.get("path"), row),
++            ("the same identity again runs nothing (same answer, no second backup, the file unchanged)",
++             replay["status"] == taken["status"] and len(after_replay["sites"][DOMAIN_A]["side_files"]["backups"]) == len(backups)
++             and after_replay["sites"][DOMAIN_A]["vhost"].get("inode") == new.get("inode"),
++             {"replay": replay["entry"], "backups": len(after_replay["sites"][DOMAIN_A]["side_files"]["backups"])})],
++            {"files": after["_kept"][DOMAIN_A], "journal": window["_file"]})
++        self.s10["mode_written_by_the_panel_on_take"] = new.get("mode")
++
++    def take_stale(self) -> None:
++        a_id = self.ids()[DOMAIN_A]
++        self.restore10("stale")
++        self.owner10("stale-edit", "owner-vhost10", domain=DOMAIN_A, action="append-location", reload=True)
++        shown = self.site_config("stale shown", a_id)
++        before = self.read10("stale-1-shown")
++        self.owner10("stale-edit-again", "owner-vhost10", domain=DOMAIN_A, action="append-comment", reload=True)
++        again = self.read10("stale-2-edited-again")
++        body = {"file_sha256": shown["body"].get("file_sha256"), "render_sha256": shown["body"].get("render_sha256")}
++        answer = self.post_raw("take with the digests shown before the second edit",
++                               f"/api/v1/domains/{a_id}/site-config/take", body, secrets.token_hex(16))
++        after = self.read10("stale-3-after")
++        g, a = again["sites"][DOMAIN_A], after["sites"][DOMAIN_A]
++        self.judge("take-stale", [
++            ("the second edit changed the file after the read", g["vhost"].get("sha256") != before["sites"][DOMAIN_A]["vhost"].get("sha256"),
++             [before["sites"][DOMAIN_A]["vhost"].get("sha256"), g["vhost"].get("sha256")]),
++            ("POST take answers 409 SITE_CONFIG_CHANGED", answer["status"] == 409
++             and answer["body"].get("code") == "SITE_CONFIG_CHANGED", answer["entry"]),
++            ("nothing was done: the file is the owner's second edit (sha256, inode), no new backup",
++             a["vhost"].get("sha256") == g["vhost"].get("sha256") and a["vhost"].get("inode") == g["vhost"].get("inode")
++             and len(a["side_files"]["backups"]) == len(g["side_files"]["backups"]),
++             {"backups": [len(g["side_files"]["backups"]), len(a["side_files"]["backups"])]})])
++
++    def take_refused(self) -> None:
++        a_id = self.ids()[DOMAIN_A]
++        self.restore10("refused")
++        self.owner10("refused-replace", "owner-vhost10", domain=DOMAIN_A, action="replace", reload=True)
++        put = self.owner10("refused-include", "owner-include", domain=DOMAIN_A, name="set10-dup-root.conf",
++                           kind="duplicate-root", reload=True)
++        before = self.read10("refused-1-before")
++        shown = self.site_config("refused shown", a_id)
++        body = {"file_sha256": shown["body"].get("file_sha256"), "render_sha256": shown["body"].get("render_sha256")}
++        answer = self.post_raw("take while an owner's include-directory file conflicts with the Panel's text",
++                               f"/api/v1/domains/{a_id}/site-config/take", body, secrets.token_hex(16))
++        time.sleep(SETTLE)
++        after = self.read10("refused-2-after", dump=True)
++        http = self.http10("refused-2-after", DOMAIN_A, "/")
++        b, a = before["sites"][DOMAIN_A]["vhost"], after["sites"][DOMAIN_A]["vhost"]
++        self.judge("take-refused", [
++            ("the owner's conflicting file passed nginx -t while only the owner's vhost was in place",
++             (put.get("nginx_test") or {}).get("returncode") == 0, put.get("nginx_test")),
++            ("POST take answers 502 SITE_CONFIG_NGINX_REFUSED with nginx's line",
++             answer["status"] == 502 and answer["body"].get("code") == "SITE_CONFIG_NGINX_REFUSED", answer["entry"]),
++            ("the owner's file is back exactly (sha256, mode, owner, group)",
++             a.get("sha256") == b.get("sha256") and (a.get("mode"), a.get("uid"), a.get("gid")) == (b.get("mode"), b.get("uid"), b.get("gid")),
++             {k: [b.get(k), a.get(k)] for k in ("sha256", "inode", "mode", "uid", "gid")}),
++            ("nginx passes -t and serves the owner's file", (after.get("nginx_test") or {}).get("returncode") == 0
++             and "owner-replaced" in str(http.get("body") or ""), {"nginx_test": after.get("nginx_test"), "body": str(http.get("body") or "")[:80]})],
++            {"backups_after": [x.get("path") for x in after["sites"][DOMAIN_A]["side_files"]["backups"]]})
++        self.owner10("refused-include-back", "owner-include", domain=DOMAIN_A, name="set10-dup-root.conf", remove=True,
++                     reload=False)
++
++    # -- e --------------------------------------------------------------------------------------------------------
++
++    def e_removed(self) -> None:
++        a_id = self.ids()[DOMAIN_A]
++        ref = self.s10["ref"][DOMAIN_A]
++        self.restore10("e")
++        pre = self.read10("e-0-restored")
++        self.panel10("e", "stop")
++        self.owner10("e-remove", "owner-vhost10", domain=DOMAIN_A, action="remove", reload=True)
++        since = self.guest_epoch()
++        fired = self.panel10("e", "start")
++        time.sleep(SETTLE)
++        after = self.read10("e-1-after-the-start")
++        window = self.window("e", since - 1)
++        panel = window["by_unit"].get("celikpanel-panel.service") or []
++        shown = self.site_config("e after the start", a_id)
++        rows = self.domains_rows("e after the start")
++        saved = self.general_save10("e save", a_id)
++        a = after["sites"][DOMAIN_A]
++        row = self.ledger_row(after, a_id) or {}
++        missing = self.judge("e", [
++            ("the Panel started", bool(fired.get("ok")), fired),
++            ("the file and its enabled link are not recreated", not a["vhost"].get("exists") and not a["enabled"].get("exists"),
++             self.brief(a)),
++            ("a journal line names the site: missing, not recreated",
++             any("(startup): missing, not recreated" in l for l in site_lines(panel, DOMAIN_A)), site_lines(panel, DOMAIN_A)),
++            ("the ledger state is missing", row.get("state") == "missing", row),
++            ("site-config answers state absent with the one choice recreate",
++             shown["body"].get("state") == "absent" and shown["body"].get("actions") == ["recreate"], shown["body"]),
++            ("the Domains row says missing", (rows.get(DOMAIN_A) or {}).get("state") == "missing", rows.get(DOMAIN_A)),
++            ("a General save answers 409 SITE_CONFIG_MISSING and writes nothing",
++             saved["status"] == 409 and saved["code"] == "SITE_CONFIG_MISSING", saved)])
++        before_epoch = self.guest_epoch()
++        made = self.post_raw("recreate", f"/api/v1/domains/{a_id}/site-config/recreate", {}, secrets.token_hex(16))
++        time.sleep(SETTLE)
++        back = self.read10("e-2-after-recreate", dump=True)
++        probe = s4.parse_probe(self.http10("e-2-after", DOMAIN_A, PROBE_PATH))
++        nginx = self.window("e-recreate", before_epoch - 1)["by_unit"].get("nginx.service") or []
++        b = back["sites"][DOMAIN_A]
++        self.judge("e-recreate", [
++            ("POST recreate answers 200 with outcome recreated", made["status"] == 200
++             and made["body"].get("outcome") == "recreated", made["entry"]),
++            ("the file is the Panel's text again and the enabled link points at it",
++             b["vhost"].get("sha256") == ref["sha256"] and b["enabled"].get("kind") == "symlink", self.brief(b)),
++            ("nginx was reloaded and the site serves again (PHP probe executed)",
++             bool(lines_after(nginx, before_epoch, "Reloaded")) and probe["executed"],
++             {"reload_lines": lines_after(nginx, before_epoch, "Reloaded"), "probe": probe})],
++            {"previous": missing, "mode_of_the_recreated_file": b["vhost"].get("mode"),
++             "owner_group": [b["vhost"].get("owner"), b["vhost"].get("group")]})
++
++    # -- f --------------------------------------------------------------------------------------------------------
++
++    def f_include_dir(self) -> None:
++        a_id = self.ids()[DOMAIN_A]
++        self.restore10("f")
++        put = self.owner10("f-include", "owner-include", domain=DOMAIN_A, name="set10-owner-dir.conf", kind="location",
++                           reload=True)
++        first = self.read10("f-0-with-the-owner-file")
++        own = lambda r: next((e for e in r["sites"][DOMAIN_A]["include_dir"].get("entries") or []
++                              if str(e.get("path", "")).endswith("set10-owner-dir.conf")), {})
++        o0 = own(first)
++        served0 = self.http10("f-0", DOMAIN_A, "/owner-dir/")
++        stages, checks = {}, [("the owner's file is in service (nginx -t passed; /owner-dir/ answers owner-dir)",
++                               (put.get("nginx_test") or {}).get("returncode") == 0 and "owner-dir" in str(served0.get("body") or ""),
++                               {"nginx_test": (put.get("nginx_test") or {}).get("returncode"), "body": str(served0.get("body") or "")[:60]})]
++        # 1. a start that rewrites A (A's file made an older CelikPanel text first: lab preparation)
++        self.snap10("f-lab-stale-a", "lab-stale-managed", domains=[DOMAIN_A])
++        stale = self.read10("f-1-stale")
++        fired = self.panel10("f", "restart")
++        time.sleep(SETTLE)
++        r1 = self.read10("f-1-after-a-start-that-rewrites-a")
++        stages["start"] = (r1, self.http10("f-1", DOMAIN_A, "/owner-dir/"))
++        checks.append(("the start rewrote A (new inode, the Panel's text)", bool(fired.get("ok"))
++                       and r1["sites"][DOMAIN_A]["vhost"].get("inode") != stale["sites"][DOMAIN_A]["vhost"].get("inode")
++                       and r1["sites"][DOMAIN_A]["vhost"].get("sha256") == self.s10["ref"][DOMAIN_A]["sha256"],
++                       {"stale": stale["sites"][DOMAIN_A]["vhost"].get("inode"), "after": r1["sites"][DOMAIN_A]["vhost"].get("inode")}))
++        # 2. a General save
++        saved = self.general_save10("f save", a_id)
++        time.sleep(SETTLE)
++        stages["save"] = (self.read10("f-2-after-a-save"), self.http10("f-2", DOMAIN_A, "/owner-dir/"))
++        # 3. a PHP version switch
++        php = self.call("f: PHP settings read (GET /php)", "GET", f"/api/v1/domains/{a_id}/php")
++        pbody = php["_parsed"] if isinstance(php["_parsed"], dict) else {}
++        current, available = pbody.get("php_version"), pbody.get("available_versions") or []
++        others = [v for v in available if v != current]
++        if others:
++            moved = self.call(f"f: PHP version switched to {others[0]}", "POST", f"/api/v1/domains/{a_id}/php",
++                              {"php_version": others[0]}, timeout=300)
++            time.sleep(SETTLE)
++            stages["php"] = (self.read10("f-3-after-a-php-switch"), self.http10("f-3", DOMAIN_A, "/owner-dir/"))
++            switch = {"kind": "a real switch", "to": others[0], "status": moved["status"]}
++        else:
++            switch = {"kind": "not measured: one PHP version installed", "current": current, "available": available}
++        for name, (reading, served) in stages.items():
++            o = own(reading)
++            checks.append((f"after the {name}: the owner's file is untouched (sha256, inode, mtime) and still served",
++                           o.get("sha256") == o0.get("sha256") and o.get("inode") == o0.get("inode")
++                           and o.get("mtime_ns") == o0.get("mtime_ns") and "owner-dir" in str(served.get("body") or "")
++                           and (reading.get("nginx_test") or {}).get("returncode") == 0,
++                           {"file": {k: [o0.get(k), o.get(k)] for k in ("sha256", "inode", "mtime_ns")},
++                            "served": str(served.get("body") or "")[:60]}))
++        if not others:
++            checks.append(("a PHP version switch keeps the owner's file", None, switch))
++        self.judge("f", checks, {"general_save": saved, "php_switch": switch})
++        self.owner10("f-include-back", "owner-include", domain=DOMAIN_A, name="set10-owner-dir.conf", remove=True,
++                     reload=True)
++
++    # -- g --------------------------------------------------------------------------------------------------------
++
++    def g_immutable(self) -> None:
++        a_id = self.ids()[DOMAIN_A]
++        refs = self.s10["ref"]
++        self.restore10("g")
++        self.panel10("g", "stop")
++        self.snap10("g-lab-stale", "lab-stale-managed", domains=[DOMAIN_A, DOMAIN_B, STATIC])
++        lock = self.owner10("g-chattr", "owner-vhost10", domain=DOMAIN_A, action="chattr-plus-i", reload=False)
++        locked = self.read10("g-1-locked")
++        since = self.guest_epoch()
++        fired = self.panel10("g", "start")
++        time.sleep(SETTLE)
++        after = self.read10("g-2-after-the-start", dump=True)
++        window = self.window("g", since - 1)
++        panel = window["by_unit"].get("celikpanel-panel.service") or []
++        nginx = window["by_unit"].get("nginx.service") or []
++        shown = self.site_config("g after the start", a_id)
++        rows = self.domains_rows("g after the start")
++        a, l = after["sites"][DOMAIN_A], locked["sites"][DOMAIN_A]
++        row = self.ledger_row(after, a_id) or {}
++        written = {d: {"inode": [locked["sites"][d]["vhost"].get("inode"), after["sites"][d]["vhost"].get("inode")],
++                       "sha256_is_the_panel_text": after["sites"][d]["vhost"].get("sha256") == refs[d]["sha256"]}
++                   for d in (DOMAIN_B, STATIC)}
++        starts = start_lines(panel)
++        verdict = self.judge("g", [
++            ("A carries the immutable flag before the start", bool(l["vhost"].get("immutable")), l["vhost"].get("lsattr")),
++            ("the Panel started and answers", bool(fired.get("ok")), fired),
++            ("A's file is untouched (sha256, inode) and its enabled link is intact",
++             a["vhost"].get("sha256") == l["vhost"].get("sha256") and a["vhost"].get("inode") == l["vhost"].get("inode")
++             and a["enabled"].get("kind") == "symlink", self.brief(a)),
++            ("B and the static site were written (new inode, the Panel's text)",
++             all(v["inode"][0] != v["inode"][1] and v["sha256_is_the_panel_text"] for v in written.values()), written),
++            ("one nginx reload after the start (one `Reloaded` line)", len(lines_after(nginx, since, "Reloaded")) == 1,
++             lines_after(nginx, since, "Reloaded")),
++            ("A's journal line says kept, not replaced (... write_refused)",
++             any("write_refused" in x for x in site_lines(panel, DOMAIN_A)), site_lines(panel, DOMAIN_A)),
++            ("the start line counts 2 written and 1 unreadable or unwritable",
++             any("2 written" in x and "1 unreadable or unwritable" in x for x in starts), starts),
++            ("the ledger names A unreadable with the reason write_refused",
++             row.get("state") == "unreadable" and row.get("state_reason") == "write_refused", row),
++            ("the Domains row names A unreadable", (rows.get(DOMAIN_A) or {}).get("state") == "unreadable", rows.get(DOMAIN_A)),
++            ("site-config for A names the reason (unreadable/write_refused or EPERM)",
++             shown["body"].get("state") == "unreadable" and shown["body"].get("reason") in ("write_refused", "permission"),
++             {k: shown["body"].get(k) for k in ("state", "reason", "detail", "actions", "ledger")})],
++            {"journal": window["_file"]})
++        self.owner10("g-chattr-minus-i", "owner-vhost10", domain=DOMAIN_A, action="chattr-minus-i", reload=False)
++        since2 = self.guest_epoch()
++        fired2 = self.panel10("g-after-unlock", "restart")
++        time.sleep(SETTLE)
++        later = self.read10("g-3-after-unlock-and-a-start")
++        lines2 = site_lines(self.window("g-after-unlock", since2 - 1)["by_unit"].get("celikpanel-panel.service") or [], DOMAIN_A)
++        self.judge("g-resume", [
++            ("after the owner unlocks the file, the next start writes A (the Panel's text)",
++             bool(fired2.get("ok")) and later["sites"][DOMAIN_A]["vhost"].get("sha256") == refs[DOMAIN_A]["sha256"],
++             {"sha256": later["sites"][DOMAIN_A]["vhost"].get("sha256"), "lines": lines2})], {"previous": verdict,
++                                                                                             "chattr": lock.get("chattr")})
++
++    # -- k --------------------------------------------------------------------------------------------------------
++
++    def k_symlink(self) -> None:
++        a_id = self.ids()[DOMAIN_A]
++        self.restore10("k")
++        self.panel10("k", "stop")
++        made = self.owner10("k-symlink", "owner-vhost10", domain=DOMAIN_A, action="symlink", reload=True)
++        before = self.read10("k-1-symlink")
++        since = self.guest_epoch()
++        fired = self.panel10("k", "start")
++        time.sleep(SETTLE)
++        after = self.read10("k-2-after-the-start")
++        panel = self.window("k", since - 1)["by_unit"].get("celikpanel-panel.service") or []
++        shown = self.site_config("k after the start", a_id)
++        rows = self.domains_rows("k after the start")
++        served = self.http10("k-2", DOMAIN_A, "/owner-link/")
++        b, a = before["sites"][DOMAIN_A], after["sites"][DOMAIN_A]
++        tb, ta = b.get("symlink_target") or {}, a.get("symlink_target") or {}
++        self.judge("k", [
++            ("the owner's symlink was in service", (made.get("nginx_test") or {}).get("returncode") == 0, made.get("nginx_test")),
++            ("the Panel started", bool(fired.get("ok")), fired),
++            ("the vhost path is still the same symlink", a["vhost"].get("kind") == "symlink"
++             and a["vhost"].get("link_target") == b["vhost"].get("link_target") and a["vhost"].get("inode") == b["vhost"].get("inode"),
++             {"before": self.brief(b)["vhost"], "after": self.brief(a)["vhost"]}),
++            ("the link's target was not written (sha256, inode)", ta.get("sha256") == tb.get("sha256") and ta.get("inode") == tb.get("inode"),
++             {k: [tb.get(k), ta.get(k)] for k in ("path", "sha256", "inode")}),
++            ("a journal line says kept, not replaced (unreadable symlink)",
++             any("unreadable symlink" in x for x in site_lines(panel, DOMAIN_A)), site_lines(panel, DOMAIN_A)),
++            ("site-config answers unreadable with the reason symlink",
++             shown["body"].get("state") == "unreadable" and shown["body"].get("reason") == "symlink",
++             {k: shown["body"].get(k) for k in ("state", "reason", "actions")}),
++            ("the Domains row says unreadable", (rows.get(DOMAIN_A) or {}).get("state") == "unreadable", rows.get(DOMAIN_A)),
++            ("the owner's content through the link is still served", "owner-link" in str(served.get("body") or ""),
++             str(served.get("body") or "")[:60])])
++
++    # -- l --------------------------------------------------------------------------------------------------------
++
++    def l_delete(self) -> None:
++        c_id, d_id = self.create_php(DOMAIN_C), self.create_php(DOMAIN_D)
++        self.owner10("l-edit-c", "owner-vhost10", domain=DOMAIN_C, action="append-location", reload=True)
++        self.owner10("l-include-c", "owner-include", domain=DOMAIN_C, name="set10-owner-dir.conf", kind="location", reload=True)
++        self.owner10("l-include-d", "owner-include", domain=DOMAIN_D, name="set10-owner-dir.conf", kind="location", reload=True)
++        before = self.read10("l-1-before", domains=[DOMAIN_C, DOMAIN_D])
++        since = self.guest_epoch()
++        gone_c = self.call(f"l: delete {DOMAIN_C} (Domains page)", "DELETE", f"/api/v1/domains/{c_id}", timeout=600)
++        gone_d = self.call(f"l: delete {DOMAIN_D} (Domains page)", "DELETE", f"/api/v1/domains/{d_id}", timeout=600)
++        time.sleep(SETTLE)
++        after = self.read10("l-2-after", domains=[DOMAIN_C, DOMAIN_D])
++        agent = self.window("l", since - 1)["by_unit"].get("celikpanel-agent.service") or []
++        c0, c1 = before["sites"][DOMAIN_C], after["sites"][DOMAIN_C]
++        d0, d1 = before["sites"][DOMAIN_D], after["sites"][DOMAIN_D]
++        backups = c1["side_files"]["backups"]
++        own = lambda s: [(e.get("path"), e.get("sha256"), e.get("inode")) for e in s["include_dir"].get("entries") or []]
++        self.judge("l", [
++            ("both deletions answered 200", gone_c["status"] == 200 and gone_d["status"] == 200,
++             [gone_c["status"], gone_d["status"]]),
++            ("the owner-edited vhost: removed, and a dated copy with the owner's bytes is kept beside it",
++             not c1["vhost"].get("exists") and len(backups) == 1 and backups[0].get("sha256") == c0["vhost"].get("sha256"),
++             {"vhost_after": c1["vhost"].get("exists"), "backups": [{k: b.get(k) for k in ("path", "sha256")} for b in backups],
++              "owner_file_sha256": c0["vhost"].get("sha256")}),
++            ("the Agent's journal names the kept copy", any("a copy is kept as" in x and DOMAIN_C in x for x in agent),
++             [x for x in agent if "DeleteSite" in x or DOMAIN_C in x][:10]),
++            ("the unchanged vhost: removed with no copy", not d1["vhost"].get("exists") and not d1["side_files"]["backups"],
++             {"vhost_after": d1["vhost"].get("exists"), "backups": len(d1["side_files"]["backups"])}),
++            ("both include directories and the owner's files in them are untouched",
++             own(c1) == own(c0) and own(d1) == own(d0) and c1["include_dir"].get("kind") == "directory"
++             and d1["include_dir"].get("kind") == "directory",
++             {"c": [own(c0), own(c1)], "d": [own(d0), own(d1)]})],
++            {"include_dirs_after": {DOMAIN_C: c1["include_dir"].get("kind"), DOMAIN_D: d1["include_dir"].get("kind")}})
++
++    # -- the cell -----------------------------------------------------------------------------------------------
++
++    def execute(self) -> dict:
++        self.step("preflight", self.preflight)
++        self.step("origin", self.origin, needs=("preflight",))
++        self.step("baseline-install", self.baseline_install, needs=("origin",))
++        self.step("owner-login", self.owner_login, needs=("baseline-install",))
++        self.step("license", self.license, needs=("owner-login",))
++        self.step("setup", self.setup, needs=("license",))
++        self.step("site", self.site, needs=("setup",))
++        functions = {"S0-sites": self.s0_sites, "h-i-unchanged-start": self.h_i,
++                     "a-owner-edit": lambda: self.scenario10("a"), "b-owner-edit": lambda: self.scenario10("b"),
++                     "c-owner-edit": lambda: self.scenario10("c"), "d-owner-edit": lambda: self.scenario10("d"),
++                     "keep": self.keep_section, "take-j": self.take_section, "take-stale": self.take_stale,
++                     "take-refused": self.take_refused, "e-removed": self.e_removed, "f-include-dir": self.f_include_dir,
++                     "g-immutable": self.g_immutable, "k-symlink": self.k_symlink, "l-delete": self.l_delete}
++        for key, title in SECTIONS:
++            # Every section needs the guest and S0's records, not S0's verdict: a product expectation S0 finds not
++            # held (a FAIL) must not hide the other cells.
++            if key != "S0-sites" and not (self.s10.get("ref") and self.ids().get(DOMAIN_A)):
++                self.step(key, lambda checks: checks.update(reason="S0 did not record the sites") or "not-run")
++                continue
++            self.section(key, title, functions[key], needs=("site",))
++            if key != "S0-sites" and self.sections.get(key, {}).get("verdict") not in ("passed", "failed"):
++                self.recover10(key)
++        self.step(s6.PIN_END_STEP, self.pin_at_the_end6)
++        self.step("collect", self.collect)
++        self.tunnel.close()
++        verdicts = [s["verdict"] for s in self.steps]
++        result = {"schema": base.RESULT_SCHEMA, "cell_kind": CELL_KIND, "native_evidence": False,
++                  "cell": dataclasses.asdict(self.settings),
++                  "identity": {k: self.identity[k] for k in ("cell_id", "node", "vm_uuid")},
++                  "request_id": None, "provenance": {"what": "set10: the D-031 code installed fresh; no update"},
++                  "artifacts": {"baseline": {k: self.artifacts["baseline"][k] for k in ("version", "commit", "sha256")}},
++                  "outcome": {"classification": "set10-measured", "final_status": None},
++                  "setup": {"purpose": self.settings.purpose, "components": sorted(self.settings.components),
++                            "waiting": self.state.get("setup_waiting")},
++                  "set10": {k: v for k, v in self.s10.items() if k != "ref"},
++                  "sections": self.sections, "findings": self.state["findings"],
++                  "steps": [{k: s.get(k) for k in ("name", "verdict", "reason", "started_at", "finished_at")} for s in self.steps],
++                  "overall": base.overall(verdicts),
++                  "note": "set10: a measurement of D-031 on the fresh install; no update is started and no P0 row is judged."}
++        self.step_dir = "result"
++        return self.ev.finalize_upd1(result)
++
++
++# ---------------------------------------------------------------------------
++# Update cells
++# ---------------------------------------------------------------------------
++
++PRE_STEP, AFTER_STEP, RESTORE_STEP = ("set10-sites-before-the-update", "set10-site-files-after-the-update",
++                                      "set10-database-restore-from-before-the-migration")
++
++
++class Set10UpdateTrial(D031, s6.Set6UpdateTrial):
++    def __init__(self, cell: Any, artifacts: dict, work_root: str, local_port: int) -> None:
++        super().__init__(cell, artifacts, work_root, local_port)
++        self.s10 = {"ids": {}}
++        finalize = self.ev.finalize_upd1
++
++        def finalize10(result: dict) -> dict:
++            result["set10"] = {"cell_kind": UPDATE_KIND, "sections": {k: v for k, v in self.sections.items()
++                                                                       if k in (PRE_STEP, AFTER_STEP, RESTORE_STEP)},
++                               "state": {k: v for k, v in self.s10.items() if k != "texts"}}
++            return finalize(result)
++        self.ev.finalize_upd1 = finalize10
++
++    def upload_helpers(self) -> dict:
++        helpers = super().upload_helpers()
++        for name in (s4.rid.HELPER, s4.HELPER4, HELPER8, HELPER10):
++            if name not in helpers:
++                helpers[name] = self.lab.put_file(self.root, self.record, self.plan, self.node_name, HERE / name, name)[1]
++        return helpers
++
++    def project(self) -> str:
++        # alpha.81 cannot create a PHP site on Arch (its vhost includes a snippet Arch's nginx does not ship).
++        return "static" if self.cell.node == "arch" else "php"
++
++    def site_domains(self) -> list:
++        # R1-R3 and the cell's own seeded static site (set4's item-9 PHP site is created after this step and is read
++        # after the update only, in extra_domains)
++        return [R1, R2, R3, "upd1-owner.test"]
++
++    def extra_domains(self) -> list:
++        return [s4.UPDATE_PHP_DOMAIN] if self.additions.get("item9") else []
++
++    def step(self, name: str, function, *, needs: tuple = ()) -> str:
++        if name == "pre-state":
++            self.section(PRE_STEP, "three sites on alpha.81 (creation text, start text, owner-edited) and, in the good "
++                                   "cell, a backup of the Panel database", self.before_update, needs=("seed",))
++        verdict = super().step(name, function, needs=needs)
++        if name == "terminal":
++            self.section(AFTER_STEP, "the site files, the ledger, the start lines, the Domains list and the three new "
++                                     "routes without a request identity", self.after_update, needs=("owner-start",))
++        if name == "verdicts" and self.cell.variant == "good":
++            # needs the update to have run, not the verdict of the reading after it (a product FAIL there must not
++            # hide this cell)
++            self.section(RESTORE_STEP, "the Panel database put back from the backup taken before the update; the start "
++                                       "classifies again", self.database_restore, needs=("terminal",))
++        return verdict
++
++    def create(self, domain: str) -> int:
++        created = self.call(f"create {self.project()} site {domain} (alpha.81)", "POST", "/api/v1/domains/create",
++                            {"domain": domain, "project_type": self.project(), "ssl_type": "none"}, timeout=600)
++        answer = created["_parsed"] if isinstance(created["_parsed"], dict) else {}
++        domain_id = answer.get("DomainID") or answer.get("domain_id")
++        self.check(f"{domain} is created by alpha.81 (200 with its id)", created["status"] == 200 and isinstance(domain_id, int),
++                   created.get("answer") or answer)
++        if not isinstance(domain_id, int):
++            raise base.StepFailed(f"{domain} was not created")
++        self.s10["ids"][domain] = domain_id
++        return domain_id
++
++    def before_update(self) -> None:
++        self.create(R2)
++        self.create(R3)
++        fired = self.panel10("pre", "restart")
++        self.create(R1)
++        edit = self.owner10("pre-r3-edit", "owner-vhost10", domain=R3, action="append-location", reload=True)
++        reading = self.read10("pre-before-the-update", dump=True)
++        self.s10["before"] = {d: {k: reading["sites"][d]["vhost"].get(k) for k in ("sha256", "inode", "mtime_ns", "uid", "gid", "mode")}
++                              | {"header": reading["sites"][d]["vhost"].get("header"),
++                                 "server_name": [l.strip() for l in (reading["sites"][d]["vhost"].get("text") or "").splitlines()
++                                                 if l.strip().startswith("server_name")]}
++                              for d in self.site_domains()}
++        self.s10["files_before"] = reading["_kept"]
++        self.s10["ids"].update({d["name"]: d["id"] for d in (reading.get("ledger") or {}).get("domains") or []})
++        checks = [("the Panel restarted between R2/R3 and R1", bool(fired.get("ok")), fired),
++                  ("the owner's edit of R3 is in service (nginx -t passed)", (edit.get("nginx_test") or {}).get("returncode") == 0,
++                   edit.get("nginx_test")),
++                  ("alpha.81's files carry no render header", not any((v.get("header") or {}).get("present")
++                                                                      for v in self.s10["before"].values()), self.s10["before"]),
++                  ("R1 (never restarted) names the domain alone; R2 (after a restart) names the www. alias too",
++                   self.s10["before"][R1]["server_name"][:1] == [f"server_name {R1};"]
++                   and self.s10["before"][R2]["server_name"][:1] == [f"server_name {R2} www.{R2};"],
++                   {R1: self.s10["before"][R1]["server_name"], R2: self.s10["before"][R2]["server_name"]}),
++                  ("the ledger is at 42 before the update", (reading.get("ledger") or {}).get("schema_version") == 42,
++                   (reading.get("ledger") or {}).get("ledger_last"))]
++        if self.cell.variant == "good":
++            backup = self.owner10("pre-db-backup", "owner-db-backup")
++            checks.append(("the owner's backup of the Panel database (online) holds schema 42",
++                           backup.get("backup_schema_version") == 42 and backup.get("backup_has_managed_site_files") is False,
++                           {k: backup.get(k) for k in ("path", "backup_schema_version", "backup_has_managed_site_files", "panel")}))
++        self.judge("B-before", checks)
++
++    def after_update(self) -> None:
++        good = self.cell.variant == "good"
++        self.current["session"] = self.ensure_session()
++        reading = self.read10("after-the-update", domains=self.site_domains() + self.extra_domains(), dump=True)
++        led = reading.get("ledger") or {}
++        self.s10["ids"].update({d["name"]: d["id"] for d in led.get("domains") or []})
++        since = self.state.get("started_at") or (time.time() - 3600)
++        window = self.window("after-the-update", float(since) - 60)
++        panel = window["by_unit"].get("celikpanel-panel.service") or []
++        starts = start_lines(panel)
++        before = self.s10["before"]
++        files = {}
++        for d in self.site_domains():
++            v = reading["sites"][d]["vhost"]
++            files[d] = {"header": v.get("header"), "sha256": v.get("sha256"), "inode": v.get("inode"),
++                        "same_bytes_as_before": v.get("sha256") == before[d]["sha256"],
++                        "same_inode_as_before": v.get("inode") == before[d]["inode"],
++                        "server_name": [l.strip() for l in (v.get("text") or "").splitlines() if l.strip().startswith("server_name")],
++                        "ledger_row": self.ledger_row(reading, self.s10["ids"].get(d)),
++                        "lines": site_lines(panel, d)}
++        self.s10["after"] = files
++        self.current["files"] = files
++        self.current["extra_sites"] = {d: {"vhost": self.brief(reading["sites"][d])["vhost"],
++                                           "ledger_row": self.ledger_row(reading, self.s10["ids"].get(d)),
++                                           "lines": site_lines(panel, d)} for d in self.extra_domains()}
++        self.current["start_lines"] = starts
++        if not good:
++            self.judge("B-return", [
++                ("the ledger is back at 42 (no managed_site_files table)",
++                 led.get("schema_version") == 42 and led.get("managed_site_files_table") is False,
++                 {k: led.get(k) for k in ("schema_version", "ledger_last", "managed_site_files_table")}),
++                ("no file carries a render header (the candidate's start never ran)",
++                 not any((f["header"] or {}).get("present") for f in files.values()), {d: f["header"] for d, f in files.items()}),
++                ("the returned alpha.81 rendered every vhost at its start (its start line)",
++                 any("certificate startup reconcile: restored" in l for l in starts), starts)],
++                {"files": files, "what_alpha81_did_per_file": {d: {"same_bytes": f["same_bytes_as_before"],
++                                                                  "same_inode": f["same_inode_as_before"],
++                                                                  "server_name": f["server_name"]} for d, f in files.items()}})
++            return
++        rows = self.domains_rows("after the update")
++        shown = {d: self.site_config(f"after the update {d}", self.s10["ids"][d]) for d in (R1, R2, R3)}
++        r3_id = self.s10["ids"][R3]
++        probes = {}
++        for action in ("keep", "take", "recreate"):
++            probes[action] = self.post_raw(f"{action} without X-CelikPanel-Request-Id (a page loaded before the update)",
++                                           f"/api/v1/domains/{r3_id}/site-config/{action}",
++                                           {"file_sha256": shown[R3]["body"].get("file_sha256"),
++                                            "render_sha256": shown[R3]["body"].get("render_sha256")}, None)
++        later = self.read10("after-the-428-probes")
++        adopted = [l for l in starts if "adopted, " in l and "left alone" in l]
++        self.s10["adopted_line"] = adopted
++        self.judge("B-forward", [
++            ("migration 044 applied (ledger 44, managed_site_files present)",
++             led.get("schema_version") == 44 and led.get("managed_site_files_table") is True,
++             {k: led.get(k) for k in ("schema_version", "ledger_last", "managed_site_files_table")}),
++            ("R1 (alpha.81's creation text) adopted: header written, ledger row adopted_from the creation text",
++             (files[R1]["header"] or {}).get("valid") is True and "(creation)" in str((files[R1]["ledger_row"] or {}).get("adopted_from")),
++             {k: files[R1][k] for k in ("header", "ledger_row", "lines")}),
++            ("R2 (alpha.81's start text) adopted: header written, ledger row adopted_from an earlier release's start text "
++             "(the frozen templates are tried newest first; alpha.82's may render the same bytes)",
++             (files[R2]["header"] or {}).get("valid") is True
++             and str((files[R2]["ledger_row"] or {}).get("adopted_from") or "").startswith("v0.1.0-alpha.8")
++             and "(creation)" not in str((files[R2]["ledger_row"] or {}).get("adopted_from")),
++             {k: files[R2][k] for k in ("header", "ledger_row", "lines")}),
++            ("R3 (owner-edited on alpha.81) is unknown_origin and was never written (sha256, inode)",
++             files[R3]["same_bytes_as_before"] and files[R3]["same_inode_as_before"]
++             and (files[R3]["ledger_row"] or {}).get("state") == "unknown_origin", {k: files[R3][k] for k in ("ledger_row", "lines", "sha256")}),
++            ("the start line says N adopted, M left alone", bool(adopted), starts),
++            ("the Domains list carries each site's state (R1, R2 adopted; R3 unknown_origin)",
++             (rows.get(R3) or {}).get("state") == "unknown_origin" and bool((rows.get(R1) or {}).get("adopted_from"))
++             and bool((rows.get(R2) or {}).get("adopted_from")), {d: rows.get(d) for d in self.site_domains()}),
++            ("site-config of R3 answers unknown_origin with a difference",
++             shown[R3]["body"].get("state") == "unknown_origin" and bool(shown[R3]["body"].get("diff")),
++             {k: shown[R3]["body"].get(k) for k in ("state", "actions", "adopted_from")}),
++            ("the three new POST routes without an identity answer 428 REQUEST_ID_REQUIRED and change nothing",
++             all(p["status"] == 428 and p["body"].get("code") == "REQUEST_ID_REQUIRED" for p in probes.values())
++             and later["sites"][R3]["vhost"].get("sha256") == files[R3]["sha256"],
++             {a: {"status": p["status"], "code": p["body"].get("code")} for a, p in probes.items()})],
++            {"bytes_after_the_header_equal_alpha81_bytes": {d: files[d]["same_bytes_as_before"] for d in files},
++             "site_config": {d: {k: s["body"].get(k) for k in ("state", "adopted_from", "actions")} for d, s in shown.items()}})
++
++    def database_restore(self) -> None:
++        before = self.read10("restore-0-before")
++        self.panel10("restore", "stop")
++        put = self.owner10("restore-db", "owner-db-restore")
++        since = self.guest_epoch()
++        fired = self.panel10("restore", "start")
++        time.sleep(SETTLE)
++        after = self.read10("restore-1-after-the-start", dump=True)
++        window = self.window("restore", since - 1)
++        panel = window["by_unit"].get("celikpanel-panel.service") or []
++        rows = self.domains_rows("after the database restore")
++        led = after.get("ledger") or {}
++        files = {d: {"same_sha256": after["sites"][d]["vhost"].get("sha256") == before["sites"][d]["vhost"].get("sha256"),
++                     "same_inode": after["sites"][d]["vhost"].get("inode") == before["sites"][d]["vhost"].get("inode"),
++                     "ledger_row": self.ledger_row(after, self.s10["ids"].get(d)), "lines": site_lines(panel, d)}
++                 for d in self.site_domains()}
++        self.judge("B-db-restore", [
++            ("the backup put back was at 42 and the Panel's start migrated it to 44",
++             (put.get("ledger_after") or {}).get("schema_version") == 42 and led.get("schema_version") == 44,
++             {"put_back": (put.get("ledger_after") or {}).get("schema_version"), "after_the_start": led.get("schema_version")}),
++            ("the Panel started and answers", bool(fired.get("ok")), fired),
++            ("no file was written by the start (sha256, inode)", all(f["same_sha256"] and f["same_inode"] for f in files.values()),
++             files),
++            ("the start classified every site again: R1, R2 managed_unchanged (header); R3 unknown_origin",
++             (files[R1]["ledger_row"] or {}).get("state") == "managed_unchanged"
++             and (files[R2]["ledger_row"] or {}).get("state") == "managed_unchanged"
++             and (files[R3]["ledger_row"] or {}).get("state") == "unknown_origin",
++             {d: files[d]["ledger_row"] for d in (R1, R2, R3)}),
++            ("the Domains list carries the states again", (rows.get(R3) or {}).get("state") == "unknown_origin", rows)],
++            {"start_lines": start_lines(panel), "journal": window["_file"]})
++
++
++# ---------------------------------------------------------------------------
++# CLI
++# ---------------------------------------------------------------------------
++
++def build_plan(name: str, artifacts: dict, work_root: str, local_port: int) -> dict:
++    plan = {"schema": "celikpanel/set10-plan/v1", "native_evidence": False, "cell": name, "work_root": work_root,
++            "local_port": local_port, "pinned_names": list(s6.PINNED_NAMES),
++            "rule": "the driver calls only the Panel's HTTP API as the logged-in owner; every native fact is an SSH reading; "
++                    "owner actions and lab preparation on the guest are recorded as such; no certificate authority and no "
++                    "licence service is contacted by the driver"}
++    if name in CELLS:
++        settings = CELLS[name]
++        plan.update(cell_kind=CELL_KIND, candidate={k: artifacts["baseline"][k] for k in ("version", "commit", "sha256")},
++                    setup={"purpose": settings.purpose, "components": sorted(settings.components), "dns_mode": "external"},
++                    steps=[s6.PIN_STEP, "preflight", "origin", "baseline-install", "owner-login", "license", "setup", "site"]
++                          + [k for k, _ in SECTIONS] + [s6.PIN_END_STEP, "collect"],
++                    runs=[dict(zip(("run", "scenario", "owner_action", "trigger", "panel_stopped_while_the_owner_edits"), r))
++                          for r in RUNS])
++    else:
++        cell = base.validate_cell(name)
++        plan.update(cell_kind=UPDATE_KIND, update=s6.build_plan(name, artifacts, work_root, local_port),
++                    added_steps=[PRE_STEP, AFTER_STEP] + ([RESTORE_STEP] if cell.variant == "good" else []))
++    return plan
++
++
++def main(argv: list[str] | None = None) -> int:
++    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
++    sub = parser.add_subparsers(dest="command", required=True)
++    for name in ("plan", "run"):
++        cmd = sub.add_parser(name)
++        cmd.add_argument("--cell", required=True, choices=sorted(CELLS) + sorted(UPDATE_CELLS))
++        cmd.add_argument("--artifacts", required=True, type=Path)
++        cmd.add_argument("--work-root", required=True)
++        cmd.add_argument("--local-port", type=int, default=18443)
++        if name == "plan":
++            cmd.add_argument("--dry-run", action="store_true", help="validate the plan without any guest")
++        else:
++            cmd.add_argument("--execute", action="store_true")
++    args = parser.parse_args(argv)
++    base.validate_work_root(args.work_root)
++    if not 1024 < args.local_port < 65536:
++        parser.error("--local-port must be an unprivileged loopback port")
++    document = json.loads(args.artifacts.read_text())
++    base.configure_labels(document)
++    cell = CELLS[args.cell].cell if args.cell in CELLS else base.validate_cell(args.cell)
++    if args.command == "plan":
++        base.validate_cell_artifacts(document, cell, check_files=not args.dry_run)
++        print(json.dumps(build_plan(args.cell, document, args.work_root, args.local_port), indent=2, sort_keys=True))
++        return 0
++    if not args.execute:
++        parser.error("run mutates one registered disposable guest and requires --execute")
++    base.validate_cell_artifacts(document, cell)
++    if args.cell in CELLS:
++        result = Set10Trial(CELLS[args.cell], document, args.work_root, args.local_port).execute()
++        print(json.dumps({"overall": result["overall"], "cell_kind": CELL_KIND,
++                          "sections": {k: v.get("verdict") for k, v in result["sections"].items()}}, sort_keys=True))
++    else:
++        result = Set10UpdateTrial(cell, document, args.work_root, args.local_port).execute()
++        print(json.dumps({"overall": result["overall"], "outcome": result["outcome"]["classification"],
++                          "steps": {s["name"]: s["verdict"] for s in result["steps"]}}, sort_keys=True))
++    return 0 if result["overall"] != "failed" else 1
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+--- /dev/null
++++ b/deploy/e2e/release-recovery/guest_set10_native.py
+@@ -0,0 +1,421 @@
++#!/usr/bin/env python3
++"""set10: native readers and the owner's hand actions for the measurement of D-031 (a site configuration file the
++owner changed is kept and named) on a marked disposable QEMU guest.
++
++Built on ``guest_set8_native.py`` (its readers, its owner actions and its lab restore are reused unchanged). Added:
++
++Readers (``read-*``) only inspect: a site's vhost with its first line read as the render header
++(``# celikpanel-render v2 sha256=<hex>``: present, declared digest, digest of the body under it, equal or not), the
++files the Panel keeps beside it (``<file>.celikpanel-pending``, ``<file>.celikpanel-backup-*``), the owner include
++directory ``/etc/nginx/celikpanel-sites.d/<domain>/`` (mode, owner, entries with their bytes), the Panel database's
++migration ledger and its ``managed_site_files`` rows (file digests, states, decisions; no secret is stored there),
++the installed PHP-FPM versions.
++
++Owner actions (``owner-*``) are what a server owner does by hand: edit, replace, remove, lock or replace by a symlink a
++site's vhost; change its owner, group and mode; put a ``.conf`` file of their own into the site's include directory
++(and take back only such a file this harness wrote); back up the Panel's database while it runs and put that backup
++back while the Panel is stopped. ``lab-*`` is lab preparation, recorded as such: set8's restore of the Panel's text,
++and ``lab-stale-managed``, which gives a site's vhost a valid header over a body that differs from the Panel's text
++(as an older CelikPanel text would be), so that the next start has to write it.
++
++No mode prints a password, a private key or a hash of one, and no mode contacts another host.
++
++set10: D-031 ölçümü için okuyucular ve sahibin elle yaptığı işlemler. Hiçbir kip parola, özel anahtar ya da parola
++özeti yazdırmaz; başka bir sunucuya bağlanmaz. Dosya özetleri (sha256) gizli değildir ve kaydedilir.
++"""
++from __future__ import annotations
++
++import argparse
++import base64
++import glob
++import hashlib
++import importlib.util
++import json
++import os
++from pathlib import Path
++import re
++import sqlite3
++import sys
++import time
++
++HERE = Path(__file__).resolve().parent
++SCHEMA = "celikpanel/set10-native/v1"
++
++
++def _load(name: str):
++    spec = importlib.util.spec_from_file_location("set10_" + name.replace(".", "_"), HERE / name)
++    value = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(value)
++    return value
++
++
++g8 = _load("guest_set8_native.py")
++s4, rid = g8.s4, g8.rid
++run, utc, Refused = rid.run, rid.utc, rid.Refused
++# The start line of the D-031 release (cmd/panel/cert_startup_reconcile.go logHostedVhostStartup) besides set8's two
++# lines of the earlier releases: owner-panel waits for one of them after a start or restart.
++g8.RECONCILE_LINES = g8.RECONCILE_LINES + ("site configuration files at start:",)
++
++NGINX = g8.NGINX
++AVAILABLE, ENABLED, OWNER_DIR = g8.AVAILABLE, g8.ENABLED, g8.OWNER_DIR
++INCLUDE_BASE = NGINX + "/celikpanel-sites.d"
++HEADER_PREFIX = b"# celikpanel-render v2 sha256="
++PENDING_SUFFIX = ".celikpanel-pending"
++BACKUP_MARKER = ".celikpanel-backup-"
++PANEL_DB = "/var/lib/celikpanel/celikpanel.db"
++DB_BACKUP = "/root/set10-panel-db-before-the-update.db"
++OWNER_FILE_RE = re.compile(r"set10-[a-z0-9-]{1,40}\.conf\Z")
++STALE_LINE = b"# set10 lab preparation: an older CelikPanel text of this site (a line the current render does not have)\n"
++
++
++# -- pure rules (covered offline by test_set10_trial) ---------------------------------------------------------------
++
++def header_of(data: bytes | None) -> dict:
++    """The render header as cmd/panel's classifier reads it: the first line (a trailing CR tolerated) must be the
++    prefix and 64 lowercase hex; the body is every byte after that line."""
++    if data is None:
++        return {"present": False}
++    newline = data.find(b"\n")
++    if newline < 0:
++        return {"present": False}
++    line = data[:newline]
++    if line.endswith(b"\r"):
++        line = line[:-1]
++    if not line.startswith(HEADER_PREFIX):
++        return {"present": False, "first_line": line[:120].decode("utf-8", "replace")}
++    declared = line[len(HEADER_PREFIX):].decode("ascii", "replace")
++    if len(declared) != 64 or declared.strip("0123456789abcdef"):
++        return {"present": False, "first_line": line[:120].decode("utf-8", "replace"), "malformed": True}
++    body = data[newline + 1:]
++    actual = hashlib.sha256(body).hexdigest()
++    return {"present": True, "declared": declared, "body_sha256": actual, "valid": declared == actual,
++            "body_bytes": len(body)}
++
++
++def seal(body: bytes) -> bytes:
++    return HEADER_PREFIX + hashlib.sha256(body).hexdigest().encode() + b"\n" + body
++
++
++def stale_body(data: bytes) -> bytes:
++    """The body of a header-valid file with one line added after the header's comment block: still CelikPanel's
++    format (a valid header), not CelikPanel's current text."""
++    head = header_of(data)
++    if not head.get("present") or not head.get("valid"):
++        raise Refused("the file does not carry a valid render header")
++    body = data[data.find(b"\n") + 1:]
++    return STALE_LINE + body
++
++
++def owner_include_text(kind: str, domain: str) -> str:
++    if kind == "location":
++        return ("# set10: the server owner's own addition for %s, in the site's include directory\n"
++                "location /owner-dir/ {\n    return 200 \"owner-dir\";\n}\n") % domain
++    if kind == "duplicate-root":
++        return ("# set10: an owner's file that conflicts with CelikPanel's text (a second root in the same server block)\n"
++                "root /srv/set10-owner-root;\n")
++    raise Refused("unknown include kind")
++
++
++# -- readers ------------------------------------------------------------------------------------------------------
++
++def raw(path: str) -> bytes | None:
++    try:
++        if os.path.islink(path) or not os.path.isfile(path):
++            return None
++        return Path(path).read_bytes()
++    except OSError:
++        return None
++
++
++def record(path: str, text: bool = True) -> dict:
++    value = g8.file_record(path, text=text)
++    data = raw(path)
++    if data is not None:
++        value["header"] = header_of(data)
++        value["first_line"] = data.split(b"\n", 1)[0][:160].decode("utf-8", "replace")
++    return value
++
++
++def side_files(path: str) -> dict:
++    return {"pending": record(path + PENDING_SUFFIX),
++            "backups": [record(p) for p in sorted(glob.glob(glob.escape(path) + BACKUP_MARKER + "*"))]}
++
++
++def include_dir(domain: str) -> dict:
++    directory = f"{INCLUDE_BASE}/{domain}"
++    value = dict(rid._stat(directory))
++    try:
++        info = os.lstat(directory)
++        value.update(inode=info.st_ino, uid=info.st_uid, gid=info.st_gid, mode_octal=oct(info.st_mode & 0o7777),
++                     mtime_ns=info.st_mtime_ns)
++    except OSError:
++        return value
++    if os.path.isdir(directory) and not os.path.islink(directory):
++        value["entries"] = [record(os.path.join(directory, n)) for n in sorted(os.listdir(directory))]
++    return value
++
++
++def ledger() -> dict:
++    """The Panel database read-only: the migration ledger's last version and every managed_site_files row."""
++    value = {"database": PANEL_DB}
++    try:
++        connection = sqlite3.connect("file:" + PANEL_DB + "?mode=ro", uri=True, timeout=20, isolation_level=None)
++    except sqlite3.Error as exc:
++        return dict(value, error=type(exc).__name__ + ": " + str(exc)[:200])
++    try:
++        connection.execute("PRAGMA query_only=ON")
++        connection.execute("BEGIN")
++        versions = [r[0] for r in connection.execute("SELECT version FROM schema_migrations ORDER BY version")]
++        value.update(schema_version=max(versions) if versions else None, ledger_rows=len(versions),
++                     ledger_last=versions[-3:])
++        tables = {r[0] for r in connection.execute("SELECT name FROM sqlite_schema WHERE type='table'")}
++        value["managed_site_files_table"] = "managed_site_files" in tables
++        if value["managed_site_files_table"]:
++            cursor = connection.execute("SELECT * FROM managed_site_files ORDER BY id")
++            names = [d[0] for d in cursor.description]
++            value["managed_site_files"] = [dict(zip(names, row)) for row in cursor.fetchall()]
++        value["domains"] = [{"id": r[0], "name": r[1]} for r in connection.execute("SELECT id, name FROM domains ORDER BY id")]
++        value["sites"] = [{"id": r[0], "domain_id": r[1], "project_type": r[2]} for r in
++                          connection.execute("SELECT id, domain_id, project_type FROM sites ORDER BY id")]
++        connection.execute("ROLLBACK")
++    except sqlite3.Error as exc:
++        value["error"] = type(exc).__name__ + ": " + str(exc)[:200]
++    finally:
++        connection.close()
++    return value
++
++
++def php_versions() -> list:
++    found = set()
++    for pattern in ("/usr/sbin/php-fpm*", "/usr/bin/php-fpm*"):
++        for path in glob.glob(pattern):
++            found.add(os.path.basename(path))
++    return sorted(found)
++
++
++def read_site10(args: dict) -> dict:
++    domains = [rid.domain_name(d) for d in args.get("domains", [])]
++    value = g8.read_site({"domains": domains, "dump": bool(args.get("dump")), "pool": False})
++    for domain in domains:
++        path = f"{AVAILABLE}/{domain}.conf"
++        site = value["sites"][domain]
++        site["vhost"] = record(path)
++        site["side_files"] = side_files(path)
++        site["include_dir"] = include_dir(domain)
++        if os.path.islink(path):
++            target = os.path.realpath(path)
++            site["symlink_target"] = record(target)
++    value["include_base"] = dict(rid._stat(INCLUDE_BASE))
++    value["ledger"] = ledger()
++    value["php_fpm_programs"] = php_versions()
++    return value
++
++
++def read_ledger(args: dict) -> dict:
++    return {"at": utc(), "epoch": time.time(), "ledger": ledger()}
++
++
++# -- owner actions ------------------------------------------------------------------------------------------------
++
++def owner_vhost10(args: dict) -> dict:
++    domain = rid.domain_name(args["domain"])
++    action = args["action"]
++    path, link = f"{AVAILABLE}/{domain}.conf", f"{ENABLED}/{domain}.conf"
++    value = {"action": "owner-vhost10", "what": action, "domain": domain,
++             "before": {"vhost": record(path), "enabled": g8.file_record(link, text=False)}}
++    if action in ("append-location", "change-index", "replace", "add-include", "append-comment"):
++        text = Path(path).read_text()
++        if action == "append-location":
++            added = ["", "    # set10: added by the server owner by hand", "    location /owner-extra/ {",
++                     "        return 200 \"owner\";", "    }"]
++            new = g8.insert_before_block_end(text, domain, added)
++            value["added_lines"] = added
++        elif action == "change-index":
++            new, old_line, new_line = g8.change_index(text)
++            value["changed"] = {"from": old_line, "to": new_line}
++        elif action == "replace":
++            new = ("# set10: the server owner's own vhost for %s, written by hand\n"
++                   "server {\n    listen 80;\n    listen [::]:80;\n    server_name %s;\n"
++                   "    location / {\n        return 200 \"owner-replaced\\n\";\n    }\n}\n") % (domain, domain)
++        elif action == "append-comment":
++            new = text.rstrip("\n") + "\n# set10: the server owner edited this file again (" + utc() + ")\n"
++        else:
++            os.makedirs(OWNER_DIR, exist_ok=True)
++            include = f"{OWNER_DIR}/{domain}.conf"
++            with open(include, "w") as stream:
++                stream.write("# set10: the server owner's own additions for %s\nlocation /owner-include/ {\n"
++                             "    return 200 \"owner-include\";\n}\n" % domain)
++            os.chmod(include, 0o644)
++            added = ["", "    # set10: the server owner's own include", f"    include {include};"]
++            new = g8.insert_before_block_end(text, domain, added)
++            value["added_lines"] = added
++            value["include_file"] = record(include)
++        g8.write_in_place(path, new.encode())
++    elif action == "remove":
++        for target in (link, path):
++            if os.path.lexists(target):
++                os.unlink(target)
++    elif action in ("chattr-plus-i", "chattr-minus-i"):
++        value["chattr"] = run(["chattr", "+i" if action == "chattr-plus-i" else "-i", path], timeout=20)
++    elif action == "chown":
++        os.chown(path, int(args["uid"]), int(args["gid"]))
++        os.chmod(path, int(str(args["file_mode"]), 8))
++    elif action == "symlink":
++        # The owner keeps their own file elsewhere and points the vhost path at it with a symlink.
++        os.makedirs(OWNER_DIR, exist_ok=True)
++        target = f"{OWNER_DIR}/{domain}-own-vhost.conf"
++        text = Path(path).read_text()
++        added = ["", "    # set10: the owner's own file, reached through a symlink", "    location /owner-link/ {",
++                 "        return 200 \"owner-link\";", "    }"]
++        with open(target, "w") as stream:
++            stream.write(g8.insert_before_block_end(text, domain, added))
++        os.chmod(target, 0o644)
++        os.unlink(path)
++        os.symlink(target, path)
++        value["symlink_target"] = record(target)
++    else:
++        raise Refused("unknown owner action")
++    value["after"] = {"vhost": record(path), "enabled": g8.file_record(link, text=False)}
++    value.update(g8.nginx_reload(bool(args.get("reload"))))
++    value["at"] = utc()
++    value["epoch"] = time.time()
++    return value
++
++
++def owner_include(args: dict) -> dict:
++    """The owner puts a .conf file of their own into the site's include directory, or takes back one this harness
++    wrote there (only a name set10-*.conf)."""
++    domain = rid.domain_name(args["domain"])
++    name = args["name"]
++    if not OWNER_FILE_RE.fullmatch(name):
++        raise Refused("not a file name this harness writes")
++    directory = f"{INCLUDE_BASE}/{domain}"
++    path = os.path.join(directory, name)
++    value = {"action": "owner-include", "domain": domain, "path": path, "directory_before": include_dir(domain)}
++    if args.get("remove"):
++        if os.path.isfile(path) and not os.path.islink(path):
++            os.unlink(path)
++            value["removed"] = True
++    else:
++        if not os.path.isdir(directory):
++            raise Refused("the site's include directory is not there")
++        with open(path, "w") as stream:
++            stream.write(owner_include_text(args["kind"], domain))
++        os.chmod(path, 0o644)
++        value["file"] = record(path)
++    value["directory_after"] = include_dir(domain)
++    value.update(g8.nginx_reload(bool(args.get("reload"))))
++    value["at"] = utc()
++    return value
++
++
++def lab_stale_managed(args: dict) -> dict:
++    """Lab preparation (not an owner action): each named site's vhost gets a valid render header over its body with
++    one line added, written through a new file renamed into place with the file's owner, group and mode."""
++    out = {"action": "lab-stale-managed", "sites": {}}
++    for domain in [rid.domain_name(d) for d in args["domains"]]:
++        path = f"{AVAILABLE}/{domain}.conf"
++        data = Path(path).read_bytes()
++        info = os.lstat(path)
++        new = seal(stale_body(data))
++        temporary = path + ".set10-stale"
++        with open(temporary, "wb") as stream:
++            stream.write(new)
++            stream.flush()
++            os.fsync(stream.fileno())
++        os.chown(temporary, info.st_uid, info.st_gid)
++        os.chmod(temporary, info.st_mode & 0o7777)
++        os.rename(temporary, path)
++        out["sites"][domain] = {"before": {"sha256": hashlib.sha256(data).hexdigest(), "inode": info.st_ino},
++                                "after": record(path, text=False)}
++    out.update(g8.nginx_reload(True))
++    out["at"] = utc()
++    return out
++
++
++def panel_active() -> str:
++    return (run(["systemctl", "is-active", g8.PANEL_UNIT], timeout=20).get("stdout") or "").strip()
++
++
++def owner_db_backup(args: dict) -> dict:
++    """The owner backs up the Panel's database while the Panel runs (SQLite's online backup), to a file of their
++    own under /root."""
++    source = sqlite3.connect("file:" + PANEL_DB + "?mode=ro", uri=True, timeout=30)
++    target = sqlite3.connect(DB_BACKUP)
++    try:
++        source.backup(target)
++    finally:
++        target.close()
++        source.close()
++    os.chmod(DB_BACKUP, 0o600)
++    check = sqlite3.connect("file:" + DB_BACKUP + "?mode=ro", uri=True)
++    try:
++        versions = [r[0] for r in check.execute("SELECT version FROM schema_migrations ORDER BY version")]
++        tables = {r[0] for r in check.execute("SELECT name FROM sqlite_schema WHERE type='table'")}
++    finally:
++        check.close()
++    return {"action": "owner-db-backup", "path": DB_BACKUP, "panel": panel_active(),
++            "backup": dict(rid._stat(DB_BACKUP), size=os.path.getsize(DB_BACKUP)),
++            "backup_schema_version": max(versions) if versions else None,
++            "backup_has_managed_site_files": "managed_site_files" in tables, "at": utc()}
++
++
++def owner_db_restore(args: dict) -> dict:
++    """With the Panel stopped, the owner puts the backup back over the Panel's database (owner, group and mode of
++    the database file kept; the write-ahead files of the replaced database removed, as SQLite requires)."""
++    state = panel_active()
++    if state == "active":
++        raise Refused("the Panel is running; the owner stops it before putting a database back")
++    if not os.path.isfile(DB_BACKUP):
++        raise Refused("there is no backup")
++    info = os.lstat(PANEL_DB)
++    value = {"action": "owner-db-restore", "panel": state, "database_before": dict(rid._stat(PANEL_DB)),
++             "ledger_before": ledger(),
++             "sidecars_before": {s: rid._stat(PANEL_DB + s) for s in ("-wal", "-shm")}}
++    temporary = PANEL_DB + ".set10-restore"
++    with open(DB_BACKUP, "rb") as source, open(temporary, "wb") as stream:
++        stream.write(source.read())
++        stream.flush()
++        os.fsync(stream.fileno())
++    os.chown(temporary, info.st_uid, info.st_gid)
++    os.chmod(temporary, info.st_mode & 0o7777)
++    for suffix in ("-wal", "-shm"):
++        if os.path.isfile(PANEL_DB + suffix):
++            os.unlink(PANEL_DB + suffix)
++    os.rename(temporary, PANEL_DB)
++    value.update(database_after=dict(rid._stat(PANEL_DB)), ledger_after=ledger(), at=utc())
++    return value
++
++
++MODES = dict(g8.MODES)
++MODES.update({"read-site10": read_site10, "read-ledger": read_ledger, "owner-vhost10": owner_vhost10,
++              "owner-include": owner_include, "lab-stale-managed": lab_stale_managed,
++              "owner-db-backup": owner_db_backup, "owner-db-restore": owner_db_restore})
++
++
++def main(argv=None) -> int:
++    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
++    parser.add_argument("mode", choices=sorted(MODES))
++    for name in ("lab-nonce", "vm-uuid", "cell-id", "node"):
++        parser.add_argument("--" + name, required=True)
++    parser.add_argument("--args-b64", default="e30=")
++    args = parser.parse_args(argv)
++    rid._load_probe().guard_guest(args)
++    request = json.loads(base64.b64decode(args.args_b64, validate=True))
++    if not isinstance(request, dict):
++        parser.error("--args-b64 must hold a JSON object")
++    value = MODES[args.mode](request)
++    value.update(schema=SCHEMA, mode=args.mode, owner_action=args.mode.startswith("owner-"))
++    print(json.dumps(value, sort_keys=True, default=str))
++    return 0
++
++
++if __name__ == "__main__":
++    try:
++        raise SystemExit(main())
++    except Refused as exc:
++        print(json.dumps({"refused": "Refused", "reason": str(exc)[:300]}), file=sys.stderr)
++        raise SystemExit(3)
++    except Exception as exc:  # noqa: BLE001 - reported as data; the driver decides
++        print(json.dumps({"refused": type(exc).__name__, "reason": str(exc)[:300]}), file=sys.stderr)
++        raise SystemExit(2)
+--- /dev/null
++++ b/deploy/e2e/release-recovery/run-set10.sh
+@@ -0,0 +1,59 @@
++#!/usr/bin/env bash
++# set10 wrapper for the Linux QEMU host (archlinux), run as root: D-031 as implemented in cd46ca595 measured on
++# disposable guests: installed fresh (cells set10-*) and reached by the owner's update from the published alpha.81
++# (cells upd1-*-good, upd1-*-defective).
++#
++#   run-set10.sh dry-run CELL ARTIFACTS_JSON LAB_NAME
++#       Validate the plan without any guest (no lab is created).
++#   run-set10.sh cell CELL ARTIFACTS_JSON LAB_NAME SSH_PORT [LOCAL_PORT]
++#       Prepare and start a NEW lab /var/tmp/cp-release-drill-LAB_NAME, run the one cell on its node, then
++#       stop the lab (disks and evidence retained).
++#
++# CELL: set10-debian13 | set10-ubuntu | set10-arch   (ARTIFACTS_JSON from `run-upd1.sh build SOURCE`; its baseline is
++#       the code installed fresh)
++#       upd1-debian13-good | upd1-ubuntu-good | upd1-arch-good | upd1-debian13-defective | upd1-ubuntu-defective |
++#       upd1-arch-defective   (ARTIFACTS_JSON from `run-upd1.sh build --baseline-ref v0.1.0-alpha.81 SOURCE`)
++# One cell per new lab. SET10_NEIGHBOUR_GATE and then SET10_DISK_GATE, when set, are programs that must exit 0
++# immediately before the guests are started (no other measurement's guest running; the host's free-disk rule);
++# otherwise no guest is started.
++set -euo pipefail
++HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
++IMAGES=${UPD1_IMAGE_CACHE:-/var/tmp/cp-v3n28/images}
++LAB=(python3 "$HERE/lab.py")
++DRIVER=(python3 "$HERE/set10_trial.py")
++
++usage() { sed -n '2,18p' "${BASH_SOURCE[0]}" >&2; exit 2; }
++[[ $# -ge 1 ]] || usage
++command=$1; shift
++case $command in
++    dry-run)
++        [[ $# -eq 3 ]] || usage
++        exec "${DRIVER[@]}" plan --cell "$1" --artifacts "$2" --work-root "/var/tmp/cp-release-drill-$3" --dry-run
++        ;;
++    cell)
++        [[ $# -ge 4 && $# -le 5 ]] || usage
++        cell=$1 artifacts=$2 name=$3 port=$4 local_port=${5:-18443}
++        [[ $EUID -eq 0 ]] || { echo "run as root (fixture signing keys are root-only)" >&2; exit 2; }
++        root=/var/tmp/cp-release-drill-$name
++        [[ ! -e $root ]] || { echo "lab $root exists; every cell needs a NEW lab" >&2; exit 2; }
++        "${DRIVER[@]}" plan --cell "$cell" --artifacts "$artifacts" --work-root "$root" > /dev/null
++        platform=debian13-arch
++        [[ $cell != set10-ubuntu && $cell != upd1-ubuntu-* ]] || platform=ubuntu
++        "${LAB[@]}" prepare --work-root "$root" --image-cache "$IMAGES" --ssh-port "$port" --platform "$platform" --execute
++        if [[ -n ${SET10_NEIGHBOUR_GATE:-} ]]; then
++            bash "$SET10_NEIGHBOUR_GATE" "$cell $name" || { echo "SET10 cell=$cell lab=$root NOT STARTED: another measurement's guest is running" >&2; exit 75; }
++        fi
++        if [[ -n ${SET10_DISK_GATE:-} ]]; then
++            bash "$SET10_DISK_GATE" "$cell $name (guest start)" || { echo "SET10 cell=$cell lab=$root NOT STARTED: the disk gate refused the guest start" >&2; exit 75; }
++        fi
++        "${LAB[@]}" start --work-root "$root" --execute
++        "${LAB[@]}" status --work-root "$root"
++        status=0
++        "${DRIVER[@]}" run --cell "$cell" --artifacts "$artifacts" --work-root "$root" --local-port "$local_port" \
++            --execute || status=$?
++        "${LAB[@]}" stop --work-root "$root" --execute || true
++        echo "SET10 cell=$cell lab=$root driver_exit=$status evidence=$root/evidence/*/upd1"
++        exit "$status"
++        ;;
++    *) usage ;;
++esac
+--- /dev/null
++++ b/deploy/e2e/release-recovery/test_set10_trial.py
+@@ -0,0 +1,109 @@
++"""Offline tests of set10's pure rules: the render header as the classifier reads it, the lab's stale text, the
++journal times and lines, and the verdict of a cell. No guest is needed."""
++from __future__ import annotations
++
++import hashlib
++import importlib.util
++from pathlib import Path
++import sys
++import unittest
++
++HERE = Path(__file__).resolve().parent
++if str(HERE) not in sys.path:
++    sys.path.insert(0, str(HERE))
++import set10_trial as s10  # noqa: E402
++
++
++def guest_module():
++    spec = importlib.util.spec_from_file_location("set10_guest_under_test", HERE / "guest_set10_native.py")
++    module = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(module)
++    return module
++
++
++BODY = b"# Nginx vhost for set10-a.test\nserver {\n    listen 80;\n    server_name set10-a.test www.set10-a.test;\n}\n"
++
++
++class Set10Rules(unittest.TestCase):
++    def setUp(self):
++        self.g = guest_module()
++
++    def test_sealed_text_has_a_valid_header(self):
++        sealed = self.g.seal(BODY)
++        head = self.g.header_of(sealed)
++        self.assertTrue(head["present"] and head["valid"])
++        self.assertEqual(head["declared"], hashlib.sha256(BODY).hexdigest())
++        self.assertEqual(sealed.split(b"\n", 1)[1], BODY)
++
++    def test_an_edited_body_keeps_the_header_but_not_its_digest(self):
++        edited = self.g.seal(BODY).replace(b"listen 80;", b"listen 8080;")
++        head = self.g.header_of(edited)
++        self.assertTrue(head["present"])
++        self.assertFalse(head["valid"])
++
++    def test_crlf_header_line_is_still_the_header(self):
++        sealed = self.g.seal(BODY)
++        first, rest = sealed.split(b"\n", 1)
++        self.assertTrue(self.g.header_of(first + b"\r\n" + rest)["present"])
++
++    def test_no_header_and_malformed_header(self):
++        self.assertFalse(self.g.header_of(BODY)["present"])
++        self.assertFalse(self.g.header_of(b"# celikpanel-render v2 sha256=XYZ\n" + BODY)["present"])
++        self.assertFalse(self.g.header_of(None)["present"])
++
++    def test_stale_text_is_header_valid_and_differs(self):
++        sealed = self.g.seal(BODY)
++        stale = self.g.seal(self.g.stale_body(sealed))
++        head = self.g.header_of(stale)
++        self.assertTrue(head["valid"])
++        self.assertNotEqual(stale, sealed)
++        with self.assertRaises(self.g.Refused):
++            self.g.stale_body(BODY)
++
++    def test_owner_include_texts(self):
++        self.assertIn("location /owner-dir/", self.g.owner_include_text("location", "set10-a.test"))
++        self.assertIn("root ", self.g.owner_include_text("duplicate-root", "set10-a.test"))
++        self.assertTrue(self.g.OWNER_FILE_RE.fullmatch("set10-dup-root.conf"))
++        self.assertIsNone(self.g.OWNER_FILE_RE.fullmatch("../x.conf"))
++        self.assertIsNone(self.g.OWNER_FILE_RE.fullmatch("owner.conf"))
++
++    def test_start_line_wait_includes_the_d031_line(self):
++        self.assertIn("site configuration files at start:", self.g.g8.RECONCILE_LINES)
++
++
++class Set10Driver(unittest.TestCase):
++    def test_journal_lines(self):
++        lines = ["2026-10-10T19:00:00.000000+00:00 host nginx[1]: Reloaded nginx.service",
++                 "2026-10-10T19:00:10.000000+00:00 host systemd[1]: Reloaded nginx.service - x",
++                 "2026-10-10T19:00:05.000000+00:00 host panel[2]: site configuration set10-a.test (startup): unchanged"]
++        epoch = s10.journal_epoch(lines[0])
++        self.assertIsNotNone(epoch)
++        self.assertEqual(len(s10.lines_after(lines, epoch + 1, "Reloaded")), 1)
++        self.assertEqual(s10.site_lines(lines, "set10-a.test"), [lines[2]])
++        self.assertEqual(s10.site_lines(lines, "set10-a.tes"), [])
++        self.assertIsNone(s10.journal_epoch("not a time"))
++
++    def test_verdicts(self):
++        self.assertEqual(s10.verdict_of([("x", True, None)]), "PASS")
++        self.assertEqual(s10.verdict_of([("x", True, None), ("y", None, None)]), "NOT-MEASURED")
++        self.assertEqual(s10.verdict_of([("x", False, None), ("y", None, None)]), "FAIL")
++
++    def test_runs_and_states(self):
++        self.assertEqual(len(s10.RUNS), 12)
++        self.assertEqual({r[3] for r in s10.RUNS}, {"start", "restart", "save"})
++        self.assertTrue(all(r[4] == (r[3] == "start") for r in s10.RUNS))
++        self.assertEqual(s10.kept_word("owner_edited"), "kept (owner-edited)")
++        self.assertEqual(s10.KEPT_STATE["replace"], "foreign")
++        self.assertEqual(s10.s8.DOMAIN_A, "set10-a.test")
++
++    def test_safe_name(self):
++        self.assertEqual(s10.safe_name("a1 after"), "a1-after")
++        self.assertEqual(s10.safe_name("after the update set10-r1.test"), "after-the-update-set10-r1.test")
++
++    def test_body_of(self):
++        self.assertEqual(s10.body_of("# h\nbody\n"), "body\n")
++        self.assertIsNone(s10.body_of(None))
++
++
++if __name__ == "__main__":
++    unittest.main()

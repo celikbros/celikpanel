@@ -1,0 +1,363 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-10T19:55:51Z",
+      "json": {
+        "aliases": [],
+        "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "domain_id": 2,
+        "domain_name": "set10-a.test",
+        "redirect_https": false,
+        "redirect_www": false,
+        "redirect_www_available": true,
+        "web_server": "nginx"
+      },
+      "label": "f save: General settings read",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/general"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T19:55:51Z",
+      "json": {
+        "status": "success"
+      },
+      "label": "f save: General settings saved unchanged (renders the vhost)",
+      "request": {
+        "body": {
+          "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+          "redirect_www": false,
+          "web_server": "nginx"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/2/general"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T19:55:55Z",
+      "json": {
+        "available_versions": [
+          "8.4"
+        ],
+        "domain_id": 2,
+        "domain_name": "set10-a.test",
+        "php_version": "8.4",
+        "pool_config": {
+          "group": "set10_a_test",
+          "listen": "/var/run/php/php8.4-fpm-site2.sock",
+          "listen_group": "www-data",
+          "listen_mode": "0660",
+          "listen_owner": "www-data",
+          "name": "site2",
+          "pm": "dynamic",
+          "pm_max_children": 5,
+          "pm_max_requests": 500,
+          "pm_max_spare_servers": 3,
+          "pm_min_spare_servers": 1,
+          "pm_start_servers": 2,
+          "user": "set10_a_test"
+        },
+        "pool_name": "site2"
+      },
+      "label": "f: PHP settings read (GET /php)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/php"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "cells": {
+    "f": {
+      "detail": {
+        "general_save": {
+          "code": null,
+          "error": null,
+          "read_status": 200,
+          "reason": null,
+          "sent": {
+            "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+            "redirect_www": false,
+            "web_server": "nginx"
+          },
+          "status": 200
+        },
+        "php_switch": {
+          "available": [
+            "8.4"
+          ],
+          "current": "8.4",
+          "kind": "not measured: one PHP version installed"
+        }
+      },
+      "expectations": [
+        {
+          "expectation": "the owner's file is in service (nginx -t passed; /owner-dir/ answers owner-dir)",
+          "held": true,
+          "measured": {
+            "body": "owner-dir",
+            "nginx_test": 0
+          }
+        },
+        {
+          "expectation": "the start rewrote A (new inode, the Panel's text)",
+          "held": true,
+          "measured": {
+            "after": 135528,
+            "stale": 131848
+          }
+        },
+        {
+          "expectation": "after the start: the owner's file is untouched (sha256, inode, mtime) and still served",
+          "held": true,
+          "measured": {
+            "file": {
+              "inode": [
+                269853,
+                269853
+              ],
+              "mtime_ns": [
+                1791662129372540209,
+                1791662129372540209
+              ],
+              "sha256": [
+                "ce0eb0428f13c0a81b39fa8755d704bf75e74881e0e13e005cd03dac8dee827c",
+                "ce0eb0428f13c0a81b39fa8755d704bf75e74881e0e13e005cd03dac8dee827c"
+              ]
+            },
+            "served": "owner-dir"
+          }
+        },
+        {
+          "expectation": "after the save: the owner's file is untouched (sha256, inode, mtime) and still served",
+          "held": true,
+          "measured": {
+            "file": {
+              "inode": [
+                269853,
+                269853
+              ],
+              "mtime_ns": [
+                1791662129372540209,
+                1791662129372540209
+              ],
+              "sha256": [
+                "ce0eb0428f13c0a81b39fa8755d704bf75e74881e0e13e005cd03dac8dee827c",
+                "ce0eb0428f13c0a81b39fa8755d704bf75e74881e0e13e005cd03dac8dee827c"
+              ]
+            },
+            "served": "owner-dir"
+          }
+        },
+        {
+          "expectation": "a PHP version switch keeps the owner's file",
+          "held": null,
+          "measured": {
+            "available": [
+              "8.4"
+            ],
+            "current": "8.4",
+            "kind": "not measured: one PHP version installed"
+          }
+        }
+      ],
+      "verdict": "NOT-MEASURED"
+    }
+  },
+  "checks": [
+    {
+      "detail": {
+        "body": "owner-dir",
+        "nginx_test": 0
+      },
+      "name": "f: the owner's file is in service (nginx -t passed; /owner-dir/ answers owner-dir)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": 135528,
+        "stale": 131848
+      },
+      "name": "f: the start rewrote A (new inode, the Panel's text)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "file": {
+          "inode": [
+            269853,
+            269853
+          ],
+          "mtime_ns": [
+            1791662129372540209,
+            1791662129372540209
+          ],
+          "sha256": [
+            "ce0eb0428f13c0a81b39fa8755d704bf75e74881e0e13e005cd03dac8dee827c",
+            "ce0eb0428f13c0a81b39fa8755d704bf75e74881e0e13e005cd03dac8dee827c"
+          ]
+        },
+        "served": "owner-dir"
+      },
+      "name": "f: after the start: the owner's file is untouched (sha256, inode, mtime) and still served",
+      "ok": true
+    },
+    {
+      "detail": {
+        "file": {
+          "inode": [
+            269853,
+            269853
+          ],
+          "mtime_ns": [
+            1791662129372540209,
+            1791662129372540209
+          ],
+          "sha256": [
+            "ce0eb0428f13c0a81b39fa8755d704bf75e74881e0e13e005cd03dac8dee827c",
+            "ce0eb0428f13c0a81b39fa8755d704bf75e74881e0e13e005cd03dac8dee827c"
+          ]
+        },
+        "served": "owner-dir"
+      },
+      "name": "f: after the save: the owner's file is untouched (sha256, inode, mtime) and still served",
+      "ok": true
+    },
+    {
+      "detail": {
+        "available": [
+          "8.4"
+        ],
+        "current": "8.4",
+        "kind": "not measured: one PHP version installed"
+      },
+      "name": "f: a PHP version switch keeps the owner's file",
+      "ok": null
+    }
+  ],
+  "finished_at": "2026-10-10T19:55:55Z",
+  "lab_preparation": [
+    {
+      "domain": "set10-a.test",
+      "file": "steps/20-f-include-dir/native/181-f-lab-restore-set10-a.test.json",
+      "label": "f",
+      "sha256_matches": true
+    }
+  ],
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/181-f-lab-restore-set10-a.test.json",
+      "label": "f-lab-restore-set10-a.test",
+      "mode": "lab-restore",
+      "owner_action": false
+    },
+    {
+      "file": "native/182-owner-f-include.json",
+      "label": "owner-f-include",
+      "mode": "owner-include",
+      "owner_action": true
+    },
+    {
+      "file": "native/183-f-0-with-the-owner-file-read.json",
+      "label": "f-0-with-the-owner-file-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/184-http-f-0-set10-a.test_owner-dir_.json",
+      "label": "http-f-0-set10-a.test_owner-dir_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/185-f-lab-stale-a.json",
+      "label": "f-lab-stale-a",
+      "mode": "lab-stale-managed",
+      "owner_action": false
+    },
+    {
+      "file": "native/186-f-1-stale-read.json",
+      "label": "f-1-stale-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/187-owner-f-panel-restart.json",
+      "label": "owner-f-panel-restart",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/188-f-1-after-a-start-that-rewrites-a-read.json",
+      "label": "f-1-after-a-start-that-rewrites-a-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/189-http-f-1-set10-a.test_owner-dir_.json",
+      "label": "http-f-1-set10-a.test_owner-dir_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/190-f-2-after-a-save-read.json",
+      "label": "f-2-after-a-save-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/191-http-f-2-set10-a.test_owner-dir_.json",
+      "label": "http-f-2-set10-a.test_owner-dir_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/192-owner-f-include-back.json",
+      "label": "owner-f-include-back",
+      "mode": "owner-include",
+      "owner_action": true
+    }
+  ],
+  "node": "debian13",
+  "notes": [
+    {
+      "detail": [
+        "a PHP version switch keeps the owner's file"
+      ],
+      "note": "f: NOT-MEASURED"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-10T19:55:29Z",
+      "label": "f-include",
+      "mode": "owner-include"
+    },
+    {
+      "at": "2026-10-10T19:55:30Z",
+      "label": "f-panel-restart",
+      "mode": "owner-panel"
+    },
+    {
+      "at": "2026-10-10T19:55:55Z",
+      "label": "f-include-back",
+      "mode": "owner-include"
+    }
+  ],
+  "section": "f-include-dir",
+  "started_at": "2026-10-10T19:55:28Z",
+  "substeps": {
+    "f": "inconclusive"
+  },
+  "title": "an owner .conf in the include directory across a rewrite, a save and a PHP switch",
+  "verdict": "inconclusive"
+}

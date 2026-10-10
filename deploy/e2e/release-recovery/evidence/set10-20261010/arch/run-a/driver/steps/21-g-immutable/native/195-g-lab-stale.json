@@ -1,0 +1,124 @@
+{
+  "action": "lab-stale-managed",
+  "at": "2026-10-10T20:40:22Z",
+  "mode": "lab-stale-managed",
+  "nginx_test": {
+    "at": "2026-10-10T20:40:22Z",
+    "output": "2026/10/10 20:40:22 [warn] 7118#7118: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": false,
+  "reload": {
+    "argv": [
+      "systemctl",
+      "reload",
+      "nginx.service"
+    ],
+    "at": "2026-10-10T20:40:22Z",
+    "returncode": 0,
+    "seconds": 0.047,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "schema": "celikpanel/set10-native/v1",
+  "sites": {
+    "set1-owner.test": {
+      "after": {
+        "ctime_ns": 1791664822367507407,
+        "exists": true,
+        "first_line": "# celikpanel-render v2 sha256=26a62de320014a9953cb5b4b71e58fd9e3d7420c8ce9ca0b06b67a5bc15adf1c",
+        "gid": 969,
+        "group": "celikpanel",
+        "header": {
+          "body_bytes": 1519,
+          "body_sha256": "26a62de320014a9953cb5b4b71e58fd9e3d7420c8ce9ca0b06b67a5bc15adf1c",
+          "declared": "26a62de320014a9953cb5b4b71e58fd9e3d7420c8ce9ca0b06b67a5bc15adf1c",
+          "present": true,
+          "valid": true
+        },
+        "immutable": false,
+        "inode": 92298,
+        "kind": "file",
+        "lsattr": "----------------------",
+        "mode": "0644",
+        "mtime_ns": 1791664822361963630,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/nginx/sites-available/set1-owner.test.conf",
+        "sha256": "185331e64c0dd6fb681cbbf5f894120edfe51099ed5eda07beb5a39a0f2f20a0",
+        "size": 1614,
+        "uid": 0
+      },
+      "before": {
+        "inode": 91932,
+        "sha256": "aa7679d801a7bd8e4d008283c4e248e96809875e83f4f6d38e742bde6999dc18"
+      }
+    },
+    "set10-a.test": {
+      "after": {
+        "ctime_ns": 1791664822350507315,
+        "exists": true,
+        "first_line": "# celikpanel-render v2 sha256=9d433187fd2a2823a4f73be5ff7712f2ff7cca8daa1e8b8489f37d37750fab2b",
+        "gid": 969,
+        "group": "celikpanel",
+        "header": {
+          "body_bytes": 1896,
+          "body_sha256": "9d433187fd2a2823a4f73be5ff7712f2ff7cca8daa1e8b8489f37d37750fab2b",
+          "declared": "9d433187fd2a2823a4f73be5ff7712f2ff7cca8daa1e8b8489f37d37750fab2b",
+          "present": true,
+          "valid": true
+        },
+        "immutable": false,
+        "inode": 92296,
+        "kind": "file",
+        "lsattr": "----------------------",
+        "mode": "0644",
+        "mtime_ns": 1791664822345700316,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "sha256": "c6a5220d1384e6af2894b4e31e4698d85331fcedd760d3d75d1458dc7061b2eb",
+        "size": 1991,
+        "uid": 0
+      },
+      "before": {
+        "inode": 92293,
+        "sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770"
+      }
+    },
+    "set10-b.test": {
+      "after": {
+        "ctime_ns": 1791664822357507353,
+        "exists": true,
+        "first_line": "# celikpanel-render v2 sha256=458db433d94f87e656c8edf55aa21fb6dd0f47ab35023ab0ecc8368be4a4e78a",
+        "gid": 969,
+        "group": "celikpanel",
+        "header": {
+          "body_bytes": 1896,
+          "body_sha256": "458db433d94f87e656c8edf55aa21fb6dd0f47ab35023ab0ecc8368be4a4e78a",
+          "declared": "458db433d94f87e656c8edf55aa21fb6dd0f47ab35023ab0ecc8368be4a4e78a",
+          "present": true,
+          "valid": true
+        },
+        "immutable": false,
+        "inode": 92297,
+        "kind": "file",
+        "lsattr": "----------------------",
+        "mode": "0644",
+        "mtime_ns": 1791664822354308451,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/nginx/sites-available/set10-b.test.conf",
+        "sha256": "265f002bc3fbff528d59dbf0c190805c5441b3896c0c12005365d730da70286b",
+        "size": 1991,
+        "uid": 0
+      },
+      "before": {
+        "inode": 92008,
+        "sha256": "7d6c6ae2c9b0628188a852c1d5872e8dce0189d7f43fd2a7a974da676c28e09b"
+      }
+    }
+  }
+}

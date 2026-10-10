@@ -1,0 +1,44 @@
+{
+  "at": "2026-10-10T19:34:26Z",
+  "by_unit": {
+    "celikpanel-agent.service": [
+      "2026-10-10T19:33:57.973681+00:00 dns-debian13 agent[5272]: 2026/10/10 19:33:57 Panel certificate activation remains pending: panel TLS directory is not root-authenticated",
+      "2026-10-10T19:34:07.977218+00:00 dns-debian13 agent[5272]: 2026/10/10 19:34:07 Panel certificate activation remains pending: panel TLS directory is not root-authenticated",
+      "2026-10-10T19:34:17.974129+00:00 dns-debian13 agent[5272]: 2026/10/10 19:34:17 Panel certificate activation remains pending: panel TLS directory is not root-authenticated"
+    ],
+    "celikpanel-panel.service": [
+      "2026-10-10T19:33:58.102487+00:00 dns-debian13 panel[33788]: 2026/10/10 19:33:58 http: TLS handshake error from 127.0.0.1:35834: EOF",
+      "2026-10-10T19:33:58.473824+00:00 dns-debian13 panel[33788]: 2026/10/10 19:33:58 http: TLS handshake error from 127.0.0.1:35862: EOF",
+      "2026-10-10T19:34:21.839050+00:00 dns-debian13 panel[33788]: 2026/10/10 19:34:21 http: TLS handshake error from 127.0.0.1:55428: EOF",
+      "2026-10-10T19:34:21.857866+00:00 dns-debian13 panel[33788]: 2026/10/10 19:34:21 http: TLS handshake error from 127.0.0.1:55446: EOF",
+      "2026-10-10T19:34:21.875483+00:00 dns-debian13 panel[33788]: 2026/10/10 19:34:21 site configuration set10-a.test (change): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+      "2026-10-10T19:34:21.896163+00:00 dns-debian13 panel[33788]: 2026/10/10 19:34:21 site configuration set10-a.test (change): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+      "2026-10-10T19:34:21.905828+00:00 dns-debian13 panel[33788]: 2026/10/10 19:34:21 [409] apply general settings vhost: site configuration of set10-a.test not applied: kept (owner_edited ); vhost restore: site configuration of set10-a.test not applied: kept (owner_edited )"
+    ],
+    "nginx.service": [
+      "2026-10-10T19:33:58.764219+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T19:33:58.800509+00:00 dns-debian13 nginx[34897]: 2026/10/10 19:33:58 [notice] 34897#34897: signal process started",
+      "2026-10-10T19:33:58.802154+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T19:33:59.729732+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T19:33:59.759980+00:00 dns-debian13 nginx[34950]: 2026/10/10 19:33:59 [notice] 34950#34950: signal process started",
+      "2026-10-10T19:33:59.765103+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+    ],
+    "php8.4-fpm.service": []
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set10-native/v1",
+  "since_epoch": 1791660837,
+  "systemd_manager": [
+    "2026-10-10T19:33:58.764219+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T19:33:58.802154+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T19:33:59.729732+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T19:33:59.765103+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php8.4-fpm.service"
+  ]
+}

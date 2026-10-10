@@ -1,0 +1,454 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-10T19:33:14Z",
+      "json": {
+        "actions": [
+          "keep",
+          "take",
+          "merge"
+        ],
+        "diff": "--- /etc/nginx/sites-available/set10-a.test.conf (on this server)\n+++ CelikPanel's text\n@@ -44,9 +44,4 @@\n \n     # Your additions for this site (server context) / Bu site için eklemeleriniz\n     include /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n-\n-    # set10: added by the server owner by hand\n-    location /owner-extra/ {\n-        return 200 \"owner\";\n-    }\n }\n",
+        "domain": "set10-a.test",
+        "domain_id": 2,
+        "enabled": "link",
+        "file_sha256": "a39089f8d890b9221f01a6cbbb97df160247dd521987f767f49d885dbf305795",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "kind": "nginx_vhost",
+        "ledger": {
+          "observed_at": "2026-10-10T19:32:52Z",
+          "written_at": "2026-10-10T19:32:20Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "pending_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+        "render_sha256": "c6b2e3d40b5505ed47a94ae3d87ba4ddcfb84724cb183a1322c0219a388916c5",
+        "state": "owner_edited"
+      },
+      "label": "a1 after: GET site-config",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/site-config"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T19:33:57Z",
+      "json": {
+        "actions": [
+          "keep",
+          "take",
+          "merge"
+        ],
+        "diff": "--- /etc/nginx/sites-available/set10-a.test.conf (on this server)\n+++ CelikPanel's text\n@@ -44,9 +44,4 @@\n \n     # Your additions for this site (server context) / Bu site için eklemeleriniz\n     include /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n-\n-    # set10: added by the server owner by hand\n-    location /owner-extra/ {\n-        return 200 \"owner\";\n-    }\n }\n",
+        "domain": "set10-a.test",
+        "domain_id": 2,
+        "enabled": "link",
+        "file_sha256": "a39089f8d890b9221f01a6cbbb97df160247dd521987f767f49d885dbf305795",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "kind": "nginx_vhost",
+        "ledger": {
+          "observed_at": "2026-10-10T19:33:37Z",
+          "written_at": "2026-10-10T19:32:20Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "pending_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+        "render_sha256": "c6b2e3d40b5505ed47a94ae3d87ba4ddcfb84724cb183a1322c0219a388916c5",
+        "state": "owner_edited"
+      },
+      "label": "a2 after: GET site-config",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/site-config"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T19:34:21Z",
+      "json": {
+        "aliases": [],
+        "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "domain_id": 2,
+        "domain_name": "set10-a.test",
+        "redirect_https": false,
+        "redirect_www": false,
+        "redirect_www_available": true,
+        "web_server": "nginx"
+      },
+      "label": "a3: General settings read",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/general"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SITE_CONFIG_OWNER_EDITED",
+        "error": "The site's nginx configuration file is not CelikPanel's unchanged text, so CelikPanel kept it and did not apply this change to it. Nothing else was changed. Open the domain's Configuration file section: keep your file, take CelikPanel's text (your file is kept as a dated copy), or merge the two by hand.",
+        "reason": "owner_edited"
+      },
+      "at": "2026-10-10T19:34:21Z",
+      "catalogue_texts": {
+        "err.SITE_CONFIG_OWNER_EDITED": {
+          "en": "This site’s nginx configuration file is not CelikPanel’s unchanged text, so CelikPanel kept it and did not apply this change to it. Nothing else was changed. On the domain’s Configuration file page, keep your file, take CelikPanel’s text (your file is kept as a dated copy), or merge the two by hand.",
+          "tr": "Bu sitenin nginx yapılandırma dosyası CelikPanel’in değişmemiş metni değil; bu yüzden CelikPanel onu korudu ve bu değişikliği ona uygulamadı. Başka hiçbir şey değiştirilmedi. Alan adının Yapılandırma dosyası sayfasında dosyanızı koruyun, CelikPanel’in metnini alın (dosyanız tarihli bir kopya olarak saklanır) ya da ikisini elle birleştirin."
+        }
+      },
+      "json": {
+        "code": "SITE_CONFIG_OWNER_EDITED",
+        "error": "The site's nginx configuration file is not CelikPanel's unchanged text, so CelikPanel kept it and did not apply this change to it. Nothing else was changed. Open the domain's Configuration file section: keep your file, take CelikPanel's text (your file is kept as a dated copy), or merge the two by hand.",
+        "reason": "owner_edited"
+      },
+      "label": "a3: General settings saved unchanged (renders the vhost)",
+      "request": {
+        "body": {
+          "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+          "redirect_www": false,
+          "web_server": "nginx"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/2/general"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T19:34:25Z",
+      "json": {
+        "actions": [
+          "keep",
+          "take",
+          "merge"
+        ],
+        "diff": "--- /etc/nginx/sites-available/set10-a.test.conf (on this server)\n+++ CelikPanel's text\n@@ -44,9 +44,4 @@\n \n     # Your additions for this site (server context) / Bu site için eklemeleriniz\n     include /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n-\n-    # set10: added by the server owner by hand\n-    location /owner-extra/ {\n-        return 200 \"owner\";\n-    }\n }\n",
+        "domain": "set10-a.test",
+        "domain_id": 2,
+        "enabled": "link",
+        "file_sha256": "a39089f8d890b9221f01a6cbbb97df160247dd521987f767f49d885dbf305795",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "kind": "nginx_vhost",
+        "ledger": {
+          "observed_at": "2026-10-10T19:34:21Z",
+          "written_at": "2026-10-10T19:32:20Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "pending_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+        "render_sha256": "c6b2e3d40b5505ed47a94ae3d87ba4ddcfb84724cb183a1322c0219a388916c5",
+        "state": "owner_edited"
+      },
+      "label": "a3 after: GET site-config",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/site-config"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": "EvidenceError: unsafe evidence path: 'steps/11-a-owner-edit/files/a1 after-site-config-diff.txt'",
+      "name": "a1: the run completed",
+      "ok": null
+    },
+    {
+      "detail": "EvidenceError: unsafe evidence path: 'steps/11-a-owner-edit/files/a2 after-site-config-diff.txt'",
+      "name": "a2: the run completed",
+      "ok": null
+    },
+    {
+      "detail": "EvidenceError: unsafe evidence path: 'steps/11-a-owner-edit/files/a3 after-site-config-diff.txt'",
+      "name": "a3: the run completed",
+      "ok": null
+    }
+  ],
+  "finished_at": "2026-10-10T19:34:26Z",
+  "lab_preparation": [
+    {
+      "domain": "set10-a.test",
+      "file": "steps/11-a-owner-edit/native/016-a1-lab-restore-set10-a.test.json",
+      "label": "a1",
+      "sha256_matches": true
+    },
+    {
+      "domain": "set10-a.test",
+      "file": "steps/11-a-owner-edit/native/028-a2-lab-restore-set10-a.test.json",
+      "label": "a2",
+      "sha256_matches": true
+    },
+    {
+      "domain": "set10-a.test",
+      "file": "steps/11-a-owner-edit/native/039-a3-lab-restore-set10-a.test.json",
+      "label": "a3",
+      "sha256_matches": true
+    }
+  ],
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/016-a1-lab-restore-set10-a.test.json",
+      "label": "a1-lab-restore-set10-a.test",
+      "mode": "lab-restore",
+      "owner_action": false
+    },
+    {
+      "file": "native/017-a1-0-restored-read.json",
+      "label": "a1-0-restored-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/018-owner-a1-panel-stop.json",
+      "label": "owner-a1-panel-stop",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/019-owner-a1-edit.json",
+      "label": "owner-a1-edit",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/020-a1-1-edited-read.json",
+      "label": "a1-1-edited-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/021-http-a1-1-edited-set10-a.test_owner-extra_.json",
+      "label": "http-a1-1-edited-set10-a.test_owner-extra_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/022-guest-clock.json",
+      "label": "guest-clock",
+      "mode": "read-ledger",
+      "owner_action": false
+    },
+    {
+      "file": "native/023-owner-a1-panel-start.json",
+      "label": "owner-a1-panel-start",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/024-a1-2-after-read.json",
+      "label": "a1-2-after-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/025-http-a1-2-after-set10-a.test_owner-extra_.json",
+      "label": "http-a1-2-after-set10-a.test_owner-extra_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/026-a1-journal.json",
+      "label": "a1-journal",
+      "mode": "read-window",
+      "owner_action": false
+    },
+    {
+      "file": "native/027-a1-lab-panel-state.json",
+      "label": "a1-lab-panel-state",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/028-a2-lab-restore-set10-a.test.json",
+      "label": "a2-lab-restore-set10-a.test",
+      "mode": "lab-restore",
+      "owner_action": false
+    },
+    {
+      "file": "native/029-a2-0-restored-read.json",
+      "label": "a2-0-restored-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/030-owner-a2-edit.json",
+      "label": "owner-a2-edit",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/031-a2-1-edited-read.json",
+      "label": "a2-1-edited-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/032-http-a2-1-edited-set10-a.test_owner-extra_.json",
+      "label": "http-a2-1-edited-set10-a.test_owner-extra_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/033-guest-clock.json",
+      "label": "guest-clock",
+      "mode": "read-ledger",
+      "owner_action": false
+    },
+    {
+      "file": "native/034-owner-a2-panel-restart.json",
+      "label": "owner-a2-panel-restart",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/035-a2-2-after-read.json",
+      "label": "a2-2-after-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/036-http-a2-2-after-set10-a.test_owner-extra_.json",
+      "label": "http-a2-2-after-set10-a.test_owner-extra_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/037-a2-journal.json",
+      "label": "a2-journal",
+      "mode": "read-window",
+      "owner_action": false
+    },
+    {
+      "file": "native/038-a2-lab-panel-state.json",
+      "label": "a2-lab-panel-state",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/039-a3-lab-restore-set10-a.test.json",
+      "label": "a3-lab-restore-set10-a.test",
+      "mode": "lab-restore",
+      "owner_action": false
+    },
+    {
+      "file": "native/040-a3-0-restored-read.json",
+      "label": "a3-0-restored-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/041-owner-a3-edit.json",
+      "label": "owner-a3-edit",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/042-a3-1-edited-read.json",
+      "label": "a3-1-edited-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/043-http-a3-1-edited-set10-a.test_owner-extra_.json",
+      "label": "http-a3-1-edited-set10-a.test_owner-extra_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/044-guest-clock.json",
+      "label": "guest-clock",
+      "mode": "read-ledger",
+      "owner_action": false
+    },
+    {
+      "file": "native/045-a3-2-after-read.json",
+      "label": "a3-2-after-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/046-http-a3-2-after-set10-a.test_owner-extra_.json",
+      "label": "http-a3-2-after-set10-a.test_owner-extra_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/047-a3-journal.json",
+      "label": "a3-journal",
+      "mode": "read-window",
+      "owner_action": false
+    },
+    {
+      "file": "native/048-a3-lab-panel-state.json",
+      "label": "a3-lab-panel-state",
+      "mode": "read-site10",
+      "owner_action": false
+    }
+  ],
+  "node": "debian13",
+  "notes": [],
+  "owner_actions": [
+    {
+      "at": "2026-10-10T19:32:50Z",
+      "label": "a1-panel-stop",
+      "mode": "owner-panel"
+    },
+    {
+      "at": "2026-10-10T19:32:51Z",
+      "label": "a1-edit",
+      "mode": "owner-vhost10"
+    },
+    {
+      "at": "2026-10-10T19:32:52Z",
+      "label": "a1-panel-start",
+      "mode": "owner-panel"
+    },
+    {
+      "at": "2026-10-10T19:33:16Z",
+      "label": "a2-edit",
+      "mode": "owner-vhost10"
+    },
+    {
+      "at": "2026-10-10T19:33:37Z",
+      "label": "a2-panel-restart",
+      "mode": "owner-panel"
+    },
+    {
+      "at": "2026-10-10T19:33:59Z",
+      "label": "a3-edit",
+      "mode": "owner-vhost10"
+    }
+  ],
+  "runs": [
+    {
+      "error": "EvidenceError: unsafe evidence path: 'steps/11-a-owner-edit/files/a1 after-site-config-diff.txt'",
+      "run": "a1"
+    },
+    {
+      "error": "EvidenceError: unsafe evidence path: 'steps/11-a-owner-edit/files/a2 after-site-config-diff.txt'",
+      "run": "a2"
+    },
+    {
+      "error": "EvidenceError: unsafe evidence path: 'steps/11-a-owner-edit/files/a3 after-site-config-diff.txt'",
+      "run": "a3"
+    }
+  ],
+  "section": "a-owner-edit",
+  "started_at": "2026-10-10T19:32:49Z",
+  "substeps": {
+    "a1": "inconclusive",
+    "a2": "inconclusive",
+    "a3": "inconclusive"
+  },
+  "title": "the owner adds a location (start, restart, General save)",
+  "verdict": "inconclusive"
+}

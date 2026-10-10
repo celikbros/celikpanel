@@ -1,0 +1,1 @@
+2026-10-10T20:25:54Z before set10-arch s10-arch-a (guest start) free_GiB=114.05 free_bytes=122456268800 (Get-PSDrive C reading of 2026-10-10T20:25:50Z, 4s old) allowed=yes

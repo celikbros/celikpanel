@@ -1,0 +1,18 @@
+##### postfix.service
+2026-10-10T21:42:08.324324+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-10T21:42:08.324481+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+##### postfix@-.service
+2026-10-10T21:42:06.686099+00:00 dns-ubuntu postfix/submission/smtpd[64168]: connect from localhost[127.0.0.1]
+2026-10-10T21:42:06.692400+00:00 dns-ubuntu postfix/submission/smtpd[64168]: disconnect from localhost[127.0.0.1] quit=1 commands=1
+2026-10-10T21:42:08.330361+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-10T21:42:08.336319+00:00 dns-ubuntu postmulti[66138]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-10T21:42:09.338219+00:00 dns-ubuntu systemd[1]: postfix@-.service: Control process exited, code=exited, status=1/FAILURE
+2026-10-10T21:42:09.339587+00:00 dns-ubuntu postfix/master[35911]: terminating on signal 15
+2026-10-10T21:42:09.341611+00:00 dns-ubuntu systemd[1]: postfix@-.service: Failed with result 'exit-code'.
+2026-10-10T21:42:09.342039+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-10T21:42:09.342181+00:00 dns-ubuntu systemd[1]: postfix@-.service: Consumed 1.066s CPU time, 11.4M memory peak, 0B memory swap peak.
+##### celikpanel-agent.service and celikpanel-panel.service
+2026-10-10T21:42:08.202463+00:00 dns-ubuntu panel[57127]: 2026/10/10 21:42:08 http: TLS handshake error from 127.0.0.1:54396: EOF
+2026-10-10T21:42:09.534613+00:00 dns-ubuntu postfix[66175]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-10T21:42:10.595770+00:00 dns-ubuntu cron[66180]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 804: Resource temporarily unavailable)
+2026-10-10T21:42:12.262355+00:00 dns-ubuntu panel[57127]: 2026/10/10 21:42:12 [200][service action] stop postfix: SERVICE_ACTION_NOTE unit_marked_failed_config: postfix@-.service

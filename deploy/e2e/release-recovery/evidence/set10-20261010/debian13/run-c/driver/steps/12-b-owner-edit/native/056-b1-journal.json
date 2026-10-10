@@ -1,0 +1,76 @@
+{
+  "at": "2026-10-10T19:50:12Z",
+  "by_unit": {
+    "celikpanel-agent.service": [
+      "2026-10-10T19:49:57.681472+00:00 dns-debian13 postfix/postfix-script[35277]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+      "2026-10-10T19:49:58.099769+00:00 dns-debian13 postfix/postfix-script[35387]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+      "2026-10-10T19:49:58.317349+00:00 dns-debian13 postfix/postfix-script[35417]: the Postfix mail system is running: PID: 28657",
+      "2026-10-10T19:49:58.448626+00:00 dns-debian13 postfix/postfix-script[35437]: refreshing the Postfix mail system",
+      "2026-10-10T19:49:58.925556+00:00 dns-debian13 postfix/postfix-script[35456]: the Postfix mail system is running: PID: 28657",
+      "2026-10-10T19:50:00.905469+00:00 dns-debian13 postfix/postfix-script[35651]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+      "2026-10-10T19:50:05.687611+00:00 dns-debian13 postfix/postfix-script[35870]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+      "2026-10-10T19:50:05.762630+00:00 dns-debian13 postfix/postfix-script[35900]: the Postfix mail system is running: PID: 28657",
+      "2026-10-10T19:50:05.876069+00:00 dns-debian13 postfix/postfix-script[35919]: refreshing the Postfix mail system",
+      "2026-10-10T19:50:06.370621+00:00 dns-debian13 postfix/postfix-script[35938]: the Postfix mail system is running: PID: 28657"
+    ],
+    "celikpanel-panel.service": [
+      "2026-10-10T19:49:51.640769+00:00 dns-debian13 panel[33496]: 2026/10/10 19:49:51 http: TLS handshake error from 127.0.0.1:37828: EOF",
+      "2026-10-10T19:49:51.667951+00:00 dns-debian13 panel[33496]: 2026/10/10 19:49:51 http: TLS handshake error from 127.0.0.1:37842: EOF",
+      "2026-10-10T19:49:52.666396+00:00 dns-debian13 systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...",
+      "2026-10-10T19:49:52.693453+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Deactivated successfully.",
+      "2026-10-10T19:49:52.693711+00:00 dns-debian13 systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.",
+      "2026-10-10T19:49:52.693959+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 560ms CPU time, 82.5M memory peak.",
+      "2026-10-10T19:49:54.152756+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...",
+      "2026-10-10T19:49:54.198585+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.",
+      "2026-10-10T19:49:54.423333+00:00 dns-debian13 panel[34982]: 2026/10/10 19:49:54 Starting CelikPanel Backend...",
+      "2026-10-10T19:49:54.430565+00:00 dns-debian13 panel[34982]: 2026/10/10 19:49:54 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)",
+      "2026-10-10T19:49:54.431522+00:00 dns-debian13 panel[34982]: 2026/10/10 19:49:54 Panel startup listener active on :2083 (HTTPS; application gated)",
+      "2026-10-10T19:49:54.432764+00:00 dns-debian13 panel[34982]: 2026/10/10 19:49:54 Connected to Agent RPC; preparing normal management access",
+      "2026-10-10T19:49:54.449070+00:00 dns-debian13 panel[34982]: 2026/10/10 19:49:54 site configuration set1-owner.test (startup): unchanged",
+      "2026-10-10T19:49:54.468075+00:00 dns-debian13 panel[34982]: 2026/10/10 19:49:54 site configuration set10-a.test (startup): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+      "2026-10-10T19:49:54.480453+00:00 dns-debian13 panel[34982]: 2026/10/10 19:49:54 site configuration set10-b.test (startup): unchanged",
+      "2026-10-10T19:49:54.488773+00:00 dns-debian13 panel[34982]: 2026/10/10 19:49:54 site configuration files at start: 0 written, 2 unchanged, 1 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release",
+      "2026-10-10T19:49:56.274177+00:00 dns-debian13 panel[34982]: 2026/10/10 19:49:56 http: TLS handshake error from 127.0.0.1:51364: EOF",
+      "2026-10-10T19:49:58.306281+00:00 dns-debian13 panel[34982]: 2026/10/10 19:49:58 http: TLS handshake error from 127.0.0.1:51376: EOF",
+      "2026-10-10T19:50:00.321099+00:00 dns-debian13 panel[34982]: 2026/10/10 19:50:00 http: TLS handshake error from 127.0.0.1:51394: EOF",
+      "2026-10-10T19:50:01.024947+00:00 dns-debian13 panel[34982]: 2026/10/10 19:50:01 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release",
+      "2026-10-10T19:50:02.338602+00:00 dns-debian13 panel[34982]: 2026/10/10 19:50:02 http: TLS handshake error from 127.0.0.1:51412: EOF",
+      "2026-10-10T19:50:04.360394+00:00 dns-debian13 panel[34982]: 2026/10/10 19:50:04 http: TLS handshake error from 127.0.0.1:51052: EOF",
+      "2026-10-10T19:50:06.373186+00:00 dns-debian13 panel[34982]: 2026/10/10 19:50:06 http: TLS handshake error from 127.0.0.1:51084: EOF",
+      "2026-10-10T19:50:06.445975+00:00 dns-debian13 panel[34982]: 2026/10/10 19:50:06 milter chain: milters=\"inet:localhost:11332\" maps=hash",
+      "2026-10-10T19:50:06.447708+00:00 dns-debian13 panel[34982]: 2026/10/10 19:50:06 Panel ready on :2083 (HTTPS)",
+      "2026-10-10T19:50:08.395325+00:00 dns-debian13 panel[34982]: 2026/10/10 19:50:08 http: TLS handshake error from 127.0.0.1:51116: EOF"
+    ],
+    "nginx.service": [
+      "2026-10-10T19:49:51.980290+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T19:49:52.024182+00:00 dns-debian13 nginx[34820]: 2026/10/10 19:49:52 [notice] 34820#34820: signal process started",
+      "2026-10-10T19:49:52.025057+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T19:49:52.969671+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T19:49:52.991703+00:00 dns-debian13 nginx[34895]: 2026/10/10 19:49:52 [notice] 34895#34895: signal process started",
+      "2026-10-10T19:49:52.992538+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+    ],
+    "php8.4-fpm.service": []
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set10-native/v1",
+  "since_epoch": 1791661790,
+  "systemd_manager": [
+    "2026-10-10T19:49:51.980290+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T19:49:52.025057+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T19:49:52.666396+00:00 dns-debian13 systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...",
+    "2026-10-10T19:49:52.693453+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Deactivated successfully.",
+    "2026-10-10T19:49:52.693711+00:00 dns-debian13 systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.",
+    "2026-10-10T19:49:52.693959+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 560ms CPU time, 82.5M memory peak.",
+    "2026-10-10T19:49:52.969671+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T19:49:52.992538+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T19:49:54.152756+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...",
+    "2026-10-10T19:49:54.198585+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel."
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php8.4-fpm.service"
+  ]
+}

@@ -1,0 +1,47 @@
+run	kind	name	verdict	class	detail	why (harness class)
+arch/run-a	step	S0-sites	failed	product	S0: set10-a.test: the include directory exists, is empty and 0755; S0: set10-b.test: the include directory exists, is empty and 0755; S0: set1-owner.test: the include directory exists, is empty and 0755	
+arch/run-a	step	f-include-dir	inconclusive	not-measured	not established: f: a PHP version switch keeps the owner's file	
+arch/run-a	step	g-immutable	failed	product	g: site-config for A names the reason (unreadable/write_refused or EPERM)	
+arch/run-a	check	09-s0-sites	False	product	S0: set10-a.test: the include directory exists, is empty and 0755	
+arch/run-a	check	09-s0-sites	False	product	S0: set10-b.test: the include directory exists, is empty and 0755	
+arch/run-a	check	09-s0-sites	False	product	S0: set1-owner.test: the include directory exists, is empty and 0755	
+arch/run-a	check	20-f-include-dir	None	not-measured	f: a PHP version switch keeps the owner's file	
+arch/run-a	check	21-g-immutable	False	product	g: site-config for A names the reason (unreadable/write_refused or EPERM)	
+arch/update-defective	step	set6-headers-after-the-update	failed	harness	B: every HTTPS answer of the running Panel carries Strict-Transport-Security exactly `max-age=31536000` (one header line, that value); B: no HTTPS answer names includeSubDomains or preload in Strict-Transport-Security; B: the Panel that answered is the build this reading is about (the commit its own	set6's header reading expects the candidate's header; after an automatic return the returned alpha.81 answers (includeSubDomains), as set6 measured for alpha.81
+arch/update-good	step	post-update-facts	failed	harness	(a) the ledger is not the released 43	set3's post-update check pins the released ledger 43; this candidate migrates to 44 (D-031, migration 044)
+debian13/run-a	step	S0-sites	failed	product	S0: set10-a.test: the include directory exists, is empty and 0755; S0: set10-b.test: the include directory exists, is empty and 0755; S0: set1-owner.test: the include directory exists, is empty and 0755	
+debian13/run-a	check	09-s0-sites	False	product	S0: set10-a.test: the include directory exists, is empty and 0755	
+debian13/run-a	check	09-s0-sites	False	product	S0: set10-b.test: the include directory exists, is empty and 0755	
+debian13/run-a	check	09-s0-sites	False	product	S0: set1-owner.test: the include directory exists, is empty and 0755	
+debian13/run-b	step	S0-sites	failed	aborted	S0: set10-a.test: the include directory exists, is empty and 0755; S0: set10-b.test: the include directory exists, is empty and 0755; S0: set1-owner.test: the include directory exists, is empty and 0755	
+debian13/run-b	step	a-owner-edit	inconclusive	aborted	not established: a1: the run completed; a2: the run completed; a3: the run completed	
+debian13/run-b	check	09-s0-sites	False	aborted	S0: set10-a.test: the include directory exists, is empty and 0755	
+debian13/run-b	check	09-s0-sites	False	aborted	S0: set10-b.test: the include directory exists, is empty and 0755	
+debian13/run-b	check	09-s0-sites	False	aborted	S0: set1-owner.test: the include directory exists, is empty and 0755	
+debian13/run-b	check	11-a-owner-edit	None	aborted	a1: the run completed	
+debian13/run-b	check	11-a-owner-edit	None	aborted	a2: the run completed	
+debian13/run-b	check	11-a-owner-edit	None	aborted	a3: the run completed	
+debian13/run-c	step	S0-sites	failed	product	S0: set10-a.test: the include directory exists, is empty and 0755; S0: set10-b.test: the include directory exists, is empty and 0755; S0: set1-owner.test: the include directory exists, is empty and 0755	
+debian13/run-c	step	f-include-dir	inconclusive	not-measured	not established: f: a PHP version switch keeps the owner's file	
+debian13/run-c	step	g-immutable	failed	product	g: site-config for A names the reason (unreadable/write_refused or EPERM)	
+debian13/run-c	check	09-s0-sites	False	product	S0: set10-a.test: the include directory exists, is empty and 0755	
+debian13/run-c	check	09-s0-sites	False	product	S0: set10-b.test: the include directory exists, is empty and 0755	
+debian13/run-c	check	09-s0-sites	False	product	S0: set1-owner.test: the include directory exists, is empty and 0755	
+debian13/run-c	check	20-f-include-dir	None	not-measured	f: a PHP version switch keeps the owner's file	
+debian13/run-c	check	21-g-immutable	False	product	g: site-config for A names the reason (unreadable/write_refused or EPERM)	
+debian13/update-defective-run-a	step	setup	failed	lab	server setup did not succeed: {'status': 'failed', 'phase': '05-mail_profile', 'error': {'code': 'HOST_MUTATION_BUSY', 'message': "This server's package manager is busy — a package task is still running on this server. Wait for it to finish, then try again."}}	
+debian13/update-defective-run-a	step	set6-headers-after-the-update	failed	harness	B: every HTTPS answer of the running Panel carries Strict-Transport-Security exactly `max-age=31536000` (one header line, that value); B: no HTTPS answer names includeSubDomains or preload in Strict-Transport-Security; B: the Panel that answered is the build this reading is about (the commit its own	set6's header reading expects the candidate's header; after an automatic return the returned alpha.81 answers (includeSubDomains), as set6 measured for alpha.81
+debian13/update-defective	step	set6-headers-after-the-update	failed	harness	B: every HTTPS answer of the running Panel carries Strict-Transport-Security exactly `max-age=31536000` (one header line, that value); B: no HTTPS answer names includeSubDomains or preload in Strict-Transport-Security; B: the Panel that answered is the build this reading is about (the commit its own	set6's header reading expects the candidate's header; after an automatic return the returned alpha.81 answers (includeSubDomains), as set6 measured for alpha.81
+debian13/update-good	step	post-update-facts	failed	harness	(a) the ledger is not the released 43	set3's post-update check pins the released ledger 43; this candidate migrates to 44 (D-031, migration 044)
+debian13/update-good	step	set4-php-site-after-the-update	failed	harness	neither the vhost file nor nginx's journal shows that the save rendered the vhost again	set4 item 9 expects a General save to rewrite the vhost; under D-031 identical bytes are not rewritten and nginx is not reloaded
+ubuntu/run-a	step	S0-sites	failed	product	S0: set10-a.test: the include directory exists, is empty and 0755; S0: set10-b.test: the include directory exists, is empty and 0755; S0: set1-owner.test: the include directory exists, is empty and 0755	
+ubuntu/run-a	step	f-include-dir	inconclusive	not-measured	not established: f: a PHP version switch keeps the owner's file	
+ubuntu/run-a	step	g-immutable	failed	product	g: site-config for A names the reason (unreadable/write_refused or EPERM)	
+ubuntu/run-a	check	09-s0-sites	False	product	S0: set10-a.test: the include directory exists, is empty and 0755	
+ubuntu/run-a	check	09-s0-sites	False	product	S0: set10-b.test: the include directory exists, is empty and 0755	
+ubuntu/run-a	check	09-s0-sites	False	product	S0: set1-owner.test: the include directory exists, is empty and 0755	
+ubuntu/run-a	check	20-f-include-dir	None	not-measured	f: a PHP version switch keeps the owner's file	
+ubuntu/run-a	check	21-g-immutable	False	product	g: site-config for A names the reason (unreadable/write_refused or EPERM)	
+ubuntu/update-defective	step	set6-headers-after-the-update	failed	harness	B: every HTTPS answer of the running Panel carries Strict-Transport-Security exactly `max-age=31536000` (one header line, that value); B: no HTTPS answer names includeSubDomains or preload in Strict-Transport-Security; B: the Panel that answered is the build this reading is about (the commit its own	set6's header reading expects the candidate's header; after an automatic return the returned alpha.81 answers (includeSubDomains), as set6 measured for alpha.81
+ubuntu/update-good	step	post-update-facts	failed	harness	(a) the ledger is not the released 43	set3's post-update check pins the released ledger 43; this candidate migrates to 44 (D-031, migration 044)
+ubuntu/update-good	step	set4-php-site-after-the-update	failed	harness	neither the vhost file nor nginx's journal shows that the save rendered the vhost again	set4 item 9 expects a General save to rewrite the vhost; under D-031 identical bytes are not rewritten and nginx is not reloaded

@@ -1,0 +1,12 @@
+2026-10-10T19:01:10Z before set10-debian13 s10-d13-a (guest start) free_GiB=108.4 free_bytes=116392357888 (Get-PSDrive C reading of 2026-10-10T19:01:04Z, 6s old) allowed=yes
+2026-10-10T19:18:06Z before set10-debian13 s10-d13-b (guest start) free_GiB=90.38 free_bytes=97042915328 (Get-PSDrive C reading of 2026-10-10T19:17:37Z, 29s old) allowed=yes
+2026-10-10T19:36:26Z before set10-debian13 s10-d13-c (guest start) free_GiB=89.4 free_bytes=95993937920 (Get-PSDrive C reading of 2026-10-10T19:36:11Z, 15s old) allowed=yes
+2026-10-10T19:58:10Z before set10-ubuntu s10-ub-a (guest start) free_GiB=114.97 free_bytes=123585798144 (Get-PSDrive C reading of 2026-10-10T19:57:45Z, 25s old) allowed=yes
+2026-10-10T20:25:54Z before set10-arch s10-arch-a (guest start) free_GiB=114.05 free_bytes=122456268800 (Get-PSDrive C reading of 2026-10-10T20:25:50Z, 4s old) allowed=yes
+2026-10-10T20:41:25Z before upd1-debian13-good s10-d13g-a (guest start) free_GiB=113.97 free_bytes=122372538368 (Get-PSDrive C reading of 2026-10-10T20:41:24Z, 1s old) allowed=yes
+2026-10-10T20:56:06Z before upd1-debian13-defective s10-d13d-a (guest start) free_GiB=113.63 free_bytes=122005942272 (Get-PSDrive C reading of 2026-10-10T20:55:57Z, 9s old) allowed=yes
+2026-10-10T21:00:36Z before upd1-debian13-defective s10-d13d-b (guest start) free_GiB=113.65 free_bytes=122026139648 (Get-PSDrive C reading of 2026-10-10T21:00:27Z, 9s old) allowed=yes
+2026-10-10T21:20:47Z before upd1-ubuntu-good s10-ubg-a (guest start) free_GiB=111.75 free_bytes=119990005760 (Get-PSDrive C reading of 2026-10-10T21:20:32Z, 15s old) allowed=yes
+2026-10-10T21:43:10Z before upd1-ubuntu-defective s10-ubd-a (guest start) free_GiB=110.65 free_bytes=118810554368 (Get-PSDrive C reading of 2026-10-10T21:43:06Z, 4s old) allowed=yes
+2026-10-10T22:04:15Z before upd1-arch-good s10-archg-a (guest start) free_GiB=110.4 free_bytes=118543454208 (Get-PSDrive C reading of 2026-10-10T22:04:09Z, 6s old) allowed=yes
+2026-10-10T22:14:36Z before upd1-arch-defective s10-archd-a (guest start) free_GiB=110.39 free_bytes=118530260992 (Get-PSDrive C reading of 2026-10-10T22:14:10Z, 26s old) allowed=yes

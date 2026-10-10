@@ -1,0 +1,137 @@
+{
+  "checks": {
+    "asked_with": [
+      "getent -s files ahosts NAME and getent -s files hosts NAME (the hosts file only; no DNS question is sent)",
+      "getent ahosts NAME and getent hosts NAME (the lookup order of this guest's nsswitch.conf)"
+    ],
+    "at": "2026-10-10T22:14:12Z",
+    "boot_id": "8c53e769-6a4b-45c0-984b-8e1962aee671",
+    "boot_id_at_the_pinning": "38e5fd24-090f-48a9-bf5a-26e5647b48e1",
+    "certbot_directories": [
+      {
+        "entries": [],
+        "path": "/var/log/letsencrypt"
+      },
+      {
+        "entries": null,
+        "path": "/etc/letsencrypt/accounts",
+        "reason": "FileNotFoundError"
+      },
+      {
+        "entries": null,
+        "path": "/etc/letsencrypt/live",
+        "reason": "FileNotFoundError"
+      },
+      {
+        "entries": null,
+        "path": "/etc/letsencrypt/renewal",
+        "reason": "FileNotFoundError"
+      }
+    ],
+    "certbot_program": "/usr/bin/certbot",
+    "default_path_answers": {
+      "acme-staging-v02.api.letsencrypt.org": {
+        "ahosts": "::1             STREAM localhost\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW",
+        "hosts": "::1             localhost"
+      },
+      "acme-v02.api.letsencrypt.org": {
+        "ahosts": "::1             STREAM localhost\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW",
+        "hosts": "::1             localhost"
+      },
+      "acme.zerossl.com": {
+        "ahosts": "::1             STREAM localhost\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW",
+        "hosts": "::1             localhost"
+      },
+      "celikpanel.net": {
+        "ahosts": "::1             STREAM localhost\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW",
+        "hosts": "127.0.0.1       localhost"
+      },
+      "dv.acme-v02.api.pki.goog": {
+        "ahosts": "::1             STREAM localhost\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW",
+        "hosts": "::1             localhost"
+      }
+    },
+    "file": "name-pinning-at-the-end.json",
+    "hosts_lines": [
+      "127.0.0.1        localhost",
+      "::1              localhost",
+      "127.0.0.1 celikpanel.net # disposable CelikPanel lab pin before provisioning",
+      "127.0.0.1 acme-v02.api.letsencrypt.org",
+      "::1 acme-v02.api.letsencrypt.org",
+      "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+      "::1 acme-staging-v02.api.letsencrypt.org",
+      "127.0.0.1 acme.zerossl.com",
+      "::1 acme.zerossl.com",
+      "127.0.0.1 dv.acme-v02.api.pki.goog",
+      "::1 dv.acme-v02.api.pki.goog"
+    ],
+    "kernel": "7.2.9-arch1-1",
+    "loopback_only": {
+      "acme-staging-v02.api.letsencrypt.org": {
+        "default_path": true,
+        "hosts_file": true
+      },
+      "acme-v02.api.letsencrypt.org": {
+        "default_path": true,
+        "hosts_file": true
+      },
+      "acme.zerossl.com": {
+        "default_path": true,
+        "hosts_file": true
+      },
+      "celikpanel.net": {
+        "default_path": true,
+        "hosts_file": true
+      },
+      "dv.acme-v02.api.pki.goog": {
+        "default_path": true,
+        "hosts_file": true
+      }
+    },
+    "names": [
+      "celikpanel.net",
+      "acme-v02.api.letsencrypt.org",
+      "acme-staging-v02.api.letsencrypt.org",
+      "acme.zerossl.com",
+      "dv.acme-v02.api.pki.goog"
+    ],
+    "nsswitch_hosts": [
+      "hosts: mymachines resolve [!UNAVAIL=return] files myhostname dns"
+    ],
+    "os_release": {
+      "BUILD_ID": "rolling",
+      "ID": "arch",
+      "PRETTY_NAME": "Arch Linux"
+    },
+    "packages_installed": {
+      "certbot": "5.8.0-1",
+      "cron": "1.7.2-2",
+      "cronie": "1.7.2-2",
+      "mariadb": "13.0.2-2",
+      "mariadb-server": "13.0.2-2",
+      "nginx": "1.30.5-1",
+      "openssl": "3.6.5-1",
+      "php": "8.5.11-1",
+      "php-fpm": "8.5.11-1",
+      "systemd": "262-1"
+    },
+    "product_paths_present": [
+      "/opt/celikpanel",
+      "/etc/celikpanel",
+      "/var/lib/celikpanel",
+      "/usr/libexec/celikpanel"
+    ],
+    "resolved_total_transactions": {
+      "after_them": 46,
+      "before_the_default_path_lookups": 46,
+      "difference": 0,
+      "what_it_is": "systemd-resolved's own counter of lookups it sent to a DNS server; not a capture of traffic, and None where resolvectl is absent"
+    },
+    "systemd_resolved": "active",
+    "uptime_seconds": 433.9
+  },
+  "finished_at": "2026-10-10T22:14:12Z",
+  "name": "set6-name-pinning-at-the-end",
+  "started_at": "2026-10-10T22:14:11Z",
+  "verdict": "passed"
+}

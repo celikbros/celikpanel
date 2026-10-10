@@ -1,0 +1,574 @@
+{
+  "at": "2026-10-10T19:55:57Z",
+  "epoch": 1791662157.9458997,
+  "include_base": {
+    "exists": true,
+    "group": "celikpanel",
+    "kind": "directory",
+    "mode": "0750",
+    "owner": "root",
+    "path": "/etc/nginx/celikpanel-sites.d"
+  },
+  "ledger": {
+    "database": "/var/lib/celikpanel/celikpanel.db",
+    "domains": [
+      {
+        "id": 1,
+        "name": "set1-owner.test"
+      },
+      {
+        "id": 2,
+        "name": "set10-a.test"
+      },
+      {
+        "id": 3,
+        "name": "set10-b.test"
+      }
+    ],
+    "ledger_last": [
+      42,
+      43,
+      44
+    ],
+    "ledger_rows": 44,
+    "managed_site_files": [
+      {
+        "adopted_from": "",
+        "backup_path": "",
+        "body_sha256": "80fb9190764fa27a9c58f42f6fa204333d5ccec68113847880012d893c24064c",
+        "decided_at": 0,
+        "decided_by": null,
+        "decision": "",
+        "decision_file_sha256": "",
+        "domain_id": 1,
+        "file_format": "celikpanel-render v2",
+        "file_sha256": "aa7679d801a7bd8e4d008283c4e248e96809875e83f4f6d38e742bde6999dc18",
+        "id": 1,
+        "kind": "nginx_vhost",
+        "observed_at": 1791662132,
+        "path": "/etc/nginx/sites-available/set1-owner.test.conf",
+        "pending_path": "",
+        "pending_sha256": "",
+        "site_id": 1,
+        "state": "managed_unchanged",
+        "state_reason": "",
+        "written_at": 1791661679,
+        "written_release": "v0.1.0-alpha.81 0684f2703b66"
+      },
+      {
+        "adopted_from": "",
+        "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T195501Z",
+        "body_sha256": "c6b2e3d40b5505ed47a94ae3d87ba4ddcfb84724cb183a1322c0219a388916c5",
+        "decided_at": 1791662124,
+        "decided_by": 2,
+        "decision": "recreate",
+        "decision_file_sha256": "937abb023dd9cc64b903ab48a059e74409424e3ef43879d1a8cc8f082d7ee943",
+        "domain_id": 2,
+        "file_format": "celikpanel-render v2",
+        "file_sha256": "937abb023dd9cc64b903ab48a059e74409424e3ef43879d1a8cc8f082d7ee943",
+        "id": 2,
+        "kind": "nginx_vhost",
+        "observed_at": 1791662151,
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "pending_path": "",
+        "pending_sha256": "",
+        "site_id": 2,
+        "state": "managed_unchanged",
+        "state_reason": "",
+        "written_at": 1791662132,
+        "written_release": "v0.1.0-alpha.81 0684f2703b66"
+      },
+      {
+        "adopted_from": "",
+        "backup_path": "",
+        "body_sha256": "766dbc994baac002e8da831fd78f4a386d682a390d682da9b9b0b8fade6ed1b8",
+        "decided_at": 0,
+        "decided_by": null,
+        "decision": "",
+        "decision_file_sha256": "",
+        "domain_id": 3,
+        "file_format": "celikpanel-render v2",
+        "file_sha256": "09e799124dbd9d55e912693ce49a4f4c350e550c4e3ccec50f959c6c0af4b91d",
+        "id": 3,
+        "kind": "nginx_vhost",
+        "observed_at": 1791662132,
+        "path": "/etc/nginx/sites-available/set10-b.test.conf",
+        "pending_path": "",
+        "pending_sha256": "",
+        "site_id": 3,
+        "state": "managed_unchanged",
+        "state_reason": "",
+        "written_at": 1791661684,
+        "written_release": "v0.1.0-alpha.81 0684f2703b66"
+      }
+    ],
+    "managed_site_files_table": true,
+    "schema_version": 44,
+    "sites": [
+      {
+        "domain_id": 1,
+        "id": 1,
+        "project_type": "static"
+      },
+      {
+        "domain_id": 2,
+        "id": 2,
+        "project_type": "php"
+      },
+      {
+        "domain_id": 3,
+        "id": 3,
+        "project_type": "php"
+      }
+    ]
+  },
+  "mode": "read-site10",
+  "nginx": {
+    "active": "active",
+    "invocation": "436241c6c5144985886789b2f06bc310",
+    "master": "7202",
+    "started": "Sat 2026-10-10 19:39:59 UTC",
+    "workers": [
+      "48402",
+      "48403"
+    ]
+  },
+  "nginx_test": {
+    "at": "2026-10-10T19:55:57Z",
+    "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": false,
+  "owner_dir": [
+    {
+      "kind": "file",
+      "name": "set10-a.test.conf"
+    }
+  ],
+  "php_fpm_programs": [
+    "php-fpm8.4"
+  ],
+  "schema": "celikpanel/set10-native/v1",
+  "sites": {
+    "set1-owner.test": {
+      "enabled": {
+        "ctime_ns": 1791661679718621246,
+        "exists": true,
+        "gid": 989,
+        "group": "celikpanel",
+        "inode": 135512,
+        "kind": "symlink",
+        "link_target": "/etc/nginx/sites-available/set1-owner.test.conf",
+        "mode": "0777",
+        "mtime_ns": 1791661679718621246,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/nginx/sites-enabled/set1-owner.test.conf",
+        "resolves_to": "/etc/nginx/sites-available/set1-owner.test.conf",
+        "size": 47,
+        "uid": 0
+      },
+      "include_dir": {
+        "entries": [],
+        "exists": true,
+        "gid": 989,
+        "group": "celikpanel",
+        "inode": 271049,
+        "kind": "directory",
+        "mode": "0750",
+        "mode_octal": "0o750",
+        "mtime_ns": 1791661679706621282,
+        "owner": "root",
+        "path": "/etc/nginx/celikpanel-sites.d/set1-owner.test",
+        "uid": 0
+      },
+      "owner_include": {
+        "error": "FileNotFoundError",
+        "exists": false,
+        "path": "/etc/nginx/owner/set1-owner.test.conf"
+      },
+      "pool": null,
+      "side_files": {
+        "backups": [],
+        "pending": {
+          "error": "FileNotFoundError",
+          "exists": false,
+          "path": "/etc/nginx/sites-available/set1-owner.test.conf.celikpanel-pending"
+        }
+      },
+      "site_id": 1,
+      "vhost": {
+        "ctime_ns": 1791662157332695928,
+        "exists": true,
+        "first_line": "# celikpanel-render v2 sha256=26a62de320014a9953cb5b4b71e58fd9e3d7420c8ce9ca0b06b67a5bc15adf1c",
+        "gid": 989,
+        "group": "celikpanel",
+        "header": {
+          "body_bytes": 1519,
+          "body_sha256": "26a62de320014a9953cb5b4b71e58fd9e3d7420c8ce9ca0b06b67a5bc15adf1c",
+          "declared": "26a62de320014a9953cb5b4b71e58fd9e3d7420c8ce9ca0b06b67a5bc15adf1c",
+          "present": true,
+          "valid": true
+        },
+        "immutable": false,
+        "inode": 135510,
+        "kind": "file",
+        "lsattr": "--------------e-------",
+        "mode": "0644",
+        "mtime_ns": 1791662157320695861,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/nginx/sites-available/set1-owner.test.conf",
+        "sha256": "185331e64c0dd6fb681cbbf5f894120edfe51099ed5eda07beb5a39a0f2f20a0",
+        "size": 1614,
+        "text": "# celikpanel-render v2 sha256=26a62de320014a9953cb5b4b71e58fd9e3d7420c8ce9ca0b06b67a5bc15adf1c\n# set10 lab preparation: an older CelikPanel text of this site (a line the current render does not have)\n# Nginx vhost for set1-owner.test\n# Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set1-owner.test/*.conf;\n# CelikPanel never writes there. If you change this file, CelikPanel keeps\n# your file and asks you before it replaces it.\n# CelikPanel yazdı. Kendi eklemeleriniz /etc/nginx/celikpanel-sites.d/set1-owner.test/*.conf içine;\n# CelikPanel oraya hiç yazmaz. Bu dosyayı değiştirirseniz CelikPanel\n# dosyanızı korur ve değiştirmeden önce size sorar.\n# Site ID: 1 · Project type: static\nserver {\n    listen 80;\n    listen [::]:80;\n    server_name set1-owner.test www.set1-owner.test;\n\n    access_log /var/log/nginx/set1-owner.test-access.log;\n    error_log /var/log/nginx/set1-owner.test-error.log;\n\n    # Root-owned validation content only; never tenant public_html.\n    location ^~ /.well-known/acme-challenge/ {\n        root /var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/1;\n        try_files $uri =404;\n    }\n\n    root /var/www/celikpanel/subscriptions/2/sites/1/public_html;\n    index index.html index.htm;\n\n    location / {\n\n        try_files $uri $uri/ =404;\n    }\n    location ~ \\.(php|phtml|phps|php[0-9])$ {\n        deny all;\n    }\n    location ~ /\\.(?!well-known).* {\n        deny all;\n    }\n\n    # Your additions for this site (server context) / Bu site için eklemeleriniz\n    include /etc/nginx/celikpanel-sites.d/set1-owner.test/*.conf;\n}\n",
+        "uid": 0
+      }
+    },
+    "set10-a.test": {
+      "enabled": {
+        "ctime_ns": 1791662124648514432,
+        "exists": true,
+        "gid": 989,
+        "group": "celikpanel",
+        "inode": 135518,
+        "kind": "symlink",
+        "link_target": "/etc/nginx/sites-available/set10-a.test.conf",
+        "mode": "0777",
+        "mtime_ns": 1791662124648514432,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/nginx/sites-enabled/set10-a.test.conf",
+        "resolves_to": "/etc/nginx/sites-available/set10-a.test.conf",
+        "size": 44,
+        "uid": 0
+      },
+      "include_dir": {
+        "entries": [],
+        "exists": true,
+        "gid": 989,
+        "group": "celikpanel",
+        "inode": 271058,
+        "kind": "directory",
+        "mode": "0750",
+        "mode_octal": "0o750",
+        "mtime_ns": 1791662155864687624,
+        "owner": "root",
+        "path": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "uid": 0
+      },
+      "owner_include": {
+        "ctime_ns": 1791662031052041234,
+        "exists": true,
+        "gid": 0,
+        "group": "root",
+        "immutable": false,
+        "inode": 268815,
+        "kind": "file",
+        "lsattr": "--------------e-------",
+        "mode": "0644",
+        "mtime_ns": 1791662031052041234,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/nginx/owner/set10-a.test.conf",
+        "sha256": "f5e7130f3262e3c33412a62997cb6e8787a9c060f8e931740714f62f4e0aa907",
+        "size": 120,
+        "text": "# set10: the server owner's own additions for set10-a.test\nlocation /owner-include/ {\n    return 200 \"owner-include\";\n}\n",
+        "uid": 0
+      },
+      "pool": null,
+      "side_files": {
+        "backups": [
+          {
+            "ctime_ns": 1791662093408348174,
+            "exists": true,
+            "first_line": "# celikpanel-render v2 sha256=c6b2e3d40b5505ed47a94ae3d87ba4ddcfb84724cb183a1322c0219a388916c5",
+            "gid": 0,
+            "group": "root",
+            "header": {
+              "body_bytes": 1902,
+              "body_sha256": "4ded80f3b86ff59a008752a96b6b353725ec38677da2a3ca1700a58393cc734f",
+              "declared": "c6b2e3d40b5505ed47a94ae3d87ba4ddcfb84724cb183a1322c0219a388916c5",
+              "present": true,
+              "valid": false
+            },
+            "immutable": false,
+            "inode": 135517,
+            "kind": "file",
+            "lsattr": "--------------e-------",
+            "mode": "0640",
+            "mtime_ns": 1791662093408348174,
+            "nlink": 1,
+            "owner": "root",
+            "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T195453Z",
+            "sha256": "a39089f8d890b9221f01a6cbbb97df160247dd521987f767f49d885dbf305795",
+            "size": 1997,
+            "text": "# celikpanel-render v2 sha256=c6b2e3d40b5505ed47a94ae3d87ba4ddcfb84724cb183a1322c0219a388916c5\n# Nginx vhost for set10-a.test\n# Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n# CelikPanel never writes there. If you change this file, CelikPanel keeps\n# your file and asks you before it replaces it.\n# CelikPanel yazdı. Kendi eklemeleriniz /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf içine;\n# CelikPanel oraya hiç yazmaz. Bu dosyayı değiştirirseniz CelikPanel\n# dosyanızı korur ve değiştirmeden önce size sorar.\n# Site ID: 2 · Project type: php\nserver {\n    listen 80;\n    listen [::]:80;\n    server_name set10-a.test www.set10-a.test;\n\n    access_log /var/log/nginx/set10-a.test-access.log;\n    error_log /var/log/nginx/set10-a.test-error.log;\n\n    # Root-owned validation content only; never tenant public_html.\n    location ^~ /.well-known/acme-challenge/ {\n        root /var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2;\n        try_files $uri =404;\n    }\n\n    root /var/www/celikpanel/subscriptions/2/sites/2/public_html;\n    index index.php index.html index.htm;\n\n    location / {\n\n        try_files $uri $uri/ /index.php?$query_string;\n    }\n    location ~ \\.php$ {\n        fastcgi_split_path_info ^(.+?\\.php)(/.*)$;\n        try_files $fastcgi_script_name =404;\n        set $path_info $fastcgi_path_info;\n        fastcgi_param PATH_INFO $path_info;\n        fastcgi_index index.php;\n        include fastcgi.conf;\n        fastcgi_pass unix:/var/run/php/php8.4-fpm-site2.sock;\n        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\n        include fastcgi_params;\n    }\n    location ~ /\\.(?!well-known).* {\n        deny all;\n    }\n\n    # Your additions for this site (server context) / Bu site için eklemeleriniz\n    include /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n\n    # set10: added by the server owner by hand\n    location /owner-extra/ {\n        return 200 \"owner\";\n    }\n}\n",
+            "uid": 0
+          },
+          {
+            "ctime_ns": 1791662101584390954,
+            "exists": true,
+            "first_line": "# set10: the server owner's own vhost for set10-a.test, written by hand",
+            "gid": 989,
+            "group": "celikpanel",
+            "header": {
+              "first_line": "# set10: the server owner's own vhost for set10-a.test, written by hand",
+              "present": false
+            },
+            "immutable": false,
+            "inode": 131847,
+            "kind": "file",
+            "lsattr": "--------------e-------",
+            "mode": "0644",
+            "mtime_ns": 1791662101584390954,
+            "nlink": 1,
+            "owner": "root",
+            "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T195501Z",
+            "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+            "size": 210,
+            "text": "# set10: the server owner's own vhost for set10-a.test, written by hand\nserver {\n    listen 80;\n    listen [::]:80;\n    server_name set10-a.test;\n    location / {\n        return 200 \"owner-replaced\\n\";\n    }\n}\n",
+            "uid": 0
+          }
+        ],
+        "pending": {
+          "error": "FileNotFoundError",
+          "exists": false,
+          "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending"
+        }
+      },
+      "site_id": 2,
+      "vhost": {
+        "ctime_ns": 1791662157624697582,
+        "exists": true,
+        "first_line": "# celikpanel-render v2 sha256=43f315cf5a7553161ee8344737dcccd3fd308e61fa0de610c39795ef99b3e50a",
+        "gid": 989,
+        "group": "celikpanel",
+        "header": {
+          "body_bytes": 1896,
+          "body_sha256": "43f315cf5a7553161ee8344737dcccd3fd308e61fa0de610c39795ef99b3e50a",
+          "declared": "43f315cf5a7553161ee8344737dcccd3fd308e61fa0de610c39795ef99b3e50a",
+          "present": true,
+          "valid": true
+        },
+        "immutable": true,
+        "inode": 131557,
+        "kind": "file",
+        "lsattr": "----i---------e-------",
+        "mode": "0644",
+        "mtime_ns": 1791662157296695725,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "sha256": "94cc63dd8b8ccb564d82da406719b60238d2d3d7cd709eff3e0da371bc2903d2",
+        "size": 1991,
+        "text": "# celikpanel-render v2 sha256=43f315cf5a7553161ee8344737dcccd3fd308e61fa0de610c39795ef99b3e50a\n# set10 lab preparation: an older CelikPanel text of this site (a line the current render does not have)\n# Nginx vhost for set10-a.test\n# Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n# CelikPanel never writes there. If you change this file, CelikPanel keeps\n# your file and asks you before it replaces it.\n# CelikPanel yazdı. Kendi eklemeleriniz /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf içine;\n# CelikPanel oraya hiç yazmaz. Bu dosyayı değiştirirseniz CelikPanel\n# dosyanızı korur ve değiştirmeden önce size sorar.\n# Site ID: 2 · Project type: php\nserver {\n    listen 80;\n    listen [::]:80;\n    server_name set10-a.test www.set10-a.test;\n\n    access_log /var/log/nginx/set10-a.test-access.log;\n    error_log /var/log/nginx/set10-a.test-error.log;\n\n    # Root-owned validation content only; never tenant public_html.\n    location ^~ /.well-known/acme-challenge/ {\n        root /var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2;\n        try_files $uri =404;\n    }\n\n    root /var/www/celikpanel/subscriptions/2/sites/2/public_html;\n    index index.php index.html index.htm;\n\n    location / {\n\n        try_files $uri $uri/ /index.php?$query_string;\n    }\n    location ~ \\.php$ {\n        fastcgi_split_path_info ^(.+?\\.php)(/.*)$;\n        try_files $fastcgi_script_name =404;\n        set $path_info $fastcgi_path_info;\n        fastcgi_param PATH_INFO $path_info;\n        fastcgi_index index.php;\n        include fastcgi.conf;\n        fastcgi_pass unix:/var/run/php/php8.4-fpm-site2.sock;\n        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\n        include fastcgi_params;\n    }\n    location ~ /\\.(?!well-known).* {\n        deny all;\n    }\n\n    # Your additions for this site (server context) / Bu site için eklemeleriniz\n    include /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n}\n",
+        "uid": 0
+      }
+    },
+    "set10-b.test": {
+      "enabled": {
+        "ctime_ns": 1791661684746607748,
+        "exists": true,
+        "gid": 989,
+        "group": "celikpanel",
+        "inode": 135524,
+        "kind": "symlink",
+        "link_target": "/etc/nginx/sites-available/set10-b.test.conf",
+        "mode": "0777",
+        "mtime_ns": 1791661684746607748,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/nginx/sites-enabled/set10-b.test.conf",
+        "resolves_to": "/etc/nginx/sites-available/set10-b.test.conf",
+        "size": 44,
+        "uid": 0
+      },
+      "include_dir": {
+        "entries": [],
+        "exists": true,
+        "gid": 989,
+        "group": "celikpanel",
+        "inode": 271069,
+        "kind": "directory",
+        "mode": "0750",
+        "mode_octal": "0o750",
+        "mtime_ns": 1791661684730607789,
+        "owner": "root",
+        "path": "/etc/nginx/celikpanel-sites.d/set10-b.test",
+        "uid": 0
+      },
+      "owner_include": {
+        "error": "FileNotFoundError",
+        "exists": false,
+        "path": "/etc/nginx/owner/set10-b.test.conf"
+      },
+      "pool": null,
+      "side_files": {
+        "backups": [],
+        "pending": {
+          "error": "FileNotFoundError",
+          "exists": false,
+          "path": "/etc/nginx/sites-available/set10-b.test.conf.celikpanel-pending"
+        }
+      },
+      "site_id": 3,
+      "vhost": {
+        "ctime_ns": 1791662157320695861,
+        "exists": true,
+        "first_line": "# celikpanel-render v2 sha256=d6fea8610760d9edf9167c88949713428e1126e3211c5645c90670b66db6ebb4",
+        "gid": 989,
+        "group": "celikpanel",
+        "header": {
+          "body_bytes": 1896,
+          "body_sha256": "d6fea8610760d9edf9167c88949713428e1126e3211c5645c90670b66db6ebb4",
+          "declared": "d6fea8610760d9edf9167c88949713428e1126e3211c5645c90670b66db6ebb4",
+          "present": true,
+          "valid": true
+        },
+        "immutable": false,
+        "inode": 131846,
+        "kind": "file",
+        "lsattr": "--------------e-------",
+        "mode": "0644",
+        "mtime_ns": 1791662157308695792,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/nginx/sites-available/set10-b.test.conf",
+        "sha256": "682bd391b5021d46fcae55003eb4683d426f6bc732cd214b530ba8d0854f1c7d",
+        "size": 1991,
+        "text": "# celikpanel-render v2 sha256=d6fea8610760d9edf9167c88949713428e1126e3211c5645c90670b66db6ebb4\n# set10 lab preparation: an older CelikPanel text of this site (a line the current render does not have)\n# Nginx vhost for set10-b.test\n# Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set10-b.test/*.conf;\n# CelikPanel never writes there. If you change this file, CelikPanel keeps\n# your file and asks you before it replaces it.\n# CelikPanel yazdı. Kendi eklemeleriniz /etc/nginx/celikpanel-sites.d/set10-b.test/*.conf içine;\n# CelikPanel oraya hiç yazmaz. Bu dosyayı değiştirirseniz CelikPanel\n# dosyanızı korur ve değiştirmeden önce size sorar.\n# Site ID: 3 · Project type: php\nserver {\n    listen 80;\n    listen [::]:80;\n    server_name set10-b.test www.set10-b.test;\n\n    access_log /var/log/nginx/set10-b.test-access.log;\n    error_log /var/log/nginx/set10-b.test-error.log;\n\n    # Root-owned validation content only; never tenant public_html.\n    location ^~ /.well-known/acme-challenge/ {\n        root /var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/3;\n        try_files $uri =404;\n    }\n\n    root /var/www/celikpanel/subscriptions/2/sites/3/public_html;\n    index index.php index.html index.htm;\n\n    location / {\n\n        try_files $uri $uri/ /index.php?$query_string;\n    }\n    location ~ \\.php$ {\n        fastcgi_split_path_info ^(.+?\\.php)(/.*)$;\n        try_files $fastcgi_script_name =404;\n        set $path_info $fastcgi_path_info;\n        fastcgi_param PATH_INFO $path_info;\n        fastcgi_index index.php;\n        include fastcgi.conf;\n        fastcgi_pass unix:/var/run/php/php8.4-fpm-site3.sock;\n        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\n        include fastcgi_params;\n    }\n    location ~ /\\.(?!well-known).* {\n        deny all;\n    }\n\n    # Your additions for this site (server context) / Bu site için eklemeleriniz\n    include /etc/nginx/celikpanel-sites.d/set10-b.test/*.conf;\n}\n",
+        "uid": 0
+      }
+    }
+  },
+  "sites_available": [
+    {
+      "kind": "file",
+      "name": "default"
+    },
+    {
+      "kind": "file",
+      "name": "set1-owner.test.conf"
+    },
+    {
+      "kind": "file",
+      "name": "set10-a.test.conf"
+    },
+    {
+      "kind": "file",
+      "name": "set10-a.test.conf.celikpanel-backup-20261010T195453Z"
+    },
+    {
+      "kind": "file",
+      "name": "set10-a.test.conf.celikpanel-backup-20261010T195501Z"
+    },
+    {
+      "kind": "file",
+      "name": "set10-b.test.conf"
+    }
+  ],
+  "sites_enabled": [
+    {
+      "kind": "symlink",
+      "name": "default"
+    },
+    {
+      "kind": "symlink",
+      "name": "set1-owner.test.conf"
+    },
+    {
+      "kind": "symlink",
+      "name": "set10-a.test.conf"
+    },
+    {
+      "kind": "symlink",
+      "name": "set10-b.test.conf"
+    }
+  ],
+  "units": {
+    "celikpanel-agent.service": {
+      "ActiveEnterTimestamp": "Sat 2026-10-10 19:38:34 UTC",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "active",
+      "ExecMainPID": "5159",
+      "ExecMainStartTimestamp": "Sat 2026-10-10 19:38:34 UTC",
+      "ExecMainStatus": "0",
+      "FragmentPath": "/etc/systemd/system/celikpanel-agent.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "Sat 2026-10-10 19:38:33 UTC",
+      "InvocationID": "b5ad15482bb24f9d945c398b7f999e54",
+      "LoadState": "loaded",
+      "MainPID": "5159",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Sat 2026-10-10 19:38:34 UTC",
+      "SubState": "running",
+      "Type": "simple"
+    },
+    "celikpanel-panel.service": {
+      "ActiveEnterTimestamp": "Sat 2026-10-10 19:55:31 UTC",
+      "ActiveExitTimestamp": "Sat 2026-10-10 19:55:57 UTC",
+      "ActiveState": "inactive",
+      "ExecMainPID": "47215",
+      "ExecMainStartTimestamp": "Sat 2026-10-10 19:55:31 UTC",
+      "ExecMainStatus": "0",
+      "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+      "InactiveEnterTimestamp": "Sat 2026-10-10 19:55:57 UTC",
+      "InactiveExitTimestamp": "Sat 2026-10-10 19:55:30 UTC",
+      "InvocationID": "c5a75ddb374f4822b775be628a3eaa01",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Sat 2026-10-10 19:55:57 UTC",
+      "SubState": "dead",
+      "Type": "simple"
+    },
+    "nginx.service": {
+      "ActiveEnterTimestamp": "Sat 2026-10-10 19:39:58 UTC",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "active",
+      "ExecMainPID": "7202",
+      "ExecMainStartTimestamp": "Sat 2026-10-10 19:39:59 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; master_process on; -s reload ; ignore_errors=no ; start_time=[Sat 2026-10-10 19:55:57 UTC] ; stop_time=[Sat 2026-10-10 19:55:57 UTC] ; pid=48400 ; code=exited ; status=0 }",
+      "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "Sat 2026-10-10 19:39:58 UTC",
+      "InvocationID": "436241c6c5144985886789b2f06bc310",
+      "LoadState": "loaded",
+      "MainPID": "7202",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Sat 2026-10-10 19:55:57 UTC",
+      "SubState": "running",
+      "Type": "forking"
+    },
+    "php8.4-fpm.service": {
+      "ActiveEnterTimestamp": "Sat 2026-10-10 19:42:57 UTC",
+      "ActiveExitTimestamp": "Sat 2026-10-10 19:42:56 UTC",
+      "ActiveState": "active",
+      "ExecMainPID": "23896",
+      "ExecMainStartTimestamp": "Sat 2026-10-10 19:42:56 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/bin/kill ; argv[]=/bin/kill -USR2 $MAINPID ; ignore_errors=no ; start_time=[Sat 2026-10-10 19:48:04 UTC] ; stop_time=[Sat 2026-10-10 19:48:04 UTC] ; pid=30901 ; code=exited ; status=0 }",
+      "FragmentPath": "/usr/lib/systemd/system/php8.4-fpm.service",
+      "InactiveEnterTimestamp": "Sat 2026-10-10 19:42:56 UTC",
+      "InactiveExitTimestamp": "Sat 2026-10-10 19:42:56 UTC",
+      "InvocationID": "c79eb126fdb44a0a91d7dd1364277c90",
+      "LoadState": "loaded",
+      "MainPID": "23896",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Sat 2026-10-10 19:48:04 UTC",
+      "SubState": "running",
+      "Type": "notify"
+    }
+  }
+}

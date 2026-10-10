@@ -1,0 +1,23 @@
+{
+  "checks": {
+    "checks": 8,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T21:14:04Z",
+    "notes": [
+      "B-before: PASS"
+    ],
+    "started_at": "2026-10-10T21:13:44Z",
+    "substeps": {
+      "B-before": "passed",
+      "section": "passed"
+    },
+    "title": "three sites on alpha.81 (creation text, start text, owner-edited) and, in the good cell, a backup of the Panel database",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T21:14:04Z",
+  "name": "set10-sites-before-the-update",
+  "started_at": "2026-10-10T21:13:44Z",
+  "verdict": "passed"
+}

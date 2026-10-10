@@ -1,0 +1,24 @@
+{
+  "agreement": {
+    "known_sources": [],
+    "phase": {},
+    "reasons": [],
+    "sources": [
+      "shell"
+    ],
+    "verdict": "no-known-source"
+  },
+  "cli_error": "TimeoutExpired",
+  "guidance_api": null,
+  "guidance_cli": null,
+  "index": 13,
+  "observed": null,
+  "panel_error": "PanelError",
+  "shell_fetch": {
+    "error": "ConnectionResetError",
+    "note": "only a browser-saved copy of the shell can show while the Panel is down"
+  },
+  "t": 1791669671.74219,
+  "update_card": null,
+  "utc": "2026-10-10T22:01:11Z"
+}

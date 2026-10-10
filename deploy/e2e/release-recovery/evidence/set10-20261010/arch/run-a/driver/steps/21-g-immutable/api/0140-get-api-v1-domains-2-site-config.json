@@ -1,0 +1,87 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "g after the start: GET site-config",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18863"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/2/site-config"
+  },
+  "response": {
+    "elapsed_seconds": 0.006,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 10 Oct 2026 20:40:29 GMT"
+      ],
+      [
+        "Content-Length",
+        "1146"
+      ]
+    ],
+    "json": {
+      "actions": [],
+      "decision": {
+        "current": false,
+        "decided_at": "2026-10-10T20:40:03Z",
+        "kind": "recreate"
+      },
+      "diff": "--- /etc/nginx/sites-available/set10-a.test.conf (on this server)\n+++ CelikPanel's text\n@@ -1,4 +1,3 @@\n-# set10 lab preparation: an older CelikPanel text of this site (a line the current render does not have)\n # Nginx vhost for set10-a.test\n # Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n # CelikPanel never writes there. If you change this file, CelikPanel keeps\n",
+      "domain": "set10-a.test",
+      "domain_id": 2,
+      "enabled": "link",
+      "file_sha256": "c6a5220d1384e6af2894b4e31e4698d85331fcedd760d3d75d1458dc7061b2eb",
+      "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+      "kind": "nginx_vhost",
+      "ledger": {
+        "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203949Z",
+        "observed_at": "2026-10-10T20:40:24Z",
+        "written_at": "2026-10-10T20:40:10Z",
+        "written_release": "v0.1.0-alpha.81 0684f2703b66"
+      },
+      "path": "/etc/nginx/sites-available/set10-a.test.conf",
+      "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+      "state": "managed_unchanged"
+    },
+    "status": 200,
+    "text": null
+  }
+}

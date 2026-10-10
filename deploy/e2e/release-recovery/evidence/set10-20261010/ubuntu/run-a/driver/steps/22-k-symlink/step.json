@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 8,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T20:25:08Z",
+    "notes": [
+      "k: PASS"
+    ],
+    "started_at": "2026-10-10T20:24:44Z",
+    "substeps": {
+      "k": "passed"
+    },
+    "title": "A's vhost replaced by a symlink to the owner's file",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T20:25:08Z",
+  "name": "k-symlink",
+  "started_at": "2026-10-10T20:24:44Z",
+  "verdict": "passed"
+}

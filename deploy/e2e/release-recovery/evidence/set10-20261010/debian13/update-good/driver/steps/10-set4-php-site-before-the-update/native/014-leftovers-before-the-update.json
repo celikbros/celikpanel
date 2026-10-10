@@ -1,0 +1,318 @@
+{
+  "account": {
+    "gid": 5005,
+    "home": "/var/www/celikpanel/subscriptions/2/sites/5",
+    "home_exists": true,
+    "name": "set4_upd_php_test",
+    "shell": "/bin/bash",
+    "uid": 5005
+  },
+  "account_name": "set4_upd_php_test",
+  "acme_challenge_directories": [
+    "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/1",
+    "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2",
+    "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/3",
+    "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/4",
+    "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/5"
+  ],
+  "acme_root": {
+    "exists": true,
+    "group": "root",
+    "kind": "directory",
+    "mode": "0755",
+    "owner": "root",
+    "path": "/var/lib/celikpanel-agent/acme-http-01"
+  },
+  "at": "2026-10-10T20:50:42Z",
+  "crontab_spool": [],
+  "domain": "set4-upd-php.test",
+  "group": "set4_upd_php_test",
+  "mode": "read-leftovers",
+  "nginx_dump_lines_naming_the_domain": [
+    "# configuration file /etc/nginx/sites-enabled/set4-upd-php.test.conf:",
+    "# Nginx vhost for set4-upd-php.test",
+    "server_name set4-upd-php.test;",
+    "access_log /var/log/nginx/set4-upd-php.test-access.log;",
+    "error_log /var/log/nginx/set4-upd-php.test-error.log;"
+  ],
+  "nginx_dump_returncode": 0,
+  "nginx_files_naming_the_domain": [
+    {
+      "bytes": 1063,
+      "kind": "file",
+      "path": "/etc/nginx/sites-available/set4-upd-php.test.conf",
+      "sha256": "7f5b6073639099328ec628e5b330dc89f5efb2c527719ec73c70f469b09caa76",
+      "target": null,
+      "target_exists": null
+    },
+    {
+      "bytes": null,
+      "kind": "symlink",
+      "path": "/etc/nginx/sites-enabled/set4-upd-php.test.conf",
+      "sha256": null,
+      "target": "/etc/nginx/sites-available/set4-upd-php.test.conf",
+      "target_exists": true
+    }
+  ],
+  "nginx_test": {
+    "at": "2026-10-10T20:50:42Z",
+    "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": false,
+  "panel": {
+    "autoincrement": {
+      "domains": 5,
+      "sites": 5
+    },
+    "domains": [
+      {
+        "created_at": "2026-10-10 20:50:39",
+        "dns_management": "external",
+        "dns_remote_connection_id": "",
+        "dns_zone_id": null,
+        "id": 5,
+        "ip_address_id": 1,
+        "is_temporary": 0,
+        "name": "set4-upd-php.test",
+        "parent_domain_id": null,
+        "status": "active",
+        "subscription_id": 2,
+        "temporary_suffix": null,
+        "updated_at": "2026-10-10 20:50:39"
+      }
+    ],
+    "row_counts": {
+      "databases_v2": 0,
+      "domains": 5,
+      "email_accounts": 1,
+      "sites": 5,
+      "subscriptions": 1
+    },
+    "sites": [
+      {
+        "access_method": "sftp",
+        "app_port": null,
+        "created_at": "2026-10-10 20:50:39",
+        "custom_error_pages": "{}",
+        "disk_usage_bytes": 0,
+        "document_root": "/var/www/celikpanel/subscriptions/2/sites/5/public_html",
+        "domain_id": 5,
+        "force_https": 0,
+        "forward_code": 301,
+        "forward_to": null,
+        "hsts_enabled": 0,
+        "hsts_max_age": 31536000,
+        "hsts_retire_after": null,
+        "id": 5,
+        "nginx_config": null,
+        "php_fpm_socket": "/var/run/php/php8.4-fpm-site5.sock",
+        "php_version": "8.4",
+        "project_type": "php",
+        "redirect_https": 0,
+        "redirect_www": 0,
+        "runtime_version": null,
+        "ssl_auto_redirect": 0,
+        "ssl_cert_path": null,
+        "ssl_enabled": 0,
+        "ssl_key_path": "[not read: secret-shaped column]",
+        "ssl_type": "none",
+        "start_command": null,
+        "status": "active",
+        "traffic_month_bytes": 0,
+        "updated_at": "2026-10-10 20:50:39",
+        "usage_updated_at": null,
+        "web_server": "nginx"
+      }
+    ],
+    "tables_naming_the_domain": {
+      "domains": {
+        "name": 1
+      },
+      "hostname_reservations": {
+        "hostname": 3
+      }
+    }
+  },
+  "pool_files": [
+    {
+      "names_the_account": false,
+      "names_the_domain": false,
+      "path": "/etc/php/8.4/fpm/pool.d/site2.conf",
+      "settings": {
+        "group": "set10_r2_test",
+        "listen": "/var/run/php/php8.4-fpm-site2.sock",
+        "listen.group": "www-data",
+        "listen.mode": "0660",
+        "listen.owner": "www-data",
+        "pool": "site2",
+        "user": "set10_r2_test"
+      }
+    },
+    {
+      "names_the_account": false,
+      "names_the_domain": false,
+      "path": "/etc/php/8.4/fpm/pool.d/site3.conf",
+      "settings": {
+        "group": "set10_r3_test",
+        "listen": "/var/run/php/php8.4-fpm-site3.sock",
+        "listen.group": "www-data",
+        "listen.mode": "0660",
+        "listen.owner": "www-data",
+        "pool": "site3",
+        "user": "set10_r3_test"
+      }
+    },
+    {
+      "names_the_account": false,
+      "names_the_domain": false,
+      "path": "/etc/php/8.4/fpm/pool.d/site4.conf",
+      "settings": {
+        "group": "set10_r1_test",
+        "listen": "/var/run/php/php8.4-fpm-site4.sock",
+        "listen.group": "www-data",
+        "listen.mode": "0660",
+        "listen.owner": "www-data",
+        "pool": "site4",
+        "user": "set10_r1_test"
+      }
+    },
+    {
+      "names_the_account": true,
+      "names_the_domain": false,
+      "path": "/etc/php/8.4/fpm/pool.d/site5.conf",
+      "settings": {
+        "group": "set4_upd_php_test",
+        "listen": "/var/run/php/php8.4-fpm-site5.sock",
+        "listen.group": "www-data",
+        "listen.mode": "0660",
+        "listen.owner": "www-data",
+        "pool": "site5",
+        "user": "set4_upd_php_test"
+      }
+    },
+    {
+      "names_the_account": false,
+      "names_the_domain": false,
+      "path": "/etc/php/8.4/fpm/pool.d/www.conf",
+      "settings": {
+        "group": "www-data",
+        "listen": "/run/php/php8.4-fpm.sock",
+        "listen.group": "www-data",
+        "listen.owner": "www-data",
+        "pool": "www",
+        "user": "www-data"
+      }
+    }
+  ],
+  "pool_files_of_the_account": [
+    "/etc/php/8.4/fpm/pool.d/site5.conf"
+  ],
+  "processes_of_the_account": [
+    "php-fpm: pool site5",
+    "php-fpm: pool site5"
+  ],
+  "schema": "celikpanel/set4-native/v1",
+  "site_directories": [
+    "/var/www/celikpanel/subscriptions/2/sites/1",
+    "/var/www/celikpanel/subscriptions/2/sites/2",
+    "/var/www/celikpanel/subscriptions/2/sites/3",
+    "/var/www/celikpanel/subscriptions/2/sites/4",
+    "/var/www/celikpanel/subscriptions/2/sites/5"
+  ],
+  "site_directories_root": {
+    "exists": true,
+    "group": "celikpanel",
+    "kind": "directory",
+    "mode": "0755",
+    "owner": "root",
+    "path": "/var/www/celikpanel/subscriptions"
+  },
+  "sockets": [
+    {
+      "exists": true,
+      "group": "root",
+      "kind": "symlink",
+      "mode": "0777",
+      "owner": "root",
+      "path": "/run/php/php-fpm.sock"
+    },
+    {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/run/php/php8.4-fpm-site2.sock"
+    },
+    {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/run/php/php8.4-fpm-site3.sock"
+    },
+    {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/run/php/php8.4-fpm-site4.sock"
+    },
+    {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/run/php/php8.4-fpm-site5.sock"
+    },
+    {
+      "exists": true,
+      "group": "root",
+      "kind": "file",
+      "mode": "0644",
+      "owner": "root",
+      "path": "/run/php/php8.4-fpm.pid"
+    },
+    {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/run/php/php8.4-fpm.sock"
+    }
+  ],
+  "subscription_directories": {
+    "/var/www/celikpanel/subscriptions/2": [
+      "sites"
+    ]
+  },
+  "this_domain": {
+    "acme_challenge_root": "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/5",
+    "acme_challenge_root_stat": {
+      "exists": true,
+      "group": "root",
+      "kind": "directory",
+      "mode": "0755",
+      "owner": "root",
+      "path": "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/5"
+    },
+    "site_home": "/var/www/celikpanel/subscriptions/2/sites/5",
+    "site_home_entries": [
+      "public_html"
+    ],
+    "site_home_stat": {
+      "exists": true,
+      "group": "www-data",
+      "kind": "directory",
+      "mode": "0750",
+      "owner": "set4_upd_php_test",
+      "path": "/var/www/celikpanel/subscriptions/2/sites/5"
+    }
+  }
+}

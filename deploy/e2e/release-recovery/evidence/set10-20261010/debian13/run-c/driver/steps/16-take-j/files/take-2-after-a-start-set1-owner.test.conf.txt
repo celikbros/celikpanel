@@ -1,0 +1,40 @@
+# celikpanel-render v2 sha256=80fb9190764fa27a9c58f42f6fa204333d5ccec68113847880012d893c24064c
+# Nginx vhost for set1-owner.test
+# Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set1-owner.test/*.conf;
+# CelikPanel never writes there. If you change this file, CelikPanel keeps
+# your file and asks you before it replaces it.
+# CelikPanel yazdı. Kendi eklemeleriniz /etc/nginx/celikpanel-sites.d/set1-owner.test/*.conf içine;
+# CelikPanel oraya hiç yazmaz. Bu dosyayı değiştirirseniz CelikPanel
+# dosyanızı korur ve değiştirmeden önce size sorar.
+# Site ID: 1 · Project type: static
+server {
+    listen 80;
+    listen [::]:80;
+    server_name set1-owner.test www.set1-owner.test;
+
+    access_log /var/log/nginx/set1-owner.test-access.log;
+    error_log /var/log/nginx/set1-owner.test-error.log;
+
+    # Root-owned validation content only; never tenant public_html.
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/1;
+        try_files $uri =404;
+    }
+
+    root /var/www/celikpanel/subscriptions/2/sites/1/public_html;
+    index index.html index.htm;
+
+    location / {
+
+        try_files $uri $uri/ =404;
+    }
+    location ~ \.(php|phtml|phps|php[0-9])$ {
+        deny all;
+    }
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+
+    # Your additions for this site (server context) / Bu site için eklemeleriniz
+    include /etc/nginx/celikpanel-sites.d/set1-owner.test/*.conf;
+}

@@ -1,0 +1,121 @@
+{
+  "action": "owner-vhost10",
+  "after": {
+    "enabled": {
+      "ctime_ns": 1791663808376808528,
+      "exists": true,
+      "gid": 988,
+      "group": "celikpanel",
+      "inode": 263363,
+      "kind": "symlink",
+      "link_target": "/etc/nginx/sites-available/set10-a.test.conf",
+      "mode": "0777",
+      "mtime_ns": 1791663808376808528,
+      "nlink": 1,
+      "owner": "root",
+      "path": "/etc/nginx/sites-enabled/set10-a.test.conf",
+      "resolves_to": "/etc/nginx/sites-available/set10-a.test.conf",
+      "size": 44,
+      "uid": 0
+    },
+    "vhost": {
+      "ctime_ns": 1791663842310036606,
+      "exists": true,
+      "first_line": "# celikpanel-render v2 sha256=757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004",
+      "gid": 988,
+      "group": "celikpanel",
+      "header": {
+        "body_bytes": 1896,
+        "body_sha256": "757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004",
+        "declared": "757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004",
+        "present": true,
+        "valid": true
+      },
+      "immutable": true,
+      "inode": 262476,
+      "kind": "file",
+      "lsattr": "----i---------e-------",
+      "mode": "0644",
+      "mtime_ns": 1791663841783033064,
+      "nlink": 1,
+      "owner": "root",
+      "path": "/etc/nginx/sites-available/set10-a.test.conf",
+      "sha256": "37da4a2eaeaa7f657f48c1822d9e24101923b04aa61369b19bde458d28af486d",
+      "size": 1991,
+      "text": "# celikpanel-render v2 sha256=757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004\n# set10 lab preparation: an older CelikPanel text of this site (a line the current render does not have)\n# Nginx vhost for set10-a.test\n# Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n# CelikPanel never writes there. If you change this file, CelikPanel keeps\n# your file and asks you before it replaces it.\n# CelikPanel yazdı. Kendi eklemeleriniz /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf içine;\n# CelikPanel oraya hiç yazmaz. Bu dosyayı değiştirirseniz CelikPanel\n# dosyanızı korur ve değiştirmeden önce size sorar.\n# Site ID: 2 · Project type: php\nserver {\n    listen 80;\n    listen [::]:80;\n    server_name set10-a.test www.set10-a.test;\n\n    access_log /var/log/nginx/set10-a.test-access.log;\n    error_log /var/log/nginx/set10-a.test-error.log;\n\n    # Root-owned validation content only; never tenant public_html.\n    location ^~ /.well-known/acme-challenge/ {\n        root /var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2;\n        try_files $uri =404;\n    }\n\n    root /var/www/celikpanel/subscriptions/2/sites/2/public_html;\n    index index.php index.html index.htm;\n\n    location / {\n\n        try_files $uri $uri/ /index.php?$query_string;\n    }\n    location ~ \\.php$ {\n        fastcgi_split_path_info ^(.+?\\.php)(/.*)$;\n        try_files $fastcgi_script_name =404;\n        set $path_info $fastcgi_path_info;\n        fastcgi_param PATH_INFO $path_info;\n        fastcgi_index index.php;\n        include fastcgi.conf;\n        fastcgi_pass unix:/var/run/php/php8.3-fpm-site2.sock;\n        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\n        include fastcgi_params;\n    }\n    location ~ /\\.(?!well-known).* {\n        deny all;\n    }\n\n    # Your additions for this site (server context) / Bu site için eklemeleriniz\n    include /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n}\n",
+      "uid": 0
+    }
+  },
+  "at": "2026-10-10T20:24:02Z",
+  "before": {
+    "enabled": {
+      "ctime_ns": 1791663808376808528,
+      "exists": true,
+      "gid": 988,
+      "group": "celikpanel",
+      "inode": 263363,
+      "kind": "symlink",
+      "link_target": "/etc/nginx/sites-available/set10-a.test.conf",
+      "mode": "0777",
+      "mtime_ns": 1791663808376808528,
+      "nlink": 1,
+      "owner": "root",
+      "path": "/etc/nginx/sites-enabled/set10-a.test.conf",
+      "resolves_to": "/etc/nginx/sites-available/set10-a.test.conf",
+      "size": 44,
+      "uid": 0
+    },
+    "vhost": {
+      "ctime_ns": 1791663841797033158,
+      "exists": true,
+      "first_line": "# celikpanel-render v2 sha256=757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004",
+      "gid": 988,
+      "group": "celikpanel",
+      "header": {
+        "body_bytes": 1896,
+        "body_sha256": "757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004",
+        "declared": "757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004",
+        "present": true,
+        "valid": true
+      },
+      "immutable": false,
+      "inode": 262476,
+      "kind": "file",
+      "lsattr": "--------------e-------",
+      "mode": "0644",
+      "mtime_ns": 1791663841783033064,
+      "nlink": 1,
+      "owner": "root",
+      "path": "/etc/nginx/sites-available/set10-a.test.conf",
+      "sha256": "37da4a2eaeaa7f657f48c1822d9e24101923b04aa61369b19bde458d28af486d",
+      "size": 1991,
+      "text": "# celikpanel-render v2 sha256=757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004\n# set10 lab preparation: an older CelikPanel text of this site (a line the current render does not have)\n# Nginx vhost for set10-a.test\n# Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n# CelikPanel never writes there. If you change this file, CelikPanel keeps\n# your file and asks you before it replaces it.\n# CelikPanel yazdı. Kendi eklemeleriniz /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf içine;\n# CelikPanel oraya hiç yazmaz. Bu dosyayı değiştirirseniz CelikPanel\n# dosyanızı korur ve değiştirmeden önce size sorar.\n# Site ID: 2 · Project type: php\nserver {\n    listen 80;\n    listen [::]:80;\n    server_name set10-a.test www.set10-a.test;\n\n    access_log /var/log/nginx/set10-a.test-access.log;\n    error_log /var/log/nginx/set10-a.test-error.log;\n\n    # Root-owned validation content only; never tenant public_html.\n    location ^~ /.well-known/acme-challenge/ {\n        root /var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2;\n        try_files $uri =404;\n    }\n\n    root /var/www/celikpanel/subscriptions/2/sites/2/public_html;\n    index index.php index.html index.htm;\n\n    location / {\n\n        try_files $uri $uri/ /index.php?$query_string;\n    }\n    location ~ \\.php$ {\n        fastcgi_split_path_info ^(.+?\\.php)(/.*)$;\n        try_files $fastcgi_script_name =404;\n        set $path_info $fastcgi_path_info;\n        fastcgi_param PATH_INFO $path_info;\n        fastcgi_index index.php;\n        include fastcgi.conf;\n        fastcgi_pass unix:/var/run/php/php8.3-fpm-site2.sock;\n        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\n        include fastcgi_params;\n    }\n    location ~ /\\.(?!well-known).* {\n        deny all;\n    }\n\n    # Your additions for this site (server context) / Bu site için eklemeleriniz\n    include /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n}\n",
+      "uid": 0
+    }
+  },
+  "chattr": {
+    "argv": [
+      "chattr",
+      "+i",
+      "/etc/nginx/sites-available/set10-a.test.conf"
+    ],
+    "at": "2026-10-10T20:24:02Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "domain": "set10-a.test",
+  "epoch": 1791663842.328696,
+  "mode": "owner-vhost10",
+  "nginx_test": {
+    "at": "2026-10-10T20:24:02Z",
+    "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": true,
+  "schema": "celikpanel/set10-native/v1",
+  "what": "chattr-plus-i"
+}

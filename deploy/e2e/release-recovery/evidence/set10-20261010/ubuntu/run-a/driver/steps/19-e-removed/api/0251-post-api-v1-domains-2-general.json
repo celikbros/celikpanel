@@ -1,0 +1,83 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "e save: General settings saved unchanged (renders the vhost)",
+  "request": {
+    "body": {
+      "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+      "redirect_www": false,
+      "web_server": "nginx"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18862"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18862"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "356400b9e3e0eb30c69acb6598c44294"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/2/general"
+  },
+  "response": {
+    "elapsed_seconds": 0.054,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 10 Oct 2026 20:23:27 GMT"
+      ],
+      [
+        "Content-Length",
+        "285"
+      ]
+    ],
+    "json": {
+      "code": "SITE_CONFIG_MISSING",
+      "error": "The site's nginx configuration file is missing, so this change was not applied and the file was not recreated. If the file was removed on purpose, nothing needs doing; otherwise open the domain's Configuration file section and choose Recreate."
+    },
+    "status": 409,
+    "text": null
+  }
+}

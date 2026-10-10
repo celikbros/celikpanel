@@ -1,0 +1,24 @@
+2026-10-10T19:01:10Z neighbour gate for set10-debian13 s10-d13-a poll=1 qemu_processes=0 set9_jobs=0
+2026-10-10T19:01:10Z neighbour gate for set10-debian13 s10-d13-a: clear
+2026-10-10T19:18:06Z neighbour gate for set10-debian13 s10-d13-b poll=1 qemu_processes=0 set9_jobs=0
+2026-10-10T19:18:06Z neighbour gate for set10-debian13 s10-d13-b: clear
+2026-10-10T19:36:26Z neighbour gate for set10-debian13 s10-d13-c poll=1 qemu_processes=0 set9_jobs=0
+2026-10-10T19:36:26Z neighbour gate for set10-debian13 s10-d13-c: clear
+2026-10-10T19:58:10Z neighbour gate for set10-ubuntu s10-ub-a poll=1 qemu_processes=0 set9_jobs=0
+2026-10-10T19:58:10Z neighbour gate for set10-ubuntu s10-ub-a: clear
+2026-10-10T20:25:54Z neighbour gate for set10-arch s10-arch-a poll=1 qemu_processes=0 set9_jobs=0
+2026-10-10T20:25:54Z neighbour gate for set10-arch s10-arch-a: clear
+2026-10-10T20:41:25Z neighbour gate for upd1-debian13-good s10-d13g-a poll=1 qemu_processes=0 set9_jobs=0
+2026-10-10T20:41:25Z neighbour gate for upd1-debian13-good s10-d13g-a: clear
+2026-10-10T20:56:06Z neighbour gate for upd1-debian13-defective s10-d13d-a poll=1 qemu_processes=0 set9_jobs=0
+2026-10-10T20:56:06Z neighbour gate for upd1-debian13-defective s10-d13d-a: clear
+2026-10-10T21:00:36Z neighbour gate for upd1-debian13-defective s10-d13d-b poll=1 qemu_processes=0 set9_jobs=0
+2026-10-10T21:00:36Z neighbour gate for upd1-debian13-defective s10-d13d-b: clear
+2026-10-10T21:20:47Z neighbour gate for upd1-ubuntu-good s10-ubg-a poll=1 qemu_processes=0 set9_jobs=0
+2026-10-10T21:20:47Z neighbour gate for upd1-ubuntu-good s10-ubg-a: clear
+2026-10-10T21:43:10Z neighbour gate for upd1-ubuntu-defective s10-ubd-a poll=1 qemu_processes=0 set9_jobs=0
+2026-10-10T21:43:10Z neighbour gate for upd1-ubuntu-defective s10-ubd-a: clear
+2026-10-10T22:04:15Z neighbour gate for upd1-arch-good s10-archg-a poll=1 qemu_processes=0 set9_jobs=0
+2026-10-10T22:04:15Z neighbour gate for upd1-arch-good s10-archg-a: clear
+2026-10-10T22:14:36Z neighbour gate for upd1-arch-defective s10-archd-a poll=1 qemu_processes=0 set9_jobs=0
+2026-10-10T22:14:36Z neighbour gate for upd1-arch-defective s10-archd-a: clear

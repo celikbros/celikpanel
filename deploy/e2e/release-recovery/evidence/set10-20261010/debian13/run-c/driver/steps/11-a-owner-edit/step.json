@@ -1,0 +1,26 @@
+{
+  "checks": {
+    "checks": 31,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T19:49:51Z",
+    "notes": [
+      "a1: PASS",
+      "a2: PASS",
+      "a3: PASS"
+    ],
+    "started_at": "2026-10-10T19:48:24Z",
+    "substeps": {
+      "a1": "passed",
+      "a2": "passed",
+      "a3": "passed"
+    },
+    "title": "the owner adds a location (start, restart, General save)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T19:49:51Z",
+  "name": "a-owner-edit",
+  "started_at": "2026-10-10T19:48:24Z",
+  "verdict": "passed"
+}

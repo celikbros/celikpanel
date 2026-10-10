@@ -1,0 +1,388 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-10T20:25:10Z",
+      "json": {
+        "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/4/public_html",
+        "Domain": "set10-c.test",
+        "DomainID": 4,
+        "FTPPassword": "[REDACTED]",
+        "FTPUser": "set10_c_test",
+        "PHPVersion": "8.3",
+        "ProjectType": "php",
+        "SiteID": 4,
+        "TempDomain": ""
+      },
+      "label": "create PHP site set10-c.test",
+      "request": {
+        "body": {
+          "domain": "set10-c.test",
+          "project_type": "php",
+          "ssl_type": "none"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/create"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:25:13Z",
+      "json": {
+        "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/5/public_html",
+        "Domain": "set10-d.test",
+        "DomainID": 5,
+        "FTPPassword": "[REDACTED]",
+        "FTPUser": "set10_d_test",
+        "PHPVersion": "8.3",
+        "ProjectType": "php",
+        "SiteID": 5,
+        "TempDomain": ""
+      },
+      "label": "create PHP site set10-d.test",
+      "request": {
+        "body": {
+          "domain": "set10-d.test",
+          "project_type": "php",
+          "ssl_type": "none"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/create"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:25:16Z",
+      "json": {
+        "domain": "set10-c.test",
+        "status": "deleted"
+      },
+      "label": "l: delete set10-c.test (Domains page)",
+      "request": {
+        "body": null,
+        "method": "DELETE",
+        "path": "/api/v1/domains/4"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:25:16Z",
+      "json": {
+        "domain": "set10-d.test",
+        "status": "deleted"
+      },
+      "label": "l: delete set10-d.test (Domains page)",
+      "request": {
+        "body": null,
+        "method": "DELETE",
+        "path": "/api/v1/domains/5"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "cells": {
+    "l": {
+      "detail": {
+        "include_dirs_after": {
+          "set10-c.test": "directory",
+          "set10-d.test": "directory"
+        }
+      },
+      "expectations": [
+        {
+          "expectation": "both deletions answered 200",
+          "held": true,
+          "measured": [
+            200,
+            200
+          ]
+        },
+        {
+          "expectation": "the owner-edited vhost: removed, and a dated copy with the owner's bytes is kept beside it",
+          "held": true,
+          "measured": {
+            "backups": [
+              {
+                "path": "/etc/nginx/sites-available/set10-c.test.conf.celikpanel-backup-20261010T202516Z",
+                "sha256": "adc68131b7901b07697456e030f26ade614a32f721dd417cf05146be3db03e47"
+              }
+            ],
+            "owner_file_sha256": "adc68131b7901b07697456e030f26ade614a32f721dd417cf05146be3db03e47",
+            "vhost_after": false
+          }
+        },
+        {
+          "expectation": "the Agent's journal names the kept copy",
+          "held": true,
+          "measured": [
+            "2026-10-10T20:25:16.138196+00:00 dns-ubuntu agent[7573]: 2026/10/10 20:25:16 DeleteSite set10-c.test: the vhost was not CelikPanel's unchanged text; a copy is kept as /etc/nginx/sites-available/set10-c.test.conf.celikpanel-backup-20261010T202516Z"
+          ]
+        },
+        {
+          "expectation": "the unchanged vhost: removed with no copy",
+          "held": true,
+          "measured": {
+            "backups": 0,
+            "vhost_after": false
+          }
+        },
+        {
+          "expectation": "both include directories and the owner's files in them are untouched",
+          "held": true,
+          "measured": {
+            "c": [
+              [
+                [
+                  "/etc/nginx/celikpanel-sites.d/set10-c.test/set10-owner-dir.conf",
+                  "741be6a3ca8c120806b3f4ca2eee798cdd32d18f35233bc920032b3b567dea95",
+                  533553
+                ]
+              ],
+              [
+                [
+                  "/etc/nginx/celikpanel-sites.d/set10-c.test/set10-owner-dir.conf",
+                  "741be6a3ca8c120806b3f4ca2eee798cdd32d18f35233bc920032b3b567dea95",
+                  533553
+                ]
+              ]
+            ],
+            "d": [
+              [
+                [
+                  "/etc/nginx/celikpanel-sites.d/set10-d.test/set10-owner-dir.conf",
+                  "7c870efc2b17198e5393e38313e333a17513eda056e57416c4885cdd2d211f7d",
+                  533554
+                ]
+              ],
+              [
+                [
+                  "/etc/nginx/celikpanel-sites.d/set10-d.test/set10-owner-dir.conf",
+                  "7c870efc2b17198e5393e38313e333a17513eda056e57416c4885cdd2d211f7d",
+                  533554
+                ]
+              ]
+            ]
+          }
+        }
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "checks": [
+    {
+      "detail": {
+        "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/4/public_html",
+        "Domain": "set10-c.test",
+        "DomainID": 4,
+        "FTPPassword": "[REDACTED]",
+        "FTPUser": "set10_c_test",
+        "PHPVersion": "8.3",
+        "ProjectType": "php",
+        "SiteID": 4,
+        "TempDomain": ""
+      },
+      "name": "the PHP site set10-c.test is created through the Panel (200 with its id)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/5/public_html",
+        "Domain": "set10-d.test",
+        "DomainID": 5,
+        "FTPPassword": "[REDACTED]",
+        "FTPUser": "set10_d_test",
+        "PHPVersion": "8.3",
+        "ProjectType": "php",
+        "SiteID": 5,
+        "TempDomain": ""
+      },
+      "name": "the PHP site set10-d.test is created through the Panel (200 with its id)",
+      "ok": true
+    },
+    {
+      "detail": [
+        200,
+        200
+      ],
+      "name": "l: both deletions answered 200",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          {
+            "path": "/etc/nginx/sites-available/set10-c.test.conf.celikpanel-backup-20261010T202516Z",
+            "sha256": "adc68131b7901b07697456e030f26ade614a32f721dd417cf05146be3db03e47"
+          }
+        ],
+        "owner_file_sha256": "adc68131b7901b07697456e030f26ade614a32f721dd417cf05146be3db03e47",
+        "vhost_after": false
+      },
+      "name": "l: the owner-edited vhost: removed, and a dated copy with the owner's bytes is kept beside it",
+      "ok": true
+    },
+    {
+      "detail": [
+        "2026-10-10T20:25:16.138196+00:00 dns-ubuntu agent[7573]: 2026/10/10 20:25:16 DeleteSite set10-c.test: the vhost was not CelikPanel's unchanged text; a copy is kept as /etc/nginx/sites-available/set10-c.test.conf.celikpanel-backup-20261010T202516Z"
+      ],
+      "name": "l: the Agent's journal names the kept copy",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": 0,
+        "vhost_after": false
+      },
+      "name": "l: the unchanged vhost: removed with no copy",
+      "ok": true
+    },
+    {
+      "detail": {
+        "c": [
+          [
+            [
+              "/etc/nginx/celikpanel-sites.d/set10-c.test/set10-owner-dir.conf",
+              "741be6a3ca8c120806b3f4ca2eee798cdd32d18f35233bc920032b3b567dea95",
+              533553
+            ]
+          ],
+          [
+            [
+              "/etc/nginx/celikpanel-sites.d/set10-c.test/set10-owner-dir.conf",
+              "741be6a3ca8c120806b3f4ca2eee798cdd32d18f35233bc920032b3b567dea95",
+              533553
+            ]
+          ]
+        ],
+        "d": [
+          [
+            [
+              "/etc/nginx/celikpanel-sites.d/set10-d.test/set10-owner-dir.conf",
+              "7c870efc2b17198e5393e38313e333a17513eda056e57416c4885cdd2d211f7d",
+              533554
+            ]
+          ],
+          [
+            [
+              "/etc/nginx/celikpanel-sites.d/set10-d.test/set10-owner-dir.conf",
+              "7c870efc2b17198e5393e38313e333a17513eda056e57416c4885cdd2d211f7d",
+              533554
+            ]
+          ]
+        ]
+      },
+      "name": "l: both include directories and the owner's files in them are untouched",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-10T20:25:21Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/217-owner-files-set10-c.test.json",
+      "label": "owner-files-set10-c.test",
+      "mode": "owner-files",
+      "owner_action": true
+    },
+    {
+      "file": "native/218-owner-files-set10-d.test.json",
+      "label": "owner-files-set10-d.test",
+      "mode": "owner-files",
+      "owner_action": true
+    },
+    {
+      "file": "native/219-owner-l-edit-c.json",
+      "label": "owner-l-edit-c",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/220-owner-l-include-c.json",
+      "label": "owner-l-include-c",
+      "mode": "owner-include",
+      "owner_action": true
+    },
+    {
+      "file": "native/221-owner-l-include-d.json",
+      "label": "owner-l-include-d",
+      "mode": "owner-include",
+      "owner_action": true
+    },
+    {
+      "file": "native/222-l-1-before-read.json",
+      "label": "l-1-before-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/223-guest-clock.json",
+      "label": "guest-clock",
+      "mode": "read-ledger",
+      "owner_action": false
+    },
+    {
+      "file": "native/224-l-2-after-read.json",
+      "label": "l-2-after-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/225-l-journal.json",
+      "label": "l-journal",
+      "mode": "read-window",
+      "owner_action": false
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [
+    {
+      "detail": [],
+      "note": "l: PASS"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-10T20:25:11Z",
+      "label": "files-set10-c.test",
+      "mode": "owner-files"
+    },
+    {
+      "at": "2026-10-10T20:25:13Z",
+      "label": "files-set10-d.test",
+      "mode": "owner-files"
+    },
+    {
+      "at": "2026-10-10T20:25:14Z",
+      "label": "l-edit-c",
+      "mode": "owner-vhost10"
+    },
+    {
+      "at": "2026-10-10T20:25:14Z",
+      "label": "l-include-c",
+      "mode": "owner-include"
+    },
+    {
+      "at": "2026-10-10T20:25:15Z",
+      "label": "l-include-d",
+      "mode": "owner-include"
+    }
+  ],
+  "owner_waited_for_idle": {
+    "at": "2026-10-10T20:25:08Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.3
+  },
+  "section": "l-delete",
+  "started_at": "2026-10-10T20:25:08Z",
+  "substeps": {
+    "l": "passed",
+    "section": "passed"
+  },
+  "title": "deleting an owner-edited site and an unchanged one",
+  "verdict": "passed"
+}

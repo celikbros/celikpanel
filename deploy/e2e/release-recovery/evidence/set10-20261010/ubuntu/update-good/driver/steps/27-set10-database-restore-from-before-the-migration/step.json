@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 5,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T21:42:51Z",
+    "notes": [
+      "B-db-restore: PASS"
+    ],
+    "started_at": "2026-10-10T21:42:30Z",
+    "substeps": {
+      "B-db-restore": "passed"
+    },
+    "title": "the Panel database put back from the backup taken before the update; the start classifies again",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T21:42:51Z",
+  "name": "set10-database-restore-from-before-the-migration",
+  "started_at": "2026-10-10T21:42:30Z",
+  "verdict": "passed"
+}

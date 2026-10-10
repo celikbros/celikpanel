@@ -1,0 +1,98 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "LicensePanel activate (acceptance fixture key)",
+  "request": {
+    "body": {
+      "action": "activate",
+      "key": "[REDACTED]"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18864"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18864"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "7e32f5e4b67a5a2e1a471e9a147c1aa6"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/panel/license"
+  },
+  "response": {
+    "elapsed_seconds": 0.025,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 10 Oct 2026 20:43:59 GMT"
+      ],
+      [
+        "Content-Length",
+        "522"
+      ]
+    ],
+    "json": {
+      "acceptance_cell": "release-recovery__a80c35f1ff6793b7",
+      "acceptance_guest": "verified",
+      "acceptance_node": "debian13",
+      "acceptance_smbios_uuid": "not readable by the panel service user",
+      "can_provision": true,
+      "expires_at": 1792269839,
+      "license_id": "acceptance-fixture",
+      "license_kind": "acceptance_fixture",
+      "license_label": "ACCEPTANCE FIXTURE — NOT FOR PRODUCTION",
+      "license_service": "not contacted: acceptance test build",
+      "observation": "known",
+      "offline_until": 1791665099,
+      "product": "celikpanel-acceptance-fixture",
+      "state": "active"
+    },
+    "status": 200,
+    "text": null
+  }
+}

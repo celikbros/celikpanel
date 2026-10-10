@@ -1,0 +1,75 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "l: delete set10-d.test (Domains page)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18861"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18861"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "4c795440e8f63695d849264099aec99c"
+      ]
+    ],
+    "method": "DELETE",
+    "path": "/api/v1/domains/5"
+  },
+  "response": {
+    "elapsed_seconds": 0.426,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 10 Oct 2026 19:57:01 GMT"
+      ],
+      [
+        "Content-Length",
+        "45"
+      ]
+    ],
+    "json": {
+      "domain": "set10-d.test",
+      "status": "deleted"
+    },
+    "status": 200,
+    "text": null
+  }
+}

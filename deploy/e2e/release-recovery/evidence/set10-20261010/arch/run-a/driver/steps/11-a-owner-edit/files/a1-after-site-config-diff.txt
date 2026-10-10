@@ -1,0 +1,12 @@
+--- /etc/nginx/sites-available/set10-a.test.conf (on this server)
++++ CelikPanel's text
+@@ -44,9 +44,4 @@
+ 
+     # Your additions for this site (server context) / Bu site için eklemeleriniz
+     include /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;
+-
+-    # set10: added by the server owner by hand
+-    location /owner-extra/ {
+-        return 200 "owner";
+-    }
+ }

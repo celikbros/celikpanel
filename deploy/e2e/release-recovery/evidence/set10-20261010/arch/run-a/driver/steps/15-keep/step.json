@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 7,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T20:39:31Z",
+    "notes": [
+      "keep: PASS"
+    ],
+    "started_at": "2026-10-10T20:39:22Z",
+    "substeps": {
+      "keep": "passed"
+    },
+    "title": "keep mine, with and without a request identity, and its replay",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T20:39:31Z",
+  "name": "keep",
+  "started_at": "2026-10-10T20:39:22Z",
+  "verdict": "passed"
+}

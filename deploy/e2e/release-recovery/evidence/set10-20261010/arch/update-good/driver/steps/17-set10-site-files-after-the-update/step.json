@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 8,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T22:14:05Z",
+    "notes": [
+      "B-forward: PASS"
+    ],
+    "started_at": "2026-10-10T22:14:04Z",
+    "substeps": {
+      "B-forward": "passed"
+    },
+    "title": "the site files, the ledger, the start lines, the Domains list and the three new routes without a request identity",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T22:14:05Z",
+  "name": "set10-site-files-after-the-update",
+  "started_at": "2026-10-10T22:14:04Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,80 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "after the update set10-r2.test: GET site-config",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18866"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/2/site-config"
+  },
+  "response": {
+    "elapsed_seconds": 0.004,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 10 Oct 2026 21:40:29 GMT"
+      ],
+      [
+        "Content-Length",
+        "532"
+      ]
+    ],
+    "json": {
+      "actions": [],
+      "domain": "set10-r2.test",
+      "domain_id": 2,
+      "enabled": "link",
+      "file_sha256": "a4706e556a4bc5101ca047836cfdd55f476e321823830eefd2e3cdda37aae142",
+      "include_dir": "/etc/nginx/celikpanel-sites.d/set10-r2.test",
+      "kind": "nginx_vhost",
+      "ledger": {
+        "observed_at": "2026-10-10T21:40:03Z",
+        "written_at": "2026-10-10T21:40:03Z",
+        "written_release": "v0.1.0-alpha.82 e0c88113f717"
+      },
+      "path": "/etc/nginx/sites-available/set10-r2.test.conf",
+      "render_sha256": "2cb1a432f8013241c7c8a8d5cd6d5890a36975ed6f2e57dd3b2a4335e7778fca",
+      "state": "managed_unchanged"
+    },
+    "status": 200,
+    "text": null
+  }
+}

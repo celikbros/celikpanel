@@ -1,0 +1,33 @@
+{
+  "at": "2026-10-10T20:39:45Z",
+  "by_unit": {
+    "celikpanel-agent.service": [],
+    "celikpanel-panel.service": [
+      "2026-10-10T20:39:39.707936+00:00 dns-arch panel[6041]: 2026/10/10 20:39:39 http: TLS handshake error from 127.0.0.1:42384: EOF",
+      "2026-10-10T20:39:40.202083+00:00 dns-arch panel[6041]: 2026/10/10 20:39:40 http: TLS handshake error from 127.0.0.1:42408: EOF",
+      "2026-10-10T20:39:40.302423+00:00 dns-arch panel[6041]: 2026/10/10 20:39:40 site configuration set10-a.test (take): taken; owner's file kept as /etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203940Z",
+      "2026-10-10T20:39:44.433766+00:00 dns-arch panel[6041]: 2026/10/10 20:39:44 http: TLS handshake error from 127.0.0.1:42422: EOF"
+    ],
+    "nginx.service": [
+      "2026-10-10T20:39:40.267806+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+      "2026-10-10T20:39:40.292415+00:00 dns-arch nginx[6101]: 2026/10/10 20:39:40 [warn] 6101#6101: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+      "2026-10-10T20:39:40.297856+00:00 dns-arch nginx[6101]: 2026/10/10 20:39:40 [notice] 6101#6101: signal process started",
+      "2026-10-10T20:39:40.300210+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+    ],
+    "php-fpm.service": []
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set10-native/v1",
+  "since_epoch": 1791664779,
+  "systemd_manager": [
+    "2026-10-10T20:39:40.267806+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+    "2026-10-10T20:39:40.300210+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php-fpm.service"
+  ]
+}

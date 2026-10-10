@@ -1,0 +1,56 @@
+{
+  "at": "2026-10-10T20:24:22Z",
+  "by_unit": {
+    "celikpanel-agent.service": [
+      "2026-10-10T20:24:09.393375+00:00 dns-ubuntu postfix/postfix-script[73556]: the Postfix mail system is running: PID: 37578",
+      "2026-10-10T20:24:16.989473+00:00 dns-ubuntu postfix/postfix-script[74223]: the Postfix mail system is running: PID: 37578",
+      "2026-10-10T20:24:17.098412+00:00 dns-ubuntu postfix/postfix-script[74241]: refreshing the Postfix mail system",
+      "2026-10-10T20:24:17.605638+00:00 dns-ubuntu postfix/postfix-script[74260]: the Postfix mail system is running: PID: 37578"
+    ],
+    "celikpanel-panel.service": [
+      "2026-10-10T20:24:03.499100+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...",
+      "2026-10-10T20:24:03.525097+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.",
+      "2026-10-10T20:24:03.768657+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 Starting CelikPanel Backend...",
+      "2026-10-10T20:24:03.776879+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)",
+      "2026-10-10T20:24:03.777967+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 Panel startup listener active on :2083 (HTTPS; application gated)",
+      "2026-10-10T20:24:03.779026+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 Connected to Agent RPC; preparing normal management access",
+      "2026-10-10T20:24:03.869425+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 site configuration set1-owner.test (startup): written",
+      "2026-10-10T20:24:03.888812+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 site configuration set10-a.test (startup): kept, not replaced (managed_unchanged write_refused); rename /etc/nginx/sites-available/.set10-a.test.conf.celikpanel-3722386884 /etc/nginx/sites-available/set10-a.test.conf: operation not permitted",
+      "2026-10-10T20:24:03.902575+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 site configuration set10-b.test (startup): written",
+      "2026-10-10T20:24:03.915454+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 site configuration files at start: 2 written, 0 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 1 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release",
+      "2026-10-10T20:24:05.611405+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:05 http: TLS handshake error from 127.0.0.1:49164: EOF",
+      "2026-10-10T20:24:07.637682+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:07 http: TLS handshake error from 127.0.0.1:40554: EOF",
+      "2026-10-10T20:24:09.658444+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:09 http: TLS handshake error from 127.0.0.1:40562: EOF",
+      "2026-10-10T20:24:11.676261+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:11 http: TLS handshake error from 127.0.0.1:40588: EOF",
+      "2026-10-10T20:24:12.277988+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:12 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release",
+      "2026-10-10T20:24:13.696478+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:13 http: TLS handshake error from 127.0.0.1:40600: EOF",
+      "2026-10-10T20:24:15.716881+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:15 http: TLS handshake error from 127.0.0.1:40610: EOF",
+      "2026-10-10T20:24:17.738274+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:17 milter chain: milters=\"inet:localhost:11332\" maps=hash",
+      "2026-10-10T20:24:17.742133+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:17 Panel ready on :2083 (HTTPS)",
+      "2026-10-10T20:24:17.746192+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:17 http: TLS handshake error from 127.0.0.1:56298: EOF",
+      "2026-10-10T20:24:17.784815+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:17 http: TLS handshake error from 127.0.0.1:56322: EOF"
+    ],
+    "nginx.service": [
+      "2026-10-10T20:24:03.855254+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T20:24:03.862306+00:00 dns-ubuntu nginx[72875]: 2026/10/10 20:24:03 [notice] 72875#72875: signal process started",
+      "2026-10-10T20:24:03.864999+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+    ],
+    "php8.3-fpm.service": []
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set10-native/v1",
+  "since_epoch": 1791663842,
+  "systemd_manager": [
+    "2026-10-10T20:24:03.499100+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...",
+    "2026-10-10T20:24:03.525097+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.",
+    "2026-10-10T20:24:03.855254+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T20:24:03.864999+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php8.3-fpm.service"
+  ]
+}

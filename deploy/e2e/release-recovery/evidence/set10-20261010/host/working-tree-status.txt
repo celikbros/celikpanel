@@ -1,0 +1,14 @@
+?? .agents/
+?? .attic/
+?? .claude/
+?? .codex/
+?? .github/agents/
+?? .github/hooks/
+?? .github/skills/
+?? .impeccable/review-final/
+?? .impeccable/review/
+?? deploy/e2e/release-recovery/evidence/set10-20261010/
+?? deploy/e2e/release-recovery/guest_set10_native.py
+?? deploy/e2e/release-recovery/run-set10.sh
+?? deploy/e2e/release-recovery/set10_trial.py
+?? deploy/e2e/release-recovery/test_set10_trial.py

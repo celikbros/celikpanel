@@ -1,0 +1,86 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "b1 after: GET site-config",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18863"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/2/site-config"
+  },
+  "response": {
+    "elapsed_seconds": 0.006,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 10 Oct 2026 20:36:05 GMT"
+      ],
+      [
+        "Content-Length",
+        "1016"
+      ]
+    ],
+    "json": {
+      "actions": [
+        "keep",
+        "take",
+        "merge"
+      ],
+      "diff": "--- /etc/nginx/sites-available/set10-a.test.conf (on this server)\n+++ CelikPanel's text\n@@ -21,7 +21,8 @@\n     }\n \n     root /var/www/celikpanel/subscriptions/2/sites/2/public_html;\n-    index set8-owner-index.html index.php index.html index.htm;\n+    index index.php index.html index.htm;\n+\n     location / {\n \n         try_files $uri $uri/ /index.php?$query_string;\n",
+      "domain": "set10-a.test",
+      "domain_id": 2,
+      "enabled": "link",
+      "file_sha256": "20164ccde93938c8078fe2a31d2821dbfb0d2734cbf80520aa53324b6416f472",
+      "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+      "kind": "nginx_vhost",
+      "ledger": {
+        "observed_at": "2026-10-10T20:35:58Z",
+        "written_at": "2026-10-10T20:34:32Z",
+        "written_release": "v0.1.0-alpha.81 0684f2703b66"
+      },
+      "path": "/etc/nginx/sites-available/set10-a.test.conf",
+      "pending_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+      "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+      "state": "owner_edited"
+    },
+    "status": 200,
+    "text": null
+  }
+}

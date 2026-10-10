@@ -1,0 +1,9 @@
+# set10: the server owner's own vhost for set10-a.test, written by hand
+server {
+    listen 80;
+    listen [::]:80;
+    server_name set10-a.test;
+    location / {
+        return 200 "owner-replaced\n";
+    }
+}

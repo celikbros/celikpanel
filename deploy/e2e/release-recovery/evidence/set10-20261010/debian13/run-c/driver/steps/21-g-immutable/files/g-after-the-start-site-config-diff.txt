@@ -1,0 +1,7 @@
+--- /etc/nginx/sites-available/set10-a.test.conf (on this server)
++++ CelikPanel's text
+@@ -1,4 +1,3 @@
+-# set10 lab preparation: an older CelikPanel text of this site (a line the current render does not have)
+ # Nginx vhost for set10-a.test
+ # Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;
+ # CelikPanel never writes there. If you change this file, CelikPanel keeps

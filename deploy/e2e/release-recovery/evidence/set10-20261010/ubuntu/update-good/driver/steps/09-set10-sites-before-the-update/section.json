@@ -1,0 +1,464 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-10T21:37:49Z",
+      "json": {
+        "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "Domain": "set10-r2.test",
+        "DomainID": 2,
+        "FTPPassword": "[REDACTED]",
+        "FTPUser": "set10_r2_test",
+        "PHPVersion": "8.3",
+        "ProjectType": "php",
+        "SiteID": 2,
+        "TempDomain": ""
+      },
+      "label": "create php site set10-r2.test (alpha.81)",
+      "request": {
+        "body": {
+          "domain": "set10-r2.test",
+          "project_type": "php",
+          "ssl_type": "none"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/create"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T21:37:51Z",
+      "json": {
+        "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/3/public_html",
+        "Domain": "set10-r3.test",
+        "DomainID": 3,
+        "FTPPassword": "[REDACTED]",
+        "FTPUser": "set10_r3_test",
+        "PHPVersion": "8.3",
+        "ProjectType": "php",
+        "SiteID": 3,
+        "TempDomain": ""
+      },
+      "label": "create php site set10-r3.test (alpha.81)",
+      "request": {
+        "body": {
+          "domain": "set10-r3.test",
+          "project_type": "php",
+          "ssl_type": "none"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/create"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T21:38:03Z",
+      "json": {
+        "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/4/public_html",
+        "Domain": "set10-r1.test",
+        "DomainID": 4,
+        "FTPPassword": "[REDACTED]",
+        "FTPUser": "set10_r1_test",
+        "PHPVersion": "8.3",
+        "ProjectType": "php",
+        "SiteID": 4,
+        "TempDomain": ""
+      },
+      "label": "create php site set10-r1.test (alpha.81)",
+      "request": {
+        "body": {
+          "domain": "set10-r1.test",
+          "project_type": "php",
+          "ssl_type": "none"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/create"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "cells": {
+    "B-before": {
+      "detail": null,
+      "expectations": [
+        {
+          "expectation": "the Panel restarted between R2/R3 and R1",
+          "held": true,
+          "measured": {
+            "api": {
+              "answering": true,
+              "seconds": 8.1,
+              "status": 200
+            },
+            "epoch": 1791668271.554984,
+            "file": "steps/09-set10-sites-before-the-update/native/001-owner-pre-panel-restart.json",
+            "is_active": "active",
+            "kind": "owner: systemctl restart celikpanel-panel",
+            "ok": true,
+            "reconcile_lines_seen": [
+              "2026-10-10T21:37:51.979793+00:00 dns-ubuntu panel[41311]: 2026/10/10 21:37:51 certificate startup reconcile: restored 3 hosted vhosts with one nginx validation and reload"
+            ],
+            "session": {
+              "status": 200
+            },
+            "waited_seconds": 2.1
+          }
+        },
+        {
+          "expectation": "the owner's edit of R3 is in service (nginx -t passed)",
+          "held": true,
+          "measured": {
+            "at": "2026-10-10T21:38:04Z",
+            "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+            "returncode": 0,
+            "status": "ok"
+          }
+        },
+        {
+          "expectation": "alpha.81's files carry no render header",
+          "held": true,
+          "measured": {
+            "set10-r1.test": {
+              "gid": 988,
+              "header": {
+                "first_line": "# Nginx vhost for set10-r1.test",
+                "present": false
+              },
+              "inode": 263787,
+              "mode": "0644",
+              "mtime_ns": 1791668283580868648,
+              "server_name": [
+                "server_name set10-r1.test;"
+              ],
+              "sha256": "afbaa540a2aa6204fdc63093c0bea283cf7579147e3f90675dda50319969a77f",
+              "uid": 0
+            },
+            "set10-r2.test": {
+              "gid": 988,
+              "header": {
+                "first_line": "# Nginx vhost for set10-r2.test",
+                "present": false
+              },
+              "inode": 262671,
+              "mode": "0644",
+              "mtime_ns": 1791668271906733426,
+              "server_name": [
+                "server_name set10-r2.test www.set10-r2.test;"
+              ],
+              "sha256": "d7e2bca9116f95b304cf3ce5e5b55ecfa823ae4983d2d306e00ca502f3222db3",
+              "uid": 0
+            },
+            "set10-r3.test": {
+              "gid": 988,
+              "header": {
+                "first_line": "# Nginx vhost for set10-r3.test",
+                "present": false
+              },
+              "inode": 263779,
+              "mode": "0644",
+              "mtime_ns": 1791668284225876120,
+              "server_name": [
+                "server_name set10-r3.test www.set10-r3.test;"
+              ],
+              "sha256": "37a45a8339714371f5f61c75de2f3135fb58c41ba1a008b3b4fc3b90af8a5b4f",
+              "uid": 0
+            },
+            "upd1-owner.test": {
+              "gid": 988,
+              "header": {
+                "first_line": "# Nginx vhost for upd1-owner.test",
+                "present": false
+              },
+              "inode": 262669,
+              "mode": "0644",
+              "mtime_ns": 1791668271872733032,
+              "server_name": [
+                "server_name upd1-owner.test www.upd1-owner.test;"
+              ],
+              "sha256": "aad048d54b437f902b33bfd27c22de681ac9329772a513334b1ffdd434ec8602",
+              "uid": 0
+            }
+          }
+        },
+        {
+          "expectation": "R1 (never restarted) names the domain alone; R2 (after a restart) names the www. alias too",
+          "held": true,
+          "measured": {
+            "set10-r1.test": [
+              "server_name set10-r1.test;"
+            ],
+            "set10-r2.test": [
+              "server_name set10-r2.test www.set10-r2.test;"
+            ]
+          }
+        },
+        {
+          "expectation": "the ledger is at 42 before the update",
+          "held": true,
+          "measured": [
+            40,
+            41,
+            42
+          ]
+        },
+        {
+          "expectation": "the owner's backup of the Panel database (online) holds schema 42",
+          "held": true,
+          "measured": {
+            "backup_has_managed_site_files": false,
+            "backup_schema_version": 42,
+            "panel": "active",
+            "path": "/root/set10-panel-db-before-the-update.db"
+          }
+        }
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "checks": [
+    {
+      "detail": {
+        "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "Domain": "set10-r2.test",
+        "DomainID": 2,
+        "FTPPassword": "[REDACTED]",
+        "FTPUser": "set10_r2_test",
+        "PHPVersion": "8.3",
+        "ProjectType": "php",
+        "SiteID": 2,
+        "TempDomain": ""
+      },
+      "name": "set10-r2.test is created by alpha.81 (200 with its id)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/3/public_html",
+        "Domain": "set10-r3.test",
+        "DomainID": 3,
+        "FTPPassword": "[REDACTED]",
+        "FTPUser": "set10_r3_test",
+        "PHPVersion": "8.3",
+        "ProjectType": "php",
+        "SiteID": 3,
+        "TempDomain": ""
+      },
+      "name": "set10-r3.test is created by alpha.81 (200 with its id)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/4/public_html",
+        "Domain": "set10-r1.test",
+        "DomainID": 4,
+        "FTPPassword": "[REDACTED]",
+        "FTPUser": "set10_r1_test",
+        "PHPVersion": "8.3",
+        "ProjectType": "php",
+        "SiteID": 4,
+        "TempDomain": ""
+      },
+      "name": "set10-r1.test is created by alpha.81 (200 with its id)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "api": {
+          "answering": true,
+          "seconds": 8.1,
+          "status": 200
+        },
+        "epoch": 1791668271.554984,
+        "file": "steps/09-set10-sites-before-the-update/native/001-owner-pre-panel-restart.json",
+        "is_active": "active",
+        "kind": "owner: systemctl restart celikpanel-panel",
+        "ok": true,
+        "reconcile_lines_seen": [
+          "2026-10-10T21:37:51.979793+00:00 dns-ubuntu panel[41311]: 2026/10/10 21:37:51 certificate startup reconcile: restored 3 hosted vhosts with one nginx validation and reload"
+        ],
+        "session": {
+          "status": 200
+        },
+        "waited_seconds": 2.1
+      },
+      "name": "B-before: the Panel restarted between R2/R3 and R1",
+      "ok": true
+    },
+    {
+      "detail": {
+        "at": "2026-10-10T21:38:04Z",
+        "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+        "returncode": 0,
+        "status": "ok"
+      },
+      "name": "B-before: the owner's edit of R3 is in service (nginx -t passed)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set10-r1.test": {
+          "gid": 988,
+          "header": {
+            "first_line": "# Nginx vhost for set10-r1.test",
+            "present": false
+          },
+          "inode": 263787,
+          "mode": "0644",
+          "mtime_ns": 1791668283580868648,
+          "server_name": [
+            "server_name set10-r1.test;"
+          ],
+          "sha256": "afbaa540a2aa6204fdc63093c0bea283cf7579147e3f90675dda50319969a77f",
+          "uid": 0
+        },
+        "set10-r2.test": {
+          "gid": 988,
+          "header": {
+            "first_line": "# Nginx vhost for set10-r2.test",
+            "present": false
+          },
+          "inode": 262671,
+          "mode": "0644",
+          "mtime_ns": 1791668271906733426,
+          "server_name": [
+            "server_name set10-r2.test www.set10-r2.test;"
+          ],
+          "sha256": "d7e2bca9116f95b304cf3ce5e5b55ecfa823ae4983d2d306e00ca502f3222db3",
+          "uid": 0
+        },
+        "set10-r3.test": {
+          "gid": 988,
+          "header": {
+            "first_line": "# Nginx vhost for set10-r3.test",
+            "present": false
+          },
+          "inode": 263779,
+          "mode": "0644",
+          "mtime_ns": 1791668284225876120,
+          "server_name": [
+            "server_name set10-r3.test www.set10-r3.test;"
+          ],
+          "sha256": "37a45a8339714371f5f61c75de2f3135fb58c41ba1a008b3b4fc3b90af8a5b4f",
+          "uid": 0
+        },
+        "upd1-owner.test": {
+          "gid": 988,
+          "header": {
+            "first_line": "# Nginx vhost for upd1-owner.test",
+            "present": false
+          },
+          "inode": 262669,
+          "mode": "0644",
+          "mtime_ns": 1791668271872733032,
+          "server_name": [
+            "server_name upd1-owner.test www.upd1-owner.test;"
+          ],
+          "sha256": "aad048d54b437f902b33bfd27c22de681ac9329772a513334b1ffdd434ec8602",
+          "uid": 0
+        }
+      },
+      "name": "B-before: alpha.81's files carry no render header",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set10-r1.test": [
+          "server_name set10-r1.test;"
+        ],
+        "set10-r2.test": [
+          "server_name set10-r2.test www.set10-r2.test;"
+        ]
+      },
+      "name": "B-before: R1 (never restarted) names the domain alone; R2 (after a restart) names the www. alias too",
+      "ok": true
+    },
+    {
+      "detail": [
+        40,
+        41,
+        42
+      ],
+      "name": "B-before: the ledger is at 42 before the update",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backup_has_managed_site_files": false,
+        "backup_schema_version": 42,
+        "panel": "active",
+        "path": "/root/set10-panel-db-before-the-update.db"
+      },
+      "name": "B-before: the owner's backup of the Panel database (online) holds schema 42",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-10T21:38:04Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/001-owner-pre-panel-restart.json",
+      "label": "owner-pre-panel-restart",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/002-owner-pre-r3-edit.json",
+      "label": "owner-pre-r3-edit",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/003-pre-before-the-update-read.json",
+      "label": "pre-before-the-update-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/004-owner-pre-db-backup.json",
+      "label": "owner-pre-db-backup",
+      "mode": "owner-db-backup",
+      "owner_action": true
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [
+    {
+      "detail": [],
+      "note": "B-before: PASS"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-10T21:37:51Z",
+      "label": "pre-panel-restart",
+      "mode": "owner-panel"
+    },
+    {
+      "at": "2026-10-10T21:38:04Z",
+      "label": "pre-r3-edit",
+      "mode": "owner-vhost10"
+    },
+    {
+      "at": "2026-10-10T21:38:05Z",
+      "label": "pre-db-backup",
+      "mode": "owner-db-backup"
+    }
+  ],
+  "owner_waited_for_idle": {
+    "at": "2026-10-10T21:37:47Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.2
+  },
+  "section": "set10-sites-before-the-update",
+  "started_at": "2026-10-10T21:37:47Z",
+  "substeps": {
+    "B-before": "passed",
+    "section": "passed"
+  },
+  "title": "three sites on alpha.81 (creation text, start text, owner-edited) and, in the good cell, a backup of the Panel database",
+  "verdict": "passed"
+}

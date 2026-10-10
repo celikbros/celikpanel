@@ -1,0 +1,26 @@
+{
+  "checks": {
+    "checks": 31,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T19:52:48Z",
+    "notes": [
+      "c1: PASS",
+      "c2: PASS",
+      "c3: PASS"
+    ],
+    "started_at": "2026-10-10T19:51:18Z",
+    "substeps": {
+      "c1": "passed",
+      "c2": "passed",
+      "c3": "passed"
+    },
+    "title": "the owner replaces the file (start, restart, General save)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T19:52:48Z",
+  "name": "c-owner-edit",
+  "started_at": "2026-10-10T19:51:18Z",
+  "verdict": "passed"
+}

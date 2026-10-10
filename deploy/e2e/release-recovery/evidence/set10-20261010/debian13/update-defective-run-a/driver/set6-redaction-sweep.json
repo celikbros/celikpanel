@@ -1,0 +1,19 @@
+{
+  "base64_rule": "runs of 40 or more base64 characters that decode strictly to UTF-8 text, three levels deep",
+  "base64_runs_replaced": 0,
+  "distinct_values_known": 0,
+  "files_changed": {},
+  "files_changed_inside_base64_text": {},
+  "files_read": 66,
+  "json_objects_marked": 0,
+  "mark": "[REDACTED-SHA256]",
+  "note": "counts only; no removed value is recorded anywhere",
+  "places_by_class": {
+    "learned_value": 0,
+    "migration_directory": 0,
+    "named_field": 0
+  },
+  "places_inside_base64_text": 0,
+  "rewritten_in_place": true,
+  "schema": "celikpanel/set6-digest-sweep/v1"
+}

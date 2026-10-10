@@ -1,0 +1,196 @@
+{
+  "agreement": {
+    "known_sources": [
+      "api",
+      "cli"
+    ],
+    "lag": "start-instant lag: the Panel API still said accepted while the root CLI already said running",
+    "phase": {
+      "api": "accepted",
+      "cli": "running"
+    },
+    "reasons": [],
+    "sources": [
+      "api",
+      "cli",
+      "shell"
+    ],
+    "verdict": "start-instant-lag"
+  },
+  "cli": {
+    "boot_id": "bd0a85a2-ff0c-45c7-b02d-9a5b27b764a9",
+    "captured_at": "2026-10-10T22:23:09.722702Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update is being applied; the panel may be unavailable for a short time. Nothing to do now: check this same request again in a minute. Checking does not restart the update.\nRequest: 0d7b7229318be6a8a53a2c71d235ebb4\nRecorded at: 2026-10-10T22:23:09Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=running reason=update_running proof=none\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"0d7b7229318be6a8a53a2c71d235ebb4\",\"observation\":\"known\",\"phase\":\"running\",\"terminal_proof\":\"none\",\"reason\":\"update_running\",\"observed_at\":\"2026-10-10T22:23:09Z\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme uygulanıyor; panel kısa bir süre erişilemeyebilir. Şimdi yapmanız gereken bir şey yok: bir dakika sonra aynı işlemi yeniden sorgulayın. Sorgulamak güncellemeyi yeniden başlatmaz.\nİşlem: 0d7b7229318be6a8a53a2c71d235ebb4\nKayıt zamanı: 2026-10-10T22:23:09Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=running reason=update_running proof=none\n"
+    }
+  },
+  "guidance_api": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.accepted",
+      "recovery.next.accepted"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "observation": {
+      "automatic_recovery": null,
+      "failure_code": null,
+      "first_failure_code": null,
+      "observation": "known",
+      "observed_at": "2026-10-10T22:23:09Z",
+      "panel_state": "ready",
+      "phase": "accepted",
+      "previous_failure": null,
+      "reason": "operation_accepted",
+      "renewal_before_update": null,
+      "request_id": "0d7b7229318be6a8a53a2c71d235ebb4",
+      "terminal_proof": "none",
+      "waiting_for": null
+    },
+    "observation_unavailable": false,
+    "texts": {
+      "en": [
+        "Update request recorded",
+        "The server recorded this request. This page checks the same operation automatically; it does not submit it again."
+      ],
+      "tr": [
+        "Güncelleme isteği kaydedildi",
+        "Sunucu bu isteği kaydetti. Bu sayfa aynı işlemi otomatik kontrol eder; yeniden göndermez."
+      ]
+    }
+  },
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.running",
+      "recovery.next.running"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "observation": {
+      "automatic_recovery": null,
+      "failure_code": null,
+      "first_failure_code": null,
+      "observation": "known",
+      "observed_at": "2026-10-10T22:23:09Z",
+      "panel_state": "ready",
+      "phase": "running",
+      "previous_failure": null,
+      "reason": "update_running",
+      "renewal_before_update": null,
+      "request_id": "0d7b7229318be6a8a53a2c71d235ebb4",
+      "terminal_proof": "none",
+      "waiting_for": null
+    },
+    "observation_unavailable": false,
+    "texts": {
+      "en": [
+        "Last recorded step: update in progress",
+        "The server last reported work on this update. Wait for the next recorded result; checking this page does not restart it."
+      ],
+      "tr": [
+        "Kaydedilmiş son adım: güncelleme sürüyor",
+        "Sunucu son olarak bu güncelleme üzerinde çalıştığını bildirdi. Sonraki kayıtlı sonucu bekleyin; bu sayfayı kontrol etmek işlemi yeniden başlatmaz."
+      ]
+    }
+  },
+  "index": 0,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-10-10T22:23:09Z",
+    "phase": "running",
+    "reason": "update_running",
+    "request_id": "0d7b7229318be6a8a53a2c71d235ebb4",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "recovery_api": {
+    "body": {
+      "observation": "known",
+      "observed_at": "2026-10-10T22:23:09Z",
+      "panel_state": "ready",
+      "phase": "accepted",
+      "reason": "operation_accepted",
+      "request_id": "0d7b7229318be6a8a53a2c71d235ebb4",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "none"
+    },
+    "http": 200
+  },
+  "t": 1791670989.1375751,
+  "update_card": {
+    "keys": [
+      "panelUpdate.title",
+      "panelUpdate.queued"
+    ],
+    "missing_keys": [],
+    "observation_error": null,
+    "role": "baseline",
+    "server_message": null,
+    "source": {
+      "observation": {
+        "path": "lib/recoveryObservation.ts",
+        "sha256": "3b1c955fd04bdcfe754ca80da5f0a10d85a16caebc435d3e719d2e4e3fd57629"
+      },
+      "outcome": {
+        "path": "lib/systemUpdateOutcome.ts",
+        "sha256": "7329a488a436f12637f3c46a60521bbe22027de032044c4963f5686b0a83f67c"
+      },
+      "screen": {
+        "path": "components/RecoveryAccess.tsx",
+        "sha256": "4cc5136c5e24f522cd44c1a9e8cb698c0d7450a90670ffab19bbc03ee74311c0"
+      },
+      "typed": {
+        "path": "lib/systemUpdateFailure.ts",
+        "sha256": "b12d9a0d2989bd70670e02481159128ba716bb21f15db5084b9631475a610af4"
+      }
+    },
+    "state": "in-progress",
+    "texts": {
+      "en": [
+        "CelikPanel updates",
+        "The update is queued."
+      ],
+      "tr": [
+        "CelikPanel güncellemeleri",
+        "Güncelleme sırada."
+      ]
+    },
+    "unavailable": null
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-10-10T22:23:09.315182695Z",
+      "found": true,
+      "request_id": "0d7b7229318be6a8a53a2c71d235ebb4",
+      "status": "queued",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "049ae9a1f8a7c44a049781310bc267706c5e2cf198d0cc616a2a1dcc56b8dc7a",
+        "archive_size": "65992740",
+        "commit": "d688d8ff85d704fd6e4fbc377d82b53971b9fc32",
+        "os": "linux",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      },
+      "updated_at": "2026-10-10T22:23:09.315182695Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-10-10T22:23:09Z"
+}

@@ -1,0 +1,293 @@
+{
+  "calls": [],
+  "cells": {
+    "B-return": {
+      "detail": {
+        "files": {
+          "set10-r1.test": {
+            "header": {
+              "first_line": "# Nginx vhost for set10-r1.test",
+              "present": false
+            },
+            "inode": 88386,
+            "ledger_row": null,
+            "lines": [],
+            "same_bytes_as_before": false,
+            "same_inode_as_before": false,
+            "server_name": [
+              "server_name set10-r1.test www.set10-r1.test;"
+            ],
+            "sha256": "4d09c7fec19380e2fe63896e72c33547612684f25960fc8f447948a16f2bde7a"
+          },
+          "set10-r2.test": {
+            "header": {
+              "first_line": "# Nginx vhost for set10-r2.test",
+              "present": false
+            },
+            "inode": 88380,
+            "ledger_row": null,
+            "lines": [],
+            "same_bytes_as_before": true,
+            "same_inode_as_before": false,
+            "server_name": [
+              "server_name set10-r2.test www.set10-r2.test;"
+            ],
+            "sha256": "7c66a8280f0b063e9ac50245527f88108064fcc141999c2ca89b271a53173a12"
+          },
+          "set10-r3.test": {
+            "header": {
+              "first_line": "# Nginx vhost for set10-r3.test",
+              "present": false
+            },
+            "inode": 88383,
+            "ledger_row": null,
+            "lines": [],
+            "same_bytes_as_before": false,
+            "same_inode_as_before": false,
+            "server_name": [
+              "server_name set10-r3.test www.set10-r3.test;"
+            ],
+            "sha256": "f02668fa4a0ba38bb71baa07366be8ea01e0dcbdb01fcc79f1a7e544db2a685c"
+          },
+          "upd1-owner.test": {
+            "header": {
+              "first_line": "# Nginx vhost for upd1-owner.test",
+              "present": false
+            },
+            "inode": 88377,
+            "ledger_row": null,
+            "lines": [],
+            "same_bytes_as_before": true,
+            "same_inode_as_before": false,
+            "server_name": [
+              "server_name upd1-owner.test www.upd1-owner.test;"
+            ],
+            "sha256": "aad048d54b437f902b33bfd27c22de681ac9329772a513334b1ffdd434ec8602"
+          }
+        },
+        "what_alpha81_did_per_file": {
+          "set10-r1.test": {
+            "same_bytes": false,
+            "same_inode": false,
+            "server_name": [
+              "server_name set10-r1.test www.set10-r1.test;"
+            ]
+          },
+          "set10-r2.test": {
+            "same_bytes": true,
+            "same_inode": false,
+            "server_name": [
+              "server_name set10-r2.test www.set10-r2.test;"
+            ]
+          },
+          "set10-r3.test": {
+            "same_bytes": false,
+            "same_inode": false,
+            "server_name": [
+              "server_name set10-r3.test www.set10-r3.test;"
+            ]
+          },
+          "upd1-owner.test": {
+            "same_bytes": true,
+            "same_inode": false,
+            "server_name": [
+              "server_name upd1-owner.test www.upd1-owner.test;"
+            ]
+          }
+        }
+      },
+      "expectations": [
+        {
+          "expectation": "the ledger is back at 42 (no managed_site_files table)",
+          "held": true,
+          "measured": {
+            "ledger_last": [
+              40,
+              41,
+              42
+            ],
+            "managed_site_files_table": false,
+            "schema_version": 42
+          }
+        },
+        {
+          "expectation": "no file carries a render header (the candidate's start never ran)",
+          "held": true,
+          "measured": {
+            "set10-r1.test": {
+              "first_line": "# Nginx vhost for set10-r1.test",
+              "present": false
+            },
+            "set10-r2.test": {
+              "first_line": "# Nginx vhost for set10-r2.test",
+              "present": false
+            },
+            "set10-r3.test": {
+              "first_line": "# Nginx vhost for set10-r3.test",
+              "present": false
+            },
+            "upd1-owner.test": {
+              "first_line": "# Nginx vhost for upd1-owner.test",
+              "present": false
+            }
+          }
+        },
+        {
+          "expectation": "the returned alpha.81 rendered every vhost at its start (its start line)",
+          "held": true,
+          "measured": [
+            "2026-10-10T22:23:56.378415+00:00 dns-arch panel[16584]: 2026/10/10 22:23:56 certificate startup reconcile: restored 4 hosted vhosts with one nginx validation and reload",
+            "2026-10-10T22:24:37.418992+00:00 dns-arch panel[19419]: 2026/10/10 22:24:37 certificate startup reconcile: restored 4 hosted vhosts with one nginx validation and reload"
+          ]
+        }
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "checks": [
+    {
+      "detail": {
+        "ledger_last": [
+          40,
+          41,
+          42
+        ],
+        "managed_site_files_table": false,
+        "schema_version": 42
+      },
+      "name": "B-return: the ledger is back at 42 (no managed_site_files table)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set10-r1.test": {
+          "first_line": "# Nginx vhost for set10-r1.test",
+          "present": false
+        },
+        "set10-r2.test": {
+          "first_line": "# Nginx vhost for set10-r2.test",
+          "present": false
+        },
+        "set10-r3.test": {
+          "first_line": "# Nginx vhost for set10-r3.test",
+          "present": false
+        },
+        "upd1-owner.test": {
+          "first_line": "# Nginx vhost for upd1-owner.test",
+          "present": false
+        }
+      },
+      "name": "B-return: no file carries a render header (the candidate's start never ran)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "2026-10-10T22:23:56.378415+00:00 dns-arch panel[16584]: 2026/10/10 22:23:56 certificate startup reconcile: restored 4 hosted vhosts with one nginx validation and reload",
+        "2026-10-10T22:24:37.418992+00:00 dns-arch panel[19419]: 2026/10/10 22:24:37 certificate startup reconcile: restored 4 hosted vhosts with one nginx validation and reload"
+      ],
+      "name": "B-return: the returned alpha.81 rendered every vhost at its start (its start line)",
+      "ok": true
+    }
+  ],
+  "extra_sites": {},
+  "files": {
+    "set10-r1.test": {
+      "header": {
+        "first_line": "# Nginx vhost for set10-r1.test",
+        "present": false
+      },
+      "inode": 88386,
+      "ledger_row": null,
+      "lines": [],
+      "same_bytes_as_before": false,
+      "same_inode_as_before": false,
+      "server_name": [
+        "server_name set10-r1.test www.set10-r1.test;"
+      ],
+      "sha256": "4d09c7fec19380e2fe63896e72c33547612684f25960fc8f447948a16f2bde7a"
+    },
+    "set10-r2.test": {
+      "header": {
+        "first_line": "# Nginx vhost for set10-r2.test",
+        "present": false
+      },
+      "inode": 88380,
+      "ledger_row": null,
+      "lines": [],
+      "same_bytes_as_before": true,
+      "same_inode_as_before": false,
+      "server_name": [
+        "server_name set10-r2.test www.set10-r2.test;"
+      ],
+      "sha256": "7c66a8280f0b063e9ac50245527f88108064fcc141999c2ca89b271a53173a12"
+    },
+    "set10-r3.test": {
+      "header": {
+        "first_line": "# Nginx vhost for set10-r3.test",
+        "present": false
+      },
+      "inode": 88383,
+      "ledger_row": null,
+      "lines": [],
+      "same_bytes_as_before": false,
+      "same_inode_as_before": false,
+      "server_name": [
+        "server_name set10-r3.test www.set10-r3.test;"
+      ],
+      "sha256": "f02668fa4a0ba38bb71baa07366be8ea01e0dcbdb01fcc79f1a7e544db2a685c"
+    },
+    "upd1-owner.test": {
+      "header": {
+        "first_line": "# Nginx vhost for upd1-owner.test",
+        "present": false
+      },
+      "inode": 88377,
+      "ledger_row": null,
+      "lines": [],
+      "same_bytes_as_before": true,
+      "same_inode_as_before": false,
+      "server_name": [
+        "server_name upd1-owner.test www.upd1-owner.test;"
+      ],
+      "sha256": "aad048d54b437f902b33bfd27c22de681ac9329772a513334b1ffdd434ec8602"
+    }
+  },
+  "finished_at": "2026-10-10T22:24:51Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/004-after-the-update-read.json",
+      "label": "after-the-update-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/005-after-the-update-journal.json",
+      "label": "after-the-update-journal",
+      "mode": "read-window",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [
+    {
+      "detail": [],
+      "note": "B-return: PASS"
+    }
+  ],
+  "owner_actions": [],
+  "section": "set10-site-files-after-the-update",
+  "session": {
+    "status": 200
+  },
+  "start_lines": [
+    "2026-10-10T22:23:56.378415+00:00 dns-arch panel[16584]: 2026/10/10 22:23:56 certificate startup reconcile: restored 4 hosted vhosts with one nginx validation and reload",
+    "2026-10-10T22:24:37.418992+00:00 dns-arch panel[19419]: 2026/10/10 22:24:37 certificate startup reconcile: restored 4 hosted vhosts with one nginx validation and reload"
+  ],
+  "started_at": "2026-10-10T22:24:50Z",
+  "substeps": {
+    "B-return": "passed"
+  },
+  "title": "the site files, the ledger, the start lines, the Domains list and the three new routes without a request identity",
+  "verdict": "passed"
+}

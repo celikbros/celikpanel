@@ -1,0 +1,61 @@
+{
+  "at": "2026-10-10T20:22:14Z",
+  "by_unit": {
+    "celikpanel-agent.service": [
+      "2026-10-10T20:21:59.694450+00:00 dns-ubuntu postfix/postfix-script[63771]: the Postfix mail system is running: PID: 37578",
+      "2026-10-10T20:22:00.288173+00:00 dns-ubuntu postfix/postfix-script[63807]: the Postfix mail system is running: PID: 37578",
+      "2026-10-10T20:22:08.091158+00:00 dns-ubuntu postfix/postfix-script[64488]: refreshing the Postfix mail system"
+    ],
+    "celikpanel-panel.service": [
+      "2026-10-10T20:21:51.632103+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:51 http: TLS handshake error from 127.0.0.1:52436: EOF",
+      "2026-10-10T20:21:51.668689+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:51 http: TLS handshake error from 127.0.0.1:52440: EOF",
+      "2026-10-10T20:21:51.682167+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:51 http: TLS handshake error from 127.0.0.1:52460: EOF",
+      "2026-10-10T20:21:51.750699+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:51 site configuration set10-a.test: the owner chose to keep the file (sha256 660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba)",
+      "2026-10-10T20:21:52.337821+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:52 http: TLS handshake error from 127.0.0.1:52470: EOF",
+      "2026-10-10T20:21:53.369665+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...",
+      "2026-10-10T20:21:53.415681+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.",
+      "2026-10-10T20:21:53.416082+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.",
+      "2026-10-10T20:21:53.442589+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...",
+      "2026-10-10T20:21:53.490270+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.",
+      "2026-10-10T20:21:53.912169+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:53 Starting CelikPanel Backend...",
+      "2026-10-10T20:21:53.937652+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:53 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)",
+      "2026-10-10T20:21:53.939703+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:53 Panel startup listener active on :2083 (HTTPS; application gated)",
+      "2026-10-10T20:21:53.942121+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:53 Connected to Agent RPC; preparing normal management access",
+      "2026-10-10T20:21:53.990014+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:53 site configuration set1-owner.test (startup): unchanged",
+      "2026-10-10T20:21:54.070922+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:54 site configuration set10-a.test (startup): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+      "2026-10-10T20:21:54.085834+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:54 site configuration set10-b.test (startup): unchanged",
+      "2026-10-10T20:21:54.099537+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:54 site configuration files at start: 0 written, 2 unchanged, 1 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release",
+      "2026-10-10T20:21:55.707040+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:55 http: TLS handshake error from 127.0.0.1:52488: EOF",
+      "2026-10-10T20:21:57.738876+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:57 http: TLS handshake error from 127.0.0.1:40572: EOF",
+      "2026-10-10T20:21:59.755934+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:59 http: TLS handshake error from 127.0.0.1:40590: EOF",
+      "2026-10-10T20:22:01.777137+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:01 http: TLS handshake error from 127.0.0.1:40604: EOF",
+      "2026-10-10T20:22:03.029177+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:03 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release",
+      "2026-10-10T20:22:03.801664+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:03 http: TLS handshake error from 127.0.0.1:40626: EOF",
+      "2026-10-10T20:22:05.823715+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:05 http: TLS handshake error from 127.0.0.1:40644: EOF",
+      "2026-10-10T20:22:07.853616+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:07 http: TLS handshake error from 127.0.0.1:40116: EOF",
+      "2026-10-10T20:22:08.821756+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:08 milter chain: milters=\"inet:localhost:11332\" maps=hash",
+      "2026-10-10T20:22:08.829225+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:08 Panel ready on :2083 (HTTPS)",
+      "2026-10-10T20:22:09.883493+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:09 http: TLS handshake error from 127.0.0.1:40134: EOF",
+      "2026-10-10T20:22:09.901936+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:09 http: TLS handshake error from 127.0.0.1:40144: EOF"
+    ],
+    "nginx.service": [],
+    "php8.3-fpm.service": []
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set10-native/v1",
+  "since_epoch": 1791663711,
+  "systemd_manager": [
+    "2026-10-10T20:21:53.369665+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...",
+    "2026-10-10T20:21:53.415681+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.",
+    "2026-10-10T20:21:53.416082+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.",
+    "2026-10-10T20:21:53.442589+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...",
+    "2026-10-10T20:21:53.490270+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel."
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php8.3-fpm.service"
+  ]
+}

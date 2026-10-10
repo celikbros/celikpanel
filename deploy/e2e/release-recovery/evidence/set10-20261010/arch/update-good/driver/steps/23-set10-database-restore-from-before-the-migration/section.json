@@ -1,0 +1,668 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-10T22:14:19Z",
+      "json": [
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T22:11:28Z",
+          "disk_usage": 0,
+          "domain_name": "set10-r1.test",
+          "id": 4,
+          "php_version": "",
+          "project_type": "static",
+          "site_config": {
+            "state": "managed_unchanged"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T22:11:24Z",
+          "disk_usage": 0,
+          "domain_name": "set10-r3.test",
+          "id": 3,
+          "php_version": "",
+          "project_type": "static",
+          "site_config": {
+            "state": "unknown_origin"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T22:11:23Z",
+          "disk_usage": 0,
+          "domain_name": "set10-r2.test",
+          "id": 2,
+          "php_version": "",
+          "project_type": "static",
+          "site_config": {
+            "state": "managed_unchanged"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T22:11:20Z",
+          "disk_usage": 0,
+          "domain_name": "upd1-owner.test",
+          "id": 1,
+          "php_version": "",
+          "project_type": "static",
+          "site_config": {
+            "state": "managed_unchanged"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        }
+      ],
+      "label": "after the database restore: GET /api/v1/domains (Domains list)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "cells": {
+    "B-db-restore": {
+      "detail": {
+        "journal": "steps/23-set10-database-restore-from-before-the-migration/native/014-restore-journal.json",
+        "start_lines": [
+          "2026-10-10T22:14:14.380240+00:00 dns-arch panel[16281]: 2026/10/10 22:14:14 site configuration files at start: 0 written, 3 unchanged, 0 kept (owner-edited), 0 kept (foreign), 1 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release",
+          "2026-10-10T22:14:14.380240+00:00 dns-arch panel[16281]: 2026/10/10 22:14:14 site configuration files at start: 0 adopted, 1 left alone because they differ from every known CelikPanel text"
+        ]
+      },
+      "expectations": [
+        {
+          "expectation": "the backup put back was at 42 and the Panel's start migrated it to 44",
+          "held": true,
+          "measured": {
+            "after_the_start": 44,
+            "put_back": 42
+          }
+        },
+        {
+          "expectation": "the Panel started and answers",
+          "held": true,
+          "measured": {
+            "api": {
+              "answering": true,
+              "seconds": 0.1,
+              "status": 200
+            },
+            "epoch": 1791670454.1932342,
+            "file": "steps/23-set10-database-restore-from-before-the-migration/native/012-owner-restore-panel-start.json",
+            "is_active": "active",
+            "kind": "owner: systemctl start celikpanel-panel",
+            "ok": true,
+            "reconcile_lines_seen": [
+              "2026-10-10T22:14:14.380240+00:00 dns-arch panel[16281]: 2026/10/10 22:14:14 site configuration files at start: 0 written, 3 unchanged, 0 kept (owner-edited), 0 kept (foreign), 1 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release",
+              "2026-10-10T22:14:14.380240+00:00 dns-arch panel[16281]: 2026/10/10 22:14:14 site configuration files at start: 0 adopted, 1 left alone because they differ from every known CelikPanel text"
+            ],
+            "session": {
+              "status": 200
+            },
+            "waited_seconds": 2.1
+          }
+        },
+        {
+          "expectation": "no file was written by the start (sha256, inode)",
+          "held": true,
+          "measured": {
+            "set10-r1.test": {
+              "ledger_row": {
+                "adopted_from": "",
+                "backup_path": "",
+                "body_sha256": "881a7810e85ee8a365274e02bb0e4aa78ddd18fc1b9a5284e876d017d9701b2c",
+                "decided_at": 0,
+                "decided_by": null,
+                "decision": "",
+                "decision_file_sha256": "",
+                "domain_id": 4,
+                "file_format": "celikpanel-render v2",
+                "file_sha256": "bd1914743d10c95ca3f8c66204d7ac8a6911ccc76bc9540b3d8b5d603c8a1d3e",
+                "id": 4,
+                "kind": "nginx_vhost",
+                "observed_at": 1791670454,
+                "path": "/etc/nginx/sites-available/set10-r1.test.conf",
+                "pending_path": "",
+                "pending_sha256": "",
+                "site_id": 4,
+                "state": "managed_unchanged",
+                "state_reason": "",
+                "written_at": 0,
+                "written_release": ""
+              },
+              "lines": [
+                "2026-10-10T22:14:14.373099+00:00 dns-arch panel[16281]: 2026/10/10 22:14:14 site configuration set10-r1.test (startup): unchanged"
+              ],
+              "same_inode": true,
+              "same_sha256": true
+            },
+            "set10-r2.test": {
+              "ledger_row": {
+                "adopted_from": "",
+                "backup_path": "",
+                "body_sha256": "b2cc0b9a98e6a271aaad213b402a8d2c456324203b62d9e8b898756c9f5acbfe",
+                "decided_at": 0,
+                "decided_by": null,
+                "decision": "",
+                "decision_file_sha256": "",
+                "domain_id": 2,
+                "file_format": "celikpanel-render v2",
+                "file_sha256": "9060ebec914e808959bda1ff0a2c64a8057fe5bc5bb63c36a191c91e3e6837bf",
+                "id": 2,
+                "kind": "nginx_vhost",
+                "observed_at": 1791670454,
+                "path": "/etc/nginx/sites-available/set10-r2.test.conf",
+                "pending_path": "",
+                "pending_sha256": "",
+                "site_id": 2,
+                "state": "managed_unchanged",
+                "state_reason": "",
+                "written_at": 0,
+                "written_release": ""
+              },
+              "lines": [
+                "2026-10-10T22:14:14.362246+00:00 dns-arch panel[16281]: 2026/10/10 22:14:14 site configuration set10-r2.test (startup): unchanged"
+              ],
+              "same_inode": true,
+              "same_sha256": true
+            },
+            "set10-r3.test": {
+              "ledger_row": {
+                "adopted_from": "",
+                "backup_path": "",
+                "body_sha256": "",
+                "decided_at": 0,
+                "decided_by": null,
+                "decision": "",
+                "decision_file_sha256": "",
+                "domain_id": 3,
+                "file_format": "",
+                "file_sha256": "1b4c0c5251417f658cb12ad1cfe4d07ec91d2bb495f8a27922bf128c0cee0015",
+                "id": 3,
+                "kind": "nginx_vhost",
+                "observed_at": 1791670454,
+                "path": "/etc/nginx/sites-available/set10-r3.test.conf",
+                "pending_path": "/etc/nginx/sites-available/set10-r3.test.conf.celikpanel-pending",
+                "pending_sha256": "0091efaa7e853c49dfa61f60db5bc3abf9304c9781bccbed2a0c15b32b0c98e5",
+                "site_id": 3,
+                "state": "unknown_origin",
+                "state_reason": "",
+                "written_at": 0,
+                "written_release": ""
+              },
+              "lines": [
+                "2026-10-10T22:14:14.368660+00:00 dns-arch panel[16281]: 2026/10/10 22:14:14 site configuration set10-r3.test (startup): kept (unknown-origin); CelikPanel's text held in /etc/nginx/sites-available/set10-r3.test.conf.celikpanel-pending"
+              ],
+              "same_inode": true,
+              "same_sha256": true
+            },
+            "upd1-owner.test": {
+              "ledger_row": {
+                "adopted_from": "",
+                "backup_path": "",
+                "body_sha256": "9cd0b0f29d38d914fa95c76245df61a7dbeb217895cc3d03b35a0ed2b5440875",
+                "decided_at": 0,
+                "decided_by": null,
+                "decision": "",
+                "decision_file_sha256": "",
+                "domain_id": 1,
+                "file_format": "celikpanel-render v2",
+                "file_sha256": "12fee27d8ed225e4be0603f2454f21e1fd09f5b6d1bd98da972d054efb2bc7e3",
+                "id": 1,
+                "kind": "nginx_vhost",
+                "observed_at": 1791670454,
+                "path": "/etc/nginx/sites-available/upd1-owner.test.conf",
+                "pending_path": "",
+                "pending_sha256": "",
+                "site_id": 1,
+                "state": "managed_unchanged",
+                "state_reason": "",
+                "written_at": 0,
+                "written_release": ""
+              },
+              "lines": [
+                "2026-10-10T22:14:14.355128+00:00 dns-arch panel[16281]: 2026/10/10 22:14:14 site configuration upd1-owner.test (startup): unchanged"
+              ],
+              "same_inode": true,
+              "same_sha256": true
+            }
+          }
+        },
+        {
+          "expectation": "the start classified every site again: R1, R2 managed_unchanged (header); R3 unknown_origin",
+          "held": true,
+          "measured": {
+            "set10-r1.test": {
+              "adopted_from": "",
+              "backup_path": "",
+              "body_sha256": "881a7810e85ee8a365274e02bb0e4aa78ddd18fc1b9a5284e876d017d9701b2c",
+              "decided_at": 0,
+              "decided_by": null,
+              "decision": "",
+              "decision_file_sha256": "",
+              "domain_id": 4,
+              "file_format": "celikpanel-render v2",
+              "file_sha256": "bd1914743d10c95ca3f8c66204d7ac8a6911ccc76bc9540b3d8b5d603c8a1d3e",
+              "id": 4,
+              "kind": "nginx_vhost",
+              "observed_at": 1791670454,
+              "path": "/etc/nginx/sites-available/set10-r1.test.conf",
+              "pending_path": "",
+              "pending_sha256": "",
+              "site_id": 4,
+              "state": "managed_unchanged",
+              "state_reason": "",
+              "written_at": 0,
+              "written_release": ""
+            },
+            "set10-r2.test": {
+              "adopted_from": "",
+              "backup_path": "",
+              "body_sha256": "b2cc0b9a98e6a271aaad213b402a8d2c456324203b62d9e8b898756c9f5acbfe",
+              "decided_at": 0,
+              "decided_by": null,
+              "decision": "",
+              "decision_file_sha256": "",
+              "domain_id": 2,
+              "file_format": "celikpanel-render v2",
+              "file_sha256": "9060ebec914e808959bda1ff0a2c64a8057fe5bc5bb63c36a191c91e3e6837bf",
+              "id": 2,
+              "kind": "nginx_vhost",
+              "observed_at": 1791670454,
+              "path": "/etc/nginx/sites-available/set10-r2.test.conf",
+              "pending_path": "",
+              "pending_sha256": "",
+              "site_id": 2,
+              "state": "managed_unchanged",
+              "state_reason": "",
+              "written_at": 0,
+              "written_release": ""
+            },
+            "set10-r3.test": {
+              "adopted_from": "",
+              "backup_path": "",
+              "body_sha256": "",
+              "decided_at": 0,
+              "decided_by": null,
+              "decision": "",
+              "decision_file_sha256": "",
+              "domain_id": 3,
+              "file_format": "",
+              "file_sha256": "1b4c0c5251417f658cb12ad1cfe4d07ec91d2bb495f8a27922bf128c0cee0015",
+              "id": 3,
+              "kind": "nginx_vhost",
+              "observed_at": 1791670454,
+              "path": "/etc/nginx/sites-available/set10-r3.test.conf",
+              "pending_path": "/etc/nginx/sites-available/set10-r3.test.conf.celikpanel-pending",
+              "pending_sha256": "0091efaa7e853c49dfa61f60db5bc3abf9304c9781bccbed2a0c15b32b0c98e5",
+              "site_id": 3,
+              "state": "unknown_origin",
+              "state_reason": "",
+              "written_at": 0,
+              "written_release": ""
+            }
+          }
+        },
+        {
+          "expectation": "the Domains list carries the states again",
+          "held": true,
+          "measured": {
+            "set10-r1.test": {
+              "state": "managed_unchanged"
+            },
+            "set10-r2.test": {
+              "state": "managed_unchanged"
+            },
+            "set10-r3.test": {
+              "state": "unknown_origin"
+            },
+            "upd1-owner.test": {
+              "state": "managed_unchanged"
+            }
+          }
+        }
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "checks": [
+    {
+      "detail": {
+        "after_the_start": 44,
+        "put_back": 42
+      },
+      "name": "B-db-restore: the backup put back was at 42 and the Panel's start migrated it to 44",
+      "ok": true
+    },
+    {
+      "detail": {
+        "api": {
+          "answering": true,
+          "seconds": 0.1,
+          "status": 200
+        },
+        "epoch": 1791670454.1932342,
+        "file": "steps/23-set10-database-restore-from-before-the-migration/native/012-owner-restore-panel-start.json",
+        "is_active": "active",
+        "kind": "owner: systemctl start celikpanel-panel",
+        "ok": true,
+        "reconcile_lines_seen": [
+          "2026-10-10T22:14:14.380240+00:00 dns-arch panel[16281]: 2026/10/10 22:14:14 site configuration files at start: 0 written, 3 unchanged, 0 kept (owner-edited), 0 kept (foreign), 1 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release",
+          "2026-10-10T22:14:14.380240+00:00 dns-arch panel[16281]: 2026/10/10 22:14:14 site configuration files at start: 0 adopted, 1 left alone because they differ from every known CelikPanel text"
+        ],
+        "session": {
+          "status": 200
+        },
+        "waited_seconds": 2.1
+      },
+      "name": "B-db-restore: the Panel started and answers",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set10-r1.test": {
+          "ledger_row": {
+            "adopted_from": "",
+            "backup_path": "",
+            "body_sha256": "881a7810e85ee8a365274e02bb0e4aa78ddd18fc1b9a5284e876d017d9701b2c",
+            "decided_at": 0,
+            "decided_by": null,
+            "decision": "",
+            "decision_file_sha256": "",
+            "domain_id": 4,
+            "file_format": "celikpanel-render v2",
+            "file_sha256": "bd1914743d10c95ca3f8c66204d7ac8a6911ccc76bc9540b3d8b5d603c8a1d3e",
+            "id": 4,
+            "kind": "nginx_vhost",
+            "observed_at": 1791670454,
+            "path": "/etc/nginx/sites-available/set10-r1.test.conf",
+            "pending_path": "",
+            "pending_sha256": "",
+            "site_id": 4,
+            "state": "managed_unchanged",
+            "state_reason": "",
+            "written_at": 0,
+            "written_release": ""
+          },
+          "lines": [
+            "2026-10-10T22:14:14.373099+00:00 dns-arch panel[16281]: 2026/10/10 22:14:14 site configuration set10-r1.test (startup): unchanged"
+          ],
+          "same_inode": true,
+          "same_sha256": true
+        },
+        "set10-r2.test": {
+          "ledger_row": {
+            "adopted_from": "",
+            "backup_path": "",
+            "body_sha256": "b2cc0b9a98e6a271aaad213b402a8d2c456324203b62d9e8b898756c9f5acbfe",
+            "decided_at": 0,
+            "decided_by": null,
+            "decision": "",
+            "decision_file_sha256": "",
+            "domain_id": 2,
+            "file_format": "celikpanel-render v2",
+            "file_sha256": "9060ebec914e808959bda1ff0a2c64a8057fe5bc5bb63c36a191c91e3e6837bf",
+            "id": 2,
+            "kind": "nginx_vhost",
+            "observed_at": 1791670454,
+            "path": "/etc/nginx/sites-available/set10-r2.test.conf",
+            "pending_path": "",
+            "pending_sha256": "",
+            "site_id": 2,
+            "state": "managed_unchanged",
+            "state_reason": "",
+            "written_at": 0,
+            "written_release": ""
+          },
+          "lines": [
+            "2026-10-10T22:14:14.362246+00:00 dns-arch panel[16281]: 2026/10/10 22:14:14 site configuration set10-r2.test (startup): unchanged"
+          ],
+          "same_inode": true,
+          "same_sha256": true
+        },
+        "set10-r3.test": {
+          "ledger_row": {
+            "adopted_from": "",
+            "backup_path": "",
+            "body_sha256": "",
+            "decided_at": 0,
+            "decided_by": null,
+            "decision": "",
+            "decision_file_sha256": "",
+            "domain_id": 3,
+            "file_format": "",
+            "file_sha256": "1b4c0c5251417f658cb12ad1cfe4d07ec91d2bb495f8a27922bf128c0cee0015",
+            "id": 3,
+            "kind": "nginx_vhost",
+            "observed_at": 1791670454,
+            "path": "/etc/nginx/sites-available/set10-r3.test.conf",
+            "pending_path": "/etc/nginx/sites-available/set10-r3.test.conf.celikpanel-pending",
+            "pending_sha256": "0091efaa7e853c49dfa61f60db5bc3abf9304c9781bccbed2a0c15b32b0c98e5",
+            "site_id": 3,
+            "state": "unknown_origin",
+            "state_reason": "",
+            "written_at": 0,
+            "written_release": ""
+          },
+          "lines": [
+            "2026-10-10T22:14:14.368660+00:00 dns-arch panel[16281]: 2026/10/10 22:14:14 site configuration set10-r3.test (startup): kept (unknown-origin); CelikPanel's text held in /etc/nginx/sites-available/set10-r3.test.conf.celikpanel-pending"
+          ],
+          "same_inode": true,
+          "same_sha256": true
+        },
+        "upd1-owner.test": {
+          "ledger_row": {
+            "adopted_from": "",
+            "backup_path": "",
+            "body_sha256": "9cd0b0f29d38d914fa95c76245df61a7dbeb217895cc3d03b35a0ed2b5440875",
+            "decided_at": 0,
+            "decided_by": null,
+            "decision": "",
+            "decision_file_sha256": "",
+            "domain_id": 1,
+            "file_format": "celikpanel-render v2",
+            "file_sha256": "12fee27d8ed225e4be0603f2454f21e1fd09f5b6d1bd98da972d054efb2bc7e3",
+            "id": 1,
+            "kind": "nginx_vhost",
+            "observed_at": 1791670454,
+            "path": "/etc/nginx/sites-available/upd1-owner.test.conf",
+            "pending_path": "",
+            "pending_sha256": "",
+            "site_id": 1,
+            "state": "managed_unchanged",
+            "state_reason": "",
+            "written_at": 0,
+            "written_release": ""
+          },
+          "lines": [
+            "2026-10-10T22:14:14.355128+00:00 dns-arch panel[16281]: 2026/10/10 22:14:14 site configuration upd1-owner.test (startup): unchanged"
+          ],
+          "same_inode": true,
+          "same_sha256": true
+        }
+      },
+      "name": "B-db-restore: no file was written by the start (sha256, inode)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set10-r1.test": {
+          "adopted_from": "",
+          "backup_path": "",
+          "body_sha256": "881a7810e85ee8a365274e02bb0e4aa78ddd18fc1b9a5284e876d017d9701b2c",
+          "decided_at": 0,
+          "decided_by": null,
+          "decision": "",
+          "decision_file_sha256": "",
+          "domain_id": 4,
+          "file_format": "celikpanel-render v2",
+          "file_sha256": "bd1914743d10c95ca3f8c66204d7ac8a6911ccc76bc9540b3d8b5d603c8a1d3e",
+          "id": 4,
+          "kind": "nginx_vhost",
+          "observed_at": 1791670454,
+          "path": "/etc/nginx/sites-available/set10-r1.test.conf",
+          "pending_path": "",
+          "pending_sha256": "",
+          "site_id": 4,
+          "state": "managed_unchanged",
+          "state_reason": "",
+          "written_at": 0,
+          "written_release": ""
+        },
+        "set10-r2.test": {
+          "adopted_from": "",
+          "backup_path": "",
+          "body_sha256": "b2cc0b9a98e6a271aaad213b402a8d2c456324203b62d9e8b898756c9f5acbfe",
+          "decided_at": 0,
+          "decided_by": null,
+          "decision": "",
+          "decision_file_sha256": "",
+          "domain_id": 2,
+          "file_format": "celikpanel-render v2",
+          "file_sha256": "9060ebec914e808959bda1ff0a2c64a8057fe5bc5bb63c36a191c91e3e6837bf",
+          "id": 2,
+          "kind": "nginx_vhost",
+          "observed_at": 1791670454,
+          "path": "/etc/nginx/sites-available/set10-r2.test.conf",
+          "pending_path": "",
+          "pending_sha256": "",
+          "site_id": 2,
+          "state": "managed_unchanged",
+          "state_reason": "",
+          "written_at": 0,
+          "written_release": ""
+        },
+        "set10-r3.test": {
+          "adopted_from": "",
+          "backup_path": "",
+          "body_sha256": "",
+          "decided_at": 0,
+          "decided_by": null,
+          "decision": "",
+          "decision_file_sha256": "",
+          "domain_id": 3,
+          "file_format": "",
+          "file_sha256": "1b4c0c5251417f658cb12ad1cfe4d07ec91d2bb495f8a27922bf128c0cee0015",
+          "id": 3,
+          "kind": "nginx_vhost",
+          "observed_at": 1791670454,
+          "path": "/etc/nginx/sites-available/set10-r3.test.conf",
+          "pending_path": "/etc/nginx/sites-available/set10-r3.test.conf.celikpanel-pending",
+          "pending_sha256": "0091efaa7e853c49dfa61f60db5bc3abf9304c9781bccbed2a0c15b32b0c98e5",
+          "site_id": 3,
+          "state": "unknown_origin",
+          "state_reason": "",
+          "written_at": 0,
+          "written_release": ""
+        }
+      },
+      "name": "B-db-restore: the start classified every site again: R1, R2 managed_unchanged (header); R3 unknown_origin",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set10-r1.test": {
+          "state": "managed_unchanged"
+        },
+        "set10-r2.test": {
+          "state": "managed_unchanged"
+        },
+        "set10-r3.test": {
+          "state": "unknown_origin"
+        },
+        "upd1-owner.test": {
+          "state": "managed_unchanged"
+        }
+      },
+      "name": "B-db-restore: the Domains list carries the states again",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-10T22:14:19Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/008-restore-0-before-read.json",
+      "label": "restore-0-before-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/009-owner-restore-panel-stop.json",
+      "label": "owner-restore-panel-stop",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/010-owner-restore-db.json",
+      "label": "owner-restore-db",
+      "mode": "owner-db-restore",
+      "owner_action": true
+    },
+    {
+      "file": "native/011-guest-clock.json",
+      "label": "guest-clock",
+      "mode": "read-ledger",
+      "owner_action": false
+    },
+    {
+      "file": "native/012-owner-restore-panel-start.json",
+      "label": "owner-restore-panel-start",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/013-restore-1-after-the-start-read.json",
+      "label": "restore-1-after-the-start-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/014-restore-journal.json",
+      "label": "restore-journal",
+      "mode": "read-window",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [
+    {
+      "detail": [],
+      "note": "B-db-restore: PASS"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-10T22:14:13Z",
+      "label": "restore-panel-stop",
+      "mode": "owner-panel"
+    },
+    {
+      "at": "2026-10-10T22:14:13Z",
+      "label": "restore-db",
+      "mode": "owner-db-restore"
+    },
+    {
+      "at": "2026-10-10T22:14:14Z",
+      "label": "restore-panel-start",
+      "mode": "owner-panel"
+    }
+  ],
+  "section": "set10-database-restore-from-before-the-migration",
+  "started_at": "2026-10-10T22:14:12Z",
+  "substeps": {
+    "B-db-restore": "passed"
+  },
+  "title": "the Panel database put back from the backup taken before the update; the start classifies again",
+  "verdict": "passed"
+}

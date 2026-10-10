@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 4,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T20:39:53Z",
+    "notes": [
+      "take-refused: PASS"
+    ],
+    "started_at": "2026-10-10T20:39:47Z",
+    "substeps": {
+      "take-refused": "passed"
+    },
+    "title": "take refused by nginx because of an owner's file in the include directory",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T20:39:53Z",
+  "name": "take-refused",
+  "started_at": "2026-10-10T20:39:47Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,28 @@
+{
+  "checks": {
+    "checks": 16,
+    "error": null,
+    "failed": [
+      "S0: set10-a.test: the include directory exists, is empty and 0755",
+      "S0: set10-b.test: the include directory exists, is empty and 0755",
+      "S0: set1-owner.test: the include directory exists, is empty and 0755"
+    ],
+    "finished_at": "2026-10-10T19:48:05Z",
+    "notes": [
+      "S0: FAIL"
+    ],
+    "started_at": "2026-10-10T19:48:01Z",
+    "substeps": {
+      "S0": "failed",
+      "section": "passed"
+    },
+    "title": "two PHP sites; header, digest, ledger row, include directory, nginx -T",
+    "unknown": [],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-10T19:48:05Z",
+  "name": "S0-sites",
+  "reason": "S0: set10-a.test: the include directory exists, is empty and 0755; S0: set10-b.test: the include directory exists, is empty and 0755; S0: set1-owner.test: the include directory exists, is empty and 0755",
+  "started_at": "2026-10-10T19:48:01Z",
+  "verdict": "failed"
+}

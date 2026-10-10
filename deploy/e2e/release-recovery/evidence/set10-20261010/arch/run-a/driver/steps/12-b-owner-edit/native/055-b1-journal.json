@@ -1,0 +1,60 @@
+{
+  "at": "2026-10-10T20:36:05Z",
+  "by_unit": {
+    "celikpanel-agent.service": [],
+    "celikpanel-panel.service": [
+      "2026-10-10T20:35:54.380681+00:00 dns-arch panel[3495]: 2026/10/10 20:35:54 http: TLS handshake error from 127.0.0.1:51500: EOF",
+      "2026-10-10T20:35:54.405728+00:00 dns-arch panel[3495]: 2026/10/10 20:35:54 http: TLS handshake error from 127.0.0.1:51506: EOF",
+      "2026-10-10T20:35:55.918021+00:00 dns-arch systemd[1]: Stopping CelikPanel web panel...",
+      "2026-10-10T20:35:55.949277+00:00 dns-arch systemd[1]: celikpanel-panel.service: Deactivated successfully.",
+      "2026-10-10T20:35:55.949883+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.",
+      "2026-10-10T20:35:55.950477+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 351ms CPU time over 35.432s wall clock time, 81.4M memory peak.",
+      "2026-10-10T20:35:58.561262+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...",
+      "2026-10-10T20:35:58.606225+00:00 dns-arch systemd[1]: Started CelikPanel web panel.",
+      "2026-10-10T20:35:58.761935+00:00 dns-arch panel[3903]: 2026/10/10 20:35:58 Starting CelikPanel Backend...",
+      "2026-10-10T20:35:58.772311+00:00 dns-arch panel[3903]: 2026/10/10 20:35:58 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)",
+      "2026-10-10T20:35:58.773594+00:00 dns-arch panel[3903]: 2026/10/10 20:35:58 Panel startup listener active on :2083 (HTTPS; application gated)",
+      "2026-10-10T20:35:58.774491+00:00 dns-arch panel[3903]: 2026/10/10 20:35:58 Connected to Agent RPC; preparing normal management access",
+      "2026-10-10T20:35:58.794744+00:00 dns-arch panel[3903]: 2026/10/10 20:35:58 site configuration set1-owner.test (startup): unchanged",
+      "2026-10-10T20:35:58.853160+00:00 dns-arch panel[3903]: 2026/10/10 20:35:58 site configuration set10-a.test (startup): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+      "2026-10-10T20:35:58.872609+00:00 dns-arch panel[3903]: 2026/10/10 20:35:58 site configuration set10-b.test (startup): unchanged",
+      "2026-10-10T20:35:58.900070+00:00 dns-arch panel[3903]: 2026/10/10 20:35:58 site configuration files at start: 0 written, 2 unchanged, 1 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release",
+      "2026-10-10T20:35:58.901191+00:00 dns-arch panel[3903]: 2026/10/10 20:35:58 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname \"dns-arch\": a fully qualified DNS name is required; preserve pending outbox: <nil>",
+      "2026-10-10T20:35:58.908401+00:00 dns-arch panel[3903]: 2026/10/10 20:35:58 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose",
+      "2026-10-10T20:35:58.912161+00:00 dns-arch panel[3903]: 2026/10/10 20:35:58 Panel ready on :2083 (HTTPS)",
+      "2026-10-10T20:36:00.720295+00:00 dns-arch panel[3903]: 2026/10/10 20:36:00 http: TLS handshake error from 127.0.0.1:45590: EOF",
+      "2026-10-10T20:36:00.746359+00:00 dns-arch panel[3903]: 2026/10/10 20:36:00 http: TLS handshake error from 127.0.0.1:45618: EOF"
+    ],
+    "nginx.service": [
+      "2026-10-10T20:35:54.842064+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+      "2026-10-10T20:35:54.875554+00:00 dns-arch nginx[3775]: 2026/10/10 20:35:54 [warn] 3775#3775: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+      "2026-10-10T20:35:54.881038+00:00 dns-arch nginx[3775]: 2026/10/10 20:35:54 [notice] 3775#3775: signal process started",
+      "2026-10-10T20:35:54.883209+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+      "2026-10-10T20:35:56.505902+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+      "2026-10-10T20:35:56.537744+00:00 dns-arch nginx[3835]: 2026/10/10 20:35:56 [warn] 3835#3835: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+      "2026-10-10T20:35:56.543644+00:00 dns-arch nginx[3835]: 2026/10/10 20:35:56 [notice] 3835#3835: signal process started",
+      "2026-10-10T20:35:56.546265+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+    ],
+    "php-fpm.service": []
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set10-native/v1",
+  "since_epoch": 1791664553,
+  "systemd_manager": [
+    "2026-10-10T20:35:54.842064+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+    "2026-10-10T20:35:54.883209+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+    "2026-10-10T20:35:55.949277+00:00 dns-arch systemd[1]: celikpanel-panel.service: Deactivated successfully.",
+    "2026-10-10T20:35:55.948000+00:00 dns-arch audit[1]: SERVICE_STOP pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=celikpanel-panel comm=\"systemd\" exe=\"/usr/lib/systemd/systemd\" hostname=? addr=? terminal=? res=success'",
+    "2026-10-10T20:35:55.950477+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 351ms CPU time over 35.432s wall clock time, 81.4M memory peak.",
+    "2026-10-10T20:35:56.505902+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+    "2026-10-10T20:35:56.546265+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+    "2026-10-10T20:35:58.605000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=celikpanel-panel comm=\"systemd\" exe=\"/usr/lib/systemd/systemd\" hostname=? addr=? terminal=? res=success'"
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php-fpm.service"
+  ]
+}

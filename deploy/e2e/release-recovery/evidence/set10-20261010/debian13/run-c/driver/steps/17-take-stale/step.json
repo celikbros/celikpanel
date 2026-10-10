@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 3,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T19:55:00Z",
+    "notes": [
+      "take-stale: PASS"
+    ],
+    "started_at": "2026-10-10T19:54:57Z",
+    "substeps": {
+      "take-stale": "passed"
+    },
+    "title": "take with the digests of a file the owner changed again after the read",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T19:55:00Z",
+  "name": "take-stale",
+  "started_at": "2026-10-10T19:54:57Z",
+  "verdict": "passed"
+}

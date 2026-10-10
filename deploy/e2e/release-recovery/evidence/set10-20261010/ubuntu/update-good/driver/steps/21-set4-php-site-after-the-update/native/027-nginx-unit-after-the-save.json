@@ -1,0 +1,45 @@
+{
+  "at": "2026-10-10T21:41:51Z",
+  "is_active": {
+    "nginx.service": "active"
+  },
+  "is_failed": {
+    "nginx.service": "active"
+  },
+  "journal": {
+    "nginx.service": []
+  },
+  "journal_product": [
+    "2026-10-10T21:41:49.263212+00:00 dns-ubuntu panel[57127]: 2026/10/10 21:41:49 http: TLS handshake error from 127.0.0.1:50422: EOF",
+    "2026-10-10T21:41:49.553199+00:00 dns-ubuntu panel[57127]: 2026/10/10 21:41:49 http: TLS handshake error from 127.0.0.1:50430: EOF",
+    "2026-10-10T21:41:49.571895+00:00 dns-ubuntu panel[57127]: 2026/10/10 21:41:49 site configuration set4-upd-php.test (change): unchanged"
+  ],
+  "journal_systemd_manager": [],
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "since_epoch": 1791668508,
+  "units": {
+    "nginx.service": {
+      "ActiveEnterTimestamp": "Sat 2026-10-10 21:27:45 UTC",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "active",
+      "ExecMainPID": "11105",
+      "ExecMainStartTimestamp": "Sat 2026-10-10 21:27:46 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; master_process on; -s reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "Sat 2026-10-10 21:27:45 UTC",
+      "InvocationID": "a2384c965a4344a683e17ab69b6ce157",
+      "LoadState": "loaded",
+      "MainPID": "11105",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Sat 2026-10-10 21:40:03 UTC",
+      "SubState": "running",
+      "Type": "forking"
+    }
+  }
+}

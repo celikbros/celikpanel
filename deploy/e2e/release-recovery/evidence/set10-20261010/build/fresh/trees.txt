@@ -1,0 +1,10 @@
+baseline 0684f2703b665e68828ff329ed6e56eb9c7d4771 tree 723573d22f544145db6c2a617af75c5589c7fb4e
+### files that differ between the source cd46ca595 and baseline
+M	deploy/release-sequence-policy
+good 3c2e353c117cffc3e012bcad905a1f936b884002 tree 47c5c3e0003e47fdad7795ba7d4875523316fc1d
+### files that differ between the source cd46ca595 and good
+M	deploy/release-sequence-policy
+defective a21d0518e54e056917f01342bc636a9dd9c0fff4 tree 88706a240d8ebf3f5d06ddc758b709433fd15c38
+### files that differ between the source cd46ca595 and defective
+M	cmd/panel/main.go
+M	deploy/release-sequence-policy

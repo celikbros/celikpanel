@@ -1,0 +1,195 @@
+{
+  "agreement": {
+    "known_sources": [
+      "api",
+      "cli"
+    ],
+    "phase": {
+      "api": "succeeded",
+      "cli": "succeeded"
+    },
+    "reasons": [],
+    "sources": [
+      "api",
+      "cli",
+      "shell"
+    ],
+    "verdict": "agree"
+  },
+  "cli": {
+    "boot_id": "99612820-43ef-4ed5-8fa7-86198c316696",
+    "captured_at": "2026-10-10T21:41:43.716529Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update completed and the new version was verified when it finished. Nothing else is needed on the server. Open the panel to check that everything works now.\nRequest: f33b6736131db43c78908afd3b8b8b96\nRecorded at: 2026-10-10T21:40:14Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=succeeded reason=update_verified proof=update_verified\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"f33b6736131db43c78908afd3b8b8b96\",\"observation\":\"known\",\"phase\":\"succeeded\",\"terminal_proof\":\"update_verified\",\"reason\":\"update_verified\",\"observed_at\":\"2026-10-10T21:40:14Z\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme tamamlandı ve yeni sürüm bittiği anda doğrulandı. Sunucuda başka bir işlem gerekmiyor. Her şeyin şu an çalıştığını görmek için paneli açın.\nİşlem: f33b6736131db43c78908afd3b8b8b96\nKayıt zamanı: 2026-10-10T21:40:14Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=succeeded reason=update_verified proof=update_verified\n"
+    }
+  },
+  "guidance_api": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.succeeded",
+      "recovery.next.succeeded"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "observation": {
+      "automatic_recovery": null,
+      "failure_code": null,
+      "first_failure_code": null,
+      "observation": "known",
+      "observed_at": "2026-10-10T21:40:14Z",
+      "panel_state": "ready",
+      "phase": "succeeded",
+      "previous_failure": null,
+      "reason": "update_verified",
+      "renewal_before_update": null,
+      "request_id": "f33b6736131db43c78908afd3b8b8b96",
+      "terminal_proof": "update_verified",
+      "waiting_for": null
+    },
+    "observation_unavailable": false,
+    "texts": {
+      "en": [
+        "Update verified",
+        "The server verified this update. Reload CelikPanel to load the installed interface."
+      ],
+      "tr": [
+        "Güncelleme doğrulandı",
+        "Sunucu bu güncellemeyi doğruladı. Kurulu arayüzü yüklemek için CelikPanel’i yeniden yükleyin."
+      ]
+    }
+  },
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.phase.succeeded",
+      "recovery.next.succeeded"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "observation": {
+      "automatic_recovery": null,
+      "failure_code": null,
+      "first_failure_code": null,
+      "observation": "known",
+      "observed_at": "2026-10-10T21:40:14Z",
+      "panel_state": "ready",
+      "phase": "succeeded",
+      "previous_failure": null,
+      "reason": "update_verified",
+      "renewal_before_update": null,
+      "request_id": "f33b6736131db43c78908afd3b8b8b96",
+      "terminal_proof": "update_verified",
+      "waiting_for": null
+    },
+    "observation_unavailable": false,
+    "texts": {
+      "en": [
+        "Update verified",
+        "The server verified this update. Reload CelikPanel to load the installed interface."
+      ],
+      "tr": [
+        "Güncelleme doğrulandı",
+        "Sunucu bu güncellemeyi doğruladı. Kurulu arayüzü yüklemek için CelikPanel’i yeniden yükleyin."
+      ]
+    }
+  },
+  "index": 9000,
+  "observed": {
+    "observation": "known",
+    "observed_at": "2026-10-10T21:40:14Z",
+    "phase": "succeeded",
+    "reason": "update_verified",
+    "request_id": "f33b6736131db43c78908afd3b8b8b96",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "update_verified"
+  },
+  "recovery_api": {
+    "body": {
+      "observation": "known",
+      "observed_at": "2026-10-10T21:40:14Z",
+      "panel_state": "ready",
+      "phase": "succeeded",
+      "reason": "update_verified",
+      "request_id": "f33b6736131db43c78908afd3b8b8b96",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "update_verified"
+    },
+    "http": 200
+  },
+  "t": 1791668502.5326502,
+  "update_card": {
+    "keys": [
+      "panelUpdate.succeeded",
+      "panelUpdate.succeeded"
+    ],
+    "missing_keys": [],
+    "observation_error": null,
+    "role": "good",
+    "server_message": null,
+    "source": {
+      "observation": {
+        "path": "lib/recoveryObservation.ts",
+        "sha256": "65c3b7e381c4fe2d9385c417124ef22d7112a43599d608a195c0be2771a82461"
+      },
+      "outcome": {
+        "path": "lib/systemUpdateOutcome.ts",
+        "sha256": "7329a488a436f12637f3c46a60521bbe22027de032044c4963f5686b0a83f67c"
+      },
+      "screen": {
+        "path": "components/RecoveryAccess.tsx",
+        "sha256": "da4880dcb7265e8a8d1c3d0a5753f91cb43d2dfff8d04ddbccb32832d2f88b52"
+      },
+      "typed": {
+        "path": "lib/systemUpdateFailure.ts",
+        "sha256": "b12d9a0d2989bd70670e02481159128ba716bb21f15db5084b9631475a610af4"
+      }
+    },
+    "state": "succeeded",
+    "texts": {
+      "en": [
+        "The update completed. The panel and agent restarted on the new version.",
+        "The update completed. The panel and agent restarted on the new version."
+      ],
+      "tr": [
+        "Güncelleme tamamlandı. Panel ve agent yeni sürümle yeniden başladı.",
+        "Güncelleme tamamlandı. Panel ve agent yeni sürümle yeniden başladı."
+      ]
+    },
+    "unavailable": null
+  },
+  "update_status": {
+    "body": {
+      "created_at": "2026-10-10T21:39:15.233744428Z",
+      "found": true,
+      "request_id": "f33b6736131db43c78908afd3b8b8b96",
+      "status": "succeeded",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "ed2bd6f9e4726fbe1c3cb0904f3889a4c5cd6bb5f8d3b546f27096e8d6791b1c",
+        "archive_size": "65992265",
+        "commit": "e0c88113f717850a74a0b25baafd4a21f23e1069",
+        "os": "linux",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      },
+      "updated_at": "2026-10-10T21:40:14.275264095Z"
+    },
+    "http": 200
+  },
+  "utc": "2026-10-10T21:41:42Z"
+}

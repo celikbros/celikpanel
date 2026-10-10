@@ -1,0 +1,201 @@
+...usage: python3 -m unittest [-h] --work-root WORK_ROOT [--node {arch,debian13}]
+                           --mode {arm,collect} [--execute]
+python3 -m unittest: error: arming requires --execute and the registered disposable VM
+........usage: python3 -m unittest [-h] --work-root WORK_ROOT [--node {arch,debian13}]
+                           --mode {arm,collect} [--execute]
+python3 -m unittest: error: arming requires --execute and the registered disposable VM
+.........EE................................................................................................................................................................................................................................................................................................................................E....E.............................usage: python3 -m unittest [-h] --work-root WORK_ROOT [--node {arch,debian13}]
+                           --mode {prepare,arm,start,collect} [--execute]
+                           [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256]
+                           [--boundary {candidate-installed,require-unit-reload,completion-database-verified}]
+                           [--candidate-data-fault {quarantine-fixed-three}]
+                           [--baseline-profile {alpha75,alpha64-schema38}]
+python3 -m unittest: error: baseline profile must be sealed during prepare
+..usage: python3 -m unittest [-h] --work-root WORK_ROOT [--node {arch,debian13}]
+                           --mode {prepare,arm,start,collect} [--execute]
+                           [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256]
+                           [--boundary {candidate-installed,require-unit-reload,completion-database-verified}]
+                           [--candidate-data-fault {quarantine-fixed-three}]
+                           [--baseline-profile {alpha75,alpha64-schema38}]
+python3 -m unittest: error: candidate data fault must be sealed during prepare
+.......usage: python3 -m unittest [-h] --work-root WORK_ROOT [--node {arch,debian13}]
+                           --mode {prepare,arm,start,collect} [--execute]
+                           [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256]
+                           [--boundary {candidate-installed,require-unit-reload,completion-database-verified}]
+                           [--candidate-data-fault {quarantine-fixed-three}]
+                           [--baseline-profile {alpha75,alpha64-schema38}]
+python3 -m unittest: error: mutation requires --execute and the registered disposable VM
+.....E.{"action": "local-candidate-start-submitted-once", "node": "arch", "operation_id": "11111111111111111111111111111111", "recovery_success": "unconfirmed"}
+.............usage: python3 -m unittest [-h] --work-root WORK_ROOT --node {arch,debian13}
+                           --mode {prepare,arm,start,collect}
+                           [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256] [--execute]
+python3 -m unittest: error: mutation requires --execute and a registered disposable VM
+usage: python3 -m unittest [-h] --work-root WORK_ROOT --node {arch,debian13}
+                           --mode {prepare,arm,start,collect}
+                           [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256] [--execute]
+python3 -m unittest: error: mutation requires --execute and a registered disposable VM
+usage: python3 -m unittest [-h] --work-root WORK_ROOT --node {arch,debian13}
+                           --mode {prepare,arm,start,collect}
+                           [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256] [--execute]
+python3 -m unittest: error: mutation requires --execute and a registered disposable VM
+.................{"action": "registered-QEMU-reset-submitted-once", "node": "arch", "operation_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "recovery_success": "unconfirmed"}
+.....usage: python3 -m unittest [-h] --work-root WORK_ROOT --node {arch,debian13}
+                           --mode {prepare,arm,start,collect,reboot}
+                           [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256] [--execute]
+python3 -m unittest: error: mutation requires --execute and a registered disposable VM
+usage: python3 -m unittest [-h] --work-root WORK_ROOT --node {arch,debian13}
+                           --mode {prepare,arm,start,collect,reboot}
+                           [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256] [--execute]
+python3 -m unittest: error: mutation requires --execute and a registered disposable VM
+usage: python3 -m unittest [-h] --work-root WORK_ROOT --node {arch,debian13}
+                           --mode {prepare,arm,start,collect,reboot}
+                           [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256] [--execute]
+python3 -m unittest: error: mutation requires --execute and a registered disposable VM
+usage: python3 -m unittest [-h] --work-root WORK_ROOT --node {arch,debian13}
+                           --mode {prepare,arm,start,collect,reboot}
+                           [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256] [--execute]
+python3 -m unittest: error: mutation requires --execute and a registered disposable VM
+.....usage: python3 -m unittest [-h] --work-root WORK_ROOT --node {arch,debian13}
+                           --mode {prepare,arm,start,collect}
+                           [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256] [--execute]
+python3 -m unittest: error: mutation requires --execute and a registered disposable VM
+usage: python3 -m unittest [-h] --work-root WORK_ROOT --node {arch,debian13}
+                           --mode {prepare,arm,start,collect}
+                           [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256] [--execute]
+python3 -m unittest: error: mutation requires --execute and a registered disposable VM
+usage: python3 -m unittest [-h] --work-root WORK_ROOT --node {arch,debian13}
+                           --mode {prepare,arm,start,collect}
+                           [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256] [--execute]
+python3 -m unittest: error: mutation requires --execute and a registered disposable VM
+..............................................ss..s..........................................................................................................................................................................s...........usage: python3 -m unittest [-h] --work-root WORK_ROOT --node {arch,debian13}
+                           --mode {prepare,arm,start,collect,reboot}
+                           [--execute] [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256]
+                           [--action {kill,reboot}]
+                           [--checkpoint {restore_admitted,payload_restored,units_reloaded,runtime_verified,schedulers_restored}]
+                           [--candidate-data-fault {quarantine-fixed-three}]
+python3 -m unittest: error: candidate data fault must be sealed during prepare
+.........usage: python3 -m unittest [-h] --work-root WORK_ROOT --node {arch,debian13}
+                           --mode {prepare,arm,start,collect,reboot}
+                           [--execute] [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256]
+                           [--action {kill,reboot}]
+                           [--checkpoint {restore_admitted,payload_restored,units_reloaded,runtime_verified,schedulers_restored}]
+                           [--candidate-data-fault {quarantine-fixed-three}]
+python3 -m unittest: error: mutation requires --execute and a registered disposable VM
+usage: python3 -m unittest [-h] --work-root WORK_ROOT --node {arch,debian13}
+                           --mode {prepare,arm,start,collect,reboot}
+                           [--execute] [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256]
+                           [--action {kill,reboot}]
+                           [--checkpoint {restore_admitted,payload_restored,units_reloaded,runtime_verified,schedulers_restored}]
+                           [--candidate-data-fault {quarantine-fixed-three}]
+python3 -m unittest: error: mutation requires --execute and a registered disposable VM
+usage: python3 -m unittest [-h] --work-root WORK_ROOT --node {arch,debian13}
+                           --mode {prepare,arm,start,collect,reboot}
+                           [--execute] [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256]
+                           [--action {kill,reboot}]
+                           [--checkpoint {restore_admitted,payload_restored,units_reloaded,runtime_verified,schedulers_restored}]
+                           [--candidate-data-fault {quarantine-fixed-three}]
+python3 -m unittest: error: mutation requires --execute and a registered disposable VM
+usage: python3 -m unittest [-h] --work-root WORK_ROOT --node {arch,debian13}
+                           --mode {prepare,arm,start,collect,reboot}
+                           [--execute] [--archive ARCHIVE]
+                           [--archive-sha256 ARCHIVE_SHA256]
+                           [--action {kill,reboot}]
+                           [--checkpoint {restore_admitted,payload_restored,units_reloaded,runtime_verified,schedulers_restored}]
+                           [--candidate-data-fault {quarantine-fixed-three}]
+python3 -m unittest: error: mutation requires --execute and a registered disposable VM
+.......{"action": "registered-QEMU-reset-submitted-once", "node": "arch", "operation_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "recovery_success": "unconfirmed"}
+...........................................................................................................................................................{"action": "prepared-not-started", "node": "arch", "request_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+....................................................................................................................................................................................................
+======================================================================
+ERROR: setUpClass (test_baseline_profiles.ProfileTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-set10-run/harness-b/deploy/e2e/release-recovery/test_baseline_profiles.py", line 32, in setUpClass
+    paths = subprocess.run(['git', '-C', str(repository), 'ls-tree', '-r', '--name-only', cls.profile.commit,
+            ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                            '--', 'internal/db/migrations'], check=True, capture_output=True, text=True).stdout.splitlines()
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['git', '-C', '/var/tmp/cp-set10-run/harness-b', 'ls-tree', '-r', '--name-only', '3ee8dac009c7e3db1d940f9b8be078e186693a80', '--', 'internal/db/migrations']' returned non-zero exit status 128.
+
+======================================================================
+ERROR: setUpClass (test_baseline_profiles.ReadOnlyDatabaseTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-set10-run/harness-b/deploy/e2e/release-recovery/test_baseline_profiles.py", line 32, in setUpClass
+    paths = subprocess.run(['git', '-C', str(repository), 'ls-tree', '-r', '--name-only', cls.profile.commit,
+            ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                            '--', 'internal/db/migrations'], check=True, capture_output=True, text=True).stdout.splitlines()
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['git', '-C', '/var/tmp/cp-set10-run/harness-b', 'ls-tree', '-r', '--name-only', '3ee8dac009c7e3db1d940f9b8be078e186693a80', '--', 'internal/db/migrations']' returned non-zero exit status 128.
+
+======================================================================
+ERROR: test_alpha64_uses_unchanged_pinned_historical_bootstrap (test_install_baseline.BaselineTests.test_alpha64_uses_unchanged_pinned_historical_bootstrap)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-set10-run/harness-b/deploy/e2e/release-recovery/test_install_baseline.py", line 27, in test_alpha64_uses_unchanged_pinned_historical_bootstrap
+    raw = baseline.historical_bootstrap(Path(__file__).resolve().parents[3], 'alpha64-schema38')
+  File "/var/tmp/cp-set10-run/harness-b/deploy/e2e/release-recovery/install_baseline.py", line 49, in historical_bootstrap
+    raw = subprocess.run(["git", "-C", str(repository), "show", profile.commit + ":download-portal/get.sh"],
+          ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                         check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['git', '-C', '/var/tmp/cp-set10-run/harness-b', 'show', '3ee8dac009c7e3db1d940f9b8be078e186693a80:download-portal/get.sh']' returned non-zero exit status 128.
+
+======================================================================
+ERROR: test_historical_bootstrap_is_exact_released_content (test_install_baseline.BaselineTests.test_historical_bootstrap_is_exact_released_content)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-set10-run/harness-b/deploy/e2e/release-recovery/test_install_baseline.py", line 22, in test_historical_bootstrap_is_exact_released_content
+    raw = baseline.historical_bootstrap(Path(__file__).resolve().parents[3])
+  File "/var/tmp/cp-set10-run/harness-b/deploy/e2e/release-recovery/install_baseline.py", line 49, in historical_bootstrap
+    raw = subprocess.run(["git", "-C", str(repository), "show", profile.commit + ":download-portal/get.sh"],
+          ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                         check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['git', '-C', '/var/tmp/cp-set10-run/harness-b', 'show', '5aa03fd5b6775b21834ff7b1ce0695d92f50ae93:download-portal/get.sh']' returned non-zero exit status 128.
+
+======================================================================
+ERROR: test_real_committed_migration_inventory_is_independent_of_release_archive_SQL (test_local_candidate_trial.ControllerTests.test_real_committed_migration_inventory_is_independent_of_release_archive_SQL)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-set10-run/harness-b/deploy/e2e/release-recovery/test_local_candidate_trial.py", line 120, in test_real_committed_migration_inventory_is_independent_of_release_archive_SQL
+    commit=subprocess.run(['git','-C',str(repository),'rev-parse','HEAD'],check=True,capture_output=True,text=True).stdout.strip()
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['git', '-C', '/var/tmp/cp-set10-run/harness-b', 'rev-parse', 'HEAD']' returned non-zero exit status 128.
+
+----------------------------------------------------------------------
+Ran 1031 tests in 20.125s
+
+FAILED (errors=5, skipped=4)

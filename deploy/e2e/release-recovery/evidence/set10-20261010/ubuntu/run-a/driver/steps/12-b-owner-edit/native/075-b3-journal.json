@@ -1,0 +1,40 @@
+{
+  "at": "2026-10-10T20:18:35Z",
+  "by_unit": {
+    "celikpanel-agent.service": [],
+    "celikpanel-panel.service": [
+      "2026-10-10T20:18:08.237700+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:08 http: TLS handshake error from 127.0.0.1:60330: EOF",
+      "2026-10-10T20:18:08.265210+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:08 http: TLS handshake error from 127.0.0.1:60354: EOF",
+      "2026-10-10T20:18:31.325613+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:31 http: TLS handshake error from 127.0.0.1:44068: EOF",
+      "2026-10-10T20:18:31.341880+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:31 http: TLS handshake error from 127.0.0.1:44076: EOF",
+      "2026-10-10T20:18:31.359395+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:31 site configuration set10-a.test (change): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+      "2026-10-10T20:18:31.381941+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:31 site configuration set10-a.test (change): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+      "2026-10-10T20:18:31.391719+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:31 [409] apply general settings vhost: site configuration of set10-a.test not applied: kept (owner_edited ); vhost restore: site configuration of set10-a.test not applied: kept (owner_edited )"
+    ],
+    "nginx.service": [
+      "2026-10-10T20:18:08.639308+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T20:18:08.648696+00:00 dns-ubuntu nginx[52544]: 2026/10/10 20:18:08 [notice] 52544#52544: signal process started",
+      "2026-10-10T20:18:08.650047+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T20:18:09.494530+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T20:18:09.500258+00:00 dns-ubuntu nginx[52673]: 2026/10/10 20:18:09 [notice] 52673#52673: signal process started",
+      "2026-10-10T20:18:09.502253+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+    ],
+    "php8.3-fpm.service": []
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set10-native/v1",
+  "since_epoch": 1791663486,
+  "systemd_manager": [
+    "2026-10-10T20:18:08.639308+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T20:18:08.650047+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T20:18:09.494530+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T20:18:09.502253+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php8.3-fpm.service"
+  ]
+}

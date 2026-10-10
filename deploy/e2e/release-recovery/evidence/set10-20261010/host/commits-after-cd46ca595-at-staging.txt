@@ -1,0 +1,56 @@
+be41ad799 Probe entries narrowed: the site-config read is not read-only while the reason stands; unknown causes named; open items listed
+7d98f7904 Certificate readiness on a kept file is probed, not grepped; a limit hit is never a verdict
+36830f2db Entries of step 1b and the session wait narrowed to the code; new open items named
+1145c801e A certificate is obtained for a kept site file; an unanswered session read stays a wait
+519ab0cc6 Retain set9 evidence: the cold-load fix on a real Panel in a real browser; lab keys carry a fixed comment
+e1d14eb83 D-031 entries narrowed to the code, with the integrator's API reference and the open certificate gap
+ cmd/agent/site_file_rpc_test.go                    |  31 ++
+ cmd/agent/site_rpc.go                              |  11 +-
+ cmd/agent/vhost_probe_test.go                      |  29 ++
+ cmd/agent/vhost_rpc.go                             |  69 +++-
+ cmd/panel/alias_certificates.go                    |  43 ++-
+ cmd/panel/cert_renewal.go                          |  48 ++-
+ cmd/panel/dashboard_handler.go                     |  68 +++-
+ cmd/panel/domain_general_handlers.go               |  36 +-
+ cmd/panel/domain_ssl_handlers.go                   |  84 +++--
+ cmd/panel/site_config.go                           |  83 ++++-
+ cmd/panel/site_config_certificate.go               | 370 +++++++++++++++++++++
+ cmd/panel/site_config_certificate_test.go          | 254 ++++++++++++++
+ cmd/panel/site_config_probe_test.go                | 243 ++++++++++++++
+ cmd/panel/ssl_runtime_status.go                    |  10 +-
+ cmd/panel/ssl_validation_vhost_restore_test.go     |  53 ++-
+ cmd/panel/vhost_apply.go                           |  13 +
+ internal/services/managed_vhost.go                 | 313 +++++++++++++++--
+ .../services/managed_vhost_certificate_test.go     | 267 +++++++++++++++
+ internal/services/managed_vhost_probe.go           | 290 ++++++++++++++++
+ internal/services/managed_vhost_probe_test.go      | 294 ++++++++++++++++
+ internal/services/nginx_acme_mail_test.go          |  11 +-
+ internal/services/nginx_generator.go               |  29 ++
+ internal/services/nginx_generator_test.go          |   9 +
+ internal/services/nginx_php_handoff_test.go        |   5 +
+ internal/services/nginx_ssl_runtime_test.go        |  11 +-
+ internal/services/site_file_ledger.go              |  66 ++++
+ internal/services/templates/nginx/vhost.conf.tmpl  |  69 ++--
+ internal/transport/rpc.go                          |   5 +
+ internal/transport/site_files.go                   |  64 ++++
+ web/src/App.tsx                                    |  16 +-
+ web/src/auth/usePanelSession.ts                    |  91 ++++-
+ web/src/components/Dashboard.tsx                   |  21 +-
+ web/src/components/DomainDetail.tsx                |   9 +-
+ web/src/components/DomainGeneralSettings.tsx       |  14 +
+ web/src/components/DomainSSLOverviewCard.tsx       |   7 +-
+ web/src/components/DomainSSLSettings.tsx           |  36 +-
+ web/src/components/DomainSiteConfig.tsx            | 206 +++++++++++-
+ web/src/components/Domains.tsx                     |  82 +++--
+ web/src/components/RecoveryAccess.tsx              |  45 ++-
+ web/src/i18n/en.ts                                 |  16 +-
+ web/src/i18n/screens/en.ts                         |  11 +
+ web/src/i18n/screens/server/en.ts                  |  51 ++-
+ web/src/i18n/screens/server/tr.ts                  |  55 ++-
+ web/src/i18n/screens/tr.ts                         |  11 +
+ web/src/i18n/tr.ts                                 |  16 +-
+ web/src/lib/api.ts                                 |   3 +-
+ web/src/lib/quietRead.ts                           |  57 ++++
+ web/src/lib/sslTier.ts                             |  26 +-
+ 48 files changed, 3403 insertions(+), 248 deletions(-)
+(none of these entered a build or a cell: both builds checked out cd46ca595 in a disposable clone; every run copy is git archive cd46ca595 plus the four set10 harness files)

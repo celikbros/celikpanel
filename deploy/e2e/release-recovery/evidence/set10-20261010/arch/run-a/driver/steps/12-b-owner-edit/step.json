@@ -1,0 +1,26 @@
+{
+  "checks": {
+    "checks": 31,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T20:37:04Z",
+    "notes": [
+      "b1: PASS",
+      "b2: PASS",
+      "b3: PASS"
+    ],
+    "started_at": "2026-10-10T20:35:54Z",
+    "substeps": {
+      "b1": "passed",
+      "b2": "passed",
+      "b3": "passed"
+    },
+    "title": "the owner changes a template directive (start, restart, General save)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T20:37:04Z",
+  "name": "b-owner-edit",
+  "started_at": "2026-10-10T20:35:54Z",
+  "verdict": "passed"
+}

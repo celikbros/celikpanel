@@ -1,0 +1,25 @@
+{
+  "checks": {
+    "checks": 5,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T20:40:20Z",
+    "notes": [
+      "f: NOT-MEASURED"
+    ],
+    "started_at": "2026-10-10T20:40:07Z",
+    "substeps": {
+      "f": "inconclusive"
+    },
+    "title": "an owner .conf in the include directory across a rewrite, a save and a PHP switch",
+    "unknown": [
+      "f: a PHP version switch keeps the owner's file"
+    ],
+    "verdict": "inconclusive"
+  },
+  "finished_at": "2026-10-10T20:40:20Z",
+  "name": "f-include-dir",
+  "reason": "not established: f: a PHP version switch keeps the owner's file",
+  "started_at": "2026-10-10T20:40:07Z",
+  "verdict": "inconclusive"
+}

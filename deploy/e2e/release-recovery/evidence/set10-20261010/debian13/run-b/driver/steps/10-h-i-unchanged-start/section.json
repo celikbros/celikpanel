@@ -1,0 +1,359 @@
+{
+  "calls": [],
+  "cells": {
+    "h": {
+      "detail": {
+        "journal": "steps/10-h-i-unchanged-start/native/015-h-journal.json"
+      },
+      "expectations": [
+        {
+          "expectation": "the Panel restarted and answers",
+          "held": true,
+          "measured": {
+            "api": {
+              "answering": true,
+              "seconds": 12.5,
+              "status": 200
+            },
+            "epoch": 1791660751.2512286,
+            "file": "steps/10-h-i-unchanged-start/native/013-owner-h-panel-restart.json",
+            "is_active": "active",
+            "kind": "owner: systemctl restart celikpanel-panel",
+            "ok": true,
+            "reconcile_lines_seen": [
+              "2026-10-10T19:32:31.730725+00:00 dns-debian13 panel[31295]: 2026/10/10 19:32:31 site configuration files at start: 0 written, 3 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+            ],
+            "waited_seconds": 2.1
+          }
+        },
+        {
+          "expectation": "no vhost was written (sha256, inode and mtime unchanged for every site)",
+          "held": true,
+          "measured": {
+            "set1-owner.test": {
+              "inode": [
+                135511,
+                135511
+              ],
+              "mtime_ns": [
+                1791660734362203931,
+                1791660734362203931
+              ],
+              "sha256": [
+                "aa7679d801a7bd8e4d008283c4e248e96809875e83f4f6d38e742bde6999dc18",
+                "aa7679d801a7bd8e4d008283c4e248e96809875e83f4f6d38e742bde6999dc18"
+              ]
+            },
+            "set10-a.test": {
+              "inode": [
+                135517,
+                135517
+              ],
+              "mtime_ns": [
+                1791660740626223122,
+                1791660740626223122
+              ],
+              "sha256": [
+                "937abb023dd9cc64b903ab48a059e74409424e3ef43879d1a8cc8f082d7ee943",
+                "937abb023dd9cc64b903ab48a059e74409424e3ef43879d1a8cc8f082d7ee943"
+              ]
+            },
+            "set10-b.test": {
+              "inode": [
+                135523,
+                135523
+              ],
+              "mtime_ns": [
+                1791660747022241158,
+                1791660747022241158
+              ],
+              "sha256": [
+                "09e799124dbd9d55e912693ce49a4f4c350e550c4e3ccec50f959c6c0af4b91d",
+                "09e799124dbd9d55e912693ce49a4f4c350e550c4e3ccec50f959c6c0af4b91d"
+              ]
+            }
+          }
+        },
+        {
+          "expectation": "nginx was not reloaded (worker PIDs unchanged; no `Reloaded` line after the restart)",
+          "held": true,
+          "measured": {
+            "reload_lines": [],
+            "workers": [
+              [
+                "31164",
+                "31165"
+              ],
+              [
+                "31164",
+                "31165"
+              ]
+            ]
+          }
+        },
+        {
+          "expectation": "the start line counts 3 unchanged and 0 written",
+          "held": true,
+          "measured": [
+            "2026-10-10T19:32:31.730725+00:00 dns-debian13 panel[31295]: 2026/10/10 19:32:31 site configuration files at start: 0 written, 3 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+          ]
+        },
+        {
+          "expectation": "one line per site saying unchanged",
+          "held": true,
+          "measured": {
+            "set1-owner.test": [
+              "2026-10-10T19:32:31.675952+00:00 dns-debian13 panel[31295]: 2026/10/10 19:32:31 site configuration set1-owner.test (startup): unchanged"
+            ],
+            "set10-a.test": [
+              "2026-10-10T19:32:31.708839+00:00 dns-debian13 panel[31295]: 2026/10/10 19:32:31 site configuration set10-a.test (startup): unchanged"
+            ],
+            "set10-b.test": [
+              "2026-10-10T19:32:31.720441+00:00 dns-debian13 panel[31295]: 2026/10/10 19:32:31 site configuration set10-b.test (startup): unchanged"
+            ]
+          }
+        }
+      ],
+      "verdict": "PASS"
+    },
+    "i": {
+      "detail": null,
+      "expectations": [
+        {
+          "expectation": "the file written at creation is unchanged by the start (the start's text is the creation text byte for byte)",
+          "held": true,
+          "measured": {
+            "set10-a.test": {
+              "after_the_restart": {
+                "inode": 135517,
+                "sha256": "937abb023dd9cc64b903ab48a059e74409424e3ef43879d1a8cc8f082d7ee943"
+              },
+              "creation": {
+                "inode": 135517,
+                "mtime_ns": 1791660740626223122,
+                "sha256": "937abb023dd9cc64b903ab48a059e74409424e3ef43879d1a8cc8f082d7ee943"
+              }
+            },
+            "set10-b.test": {
+              "after_the_restart": {
+                "inode": 135523,
+                "sha256": "09e799124dbd9d55e912693ce49a4f4c350e550c4e3ccec50f959c6c0af4b91d"
+              },
+              "creation": {
+                "inode": 135523,
+                "mtime_ns": 1791660747022241158,
+                "sha256": "09e799124dbd9d55e912693ce49a4f4c350e550c4e3ccec50f959c6c0af4b91d"
+              }
+            }
+          }
+        },
+        {
+          "expectation": "A's server_name as created names the www. alias (the start's text)",
+          "held": true,
+          "measured": [
+            "server_name set10-a.test www.set10-a.test;"
+          ]
+        }
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "checks": [
+    {
+      "detail": {
+        "api": {
+          "answering": true,
+          "seconds": 12.5,
+          "status": 200
+        },
+        "epoch": 1791660751.2512286,
+        "file": "steps/10-h-i-unchanged-start/native/013-owner-h-panel-restart.json",
+        "is_active": "active",
+        "kind": "owner: systemctl restart celikpanel-panel",
+        "ok": true,
+        "reconcile_lines_seen": [
+          "2026-10-10T19:32:31.730725+00:00 dns-debian13 panel[31295]: 2026/10/10 19:32:31 site configuration files at start: 0 written, 3 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+        ],
+        "waited_seconds": 2.1
+      },
+      "name": "h: the Panel restarted and answers",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set1-owner.test": {
+          "inode": [
+            135511,
+            135511
+          ],
+          "mtime_ns": [
+            1791660734362203931,
+            1791660734362203931
+          ],
+          "sha256": [
+            "aa7679d801a7bd8e4d008283c4e248e96809875e83f4f6d38e742bde6999dc18",
+            "aa7679d801a7bd8e4d008283c4e248e96809875e83f4f6d38e742bde6999dc18"
+          ]
+        },
+        "set10-a.test": {
+          "inode": [
+            135517,
+            135517
+          ],
+          "mtime_ns": [
+            1791660740626223122,
+            1791660740626223122
+          ],
+          "sha256": [
+            "937abb023dd9cc64b903ab48a059e74409424e3ef43879d1a8cc8f082d7ee943",
+            "937abb023dd9cc64b903ab48a059e74409424e3ef43879d1a8cc8f082d7ee943"
+          ]
+        },
+        "set10-b.test": {
+          "inode": [
+            135523,
+            135523
+          ],
+          "mtime_ns": [
+            1791660747022241158,
+            1791660747022241158
+          ],
+          "sha256": [
+            "09e799124dbd9d55e912693ce49a4f4c350e550c4e3ccec50f959c6c0af4b91d",
+            "09e799124dbd9d55e912693ce49a4f4c350e550c4e3ccec50f959c6c0af4b91d"
+          ]
+        }
+      },
+      "name": "h: no vhost was written (sha256, inode and mtime unchanged for every site)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "reload_lines": [],
+        "workers": [
+          [
+            "31164",
+            "31165"
+          ],
+          [
+            "31164",
+            "31165"
+          ]
+        ]
+      },
+      "name": "h: nginx was not reloaded (worker PIDs unchanged; no `Reloaded` line after the restart)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "2026-10-10T19:32:31.730725+00:00 dns-debian13 panel[31295]: 2026/10/10 19:32:31 site configuration files at start: 0 written, 3 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+      ],
+      "name": "h: the start line counts 3 unchanged and 0 written",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set1-owner.test": [
+          "2026-10-10T19:32:31.675952+00:00 dns-debian13 panel[31295]: 2026/10/10 19:32:31 site configuration set1-owner.test (startup): unchanged"
+        ],
+        "set10-a.test": [
+          "2026-10-10T19:32:31.708839+00:00 dns-debian13 panel[31295]: 2026/10/10 19:32:31 site configuration set10-a.test (startup): unchanged"
+        ],
+        "set10-b.test": [
+          "2026-10-10T19:32:31.720441+00:00 dns-debian13 panel[31295]: 2026/10/10 19:32:31 site configuration set10-b.test (startup): unchanged"
+        ]
+      },
+      "name": "h: one line per site saying unchanged",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set10-a.test": {
+          "after_the_restart": {
+            "inode": 135517,
+            "sha256": "937abb023dd9cc64b903ab48a059e74409424e3ef43879d1a8cc8f082d7ee943"
+          },
+          "creation": {
+            "inode": 135517,
+            "mtime_ns": 1791660740626223122,
+            "sha256": "937abb023dd9cc64b903ab48a059e74409424e3ef43879d1a8cc8f082d7ee943"
+          }
+        },
+        "set10-b.test": {
+          "after_the_restart": {
+            "inode": 135523,
+            "sha256": "09e799124dbd9d55e912693ce49a4f4c350e550c4e3ccec50f959c6c0af4b91d"
+          },
+          "creation": {
+            "inode": 135523,
+            "mtime_ns": 1791660747022241158,
+            "sha256": "09e799124dbd9d55e912693ce49a4f4c350e550c4e3ccec50f959c6c0af4b91d"
+          }
+        }
+      },
+      "name": "i: the file written at creation is unchanged by the start (the start's text is the creation text byte for byte)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "server_name set10-a.test www.set10-a.test;"
+      ],
+      "name": "i: A's server_name as created names the www. alias (the start's text)",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-10T19:32:49Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/012-h-0-before-read.json",
+      "label": "h-0-before-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/013-owner-h-panel-restart.json",
+      "label": "owner-h-panel-restart",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/014-h-1-after-the-restart-read.json",
+      "label": "h-1-after-the-restart-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/015-h-journal.json",
+      "label": "h-journal",
+      "mode": "read-window",
+      "owner_action": false
+    }
+  ],
+  "node": "debian13",
+  "notes": [
+    {
+      "detail": [],
+      "note": "h: PASS"
+    },
+    {
+      "detail": [],
+      "note": "i: PASS"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-10T19:32:31Z",
+      "label": "h-panel-restart",
+      "mode": "owner-panel"
+    }
+  ],
+  "section": "h-i-unchanged-start",
+  "started_at": "2026-10-10T19:32:30Z",
+  "substeps": {
+    "h": "passed",
+    "i": "passed"
+  },
+  "title": "a restart with every site unchanged; the creation text is the start text",
+  "verdict": "passed"
+}

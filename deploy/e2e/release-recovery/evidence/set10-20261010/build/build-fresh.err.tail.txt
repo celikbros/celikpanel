@@ -1,0 +1,40 @@
+    "entries_under_evidence_dirs": 0,
+    "file": "/var/tmp/cp-pair-accept/dist/bbb686ceb4dbb44b927bb0c9d86b46958fbe921c-acceptance-license/archive-evidence-entries.json",
+    "note": "recorded observation only; entries are counted, nothing is refused on them",
+    "total_entries": 235
+  },
+  "commit": "bbb686ceb4dbb44b927bb0c9d86b46958fbe921c",
+  "license_mode": "acceptance-fixture",
+  "note": "not a release; use only with pair_acceptance.py --license-mode acceptance-fixture",
+  "panel_build_tags": "acceptance_license",
+  "product_web_src": "/var/tmp/cp-pair-accept/dist/bbb686ceb4dbb44b927bb0c9d86b46958fbe921c-acceptance-license/product-web-src",
+  "product_web_src_commit": "bbb686ceb4dbb44b927bb0c9d86b46958fbe921c",
+  "release": false,
+  "root": "celikpanel-v0.1.0-alpha.82",
+  "sha256": "2e118782c7360b85559f633fe2cb554f63c89aed524ccfd4e9486353da5793e0",
+  "tree": "5f42e0fddabc5083deeec319071cac5438768d12",
+  "version": "v0.1.0-alpha.82"
+}
+BUILD-OK
+{
+  "archive": "/var/tmp/cp-pair-accept/dist/62adb1f49dbbf54791e5144287cc29a067ff4a4d-acceptance-license/celikpanel-v0.1.0-alpha.82-acceptance-license.tar.gz",
+  "archive_observation": {
+    "entries_under_deploy_e2e": 0,
+    "entries_under_evidence_dirs": 0,
+    "file": "/var/tmp/cp-pair-accept/dist/62adb1f49dbbf54791e5144287cc29a067ff4a4d-acceptance-license/archive-evidence-entries.json",
+    "note": "recorded observation only; entries are counted, nothing is refused on them",
+    "total_entries": 235
+  },
+  "commit": "62adb1f49dbbf54791e5144287cc29a067ff4a4d",
+  "license_mode": "acceptance-fixture",
+  "note": "not a release; use only with pair_acceptance.py --license-mode acceptance-fixture",
+  "panel_build_tags": "acceptance_license",
+  "product_web_src": "/var/tmp/cp-pair-accept/dist/62adb1f49dbbf54791e5144287cc29a067ff4a4d-acceptance-license/product-web-src",
+  "product_web_src_commit": "62adb1f49dbbf54791e5144287cc29a067ff4a4d",
+  "release": false,
+  "root": "celikpanel-v0.1.0-alpha.82",
+  "sha256": "d24e5b5f36052a6d8d5a710890919f392ef8e3a83ba732e402e81103953bb5f8",
+  "tree": "84b6bd8f5be87b9a588d218c39f36072e7b70d42",
+  "version": "v0.1.0-alpha.82"
+}
+BUILD-OK

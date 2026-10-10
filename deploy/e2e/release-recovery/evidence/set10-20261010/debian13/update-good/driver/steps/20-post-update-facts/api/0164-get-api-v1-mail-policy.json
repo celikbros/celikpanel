@@ -1,0 +1,69 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "mail policy save: read after the change",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18864"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/mail/policy"
+  },
+  "response": {
+    "elapsed_seconds": 0.032,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 10 Oct 2026 20:54:47 GMT"
+      ],
+      [
+        "Content-Length",
+        "145"
+      ]
+    ],
+    "json": {
+      "dnsbl_zones": [],
+      "message_size_mb": 9,
+      "outbound_rate_limit": 37,
+      "version": "mp1-5b786b06cee5ee2104d7c2048495b719821b157c70faefdaf46602a04d673aa9"
+    },
+    "status": 200,
+    "text": null
+  }
+}

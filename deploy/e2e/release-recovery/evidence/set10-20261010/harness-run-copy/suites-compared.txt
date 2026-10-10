@@ -1,0 +1,2 @@
+copy b: the five not-OK tests are those of copy a by name
+copy g: the five not-OK tests are those of copy a by name

@@ -1,0 +1,18 @@
+{
+  "at": "2026-10-10T20:20:18Z",
+  "body": "owner-include",
+  "body_sha256": "a3da845ce89563e537e48342d0a871242e9c3e123d43eb7af767b4285a9a2893",
+  "bytes": 13,
+  "headers": {
+    "content-length": "13",
+    "content-type": "application/octet-stream",
+    "server": "nginx/1.24.0 (Ubuntu)"
+  },
+  "host": "set10-a.test",
+  "mode": "read-http",
+  "owner_action": false,
+  "path": "/owner-include/",
+  "schema": "celikpanel/set10-native/v1",
+  "status": 200,
+  "status_line": "HTTP/1.1 200 OK"
+}

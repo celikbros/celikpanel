@@ -1,0 +1,26 @@
+{
+  "checks": {
+    "checks": 31,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T20:39:22Z",
+    "notes": [
+      "d1: PASS",
+      "d2: PASS",
+      "d3: PASS"
+    ],
+    "started_at": "2026-10-10T20:38:12Z",
+    "substeps": {
+      "d1": "passed",
+      "d2": "passed",
+      "d3": "passed"
+    },
+    "title": "the owner adds an include of their own (start, restart, General save)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T20:39:22Z",
+  "name": "d-owner-edit",
+  "started_at": "2026-10-10T20:38:12Z",
+  "verdict": "passed"
+}

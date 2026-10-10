@@ -1,0 +1,70 @@
+{
+  "at": "2026-10-10T20:16:32Z",
+  "by_unit": {
+    "celikpanel-agent.service": [
+      "2026-10-10T20:16:18.513812+00:00 dns-ubuntu postfix/postfix-script[46776]: the Postfix mail system is running: PID: 37578",
+      "2026-10-10T20:16:18.600514+00:00 dns-ubuntu postfix/postfix-script[46794]: refreshing the Postfix mail system",
+      "2026-10-10T20:16:19.098692+00:00 dns-ubuntu postfix/postfix-script[46812]: the Postfix mail system is running: PID: 37578",
+      "2026-10-10T20:16:26.318359+00:00 dns-ubuntu postfix/postfix-script[47474]: the Postfix mail system is running: PID: 37578",
+      "2026-10-10T20:16:26.462595+00:00 dns-ubuntu postfix/postfix-script[47492]: refreshing the Postfix mail system"
+    ],
+    "celikpanel-panel.service": [
+      "2026-10-10T20:15:49.766381+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:49 http: TLS handshake error from 127.0.0.1:44592: EOF",
+      "2026-10-10T20:15:49.802090+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:49 http: TLS handshake error from 127.0.0.1:44606: EOF",
+      "2026-10-10T20:16:14.319111+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...",
+      "2026-10-10T20:16:14.348958+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.",
+      "2026-10-10T20:16:14.349271+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.",
+      "2026-10-10T20:16:14.358196+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...",
+      "2026-10-10T20:16:14.380073+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.",
+      "2026-10-10T20:16:14.658463+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 Starting CelikPanel Backend...",
+      "2026-10-10T20:16:14.670329+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)",
+      "2026-10-10T20:16:14.670329+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 Panel startup listener active on :2083 (HTTPS; application gated)",
+      "2026-10-10T20:16:14.671216+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 Connected to Agent RPC; preparing normal management access",
+      "2026-10-10T20:16:14.687830+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 site configuration set1-owner.test (startup): unchanged",
+      "2026-10-10T20:16:14.719238+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 site configuration set10-a.test (startup): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending",
+      "2026-10-10T20:16:14.729596+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 site configuration set10-b.test (startup): unchanged",
+      "2026-10-10T20:16:14.739887+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 site configuration files at start: 0 written, 2 unchanged, 1 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release",
+      "2026-10-10T20:16:16.443938+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:16 http: TLS handshake error from 127.0.0.1:42214: EOF",
+      "2026-10-10T20:16:18.465448+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:18 http: TLS handshake error from 127.0.0.1:35880: EOF",
+      "2026-10-10T20:16:20.492553+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:20 http: TLS handshake error from 127.0.0.1:35910: EOF",
+      "2026-10-10T20:16:21.439803+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:21 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release",
+      "2026-10-10T20:16:22.533539+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:22 http: TLS handshake error from 127.0.0.1:35918: EOF",
+      "2026-10-10T20:16:24.601854+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:24 http: TLS handshake error from 127.0.0.1:35944: EOF",
+      "2026-10-10T20:16:26.621607+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:26 http: TLS handshake error from 127.0.0.1:35968: EOF",
+      "2026-10-10T20:16:27.095103+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:27 milter chain: milters=\"inet:localhost:11332\" maps=hash",
+      "2026-10-10T20:16:27.098055+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:27 Panel ready on :2083 (HTTPS)",
+      "2026-10-10T20:16:28.649602+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:28 http: TLS handshake error from 127.0.0.1:53030: EOF",
+      "2026-10-10T20:16:28.670418+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:28 http: TLS handshake error from 127.0.0.1:53056: EOF"
+    ],
+    "nginx.service": [
+      "2026-10-10T20:15:50.750958+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T20:15:50.813245+00:00 dns-ubuntu nginx[45720]: 2026/10/10 20:15:50 [notice] 45720#45720: signal process started",
+      "2026-10-10T20:15:50.821434+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T20:15:52.639204+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T20:15:52.660573+00:00 dns-ubuntu nginx[45849]: 2026/10/10 20:15:52 [notice] 45849#45849: signal process started",
+      "2026-10-10T20:15:52.663138+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+    ],
+    "php8.3-fpm.service": []
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set10-native/v1",
+  "since_epoch": 1791663349,
+  "systemd_manager": [
+    "2026-10-10T20:15:50.750958+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T20:15:50.821434+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T20:15:52.639204+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T20:15:52.663138+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T20:16:14.319111+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...",
+    "2026-10-10T20:16:14.348958+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.",
+    "2026-10-10T20:16:14.349271+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.",
+    "2026-10-10T20:16:14.358196+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...",
+    "2026-10-10T20:16:14.380073+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel."
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php8.3-fpm.service"
+  ]
+}

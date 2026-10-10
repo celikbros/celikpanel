@@ -1,0 +1,238 @@
+{
+  "action": "owner-db-restore",
+  "at": "2026-10-10T22:14:13Z",
+  "database_after": {
+    "exists": true,
+    "group": "celikpanel",
+    "kind": "file",
+    "mode": "0600",
+    "owner": "celikpanel",
+    "path": "/var/lib/celikpanel/celikpanel.db"
+  },
+  "database_before": {
+    "exists": true,
+    "group": "celikpanel",
+    "kind": "file",
+    "mode": "0600",
+    "owner": "celikpanel",
+    "path": "/var/lib/celikpanel/celikpanel.db"
+  },
+  "ledger_after": {
+    "database": "/var/lib/celikpanel/celikpanel.db",
+    "domains": [
+      {
+        "id": 1,
+        "name": "upd1-owner.test"
+      },
+      {
+        "id": 2,
+        "name": "set10-r2.test"
+      },
+      {
+        "id": 3,
+        "name": "set10-r3.test"
+      },
+      {
+        "id": 4,
+        "name": "set10-r1.test"
+      }
+    ],
+    "ledger_last": [
+      40,
+      41,
+      42
+    ],
+    "ledger_rows": 42,
+    "managed_site_files_table": false,
+    "schema_version": 42,
+    "sites": [
+      {
+        "domain_id": 1,
+        "id": 1,
+        "project_type": "static"
+      },
+      {
+        "domain_id": 2,
+        "id": 2,
+        "project_type": "static"
+      },
+      {
+        "domain_id": 3,
+        "id": 3,
+        "project_type": "static"
+      },
+      {
+        "domain_id": 4,
+        "id": 4,
+        "project_type": "static"
+      }
+    ]
+  },
+  "ledger_before": {
+    "database": "/var/lib/celikpanel/celikpanel.db",
+    "domains": [
+      {
+        "id": 1,
+        "name": "upd1-owner.test"
+      },
+      {
+        "id": 2,
+        "name": "set10-r2.test"
+      },
+      {
+        "id": 3,
+        "name": "set10-r3.test"
+      },
+      {
+        "id": 4,
+        "name": "set10-r1.test"
+      }
+    ],
+    "ledger_last": [
+      42,
+      43,
+      44
+    ],
+    "ledger_rows": 44,
+    "managed_site_files": [
+      {
+        "adopted_from": "v0.1.0-alpha.82",
+        "backup_path": "",
+        "body_sha256": "9cd0b0f29d38d914fa95c76245df61a7dbeb217895cc3d03b35a0ed2b5440875",
+        "decided_at": 0,
+        "decided_by": null,
+        "decision": "",
+        "decision_file_sha256": "",
+        "domain_id": 1,
+        "file_format": "celikpanel-render v2",
+        "file_sha256": "12fee27d8ed225e4be0603f2454f21e1fd09f5b6d1bd98da972d054efb2bc7e3",
+        "id": 1,
+        "kind": "nginx_vhost",
+        "observed_at": 1791670426,
+        "path": "/etc/nginx/sites-available/upd1-owner.test.conf",
+        "pending_path": "",
+        "pending_sha256": "",
+        "site_id": 1,
+        "state": "managed_unchanged",
+        "state_reason": "",
+        "written_at": 1791670426,
+        "written_release": "v0.1.0-alpha.82 e0c88113f717"
+      },
+      {
+        "adopted_from": "v0.1.0-alpha.82",
+        "backup_path": "",
+        "body_sha256": "b2cc0b9a98e6a271aaad213b402a8d2c456324203b62d9e8b898756c9f5acbfe",
+        "decided_at": 0,
+        "decided_by": null,
+        "decision": "",
+        "decision_file_sha256": "",
+        "domain_id": 2,
+        "file_format": "celikpanel-render v2",
+        "file_sha256": "9060ebec914e808959bda1ff0a2c64a8057fe5bc5bb63c36a191c91e3e6837bf",
+        "id": 2,
+        "kind": "nginx_vhost",
+        "observed_at": 1791670426,
+        "path": "/etc/nginx/sites-available/set10-r2.test.conf",
+        "pending_path": "",
+        "pending_sha256": "",
+        "site_id": 2,
+        "state": "managed_unchanged",
+        "state_reason": "",
+        "written_at": 1791670426,
+        "written_release": "v0.1.0-alpha.82 e0c88113f717"
+      },
+      {
+        "adopted_from": "",
+        "backup_path": "",
+        "body_sha256": "",
+        "decided_at": 0,
+        "decided_by": null,
+        "decision": "",
+        "decision_file_sha256": "",
+        "domain_id": 3,
+        "file_format": "",
+        "file_sha256": "1b4c0c5251417f658cb12ad1cfe4d07ec91d2bb495f8a27922bf128c0cee0015",
+        "id": 3,
+        "kind": "nginx_vhost",
+        "observed_at": 1791670426,
+        "path": "/etc/nginx/sites-available/set10-r3.test.conf",
+        "pending_path": "/etc/nginx/sites-available/set10-r3.test.conf.celikpanel-pending",
+        "pending_sha256": "0091efaa7e853c49dfa61f60db5bc3abf9304c9781bccbed2a0c15b32b0c98e5",
+        "site_id": 3,
+        "state": "unknown_origin",
+        "state_reason": "",
+        "written_at": 0,
+        "written_release": ""
+      },
+      {
+        "adopted_from": "v0.1.0-alpha.82 (creation)",
+        "backup_path": "",
+        "body_sha256": "881a7810e85ee8a365274e02bb0e4aa78ddd18fc1b9a5284e876d017d9701b2c",
+        "decided_at": 0,
+        "decided_by": null,
+        "decision": "",
+        "decision_file_sha256": "",
+        "domain_id": 4,
+        "file_format": "celikpanel-render v2",
+        "file_sha256": "bd1914743d10c95ca3f8c66204d7ac8a6911ccc76bc9540b3d8b5d603c8a1d3e",
+        "id": 4,
+        "kind": "nginx_vhost",
+        "observed_at": 1791670426,
+        "path": "/etc/nginx/sites-available/set10-r1.test.conf",
+        "pending_path": "",
+        "pending_sha256": "",
+        "site_id": 4,
+        "state": "managed_unchanged",
+        "state_reason": "",
+        "written_at": 1791670426,
+        "written_release": "v0.1.0-alpha.82 e0c88113f717"
+      }
+    ],
+    "managed_site_files_table": true,
+    "schema_version": 44,
+    "sites": [
+      {
+        "domain_id": 1,
+        "id": 1,
+        "project_type": "static"
+      },
+      {
+        "domain_id": 2,
+        "id": 2,
+        "project_type": "static"
+      },
+      {
+        "domain_id": 3,
+        "id": 3,
+        "project_type": "static"
+      },
+      {
+        "domain_id": 4,
+        "id": 4,
+        "project_type": "static"
+      }
+    ]
+  },
+  "mode": "owner-db-restore",
+  "owner_action": true,
+  "panel": "inactive",
+  "schema": "celikpanel/set10-native/v1",
+  "sidecars_before": {
+    "-shm": {
+      "exists": true,
+      "group": "celikpanel",
+      "kind": "file",
+      "mode": "0600",
+      "owner": "celikpanel",
+      "path": "/var/lib/celikpanel/celikpanel.db-shm"
+    },
+    "-wal": {
+      "exists": true,
+      "group": "celikpanel",
+      "kind": "file",
+      "mode": "0600",
+      "owner": "celikpanel",
+      "path": "/var/lib/celikpanel/celikpanel.db-wal"
+    }
+  }
+}

@@ -1,0 +1,1036 @@
+{
+  "at_end": "2026-10-10T22:14:09Z",
+  "at_start": "2026-10-10T22:14:09Z",
+  "boot_id": "8c53e769-6a4b-45c0-984b-8e1962aee671",
+  "expected_strict_transport_security": "max-age=31536000",
+  "label": "after-the-update",
+  "listening_tcp_of_the_panel_process": [
+    "*:2083 users:((\"panel\",pid=13778,fd=8))"
+  ],
+  "listening_tcp_on_80_443_and_the_panel_port": [
+    "127.0.0.1:443 users:((\"python3\",pid=399,fd=3))",
+    "0.0.0.0:80 users:((\"nginx\",pid=13807,fd=4),(\"nginx\",pid=875,fd=4))",
+    "[::]:80 users:((\"nginx\",pid=13807,fd=10),(\"nginx\",pid=875,fd=10))",
+    "*:2083 users:((\"panel\",pid=13778,fd=8))"
+  ],
+  "owner_login_held": true,
+  "panel_ports": [
+    2083
+  ],
+  "panel_program": "/opt/celikpanel/bin/panel",
+  "panel_unit": {
+    "ActiveState": "active",
+    "ExecMainStartTimestamp": "Sat 2026-10-10 22:13:46 UTC",
+    "MainPID": "13778",
+    "SubState": "running"
+  },
+  "requests": [
+    {
+      "as_logged_in_owner": false,
+      "body_bytes": 703,
+      "body_sha256": "63dffb14551f1440c7a3ed34e21960651c4b8aa81bb4a250ce863459d1c9871e",
+      "headers": [
+        [
+          "Accept-Ranges",
+          "bytes"
+        ],
+        [
+          "Cache-Control",
+          "no-cache"
+        ],
+        [
+          "Content-Length",
+          "703"
+        ],
+        [
+          "Content-Security-Policy",
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        ],
+        [
+          "Content-Type",
+          "text/html; charset=utf-8"
+        ],
+        [
+          "Last-Modified",
+          "Sat, 10 Oct 2026 22:13:38 GMT"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Strict-Transport-Security",
+          "max-age=31536000"
+        ],
+        [
+          "X-Content-Type-Options",
+          "nosniff"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ],
+        [
+          "Date",
+          "Sat, 10 Oct 2026 22:14:09 GMT"
+        ]
+      ],
+      "host": "127.0.0.1",
+      "http_version": 11,
+      "method": "GET",
+      "name": "spa-root",
+      "path": "/",
+      "port": 2083,
+      "reason": "OK",
+      "request_headers": [
+        [
+          "Host",
+          "127.0.0.1:2083"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ],
+        [
+          "User-Agent",
+          "set6-header-reading"
+        ]
+      ],
+      "scheme": "https",
+      "status": 200,
+      "strict_transport_security": [
+        "max-age=31536000"
+      ],
+      "tls_version": "TLSv1.3"
+    },
+    {
+      "as_logged_in_owner": false,
+      "body_bytes": 703,
+      "body_sha256": "63dffb14551f1440c7a3ed34e21960651c4b8aa81bb4a250ce863459d1c9871e",
+      "headers": [
+        [
+          "Accept-Ranges",
+          "bytes"
+        ],
+        [
+          "Cache-Control",
+          "no-cache"
+        ],
+        [
+          "Content-Length",
+          "703"
+        ],
+        [
+          "Content-Security-Policy",
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        ],
+        [
+          "Content-Type",
+          "text/html; charset=utf-8"
+        ],
+        [
+          "Last-Modified",
+          "Sat, 10 Oct 2026 22:13:38 GMT"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Strict-Transport-Security",
+          "max-age=31536000"
+        ],
+        [
+          "X-Content-Type-Options",
+          "nosniff"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ],
+        [
+          "Date",
+          "Sat, 10 Oct 2026 22:14:09 GMT"
+        ]
+      ],
+      "host": "127.0.0.1",
+      "http_version": 11,
+      "method": "GET",
+      "name": "spa-unknown-page",
+      "path": "/set6-no-such-page",
+      "port": 2083,
+      "reason": "OK",
+      "request_headers": [
+        [
+          "Host",
+          "127.0.0.1:2083"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ],
+        [
+          "User-Agent",
+          "set6-header-reading"
+        ]
+      ],
+      "scheme": "https",
+      "status": 200,
+      "strict_transport_security": [
+        "max-age=31536000"
+      ],
+      "tls_version": "TLSv1.3"
+    },
+    {
+      "as_logged_in_owner": false,
+      "body_bytes": 240429,
+      "body_sha256": "dfd115a9b4ccc5f16dcba0966f5803d179582c6164b7164777a059e78819082d",
+      "headers": [
+        [
+          "Accept-Ranges",
+          "bytes"
+        ],
+        [
+          "Cache-Control",
+          "public, max-age=31536000, immutable"
+        ],
+        [
+          "Content-Length",
+          "240429"
+        ],
+        [
+          "Content-Security-Policy",
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        ],
+        [
+          "Content-Type",
+          "text/javascript; charset=utf-8"
+        ],
+        [
+          "Last-Modified",
+          "Sat, 10 Oct 2026 22:13:37 GMT"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Strict-Transport-Security",
+          "max-age=31536000"
+        ],
+        [
+          "X-Content-Type-Options",
+          "nosniff"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ],
+        [
+          "Date",
+          "Sat, 10 Oct 2026 22:14:09 GMT"
+        ]
+      ],
+      "host": "127.0.0.1",
+      "http_version": 11,
+      "method": "GET",
+      "name": "spa-asset",
+      "path": "/assets/app-BNe93exx.js",
+      "port": 2083,
+      "reason": "OK",
+      "request_headers": [
+        [
+          "Host",
+          "127.0.0.1:2083"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ],
+        [
+          "User-Agent",
+          "set6-header-reading"
+        ]
+      ],
+      "scheme": "https",
+      "status": 200,
+      "strict_transport_security": [
+        "max-age=31536000"
+      ],
+      "tls_version": "TLSv1.3"
+    },
+    {
+      "as_logged_in_owner": false,
+      "body_bytes": 16,
+      "body_sha256": "c0d3392599aed96320eb77695c62eca2ff268f426ba4447c2f5418a4f3078e93",
+      "body_start": "{\"hostname\":\"\"}\n",
+      "headers": [
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Content-Security-Policy",
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Strict-Transport-Security",
+          "max-age=31536000"
+        ],
+        [
+          "X-Content-Type-Options",
+          "nosniff"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ],
+        [
+          "Date",
+          "Sat, 10 Oct 2026 22:14:09 GMT"
+        ],
+        [
+          "Content-Length",
+          "16"
+        ]
+      ],
+      "host": "127.0.0.1",
+      "http_version": 11,
+      "method": "GET",
+      "name": "api-public",
+      "path": "/api/v1/panel/access-address",
+      "port": 2083,
+      "reason": "OK",
+      "request_headers": [
+        [
+          "Host",
+          "127.0.0.1:2083"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ],
+        [
+          "User-Agent",
+          "set6-header-reading"
+        ]
+      ],
+      "scheme": "https",
+      "status": 200,
+      "strict_transport_security": [
+        "max-age=31536000"
+      ],
+      "tls_version": "TLSv1.3"
+    },
+    {
+      "as_logged_in_owner": true,
+      "body_bytes": 223,
+      "body_sha256": "ca99ebf44114168ee41edf7e231be4942ae9b3945da7338ddbe77fc42c7d5915",
+      "headers": [
+        [
+          "Cache-Control",
+          "no-store"
+        ],
+        [
+          "Content-Security-Policy",
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Pragma",
+          "no-cache"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Strict-Transport-Security",
+          "max-age=31536000"
+        ],
+        [
+          "X-Content-Type-Options",
+          "nosniff"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ],
+        [
+          "Date",
+          "Sat, 10 Oct 2026 22:14:09 GMT"
+        ],
+        [
+          "Content-Length",
+          "223"
+        ]
+      ],
+      "host": "127.0.0.1",
+      "http_version": 11,
+      "method": "GET",
+      "name": "api-version-as-owner",
+      "panel": {
+        "agent_commit": "e0c88113f717850a74a0b25baafd4a21f23e1069",
+        "agent_matches": true,
+        "commit": "e0c88113f717850a74a0b25baafd4a21f23e1069",
+        "schema_version": 44,
+        "version": "v0.1.0-alpha.82"
+      },
+      "path": "/api/v1/panel/version",
+      "port": 2083,
+      "reason": "OK",
+      "request_headers": [
+        [
+          "Host",
+          "127.0.0.1:2083"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ],
+        [
+          "User-Agent",
+          "set6-header-reading"
+        ],
+        [
+          "Cookie",
+          "[REDACTED]"
+        ]
+      ],
+      "scheme": "https",
+      "status": 200,
+      "strict_transport_security": [
+        "max-age=31536000"
+      ],
+      "tls_version": "TLSv1.3"
+    },
+    {
+      "as_logged_in_owner": true,
+      "body_bytes": 1019,
+      "body_sha256": "25d2269beb7df7708cc3404bba106a987d211e3c3d0bb02fe76cf1cdec6e6e47",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Strict-Transport-Security",
+          "max-age=31536000"
+        ],
+        [
+          "X-Content-Type-Options",
+          "nosniff"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ],
+        [
+          "Date",
+          "Sat, 10 Oct 2026 22:14:09 GMT"
+        ],
+        [
+          "Content-Length",
+          "1019"
+        ]
+      ],
+      "host": "127.0.0.1",
+      "http_version": 11,
+      "method": "GET",
+      "name": "api-domains-as-owner",
+      "path": "/api/v1/domains",
+      "port": 2083,
+      "reason": "OK",
+      "request_headers": [
+        [
+          "Host",
+          "127.0.0.1:2083"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ],
+        [
+          "User-Agent",
+          "set6-header-reading"
+        ],
+        [
+          "Cookie",
+          "[REDACTED]"
+        ]
+      ],
+      "scheme": "https",
+      "status": 200,
+      "strict_transport_security": [
+        "max-age=31536000"
+      ],
+      "tls_version": "TLSv1.3"
+    },
+    {
+      "as_logged_in_owner": false,
+      "body_bytes": 59,
+      "body_sha256": "037b0bc32ef5d1c59e94885f2e135ca8985b70b03ab6c3a953b08ff32027ca58",
+      "body_start": "{\"error\":\"authentication required\",\"code\":\"AUTH_REQUIRED\"}\n",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Strict-Transport-Security",
+          "max-age=31536000"
+        ],
+        [
+          "X-Content-Type-Options",
+          "nosniff"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ],
+        [
+          "Date",
+          "Sat, 10 Oct 2026 22:14:09 GMT"
+        ],
+        [
+          "Content-Length",
+          "59"
+        ]
+      ],
+      "host": "127.0.0.1",
+      "http_version": 11,
+      "method": "GET",
+      "name": "api-domains-no-login",
+      "path": "/api/v1/domains",
+      "port": 2083,
+      "reason": "Unauthorized",
+      "request_headers": [
+        [
+          "Host",
+          "127.0.0.1:2083"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ],
+        [
+          "User-Agent",
+          "set6-header-reading"
+        ]
+      ],
+      "scheme": "https",
+      "status": 401,
+      "strict_transport_security": [
+        "max-age=31536000"
+      ],
+      "tls_version": "TLSv1.3"
+    },
+    {
+      "as_logged_in_owner": false,
+      "body_bytes": 59,
+      "body_sha256": "037b0bc32ef5d1c59e94885f2e135ca8985b70b03ab6c3a953b08ff32027ca58",
+      "body_start": "{\"error\":\"authentication required\",\"code\":\"AUTH_REQUIRED\"}\n",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Strict-Transport-Security",
+          "max-age=31536000"
+        ],
+        [
+          "X-Content-Type-Options",
+          "nosniff"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ],
+        [
+          "Date",
+          "Sat, 10 Oct 2026 22:14:09 GMT"
+        ],
+        [
+          "Content-Length",
+          "59"
+        ]
+      ],
+      "host": "127.0.0.1",
+      "http_version": 11,
+      "method": "GET",
+      "name": "api-unknown-no-login",
+      "path": "/api/v1/set6-no-such-route",
+      "port": 2083,
+      "reason": "Unauthorized",
+      "request_headers": [
+        [
+          "Host",
+          "127.0.0.1:2083"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ],
+        [
+          "User-Agent",
+          "set6-header-reading"
+        ]
+      ],
+      "scheme": "https",
+      "status": 401,
+      "strict_transport_security": [
+        "max-age=31536000"
+      ],
+      "tls_version": "TLSv1.3"
+    },
+    {
+      "as_logged_in_owner": false,
+      "body_bytes": 41,
+      "body_sha256": "8af8223db9819a0edbe3df176d496c0621e63b076d63c9048530498c8519c85e",
+      "body_start": "{\"error\":\"cross-origin request blocked\"}\n",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        ],
+        [
+          "Content-Type",
+          "application/json"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Strict-Transport-Security",
+          "max-age=31536000"
+        ],
+        [
+          "X-Content-Type-Options",
+          "nosniff"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ],
+        [
+          "Date",
+          "Sat, 10 Oct 2026 22:14:09 GMT"
+        ],
+        [
+          "Content-Length",
+          "41"
+        ]
+      ],
+      "host": "127.0.0.1",
+      "http_version": 11,
+      "method": "POST",
+      "name": "api-post-without-origin",
+      "path": "/api/v1/set6-no-such-route",
+      "port": 2083,
+      "reason": "Forbidden",
+      "request_headers": [
+        [
+          "Host",
+          "127.0.0.1:2083"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ],
+        [
+          "User-Agent",
+          "set6-header-reading"
+        ],
+        [
+          "Content-Length",
+          "0"
+        ]
+      ],
+      "scheme": "https",
+      "status": 403,
+      "strict_transport_security": [
+        "max-age=31536000"
+      ],
+      "tls_version": "TLSv1.3"
+    },
+    {
+      "as_logged_in_owner": true,
+      "body_bytes": 19,
+      "body_sha256": "b16e15764b8bc06c5c3f9f19bc8b99fa48e7894aa5a6ccdad65da49bbf564793",
+      "body_start": "404 page not found\n",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        ],
+        [
+          "Content-Type",
+          "text/plain; charset=utf-8"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Strict-Transport-Security",
+          "max-age=31536000"
+        ],
+        [
+          "X-Content-Type-Options",
+          "nosniff"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ],
+        [
+          "Date",
+          "Sat, 10 Oct 2026 22:14:09 GMT"
+        ],
+        [
+          "Content-Length",
+          "19"
+        ]
+      ],
+      "host": "127.0.0.1",
+      "http_version": 11,
+      "method": "GET",
+      "name": "api-unknown-as-owner",
+      "path": "/api/v1/set6-no-such-route",
+      "port": 2083,
+      "reason": "Not Found",
+      "request_headers": [
+        [
+          "Host",
+          "127.0.0.1:2083"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ],
+        [
+          "User-Agent",
+          "set6-header-reading"
+        ],
+        [
+          "Cookie",
+          "[REDACTED]"
+        ]
+      ],
+      "scheme": "https",
+      "status": 404,
+      "strict_transport_security": [
+        "max-age=31536000"
+      ],
+      "tls_version": "TLSv1.3"
+    },
+    {
+      "as_logged_in_owner": false,
+      "body_bytes": 0,
+      "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "headers": [
+        [
+          "Content-Security-Policy",
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        ],
+        [
+          "Referrer-Policy",
+          "no-referrer"
+        ],
+        [
+          "Strict-Transport-Security",
+          "max-age=31536000"
+        ],
+        [
+          "X-Content-Type-Options",
+          "nosniff"
+        ],
+        [
+          "X-Frame-Options",
+          "DENY"
+        ],
+        [
+          "Date",
+          "Sat, 10 Oct 2026 22:14:09 GMT"
+        ]
+      ],
+      "host": "127.0.0.1",
+      "http_version": 11,
+      "method": "OPTIONS",
+      "name": "api-options-preflight",
+      "path": "/api/v1/domains",
+      "port": 2083,
+      "reason": "No Content",
+      "request_headers": [
+        [
+          "Host",
+          "127.0.0.1:2083"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ],
+        [
+          "User-Agent",
+          "set6-header-reading"
+        ]
+      ],
+      "scheme": "https",
+      "status": 204,
+      "strict_transport_security": [
+        "max-age=31536000"
+      ],
+      "tls_version": "TLSv1.3"
+    },
+    {
+      "answered": true,
+      "as_logged_in_owner": false,
+      "body_start": "Client sent an HTTP request to an HTTPS server.\n",
+      "header_name_anywhere_in_the_answer": false,
+      "headers": [],
+      "host": "127.0.0.1",
+      "method": "GET",
+      "name": "plain-http-to-the-panel-port-2083",
+      "path": "/",
+      "port": 2083,
+      "raw_bytes": 76,
+      "raw_head": "HTTP/1.0 400 Bad Request",
+      "request_headers": [
+        [
+          "Host",
+          "127.0.0.1:2083"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ],
+        [
+          "User-Agent",
+          "set6-header-reading"
+        ],
+        [
+          "Connection",
+          "close"
+        ]
+      ],
+      "scheme": "http",
+      "status": 400,
+      "status_line": "HTTP/1.0 400 Bad Request",
+      "strict_transport_security": []
+    },
+    {
+      "answered": true,
+      "as_logged_in_owner": false,
+      "body_start": "Client sent an HTTP request to an HTTPS server.\n",
+      "header_name_anywhere_in_the_answer": false,
+      "headers": [],
+      "host": "127.0.0.1",
+      "method": "GET",
+      "name": "plain-http-to-the-panel-port-2083-api",
+      "path": "/api/v1/panel/access-address",
+      "port": 2083,
+      "raw_bytes": 76,
+      "raw_head": "HTTP/1.0 400 Bad Request",
+      "request_headers": [
+        [
+          "Host",
+          "127.0.0.1:2083"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ],
+        [
+          "User-Agent",
+          "set6-header-reading"
+        ],
+        [
+          "Connection",
+          "close"
+        ]
+      ],
+      "scheme": "http",
+      "status": 400,
+      "status_line": "HTTP/1.0 400 Bad Request",
+      "strict_transport_security": []
+    },
+    {
+      "answered": true,
+      "as_logged_in_owner": false,
+      "body_start": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set10-r1.test</title>\n<style>\n  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}",
+      "header_name_anywhere_in_the_answer": false,
+      "headers": [
+        [
+          "Server",
+          "nginx/1.30.5"
+        ],
+        [
+          "Date",
+          "Sat, 10 Oct 2026 22:14:09 GMT"
+        ],
+        [
+          "Content-Type",
+          "text/html"
+        ],
+        [
+          "Content-Length",
+          "545"
+        ],
+        [
+          "Last-Modified",
+          "Sat, 10 Oct 2026 22:11:28 GMT"
+        ],
+        [
+          "Connection",
+          "close"
+        ],
+        [
+          "ETag",
+          "\"6acab810-221\""
+        ],
+        [
+          "Accept-Ranges",
+          "bytes"
+        ]
+      ],
+      "host": "127.0.0.1",
+      "method": "GET",
+      "name": "plain-http-port-80-panel-host-name",
+      "path": "/",
+      "port": 80,
+      "raw_bytes": 778,
+      "raw_head": "HTTP/1.1 200 OK\r\nServer: nginx/1.30.5\r\nDate: Sat, 10 Oct 2026 22:14:09 GMT\r\nContent-Type: text/html\r\nContent-Length: 545\r\nLast-Modified: Sat, 10 Oct 2026 22:11:28 GMT\r\nConnection: close\r\nETag: \"6acab810-221\"\r\nAccept-Ranges: bytes",
+      "request_headers": [
+        [
+          "Host",
+          "panel-arch.upd1-infra.test"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ],
+        [
+          "User-Agent",
+          "set6-header-reading"
+        ],
+        [
+          "Connection",
+          "close"
+        ]
+      ],
+      "scheme": "http",
+      "status": 200,
+      "status_line": "HTTP/1.1 200 OK",
+      "strict_transport_security": []
+    },
+    {
+      "answered": true,
+      "as_logged_in_owner": false,
+      "body_start": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set10-r1.test</title>\n<style>\n  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}",
+      "header_name_anywhere_in_the_answer": false,
+      "headers": [
+        [
+          "Server",
+          "nginx/1.30.5"
+        ],
+        [
+          "Date",
+          "Sat, 10 Oct 2026 22:14:09 GMT"
+        ],
+        [
+          "Content-Type",
+          "text/html"
+        ],
+        [
+          "Content-Length",
+          "545"
+        ],
+        [
+          "Last-Modified",
+          "Sat, 10 Oct 2026 22:11:28 GMT"
+        ],
+        [
+          "Connection",
+          "close"
+        ],
+        [
+          "ETag",
+          "\"6acab810-221\""
+        ],
+        [
+          "Accept-Ranges",
+          "bytes"
+        ]
+      ],
+      "host": "127.0.0.1",
+      "method": "GET",
+      "name": "plain-http-port-80-address",
+      "path": "/",
+      "port": 80,
+      "raw_bytes": 778,
+      "raw_head": "HTTP/1.1 200 OK\r\nServer: nginx/1.30.5\r\nDate: Sat, 10 Oct 2026 22:14:09 GMT\r\nContent-Type: text/html\r\nContent-Length: 545\r\nLast-Modified: Sat, 10 Oct 2026 22:11:28 GMT\r\nConnection: close\r\nETag: \"6acab810-221\"\r\nAccept-Ranges: bytes",
+      "request_headers": [
+        [
+          "Host",
+          "127.0.0.1"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ],
+        [
+          "User-Agent",
+          "set6-header-reading"
+        ],
+        [
+          "Connection",
+          "close"
+        ]
+      ],
+      "scheme": "http",
+      "status": 200,
+      "status_line": "HTTP/1.1 200 OK",
+      "strict_transport_security": []
+    }
+  ],
+  "tls_leaf_sha256": [
+    "bc9ec0e8c20ba02e767c23dc2eb5e5285aa5feee995b359ad86ec63faa0d579f"
+  ]
+}

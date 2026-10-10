@@ -1,0 +1,948 @@
+2026-10-10T19:59:42.604152+00:00 dns-ubuntu systemd[1]: Starting celikpanel-agent.service - CelikPanel privileged agent...
+2026-10-10T19:59:42.621034+00:00 dns-ubuntu systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-10-10T19:59:42.636598+00:00 dns-ubuntu agent[7573]: 2026/10/10 19:59:42 Starting CelikPanel Agent...
+2026-10-10T19:59:42.640014+00:00 dns-ubuntu agent[7573]: 2026/10/10 19:59:42 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-10T19:59:42.640151+00:00 dns-ubuntu agent[7573]: 2026/10/10 19:59:42 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-10-10T19:59:44.869141+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T19:59:44.890000+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T19:59:45.148402+00:00 dns-ubuntu panel[7706]: 2026/10/10 19:59:45 Starting CelikPanel Backend...
+2026-10-10T19:59:45.156638+00:00 dns-ubuntu panel[7706]: 2026/10/10 19:59:45 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T19:59:45.157968+00:00 dns-ubuntu panel[7706]: 2026/10/10 19:59:45 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T19:59:45.158984+00:00 dns-ubuntu panel[7706]: 2026/10/10 19:59:45 Connected to Agent RPC; preparing normal management access
+2026-10-10T19:59:45.193928+00:00 dns-ubuntu panel[7706]: 2026/10/10 19:59:45 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-ubuntu": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-10T19:59:45.196542+00:00 dns-ubuntu panel[7706]: 2026/10/10 19:59:45 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-10T19:59:45.199279+00:00 dns-ubuntu panel[7706]: 2026/10/10 19:59:45 Panel ready on :2083 (HTTPS)
+2026-10-10T19:59:45.912722+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T19:59:45.932123+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T19:59:45.932350+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T19:59:46.088276+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T19:59:46.121033+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T19:59:46.397787+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:46 Starting CelikPanel Backend...
+2026-10-10T19:59:46.405070+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:46 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T19:59:46.405892+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:46 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T19:59:46.406317+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:46 Connected to Agent RPC; preparing normal management access
+2026-10-10T19:59:46.420850+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:46 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-ubuntu": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-10T19:59:46.423478+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:46 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-10T19:59:46.425461+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:46 Panel ready on :2083 (HTTPS)
+2026-10-10T19:59:55.660013+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:55 http: TLS handshake error from 127.0.0.1:51172: EOF
+2026-10-10T19:59:56.189408+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:56 http: TLS handshake error from 127.0.0.1:51192: EOF
+2026-10-10T19:59:56.984963+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:56 http: TLS handshake error from 127.0.0.1:51224: EOF
+2026-10-10T19:59:57.005911+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:57 http: TLS handshake error from 127.0.0.1:51248: EOF
+2026-10-10T19:59:57.024408+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:57 http: TLS handshake error from 127.0.0.1:51266: EOF
+2026-10-10T19:59:57.041004+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:57 http: TLS handshake error from 127.0.0.1:51282: EOF
+2026-10-10T19:59:57.078364+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:57 http: TLS handshake error from 127.0.0.1:51312: EOF
+2026-10-10T19:59:57.099496+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:57 http: TLS handshake error from 127.0.0.1:51336: EOF
+2026-10-10T19:59:57.127456+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:57 http: TLS handshake error from 127.0.0.1:51356: EOF
+2026-10-10T19:59:57.150535+00:00 dns-ubuntu panel[7768]: 2026/10/10 19:59:57 http: TLS handshake error from 127.0.0.1:51372: EOF
+2026-10-10T20:04:41.103975+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:04:41 http: TLS handshake error from 127.0.0.1:39652: EOF
+2026-10-10T20:04:41.152253+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:04:41 http: TLS handshake error from 127.0.0.1:39676: EOF
+2026-10-10T20:04:42.341745+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:04:42 http: TLS handshake error from 127.0.0.1:39686: EOF
+2026-10-10T20:04:43.288729+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:04:43 http: TLS handshake error from 127.0.0.1:39696: EOF
+2026-10-10T20:04:44.755842+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:04:44 http: TLS handshake error from 127.0.0.1:39700: EOF
+2026-10-10T20:04:49.782099+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:04:49 http: TLS handshake error from 127.0.0.1:53838: EOF
+2026-10-10T20:04:54.800210+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:04:54 http: TLS handshake error from 127.0.0.1:53858: EOF
+2026-10-10T20:04:56.314813+00:00 dns-ubuntu adduser[10819]: The home dir /nonexistent you specified can't be accessed: No such file or directory
+2026-10-10T20:04:56.320650+00:00 dns-ubuntu adduser[10819]: Selecting UID from range 100 to 999 ...
+2026-10-10T20:04:56.323931+00:00 dns-ubuntu adduser[10819]: Adding system user `_galera' (UID 109) ...
+2026-10-10T20:04:56.326298+00:00 dns-ubuntu adduser[10819]: Adding new user `_galera' (UID 109) with group `nogroup' ...
+2026-10-10T20:04:56.379649+00:00 dns-ubuntu useradd[10824]: new user: name=_galera, UID=109, GID=65534, home=/nonexistent, shell=/usr/sbin/nologin, from=none
+2026-10-10T20:04:56.441860+00:00 dns-ubuntu adduser[10819]: Not creating `/nonexistent'.
+2026-10-10T20:04:59.824829+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:04:59 http: TLS handshake error from 127.0.0.1:40446: EOF
+2026-10-10T20:04:59.916924+00:00 dns-ubuntu addgroup[10977]: Selecting GID from range 100 to 999 ...
+2026-10-10T20:04:59.920209+00:00 dns-ubuntu addgroup[10977]: Adding group `mysql' (GID 112) ...
+2026-10-10T20:04:59.967957+00:00 dns-ubuntu groupadd[10980]: group added to /etc/group: name=mysql, GID=112
+2026-10-10T20:04:59.996208+00:00 dns-ubuntu groupadd[10980]: group added to /etc/gshadow: name=mysql
+2026-10-10T20:04:59.997923+00:00 dns-ubuntu groupadd[10980]: new group: name=mysql, GID=112
+2026-10-10T20:05:00.039110+00:00 dns-ubuntu adduser[10987]: The home dir /nonexistent you specified can't be accessed: No such file or directory
+2026-10-10T20:05:00.044008+00:00 dns-ubuntu adduser[10987]: Selecting UID from range 100 to 999 ...
+2026-10-10T20:05:00.047244+00:00 dns-ubuntu adduser[10987]: Adding system user `mysql' (UID 110) ...
+2026-10-10T20:05:00.049830+00:00 dns-ubuntu adduser[10987]: Adding new user `mysql' (UID 110) with group `mysql' ...
+2026-10-10T20:05:00.100470+00:00 dns-ubuntu useradd[10992]: new user: name=mysql, UID=110, GID=112, home=/nonexistent, shell=/bin/false, from=none
+2026-10-10T20:05:00.191720+00:00 dns-ubuntu chfn[10999]: changed user 'mysql' information
+2026-10-10T20:05:00.195292+00:00 dns-ubuntu adduser[10987]: Not creating `/nonexistent'.
+2026-10-10T20:05:02.263589+00:00 dns-ubuntu mariadb-server.postinst[11065]: 2026-10-10 20:05:02 0 [Warning] You need to use --log-bin to make --expire-logs-days or --binlog-expire-logs-seconds work.
+2026-10-10T20:05:04.844754+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:05:04 http: TLS handshake error from 127.0.0.1:40464: EOF
+2026-10-10T20:05:09.866593+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:05:09 http: TLS handshake error from 127.0.0.1:53748: EOF
+2026-10-10T20:05:13.785912+00:00 dns-ubuntu cron[11524]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:05:15.767692+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:05:15 http: TLS handshake error from 127.0.0.1:53772: EOF
+2026-10-10T20:05:20.789880+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:05:20 http: TLS handshake error from 127.0.0.1:37128: EOF
+2026-10-10T20:05:25.814208+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:05:25 http: TLS handshake error from 127.0.0.1:37146: EOF
+2026-10-10T20:05:29.871373+00:00 dns-ubuntu cron[12195]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:05:30.837793+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:05:30 http: TLS handshake error from 127.0.0.1:56552: EOF
+2026-10-10T20:05:35.853503+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:05:35 http: TLS handshake error from 127.0.0.1:56558: EOF
+2026-10-10T20:05:38.049900+00:00 dns-ubuntu php8.3-common[12687]: php_invoke calendar: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:38.091670+00:00 dns-ubuntu php8.3-common[12719]: php_invoke calendar: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:38.442502+00:00 dns-ubuntu php8.3-common[12917]: php_invoke ctype: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:38.478327+00:00 dns-ubuntu php8.3-common[12949]: php_invoke ctype: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:38.813248+00:00 dns-ubuntu php8.3-common[13147]: php_invoke exif: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:38.854117+00:00 dns-ubuntu php8.3-common[13179]: php_invoke exif: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:39.201003+00:00 dns-ubuntu php8.3-common[13377]: php_invoke fileinfo: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:39.234870+00:00 dns-ubuntu php8.3-common[13409]: php_invoke fileinfo: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:39.559963+00:00 dns-ubuntu php8.3-common[13607]: php_invoke ffi: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:39.597845+00:00 dns-ubuntu php8.3-common[13639]: php_invoke ffi: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:39.938030+00:00 dns-ubuntu php8.3-common[13837]: php_invoke ftp: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:39.974712+00:00 dns-ubuntu php8.3-common[13869]: php_invoke ftp: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:40.344058+00:00 dns-ubuntu php8.3-common[14099]: php_invoke gettext: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:40.667078+00:00 dns-ubuntu php8.3-common[14297]: php_invoke iconv: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:40.710918+00:00 dns-ubuntu php8.3-common[14329]: php_invoke iconv: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:40.885746+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:05:40 http: TLS handshake error from 127.0.0.1:44180: EOF
+2026-10-10T20:05:41.045853+00:00 dns-ubuntu php8.3-common[14527]: php_invoke pdo: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:41.082222+00:00 dns-ubuntu php8.3-common[14559]: php_invoke pdo: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:41.405846+00:00 dns-ubuntu php8.3-common[14757]: php_invoke phar: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:41.443541+00:00 dns-ubuntu php8.3-common[14789]: php_invoke phar: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:41.766250+00:00 dns-ubuntu php8.3-common[14987]: php_invoke posix: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:41.802433+00:00 dns-ubuntu php8.3-common[15019]: php_invoke posix: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:42.135449+00:00 dns-ubuntu php8.3-common[15217]: php_invoke shmop: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:42.175556+00:00 dns-ubuntu php8.3-common[15249]: php_invoke shmop: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:42.510903+00:00 dns-ubuntu php8.3-common[15447]: php_invoke sockets: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:42.549086+00:00 dns-ubuntu php8.3-common[15479]: php_invoke sockets: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:42.879424+00:00 dns-ubuntu php8.3-common[15677]: php_invoke sysvmsg: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:42.920825+00:00 dns-ubuntu php8.3-common[15709]: php_invoke sysvmsg: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:43.292452+00:00 dns-ubuntu php8.3-common[15939]: php_invoke sysvsem: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:43.616149+00:00 dns-ubuntu php8.3-common[16137]: php_invoke sysvshm: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:43.657158+00:00 dns-ubuntu php8.3-common[16169]: php_invoke sysvshm: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:43.988232+00:00 dns-ubuntu php8.3-common[16367]: php_invoke tokenizer: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:44.026887+00:00 dns-ubuntu php8.3-common[16399]: php_invoke tokenizer: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:44.433591+00:00 dns-ubuntu php8.3-readline[16598]: php_invoke readline: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:44.862052+00:00 dns-ubuntu php8.3-opcache[16829]: php_invoke opcache: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:44.928954+00:00 dns-ubuntu php8.3-opcache[16861]: php_invoke opcache: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:45.309581+00:00 dns-ubuntu php8.3-cli[17003]: php_invoke exif: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.348265+00:00 dns-ubuntu php8.3-cli[17036]: php_invoke phar: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.386884+00:00 dns-ubuntu php8.3-cli[17069]: php_invoke shmop: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.425185+00:00 dns-ubuntu php8.3-cli[17102]: php_invoke fileinfo: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.462249+00:00 dns-ubuntu php8.3-cli[17135]: php_invoke iconv: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.498253+00:00 dns-ubuntu php8.3-cli[17168]: php_invoke sysvshm: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.535578+00:00 dns-ubuntu php8.3-cli[17201]: php_invoke sockets: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.569606+00:00 dns-ubuntu php8.3-cli[17234]: php_invoke ctype: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.604562+00:00 dns-ubuntu php8.3-cli[17267]: php_invoke posix: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.642232+00:00 dns-ubuntu php8.3-cli[17300]: php_invoke sysvmsg: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.676614+00:00 dns-ubuntu php8.3-cli[17333]: php_invoke opcache: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.711672+00:00 dns-ubuntu php8.3-cli[17366]: php_invoke gettext: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.748277+00:00 dns-ubuntu php8.3-cli[17399]: php_invoke calendar: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.785354+00:00 dns-ubuntu php8.3-cli[17432]: php_invoke ffi: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.820749+00:00 dns-ubuntu php8.3-cli[17465]: php_invoke sysvsem: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.856600+00:00 dns-ubuntu php8.3-cli[17498]: php_invoke tokenizer: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.892893+00:00 dns-ubuntu php8.3-cli[17531]: php_invoke readline: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:45.965862+00:00 dns-ubuntu php8.3-cli[17599]: php_invoke pdo: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:05:46.211984+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:05:46 http: TLS handshake error from 127.0.0.1:44184: EOF
+2026-10-10T20:05:46.419516+00:00 dns-ubuntu php8.3-fpm[17793]: php_invoke exif: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:46.456431+00:00 dns-ubuntu php8.3-fpm[17826]: php_invoke phar: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:46.492863+00:00 dns-ubuntu php8.3-fpm[17859]: php_invoke shmop: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:46.526179+00:00 dns-ubuntu php8.3-fpm[17892]: php_invoke fileinfo: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:46.599656+00:00 dns-ubuntu php8.3-fpm[17958]: php_invoke sysvshm: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:46.634032+00:00 dns-ubuntu php8.3-fpm[17991]: php_invoke sockets: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:46.669205+00:00 dns-ubuntu php8.3-fpm[18024]: php_invoke ctype: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:46.706459+00:00 dns-ubuntu php8.3-fpm[18057]: php_invoke posix: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:46.741842+00:00 dns-ubuntu php8.3-fpm[18090]: php_invoke sysvmsg: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:46.777169+00:00 dns-ubuntu php8.3-fpm[18123]: php_invoke opcache: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:46.814170+00:00 dns-ubuntu php8.3-fpm[18156]: php_invoke gettext: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:46.849537+00:00 dns-ubuntu php8.3-fpm[18189]: php_invoke calendar: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:46.883847+00:00 dns-ubuntu php8.3-fpm[18222]: php_invoke ffi: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:46.918918+00:00 dns-ubuntu php8.3-fpm[18255]: php_invoke sysvsem: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:46.954377+00:00 dns-ubuntu php8.3-fpm[18288]: php_invoke tokenizer: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:46.990127+00:00 dns-ubuntu php8.3-fpm[18321]: php_invoke readline: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:47.025274+00:00 dns-ubuntu php8.3-fpm[18354]: php_invoke ftp: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:47.061462+00:00 dns-ubuntu php8.3-fpm[18387]: php_invoke pdo: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:05:51.232816+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:05:51 http: TLS handshake error from 127.0.0.1:34780: EOF
+2026-10-10T20:05:51.867462+00:00 dns-ubuntu cron[18696]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:05:56.250881+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:05:56 http: TLS handshake error from 127.0.0.1:34788: EOF
+2026-10-10T20:06:01.269123+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:06:01 http: TLS handshake error from 127.0.0.1:45396: EOF
+2026-10-10T20:06:06.311597+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:06:06 http: TLS handshake error from 127.0.0.1:45420: EOF
+2026-10-10T20:06:08.232871+00:00 dns-ubuntu addgroup[18974]: Selecting GID from range 100 to 999 ...
+2026-10-10T20:06:08.236977+00:00 dns-ubuntu addgroup[18974]: Adding group `ssl-cert' (GID 113) ...
+2026-10-10T20:06:08.276078+00:00 dns-ubuntu groupadd[18977]: group added to /etc/group: name=ssl-cert, GID=113
+2026-10-10T20:06:08.298008+00:00 dns-ubuntu groupadd[18977]: group added to /etc/gshadow: name=ssl-cert
+2026-10-10T20:06:08.299919+00:00 dns-ubuntu groupadd[18977]: new group: name=ssl-cert, GID=113
+2026-10-10T20:06:09.727972+00:00 dns-ubuntu adduser[19735]: Selecting UID from range 100 to 999 ...
+2026-10-10T20:06:09.731305+00:00 dns-ubuntu adduser[19735]: Selecting GID from range 100 to 999 ...
+2026-10-10T20:06:09.734669+00:00 dns-ubuntu adduser[19735]: Adding system user `postgres' (UID 111) ...
+2026-10-10T20:06:09.738501+00:00 dns-ubuntu adduser[19735]: Adding new group `postgres' (GID 114) ...
+2026-10-10T20:06:09.778693+00:00 dns-ubuntu groupadd[19740]: group added to /etc/group: name=postgres, GID=114
+2026-10-10T20:06:09.794447+00:00 dns-ubuntu groupadd[19740]: group added to /etc/gshadow: name=postgres
+2026-10-10T20:06:09.796192+00:00 dns-ubuntu groupadd[19740]: new group: name=postgres, GID=114
+2026-10-10T20:06:09.800009+00:00 dns-ubuntu adduser[19735]: Adding new user `postgres' (UID 111) with group `postgres' ...
+2026-10-10T20:06:09.840304+00:00 dns-ubuntu useradd[19747]: new user: name=postgres, UID=111, GID=114, home=/var/lib/postgresql, shell=/bin/bash, from=none
+2026-10-10T20:06:09.908203+00:00 dns-ubuntu chfn[19754]: changed user 'postgres' information
+2026-10-10T20:06:09.912151+00:00 dns-ubuntu adduser[19735]: Not creating home directory `/var/lib/postgresql'.
+2026-10-10T20:06:09.928593+00:00 dns-ubuntu su[19767]: (to postgres) root on none
+2026-10-10T20:06:09.929962+00:00 dns-ubuntu su[19767]: pam_unix(su:session): session opened for user postgres(uid=111) by (uid=0)
+2026-10-10T20:06:10.099711+00:00 dns-ubuntu su[19767]: pam_unix(su:session): session closed for user postgres
+2026-10-10T20:06:10.150277+00:00 dns-ubuntu adduser[19793]: Adding user `postgres' to group `ssl-cert' ...
+2026-10-10T20:06:10.193727+00:00 dns-ubuntu usermod[19795]: add 'postgres' to group 'ssl-cert'
+2026-10-10T20:06:10.193839+00:00 dns-ubuntu usermod[19795]: add 'postgres' to shadow group 'ssl-cert'
+2026-10-10T20:06:11.386505+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:06:11 http: TLS handshake error from 127.0.0.1:39186: EOF
+2026-10-10T20:06:17.111156+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:06:17 http: TLS handshake error from 127.0.0.1:39202: EOF
+2026-10-10T20:06:20.700221+00:00 dns-ubuntu cron[21304]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:06:22.127582+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:06:22 http: TLS handshake error from 127.0.0.1:46622: EOF
+2026-10-10T20:06:24.484626+00:00 dns-ubuntu cron[21367]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:06:26.538244+00:00 dns-ubuntu cron[21395]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:06:27.145620+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:06:27 http: TLS handshake error from 127.0.0.1:46646: EOF
+2026-10-10T20:06:32.168616+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:06:32 http: TLS handshake error from 127.0.0.1:49166: EOF
+2026-10-10T20:06:32.981469+00:00 dns-ubuntu addgroup[21637]: Selecting GID from range 100 to 999 ...
+2026-10-10T20:06:32.985007+00:00 dns-ubuntu addgroup[21637]: Adding group `postfix' (GID 115) ...
+2026-10-10T20:06:33.031583+00:00 dns-ubuntu groupadd[21640]: group added to /etc/group: name=postfix, GID=115
+2026-10-10T20:06:33.053901+00:00 dns-ubuntu groupadd[21640]: group added to /etc/gshadow: name=postfix
+2026-10-10T20:06:33.055513+00:00 dns-ubuntu groupadd[21640]: new group: name=postfix, GID=115
+2026-10-10T20:06:33.095806+00:00 dns-ubuntu adduser[21647]: Selecting UID from range 100 to 999 ...
+2026-10-10T20:06:33.099183+00:00 dns-ubuntu adduser[21647]: Adding system user `postfix' (UID 112) ...
+2026-10-10T20:06:33.101721+00:00 dns-ubuntu adduser[21647]: Adding new user `postfix' (UID 112) with group `postfix' ...
+2026-10-10T20:06:33.146814+00:00 dns-ubuntu useradd[21651]: new user: name=postfix, UID=112, GID=115, home=/var/spool/postfix, shell=/usr/sbin/nologin, from=none
+2026-10-10T20:06:33.198109+00:00 dns-ubuntu adduser[21647]: Not creating home directory `/var/spool/postfix'.
+2026-10-10T20:06:33.306714+00:00 dns-ubuntu addgroup[21699]: Selecting GID from range 100 to 999 ...
+2026-10-10T20:06:33.310410+00:00 dns-ubuntu addgroup[21699]: Adding group `postdrop' (GID 116) ...
+2026-10-10T20:06:33.349027+00:00 dns-ubuntu groupadd[21702]: group added to /etc/group: name=postdrop, GID=116
+2026-10-10T20:06:33.368093+00:00 dns-ubuntu groupadd[21702]: group added to /etc/gshadow: name=postdrop
+2026-10-10T20:06:33.369816+00:00 dns-ubuntu groupadd[21702]: new group: name=postdrop, GID=116
+2026-10-10T20:06:37.195078+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:06:37 http: TLS handshake error from 127.0.0.1:49192: EOF
+2026-10-10T20:06:42.212887+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:06:42 http: TLS handshake error from 127.0.0.1:38342: EOF
+2026-10-10T20:06:44.738326+00:00 dns-ubuntu groupadd[22458]: group added to /etc/group: name=vmail, GID=5000
+2026-10-10T20:06:44.758470+00:00 dns-ubuntu groupadd[22458]: group added to /etc/gshadow: name=vmail
+2026-10-10T20:06:44.760058+00:00 dns-ubuntu groupadd[22458]: new group: name=vmail, GID=5000
+2026-10-10T20:06:44.828502+00:00 dns-ubuntu useradd[22469]: new user: name=vmail, UID=5000, GID=5000, home=/var/mail/vhosts, shell=/usr/sbin/nologin, from=none
+2026-10-10T20:06:44.914520+00:00 dns-ubuntu postfix/postmap[22482]: warning: unsupported dictionary type: lmdb. Is the postfix-lmdb package installed?
+2026-10-10T20:06:44.914533+00:00 dns-ubuntu postfix/postmap[22482]: fatal: unsupported map type: lmdb
+2026-10-10T20:06:47.529337+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:06:47 http: TLS handshake error from 127.0.0.1:38356: EOF
+2026-10-10T20:06:50.820581+00:00 dns-ubuntu postfix/postfix-script[22881]: the Postfix mail system is running: PID: 22192
+2026-10-10T20:06:50.910668+00:00 dns-ubuntu postfix/postfix-script[22899]: refreshing the Postfix mail system
+2026-10-10T20:06:51.377022+00:00 dns-ubuntu postfix/postfix-script[22917]: the Postfix mail system is running: PID: 22192
+2026-10-10T20:06:51.886356+00:00 dns-ubuntu postfix/postfix-script[23164]: the Postfix mail system is running: PID: 22192
+2026-10-10T20:06:51.982369+00:00 dns-ubuntu cron[23175]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:06:52.548320+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:06:52 http: TLS handshake error from 127.0.0.1:58602: EOF
+2026-10-10T20:06:53.576483+00:00 dns-ubuntu cron[23210]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:06:57.567952+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:06:57 http: TLS handshake error from 127.0.0.1:58622: EOF
+2026-10-10T20:07:00.613880+00:00 dns-ubuntu adduser[23455]: Selecting UID from range 100 to 999 ...
+2026-10-10T20:07:00.617669+00:00 dns-ubuntu adduser[23455]: Selecting GID from range 100 to 999 ...
+2026-10-10T20:07:00.621266+00:00 dns-ubuntu adduser[23455]: Adding system user `dovecot' (UID 113) ...
+2026-10-10T20:07:00.624616+00:00 dns-ubuntu adduser[23455]: Adding new group `dovecot' (GID 117) ...
+2026-10-10T20:07:00.667023+00:00 dns-ubuntu groupadd[23460]: group added to /etc/group: name=dovecot, GID=117
+2026-10-10T20:07:00.688904+00:00 dns-ubuntu groupadd[23460]: group added to /etc/gshadow: name=dovecot
+2026-10-10T20:07:00.690878+00:00 dns-ubuntu groupadd[23460]: new group: name=dovecot, GID=117
+2026-10-10T20:07:00.695622+00:00 dns-ubuntu adduser[23455]: Adding new user `dovecot' (UID 113) with group `dovecot' ...
+2026-10-10T20:07:00.744299+00:00 dns-ubuntu useradd[23467]: new user: name=dovecot, UID=113, GID=117, home=/usr/lib/dovecot, shell=/usr/sbin/nologin, from=none
+2026-10-10T20:07:00.837703+00:00 dns-ubuntu chfn[23474]: changed user 'dovecot' information
+2026-10-10T20:07:00.841703+00:00 dns-ubuntu adduser[23455]: Not creating home directory `/usr/lib/dovecot'.
+2026-10-10T20:07:00.876642+00:00 dns-ubuntu adduser[23481]: The home dir /nonexistent you specified can't be accessed: No such file or directory
+2026-10-10T20:07:00.882611+00:00 dns-ubuntu adduser[23481]: Selecting UID from range 100 to 999 ...
+2026-10-10T20:07:00.885615+00:00 dns-ubuntu adduser[23481]: Selecting GID from range 100 to 999 ...
+2026-10-10T20:07:00.888968+00:00 dns-ubuntu adduser[23481]: Adding system user `dovenull' (UID 114) ...
+2026-10-10T20:07:00.891998+00:00 dns-ubuntu adduser[23481]: Adding new group `dovenull' (GID 118) ...
+2026-10-10T20:07:00.940398+00:00 dns-ubuntu groupadd[23487]: group added to /etc/group: name=dovenull, GID=118
+2026-10-10T20:07:00.962657+00:00 dns-ubuntu groupadd[23487]: group added to /etc/gshadow: name=dovenull
+2026-10-10T20:07:00.964513+00:00 dns-ubuntu groupadd[23487]: new group: name=dovenull, GID=118
+2026-10-10T20:07:00.968092+00:00 dns-ubuntu adduser[23481]: Adding new user `dovenull' (UID 114) with group `dovenull' ...
+2026-10-10T20:07:01.018201+00:00 dns-ubuntu useradd[23494]: new user: name=dovenull, UID=114, GID=118, home=/nonexistent, shell=/usr/sbin/nologin, from=none
+2026-10-10T20:07:01.096743+00:00 dns-ubuntu chfn[23501]: changed user 'dovenull' information
+2026-10-10T20:07:01.100374+00:00 dns-ubuntu adduser[23481]: Not creating `/nonexistent'.
+2026-10-10T20:07:02.587856+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:07:02 http: TLS handshake error from 127.0.0.1:42064: EOF
+2026-10-10T20:07:07.608824+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:07:07 http: TLS handshake error from 127.0.0.1:55516: EOF
+2026-10-10T20:07:12.628550+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:07:12 http: TLS handshake error from 127.0.0.1:55544: EOF
+2026-10-10T20:07:18.241535+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:07:18 http: TLS handshake error from 127.0.0.1:50100: EOF
+2026-10-10T20:07:18.988671+00:00 dns-ubuntu postfix/postfix-script[27337]: the Postfix mail system is running: PID: 22192
+2026-10-10T20:07:19.067577+00:00 dns-ubuntu postfix/postfix-script[27355]: refreshing the Postfix mail system
+2026-10-10T20:07:19.533949+00:00 dns-ubuntu postfix/postfix-script[27373]: the Postfix mail system is running: PID: 22192
+2026-10-10T20:07:23.259146+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:07:23 http: TLS handshake error from 127.0.0.1:50108: EOF
+2026-10-10T20:07:23.776142+00:00 dns-ubuntu cron[27478]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:07:28.283913+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:07:28 http: TLS handshake error from 127.0.0.1:35212: EOF
+2026-10-10T20:07:30.160416+00:00 dns-ubuntu cron[27839]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:07:33.344061+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:07:33 http: TLS handshake error from 127.0.0.1:35226: EOF
+2026-10-10T20:07:36.817604+00:00 dns-ubuntu cron[28132]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:07:38.366915+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:07:38 http: TLS handshake error from 127.0.0.1:53774: EOF
+2026-10-10T20:07:42.646512+00:00 dns-ubuntu php8.3-intl[28507]: php_invoke intl: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:07:42.683950+00:00 dns-ubuntu php8.3-intl[28539]: php_invoke intl: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:07:43.073318+00:00 dns-ubuntu php8.3-sqlite3[28738]: php_invoke sqlite3: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:07:43.111588+00:00 dns-ubuntu php8.3-sqlite3[28770]: php_invoke sqlite3: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:07:43.388089+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:07:43 http: TLS handshake error from 127.0.0.1:53788: EOF
+2026-10-10T20:07:43.425321+00:00 dns-ubuntu php8.3-sqlite3[28968]: php_invoke pdo_sqlite: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:07:43.458067+00:00 dns-ubuntu php8.3-sqlite3[29000]: php_invoke pdo_sqlite: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:07:43.825674+00:00 dns-ubuntu php8.3-mbstring[29199]: php_invoke mbstring: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:07:43.863008+00:00 dns-ubuntu php8.3-mbstring[29231]: php_invoke mbstring: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:07:44.229022+00:00 dns-ubuntu php8.3-xml[29430]: php_invoke dom: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:07:44.268907+00:00 dns-ubuntu php8.3-xml[29462]: php_invoke dom: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:07:44.579644+00:00 dns-ubuntu php8.3-xml[29660]: php_invoke simplexml: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:07:44.612734+00:00 dns-ubuntu php8.3-xml[29692]: php_invoke simplexml: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:07:44.932049+00:00 dns-ubuntu php8.3-xml[29890]: php_invoke xml: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:07:44.968118+00:00 dns-ubuntu php8.3-xml[29922]: php_invoke xml: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:07:45.463056+00:00 dns-ubuntu php8.3-xml[30120]: php_invoke xmlreader: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:07:45.503718+00:00 dns-ubuntu php8.3-xml[30152]: php_invoke xmlreader: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:07:46.114329+00:00 dns-ubuntu php8.3-xml[30350]: php_invoke xmlwriter: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:07:46.171054+00:00 dns-ubuntu php8.3-xml[30382]: php_invoke xmlwriter: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:07:46.576264+00:00 dns-ubuntu php8.3-xml[30580]: php_invoke xsl: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:07:46.613087+00:00 dns-ubuntu php8.3-xml[30612]: php_invoke xsl: already enabled for PHP 8.3 fpm sapi
+2026-10-10T20:07:47.033053+00:00 dns-ubuntu php8.3-zip[30811]: php_invoke zip: already enabled for PHP 8.3 cli sapi
+2026-10-10T20:07:48.720232+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:07:48 http: TLS handshake error from 127.0.0.1:40808: EOF
+2026-10-10T20:07:51.738186+00:00 dns-ubuntu cron[31032]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:07:53.740520+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:07:53 http: TLS handshake error from 127.0.0.1:40822: EOF
+2026-10-10T20:07:57.904954+00:00 dns-ubuntu postfix/postfix-script[31433]: the Postfix mail system is running: PID: 22192
+2026-10-10T20:07:57.984355+00:00 dns-ubuntu postfix/postfix-script[31451]: refreshing the Postfix mail system
+2026-10-10T20:07:58.446826+00:00 dns-ubuntu postfix/postfix-script[31469]: the Postfix mail system is running: PID: 22192
+2026-10-10T20:07:58.764368+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:07:58 http: TLS handshake error from 127.0.0.1:58918: EOF
+2026-10-10T20:08:03.781306+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:08:03 http: TLS handshake error from 127.0.0.1:58946: EOF
+2026-10-10T20:08:04.573064+00:00 dns-ubuntu postfix/postfix-script[31915]: the Postfix mail system is running: PID: 22192
+2026-10-10T20:08:05.279317+00:00 dns-ubuntu postfix/postfix-script[32242]: the Postfix mail system is running: PID: 32224
+2026-10-10T20:08:05.358290+00:00 dns-ubuntu cron[32253]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:08:08.800920+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:08:08 http: TLS handshake error from 127.0.0.1:50204: EOF
+2026-10-10T20:08:11.415734+00:00 dns-ubuntu postfix/postfix-script[32938]: refreshing the Postfix mail system
+2026-10-10T20:08:11.883408+00:00 dns-ubuntu postfix/postfix-script[32956]: the Postfix mail system is running: PID: 32224
+2026-10-10T20:08:13.820550+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:08:13 http: TLS handshake error from 127.0.0.1:50214: EOF
+2026-10-10T20:08:15.153369+00:00 dns-ubuntu cron[33290]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:08:20.253593+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:08:20 http: TLS handshake error from 127.0.0.1:57648: EOF
+2026-10-10T20:08:25.054950+00:00 dns-ubuntu postfix/postfix-script[34001]: refreshing the Postfix mail system
+2026-10-10T20:08:25.275202+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:08:25 http: TLS handshake error from 127.0.0.1:57660: EOF
+2026-10-10T20:08:25.513508+00:00 dns-ubuntu postfix/postfix-script[34019]: the Postfix mail system is running: PID: 32224
+2026-10-10T20:08:28.447270+00:00 dns-ubuntu postfix/postfix-script[34342]: the Postfix mail system is running: PID: 32224
+2026-10-10T20:08:28.528986+00:00 dns-ubuntu cron[34353]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:08:30.296008+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:08:30 http: TLS handshake error from 127.0.0.1:59966: EOF
+2026-10-10T20:08:35.317210+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:08:35 http: TLS handshake error from 127.0.0.1:59982: EOF
+2026-10-10T20:08:39.034370+00:00 dns-ubuntu postfix/postfix-script[35002]: refreshing the Postfix mail system
+2026-10-10T20:08:39.500128+00:00 dns-ubuntu postfix/postfix-script[35021]: the Postfix mail system is running: PID: 32224
+2026-10-10T20:08:40.335969+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:08:40 http: TLS handshake error from 127.0.0.1:45074: EOF
+2026-10-10T20:08:42.123846+00:00 dns-ubuntu cron[35092]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:08:43.748016+00:00 dns-ubuntu cron[35126]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:08:45.353678+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:08:45 http: TLS handshake error from 127.0.0.1:45092: EOF
+2026-10-10T20:08:50.691621+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:08:50 http: TLS handshake error from 127.0.0.1:57784: EOF
+2026-10-10T20:08:53.233049+00:00 dns-ubuntu adduser[35529]: Selecting UID from range 100 to 999 ...
+2026-10-10T20:08:53.237332+00:00 dns-ubuntu adduser[35529]: Selecting GID from range 100 to 999 ...
+2026-10-10T20:08:53.240899+00:00 dns-ubuntu adduser[35529]: Adding system user `_rspamd' (UID 115) ...
+2026-10-10T20:08:53.244202+00:00 dns-ubuntu adduser[35529]: Adding new group `_rspamd' (GID 119) ...
+2026-10-10T20:08:53.279306+00:00 dns-ubuntu groupadd[35534]: group added to /etc/group: name=_rspamd, GID=119
+2026-10-10T20:08:53.295529+00:00 dns-ubuntu groupadd[35534]: group added to /etc/gshadow: name=_rspamd
+2026-10-10T20:08:53.297403+00:00 dns-ubuntu groupadd[35534]: new group: name=_rspamd, GID=119
+2026-10-10T20:08:53.301341+00:00 dns-ubuntu adduser[35529]: Adding new user `_rspamd' (UID 115) with group `_rspamd' ...
+2026-10-10T20:08:53.337354+00:00 dns-ubuntu useradd[35541]: new user: name=_rspamd, UID=115, GID=119, home=/var/lib/rspamd, shell=/usr/sbin/nologin, from=none
+2026-10-10T20:08:53.405569+00:00 dns-ubuntu chfn[35548]: changed user '_rspamd' information
+2026-10-10T20:08:53.409168+00:00 dns-ubuntu adduser[35529]: Not creating home directory `/var/lib/rspamd'.
+2026-10-10T20:08:55.712421+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:08:55 http: TLS handshake error from 127.0.0.1:57810: EOF
+2026-10-10T20:09:00.742949+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:09:00 http: TLS handshake error from 127.0.0.1:48186: EOF
+2026-10-10T20:09:02.778544+00:00 dns-ubuntu postfix/postfix-script[36358]: the Postfix mail system is running: PID: 32224
+2026-10-10T20:09:03.445678+00:00 dns-ubuntu cron[36406]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:09:05.763166+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:09:05 http: TLS handshake error from 127.0.0.1:48214: EOF
+2026-10-10T20:09:09.887798+00:00 dns-ubuntu postfix/postfix-script[36783]: the Postfix mail system is running: PID: 32224
+2026-10-10T20:09:10.783112+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:09:10 http: TLS handshake error from 127.0.0.1:57006: EOF
+2026-10-10T20:09:15.801062+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:09:15 http: TLS handshake error from 127.0.0.1:57024: EOF
+2026-10-10T20:09:18.046574+00:00 dns-ubuntu postfix/postfix-script[37271]: the Postfix mail system is running: PID: 32224
+2026-10-10T20:09:18.881234+00:00 dns-ubuntu postfix/postfix-script[37596]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:09:18.962120+00:00 dns-ubuntu cron[37607]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:09:21.454599+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:09:21 http: TLS handshake error from 127.0.0.1:39560: EOF
+2026-10-10T20:09:24.400351+00:00 dns-ubuntu postfix/postfix-script[38344]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:09:24.477924+00:00 dns-ubuntu postfix/postfix-script[38362]: refreshing the Postfix mail system
+2026-10-10T20:09:26.475161+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:09:26 http: TLS handshake error from 127.0.0.1:39572: EOF
+2026-10-10T20:09:31.494024+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:09:31 http: TLS handshake error from 127.0.0.1:45192: EOF
+2026-10-10T20:09:36.513550+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:09:36 http: TLS handshake error from 127.0.0.1:45212: EOF
+2026-10-10T20:09:37.108456+00:00 dns-ubuntu cron[39130]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 805: Resource temporarily unavailable)
+2026-10-10T20:09:41.530720+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:09:41 http: TLS handshake error from 127.0.0.1:38010: EOF
+2026-10-10T20:09:46.549493+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:09:46 http: TLS handshake error from 127.0.0.1:38026: EOF
+2026-10-10T20:09:51.893711+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:09:51 http: TLS handshake error from 127.0.0.1:34062: EOF
+2026-10-10T20:09:56.913409+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:09:56 http: TLS handshake error from 127.0.0.1:34084: EOF
+2026-10-10T20:10:01.931184+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:10:01 http: TLS handshake error from 127.0.0.1:53492: EOF
+2026-10-10T20:10:06.950197+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:10:06 http: TLS handshake error from 127.0.0.1:53510: EOF
+2026-10-10T20:10:11.970991+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:10:11 http: TLS handshake error from 127.0.0.1:33896: EOF
+2026-10-10T20:10:16.995698+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:10:16 http: TLS handshake error from 127.0.0.1:33914: EOF
+2026-10-10T20:10:22.852870+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:10:22 http: TLS handshake error from 127.0.0.1:54836: EOF
+2026-10-10T20:10:27.873262+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:10:27 http: TLS handshake error from 127.0.0.1:37872: EOF
+2026-10-10T20:10:32.894392+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:10:32 http: TLS handshake error from 127.0.0.1:37898: EOF
+2026-10-10T20:10:38.000537+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:10:38 http: TLS handshake error from 127.0.0.1:54582: EOF
+2026-10-10T20:10:43.034823+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:10:43 http: TLS handshake error from 127.0.0.1:54600: EOF
+2026-10-10T20:10:48.062438+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:10:48 http: TLS handshake error from 127.0.0.1:56912: EOF
+2026-10-10T20:10:53.581879+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:10:53 http: TLS handshake error from 127.0.0.1:56922: EOF
+2026-10-10T20:10:58.604395+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:10:58 http: TLS handshake error from 127.0.0.1:41232: EOF
+2026-10-10T20:11:03.626921+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:11:03 http: TLS handshake error from 127.0.0.1:41256: EOF
+2026-10-10T20:11:08.648220+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:11:08 http: TLS handshake error from 127.0.0.1:53282: EOF
+2026-10-10T20:11:13.669364+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:11:13 http: TLS handshake error from 127.0.0.1:53298: EOF
+2026-10-10T20:11:18.689160+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:11:18 http: TLS handshake error from 127.0.0.1:42354: EOF
+2026-10-10T20:11:24.512205+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:11:24 http: TLS handshake error from 127.0.0.1:42376: EOF
+2026-10-10T20:11:29.536159+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:11:29 http: TLS handshake error from 127.0.0.1:56498: EOF
+2026-10-10T20:11:34.563141+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:11:34 http: TLS handshake error from 127.0.0.1:56506: EOF
+2026-10-10T20:11:39.588224+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:11:39 http: TLS handshake error from 127.0.0.1:41164: EOF
+2026-10-10T20:11:44.618026+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:11:44 http: TLS handshake error from 127.0.0.1:41176: EOF
+2026-10-10T20:14:44.843805+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:14:44 http: TLS handshake error from 127.0.0.1:45904: EOF
+2026-10-10T20:14:47.084508+00:00 dns-ubuntu agent[7573]: 2026/10/10 20:14:47 hosting root: created /var/www/celikpanel at 0755 0:0
+2026-10-10T20:14:47.178892+00:00 dns-ubuntu useradd[40952]: new group: name=set1_owner_test, GID=5001
+2026-10-10T20:14:47.179255+00:00 dns-ubuntu useradd[40952]: new user: name=set1_owner_test, UID=5001, GID=5001, home=/var/www/celikpanel/subscriptions/2/sites/1, shell=/bin/bash, from=none
+2026-10-10T20:14:47.386258+00:00 dns-ubuntu chpasswd[40959]: pam_unix(chpasswd:chauthtok): password changed for set1_owner_test
+2026-10-10T20:14:47.962547+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:14:47 http: TLS handshake error from 127.0.0.1:40330: EOF
+2026-10-10T20:14:48.107996+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:14:48 http: TLS handshake error from 127.0.0.1:40352: EOF
+2026-10-10T20:14:48.133459+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:14:48 http: TLS handshake error from 127.0.0.1:40372: EOF
+2026-10-10T20:14:50.412677+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:14:50 http: TLS handshake error from 127.0.0.1:40386: EOF
+2026-10-10T20:14:53.062059+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:14:53 http: TLS handshake error from 127.0.0.1:40418: EOF
+2026-10-10T20:14:55.447214+00:00 dns-ubuntu useradd[41411]: new group: name=set10_a_test, GID=5002
+2026-10-10T20:14:55.447405+00:00 dns-ubuntu useradd[41411]: new user: name=set10_a_test, UID=5002, GID=5002, home=/var/www/celikpanel/subscriptions/2/sites/2, shell=/bin/bash, from=none
+2026-10-10T20:14:55.631252+00:00 dns-ubuntu chpasswd[41418]: pam_unix(chpasswd:chauthtok): password changed for set10_a_test
+2026-10-10T20:14:56.362646+00:00 dns-ubuntu panel[7768]: 2026/10/10 20:14:56 http: TLS handshake error from 127.0.0.1:40438: EOF
+2026-10-10T20:14:58.614206+00:00 dns-ubuntu useradd[41505]: new group: name=set10_b_test, GID=5003
+2026-10-10T20:14:58.614465+00:00 dns-ubuntu useradd[41505]: new user: name=set10_b_test, UID=5003, GID=5003, home=/var/www/celikpanel/subscriptions/2/sites/3, shell=/bin/bash, from=none
+2026-10-10T20:14:58.803696+00:00 dns-ubuntu chpasswd[41512]: pam_unix(chpasswd:chauthtok): password changed for set10_b_test
+2026-10-10T20:15:02.189082+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:15:02.217493+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:15:02.218277+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:15:02.218397+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Consumed 4.030s CPU time, 143.2M memory peak, 0B memory swap peak.
+2026-10-10T20:15:02.227512+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:15:02.250143+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:15:02.745292+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 Starting CelikPanel Backend...
+2026-10-10T20:15:02.763863+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:15:02.765409+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:15:02.768110+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:15:02.790749+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 site configuration set1-owner.test (startup): unchanged
+2026-10-10T20:15:02.821006+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 site configuration set10-a.test (startup): unchanged
+2026-10-10T20:15:02.837579+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 site configuration set10-b.test (startup): unchanged
+2026-10-10T20:15:02.850696+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 site configuration files at start: 0 written, 3 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:15:04.356482+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:04 http: TLS handshake error from 127.0.0.1:60082: EOF
+2026-10-10T20:15:06.391258+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:06 http: TLS handshake error from 127.0.0.1:60104: EOF
+2026-10-10T20:15:07.666824+00:00 dns-ubuntu postfix/postfix-script[42618]: refreshing the Postfix mail system
+2026-10-10T20:15:08.151492+00:00 dns-ubuntu postfix/postfix-script[42636]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:15:08.427277+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:08 http: TLS handshake error from 127.0.0.1:41972: EOF
+2026-10-10T20:15:10.448644+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:10 http: TLS handshake error from 127.0.0.1:41992: EOF
+2026-10-10T20:15:11.073697+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:11 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:15:12.471589+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:12 http: TLS handshake error from 127.0.0.1:41998: EOF
+2026-10-10T20:15:14.494735+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:14 http: TLS handshake error from 127.0.0.1:42008: EOF
+2026-10-10T20:15:16.517907+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:16 http: TLS handshake error from 127.0.0.1:42020: EOF
+2026-10-10T20:15:17.069343+00:00 dns-ubuntu postfix/postfix-script[43332]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:15:17.252624+00:00 dns-ubuntu postfix/postfix-script[43351]: refreshing the Postfix mail system
+2026-10-10T20:15:17.762018+00:00 dns-ubuntu postfix/postfix-script[43369]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:15:17.857032+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:17 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:15:17.859293+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:17 Panel ready on :2083 (HTTPS)
+2026-10-10T20:15:18.544280+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:18 http: TLS handshake error from 127.0.0.1:51106: EOF
+2026-10-10T20:15:18.562471+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:18 http: TLS handshake error from 127.0.0.1:51134: EOF
+2026-10-10T20:15:24.637338+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:15:24.678129+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:15:24.678538+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:15:24.679235+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Consumed 1.134s CPU time, 76.3M memory peak, 0B memory swap peak.
+2026-10-10T20:15:28.415287+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:15:28.441137+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:15:28.778487+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:28 Starting CelikPanel Backend...
+2026-10-10T20:15:28.788342+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:28 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:15:28.789492+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:28 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:15:28.790807+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:28 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:15:28.837287+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:28 site configuration set1-owner.test (startup): unchanged
+2026-10-10T20:15:28.860402+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:28 site configuration set10-a.test (startup): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:15:28.872067+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:28 site configuration set10-b.test (startup): unchanged
+2026-10-10T20:15:28.888376+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:28 site configuration files at start: 0 written, 2 unchanged, 1 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:15:30.561881+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:30 http: TLS handshake error from 127.0.0.1:58346: EOF
+2026-10-10T20:15:32.590448+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:32 http: TLS handshake error from 127.0.0.1:58370: EOF
+2026-10-10T20:15:34.632234+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:34 http: TLS handshake error from 127.0.0.1:58400: EOF
+2026-10-10T20:15:34.919484+00:00 dns-ubuntu postfix/postfix-script[44689]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:15:35.049986+00:00 dns-ubuntu postfix/postfix-script[44707]: refreshing the Postfix mail system
+2026-10-10T20:15:35.576939+00:00 dns-ubuntu postfix/postfix-script[44725]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:15:36.654437+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:36 http: TLS handshake error from 127.0.0.1:58406: EOF
+2026-10-10T20:15:38.275714+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:38 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:15:38.693965+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:38 http: TLS handshake error from 127.0.0.1:53562: EOF
+2026-10-10T20:15:40.720978+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:40 http: TLS handshake error from 127.0.0.1:53580: EOF
+2026-10-10T20:15:42.743264+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:42 http: TLS handshake error from 127.0.0.1:53610: EOF
+2026-10-10T20:15:44.708074+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:44 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:15:44.710144+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:44 Panel ready on :2083 (HTTPS)
+2026-10-10T20:15:44.761422+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:44 http: TLS handshake error from 127.0.0.1:53616: EOF
+2026-10-10T20:15:44.781121+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:44 http: TLS handshake error from 127.0.0.1:53648: EOF
+2026-10-10T20:15:49.766381+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:49 http: TLS handshake error from 127.0.0.1:44592: EOF
+2026-10-10T20:15:49.802090+00:00 dns-ubuntu panel[44040]: 2026/10/10 20:15:49 http: TLS handshake error from 127.0.0.1:44606: EOF
+2026-10-10T20:16:14.319111+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:16:14.348958+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:16:14.349271+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:16:14.358196+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:16:14.380073+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:16:14.658463+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 Starting CelikPanel Backend...
+2026-10-10T20:16:14.670329+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:16:14.670329+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:16:14.671216+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:16:14.687830+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 site configuration set1-owner.test (startup): unchanged
+2026-10-10T20:16:14.719238+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 site configuration set10-a.test (startup): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:16:14.729596+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 site configuration set10-b.test (startup): unchanged
+2026-10-10T20:16:14.739887+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:14 site configuration files at start: 0 written, 2 unchanged, 1 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:16:16.443938+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:16 http: TLS handshake error from 127.0.0.1:42214: EOF
+2026-10-10T20:16:18.465448+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:18 http: TLS handshake error from 127.0.0.1:35880: EOF
+2026-10-10T20:16:18.513812+00:00 dns-ubuntu postfix/postfix-script[46776]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:16:18.600514+00:00 dns-ubuntu postfix/postfix-script[46794]: refreshing the Postfix mail system
+2026-10-10T20:16:19.098692+00:00 dns-ubuntu postfix/postfix-script[46812]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:16:20.492553+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:20 http: TLS handshake error from 127.0.0.1:35910: EOF
+2026-10-10T20:16:21.439803+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:21 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:16:22.533539+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:22 http: TLS handshake error from 127.0.0.1:35918: EOF
+2026-10-10T20:16:24.601854+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:24 http: TLS handshake error from 127.0.0.1:35944: EOF
+2026-10-10T20:16:26.318359+00:00 dns-ubuntu postfix/postfix-script[47474]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:16:26.462595+00:00 dns-ubuntu postfix/postfix-script[47492]: refreshing the Postfix mail system
+2026-10-10T20:16:26.621607+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:26 http: TLS handshake error from 127.0.0.1:35968: EOF
+2026-10-10T20:16:27.095103+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:27 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:16:27.098055+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:27 Panel ready on :2083 (HTTPS)
+2026-10-10T20:16:28.649602+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:28 http: TLS handshake error from 127.0.0.1:53030: EOF
+2026-10-10T20:16:28.670418+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:28 http: TLS handshake error from 127.0.0.1:53056: EOF
+2026-10-10T20:16:32.855932+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:32 http: TLS handshake error from 127.0.0.1:53078: EOF
+2026-10-10T20:16:32.881866+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:32 http: TLS handshake error from 127.0.0.1:53104: EOF
+2026-10-10T20:16:56.568404+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:56 http: TLS handshake error from 127.0.0.1:44848: EOF
+2026-10-10T20:16:56.589574+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:56 http: TLS handshake error from 127.0.0.1:44872: EOF
+2026-10-10T20:16:56.610163+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:56 site configuration set10-a.test (change): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:16:56.632708+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:56 site configuration set10-a.test (change): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:16:56.643152+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:16:56 [409] apply general settings vhost: site configuration of set10-a.test not applied: kept (owner_edited ); vhost restore: site configuration of set10-a.test not applied: kept (owner_edited )
+2026-10-10T20:17:00.919604+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:17:00 http: TLS handshake error from 127.0.0.1:32996: EOF
+2026-10-10T20:17:00.947258+00:00 dns-ubuntu panel[46123]: 2026/10/10 20:17:00 http: TLS handshake error from 127.0.0.1:33024: EOF
+2026-10-10T20:17:02.702377+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:17:02.734698+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:17:02.734984+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:17:04.884602+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:17:04.907069+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:17:05.265070+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:05 Starting CelikPanel Backend...
+2026-10-10T20:17:05.280702+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:05 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:17:05.281913+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:05 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:17:05.284340+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:05 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:17:05.306675+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:05 site configuration set1-owner.test (startup): unchanged
+2026-10-10T20:17:05.332587+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:05 site configuration set10-a.test (startup): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:17:05.342915+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:05 site configuration set10-b.test (startup): unchanged
+2026-10-10T20:17:05.352336+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:05 site configuration files at start: 0 written, 2 unchanged, 1 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:17:06.991017+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:06 http: TLS handshake error from 127.0.0.1:33040: EOF
+2026-10-10T20:17:09.011792+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:09 http: TLS handshake error from 127.0.0.1:36564: EOF
+2026-10-10T20:17:09.608636+00:00 dns-ubuntu postfix/postfix-script[49479]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:17:10.195666+00:00 dns-ubuntu postfix/postfix-script[49515]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:17:11.031628+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:11 http: TLS handshake error from 127.0.0.1:36572: EOF
+2026-10-10T20:17:12.798619+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:12 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:17:13.052023+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:13 http: TLS handshake error from 127.0.0.1:36590: EOF
+2026-10-10T20:17:15.077211+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:15 http: TLS handshake error from 127.0.0.1:36610: EOF
+2026-10-10T20:17:17.097324+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:17 http: TLS handshake error from 127.0.0.1:36628: EOF
+2026-10-10T20:17:18.079738+00:00 dns-ubuntu postfix/postfix-script[50232]: refreshing the Postfix mail system
+2026-10-10T20:17:18.572388+00:00 dns-ubuntu postfix/postfix-script[50250]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:17:18.658855+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:18 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:17:18.662000+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:18 Panel ready on :2083 (HTTPS)
+2026-10-10T20:17:19.117206+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:19 http: TLS handshake error from 127.0.0.1:37708: EOF
+2026-10-10T20:17:19.135050+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:19 http: TLS handshake error from 127.0.0.1:37724: EOF
+2026-10-10T20:17:23.673669+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:23 http: TLS handshake error from 127.0.0.1:37740: EOF
+2026-10-10T20:17:23.701111+00:00 dns-ubuntu panel[48830]: 2026/10/10 20:17:23 http: TLS handshake error from 127.0.0.1:37760: EOF
+2026-10-10T20:17:46.996654+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:17:47.040686+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:17:47.041287+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:17:47.054303+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:17:47.095172+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:17:47.778294+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:17:47 Starting CelikPanel Backend...
+2026-10-10T20:17:47.799816+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:17:47 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:17:47.809561+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:17:47 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:17:47.811110+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:17:47 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:17:47.844490+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:17:47 site configuration set1-owner.test (startup): unchanged
+2026-10-10T20:17:47.871004+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:17:47 site configuration set10-a.test (startup): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:17:47.882083+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:17:47 site configuration set10-b.test (startup): unchanged
+2026-10-10T20:17:47.893182+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:17:47 site configuration files at start: 0 written, 2 unchanged, 1 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:17:49.176560+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:17:49 http: TLS handshake error from 127.0.0.1:51558: EOF
+2026-10-10T20:17:51.202187+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:17:51 http: TLS handshake error from 127.0.0.1:51562: EOF
+2026-10-10T20:17:52.861163+00:00 dns-ubuntu postfix/postfix-script[51552]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:17:53.221574+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:17:53 http: TLS handshake error from 127.0.0.1:51578: EOF
+2026-10-10T20:17:53.497431+00:00 dns-ubuntu postfix/postfix-script[51588]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:17:55.257487+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:17:55 http: TLS handshake error from 127.0.0.1:51604: EOF
+2026-10-10T20:17:55.813960+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:17:55 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:17:57.275029+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:17:57 http: TLS handshake error from 127.0.0.1:51622: EOF
+2026-10-10T20:17:59.293283+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:17:59 http: TLS handshake error from 127.0.0.1:44064: EOF
+2026-10-10T20:18:01.286972+00:00 dns-ubuntu postfix/postfix-script[52249]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:18:01.315092+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:01 http: TLS handshake error from 127.0.0.1:44076: EOF
+2026-10-10T20:18:01.401193+00:00 dns-ubuntu postfix/postfix-script[52267]: refreshing the Postfix mail system
+2026-10-10T20:18:01.921964+00:00 dns-ubuntu postfix/postfix-script[52286]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:18:02.026245+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:02 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:18:02.029607+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:02 Panel ready on :2083 (HTTPS)
+2026-10-10T20:18:03.333512+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:03 http: TLS handshake error from 127.0.0.1:44100: EOF
+2026-10-10T20:18:03.353276+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:03 http: TLS handshake error from 127.0.0.1:44128: EOF
+2026-10-10T20:18:08.237700+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:08 http: TLS handshake error from 127.0.0.1:60330: EOF
+2026-10-10T20:18:08.265210+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:08 http: TLS handshake error from 127.0.0.1:60354: EOF
+2026-10-10T20:18:31.325613+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:31 http: TLS handshake error from 127.0.0.1:44068: EOF
+2026-10-10T20:18:31.341880+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:31 http: TLS handshake error from 127.0.0.1:44076: EOF
+2026-10-10T20:18:31.359395+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:31 site configuration set10-a.test (change): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:18:31.381941+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:31 site configuration set10-a.test (change): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:18:31.391719+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:31 [409] apply general settings vhost: site configuration of set10-a.test not applied: kept (owner_edited ); vhost restore: site configuration of set10-a.test not applied: kept (owner_edited )
+2026-10-10T20:18:35.841380+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:35 http: TLS handshake error from 127.0.0.1:44088: EOF
+2026-10-10T20:18:35.868274+00:00 dns-ubuntu panel[50901]: 2026/10/10 20:18:35 http: TLS handshake error from 127.0.0.1:44106: EOF
+2026-10-10T20:18:37.695483+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:18:37.722132+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:18:37.722354+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:18:37.722563+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Consumed 1.574s CPU time, 77.5M memory peak, 0B memory swap peak.
+2026-10-10T20:18:40.388135+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:18:40.414150+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:18:40.675622+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:40 Starting CelikPanel Backend...
+2026-10-10T20:18:40.683061+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:40 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:18:40.683674+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:40 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:18:40.684305+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:40 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:18:40.701724+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:40 site configuration set1-owner.test (startup): unchanged
+2026-10-10T20:18:40.725462+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:40 site configuration set10-a.test (startup): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:18:40.736061+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:40 site configuration set10-b.test (startup): unchanged
+2026-10-10T20:18:40.750695+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:40 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 1 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:18:42.540031+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:42 http: TLS handshake error from 127.0.0.1:52964: EOF
+2026-10-10T20:18:44.561966+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:44 http: TLS handshake error from 127.0.0.1:52976: EOF
+2026-10-10T20:18:44.574930+00:00 dns-ubuntu postfix/postfix-script[54258]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:18:44.701650+00:00 dns-ubuntu postfix/postfix-script[54277]: refreshing the Postfix mail system
+2026-10-10T20:18:45.208063+00:00 dns-ubuntu postfix/postfix-script[54295]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:18:46.590848+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:46 http: TLS handshake error from 127.0.0.1:52990: EOF
+2026-10-10T20:18:48.211587+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:48 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:18:48.676824+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:48 http: TLS handshake error from 127.0.0.1:53932: EOF
+2026-10-10T20:18:50.699495+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:50 http: TLS handshake error from 127.0.0.1:53940: EOF
+2026-10-10T20:18:52.734146+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:52 http: TLS handshake error from 127.0.0.1:53948: EOF
+2026-10-10T20:18:54.213755+00:00 dns-ubuntu postfix/postfix-script[54993]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:18:54.398330+00:00 dns-ubuntu postfix/postfix-script[55012]: refreshing the Postfix mail system
+2026-10-10T20:18:54.759621+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:54 http: TLS handshake error from 127.0.0.1:53958: EOF
+2026-10-10T20:18:54.931041+00:00 dns-ubuntu postfix/postfix-script[55031]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:18:55.034995+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:55 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:18:55.038588+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:55 Panel ready on :2083 (HTTPS)
+2026-10-10T20:18:56.780965+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:56 http: TLS handshake error from 127.0.0.1:53980: EOF
+2026-10-10T20:18:56.815370+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:18:56 http: TLS handshake error from 127.0.0.1:53998: EOF
+2026-10-10T20:19:01.615327+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:19:01 http: TLS handshake error from 127.0.0.1:40830: EOF
+2026-10-10T20:19:01.661489+00:00 dns-ubuntu panel[53608]: 2026/10/10 20:19:01 http: TLS handshake error from 127.0.0.1:40848: EOF
+2026-10-10T20:19:28.090083+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:19:28.198013+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:19:28.200149+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:19:28.229813+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:19:28.293151+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:19:28.643629+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:28 Starting CelikPanel Backend...
+2026-10-10T20:19:28.655580+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:28 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:19:28.658017+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:28 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:19:28.659167+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:28 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:19:28.678410+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:28 site configuration set1-owner.test (startup): unchanged
+2026-10-10T20:19:28.705749+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:28 site configuration set10-a.test (startup): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:19:28.719916+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:28 site configuration set10-b.test (startup): unchanged
+2026-10-10T20:19:28.731711+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:28 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 1 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:19:30.367988+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:30 http: TLS handshake error from 127.0.0.1:45028: EOF
+2026-10-10T20:19:32.352810+00:00 dns-ubuntu postfix/postfix-script[56339]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:19:32.386800+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:32 http: TLS handshake error from 127.0.0.1:45050: EOF
+2026-10-10T20:19:32.452961+00:00 dns-ubuntu postfix/postfix-script[56357]: refreshing the Postfix mail system
+2026-10-10T20:19:32.998331+00:00 dns-ubuntu postfix/postfix-script[56375]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:19:34.405982+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:34 http: TLS handshake error from 127.0.0.1:45076: EOF
+2026-10-10T20:19:35.396197+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:35 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:19:36.423968+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:36 http: TLS handshake error from 127.0.0.1:45084: EOF
+2026-10-10T20:19:38.442219+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:38 http: TLS handshake error from 127.0.0.1:51258: EOF
+2026-10-10T20:19:40.461825+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:40 http: TLS handshake error from 127.0.0.1:51282: EOF
+2026-10-10T20:19:41.286253+00:00 dns-ubuntu postfix/postfix-script[57041]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:19:41.400187+00:00 dns-ubuntu postfix/postfix-script[57059]: refreshing the Postfix mail system
+2026-10-10T20:19:41.874249+00:00 dns-ubuntu postfix/postfix-script[57077]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:19:41.950909+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:41 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:19:41.952844+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:41 Panel ready on :2083 (HTTPS)
+2026-10-10T20:19:42.488210+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:42 http: TLS handshake error from 127.0.0.1:51302: EOF
+2026-10-10T20:19:42.508296+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:42 http: TLS handshake error from 127.0.0.1:51310: EOF
+2026-10-10T20:19:47.698260+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:47 http: TLS handshake error from 127.0.0.1:56160: EOF
+2026-10-10T20:19:47.732744+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:19:47 http: TLS handshake error from 127.0.0.1:56182: EOF
+2026-10-10T20:20:10.544232+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:20:10 http: TLS handshake error from 127.0.0.1:53076: EOF
+2026-10-10T20:20:10.560886+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:20:10 http: TLS handshake error from 127.0.0.1:53096: EOF
+2026-10-10T20:20:10.579230+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:20:10 site configuration set10-a.test (change): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:20:10.602207+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:20:10 site configuration set10-a.test (change): kept (foreign); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:20:10.611585+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:20:10 [409] apply general settings vhost: site configuration of set10-a.test not applied: kept (foreign ); vhost restore: site configuration of set10-a.test not applied: kept (foreign )
+2026-10-10T20:20:14.698298+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:20:14 http: TLS handshake error from 127.0.0.1:53102: EOF
+2026-10-10T20:20:14.726613+00:00 dns-ubuntu panel[55692]: 2026/10/10 20:20:14 http: TLS handshake error from 127.0.0.1:53120: EOF
+2026-10-10T20:20:16.479680+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:20:16.512713+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:20:16.513166+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:20:19.172916+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:20:19.212174+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:20:19.534057+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:19 Starting CelikPanel Backend...
+2026-10-10T20:20:19.544314+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:19 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:20:19.545748+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:19 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:20:19.547111+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:19 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:20:19.567503+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:19 site configuration set1-owner.test (startup): unchanged
+2026-10-10T20:20:19.594648+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:19 site configuration set10-a.test (startup): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:20:19.607657+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:19 site configuration set10-b.test (startup): unchanged
+2026-10-10T20:20:19.619062+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:19 site configuration files at start: 0 written, 2 unchanged, 1 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:20:21.320066+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:21 http: TLS handshake error from 127.0.0.1:52774: EOF
+2026-10-10T20:20:23.353399+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:23 http: TLS handshake error from 127.0.0.1:52798: EOF
+2026-10-10T20:20:23.573496+00:00 dns-ubuntu postfix/postfix-script[59072]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:20:23.671726+00:00 dns-ubuntu postfix/postfix-script[59090]: refreshing the Postfix mail system
+2026-10-10T20:20:24.148923+00:00 dns-ubuntu postfix/postfix-script[59108]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:20:25.385428+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:25 http: TLS handshake error from 127.0.0.1:52812: EOF
+2026-10-10T20:20:26.579356+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:26 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:20:27.403922+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:27 http: TLS handshake error from 127.0.0.1:52842: EOF
+2026-10-10T20:20:29.430189+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:29 http: TLS handshake error from 127.0.0.1:39408: EOF
+2026-10-10T20:20:31.449342+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:31 http: TLS handshake error from 127.0.0.1:39432: EOF
+2026-10-10T20:20:32.135242+00:00 dns-ubuntu postfix/postfix-script[59775]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:20:33.069656+00:00 dns-ubuntu postfix/postfix-script[59811]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:20:33.220015+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:33 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:20:33.222988+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:33 Panel ready on :2083 (HTTPS)
+2026-10-10T20:20:33.469853+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:33 http: TLS handshake error from 127.0.0.1:39448: EOF
+2026-10-10T20:20:33.491115+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:33 http: TLS handshake error from 127.0.0.1:39474: EOF
+2026-10-10T20:20:38.368031+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:38 http: TLS handshake error from 127.0.0.1:51728: EOF
+2026-10-10T20:20:38.401909+00:00 dns-ubuntu panel[58424]: 2026/10/10 20:20:38 http: TLS handshake error from 127.0.0.1:51748: EOF
+2026-10-10T20:21:01.969333+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:21:02.000271+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:21:02.000738+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:21:02.011563+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:21:02.035092+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:21:02.340710+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:02 Starting CelikPanel Backend...
+2026-10-10T20:21:02.351672+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:02 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:21:02.352687+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:02 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:21:02.354183+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:02 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:21:02.371751+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:02 site configuration set1-owner.test (startup): unchanged
+2026-10-10T20:21:02.392686+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:02 site configuration set10-a.test (startup): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:21:02.399227+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:02 site configuration set10-b.test (startup): unchanged
+2026-10-10T20:21:02.411615+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:02 site configuration files at start: 0 written, 2 unchanged, 1 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:21:04.094513+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:04 http: TLS handshake error from 127.0.0.1:34840: EOF
+2026-10-10T20:21:06.112381+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:06 http: TLS handshake error from 127.0.0.1:34872: EOF
+2026-10-10T20:21:06.364724+00:00 dns-ubuntu postfix/postfix-script[61124]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:21:06.463585+00:00 dns-ubuntu postfix/postfix-script[61142]: refreshing the Postfix mail system
+2026-10-10T20:21:07.031668+00:00 dns-ubuntu postfix/postfix-script[61160]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:21:08.129352+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:08 http: TLS handshake error from 127.0.0.1:42000: EOF
+2026-10-10T20:21:09.595489+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:09 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:21:10.158678+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:10 http: TLS handshake error from 127.0.0.1:42018: EOF
+2026-10-10T20:21:12.176465+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:12 http: TLS handshake error from 127.0.0.1:42036: EOF
+2026-10-10T20:21:13.922669+00:00 dns-ubuntu postfix/postfix-script[61820]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:21:14.009822+00:00 dns-ubuntu postfix/postfix-script[61838]: refreshing the Postfix mail system
+2026-10-10T20:21:14.204148+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:14 http: TLS handshake error from 127.0.0.1:42044: EOF
+2026-10-10T20:21:14.567146+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:14 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:21:14.570000+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:14 Panel ready on :2083 (HTTPS)
+2026-10-10T20:21:16.222721+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:16 http: TLS handshake error from 127.0.0.1:42062: EOF
+2026-10-10T20:21:16.258981+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:16 http: TLS handshake error from 127.0.0.1:42068: EOF
+2026-10-10T20:21:21.324299+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:21 http: TLS handshake error from 127.0.0.1:34270: EOF
+2026-10-10T20:21:21.375729+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:21 http: TLS handshake error from 127.0.0.1:34292: EOF
+2026-10-10T20:21:44.253687+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:44 http: TLS handshake error from 127.0.0.1:58434: EOF
+2026-10-10T20:21:44.270039+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:44 http: TLS handshake error from 127.0.0.1:58448: EOF
+2026-10-10T20:21:44.291294+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:44 site configuration set10-a.test (change): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:21:44.313884+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:44 site configuration set10-a.test (change): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:21:44.322142+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:44 [409] apply general settings vhost: site configuration of set10-a.test not applied: kept (owner_edited ); vhost restore: site configuration of set10-a.test not applied: kept (owner_edited )
+2026-10-10T20:21:49.560746+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:49 http: TLS handshake error from 127.0.0.1:52404: EOF
+2026-10-10T20:21:49.597595+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:49 http: TLS handshake error from 127.0.0.1:52426: EOF
+2026-10-10T20:21:51.632103+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:51 http: TLS handshake error from 127.0.0.1:52436: EOF
+2026-10-10T20:21:51.668689+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:51 http: TLS handshake error from 127.0.0.1:52440: EOF
+2026-10-10T20:21:51.682167+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:51 http: TLS handshake error from 127.0.0.1:52460: EOF
+2026-10-10T20:21:51.750699+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:51 site configuration set10-a.test: the owner chose to keep the file (sha256 660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba)
+2026-10-10T20:21:52.337821+00:00 dns-ubuntu panel[60475]: 2026/10/10 20:21:52 http: TLS handshake error from 127.0.0.1:52470: EOF
+2026-10-10T20:21:53.369665+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:21:53.415681+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:21:53.416082+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:21:53.442589+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:21:53.490270+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:21:53.912169+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:53 Starting CelikPanel Backend...
+2026-10-10T20:21:53.937652+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:53 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:21:53.939703+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:53 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:21:53.942121+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:53 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:21:53.990014+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:53 site configuration set1-owner.test (startup): unchanged
+2026-10-10T20:21:54.070922+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:54 site configuration set10-a.test (startup): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:21:54.085834+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:54 site configuration set10-b.test (startup): unchanged
+2026-10-10T20:21:54.099537+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:54 site configuration files at start: 0 written, 2 unchanged, 1 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:21:55.707040+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:55 http: TLS handshake error from 127.0.0.1:52488: EOF
+2026-10-10T20:21:57.738876+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:57 http: TLS handshake error from 127.0.0.1:40572: EOF
+2026-10-10T20:21:59.694450+00:00 dns-ubuntu postfix/postfix-script[63771]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:21:59.755934+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:21:59 http: TLS handshake error from 127.0.0.1:40590: EOF
+2026-10-10T20:22:00.288173+00:00 dns-ubuntu postfix/postfix-script[63807]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:22:01.777137+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:01 http: TLS handshake error from 127.0.0.1:40604: EOF
+2026-10-10T20:22:03.029177+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:03 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:22:03.801664+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:03 http: TLS handshake error from 127.0.0.1:40626: EOF
+2026-10-10T20:22:05.823715+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:05 http: TLS handshake error from 127.0.0.1:40644: EOF
+2026-10-10T20:22:07.853616+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:07 http: TLS handshake error from 127.0.0.1:40116: EOF
+2026-10-10T20:22:08.091158+00:00 dns-ubuntu postfix/postfix-script[64488]: refreshing the Postfix mail system
+2026-10-10T20:22:08.821756+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:08 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:22:08.829225+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:08 Panel ready on :2083 (HTTPS)
+2026-10-10T20:22:09.883493+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:09 http: TLS handshake error from 127.0.0.1:40134: EOF
+2026-10-10T20:22:09.901936+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:09 http: TLS handshake error from 127.0.0.1:40144: EOF
+2026-10-10T20:22:14.954103+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:14 http: TLS handshake error from 127.0.0.1:40156: EOF
+2026-10-10T20:22:15.025490+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:15 http: TLS handshake error from 127.0.0.1:40170: EOF
+2026-10-10T20:22:15.054288+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:15 http: TLS handshake error from 127.0.0.1:40196: EOF
+2026-10-10T20:22:15.127481+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:15 http: TLS handshake error from 127.0.0.1:40208: EOF
+2026-10-10T20:22:15.225065+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:15 site configuration set10-a.test (change): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:22:15.257108+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:15 site configuration set10-a.test (change): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:22:15.292041+00:00 dns-ubuntu panel[63120]: 2026/10/10 20:22:15 [409] apply general settings vhost: site configuration of set10-a.test not applied: kept (owner_edited ); vhost restore: site configuration of set10-a.test not applied: kept (owner_edited )
+2026-10-10T20:22:19.387446+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:22:19.420600+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:22:19.421471+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:22:19.421565+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Consumed 1.145s CPU time, 78.4M memory peak, 0B memory swap peak.
+2026-10-10T20:22:19.434481+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:22:19.469071+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:22:19.818017+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:19 Starting CelikPanel Backend...
+2026-10-10T20:22:19.832158+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:19 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:22:19.833998+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:19 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:22:19.835715+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:19 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:22:19.878872+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:19 site configuration set1-owner.test (startup): unchanged
+2026-10-10T20:22:19.917098+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:19 site configuration set10-a.test (startup): kept (owner-edited); CelikPanel's text held in /etc/nginx/sites-available/set10-a.test.conf.celikpanel-pending
+2026-10-10T20:22:19.928648+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:19 site configuration set10-b.test (startup): unchanged
+2026-10-10T20:22:19.940925+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:19 site configuration files at start: 0 written, 2 unchanged, 1 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:22:21.606531+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:21 http: TLS handshake error from 127.0.0.1:52020: EOF
+2026-10-10T20:22:23.646402+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:23 http: TLS handshake error from 127.0.0.1:52028: EOF
+2026-10-10T20:22:25.673583+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:25 http: TLS handshake error from 127.0.0.1:52046: EOF
+2026-10-10T20:22:26.256579+00:00 dns-ubuntu postfix/postfix-script[65695]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:22:26.907851+00:00 dns-ubuntu postfix/postfix-script[65732]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:22:27.704206+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:27 http: TLS handshake error from 127.0.0.1:58848: EOF
+2026-10-10T20:22:29.728544+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:29 http: TLS handshake error from 127.0.0.1:58874: EOF
+2026-10-10T20:22:30.251092+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:30 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:22:31.785408+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:31 http: TLS handshake error from 127.0.0.1:58888: EOF
+2026-10-10T20:22:33.817520+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:33 http: TLS handshake error from 127.0.0.1:58902: EOF
+2026-10-10T20:22:35.843528+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:35 http: TLS handshake error from 127.0.0.1:58916: EOF
+2026-10-10T20:22:36.290121+00:00 dns-ubuntu postfix/postfix-script[66399]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:22:36.496615+00:00 dns-ubuntu postfix/postfix-script[66417]: refreshing the Postfix mail system
+2026-10-10T20:22:37.038391+00:00 dns-ubuntu postfix/postfix-script[66435]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:22:37.201378+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:37 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:22:37.208645+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:37 Panel ready on :2083 (HTTPS)
+2026-10-10T20:22:37.885422+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:37 http: TLS handshake error from 127.0.0.1:37478: EOF
+2026-10-10T20:22:37.948371+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:37 http: TLS handshake error from 127.0.0.1:37496: EOF
+2026-10-10T20:22:41.970482+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:41 http: TLS handshake error from 127.0.0.1:37520: EOF
+2026-10-10T20:22:42.953690+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:42 http: TLS handshake error from 127.0.0.1:37546: EOF
+2026-10-10T20:22:43.163920+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:43 site configuration set10-a.test (take): taken; owner's file kept as /etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z
+2026-10-10T20:22:50.421977+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:50 http: TLS handshake error from 127.0.0.1:58916: EOF
+2026-10-10T20:22:54.156559+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:54 http: TLS handshake error from 127.0.0.1:58934: EOF
+2026-10-10T20:22:55.758019+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:55 http: TLS handshake error from 127.0.0.1:58958: EOF
+2026-10-10T20:22:55.781730+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:55 site configuration set10-a.test (take): kept, not replaced (owner_edited changed_since_shown)
+2026-10-10T20:22:59.303658+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:59 http: TLS handshake error from 127.0.0.1:38974: EOF
+2026-10-10T20:22:59.372012+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:59 http: TLS handshake error from 127.0.0.1:38992: EOF
+2026-10-10T20:22:59.553229+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:59 site configuration set10-a.test (take): failed; owner's file kept as /etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202259Z; 2026/10/10 20:22:59 [emerg] 67669#67669: "root" directive is duplicate in /etc/nginx/celikpanel-sites.d/set10-a.test/set10-dup-root.conf:2
+2026-10-10T20:22:59.574233+00:00 dns-ubuntu panel[65009]: 2026/10/10 20:22:59 [502] site configuration set10-a.test: take: nginx validation failed: nginx validation failed: 2026/10/10 20:22:59 [emerg] 67669#67669: "root" directive is duplicate in /etc/nginx/celikpanel-sites.d/set10-a.test/set10-dup-root.conf:2
+2026-10-10T20:22:59.574233+00:00 dns-ubuntu panel[65009]: nginx: configuration file /etc/nginx/nginx.conf test failed: exit status 1; rollback restored and reloaded the previous vhost
+2026-10-10T20:23:06.209488+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:23:06.248611+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:23:06.249541+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:23:06.250337+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Consumed 1.007s CPU time, 76.6M memory peak, 0B memory swap peak.
+2026-10-10T20:23:07.724276+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:23:07.748984+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:23:08.060426+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:08 Starting CelikPanel Backend...
+2026-10-10T20:23:08.074637+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:08 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:23:08.076157+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:08 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:23:08.076874+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:08 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:23:08.102344+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:08 site configuration set1-owner.test (startup): unchanged
+2026-10-10T20:23:08.138725+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:08 site configuration set10-a.test (startup): missing, not recreated
+2026-10-10T20:23:08.150164+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:08 site configuration set10-b.test (startup): unchanged
+2026-10-10T20:23:08.161081+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:08 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 1 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:23:09.839108+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:09 http: TLS handshake error from 127.0.0.1:37198: EOF
+2026-10-10T20:23:11.862353+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:11 http: TLS handshake error from 127.0.0.1:37214: EOF
+2026-10-10T20:23:12.551299+00:00 dns-ubuntu postfix/postfix-script[68922]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:23:12.652066+00:00 dns-ubuntu postfix/postfix-script[68940]: refreshing the Postfix mail system
+2026-10-10T20:23:13.137748+00:00 dns-ubuntu postfix/postfix-script[68958]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:23:13.881311+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:13 http: TLS handshake error from 127.0.0.1:37226: EOF
+2026-10-10T20:23:15.901905+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:15 http: TLS handshake error from 127.0.0.1:37252: EOF
+2026-10-10T20:23:16.213477+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:16 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:23:17.934218+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:17 http: TLS handshake error from 127.0.0.1:36652: EOF
+2026-10-10T20:23:19.961838+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:19 http: TLS handshake error from 127.0.0.1:36660: EOF
+2026-10-10T20:23:21.988880+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:21 http: TLS handshake error from 127.0.0.1:36666: EOF
+2026-10-10T20:23:22.087548+00:00 dns-ubuntu postfix/postfix-script[69662]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:23:22.196899+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:22 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:23:22.200301+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:22 Panel ready on :2083 (HTTPS)
+2026-10-10T20:23:24.008884+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:24 http: TLS handshake error from 127.0.0.1:36680: EOF
+2026-10-10T20:23:24.031709+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:24 http: TLS handshake error from 127.0.0.1:36712: EOF
+2026-10-10T20:23:27.878406+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:27 http: TLS handshake error from 127.0.0.1:42240: EOF
+2026-10-10T20:23:27.898931+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:27 http: TLS handshake error from 127.0.0.1:42248: EOF
+2026-10-10T20:23:27.914490+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:27 http: TLS handshake error from 127.0.0.1:42266: EOF
+2026-10-10T20:23:27.930661+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:27 http: TLS handshake error from 127.0.0.1:42292: EOF
+2026-10-10T20:23:27.953640+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:27 site configuration set10-a.test (change): missing, not recreated
+2026-10-10T20:23:27.976893+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:27 site configuration set10-a.test (change): missing, not recreated
+2026-10-10T20:23:27.986961+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:27 [409] apply general settings vhost: site configuration of set10-a.test not applied: missing (absent ); vhost restore: site configuration of set10-a.test not applied: missing (absent )
+2026-10-10T20:23:28.343191+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:28 http: TLS handshake error from 127.0.0.1:42312: EOF
+2026-10-10T20:23:28.432296+00:00 dns-ubuntu panel[68275]: 2026/10/10 20:23:28 site configuration set10-a.test (recreate): recreated
+2026-10-10T20:23:35.450866+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:23:35.489733+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:23:35.490048+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:23:35.496073+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:23:35.534024+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:23:35.781899+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:35 Starting CelikPanel Backend...
+2026-10-10T20:23:35.789422+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:35 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:23:35.790318+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:35 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:23:35.791042+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:35 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:23:35.870184+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:35 site configuration set1-owner.test (startup): unchanged
+2026-10-10T20:23:35.888114+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:35 site configuration set10-a.test (startup): written
+2026-10-10T20:23:35.901174+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:35 site configuration set10-b.test (startup): unchanged
+2026-10-10T20:23:35.911259+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:35 site configuration files at start: 1 written, 2 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:23:37.622179+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:37 http: TLS handshake error from 127.0.0.1:58780: EOF
+2026-10-10T20:23:39.647016+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:39 http: TLS handshake error from 127.0.0.1:58798: EOF
+2026-10-10T20:23:41.056019+00:00 dns-ubuntu postfix/postfix-script[71260]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:23:41.671199+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:41 http: TLS handshake error from 127.0.0.1:58818: EOF
+2026-10-10T20:23:43.377709+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:43 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:23:43.690174+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:43 http: TLS handshake error from 127.0.0.1:58838: EOF
+2026-10-10T20:23:45.706093+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:45 http: TLS handshake error from 127.0.0.1:58856: EOF
+2026-10-10T20:23:47.728651+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:47 http: TLS handshake error from 127.0.0.1:42476: EOF
+2026-10-10T20:23:49.112250+00:00 dns-ubuntu postfix/postfix-script[71941]: refreshing the Postfix mail system
+2026-10-10T20:23:49.714170+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:49 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:23:49.717726+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:49 Panel ready on :2083 (HTTPS)
+2026-10-10T20:23:49.749547+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:49 http: TLS handshake error from 127.0.0.1:42494: EOF
+2026-10-10T20:23:49.774270+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:49 http: TLS handshake error from 127.0.0.1:42518: EOF
+2026-10-10T20:23:54.026791+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:54 http: TLS handshake error from 127.0.0.1:42550: EOF
+2026-10-10T20:23:54.047127+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:54 http: TLS handshake error from 127.0.0.1:42570: EOF
+2026-10-10T20:23:54.071248+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:54 site configuration set10-a.test (change): unchanged
+2026-10-10T20:23:57.992271+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:57 http: TLS handshake error from 127.0.0.1:49134: EOF
+2026-10-10T20:23:58.812164+00:00 dns-ubuntu agent[7573]: 2026/10/10 20:23:58 Getting pool config for site2 (PHP 8.3)
+2026-10-10T20:23:59.984462+00:00 dns-ubuntu panel[70570]: 2026/10/10 20:23:59 http: TLS handshake error from 127.0.0.1:49148: EOF
+2026-10-10T20:24:01.263665+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:24:01.317641+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:24:01.318609+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:24:03.499100+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:24:03.525097+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:24:03.768657+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 Starting CelikPanel Backend...
+2026-10-10T20:24:03.776879+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:24:03.777967+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:24:03.779026+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:24:03.869425+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 site configuration set1-owner.test (startup): written
+2026-10-10T20:24:03.888812+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 site configuration set10-a.test (startup): kept, not replaced (managed_unchanged write_refused); rename /etc/nginx/sites-available/.set10-a.test.conf.celikpanel-3722386884 /etc/nginx/sites-available/set10-a.test.conf: operation not permitted
+2026-10-10T20:24:03.902575+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 site configuration set10-b.test (startup): written
+2026-10-10T20:24:03.915454+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 site configuration files at start: 2 written, 0 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 1 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:24:05.611405+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:05 http: TLS handshake error from 127.0.0.1:49164: EOF
+2026-10-10T20:24:07.637682+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:07 http: TLS handshake error from 127.0.0.1:40554: EOF
+2026-10-10T20:24:09.393375+00:00 dns-ubuntu postfix/postfix-script[73556]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:24:09.658444+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:09 http: TLS handshake error from 127.0.0.1:40562: EOF
+2026-10-10T20:24:11.676261+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:11 http: TLS handshake error from 127.0.0.1:40588: EOF
+2026-10-10T20:24:12.277988+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:12 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:24:13.696478+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:13 http: TLS handshake error from 127.0.0.1:40600: EOF
+2026-10-10T20:24:15.716881+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:15 http: TLS handshake error from 127.0.0.1:40610: EOF
+2026-10-10T20:24:16.989473+00:00 dns-ubuntu postfix/postfix-script[74223]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:24:17.098412+00:00 dns-ubuntu postfix/postfix-script[74241]: refreshing the Postfix mail system
+2026-10-10T20:24:17.605638+00:00 dns-ubuntu postfix/postfix-script[74260]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:24:17.738274+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:17 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:24:17.742133+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:17 Panel ready on :2083 (HTTPS)
+2026-10-10T20:24:17.746192+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:17 http: TLS handshake error from 127.0.0.1:56298: EOF
+2026-10-10T20:24:17.784815+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:17 http: TLS handshake error from 127.0.0.1:56322: EOF
+2026-10-10T20:24:22.135754+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:22 http: TLS handshake error from 127.0.0.1:56338: EOF
+2026-10-10T20:24:22.174276+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:22 http: TLS handshake error from 127.0.0.1:56352: EOF
+2026-10-10T20:24:23.822674+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:24:23.938755+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:24:23.940307+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:24:23.959992+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:24:24.010075+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:24:24.427900+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:24 Starting CelikPanel Backend...
+2026-10-10T20:24:24.440439+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:24 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:24:24.442003+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:24 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:24:24.444034+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:24 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:24:24.576101+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:24 site configuration set1-owner.test (startup): unchanged
+2026-10-10T20:24:24.602164+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:24 site configuration set10-a.test (startup): written
+2026-10-10T20:24:24.611333+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:24 site configuration set10-b.test (startup): unchanged
+2026-10-10T20:24:24.621531+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:24 site configuration files at start: 1 written, 2 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:24:26.110456+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:26 http: TLS handshake error from 127.0.0.1:56370: EOF
+2026-10-10T20:24:28.138568+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:28 http: TLS handshake error from 127.0.0.1:41438: EOF
+2026-10-10T20:24:29.747734+00:00 dns-ubuntu postfix/postfix-script[75259]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:24:29.857383+00:00 dns-ubuntu postfix/postfix-script[75277]: refreshing the Postfix mail system
+2026-10-10T20:24:30.154291+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:30 http: TLS handshake error from 127.0.0.1:41464: EOF
+2026-10-10T20:24:32.173542+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:32 http: TLS handshake error from 127.0.0.1:41480: EOF
+2026-10-10T20:24:32.755221+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:32 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:24:34.219480+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:34 http: TLS handshake error from 127.0.0.1:41496: EOF
+2026-10-10T20:24:36.256380+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:36 http: TLS handshake error from 127.0.0.1:41504: EOF
+2026-10-10T20:24:38.288452+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:38 http: TLS handshake error from 127.0.0.1:55250: EOF
+2026-10-10T20:24:38.918433+00:00 dns-ubuntu postfix/postfix-script[75957]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:24:39.007277+00:00 dns-ubuntu postfix/postfix-script[75975]: refreshing the Postfix mail system
+2026-10-10T20:24:39.568063+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:39 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:24:39.571484+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:39 Panel ready on :2083 (HTTPS)
+2026-10-10T20:24:40.306547+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:40 http: TLS handshake error from 127.0.0.1:55260: EOF
+2026-10-10T20:24:40.325936+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:40 http: TLS handshake error from 127.0.0.1:55266: EOF
+2026-10-10T20:24:45.569327+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:24:45.591887+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-10T20:24:45.592158+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:24:47.236178+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-10T20:24:47.272191+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-10T20:24:47.605638+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:47 Starting CelikPanel Backend...
+2026-10-10T20:24:47.619368+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:47 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-10T20:24:47.621503+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:47 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-10T20:24:47.622580+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:47 Connected to Agent RPC; preparing normal management access
+2026-10-10T20:24:47.653410+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:47 site configuration set1-owner.test (startup): unchanged
+2026-10-10T20:24:47.682157+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:47 site configuration set10-a.test (startup): kept, not replaced (unreadable symlink)
+2026-10-10T20:24:47.699892+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:47 site configuration set10-b.test (startup): unchanged
+2026-10-10T20:24:47.712460+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:47 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 1 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release
+2026-10-10T20:24:49.344553+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:49 http: TLS handshake error from 127.0.0.1:35926: EOF
+2026-10-10T20:24:51.364039+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:51 http: TLS handshake error from 127.0.0.1:35952: EOF
+2026-10-10T20:24:53.117090+00:00 dns-ubuntu postfix/postfix-script[77199]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:24:53.381866+00:00 dns-ubuntu postfix/postfix-script[77218]: refreshing the Postfix mail system
+2026-10-10T20:24:53.405884+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:53 http: TLS handshake error from 127.0.0.1:35960: EOF
+2026-10-10T20:24:53.911375+00:00 dns-ubuntu postfix/postfix-script[77236]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:24:55.441601+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:55 http: TLS handshake error from 127.0.0.1:35974: EOF
+2026-10-10T20:24:56.615406+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:56 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-10T20:24:57.477659+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:57 http: TLS handshake error from 127.0.0.1:35988: EOF
+2026-10-10T20:24:59.496583+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:24:59 http: TLS handshake error from 127.0.0.1:50192: EOF
+2026-10-10T20:25:01.278585+00:00 dns-ubuntu postfix/postfix-script[77931]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:25:01.421248+00:00 dns-ubuntu postfix/postfix-script[77949]: refreshing the Postfix mail system
+2026-10-10T20:25:01.515905+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:25:01 http: TLS handshake error from 127.0.0.1:50198: EOF
+2026-10-10T20:25:01.965552+00:00 dns-ubuntu postfix/postfix-script[77970]: the Postfix mail system is running: PID: 37578
+2026-10-10T20:25:02.094316+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:25:02 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-10T20:25:02.097823+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:25:02 Panel ready on :2083 (HTTPS)
+2026-10-10T20:25:03.549862+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:25:03 http: TLS handshake error from 127.0.0.1:50226: EOF
+2026-10-10T20:25:03.573491+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:25:03 http: TLS handshake error from 127.0.0.1:50250: EOF
+2026-10-10T20:25:07.892915+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:25:07 http: TLS handshake error from 127.0.0.1:38324: EOF
+2026-10-10T20:25:07.918339+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:25:07 http: TLS handshake error from 127.0.0.1:38354: EOF
+2026-10-10T20:25:08.722134+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:25:08 http: TLS handshake error from 127.0.0.1:38380: EOF
+2026-10-10T20:25:10.741455+00:00 dns-ubuntu useradd[78234]: new group: name=set10_c_test, GID=5004
+2026-10-10T20:25:10.741583+00:00 dns-ubuntu useradd[78234]: new user: name=set10_c_test, UID=5004, GID=5004, home=/var/www/celikpanel/subscriptions/2/sites/4, shell=/bin/bash, from=none
+2026-10-10T20:25:10.911891+00:00 dns-ubuntu chpasswd[78241]: pam_unix(chpasswd:chauthtok): password changed for set10_c_test
+2026-10-10T20:25:11.467102+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:25:11 http: TLS handshake error from 127.0.0.1:38394: EOF
+2026-10-10T20:25:13.252356+00:00 dns-ubuntu useradd[78332]: new group: name=set10_d_test, GID=5005
+2026-10-10T20:25:13.252522+00:00 dns-ubuntu useradd[78332]: new user: name=set10_d_test, UID=5005, GID=5005, home=/var/www/celikpanel/subscriptions/2/sites/5, shell=/bin/bash, from=none
+2026-10-10T20:25:13.432123+00:00 dns-ubuntu chpasswd[78339]: pam_unix(chpasswd:chauthtok): password changed for set10_d_test
+2026-10-10T20:25:16.007722+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:25:16 http: TLS handshake error from 127.0.0.1:38410: EOF
+2026-10-10T20:25:16.138196+00:00 dns-ubuntu agent[7573]: 2026/10/10 20:25:16 DeleteSite set10-c.test: the vhost was not CelikPanel's unchanged text; a copy is kept as /etc/nginx/sites-available/set10-c.test.conf.celikpanel-backup-20261010T202516Z
+2026-10-10T20:25:16.327862+00:00 dns-ubuntu userdel[78738]: delete user 'set10_c_test'
+2026-10-10T20:25:16.328857+00:00 dns-ubuntu userdel[78738]: removed group 'set10_c_test' owned by 'set10_c_test'
+2026-10-10T20:25:16.328884+00:00 dns-ubuntu userdel[78738]: removed shadow group 'set10_c_test' owned by 'set10_c_test'
+2026-10-10T20:25:16.480738+00:00 dns-ubuntu panel[76549]: 2026/10/10 20:25:16 http: TLS handshake error from 127.0.0.1:38422: EOF
+2026-10-10T20:25:16.752154+00:00 dns-ubuntu userdel[78769]: delete user 'set10_d_test'
+2026-10-10T20:25:16.753877+00:00 dns-ubuntu userdel[78769]: removed group 'set10_d_test' owned by 'set10_d_test'
+2026-10-10T20:25:16.753968+00:00 dns-ubuntu userdel[78769]: removed shadow group 'set10_d_test' owned by 'set10_d_test'

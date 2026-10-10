@@ -1,0 +1,948 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-10T20:40:02Z",
+      "json": {
+        "actions": [
+          "recreate"
+        ],
+        "decision": {
+          "current": false,
+          "decided_at": "2026-10-10T20:39:40Z",
+          "kind": "take_celikpanel"
+        },
+        "domain": "set10-a.test",
+        "domain_id": 2,
+        "enabled": "absent",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "kind": "nginx_vhost",
+        "ledger": {
+          "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203949Z",
+          "observed_at": "2026-10-10T20:39:56Z",
+          "written_at": "2026-10-10T20:39:40Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+        "state": "absent"
+      },
+      "label": "e after the start: GET site-config",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/site-config"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:40:02Z",
+      "json": [
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:34:35Z",
+          "disk_usage": 0,
+          "domain_name": "set10-b.test",
+          "id": 3,
+          "php_version": "8.5",
+          "project_type": "php",
+          "site_config": {
+            "state": "managed_unchanged"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:34:32Z",
+          "disk_usage": 0,
+          "domain_name": "set10-a.test",
+          "id": 2,
+          "php_version": "8.5",
+          "project_type": "php",
+          "site_config": {
+            "state": "missing"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:34:28Z",
+          "disk_usage": 0,
+          "domain_name": "set1-owner.test",
+          "id": 1,
+          "php_version": "",
+          "project_type": "static",
+          "site_config": {
+            "state": "managed_unchanged"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        }
+      ],
+      "label": "e after the start: GET /api/v1/domains (Domains list)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:40:02Z",
+      "json": {
+        "aliases": [],
+        "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "domain_id": 2,
+        "domain_name": "set10-a.test",
+        "redirect_https": false,
+        "redirect_www": false,
+        "redirect_www_available": true,
+        "web_server": "nginx"
+      },
+      "label": "e save: General settings read",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/general"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SITE_CONFIG_MISSING",
+        "error": "The site's nginx configuration file is missing, so this change was not applied and the file was not recreated. If the file was removed on purpose, nothing needs doing; otherwise open the domain's Configuration file section and choose Recreate."
+      },
+      "at": "2026-10-10T20:40:02Z",
+      "catalogue_texts": {
+        "err.SITE_CONFIG_MISSING": {
+          "en": "This site’s nginx configuration file is missing, so this change was not applied and the file was not recreated. If it was removed on purpose, nothing needs doing; otherwise choose Recreate on the domain’s Configuration file page.",
+          "tr": "Bu sitenin nginx yapılandırma dosyası eksik; bu yüzden bu değişiklik uygulanmadı ve dosya yeniden oluşturulmadı. Bilerek kaldırıldıysa bir şey yapmanız gerekmez; değilse alan adının Yapılandırma dosyası sayfasında Yeniden oluştur’u seçin."
+        }
+      },
+      "json": {
+        "code": "SITE_CONFIG_MISSING",
+        "error": "The site's nginx configuration file is missing, so this change was not applied and the file was not recreated. If the file was removed on purpose, nothing needs doing; otherwise open the domain's Configuration file section and choose Recreate."
+      },
+      "label": "e save: General settings saved unchanged (renders the vhost)",
+      "request": {
+        "body": {
+          "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+          "redirect_www": false,
+          "web_server": "nginx"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/2/general"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:40:02Z",
+      "json": {
+        "actions": [],
+        "decision": {
+          "current": true,
+          "decided_at": "2026-10-10T20:40:03Z",
+          "kind": "recreate"
+        },
+        "domain": "set10-a.test",
+        "domain_id": 2,
+        "enabled": "link",
+        "file_sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "kind": "nginx_vhost",
+        "ledger": {
+          "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203949Z",
+          "observed_at": "2026-10-10T20:40:03Z",
+          "written_at": "2026-10-10T20:40:03Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "outcome": "recreated",
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+        "state": "managed_unchanged"
+      },
+      "label": "recreate",
+      "request": {
+        "body": {},
+        "method": "POST",
+        "path": "/api/v1/domains/2/site-config/recreate",
+        "x_celikpanel_request_id": "0cc147bd2b8754769b1a558614a534f4"
+      },
+      "seconds": 0.22,
+      "status": 200,
+      "text": null
+    }
+  ],
+  "cells": {
+    "e": {
+      "detail": null,
+      "expectations": [
+        {
+          "expectation": "the Panel started",
+          "held": true,
+          "measured": {
+            "api": {
+              "answering": true,
+              "seconds": 0.0,
+              "status": 200
+            },
+            "epoch": 1791664796.3486214,
+            "file": "steps/19-e-removed/native/173-owner-e-panel-start.json",
+            "is_active": "active",
+            "kind": "owner: systemctl start celikpanel-panel",
+            "ok": true,
+            "reconcile_lines_seen": [
+              "2026-10-10T20:39:56.539827+00:00 dns-arch panel[6617]: 2026/10/10 20:39:56 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 1 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+            ],
+            "session": {
+              "status": 200
+            },
+            "waited_seconds": 2.1
+          }
+        },
+        {
+          "expectation": "the file and its enabled link are not recreated",
+          "held": true,
+          "measured": {
+            "backups": [
+              {
+                "gid": 0,
+                "group": "root",
+                "mode": "0640",
+                "owner": "root",
+                "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203940Z",
+                "sha256": "5fedf78eca864bf5455f9d167b0aaf564bca7998ef7a0438d6ab9f1ed58fdbe0",
+                "uid": 0
+              },
+              {
+                "gid": 969,
+                "group": "celikpanel",
+                "mode": "0644",
+                "owner": "root",
+                "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203949Z",
+                "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+                "uid": 0
+              }
+            ],
+            "enabled": {
+              "exists": false,
+              "inode": null,
+              "kind": null,
+              "link_target": null
+            },
+            "include_dir": {
+              "entries": [],
+              "exists": true,
+              "gid": 969,
+              "group": "celikpanel",
+              "kind": "directory",
+              "mode_octal": "0o750",
+              "owner": "root",
+              "uid": 0
+            },
+            "pending": {
+              "exists": false,
+              "mode": null,
+              "sha256": null
+            },
+            "vhost": {
+              "ctime_ns": null,
+              "exists": false,
+              "first_line": null,
+              "gid": null,
+              "group": null,
+              "header": null,
+              "immutable": null,
+              "inode": null,
+              "kind": null,
+              "link_target": null,
+              "lsattr": null,
+              "mode": null,
+              "mtime_ns": null,
+              "owner": null,
+              "sha256": null,
+              "size": null,
+              "uid": null
+            }
+          }
+        },
+        {
+          "expectation": "a journal line names the site: missing, not recreated",
+          "held": true,
+          "measured": [
+            "2026-10-10T20:39:56.526176+00:00 dns-arch panel[6617]: 2026/10/10 20:39:56 site configuration set10-a.test (startup): missing, not recreated"
+          ]
+        },
+        {
+          "expectation": "the ledger state is missing",
+          "held": true,
+          "measured": {
+            "adopted_from": "",
+            "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203949Z",
+            "body_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+            "decided_at": 1791664780,
+            "decided_by": 2,
+            "decision": "take_celikpanel",
+            "decision_file_sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770",
+            "domain_id": 2,
+            "file_format": "celikpanel-render v2",
+            "file_sha256": "",
+            "id": 2,
+            "kind": "nginx_vhost",
+            "observed_at": 1791664796,
+            "path": "/etc/nginx/sites-available/set10-a.test.conf",
+            "pending_path": "",
+            "pending_sha256": "",
+            "site_id": 2,
+            "state": "missing",
+            "state_reason": "",
+            "written_at": 1791664780,
+            "written_release": "v0.1.0-alpha.81 0684f2703b66"
+          }
+        },
+        {
+          "expectation": "site-config answers state absent with the one choice recreate",
+          "held": true,
+          "measured": {
+            "actions": [
+              "recreate"
+            ],
+            "decision": {
+              "current": false,
+              "decided_at": "2026-10-10T20:39:40Z",
+              "kind": "take_celikpanel"
+            },
+            "domain": "set10-a.test",
+            "domain_id": 2,
+            "enabled": "absent",
+            "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+            "kind": "nginx_vhost",
+            "ledger": {
+              "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203949Z",
+              "observed_at": "2026-10-10T20:39:56Z",
+              "written_at": "2026-10-10T20:39:40Z",
+              "written_release": "v0.1.0-alpha.81 0684f2703b66"
+            },
+            "path": "/etc/nginx/sites-available/set10-a.test.conf",
+            "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+            "state": "absent"
+          }
+        },
+        {
+          "expectation": "the Domains row says missing",
+          "held": true,
+          "measured": {
+            "state": "missing"
+          }
+        },
+        {
+          "expectation": "a General save answers 409 SITE_CONFIG_MISSING and writes nothing",
+          "held": true,
+          "measured": {
+            "code": "SITE_CONFIG_MISSING",
+            "error": "The site's nginx configuration file is missing, so this change was not applied and the file was not recreated. If the file was removed on purpose, nothing needs doing; otherwise open the domain's Configuration file section and choose Recreate.",
+            "read_status": 200,
+            "reason": null,
+            "sent": {
+              "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+              "redirect_www": false,
+              "web_server": "nginx"
+            },
+            "status": 409
+          }
+        }
+      ],
+      "verdict": "PASS"
+    },
+    "e-recreate": {
+      "detail": {
+        "mode_of_the_recreated_file": "0644",
+        "owner_group": [
+          "root",
+          "celikpanel"
+        ],
+        "previous": "PASS"
+      },
+      "expectations": [
+        {
+          "expectation": "POST recreate answers 200 with outcome recreated",
+          "held": true,
+          "measured": {
+            "at": "2026-10-10T20:40:02Z",
+            "json": {
+              "actions": [],
+              "decision": {
+                "current": true,
+                "decided_at": "2026-10-10T20:40:03Z",
+                "kind": "recreate"
+              },
+              "domain": "set10-a.test",
+              "domain_id": 2,
+              "enabled": "link",
+              "file_sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770",
+              "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+              "kind": "nginx_vhost",
+              "ledger": {
+                "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203949Z",
+                "observed_at": "2026-10-10T20:40:03Z",
+                "written_at": "2026-10-10T20:40:03Z",
+                "written_release": "v0.1.0-alpha.81 0684f2703b66"
+              },
+              "outcome": "recreated",
+              "path": "/etc/nginx/sites-available/set10-a.test.conf",
+              "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+              "state": "managed_unchanged"
+            },
+            "label": "recreate",
+            "request": {
+              "body": {},
+              "method": "POST",
+              "path": "/api/v1/domains/2/site-config/recreate",
+              "x_celikpanel_request_id": "0cc147bd2b8754769b1a558614a534f4"
+            },
+            "seconds": 0.22,
+            "status": 200,
+            "text": null
+          }
+        },
+        {
+          "expectation": "the file is the Panel's text again and the enabled link points at it",
+          "held": true,
+          "measured": {
+            "backups": [
+              {
+                "gid": 0,
+                "group": "root",
+                "mode": "0640",
+                "owner": "root",
+                "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203940Z",
+                "sha256": "5fedf78eca864bf5455f9d167b0aaf564bca7998ef7a0438d6ab9f1ed58fdbe0",
+                "uid": 0
+              },
+              {
+                "gid": 969,
+                "group": "celikpanel",
+                "mode": "0644",
+                "owner": "root",
+                "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203949Z",
+                "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+                "uid": 0
+              }
+            ],
+            "enabled": {
+              "exists": true,
+              "inode": 92267,
+              "kind": "symlink",
+              "link_target": "/etc/nginx/sites-available/set10-a.test.conf"
+            },
+            "include_dir": {
+              "entries": [],
+              "exists": true,
+              "gid": 969,
+              "group": "celikpanel",
+              "kind": "directory",
+              "mode_octal": "0o750",
+              "owner": "root",
+              "uid": 0
+            },
+            "pending": {
+              "exists": false,
+              "mode": null,
+              "sha256": null
+            },
+            "vhost": {
+              "ctime_ns": 1791664802951404903,
+              "exists": true,
+              "first_line": "# celikpanel-render v2 sha256=0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+              "gid": 969,
+              "group": "celikpanel",
+              "header": {
+                "body_bytes": 1791,
+                "body_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+                "declared": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+                "present": true,
+                "valid": true
+              },
+              "immutable": false,
+              "inode": 92265,
+              "kind": "file",
+              "link_target": null,
+              "lsattr": "----------------------",
+              "mode": "0644",
+              "mtime_ns": 1791664802944404868,
+              "owner": "root",
+              "sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770",
+              "size": 1886,
+              "uid": 0
+            }
+          }
+        },
+        {
+          "expectation": "nginx was reloaded and the site serves again (PHP probe executed)",
+          "held": true,
+          "measured": {
+            "probe": {
+              "executed": true,
+              "php_version": "8.5.11",
+              "runs_as": "set10_a_test",
+              "server_api": "fpm-fcgi",
+              "values": {
+                "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+                "DOCUMENT_URI": "/set4-probe.php",
+                "PATH_INFO": "",
+                "PATH_TRANSLATED": "(unset)",
+                "QUERY_STRING": "",
+                "REQUEST_URI": "/set4-probe.php",
+                "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+                "SCRIPT_NAME": "/set4-probe.php"
+              }
+            },
+            "reload_lines": [
+              "2026-10-10T20:40:03.068805+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+            ]
+          }
+        }
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "checks": [
+    {
+      "detail": {
+        "api": {
+          "answering": true,
+          "seconds": 0.0,
+          "status": 200
+        },
+        "epoch": 1791664796.3486214,
+        "file": "steps/19-e-removed/native/173-owner-e-panel-start.json",
+        "is_active": "active",
+        "kind": "owner: systemctl start celikpanel-panel",
+        "ok": true,
+        "reconcile_lines_seen": [
+          "2026-10-10T20:39:56.539827+00:00 dns-arch panel[6617]: 2026/10/10 20:39:56 site configuration files at start: 0 written, 2 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 1 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+        ],
+        "session": {
+          "status": 200
+        },
+        "waited_seconds": 2.1
+      },
+      "name": "e: the Panel started",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          {
+            "gid": 0,
+            "group": "root",
+            "mode": "0640",
+            "owner": "root",
+            "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203940Z",
+            "sha256": "5fedf78eca864bf5455f9d167b0aaf564bca7998ef7a0438d6ab9f1ed58fdbe0",
+            "uid": 0
+          },
+          {
+            "gid": 969,
+            "group": "celikpanel",
+            "mode": "0644",
+            "owner": "root",
+            "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203949Z",
+            "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+            "uid": 0
+          }
+        ],
+        "enabled": {
+          "exists": false,
+          "inode": null,
+          "kind": null,
+          "link_target": null
+        },
+        "include_dir": {
+          "entries": [],
+          "exists": true,
+          "gid": 969,
+          "group": "celikpanel",
+          "kind": "directory",
+          "mode_octal": "0o750",
+          "owner": "root",
+          "uid": 0
+        },
+        "pending": {
+          "exists": false,
+          "mode": null,
+          "sha256": null
+        },
+        "vhost": {
+          "ctime_ns": null,
+          "exists": false,
+          "first_line": null,
+          "gid": null,
+          "group": null,
+          "header": null,
+          "immutable": null,
+          "inode": null,
+          "kind": null,
+          "link_target": null,
+          "lsattr": null,
+          "mode": null,
+          "mtime_ns": null,
+          "owner": null,
+          "sha256": null,
+          "size": null,
+          "uid": null
+        }
+      },
+      "name": "e: the file and its enabled link are not recreated",
+      "ok": true
+    },
+    {
+      "detail": [
+        "2026-10-10T20:39:56.526176+00:00 dns-arch panel[6617]: 2026/10/10 20:39:56 site configuration set10-a.test (startup): missing, not recreated"
+      ],
+      "name": "e: a journal line names the site: missing, not recreated",
+      "ok": true
+    },
+    {
+      "detail": {
+        "adopted_from": "",
+        "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203949Z",
+        "body_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+        "decided_at": 1791664780,
+        "decided_by": 2,
+        "decision": "take_celikpanel",
+        "decision_file_sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770",
+        "domain_id": 2,
+        "file_format": "celikpanel-render v2",
+        "file_sha256": "",
+        "id": 2,
+        "kind": "nginx_vhost",
+        "observed_at": 1791664796,
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "pending_path": "",
+        "pending_sha256": "",
+        "site_id": 2,
+        "state": "missing",
+        "state_reason": "",
+        "written_at": 1791664780,
+        "written_release": "v0.1.0-alpha.81 0684f2703b66"
+      },
+      "name": "e: the ledger state is missing",
+      "ok": true
+    },
+    {
+      "detail": {
+        "actions": [
+          "recreate"
+        ],
+        "decision": {
+          "current": false,
+          "decided_at": "2026-10-10T20:39:40Z",
+          "kind": "take_celikpanel"
+        },
+        "domain": "set10-a.test",
+        "domain_id": 2,
+        "enabled": "absent",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "kind": "nginx_vhost",
+        "ledger": {
+          "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203949Z",
+          "observed_at": "2026-10-10T20:39:56Z",
+          "written_at": "2026-10-10T20:39:40Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+        "state": "absent"
+      },
+      "name": "e: site-config answers state absent with the one choice recreate",
+      "ok": true
+    },
+    {
+      "detail": {
+        "state": "missing"
+      },
+      "name": "e: the Domains row says missing",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SITE_CONFIG_MISSING",
+        "error": "The site's nginx configuration file is missing, so this change was not applied and the file was not recreated. If the file was removed on purpose, nothing needs doing; otherwise open the domain's Configuration file section and choose Recreate.",
+        "read_status": 200,
+        "reason": null,
+        "sent": {
+          "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+          "redirect_www": false,
+          "web_server": "nginx"
+        },
+        "status": 409
+      },
+      "name": "e: a General save answers 409 SITE_CONFIG_MISSING and writes nothing",
+      "ok": true
+    },
+    {
+      "detail": {
+        "at": "2026-10-10T20:40:02Z",
+        "json": {
+          "actions": [],
+          "decision": {
+            "current": true,
+            "decided_at": "2026-10-10T20:40:03Z",
+            "kind": "recreate"
+          },
+          "domain": "set10-a.test",
+          "domain_id": 2,
+          "enabled": "link",
+          "file_sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770",
+          "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+          "kind": "nginx_vhost",
+          "ledger": {
+            "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203949Z",
+            "observed_at": "2026-10-10T20:40:03Z",
+            "written_at": "2026-10-10T20:40:03Z",
+            "written_release": "v0.1.0-alpha.81 0684f2703b66"
+          },
+          "outcome": "recreated",
+          "path": "/etc/nginx/sites-available/set10-a.test.conf",
+          "render_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+          "state": "managed_unchanged"
+        },
+        "label": "recreate",
+        "request": {
+          "body": {},
+          "method": "POST",
+          "path": "/api/v1/domains/2/site-config/recreate",
+          "x_celikpanel_request_id": "0cc147bd2b8754769b1a558614a534f4"
+        },
+        "seconds": 0.22,
+        "status": 200,
+        "text": null
+      },
+      "name": "e-recreate: POST recreate answers 200 with outcome recreated",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          {
+            "gid": 0,
+            "group": "root",
+            "mode": "0640",
+            "owner": "root",
+            "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203940Z",
+            "sha256": "5fedf78eca864bf5455f9d167b0aaf564bca7998ef7a0438d6ab9f1ed58fdbe0",
+            "uid": 0
+          },
+          {
+            "gid": 969,
+            "group": "celikpanel",
+            "mode": "0644",
+            "owner": "root",
+            "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T203949Z",
+            "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+            "uid": 0
+          }
+        ],
+        "enabled": {
+          "exists": true,
+          "inode": 92267,
+          "kind": "symlink",
+          "link_target": "/etc/nginx/sites-available/set10-a.test.conf"
+        },
+        "include_dir": {
+          "entries": [],
+          "exists": true,
+          "gid": 969,
+          "group": "celikpanel",
+          "kind": "directory",
+          "mode_octal": "0o750",
+          "owner": "root",
+          "uid": 0
+        },
+        "pending": {
+          "exists": false,
+          "mode": null,
+          "sha256": null
+        },
+        "vhost": {
+          "ctime_ns": 1791664802951404903,
+          "exists": true,
+          "first_line": "# celikpanel-render v2 sha256=0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+          "gid": 969,
+          "group": "celikpanel",
+          "header": {
+            "body_bytes": 1791,
+            "body_sha256": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+            "declared": "0a95b73cce5028097878ca0cc5ba970b44f8d5719e257c8384f47e4e77b2bdee",
+            "present": true,
+            "valid": true
+          },
+          "immutable": false,
+          "inode": 92265,
+          "kind": "file",
+          "link_target": null,
+          "lsattr": "----------------------",
+          "mode": "0644",
+          "mtime_ns": 1791664802944404868,
+          "owner": "root",
+          "sha256": "511208e016498249e0b5ac9a6dd8fd9cd497311cc837a0a4ed3a905d8e2ad770",
+          "size": 1886,
+          "uid": 0
+        }
+      },
+      "name": "e-recreate: the file is the Panel's text again and the enabled link points at it",
+      "ok": true
+    },
+    {
+      "detail": {
+        "probe": {
+          "executed": true,
+          "php_version": "8.5.11",
+          "runs_as": "set10_a_test",
+          "server_api": "fpm-fcgi",
+          "values": {
+            "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+            "DOCUMENT_URI": "/set4-probe.php",
+            "PATH_INFO": "",
+            "PATH_TRANSLATED": "(unset)",
+            "QUERY_STRING": "",
+            "REQUEST_URI": "/set4-probe.php",
+            "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+            "SCRIPT_NAME": "/set4-probe.php"
+          }
+        },
+        "reload_lines": [
+          "2026-10-10T20:40:03.068805+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+        ]
+      },
+      "name": "e-recreate: nginx was reloaded and the site serves again (PHP probe executed)",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-10T20:40:07Z",
+  "lab_preparation": [
+    {
+      "domain": "set10-a.test",
+      "file": "steps/19-e-removed/native/168-e-lab-restore-set10-a.test.json",
+      "label": "e",
+      "sha256_matches": true
+    }
+  ],
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/168-e-lab-restore-set10-a.test.json",
+      "label": "e-lab-restore-set10-a.test",
+      "mode": "lab-restore",
+      "owner_action": false
+    },
+    {
+      "file": "native/169-e-0-restored-read.json",
+      "label": "e-0-restored-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/170-owner-e-panel-stop.json",
+      "label": "owner-e-panel-stop",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/171-owner-e-remove.json",
+      "label": "owner-e-remove",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/172-guest-clock.json",
+      "label": "guest-clock",
+      "mode": "read-ledger",
+      "owner_action": false
+    },
+    {
+      "file": "native/173-owner-e-panel-start.json",
+      "label": "owner-e-panel-start",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/174-e-1-after-the-start-read.json",
+      "label": "e-1-after-the-start-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/175-e-journal.json",
+      "label": "e-journal",
+      "mode": "read-window",
+      "owner_action": false
+    },
+    {
+      "file": "native/176-guest-clock.json",
+      "label": "guest-clock",
+      "mode": "read-ledger",
+      "owner_action": false
+    },
+    {
+      "file": "native/177-e-2-after-recreate-read.json",
+      "label": "e-2-after-recreate-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/178-http-e-2-after-set10-a.test_set4-probe.php.json",
+      "label": "http-e-2-after-set10-a.test_set4-probe.php",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/179-e-recreate-journal.json",
+      "label": "e-recreate-journal",
+      "mode": "read-window",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [
+    {
+      "detail": [],
+      "note": "e: PASS"
+    },
+    {
+      "detail": [],
+      "note": "e-recreate: PASS"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-10T20:39:55Z",
+      "label": "e-panel-stop",
+      "mode": "owner-panel"
+    },
+    {
+      "at": "2026-10-10T20:39:55Z",
+      "label": "e-remove",
+      "mode": "owner-vhost10"
+    },
+    {
+      "at": "2026-10-10T20:39:56Z",
+      "label": "e-panel-start",
+      "mode": "owner-panel"
+    }
+  ],
+  "section": "e-removed",
+  "started_at": "2026-10-10T20:39:53Z",
+  "substeps": {
+    "e": "passed",
+    "e-recreate": "passed"
+  },
+  "title": "the owner removes the vhost and its link; start; recreate",
+  "verdict": "passed"
+}

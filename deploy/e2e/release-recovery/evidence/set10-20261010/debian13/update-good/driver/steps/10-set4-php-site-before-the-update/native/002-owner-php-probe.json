@@ -1,0 +1,22 @@
+{
+  "action": "owner-php-probe",
+  "at": "2026-10-10T20:50:39Z",
+  "docroot_entries": [
+    "index.php",
+    "set4-probe.php",
+    "set4-static.txt"
+  ],
+  "document_root": "/var/www/celikpanel/subscriptions/2/sites/5/public_html",
+  "domain": {
+    "id": 5,
+    "name": "set4-upd-php.test",
+    "status": "active",
+    "subscription_id": 2
+  },
+  "mode": "owner-php-probe",
+  "owner_action": true,
+  "path": "/var/www/celikpanel/subscriptions/2/sites/5/public_html/set4-probe.php",
+  "probe_sha256": "bb84357145262c57a5cad399eed421d928a5e3be20c5e0ecf25b1df42ce743c7",
+  "schema": "celikpanel/set4-native/v1",
+  "site_account": "set4_upd_php_test"
+}

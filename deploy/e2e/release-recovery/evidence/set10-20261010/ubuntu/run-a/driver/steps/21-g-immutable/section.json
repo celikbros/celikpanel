@@ -1,0 +1,680 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-10T20:24:21Z",
+      "json": {
+        "actions": [],
+        "decision": {
+          "current": false,
+          "decided_at": "2026-10-10T20:23:28Z",
+          "kind": "recreate"
+        },
+        "diff": "--- /etc/nginx/sites-available/set10-a.test.conf (on this server)\n+++ CelikPanel's text\n@@ -1,4 +1,3 @@\n-# set10 lab preparation: an older CelikPanel text of this site (a line the current render does not have)\n # Nginx vhost for set10-a.test\n # Written by CelikPanel. Put your own additions in /etc/nginx/celikpanel-sites.d/set10-a.test/*.conf;\n # CelikPanel never writes there. If you change this file, CelikPanel keeps\n",
+        "domain": "set10-a.test",
+        "domain_id": 2,
+        "enabled": "link",
+        "file_sha256": "37da4a2eaeaa7f657f48c1822d9e24101923b04aa61369b19bde458d28af486d",
+        "include_dir": "/etc/nginx/celikpanel-sites.d/set10-a.test",
+        "kind": "nginx_vhost",
+        "ledger": {
+          "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202259Z",
+          "observed_at": "2026-10-10T20:24:03Z",
+          "written_at": "2026-10-10T20:23:35Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "render_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd",
+        "state": "managed_unchanged"
+      },
+      "label": "g after the start: GET site-config",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/site-config"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T20:24:22Z",
+      "json": [
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:14:58Z",
+          "disk_usage": 0,
+          "domain_name": "set10-b.test",
+          "id": 3,
+          "php_version": "8.3",
+          "project_type": "php",
+          "site_config": {
+            "state": "managed_unchanged"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:14:55Z",
+          "disk_usage": 0,
+          "domain_name": "set10-a.test",
+          "id": 2,
+          "php_version": "8.3",
+          "project_type": "php",
+          "site_config": {
+            "state": "unreadable"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T20:14:47Z",
+          "disk_usage": 0,
+          "domain_name": "set1-owner.test",
+          "id": 1,
+          "php_version": "",
+          "project_type": "static",
+          "site_config": {
+            "state": "managed_unchanged"
+          },
+          "ssl_enabled": false,
+          "status": "active"
+        }
+      ],
+      "label": "g after the start: GET /api/v1/domains (Domains list)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "cells": {
+    "g": {
+      "detail": {
+        "journal": "steps/21-g-immutable/native/202-g-journal.json"
+      },
+      "expectations": [
+        {
+          "expectation": "A carries the immutable flag before the start",
+          "held": true,
+          "measured": "----i---------e-------"
+        },
+        {
+          "expectation": "the Panel started and answers",
+          "held": true,
+          "measured": {
+            "api": {
+              "answering": true,
+              "seconds": 12.2,
+              "status": 200
+            },
+            "epoch": 1791663843.4815803,
+            "file": "steps/21-g-immutable/native/200-owner-g-panel-start.json",
+            "is_active": "active",
+            "kind": "owner: systemctl start celikpanel-panel",
+            "ok": true,
+            "reconcile_lines_seen": [
+              "2026-10-10T20:24:03.915454+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 site configuration files at start: 2 written, 0 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 1 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+            ],
+            "session": {
+              "status": 200
+            },
+            "waited_seconds": 2.1
+          }
+        },
+        {
+          "expectation": "A's file is untouched (sha256, inode) and its enabled link is intact",
+          "held": true,
+          "measured": {
+            "backups": [
+              {
+                "gid": 0,
+                "group": "root",
+                "mode": "0640",
+                "owner": "root",
+                "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+                "sha256": "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba",
+                "uid": 0
+              },
+              {
+                "gid": 988,
+                "group": "celikpanel",
+                "mode": "0644",
+                "owner": "root",
+                "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202259Z",
+                "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+                "uid": 0
+              }
+            ],
+            "enabled": {
+              "exists": true,
+              "inode": 263363,
+              "kind": "symlink",
+              "link_target": "/etc/nginx/sites-available/set10-a.test.conf"
+            },
+            "include_dir": {
+              "entries": [],
+              "exists": true,
+              "gid": 988,
+              "group": "celikpanel",
+              "kind": "directory",
+              "mode_octal": "0o750",
+              "owner": "root",
+              "uid": 0
+            },
+            "pending": {
+              "exists": false,
+              "mode": null,
+              "sha256": null
+            },
+            "vhost": {
+              "ctime_ns": 1791663842310036606,
+              "exists": true,
+              "first_line": "# celikpanel-render v2 sha256=757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004",
+              "gid": 988,
+              "group": "celikpanel",
+              "header": {
+                "body_bytes": 1896,
+                "body_sha256": "757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004",
+                "declared": "757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004",
+                "present": true,
+                "valid": true
+              },
+              "immutable": true,
+              "inode": 262476,
+              "kind": "file",
+              "link_target": null,
+              "lsattr": "----i---------e-------",
+              "mode": "0644",
+              "mtime_ns": 1791663841783033064,
+              "owner": "root",
+              "sha256": "37da4a2eaeaa7f657f48c1822d9e24101923b04aa61369b19bde458d28af486d",
+              "size": 1991,
+              "uid": 0
+            }
+          }
+        },
+        {
+          "expectation": "B and the static site were written (new inode, the Panel's text)",
+          "held": true,
+          "measured": {
+            "set1-owner.test": {
+              "inode": [
+                263359,
+                263370
+              ],
+              "sha256_is_the_panel_text": true
+            },
+            "set10-b.test": {
+              "inode": [
+                262701,
+                263359
+              ],
+              "sha256_is_the_panel_text": true
+            }
+          }
+        },
+        {
+          "expectation": "one nginx reload after the start (one `Reloaded` line)",
+          "held": true,
+          "measured": [
+            "2026-10-10T20:24:03.864999+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+          ]
+        },
+        {
+          "expectation": "A's journal line says kept, not replaced (... write_refused)",
+          "held": true,
+          "measured": [
+            "2026-10-10T20:24:03.888812+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 site configuration set10-a.test (startup): kept, not replaced (managed_unchanged write_refused); rename /etc/nginx/sites-available/.set10-a.test.conf.celikpanel-3722386884 /etc/nginx/sites-available/set10-a.test.conf: operation not permitted"
+          ]
+        },
+        {
+          "expectation": "the start line counts 2 written and 1 unreadable or unwritable",
+          "held": true,
+          "measured": [
+            "2026-10-10T20:24:03.915454+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 site configuration files at start: 2 written, 0 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 1 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+          ]
+        },
+        {
+          "expectation": "the ledger names A unreadable with the reason write_refused",
+          "held": true,
+          "measured": {
+            "adopted_from": "",
+            "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202259Z",
+            "body_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd",
+            "decided_at": 1791663808,
+            "decided_by": 2,
+            "decision": "recreate",
+            "decision_file_sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+            "domain_id": 2,
+            "file_format": "celikpanel-render v2",
+            "file_sha256": "37da4a2eaeaa7f657f48c1822d9e24101923b04aa61369b19bde458d28af486d",
+            "id": 2,
+            "kind": "nginx_vhost",
+            "observed_at": 1791663843,
+            "path": "/etc/nginx/sites-available/set10-a.test.conf",
+            "pending_path": "",
+            "pending_sha256": "",
+            "site_id": 2,
+            "state": "unreadable",
+            "state_reason": "write_refused",
+            "written_at": 1791663815,
+            "written_release": "v0.1.0-alpha.81 0684f2703b66"
+          }
+        },
+        {
+          "expectation": "the Domains row names A unreadable",
+          "held": true,
+          "measured": {
+            "state": "unreadable"
+          }
+        },
+        {
+          "expectation": "site-config for A names the reason (unreadable/write_refused or EPERM)",
+          "held": false,
+          "measured": {
+            "actions": [],
+            "detail": null,
+            "ledger": {
+              "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202259Z",
+              "observed_at": "2026-10-10T20:24:03Z",
+              "written_at": "2026-10-10T20:23:35Z",
+              "written_release": "v0.1.0-alpha.81 0684f2703b66"
+            },
+            "reason": null,
+            "state": "managed_unchanged"
+          }
+        }
+      ],
+      "verdict": "FAIL"
+    },
+    "g-resume": {
+      "detail": {
+        "chattr": {
+          "argv": [
+            "chattr",
+            "+i",
+            "/etc/nginx/sites-available/set10-a.test.conf"
+          ],
+          "at": "2026-10-10T20:24:02Z",
+          "returncode": 0,
+          "seconds": 0.005,
+          "status": "ok",
+          "stderr": "",
+          "stdout": ""
+        },
+        "previous": "FAIL"
+      },
+      "expectations": [
+        {
+          "expectation": "after the owner unlocks the file, the next start writes A (the Panel's text)",
+          "held": true,
+          "measured": {
+            "lines": [
+              "2026-10-10T20:24:24.602164+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:24 site configuration set10-a.test (startup): written"
+            ],
+            "sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d"
+          }
+        }
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "checks": [
+    {
+      "detail": "----i---------e-------",
+      "name": "g: A carries the immutable flag before the start",
+      "ok": true
+    },
+    {
+      "detail": {
+        "api": {
+          "answering": true,
+          "seconds": 12.2,
+          "status": 200
+        },
+        "epoch": 1791663843.4815803,
+        "file": "steps/21-g-immutable/native/200-owner-g-panel-start.json",
+        "is_active": "active",
+        "kind": "owner: systemctl start celikpanel-panel",
+        "ok": true,
+        "reconcile_lines_seen": [
+          "2026-10-10T20:24:03.915454+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 site configuration files at start: 2 written, 0 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 1 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+        ],
+        "session": {
+          "status": 200
+        },
+        "waited_seconds": 2.1
+      },
+      "name": "g: the Panel started and answers",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backups": [
+          {
+            "gid": 0,
+            "group": "root",
+            "mode": "0640",
+            "owner": "root",
+            "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202243Z",
+            "sha256": "660d14444a91a86ab0f8c32a43685d3261f6beabe1b8e8ff60605eb44d5fb1ba",
+            "uid": 0
+          },
+          {
+            "gid": 988,
+            "group": "celikpanel",
+            "mode": "0644",
+            "owner": "root",
+            "path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202259Z",
+            "sha256": "7720509a3fc6a0dccc3e470f345bd9cfa1134307d2db938654995862574a6d89",
+            "uid": 0
+          }
+        ],
+        "enabled": {
+          "exists": true,
+          "inode": 263363,
+          "kind": "symlink",
+          "link_target": "/etc/nginx/sites-available/set10-a.test.conf"
+        },
+        "include_dir": {
+          "entries": [],
+          "exists": true,
+          "gid": 988,
+          "group": "celikpanel",
+          "kind": "directory",
+          "mode_octal": "0o750",
+          "owner": "root",
+          "uid": 0
+        },
+        "pending": {
+          "exists": false,
+          "mode": null,
+          "sha256": null
+        },
+        "vhost": {
+          "ctime_ns": 1791663842310036606,
+          "exists": true,
+          "first_line": "# celikpanel-render v2 sha256=757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004",
+          "gid": 988,
+          "group": "celikpanel",
+          "header": {
+            "body_bytes": 1896,
+            "body_sha256": "757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004",
+            "declared": "757f7a8c4d41739a8d1416b0b30e6fe23c1ff2cfa2ccd7f1209705fa2bcb4004",
+            "present": true,
+            "valid": true
+          },
+          "immutable": true,
+          "inode": 262476,
+          "kind": "file",
+          "link_target": null,
+          "lsattr": "----i---------e-------",
+          "mode": "0644",
+          "mtime_ns": 1791663841783033064,
+          "owner": "root",
+          "sha256": "37da4a2eaeaa7f657f48c1822d9e24101923b04aa61369b19bde458d28af486d",
+          "size": 1991,
+          "uid": 0
+        }
+      },
+      "name": "g: A's file is untouched (sha256, inode) and its enabled link is intact",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set1-owner.test": {
+          "inode": [
+            263359,
+            263370
+          ],
+          "sha256_is_the_panel_text": true
+        },
+        "set10-b.test": {
+          "inode": [
+            262701,
+            263359
+          ],
+          "sha256_is_the_panel_text": true
+        }
+      },
+      "name": "g: B and the static site were written (new inode, the Panel's text)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "2026-10-10T20:24:03.864999+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+      ],
+      "name": "g: one nginx reload after the start (one `Reloaded` line)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "2026-10-10T20:24:03.888812+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 site configuration set10-a.test (startup): kept, not replaced (managed_unchanged write_refused); rename /etc/nginx/sites-available/.set10-a.test.conf.celikpanel-3722386884 /etc/nginx/sites-available/set10-a.test.conf: operation not permitted"
+      ],
+      "name": "g: A's journal line says kept, not replaced (... write_refused)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "2026-10-10T20:24:03.915454+00:00 dns-ubuntu panel[72864]: 2026/10/10 20:24:03 site configuration files at start: 2 written, 0 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 1 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+      ],
+      "name": "g: the start line counts 2 written and 1 unreadable or unwritable",
+      "ok": true
+    },
+    {
+      "detail": {
+        "adopted_from": "",
+        "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202259Z",
+        "body_sha256": "df4670b698c7b1f70fb5b401ba506670f3da4347b7f054bdbfd9f0a263cb2dbd",
+        "decided_at": 1791663808,
+        "decided_by": 2,
+        "decision": "recreate",
+        "decision_file_sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+        "domain_id": 2,
+        "file_format": "celikpanel-render v2",
+        "file_sha256": "37da4a2eaeaa7f657f48c1822d9e24101923b04aa61369b19bde458d28af486d",
+        "id": 2,
+        "kind": "nginx_vhost",
+        "observed_at": 1791663843,
+        "path": "/etc/nginx/sites-available/set10-a.test.conf",
+        "pending_path": "",
+        "pending_sha256": "",
+        "site_id": 2,
+        "state": "unreadable",
+        "state_reason": "write_refused",
+        "written_at": 1791663815,
+        "written_release": "v0.1.0-alpha.81 0684f2703b66"
+      },
+      "name": "g: the ledger names A unreadable with the reason write_refused",
+      "ok": true
+    },
+    {
+      "detail": {
+        "state": "unreadable"
+      },
+      "name": "g: the Domains row names A unreadable",
+      "ok": true
+    },
+    {
+      "detail": {
+        "actions": [],
+        "detail": null,
+        "ledger": {
+          "backup_path": "/etc/nginx/sites-available/set10-a.test.conf.celikpanel-backup-20261010T202259Z",
+          "observed_at": "2026-10-10T20:24:03Z",
+          "written_at": "2026-10-10T20:23:35Z",
+          "written_release": "v0.1.0-alpha.81 0684f2703b66"
+        },
+        "reason": null,
+        "state": "managed_unchanged"
+      },
+      "name": "g: site-config for A names the reason (unreadable/write_refused or EPERM)",
+      "ok": false
+    },
+    {
+      "detail": {
+        "lines": [
+          "2026-10-10T20:24:24.602164+00:00 dns-ubuntu panel[74576]: 2026/10/10 20:24:24 site configuration set10-a.test (startup): written"
+        ],
+        "sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d"
+      },
+      "name": "g-resume: after the owner unlocks the file, the next start writes A (the Panel's text)",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-10T20:24:44Z",
+  "lab_preparation": [
+    {
+      "domain": "set10-a.test",
+      "file": "steps/21-g-immutable/native/194-g-lab-restore-set10-a.test.json",
+      "label": "g",
+      "sha256_matches": true
+    }
+  ],
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/194-g-lab-restore-set10-a.test.json",
+      "label": "g-lab-restore-set10-a.test",
+      "mode": "lab-restore",
+      "owner_action": false
+    },
+    {
+      "file": "native/195-owner-g-panel-stop.json",
+      "label": "owner-g-panel-stop",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/196-g-lab-stale.json",
+      "label": "g-lab-stale",
+      "mode": "lab-stale-managed",
+      "owner_action": false
+    },
+    {
+      "file": "native/197-owner-g-chattr.json",
+      "label": "owner-g-chattr",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/198-g-1-locked-read.json",
+      "label": "g-1-locked-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/199-guest-clock.json",
+      "label": "guest-clock",
+      "mode": "read-ledger",
+      "owner_action": false
+    },
+    {
+      "file": "native/200-owner-g-panel-start.json",
+      "label": "owner-g-panel-start",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/201-g-2-after-the-start-read.json",
+      "label": "g-2-after-the-start-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/202-g-journal.json",
+      "label": "g-journal",
+      "mode": "read-window",
+      "owner_action": false
+    },
+    {
+      "file": "native/203-owner-g-chattr-minus-i.json",
+      "label": "owner-g-chattr-minus-i",
+      "mode": "owner-vhost10",
+      "owner_action": true
+    },
+    {
+      "file": "native/204-guest-clock.json",
+      "label": "guest-clock",
+      "mode": "read-ledger",
+      "owner_action": false
+    },
+    {
+      "file": "native/205-owner-g-after-unlock-panel-restart.json",
+      "label": "owner-g-after-unlock-panel-restart",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/206-g-3-after-unlock-and-a-start-read.json",
+      "label": "g-3-after-unlock-and-a-start-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/207-g-after-unlock-journal.json",
+      "label": "g-after-unlock-journal",
+      "mode": "read-window",
+      "owner_action": false
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [
+    {
+      "detail": [
+        "site-config for A names the reason (unreadable/write_refused or EPERM)"
+      ],
+      "note": "g: FAIL"
+    },
+    {
+      "detail": [],
+      "note": "g-resume: PASS"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-10T20:24:01Z",
+      "label": "g-panel-stop",
+      "mode": "owner-panel"
+    },
+    {
+      "at": "2026-10-10T20:24:02Z",
+      "label": "g-chattr",
+      "mode": "owner-vhost10"
+    },
+    {
+      "at": "2026-10-10T20:24:03Z",
+      "label": "g-panel-start",
+      "mode": "owner-panel"
+    },
+    {
+      "at": "2026-10-10T20:24:22Z",
+      "label": "g-chattr-minus-i",
+      "mode": "owner-vhost10"
+    },
+    {
+      "at": "2026-10-10T20:24:23Z",
+      "label": "g-after-unlock-panel-restart",
+      "mode": "owner-panel"
+    }
+  ],
+  "owner_waited_for_idle": {
+    "at": "2026-10-10T20:24:00Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.3
+  },
+  "section": "g-immutable",
+  "started_at": "2026-10-10T20:23:59Z",
+  "substeps": {
+    "g": "failed",
+    "g-resume": "passed"
+  },
+  "title": "A locked while A, B and the static site need a render",
+  "verdict": "failed"
+}

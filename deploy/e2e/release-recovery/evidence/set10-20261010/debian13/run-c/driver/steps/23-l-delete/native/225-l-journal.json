@@ -1,0 +1,76 @@
+{
+  "at": "2026-10-10T19:57:04Z",
+  "by_unit": {
+    "celikpanel-agent.service": [
+      "2026-10-10T19:57:00.621266+00:00 dns-debian13 agent[5159]: 2026/10/10 19:57:00 DeleteSite set10-c.test: the vhost was not CelikPanel's unchanged text; a copy is kept as /etc/nginx/sites-available/set10-c.test.conf.celikpanel-backup-20261010T195700Z",
+      "2026-10-10T19:57:00.797967+00:00 dns-debian13 userdel[52122]: delete user 'set10_c_test'",
+      "2026-10-10T19:57:00.798144+00:00 dns-debian13 userdel[52122]: removed group 'set10_c_test' owned by 'set10_c_test'",
+      "2026-10-10T19:57:00.798171+00:00 dns-debian13 userdel[52122]: removed shadow group 'set10_c_test' owned by 'set10_c_test'",
+      "2026-10-10T19:57:01.237771+00:00 dns-debian13 userdel[52150]: delete user 'set10_d_test'",
+      "2026-10-10T19:57:01.237887+00:00 dns-debian13 userdel[52150]: removed group 'set10_d_test' owned by 'set10_d_test'",
+      "2026-10-10T19:57:01.237907+00:00 dns-debian13 userdel[52150]: removed shadow group 'set10_d_test' owned by 'set10_d_test'"
+    ],
+    "celikpanel-panel.service": [
+      "2026-10-10T19:57:00.461096+00:00 dns-debian13 panel[50804]: 2026/10/10 19:57:00 http: TLS handshake error from 127.0.0.1:44006: EOF",
+      "2026-10-10T19:57:00.946882+00:00 dns-debian13 panel[50804]: 2026/10/10 19:57:00 http: TLS handshake error from 127.0.0.1:44030: EOF"
+    ],
+    "nginx.service": [
+      "2026-10-10T19:56:59.247132+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T19:56:59.282607+00:00 dns-debian13 nginx[51979]: 2026/10/10 19:56:59 [notice] 51979#51979: signal process started",
+      "2026-10-10T19:56:59.287158+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T19:56:59.540380+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T19:56:59.559698+00:00 dns-debian13 nginx[52002]: 2026/10/10 19:56:59 [notice] 52002#52002: signal process started",
+      "2026-10-10T19:56:59.561090+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T19:56:59.813691+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T19:56:59.843191+00:00 dns-debian13 nginx[52025]: 2026/10/10 19:56:59 [notice] 52025#52025: signal process started",
+      "2026-10-10T19:56:59.844191+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T19:57:00.578297+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T19:57:00.614757+00:00 dns-debian13 nginx[52112]: 2026/10/10 19:57:00 [notice] 52112#52112: signal process started",
+      "2026-10-10T19:57:00.618391+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T19:57:01.041602+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T19:57:01.070662+00:00 dns-debian13 nginx[52140]: 2026/10/10 19:57:01 [notice] 52140#52140: signal process started",
+      "2026-10-10T19:57:01.074447+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+    ],
+    "php8.4-fpm.service": [
+      "2026-10-10T19:57:00.684113+00:00 dns-debian13 systemd[1]: Reloading php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager...",
+      "2026-10-10T19:57:00.713605+00:00 dns-debian13 systemd[1]: Reloaded php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager.",
+      "2026-10-10T19:57:00.763923+00:00 dns-debian13 php-fpm8.4[23896]: [10-Oct-2026 19:57:00] NOTICE: using inherited socket fd=8, \"/run/php/php8.4-fpm.sock\"",
+      "2026-10-10T19:57:00.763923+00:00 dns-debian13 php-fpm8.4[23896]: [10-Oct-2026 19:57:00] NOTICE: using inherited socket fd=9, \"/var/run/php/php8.4-fpm-site2.sock\"",
+      "2026-10-10T19:57:00.763923+00:00 dns-debian13 php-fpm8.4[23896]: [10-Oct-2026 19:57:00] NOTICE: using inherited socket fd=10, \"/var/run/php/php8.4-fpm-site3.sock\"",
+      "2026-10-10T19:57:00.763923+00:00 dns-debian13 php-fpm8.4[23896]: [10-Oct-2026 19:57:00] NOTICE: using inherited socket fd=11, \"/var/run/php/php8.4-fpm-site4.sock\"",
+      "2026-10-10T19:57:00.763923+00:00 dns-debian13 php-fpm8.4[23896]: [10-Oct-2026 19:57:00] NOTICE: using inherited socket fd=12, \"/var/run/php/php8.4-fpm-site5.sock\"",
+      "2026-10-10T19:57:01.141541+00:00 dns-debian13 systemd[1]: Reloading php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager...",
+      "2026-10-10T19:57:01.164072+00:00 dns-debian13 systemd[1]: Reloaded php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager.",
+      "2026-10-10T19:57:01.212406+00:00 dns-debian13 php-fpm8.4[23896]: [10-Oct-2026 19:57:01] NOTICE: using inherited socket fd=8, \"/run/php/php8.4-fpm.sock\"",
+      "2026-10-10T19:57:01.212406+00:00 dns-debian13 php-fpm8.4[23896]: [10-Oct-2026 19:57:01] NOTICE: using inherited socket fd=9, \"/var/run/php/php8.4-fpm-site2.sock\"",
+      "2026-10-10T19:57:01.212406+00:00 dns-debian13 php-fpm8.4[23896]: [10-Oct-2026 19:57:01] NOTICE: using inherited socket fd=10, \"/var/run/php/php8.4-fpm-site3.sock\"",
+      "2026-10-10T19:57:01.212406+00:00 dns-debian13 php-fpm8.4[23896]: [10-Oct-2026 19:57:01] NOTICE: using inherited socket fd=12, \"/var/run/php/php8.4-fpm-site5.sock\""
+    ]
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set10-native/v1",
+  "since_epoch": 1791662219,
+  "systemd_manager": [
+    "2026-10-10T19:56:59.247132+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T19:56:59.287158+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T19:56:59.540380+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T19:56:59.561090+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T19:56:59.813691+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T19:56:59.844191+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T19:57:00.578297+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T19:57:00.618391+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T19:57:00.684113+00:00 dns-debian13 systemd[1]: Reloading php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager...",
+    "2026-10-10T19:57:00.713605+00:00 dns-debian13 systemd[1]: Reloaded php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager.",
+    "2026-10-10T19:57:01.041602+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T19:57:01.074447+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T19:57:01.141541+00:00 dns-debian13 systemd[1]: Reloading php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager...",
+    "2026-10-10T19:57:01.164072+00:00 dns-debian13 systemd[1]: Reloaded php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager."
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php8.4-fpm.service"
+  ]
+}

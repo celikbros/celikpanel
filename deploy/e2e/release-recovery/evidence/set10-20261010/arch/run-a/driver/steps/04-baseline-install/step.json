@@ -1,0 +1,134 @@
+{
+  "checks": {
+    "collected": {
+      "artifacts": {
+        "current-worker-baseline-result.json": {
+          "bytes": 2146,
+          "path": "/var/tmp/cp-release-drill-s10-arch-a/current-worker-baseline-arch-current-worker-baseline-result.json",
+          "sha256": "f49de04fb5450c2d45271cf3204cf536e172b5cec822a085e3feb6fa05c2e619"
+        },
+        "current-worker-baseline.log": {
+          "bytes": 6612,
+          "path": "/var/tmp/cp-release-drill-s10-arch-a/current-worker-baseline-arch-current-worker-baseline.log",
+          "sha256": "82463e7c0df636349c869c3c6ae774bbd782319dae0f2bf6eee7403424a6569f"
+        }
+      },
+      "node": "arch"
+    },
+    "h22_failed_status_reads": [
+      {
+        "at": "2026-10-10T20:28:35Z",
+        "returncode": 1,
+        "stderr_tail": [
+          "    raise CalledProcessError(retcode, process.args,",
+          "                             output=stdout, stderr=stderr)",
+          "subprocess.CalledProcessError: Command '['systemctl', 'show', 'celikpanel-lab-current-worker-baseline.service', '-p', 'ActiveState', '-p', 'SubState', '-p', 'Result', '-p', 'ExecMainStatus']' died with <Signals.SIGBUS: 7>."
+        ]
+      }
+    ],
+    "installer_restart_notice": {
+      "banner": "RESTART THIS SERVER NOW / BU SUNUCUYU SIMDI YENIDEN BASLATIN",
+      "state": "required",
+      "text": "RESTART THIS SERVER NOW / BU SUNUCUYU SIMDI YENIDEN BASLATIN\n    This server is running kernel 7.1.8-arch1-3, whose modules are no longer on disk:\n    the prerequisite step upgraded the kernel and replaced them. Until this server\n    is restarted it cannot load nftables or WireGuard, so turning the firewall on\n    or installing the VPN will fail. Everything else is installed and running.\n        reboot\n\n    Bu sunucu, modulleri artik diskte olmayan 7.1.8-arch1-3 cekirdegiyle calisiyor:\n    on gereksinim adimi cekirdegi yukseltti ve modulleri degistirdi. Sunucu\n    yeniden baslatilana kadar nftables veya WireGuard yuklenemez; guvenlik\n    duvarini acmak veya VPN kurmak hata verir. Geri kalan her sey kurulu.\n        reboot"
+    },
+    "origin_after_restart": {
+      "addresses": [
+        "127.0.0.1"
+      ],
+      "boot_id": "6596b162-820a-4b4d-95d6-632d3e241356",
+      "getent_outcome": "found",
+      "getent_returncode": 0,
+      "getent_status": "ok",
+      "getent_stdout": "127.0.0.1       localhost\n",
+      "http": "200",
+      "loopback_only": true,
+      "ok": true,
+      "unit": {
+        "ActiveState": "active",
+        "NRestarts": "0",
+        "UnitFileState": "enabled"
+      }
+    },
+    "owner_restart_seconds": 43.796139547994244,
+    "start": {
+      "action": "started",
+      "archive_sha256": "320c39e3ee0f5e89d21393694ac470cf1030d390746b25fda33cb355c36a23ae",
+      "credentials": "[REDACTED]",
+      "node": "arch",
+      "source_commit": "0684f2703b665e68828ff329ed6e56eb9c7d4771",
+      "unit": "celikpanel-lab-current-worker-baseline.service",
+      "version": "v0.1.0-alpha.81"
+    },
+    "status": {
+      "installation": {
+        "archive_sha256": "320c39e3ee0f5e89d21393694ac470cf1030d390746b25fda33cb355c36a23ae",
+        "credentials": "[REDACTED]",
+        "enrollment_exit": 0,
+        "error_type": null,
+        "finished_at": "2026-10-10T20:29:24.239236+00:00",
+        "foundation": {
+          "commit": "0684f2703b665e68828ff329ed6e56eb9c7d4771",
+          "sequence": 81,
+          "sha256": "9504fedcd2020083b57f5dd310022881f8f6136e96591d5133d04cdbb69863f5",
+          "version": "v0.1.0-alpha.81"
+        },
+        "https_curl_exit": 0,
+        "https_http_code": "200",
+        "https_trust_validation": "not-claimed-self-signed-bootstrap",
+        "identity": {
+          "cell_id": "release-recovery__b944ae265f731a0d",
+          "node": "arch",
+          "nonce": "b944ae265f731a0d9e62de508bf65eae093b52659e2e702a6a62f4138c313a5c",
+          "schema": "celikpanel-release-recovery-lab/v1",
+          "vm_uuid": "7b4351c2-feff-5784-93a9-edcd8e9b10c1"
+        },
+        "install_exit": 0,
+        "installed_artifacts": {
+          "agent": "46d9d684be6c5af4bb5f051bd485617e0116fc6872f73e6d7eaa9170c5dfb49a",
+          "panel": "f8e278919af6661fc16f6cae11eb3416ea3f264881878a619fdadcd8a78f08b1"
+        },
+        "installer_log_bytes": 6612,
+        "installer_log_sha256": "82463e7c0df636349c869c3c6ae774bbd782319dae0f2bf6eee7403424a6569f",
+        "intent_sha256": "a9dd296838a0239d54a54b87583f6d2a837ba9b4678bed0537dd68a81e2b68e9",
+        "provenance": "unpublished-local-build-with-isolated-fixture-trust-not-production-release-admission",
+        "public_key_sha256": "309e5b043060ae226019e69b8c1fc976543d57aed6a3d5d9bc8a5f9785a9c590",
+        "running_artifacts": {
+          "agent": "46d9d684be6c5af4bb5f051bd485617e0116fc6872f73e6d7eaa9170c5dfb49a",
+          "panel": "f8e278919af6661fc16f6cae11eb3416ea3f264881878a619fdadcd8a78f08b1"
+        },
+        "schema": "celikpanel/current-worker-baseline-result/v1",
+        "sequence": 81,
+        "sequence_floor_sha256": "6903b4d1c3570faee8afdb177bd9bb33572803b0c5de6aceb913675b183f8b66",
+        "services": {
+          "agent": {
+            "ActiveState": "active",
+            "InvocationID": "72bb75e16a964486a6d418e172f23b40",
+            "MainPID": "8013",
+            "SubState": "running"
+          },
+          "panel": {
+            "ActiveState": "active",
+            "InvocationID": "771cdeb208f343578bd15ae26f658752",
+            "MainPID": "8215",
+            "SubState": "running"
+          }
+        },
+        "source_commit": "0684f2703b665e68828ff329ed6e56eb9c7d4771",
+        "started_at": "2026-10-10T20:27:33.197651+00:00",
+        "verified": true,
+        "version": "v0.1.0-alpha.81"
+      },
+      "node": "arch",
+      "unit": {
+        "ActiveState": "inactive",
+        "ExecMainStatus": "0",
+        "Result": "success",
+        "SubState": "dead"
+      }
+    }
+  },
+  "finished_at": "2026-10-10T20:30:33Z",
+  "name": "baseline-install",
+  "started_at": "2026-10-10T20:27:29Z",
+  "verdict": "passed"
+}

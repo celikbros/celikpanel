@@ -1,0 +1,372 @@
+{
+  "calls": [],
+  "cells": {
+    "h": {
+      "detail": {
+        "journal": "steps/10-h-i-unchanged-start/native/015-h-journal.json"
+      },
+      "expectations": [
+        {
+          "expectation": "the Panel restarted and answers",
+          "held": true,
+          "measured": {
+            "api": {
+              "answering": true,
+              "seconds": 14.2,
+              "status": 200
+            },
+            "epoch": 1791663302.1700265,
+            "file": "steps/10-h-i-unchanged-start/native/013-owner-h-panel-restart.json",
+            "is_active": "active",
+            "kind": "owner: systemctl restart celikpanel-panel",
+            "ok": true,
+            "reconcile_lines_seen": [
+              "2026-10-10T20:15:02.850696+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 site configuration files at start: 0 written, 3 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+            ],
+            "session": {
+              "status": 200
+            },
+            "waited_seconds": 2.1
+          }
+        },
+        {
+          "expectation": "no vhost was written (sha256, inode and mtime unchanged for every site)",
+          "held": true,
+          "measured": {
+            "set1-owner.test": {
+              "inode": [
+                263364,
+                263364
+              ],
+              "mtime_ns": [
+                1791663287409307131,
+                1791663287409307131
+              ],
+              "sha256": [
+                "aa7679d801a7bd8e4d008283c4e248e96809875e83f4f6d38e742bde6999dc18",
+                "aa7679d801a7bd8e4d008283c4e248e96809875e83f4f6d38e742bde6999dc18"
+              ]
+            },
+            "set10-a.test": {
+              "inode": [
+                263369,
+                263369
+              ],
+              "mtime_ns": [
+                1791663295760363248,
+                1791663295760363248
+              ],
+              "sha256": [
+                "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+                "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d"
+              ]
+            },
+            "set10-b.test": {
+              "inode": [
+                263374,
+                263374
+              ],
+              "mtime_ns": [
+                1791663299002385034,
+                1791663299002385034
+              ],
+              "sha256": [
+                "c9489837c02a058a57f43acfacb895373fe8eb0b1c2d209c8ffbea3a3b913ffc",
+                "c9489837c02a058a57f43acfacb895373fe8eb0b1c2d209c8ffbea3a3b913ffc"
+              ]
+            }
+          }
+        },
+        {
+          "expectation": "nginx was not reloaded (worker PIDs unchanged; no `Reloaded` line after the restart)",
+          "held": true,
+          "measured": {
+            "reload_lines": [],
+            "workers": [
+              [
+                "41533",
+                "41534"
+              ],
+              [
+                "41533",
+                "41534"
+              ]
+            ]
+          }
+        },
+        {
+          "expectation": "the start line counts 3 unchanged and 0 written",
+          "held": true,
+          "measured": [
+            "2026-10-10T20:15:02.850696+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 site configuration files at start: 0 written, 3 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+          ]
+        },
+        {
+          "expectation": "one line per site saying unchanged",
+          "held": true,
+          "measured": {
+            "set1-owner.test": [
+              "2026-10-10T20:15:02.790749+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 site configuration set1-owner.test (startup): unchanged"
+            ],
+            "set10-a.test": [
+              "2026-10-10T20:15:02.821006+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 site configuration set10-a.test (startup): unchanged"
+            ],
+            "set10-b.test": [
+              "2026-10-10T20:15:02.837579+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 site configuration set10-b.test (startup): unchanged"
+            ]
+          }
+        }
+      ],
+      "verdict": "PASS"
+    },
+    "i": {
+      "detail": null,
+      "expectations": [
+        {
+          "expectation": "the file written at creation is unchanged by the start (the start's text is the creation text byte for byte)",
+          "held": true,
+          "measured": {
+            "set10-a.test": {
+              "after_the_restart": {
+                "inode": 263369,
+                "sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d"
+              },
+              "creation": {
+                "inode": 263369,
+                "mtime_ns": 1791663295760363248,
+                "sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d"
+              }
+            },
+            "set10-b.test": {
+              "after_the_restart": {
+                "inode": 263374,
+                "sha256": "c9489837c02a058a57f43acfacb895373fe8eb0b1c2d209c8ffbea3a3b913ffc"
+              },
+              "creation": {
+                "inode": 263374,
+                "mtime_ns": 1791663299002385034,
+                "sha256": "c9489837c02a058a57f43acfacb895373fe8eb0b1c2d209c8ffbea3a3b913ffc"
+              }
+            }
+          }
+        },
+        {
+          "expectation": "A's server_name as created names the www. alias (the start's text)",
+          "held": true,
+          "measured": [
+            "server_name set10-a.test www.set10-a.test;"
+          ]
+        }
+      ],
+      "verdict": "PASS"
+    }
+  },
+  "checks": [
+    {
+      "detail": {
+        "api": {
+          "answering": true,
+          "seconds": 14.2,
+          "status": 200
+        },
+        "epoch": 1791663302.1700265,
+        "file": "steps/10-h-i-unchanged-start/native/013-owner-h-panel-restart.json",
+        "is_active": "active",
+        "kind": "owner: systemctl restart celikpanel-panel",
+        "ok": true,
+        "reconcile_lines_seen": [
+          "2026-10-10T20:15:02.850696+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 site configuration files at start: 0 written, 3 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+        ],
+        "session": {
+          "status": 200
+        },
+        "waited_seconds": 2.1
+      },
+      "name": "h: the Panel restarted and answers",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set1-owner.test": {
+          "inode": [
+            263364,
+            263364
+          ],
+          "mtime_ns": [
+            1791663287409307131,
+            1791663287409307131
+          ],
+          "sha256": [
+            "aa7679d801a7bd8e4d008283c4e248e96809875e83f4f6d38e742bde6999dc18",
+            "aa7679d801a7bd8e4d008283c4e248e96809875e83f4f6d38e742bde6999dc18"
+          ]
+        },
+        "set10-a.test": {
+          "inode": [
+            263369,
+            263369
+          ],
+          "mtime_ns": [
+            1791663295760363248,
+            1791663295760363248
+          ],
+          "sha256": [
+            "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d",
+            "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d"
+          ]
+        },
+        "set10-b.test": {
+          "inode": [
+            263374,
+            263374
+          ],
+          "mtime_ns": [
+            1791663299002385034,
+            1791663299002385034
+          ],
+          "sha256": [
+            "c9489837c02a058a57f43acfacb895373fe8eb0b1c2d209c8ffbea3a3b913ffc",
+            "c9489837c02a058a57f43acfacb895373fe8eb0b1c2d209c8ffbea3a3b913ffc"
+          ]
+        }
+      },
+      "name": "h: no vhost was written (sha256, inode and mtime unchanged for every site)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "reload_lines": [],
+        "workers": [
+          [
+            "41533",
+            "41534"
+          ],
+          [
+            "41533",
+            "41534"
+          ]
+        ]
+      },
+      "name": "h: nginx was not reloaded (worker PIDs unchanged; no `Reloaded` line after the restart)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "2026-10-10T20:15:02.850696+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 site configuration files at start: 0 written, 3 unchanged, 0 kept (owner-edited), 0 kept (foreign), 0 kept (unknown origin), 0 unreadable or unwritable, 0 missing (not recreated), 0 failed; 0 adopted from an earlier release"
+      ],
+      "name": "h: the start line counts 3 unchanged and 0 written",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set1-owner.test": [
+          "2026-10-10T20:15:02.790749+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 site configuration set1-owner.test (startup): unchanged"
+        ],
+        "set10-a.test": [
+          "2026-10-10T20:15:02.821006+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 site configuration set10-a.test (startup): unchanged"
+        ],
+        "set10-b.test": [
+          "2026-10-10T20:15:02.837579+00:00 dns-ubuntu panel[41949]: 2026/10/10 20:15:02 site configuration set10-b.test (startup): unchanged"
+        ]
+      },
+      "name": "h: one line per site saying unchanged",
+      "ok": true
+    },
+    {
+      "detail": {
+        "set10-a.test": {
+          "after_the_restart": {
+            "inode": 263369,
+            "sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d"
+          },
+          "creation": {
+            "inode": 263369,
+            "mtime_ns": 1791663295760363248,
+            "sha256": "81e868c29a59509cecdfd9e513f5ffcb8b499a13981f0a7a858a6ab80380b33d"
+          }
+        },
+        "set10-b.test": {
+          "after_the_restart": {
+            "inode": 263374,
+            "sha256": "c9489837c02a058a57f43acfacb895373fe8eb0b1c2d209c8ffbea3a3b913ffc"
+          },
+          "creation": {
+            "inode": 263374,
+            "mtime_ns": 1791663299002385034,
+            "sha256": "c9489837c02a058a57f43acfacb895373fe8eb0b1c2d209c8ffbea3a3b913ffc"
+          }
+        }
+      },
+      "name": "i: the file written at creation is unchanged by the start (the start's text is the creation text byte for byte)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "server_name set10-a.test www.set10-a.test;"
+      ],
+      "name": "i: A's server_name as created names the www. alias (the start's text)",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-10T20:15:22Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/012-h-0-before-read.json",
+      "label": "h-0-before-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/013-owner-h-panel-restart.json",
+      "label": "owner-h-panel-restart",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/014-h-1-after-the-restart-read.json",
+      "label": "h-1-after-the-restart-read",
+      "mode": "read-site10",
+      "owner_action": false
+    },
+    {
+      "file": "native/015-h-journal.json",
+      "label": "h-journal",
+      "mode": "read-window",
+      "owner_action": false
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [
+    {
+      "detail": [],
+      "note": "h: PASS"
+    },
+    {
+      "detail": [],
+      "note": "i: PASS"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-10T20:15:02Z",
+      "label": "h-panel-restart",
+      "mode": "owner-panel"
+    }
+  ],
+  "owner_waited_for_idle": {
+    "at": "2026-10-10T20:15:01Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.3
+  },
+  "section": "h-i-unchanged-start",
+  "started_at": "2026-10-10T20:15:00Z",
+  "substeps": {
+    "h": "passed",
+    "i": "passed"
+  },
+  "title": "a restart with every site unchanged; the creation text is the start text",
+  "verdict": "passed"
+}
