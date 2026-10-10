@@ -1,0 +1,5 @@
+source 2a0af8866 = 2a0af88660773b43cbe1155c622483e2f0a2bbeb tree 988ea2eab0653ed442d20e1fc351cd9bb68a4c07 (v0.1.0-alpha.82: 2a0af88660773b43cbe1155c622483e2f0a2bbeb)
+baseline (installed fresh by every cell) 9e12ed1aa9037964671540e66b7b85748c444369 tree ff0d0eefe5771b695592d747ec2eedf0f4e7c024
+### files that differ between the source 2a0af8866 and the baseline 9e12ed1aa9037964671540e66b7b85748c444369
+M	deploy/release-sequence-policy
+### files of cmd/, internal/, web/ that differ between them: 0

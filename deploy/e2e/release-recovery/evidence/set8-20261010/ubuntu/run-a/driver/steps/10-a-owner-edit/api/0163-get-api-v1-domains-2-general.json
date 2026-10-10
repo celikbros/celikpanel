@@ -1,0 +1,73 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "set8 a3 after: general (GET /api/v1/domains/2/general)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18852"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/2/general"
+  },
+  "response": {
+    "elapsed_seconds": 0.004,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 10 Oct 2026 16:27:15 GMT"
+      ],
+      [
+        "Content-Length",
+        "226"
+      ]
+    ],
+    "json": {
+      "aliases": [],
+      "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+      "domain_id": 2,
+      "domain_name": "set8-a.test",
+      "redirect_https": false,
+      "redirect_www": false,
+      "redirect_www_available": true,
+      "web_server": "nginx"
+    },
+    "status": 200,
+    "text": null
+  }
+}

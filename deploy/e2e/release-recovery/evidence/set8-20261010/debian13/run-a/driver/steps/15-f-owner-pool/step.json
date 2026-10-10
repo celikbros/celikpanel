@@ -1,0 +1,24 @@
+{
+  "checks": {
+    "checks": 3,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T16:04:07Z",
+    "notes": [
+      "f after_the_panel_start: owner's lines present 2/2, pool sha unchanged, inode same, served set8-ini:memory_limit=193M",
+      "f after_the_pool_save: owner's lines present 0/2, pool sha changed, inode changed, served set8-ini:memory_limit=128M",
+      "f after_the_php_switch: owner's lines present 0/2, pool sha changed, inode changed, served set8-ini:memory_limit=128M"
+    ],
+    "started_at": "2026-10-10T16:03:35Z",
+    "substeps": {
+      "f": "passed"
+    },
+    "title": "the owner adds a directive and a comment to the site's PHP-FPM pool",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T16:04:07Z",
+  "name": "f-owner-pool",
+  "started_at": "2026-10-10T16:03:35Z",
+  "verdict": "passed"
+}

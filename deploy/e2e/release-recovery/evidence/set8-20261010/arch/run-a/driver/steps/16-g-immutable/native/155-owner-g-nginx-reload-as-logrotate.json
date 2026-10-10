@@ -1,0 +1,44 @@
+{
+  "action": "owner-nginx-reload",
+  "after": {
+    "active": "active",
+    "invocation": "fb42c1bae67446bfa8a26f095401086c",
+    "master": "1165",
+    "started": "Sat 2026-10-10 16:35:39 UTC",
+    "workers": [
+      "6032"
+    ]
+  },
+  "at": "2026-10-10T16:42:23Z",
+  "before": {
+    "active": "active",
+    "invocation": "fb42c1bae67446bfa8a26f095401086c",
+    "master": "1165",
+    "started": "Sat 2026-10-10 16:35:39 UTC",
+    "workers": [
+      "5798"
+    ]
+  },
+  "mode": "owner-nginx-reload",
+  "nginx_test": {
+    "at": "2026-10-10T16:42:22Z",
+    "output": "2026/10/10 16:42:22 [warn] 6028#6028: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": true,
+  "reload": {
+    "argv": [
+      "systemctl",
+      "reload",
+      "nginx.service"
+    ],
+    "at": "2026-10-10T16:42:22Z",
+    "returncode": 0,
+    "seconds": 0.036,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "schema": "celikpanel/set8-native/v1"
+}

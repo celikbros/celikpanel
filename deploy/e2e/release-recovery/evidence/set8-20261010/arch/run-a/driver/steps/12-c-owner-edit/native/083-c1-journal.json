@@ -1,0 +1,75 @@
+{
+  "at": "2026-10-10T16:40:34Z",
+  "by_unit": {
+    "celikpanel-agent.service": [
+      "2026-10-10T16:40:24.734328+00:00 dns-arch agent[410]: 2026/10/10 16:40:24 Getting pool config for site2 (PHP 8.5)",
+      "2026-10-10T16:40:26.202989+00:00 dns-arch agent[410]: 2026/10/10 16:40:26 Getting pool config for site2 (PHP 8.5)"
+    ],
+    "celikpanel-panel.service": [
+      "2026-10-10T16:40:24.132525+00:00 dns-arch panel[3910]: 2026/10/10 16:40:24 http: TLS handshake error from 127.0.0.1:42684: EOF",
+      "2026-10-10T16:40:24.143930+00:00 dns-arch panel[3910]: 2026/10/10 16:40:24 http: TLS handshake error from 127.0.0.1:42700: EOF",
+      "2026-10-10T16:40:24.155129+00:00 dns-arch panel[3910]: 2026/10/10 16:40:24 http: TLS handshake error from 127.0.0.1:42714: EOF",
+      "2026-10-10T16:40:24.741360+00:00 dns-arch panel[3910]: 2026/10/10 16:40:24 http: TLS handshake error from 127.0.0.1:42734: EOF",
+      "2026-10-10T16:40:24.752377+00:00 dns-arch panel[3910]: 2026/10/10 16:40:24 http: TLS handshake error from 127.0.0.1:42754: EOF",
+      "2026-10-10T16:40:24.776443+00:00 dns-arch panel[3910]: 2026/10/10 16:40:24 http: TLS handshake error from 127.0.0.1:42758: EOF",
+      "2026-10-10T16:40:25.596953+00:00 dns-arch panel[3910]: 2026/10/10 16:40:25 http: TLS handshake error from 127.0.0.1:42784: EOF",
+      "2026-10-10T16:40:25.609129+00:00 dns-arch panel[3910]: 2026/10/10 16:40:25 http: TLS handshake error from 127.0.0.1:42788: EOF",
+      "2026-10-10T16:40:25.619986+00:00 dns-arch panel[3910]: 2026/10/10 16:40:25 http: TLS handshake error from 127.0.0.1:42806: EOF",
+      "2026-10-10T16:40:26.210278+00:00 dns-arch panel[3910]: 2026/10/10 16:40:26 http: TLS handshake error from 127.0.0.1:42830: EOF",
+      "2026-10-10T16:40:26.221091+00:00 dns-arch panel[3910]: 2026/10/10 16:40:26 http: TLS handshake error from 127.0.0.1:42846: EOF",
+      "2026-10-10T16:40:26.245793+00:00 dns-arch panel[3910]: 2026/10/10 16:40:26 http: TLS handshake error from 127.0.0.1:42860: EOF",
+      "2026-10-10T16:40:26.534614+00:00 dns-arch systemd[1]: Stopping CelikPanel web panel...",
+      "2026-10-10T16:40:26.547197+00:00 dns-arch systemd[1]: celikpanel-panel.service: Deactivated successfully.",
+      "2026-10-10T16:40:26.547550+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.",
+      "2026-10-10T16:40:26.548064+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 279ms CPU time over 37.363s wall clock time, 82.9M memory peak.",
+      "2026-10-10T16:40:27.892007+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...",
+      "2026-10-10T16:40:27.927655+00:00 dns-arch systemd[1]: Started CelikPanel web panel.",
+      "2026-10-10T16:40:28.019464+00:00 dns-arch panel[4375]: 2026/10/10 16:40:28 Starting CelikPanel Backend...",
+      "2026-10-10T16:40:28.025814+00:00 dns-arch panel[4375]: 2026/10/10 16:40:28 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)",
+      "2026-10-10T16:40:28.026620+00:00 dns-arch panel[4375]: 2026/10/10 16:40:28 Panel startup listener active on :2083 (HTTPS; application gated)",
+      "2026-10-10T16:40:28.027204+00:00 dns-arch panel[4375]: 2026/10/10 16:40:28 Connected to Agent RPC; preparing normal management access",
+      "2026-10-10T16:40:28.127552+00:00 dns-arch panel[4375]: 2026/10/10 16:40:28 certificate startup reconcile: restored 3 hosted vhosts with one nginx validation and reload",
+      "2026-10-10T16:40:28.129701+00:00 dns-arch panel[4375]: 2026/10/10 16:40:28 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname \"dns-arch\": a fully qualified DNS name is required; preserve pending outbox: <nil>",
+      "2026-10-10T16:40:28.133264+00:00 dns-arch panel[4375]: 2026/10/10 16:40:28 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose",
+      "2026-10-10T16:40:28.136288+00:00 dns-arch panel[4375]: 2026/10/10 16:40:28 Panel ready on :2083 (HTTPS)",
+      "2026-10-10T16:40:29.984027+00:00 dns-arch panel[4375]: 2026/10/10 16:40:29 http: TLS handshake error from 127.0.0.1:42884: EOF"
+    ],
+    "nginx.service": [
+      "2026-10-10T16:40:25.153821+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+      "2026-10-10T16:40:25.180387+00:00 dns-arch nginx[4258]: 2026/10/10 16:40:25 [warn] 4258#4258: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+      "2026-10-10T16:40:25.184684+00:00 dns-arch nginx[4258]: 2026/10/10 16:40:25 [notice] 4258#4258: signal process started",
+      "2026-10-10T16:40:25.187335+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+      "2026-10-10T16:40:26.888017+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+      "2026-10-10T16:40:26.910989+00:00 dns-arch nginx[4322]: 2026/10/10 16:40:26 [warn] 4322#4322: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+      "2026-10-10T16:40:26.915308+00:00 dns-arch nginx[4322]: 2026/10/10 16:40:26 [notice] 4322#4322: signal process started",
+      "2026-10-10T16:40:26.916900+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+      "2026-10-10T16:40:28.094968+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+      "2026-10-10T16:40:28.120479+00:00 dns-arch nginx[4387]: 2026/10/10 16:40:28 [warn] 4387#4387: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+      "2026-10-10T16:40:28.124694+00:00 dns-arch nginx[4387]: 2026/10/10 16:40:28 [notice] 4387#4387: signal process started",
+      "2026-10-10T16:40:28.126192+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+    ],
+    "php-fpm.service": []
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set8-native/v1",
+  "since_epoch": 1791650423,
+  "systemd_manager": [
+    "2026-10-10T16:40:25.153821+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+    "2026-10-10T16:40:25.187335+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+    "2026-10-10T16:40:26.547197+00:00 dns-arch systemd[1]: celikpanel-panel.service: Deactivated successfully.",
+    "2026-10-10T16:40:26.547000+00:00 dns-arch audit[1]: SERVICE_STOP pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=celikpanel-panel comm=\"systemd\" exe=\"/usr/lib/systemd/systemd\" hostname=? addr=? terminal=? res=success'",
+    "2026-10-10T16:40:26.548064+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 279ms CPU time over 37.363s wall clock time, 82.9M memory peak.",
+    "2026-10-10T16:40:26.888017+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+    "2026-10-10T16:40:26.916900+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+    "2026-10-10T16:40:27.928000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=celikpanel-panel comm=\"systemd\" exe=\"/usr/lib/systemd/systemd\" hostname=? addr=? terminal=? res=success'",
+    "2026-10-10T16:40:28.094968+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+    "2026-10-10T16:40:28.126192+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php-fpm.service"
+  ]
+}

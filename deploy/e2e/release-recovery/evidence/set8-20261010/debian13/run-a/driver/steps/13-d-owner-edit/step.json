@@ -1,0 +1,24 @@
+{
+  "checks": {
+    "checks": 6,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T16:03:13Z",
+    "notes": [
+      "d1: unknown (file other-bytes, inode changed, owner's answer not served after the trigger)",
+      "d3: unknown (file other-bytes, inode changed, owner's answer not served after the trigger)"
+    ],
+    "started_at": "2026-10-10T16:02:23Z",
+    "substeps": {
+      "d1": "passed",
+      "d3": "passed"
+    },
+    "title": "the owner adds an include of their own file to the vhost",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T16:03:13Z",
+  "name": "d-owner-edit",
+  "started_at": "2026-10-10T16:02:23Z",
+  "verdict": "passed"
+}

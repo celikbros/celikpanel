@@ -1,0 +1,17 @@
+{
+  "at": "2026-10-10T16:03:39Z",
+  "body": "set8-ini:memory_limit=193M\n",
+  "body_sha256": "df2e8e9f9f4d42bbb2328dbce4ed8e39becb9182ee09fbbea7d6f30c8bacf388",
+  "bytes": 27,
+  "headers": {
+    "content-type": "text/plain;charset=UTF-8",
+    "server": "nginx"
+  },
+  "host": "set8-a.test",
+  "mode": "read-http",
+  "owner_action": false,
+  "path": "/set8-ini.php",
+  "schema": "celikpanel/set8-native/v1",
+  "status": 200,
+  "status_line": "HTTP/1.1 200 OK"
+}

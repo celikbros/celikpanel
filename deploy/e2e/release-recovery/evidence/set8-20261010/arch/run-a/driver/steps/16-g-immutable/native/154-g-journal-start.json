@@ -1,0 +1,62 @@
+{
+  "at": "2026-10-10T16:42:21Z",
+  "by_unit": {
+    "celikpanel-agent.service": [
+      "2026-10-10T16:42:11.906071+00:00 dns-arch agent[410]: 2026/10/10 16:42:11 Getting pool config for site2 (PHP 8.5)",
+      "2026-10-10T16:42:13.357312+00:00 dns-arch agent[410]: 2026/10/10 16:42:13 Getting pool config for site2 (PHP 8.5)"
+    ],
+    "celikpanel-panel.service": [
+      "2026-10-10T16:42:11.283667+00:00 dns-arch panel[5608]: 2026/10/10 16:42:11 http: TLS handshake error from 127.0.0.1:51728: EOF",
+      "2026-10-10T16:42:11.295321+00:00 dns-arch panel[5608]: 2026/10/10 16:42:11 http: TLS handshake error from 127.0.0.1:51752: EOF",
+      "2026-10-10T16:42:11.306770+00:00 dns-arch panel[5608]: 2026/10/10 16:42:11 http: TLS handshake error from 127.0.0.1:51768: EOF",
+      "2026-10-10T16:42:11.913047+00:00 dns-arch panel[5608]: 2026/10/10 16:42:11 http: TLS handshake error from 127.0.0.1:51780: EOF",
+      "2026-10-10T16:42:11.925923+00:00 dns-arch panel[5608]: 2026/10/10 16:42:11 http: TLS handshake error from 127.0.0.1:51812: EOF",
+      "2026-10-10T16:42:11.948320+00:00 dns-arch panel[5608]: 2026/10/10 16:42:11 http: TLS handshake error from 127.0.0.1:51822: EOF",
+      "2026-10-10T16:42:12.757447+00:00 dns-arch panel[5608]: 2026/10/10 16:42:12 http: TLS handshake error from 127.0.0.1:51840: EOF",
+      "2026-10-10T16:42:12.769651+00:00 dns-arch panel[5608]: 2026/10/10 16:42:12 http: TLS handshake error from 127.0.0.1:51852: EOF",
+      "2026-10-10T16:42:12.779992+00:00 dns-arch panel[5608]: 2026/10/10 16:42:12 http: TLS handshake error from 127.0.0.1:51876: EOF",
+      "2026-10-10T16:42:13.364873+00:00 dns-arch panel[5608]: 2026/10/10 16:42:13 http: TLS handshake error from 127.0.0.1:44530: EOF",
+      "2026-10-10T16:42:13.375622+00:00 dns-arch panel[5608]: 2026/10/10 16:42:13 http: TLS handshake error from 127.0.0.1:44548: EOF",
+      "2026-10-10T16:42:13.398787+00:00 dns-arch panel[5608]: 2026/10/10 16:42:13 http: TLS handshake error from 127.0.0.1:44564: EOF",
+      "2026-10-10T16:42:13.694989+00:00 dns-arch systemd[1]: Stopping CelikPanel web panel...",
+      "2026-10-10T16:42:13.707718+00:00 dns-arch systemd[1]: celikpanel-panel.service: Deactivated successfully.",
+      "2026-10-10T16:42:13.708017+00:00 dns-arch systemd[1]: Stopped CelikPanel web panel.",
+      "2026-10-10T16:42:13.708664+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 245ms CPU time over 17.253s wall clock time, 82.9M memory peak.",
+      "2026-10-10T16:42:14.742761+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...",
+      "2026-10-10T16:42:14.776054+00:00 dns-arch systemd[1]: Started CelikPanel web panel.",
+      "2026-10-10T16:42:14.864745+00:00 dns-arch panel[5903]: 2026/10/10 16:42:14 Starting CelikPanel Backend...",
+      "2026-10-10T16:42:14.871104+00:00 dns-arch panel[5903]: 2026/10/10 16:42:14 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)",
+      "2026-10-10T16:42:14.871731+00:00 dns-arch panel[5903]: 2026/10/10 16:42:14 Panel startup listener active on :2083 (HTTPS; application gated)",
+      "2026-10-10T16:42:14.872591+00:00 dns-arch panel[5903]: 2026/10/10 16:42:14 Connected to Agent RPC; preparing normal management access",
+      "2026-10-10T16:42:14.918617+00:00 dns-arch panel[5903]: 2026/10/10 16:42:14 certificate startup reconcile: restore hosted vhost batch: write vhost set8-a.test: failed to write vhost file: rename /etc/nginx/sites-available/.set8-a.test.conf.tmp-690317752 /etc/nginx/sites-available/set8-a.test.conf: operation not permitted; batch rollback incomplete: restore set8-a.test: remove mutated vhost: remove vhost file: remove /etc/nginx/sites-available/set8-a.test.conf: operation not permitted; pending activation rollback: <nil>",
+      "2026-10-10T16:42:14.921064+00:00 dns-arch panel[5903]: 2026/10/10 16:42:14 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose",
+      "2026-10-10T16:42:14.922667+00:00 dns-arch panel[5903]: 2026/10/10 16:42:14 Panel ready on :2083 (HTTPS)",
+      "2026-10-10T16:42:16.830524+00:00 dns-arch panel[5903]: 2026/10/10 16:42:16 http: TLS handshake error from 127.0.0.1:44578: EOF"
+    ],
+    "nginx.service": [
+      "2026-10-10T16:42:12.306459+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+      "2026-10-10T16:42:12.330138+00:00 dns-arch nginx[5796]: 2026/10/10 16:42:12 [warn] 5796#5796: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+      "2026-10-10T16:42:12.334650+00:00 dns-arch nginx[5796]: 2026/10/10 16:42:12 [notice] 5796#5796: signal process started",
+      "2026-10-10T16:42:12.337732+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+    ],
+    "php-fpm.service": []
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set8-native/v1",
+  "since_epoch": 1791650530,
+  "systemd_manager": [
+    "2026-10-10T16:42:12.306459+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+    "2026-10-10T16:42:12.337732+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+    "2026-10-10T16:42:13.707718+00:00 dns-arch systemd[1]: celikpanel-panel.service: Deactivated successfully.",
+    "2026-10-10T16:42:13.708664+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 245ms CPU time over 17.253s wall clock time, 82.9M memory peak.",
+    "2026-10-10T16:42:13.707000+00:00 dns-arch audit[1]: SERVICE_STOP pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=celikpanel-panel comm=\"systemd\" exe=\"/usr/lib/systemd/systemd\" hostname=? addr=? terminal=? res=success'",
+    "2026-10-10T16:42:14.775000+00:00 dns-arch audit[1]: SERVICE_START pid=1 uid=0 auid=4294967295 ses=4294967295 msg='unit=celikpanel-panel comm=\"systemd\" exe=\"/usr/lib/systemd/systemd\" hostname=? addr=? terminal=? res=success'"
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php-fpm.service"
+  ]
+}

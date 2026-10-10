@@ -1,0 +1,9 @@
+--- before
++++ after
+@@ -5,5 +5,5 @@
+     listen 80;
+     listen [::]:80;
+-    server_name set8-a.test;
++    server_name set8-a.test www.set8-a.test;
+ 
+     access_log /var/log/nginx/set8-a.test-access.log;

@@ -1,0 +1,358 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "9e12ed1aa9037964671540e66b7b85748c444369",
+      "sha256": "fdb005cabcdaa78ff83fd97abbebeb7a0c98f1a23062db42eead5a33334af117",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "cell": {
+    "components": [
+      "nginx",
+      "php-fpm",
+      "mariadb",
+      "postgresql"
+    ],
+    "mail": false,
+    "name": "set8-arch",
+    "node": "arch",
+    "purpose": "web"
+  },
+  "cell_kind": "set8-owner-edits-baseline",
+  "findings": [
+    "arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-verify']"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__5dd6617153945e21",
+    "node": "arch",
+    "vm_uuid": "18aa8ede-0019-50ec-aef2-37abe2c1b40b"
+  },
+  "native_evidence": false,
+  "note": "set8: a baseline of the published alpha.82 code; no update is started and no P0 row is judged.",
+  "outcome": {
+    "classification": "set8-measured",
+    "final_status": null
+  },
+  "overall": "complete-for-review",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "sections": {
+    "S0-sites": {
+      "checks": 5,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T16:38:36Z",
+      "notes": [],
+      "started_at": "2026-10-10T16:38:27Z",
+      "substeps": {
+        "S0": "passed"
+      },
+      "title": "two PHP sites and A's vhost as the Panel wrote it",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "a-owner-edit": {
+      "checks": 9,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T16:39:45Z",
+      "notes": [
+        "a1: overwritten silently (file panel-text-written, inode changed, owner's answer not served after the trigger)",
+        "a2: overwritten silently (file panel-text-written, inode changed, owner's answer not served after the trigger)",
+        "a3: overwritten silently (file panel-text-written, inode changed, owner's answer not served after the trigger)"
+      ],
+      "started_at": "2026-10-10T16:38:36Z",
+      "substeps": {
+        "a1": "passed",
+        "a2": "passed",
+        "a3": "passed"
+      },
+      "title": "the owner adds a location block to the vhost",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "b-owner-edit": {
+      "checks": 6,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T16:40:24Z",
+      "notes": [
+        "b1: overwritten silently (file panel-text-written, inode changed, owner's answer not served after the trigger)",
+        "b3: overwritten silently (file panel-text-written, inode changed, owner's answer not served after the trigger)"
+      ],
+      "started_at": "2026-10-10T16:39:45Z",
+      "substeps": {
+        "b1": "passed",
+        "b3": "passed"
+      },
+      "title": "the owner changes a directive the template sets (index)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "c-owner-edit": {
+      "checks": 6,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T16:41:03Z",
+      "notes": [
+        "c1: overwritten silently (file panel-text-written, inode changed, owner's answer not served after the trigger)",
+        "c3: overwritten silently (file panel-text-written, inode changed, owner's answer not served after the trigger)"
+      ],
+      "started_at": "2026-10-10T16:40:24Z",
+      "substeps": {
+        "c1": "passed",
+        "c3": "passed"
+      },
+      "title": "the owner replaces the vhost wholesale with a minimal server block of their own",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "d-owner-edit": {
+      "checks": 6,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T16:41:42Z",
+      "notes": [
+        "d1: overwritten silently (file panel-text-written, inode changed, owner's answer not served after the trigger)",
+        "d3: overwritten silently (file panel-text-written, inode changed, owner's answer not served after the trigger)"
+      ],
+      "started_at": "2026-10-10T16:41:03Z",
+      "substeps": {
+        "d1": "passed",
+        "d3": "passed"
+      },
+      "title": "the owner adds an include of their own file to the vhost",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "e-owner-edit": {
+      "checks": 3,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T16:41:52Z",
+      "notes": [
+        "e1: overwritten silently (file panel-text-written, inode changed, owner's answer not served after the trigger)"
+      ],
+      "started_at": "2026-10-10T16:41:42Z",
+      "substeps": {
+        "e1": "passed"
+      },
+      "title": "the owner removes the vhost and its sites-enabled link",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "f-owner-pool": {
+      "checks": 3,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T16:42:11Z",
+      "notes": [
+        "f after_the_panel_start: owner's lines present 2/2, pool sha unchanged, inode same, served set8-ini:memory_limit=193M",
+        "f after_the_pool_save: owner's lines present 0/2, pool sha changed, inode changed, served set8-ini:memory_limit=128M",
+        "f after_the_php_switch: owner's lines present 0/2, pool sha changed, inode changed, served set8-ini:memory_limit=128M"
+      ],
+      "started_at": "2026-10-10T16:41:52Z",
+      "substeps": {
+        "f": "passed"
+      },
+      "title": "the owner adds a directive and a comment to the site's PHP-FPM pool",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "g-immutable": {
+      "checks": 2,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-10T16:42:25Z",
+      "notes": [
+        "g: Panel active after the start: active; API answering: True",
+        "g: vhost files touched by the start (inode, ctime or bytes changed): {\"set8-a.test\": false, \"set8-b.test\": false, \"set1-owner.test\": true}"
+      ],
+      "started_at": "2026-10-10T16:42:11Z",
+      "substeps": {
+        "g": "passed"
+      },
+      "title": "the owner makes the vhost immutable (chattr +i)",
+      "unknown": [],
+      "verdict": "passed"
+    }
+  },
+  "set8": {
+    "a_id": 2,
+    "b_id": 3,
+    "baseline_sha": "05a294adc7780c26d3fab56658a48618b1eb28bc658823964a58dc11866a619a",
+    "pool_path": "/etc/php/php-fpm.d/site2.conf",
+    "pool_sha": "1795edbece04b28edb2262017d02729ab5212ba9ad298f4d0214960f4fa0c569",
+    "reference_gid": 969,
+    "reference_mode": "0644",
+    "reference_sha": "aa97b45e79651bc21337c6eed3fe8244dcb93e37d37f8eeba947bf276935d55b",
+    "reference_uid": 0,
+    "site_id": 2
+  },
+  "setup": {
+    "components": [
+      "mariadb",
+      "nginx",
+      "php-fpm",
+      "postgresql"
+    ],
+    "purpose": "web",
+    "waiting": {
+      "code": "server_setup_access_dns_required",
+      "mail_steps_reached": true,
+      "not_run": [
+        "10-panel_certificate",
+        "11-verify"
+      ],
+      "phase": "access_dns",
+      "polls": 25,
+      "stable_wait_seconds": 122.6,
+      "steps": {
+        "01-dns": "succeeded",
+        "02-service": "succeeded",
+        "03-service": "succeeded",
+        "04-service": "succeeded",
+        "05-service": "succeeded",
+        "06-service": "succeeded",
+        "07-service": "succeeded",
+        "08-firewall": "succeeded",
+        "09-access_dns": "running",
+        "10-panel_certificate": "pending",
+        "11-verify": "pending"
+      }
+    }
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-10T16:32:50Z",
+      "name": "set6-name-pinning",
+      "reason": null,
+      "started_at": "2026-10-10T16:32:45Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:32:55Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-10T16:32:50Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:33:03Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-10T16:32:55Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:35:17Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-10T16:33:03Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:35:17Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-10T16:35:17Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:35:18Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-10T16:35:17Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:38:25Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-10T16:35:18Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-10T16:38:27Z",
+      "name": "site",
+      "reason": null,
+      "started_at": "2026-10-10T16:38:25Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:38:36Z",
+      "name": "S0-sites",
+      "reason": null,
+      "started_at": "2026-10-10T16:38:27Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:39:45Z",
+      "name": "a-owner-edit",
+      "reason": null,
+      "started_at": "2026-10-10T16:38:36Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:40:24Z",
+      "name": "b-owner-edit",
+      "reason": null,
+      "started_at": "2026-10-10T16:39:45Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:41:03Z",
+      "name": "c-owner-edit",
+      "reason": null,
+      "started_at": "2026-10-10T16:40:24Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:41:42Z",
+      "name": "d-owner-edit",
+      "reason": null,
+      "started_at": "2026-10-10T16:41:03Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:41:52Z",
+      "name": "e-owner-edit",
+      "reason": null,
+      "started_at": "2026-10-10T16:41:42Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:42:11Z",
+      "name": "f-owner-pool",
+      "reason": null,
+      "started_at": "2026-10-10T16:41:52Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:42:25Z",
+      "name": "g-immutable",
+      "reason": null,
+      "started_at": "2026-10-10T16:42:11Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:42:25Z",
+      "name": "set6-name-pinning-at-the-end",
+      "reason": null,
+      "started_at": "2026-10-10T16:42:25Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T16:42:27Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-10T16:42:25Z",
+      "verdict": "passed"
+    }
+  ]
+}

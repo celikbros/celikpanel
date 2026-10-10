@@ -1,0 +1,26 @@
+Formatting '/var/tmp/cp-release-drill-s8-arch-a/cells/30d10b2392df709466178ccb/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-s8-arch-a/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-s8-arch-a/cells/30d10b2392df709466178ccb/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-s8-arch-a/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-s8-arch-a", "cell_id": "release-recovery__5dd6617153945e21", "ssh_ports": [4853, 4854]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s8-arch-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s8-arch-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"step": "set6-name-pinning", "verdict": "passed", "reason": null}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "site", "verdict": "passed", "reason": null}
+{"step": "S0-sites", "verdict": "passed", "reason": null}
+{"step": "a-owner-edit", "verdict": "passed", "reason": null}
+{"step": "b-owner-edit", "verdict": "passed", "reason": null}
+{"step": "c-owner-edit", "verdict": "passed", "reason": null}
+{"step": "d-owner-edit", "verdict": "passed", "reason": null}
+{"step": "e-owner-edit", "verdict": "passed", "reason": null}
+{"step": "f-owner-pool", "verdict": "passed", "reason": null}
+{"step": "g-immutable", "verdict": "passed", "reason": null}
+{"step": "set6-name-pinning-at-the-end", "verdict": "passed", "reason": null}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"cell_kind": "set8-owner-edits-baseline", "overall": "complete-for-review", "sections": {"S0-sites": "passed", "a-owner-edit": "passed", "b-owner-edit": "passed", "c-owner-edit": "passed", "d-owner-edit": "passed", "e-owner-edit": "passed", "f-owner-pool": "passed", "g-immutable": "passed"}}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-s8-arch-a", "evidence_retained": true}
+SET8 cell=set8-arch lab=/var/tmp/cp-release-drill-s8-arch-a driver_exit=0 evidence=/var/tmp/cp-release-drill-s8-arch-a/evidence/*/upd1

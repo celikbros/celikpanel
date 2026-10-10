@@ -1,0 +1,84 @@
+{
+  "checks": {
+    "appended_lines": 10,
+    "asked_with": [
+      "getent -s files ahosts NAME and getent -s files hosts NAME (the hosts file only; no DNS question is sent)",
+      "getent ahosts NAME and getent hosts NAME (the lookup order of this guest's nsswitch.conf)"
+    ],
+    "at": "2026-10-10T16:44:31Z",
+    "boot_id": "9c92839b-8bc0-497a-a302-d3456bc5b165",
+    "certbot_program": null,
+    "default_path_answers": {
+      "acme-staging-v02.api.letsencrypt.org": {
+        "ahosts": "::1             STREAM acme-staging-v02.api.letsencrypt.org\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW",
+        "hosts": "::1             acme-staging-v02.api.letsencrypt.org"
+      },
+      "acme-v02.api.letsencrypt.org": {
+        "ahosts": "::1             STREAM acme-v02.api.letsencrypt.org\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW",
+        "hosts": "::1             acme-v02.api.letsencrypt.org"
+      },
+      "acme.zerossl.com": {
+        "ahosts": "::1             STREAM acme.zerossl.com\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW",
+        "hosts": "::1             acme.zerossl.com"
+      },
+      "celikpanel.net": {
+        "ahosts": "127.0.0.1       STREAM celikpanel.net\n127.0.0.1       DGRAM  \n127.0.0.1       RAW",
+        "hosts": "127.0.0.1       celikpanel.net"
+      },
+      "dv.acme-v02.api.pki.goog": {
+        "ahosts": "::1             STREAM dv.acme-v02.api.pki.goog\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW",
+        "hosts": "::1             dv.acme-v02.api.pki.goog"
+      }
+    },
+    "default_path_settle_seconds": 4.0,
+    "file": "name-pinning.json",
+    "loopback_only": {
+      "acme-staging-v02.api.letsencrypt.org": {
+        "default_path": true,
+        "hosts_file": true
+      },
+      "acme-v02.api.letsencrypt.org": {
+        "default_path": true,
+        "hosts_file": true
+      },
+      "acme.zerossl.com": {
+        "default_path": true,
+        "hosts_file": true
+      },
+      "celikpanel.net": {
+        "default_path": true,
+        "hosts_file": true
+      },
+      "dv.acme-v02.api.pki.goog": {
+        "default_path": true,
+        "hosts_file": true
+      }
+    },
+    "names": [
+      "celikpanel.net",
+      "acme-v02.api.letsencrypt.org",
+      "acme-staging-v02.api.letsencrypt.org",
+      "acme.zerossl.com",
+      "dv.acme-v02.api.pki.goog"
+    ],
+    "nsswitch_hosts": [
+      "hosts:          files myhostname resolve [!UNAVAIL=return] dns"
+    ],
+    "product_paths_present": [],
+    "refused": null,
+    "resolved_total_transactions": {
+      "after_them": 6,
+      "before_the_default_path_lookups": 6,
+      "difference": 0,
+      "what_it_is": "systemd-resolved's own counter of lookups it sent to a DNS server; not a capture of traffic, and None where resolvectl is absent"
+    },
+    "systemd_resolved": "active",
+    "uptime_seconds": 58.79,
+    "what": "lab preparation, not an owner action",
+    "written_at": "2026-10-10T16:44:27Z"
+  },
+  "finished_at": "2026-10-10T16:44:31Z",
+  "name": "set6-name-pinning",
+  "started_at": "2026-10-10T16:44:27Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,24 @@
+{
+  "checks": {
+    "checks": 6,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T16:02:23Z",
+    "notes": [
+      "c1: unknown (file other-bytes, inode changed, owner's answer not served after the trigger)",
+      "c3: unknown (file other-bytes, inode changed, owner's answer not served after the trigger)"
+    ],
+    "started_at": "2026-10-10T16:01:33Z",
+    "substeps": {
+      "c1": "passed",
+      "c3": "passed"
+    },
+    "title": "the owner replaces the vhost wholesale with a minimal server block of their own",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T16:02:23Z",
+  "name": "c-owner-edit",
+  "started_at": "2026-10-10T16:01:33Z",
+  "verdict": "passed"
+}

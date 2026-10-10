@@ -1,0 +1,79 @@
+{
+  "action": "owner-pool",
+  "added_lines": [
+    "; set8: added by the server owner by hand",
+    "php_admin_value[memory_limit] = 193M"
+  ],
+  "after": {
+    "ctime_ns": 1791648218710369174,
+    "exists": true,
+    "gid": 989,
+    "group": "celikpanel",
+    "immutable": false,
+    "inode": 135511,
+    "kind": "file",
+    "lsattr": "--------------e-------",
+    "mode": "0644",
+    "mtime_ns": 1791648218710369174,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/php/8.4/fpm/pool.d/site2.conf",
+    "sha256": "ebc87eab65c2bce1f959613f58f0f190a7691d2857857fe2765f1edb33118923",
+    "size": 373,
+    "text": "[site2]\nuser = set8_a_test\ngroup = set8_a_test\nlisten = /var/run/php/php8.4-fpm-site2.sock\nlisten.owner = www-data\nlisten.group = www-data\nlisten.mode = 0660\npm = dynamic\npm.max_children = 5\npm.start_servers = 2\npm.min_spare_servers = 1\npm.max_spare_servers = 3\npm.max_requests = 500\nchdir = /\n; set8: added by the server owner by hand\nphp_admin_value[memory_limit] = 193M\n",
+    "uid": 0
+  },
+  "at": "2026-10-10T16:03:38Z",
+  "before": {
+    "ctime_ns": 1791648216322351892,
+    "exists": true,
+    "gid": 989,
+    "group": "celikpanel",
+    "immutable": false,
+    "inode": 135511,
+    "kind": "file",
+    "lsattr": "--------------e-------",
+    "mode": "0644",
+    "mtime_ns": 1791648216322351892,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/php/8.4/fpm/pool.d/site2.conf",
+    "sha256": "33787f2095df57412b0bc76d25e82f70fa975bda5f4da234c97fa6d8be15c636",
+    "size": 294,
+    "text": "[site2]\nuser = set8_a_test\ngroup = set8_a_test\nlisten = /var/run/php/php8.4-fpm-site2.sock\nlisten.owner = www-data\nlisten.group = www-data\nlisten.mode = 0660\npm = dynamic\npm.max_children = 5\npm.start_servers = 2\npm.min_spare_servers = 1\npm.max_spare_servers = 3\npm.max_requests = 500\nchdir = /\n",
+    "uid": 0
+  },
+  "mode": "owner-pool",
+  "owner_action": true,
+  "path": "/etc/php/8.4/fpm/pool.d/site2.conf",
+  "php_fpm_program": "/usr/sbin/php-fpm8.4",
+  "php_fpm_test": {
+    "argv": [
+      "/usr/sbin/php-fpm8.4",
+      "-t"
+    ],
+    "at": "2026-10-10T16:03:38Z",
+    "returncode": 0,
+    "seconds": 0.058,
+    "status": "ok",
+    "stderr": "[10-Oct-2026 16:03:38] NOTICE: configuration file /etc/php/8.4/fpm/php-fpm.conf test is successful\n",
+    "stdout": ""
+  },
+  "php_units": [
+    "php8.4-fpm.service"
+  ],
+  "reload": {
+    "argv": [
+      "systemctl",
+      "reload",
+      "php8.4-fpm.service"
+    ],
+    "at": "2026-10-10T16:03:38Z",
+    "returncode": 0,
+    "seconds": 0.039,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "schema": "celikpanel/set8-native/v1"
+}

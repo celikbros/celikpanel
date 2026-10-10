@@ -1,0 +1,55 @@
+{
+  "at": "2026-10-10T16:29:42Z",
+  "by_unit": {
+    "celikpanel-agent.service": [
+      "2026-10-10T16:29:14.945543+00:00 dns-ubuntu agent[7518]: 2026/10/10 16:29:14 Getting pool config for site2 (PHP 8.3)",
+      "2026-10-10T16:29:16.410727+00:00 dns-ubuntu agent[7518]: 2026/10/10 16:29:16 Getting pool config for site2 (PHP 8.3)"
+    ],
+    "celikpanel-panel.service": [
+      "2026-10-10T16:29:14.186922+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:29:14 http: TLS handshake error from 127.0.0.1:40228: EOF",
+      "2026-10-10T16:29:14.199322+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:29:14 http: TLS handshake error from 127.0.0.1:40234: EOF",
+      "2026-10-10T16:29:14.210517+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:29:14 http: TLS handshake error from 127.0.0.1:40262: EOF",
+      "2026-10-10T16:29:14.955555+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:29:14 http: TLS handshake error from 127.0.0.1:40278: EOF",
+      "2026-10-10T16:29:14.966455+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:29:14 http: TLS handshake error from 127.0.0.1:40308: EOF",
+      "2026-10-10T16:29:14.990401+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:29:14 http: TLS handshake error from 127.0.0.1:40330: EOF",
+      "2026-10-10T16:29:15.647540+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:29:15 http: TLS handshake error from 127.0.0.1:40344: EOF",
+      "2026-10-10T16:29:15.659428+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:29:15 http: TLS handshake error from 127.0.0.1:40372: EOF",
+      "2026-10-10T16:29:15.670380+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:29:15 http: TLS handshake error from 127.0.0.1:40388: EOF",
+      "2026-10-10T16:29:16.421535+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:29:16 http: TLS handshake error from 127.0.0.1:40406: EOF",
+      "2026-10-10T16:29:16.433221+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:29:16 http: TLS handshake error from 127.0.0.1:40426: EOF",
+      "2026-10-10T16:29:16.456010+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:29:16 http: TLS handshake error from 127.0.0.1:40452: EOF",
+      "2026-10-10T16:29:37.752079+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:29:37 http: TLS handshake error from 127.0.0.1:43272: EOF",
+      "2026-10-10T16:29:37.764139+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:29:37 http: TLS handshake error from 127.0.0.1:43280: EOF"
+    ],
+    "nginx.service": [
+      "2026-10-10T16:29:15.283209+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T16:29:15.289434+00:00 dns-ubuntu nginx[58366]: 2026/10/10 16:29:15 [notice] 58366#58366: signal process started",
+      "2026-10-10T16:29:15.290541+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T16:29:16.746229+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T16:29:16.753009+00:00 dns-ubuntu nginx[58494]: 2026/10/10 16:29:16 [notice] 58494#58494: signal process started",
+      "2026-10-10T16:29:16.754159+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T16:29:37.799121+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T16:29:37.807167+00:00 dns-ubuntu nginx[58680]: 2026/10/10 16:29:37 [notice] 58680#58680: signal process started",
+      "2026-10-10T16:29:37.808642+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+    ],
+    "php8.3-fpm.service": []
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set8-native/v1",
+  "since_epoch": 1791649753,
+  "systemd_manager": [
+    "2026-10-10T16:29:15.283209+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T16:29:15.290541+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T16:29:16.746229+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T16:29:16.754159+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T16:29:37.799121+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T16:29:37.808642+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php8.3-fpm.service"
+  ]
+}

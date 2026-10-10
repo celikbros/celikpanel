@@ -1,0 +1,18 @@
+{
+  "checks": {
+    "journals": [
+      "install",
+      "product",
+      "services"
+    ],
+    "panel_rows_at_end": {
+      "backup_schedules": [],
+      "mail_catch_all": []
+    },
+    "unavailable": {}
+  },
+  "finished_at": "2026-10-10T16:30:52Z",
+  "name": "collect",
+  "started_at": "2026-10-10T16:30:51Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,20 @@
+{
+  "checks": {
+    "checks": 5,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T15:59:14Z",
+    "notes": [],
+    "started_at": "2026-10-10T15:59:06Z",
+    "substeps": {
+      "S0": "passed"
+    },
+    "title": "two PHP sites and A's vhost as the Panel wrote it",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T15:59:14Z",
+  "name": "S0-sites",
+  "started_at": "2026-10-10T15:59:06Z",
+  "verdict": "passed"
+}

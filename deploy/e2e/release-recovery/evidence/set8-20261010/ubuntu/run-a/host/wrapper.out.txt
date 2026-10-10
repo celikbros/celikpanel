@@ -1,0 +1,25 @@
+Formatting '/var/tmp/cp-release-drill-s8-ub-a/cells/c6dac26db5e850b6dc564abc/ubuntu/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-s8-ub-a/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-s8-ub-a", "cell_id": "release-recovery__b8196542f7f6b4b4", "ssh_ports": [4852, 4853]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s8-ub-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s8-ub-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"step": "set6-name-pinning", "verdict": "passed", "reason": null}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "site", "verdict": "passed", "reason": null}
+{"step": "S0-sites", "verdict": "passed", "reason": null}
+{"step": "a-owner-edit", "verdict": "passed", "reason": null}
+{"step": "b-owner-edit", "verdict": "passed", "reason": null}
+{"step": "c-owner-edit", "verdict": "passed", "reason": null}
+{"step": "d-owner-edit", "verdict": "passed", "reason": null}
+{"step": "e-owner-edit", "verdict": "passed", "reason": null}
+{"step": "f-owner-pool", "verdict": "passed", "reason": null}
+{"step": "g-immutable", "verdict": "passed", "reason": null}
+{"step": "set6-name-pinning-at-the-end", "verdict": "passed", "reason": null}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"cell_kind": "set8-owner-edits-baseline", "overall": "complete-for-review", "sections": {"S0-sites": "passed", "a-owner-edit": "passed", "b-owner-edit": "passed", "c-owner-edit": "passed", "d-owner-edit": "passed", "e-owner-edit": "passed", "f-owner-pool": "passed", "g-immutable": "passed"}}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-s8-ub-a", "evidence_retained": true}
+SET8 cell=set8-ubuntu lab=/var/tmp/cp-release-drill-s8-ub-a driver_exit=0 evidence=/var/tmp/cp-release-drill-s8-ub-a/evidence/*/upd1

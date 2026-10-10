@@ -1,0 +1,68 @@
+{
+  "action": "owner-panel",
+  "after": {
+    "ActiveEnterTimestamp": "Sat 2026-10-10 16:04:11 UTC",
+    "ActiveExitTimestamp": "Sat 2026-10-10 16:04:09 UTC",
+    "ActiveState": "active",
+    "ExecMainPID": "41649",
+    "ExecMainStartTimestamp": "Sat 2026-10-10 16:04:11 UTC",
+    "ExecMainStatus": "0",
+    "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+    "InactiveEnterTimestamp": "Sat 2026-10-10 16:04:09 UTC",
+    "InactiveExitTimestamp": "Sat 2026-10-10 16:04:10 UTC",
+    "InvocationID": "fb2701468e6a4eafa9c77ba226c277c2",
+    "LoadState": "loaded",
+    "MainPID": "41649",
+    "NRestarts": "0",
+    "ReloadResult": "success",
+    "Result": "success",
+    "StateChangeTimestamp": "Sat 2026-10-10 16:04:11 UTC",
+    "SubState": "running",
+    "Type": "simple"
+  },
+  "at": "2026-10-10T16:04:10Z",
+  "before": {
+    "ActiveEnterTimestamp": "Sat 2026-10-10 16:03:39 UTC",
+    "ActiveExitTimestamp": "Sat 2026-10-10 16:04:09 UTC",
+    "ActiveState": "inactive",
+    "ExecMainPID": "40327",
+    "ExecMainStartTimestamp": "Sat 2026-10-10 16:03:39 UTC",
+    "ExecMainStatus": "0",
+    "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+    "InactiveEnterTimestamp": "Sat 2026-10-10 16:04:09 UTC",
+    "InactiveExitTimestamp": "Sat 2026-10-10 16:03:39 UTC",
+    "InvocationID": "3996a8343da54015bcbb339fb2b16eb3",
+    "LoadState": "loaded",
+    "MainPID": "0",
+    "NRestarts": "0",
+    "ReloadResult": "success",
+    "Result": "success",
+    "StateChangeTimestamp": "Sat 2026-10-10 16:04:09 UTC",
+    "SubState": "dead",
+    "Type": "simple"
+  },
+  "epoch": 1791648250.9077857,
+  "finished_at": "2026-10-10T16:04:13Z",
+  "is_active": "active",
+  "mode": "owner-panel",
+  "owner_action": true,
+  "reconcile_lines_seen": [
+    "2026-10-10T16:04:11.410211+00:00 dns-debian13 panel[41649]: 2026/10/10 16:04:11 certificate startup reconcile: restore hosted vhost batch: write vhost set8-a.test: failed to write vhost file: rename /etc/nginx/sites-available/.set8-a.test.conf.tmp-283417475 /etc/nginx/sites-available/set8-a.test.conf: operation not permitted; batch rollback incomplete: restore set8-a.test: remove mutated vhost: remove vhost file: remove /etc/nginx/sites-available/set8-a.test.conf: operation not permitted; pending activation rollback: <nil>"
+  ],
+  "schema": "celikpanel/set8-native/v1",
+  "systemctl": {
+    "argv": [
+      "systemctl",
+      "start",
+      "celikpanel-panel.service"
+    ],
+    "at": "2026-10-10T16:04:11Z",
+    "returncode": 0,
+    "seconds": 0.092,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "waited_seconds": 2.2,
+  "what": "start"
+}

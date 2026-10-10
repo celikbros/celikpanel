@@ -1,0 +1,89 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "f: pool settings saved unchanged (POST /php/pool, process-manager values only)",
+  "request": {
+    "body": {
+      "pool_config": {
+        "pm": "dynamic",
+        "pm_max_children": 5,
+        "pm_max_requests": 500,
+        "pm_max_spare_servers": 3,
+        "pm_min_spare_servers": 1,
+        "pm_start_servers": 2
+      },
+      "version": ""
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18853"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18853"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "a8808dcc6448a20cf329a833b360a332"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/2/php/pool"
+  },
+  "response": {
+    "elapsed_seconds": 0.097,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 10 Oct 2026 16:42:02 GMT"
+      ],
+      [
+        "Content-Length",
+        "60"
+      ]
+    ],
+    "json": {
+      "message": "Pool configuration updated",
+      "status": "success"
+    },
+    "status": 200,
+    "text": null
+  }
+}

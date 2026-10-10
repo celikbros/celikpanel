@@ -1,0 +1,58 @@
+{
+  "at": "2026-10-10T16:40:24Z",
+  "by_unit": {
+    "celikpanel-agent.service": [
+      "2026-10-10T16:39:56.484981+00:00 dns-arch agent[410]: 2026/10/10 16:39:56 Getting pool config for site2 (PHP 8.5)",
+      "2026-10-10T16:39:57.905762+00:00 dns-arch agent[410]: 2026/10/10 16:39:57 Getting pool config for site2 (PHP 8.5)"
+    ],
+    "celikpanel-panel.service": [
+      "2026-10-10T16:39:55.878695+00:00 dns-arch panel[3910]: 2026/10/10 16:39:55 http: TLS handshake error from 127.0.0.1:59112: EOF",
+      "2026-10-10T16:39:55.890754+00:00 dns-arch panel[3910]: 2026/10/10 16:39:55 http: TLS handshake error from 127.0.0.1:59144: EOF",
+      "2026-10-10T16:39:55.901173+00:00 dns-arch panel[3910]: 2026/10/10 16:39:55 http: TLS handshake error from 127.0.0.1:59166: EOF",
+      "2026-10-10T16:39:56.490760+00:00 dns-arch panel[3910]: 2026/10/10 16:39:56 http: TLS handshake error from 127.0.0.1:59172: EOF",
+      "2026-10-10T16:39:56.501348+00:00 dns-arch panel[3910]: 2026/10/10 16:39:56 http: TLS handshake error from 127.0.0.1:59194: EOF",
+      "2026-10-10T16:39:56.525504+00:00 dns-arch panel[3910]: 2026/10/10 16:39:56 http: TLS handshake error from 127.0.0.1:59208: EOF",
+      "2026-10-10T16:39:57.283055+00:00 dns-arch panel[3910]: 2026/10/10 16:39:57 http: TLS handshake error from 127.0.0.1:59224: EOF",
+      "2026-10-10T16:39:57.294596+00:00 dns-arch panel[3910]: 2026/10/10 16:39:57 http: TLS handshake error from 127.0.0.1:59246: EOF",
+      "2026-10-10T16:39:57.305944+00:00 dns-arch panel[3910]: 2026/10/10 16:39:57 http: TLS handshake error from 127.0.0.1:59254: EOF",
+      "2026-10-10T16:39:57.911543+00:00 dns-arch panel[3910]: 2026/10/10 16:39:57 http: TLS handshake error from 127.0.0.1:59274: EOF",
+      "2026-10-10T16:39:57.922423+00:00 dns-arch panel[3910]: 2026/10/10 16:39:57 http: TLS handshake error from 127.0.0.1:59294: EOF",
+      "2026-10-10T16:39:57.946756+00:00 dns-arch panel[3910]: 2026/10/10 16:39:57 http: TLS handshake error from 127.0.0.1:59316: EOF",
+      "2026-10-10T16:40:19.399057+00:00 dns-arch panel[3910]: 2026/10/10 16:40:19 http: TLS handshake error from 127.0.0.1:48778: EOF",
+      "2026-10-10T16:40:19.409949+00:00 dns-arch panel[3910]: 2026/10/10 16:40:19 http: TLS handshake error from 127.0.0.1:48794: EOF"
+    ],
+    "nginx.service": [
+      "2026-10-10T16:39:56.843200+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+      "2026-10-10T16:39:56.868166+00:00 dns-arch nginx[4022]: 2026/10/10 16:39:56 [warn] 4022#4022: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+      "2026-10-10T16:39:56.872393+00:00 dns-arch nginx[4022]: 2026/10/10 16:39:56 [notice] 4022#4022: signal process started",
+      "2026-10-10T16:39:56.874020+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+      "2026-10-10T16:39:58.270367+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+      "2026-10-10T16:39:58.298484+00:00 dns-arch nginx[4066]: 2026/10/10 16:39:58 [warn] 4066#4066: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+      "2026-10-10T16:39:58.302597+00:00 dns-arch nginx[4066]: 2026/10/10 16:39:58 [notice] 4066#4066: signal process started",
+      "2026-10-10T16:39:58.304078+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+      "2026-10-10T16:40:19.456053+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+      "2026-10-10T16:40:19.484914+00:00 dns-arch nginx[4164]: 2026/10/10 16:40:19 [warn] 4164#4164: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+      "2026-10-10T16:40:19.489435+00:00 dns-arch nginx[4164]: 2026/10/10 16:40:19 [notice] 4164#4164: signal process started",
+      "2026-10-10T16:40:19.491019+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+    ],
+    "php-fpm.service": []
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set8-native/v1",
+  "since_epoch": 1791650395,
+  "systemd_manager": [
+    "2026-10-10T16:39:56.843200+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+    "2026-10-10T16:39:56.874020+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+    "2026-10-10T16:39:58.270367+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+    "2026-10-10T16:39:58.304078+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+    "2026-10-10T16:40:19.456053+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+    "2026-10-10T16:40:19.491019+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php-fpm.service"
+  ]
+}

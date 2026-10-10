@@ -1,0 +1,4640 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-10T16:28:54Z",
+      "json": [
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T16:25:27Z",
+          "disk_usage": 0,
+          "domain_name": "set8-b.test",
+          "id": 3,
+          "php_version": "8.3",
+          "project_type": "php",
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T16:25:25Z",
+          "disk_usage": 0,
+          "domain_name": "set8-a.test",
+          "id": 2,
+          "php_version": "8.3",
+          "project_type": "php",
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T16:25:19Z",
+          "disk_usage": 0,
+          "domain_name": "set1-owner.test",
+          "id": 1,
+          "php_version": "",
+          "project_type": "static",
+          "ssl_enabled": false,
+          "status": "active"
+        }
+      ],
+      "label": "set8 d1 before: domains (GET /api/v1/domains)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:28:54Z",
+      "json": {
+        "aliases": [],
+        "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "domain_id": 2,
+        "domain_name": "set8-a.test",
+        "redirect_https": false,
+        "redirect_www": false,
+        "redirect_www_available": true,
+        "web_server": "nginx"
+      },
+      "label": "set8 d1 before: general (GET /api/v1/domains/2/general)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/general"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:28:55Z",
+      "json": {
+        "available_versions": [
+          "8.3"
+        ],
+        "domain_id": 2,
+        "domain_name": "set8-a.test",
+        "php_version": "8.3",
+        "pool_config": {
+          "group": "set8_a_test",
+          "listen": "/var/run/php/php8.3-fpm-site2.sock",
+          "listen_group": "www-data",
+          "listen_mode": "0660",
+          "listen_owner": "www-data",
+          "name": "site2",
+          "pm": "dynamic",
+          "pm_max_children": 5,
+          "pm_max_requests": 500,
+          "pm_max_spare_servers": 3,
+          "pm_min_spare_servers": 1,
+          "pm_start_servers": 2,
+          "user": "set8_a_test"
+        },
+        "pool_name": "site2"
+      },
+      "label": "set8 d1 before: php (GET /api/v1/domains/2/php)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/php"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:28:55Z",
+      "json": {
+        "databases": 0,
+        "expiring_certs": [],
+        "mail_accounts": 1
+      },
+      "label": "set8 d1 before: dashboard (GET /api/v1/dashboard)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/dashboard"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:28:55Z",
+      "json": {
+        "dns_identity_ready": true,
+        "mail_hostname": {
+          "current": "dns-ubuntu",
+          "current_usable": false,
+          "hostname": "mail-ubuntu.upd1-infra.test",
+          "source": "saved",
+          "will_set_hostname": false
+        },
+        "profiles": [
+          {
+            "available": true,
+            "description": "Postfix SMTP and Dovecot IMAP/POP3 with authenticated submission.",
+            "id": "core-mail",
+            "latest_attempt_status": "none",
+            "name": "Core Mail",
+            "services": [
+              "postfix",
+              "dovecot"
+            ],
+            "status": "complete",
+            "verified": false,
+            "warning": "Components are running. Run Repair to verify and reconcile the complete mail profile, including mail TLS and authenticated submission."
+          },
+          {
+            "available": true,
+            "description": "Core mail plus Nginx, PHP-FPM and Roundcube webmail.",
+            "id": "webmail",
+            "latest_attempt_status": "succeeded",
+            "name": "Webmail",
+            "services": [
+              "postfix",
+              "dovecot",
+              "nginx",
+              "php-fpm",
+              "roundcube"
+            ],
+            "status": "complete",
+            "verified": true
+          },
+          {
+            "available": true,
+            "description": "Core mail with Rspamd spam filtering.",
+            "id": "protected-mail",
+            "latest_attempt_status": "succeeded",
+            "name": "Spam-Protected Mail",
+            "services": [
+              "postfix",
+              "dovecot",
+              "rspamd"
+            ],
+            "status": "complete",
+            "verified": true
+          }
+        ],
+        "scanned_at": "2026-10-10T16:25:22Z",
+        "services": [
+          {
+            "category": "web",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/php/8.3/fpm/php-fpm.conf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/php/8.3/fpm/pool.d/www.conf"
+              }
+            ],
+            "description": "PHP FastCGI Process Manager",
+            "icon": "🐘",
+            "id": "php-fpm",
+            "installed_evidence": "systemd_unit",
+            "instances": [
+              {
+                "managed": true,
+                "path": "/etc/php/8.3",
+                "status": "active (running)",
+                "unit": "php8.3-fpm",
+                "version": "8.3"
+              }
+            ],
+            "is_installed": true,
+            "kind": "runtime",
+            "name": "PHP-FPM",
+            "packages": [
+              "php-fpm"
+            ],
+            "repair_available": true,
+            "repair_package": "php8.3-fpm",
+            "status": "active (running)",
+            "unit": "php8.3-fpm",
+            "versions": [
+              "8.3"
+            ]
+          },
+          {
+            "category": "web",
+            "config_files": [],
+            "description": "JavaScript Runtime",
+            "icon": "🟩",
+            "id": "node",
+            "instances": [],
+            "is_installed": false,
+            "kind": "runtime",
+            "name": "Node.js",
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "web",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/nginx/nginx.conf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/nginx/sites-enabled/default"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/nginx/sites-enabled/set1-owner.test.conf"
+              }
+            ],
+            "description": "Reverse Proxy Server",
+            "icon": "🔄",
+            "id": "nginx",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Nginx",
+            "packages": [
+              "nginx"
+            ],
+            "ports": [
+              "80/tcp",
+              "443/tcp"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "nginx",
+            "versions": []
+          },
+          {
+            "category": "web",
+            "config_files": [],
+            "conflict_with": "Nginx",
+            "description": "Web Server",
+            "icon": "🪶",
+            "id": "apache",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Apache",
+            "not_offered": true,
+            "not_offered_kind": "integration",
+            "not_offered_reason": "Apache virtual-host integration is not available in CelikPanel yet; use Nginx.",
+            "packages": [
+              "apache2"
+            ],
+            "ports": [
+              "80/tcp",
+              "443/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/postgresql/16/main/postgresql.conf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/postgresql/16/main/pg_hba.conf"
+              }
+            ],
+            "description": "Database Server",
+            "icon": "🐘",
+            "id": "postgresql",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "PostgreSQL",
+            "packages": [
+              "postgresql"
+            ],
+            "repair_available": true,
+            "repair_package": "postgresql-16",
+            "status": "active (running)",
+            "unit": "postgresql@16-main",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/mysql/mariadb.cnf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/mysql/mariadb.conf.d/50-server.cnf"
+              }
+            ],
+            "description": "Database Server",
+            "icon": "🦭",
+            "id": "mariadb",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "MariaDB",
+            "packages": [
+              "mariadb-server"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "mariadb",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [],
+            "description": "MariaDB/MySQL web admin tool",
+            "icon": "🐬",
+            "id": "phpmyadmin",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": false,
+            "kind": "tool",
+            "name": "phpMyAdmin",
+            "packages": [
+              "phpmyadmin"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [],
+            "description": "PostgreSQL web admin tool",
+            "icon": "🐘",
+            "id": "phppgadmin",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": false,
+            "kind": "tool",
+            "name": "phpPgAdmin",
+            "packages": [
+              "phppgadmin"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/postfix/main.cf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/postfix/master.cf"
+              }
+            ],
+            "description": "SMTP Server",
+            "icon": "📧",
+            "id": "postfix",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Postfix",
+            "packages": [
+              "postfix"
+            ],
+            "ports": [
+              "25/tcp",
+              "587/tcp",
+              "465/tcp"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "postfix",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "conflict_with": "Postfix",
+            "description": "SMTP Server",
+            "icon": "📮",
+            "id": "exim",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Exim",
+            "not_offered": true,
+            "not_offered_kind": "integration",
+            "not_offered_reason": "Exim mailbox, TLS and submission integration is not available in CelikPanel yet; use Postfix.",
+            "packages": [
+              "exim4-daemon-light"
+            ],
+            "ports": [
+              "25/tcp",
+              "587/tcp",
+              "465/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/rspamd/rspamd.conf"
+              }
+            ],
+            "description": "Spam Filter & DKIM",
+            "icon": "🧹",
+            "id": "rspamd",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Rspamd",
+            "packages": [
+              "rspamd"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "rspamd",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/dovecot/dovecot.conf"
+              }
+            ],
+            "description": "IMAP/POP3 Server",
+            "icon": "📬",
+            "id": "dovecot",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Dovecot",
+            "packages": [
+              "dovecot-imapd",
+              "dovecot-pop3d",
+              "dovecot-lmtpd"
+            ],
+            "ports": [
+              "143/tcp",
+              "993/tcp",
+              "110/tcp",
+              "995/tcp"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "dovecot",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "description": "Webmail",
+            "icon": "✉️",
+            "id": "roundcube",
+            "installed_evidence": "application_files",
+            "instances": [],
+            "is_installed": true,
+            "kind": "tool",
+            "name": "Roundcube",
+            "repair_available": true,
+            "status": "installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "conflict_with": "Rspamd",
+            "description": "Spam Filter",
+            "icon": "🛡️",
+            "id": "spamassassin",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "SpamAssassin",
+            "packages": [
+              "spamassassin",
+              "spamd",
+              "spamass-milter"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "Built-in VPN server",
+            "icon": "🔐",
+            "id": "wireguard",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "WireGuard VPN",
+            "packages": [
+              "wireguard"
+            ],
+            "ports": [
+              "51820/udp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "SSL certificate provider",
+            "icon": "🔐",
+            "id": "certbot",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": true,
+            "kind": "tool",
+            "name": "Let's Encrypt client (certbot)",
+            "packages": [
+              "certbot"
+            ],
+            "repair_available": true,
+            "status": "installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "Intrusion Prevention",
+            "icon": "🚫",
+            "id": "fail2ban",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Fail2ban",
+            "packages": [
+              "fail2ban"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "nftables — the panel firewall's packet-filtering engine",
+            "icon": "🧱",
+            "id": "nftables",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": true,
+            "kind": "tool",
+            "name": "Firewall engine",
+            "packages": [
+              "nftables"
+            ],
+            "repair_available": true,
+            "status": "installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "Antivirus / malware scanner",
+            "icon": "🦠",
+            "id": "clamav",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "ClamAV",
+            "packages": [
+              "clamav",
+              "clamav-daemon"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "dns",
+            "config_files": [],
+            "description": "DNS Server",
+            "icon": "🌐",
+            "id": "bind",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "BIND",
+            "packages": [
+              "bind9"
+            ],
+            "ports": [
+              "53/tcp",
+              "53/udp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "dns",
+            "config_files": [],
+            "description": "DNS Server",
+            "icon": "⚡",
+            "id": "pdns",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "PowerDNS",
+            "packages": [
+              "pdns-server",
+              "pdns-backend-sqlite3"
+            ],
+            "ports": [
+              "53/tcp",
+              "53/udp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "ftp",
+            "config_files": [],
+            "description": "FTP Server",
+            "icon": "📂",
+            "id": "vsftpd",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "vsftpd",
+            "not_offered": true,
+            "not_offered_kind": "integration",
+            "not_offered_reason": "vsftpd passive-mode ports, TLS and per-subscription access are not integrated in CelikPanel yet.",
+            "packages": [
+              "vsftpd"
+            ],
+            "ports": [
+              "21/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "cache",
+            "config_files": [],
+            "description": "Cache Server",
+            "icon": "⚡",
+            "id": "redis",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Redis",
+            "packages": [
+              "redis-server"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "cache",
+            "config_files": [],
+            "description": "Cache Server",
+            "icon": "🗝️",
+            "id": "valkey",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Valkey",
+            "packages": [
+              "valkey-server"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "cache",
+            "config_files": [],
+            "description": "Cache Server",
+            "icon": "💾",
+            "id": "memcached",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Memcached",
+            "packages": [
+              "memcached"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "monitoring",
+            "config_files": [],
+            "description": "Real-time metrics agent",
+            "icon": "📈",
+            "id": "netdata",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Netdata",
+            "packages": [
+              "netdata"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "system",
+            "config_files": [],
+            "description": "Native cron daemon that runs scheduled tasks",
+            "icon": "⏰",
+            "id": "cron",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Scheduled tasks (cron)",
+            "packages": [
+              "cron"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "cron",
+            "versions": []
+          }
+        ]
+      },
+      "label": "set8 d1 before: components (GET /api/v1/managed-services)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/managed-services"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:28:55Z",
+      "json": {
+        "entries": [
+          {
+            "action": "domain.general.update",
+            "created_at": "2026-10-10 16:28:48",
+            "id": 18,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.general.update",
+            "created_at": "2026-10-10 16:27:59",
+            "id": 17,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.general.update",
+            "created_at": "2026-10-10 16:27:10",
+            "id": 16,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.create",
+            "created_at": "2026-10-10 16:25:28",
+            "id": 15,
+            "ip_address": "127.0.0.1",
+            "resource_id": 3,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.create",
+            "created_at": "2026-10-10 16:25:26",
+            "id": 14,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.create",
+            "created_at": "2026-10-10 16:25:20",
+            "id": 13,
+            "ip_address": "127.0.0.1",
+            "resource_id": 1,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "subscription.bootstrap",
+            "created_at": "2026-10-10 16:25:19",
+            "id": 12,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "subscription",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:certbot",
+            "created_at": "2026-10-10 16:20:14",
+            "id": 11,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:protected-mail",
+            "created_at": "2026-10-10 16:20:00",
+            "id": 10,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:webmail",
+            "created_at": "2026-10-10 16:18:47",
+            "id": 9,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:postgresql",
+            "created_at": "2026-10-10 16:16:56",
+            "id": 8,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:php-fpm",
+            "created_at": "2026-10-10 16:16:26",
+            "id": 7,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:nginx",
+            "created_at": "2026-10-10 16:15:59",
+            "id": 6,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:mariadb",
+            "created_at": "2026-10-10 16:15:44",
+            "id": 5,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.start:web_mail",
+            "created_at": "2026-10-10 16:15:15",
+            "id": 4,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.draft",
+            "created_at": "2026-10-10 16:15:13",
+            "id": 3,
+            "ip_address": "127.0.0.1",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.guidance",
+            "created_at": "2026-10-10 16:10:33",
+            "id": 2,
+            "ip_address": "127.0.0.1",
+            "resource_type": "guided",
+            "username": "labadmin"
+          },
+          {
+            "action": "auth.login",
+            "created_at": "2026-10-10 16:10:33",
+            "id": 1,
+            "ip_address": "127.0.0.1",
+            "username": "labadmin"
+          }
+        ]
+      },
+      "label": "set8 d1 before: audit (GET /api/v1/audit-logs?limit=25)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/audit-logs?limit=25"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:14Z",
+      "json": [
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T16:25:27Z",
+          "disk_usage": 0,
+          "domain_name": "set8-b.test",
+          "id": 3,
+          "php_version": "8.3",
+          "project_type": "php",
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T16:25:25Z",
+          "disk_usage": 0,
+          "domain_name": "set8-a.test",
+          "id": 2,
+          "php_version": "8.3",
+          "project_type": "php",
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T16:25:19Z",
+          "disk_usage": 0,
+          "domain_name": "set1-owner.test",
+          "id": 1,
+          "php_version": "",
+          "project_type": "static",
+          "ssl_enabled": false,
+          "status": "active"
+        }
+      ],
+      "label": "set8 d1 after: domains (GET /api/v1/domains)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:14Z",
+      "json": {
+        "aliases": [],
+        "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "domain_id": 2,
+        "domain_name": "set8-a.test",
+        "redirect_https": false,
+        "redirect_www": false,
+        "redirect_www_available": true,
+        "web_server": "nginx"
+      },
+      "label": "set8 d1 after: general (GET /api/v1/domains/2/general)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/general"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:14Z",
+      "json": {
+        "available_versions": [
+          "8.3"
+        ],
+        "domain_id": 2,
+        "domain_name": "set8-a.test",
+        "php_version": "8.3",
+        "pool_config": {
+          "group": "set8_a_test",
+          "listen": "/var/run/php/php8.3-fpm-site2.sock",
+          "listen_group": "www-data",
+          "listen_mode": "0660",
+          "listen_owner": "www-data",
+          "name": "site2",
+          "pm": "dynamic",
+          "pm_max_children": 5,
+          "pm_max_requests": 500,
+          "pm_max_spare_servers": 3,
+          "pm_min_spare_servers": 1,
+          "pm_start_servers": 2,
+          "user": "set8_a_test"
+        },
+        "pool_name": "site2"
+      },
+      "label": "set8 d1 after: php (GET /api/v1/domains/2/php)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/php"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:14Z",
+      "json": {
+        "databases": 0,
+        "expiring_certs": [],
+        "mail_accounts": 1
+      },
+      "label": "set8 d1 after: dashboard (GET /api/v1/dashboard)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/dashboard"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:14Z",
+      "json": {
+        "dns_identity_ready": true,
+        "mail_hostname": {
+          "current": "dns-ubuntu",
+          "current_usable": false,
+          "hostname": "mail-ubuntu.upd1-infra.test",
+          "source": "saved",
+          "will_set_hostname": false
+        },
+        "profiles": [
+          {
+            "available": true,
+            "description": "Postfix SMTP and Dovecot IMAP/POP3 with authenticated submission.",
+            "id": "core-mail",
+            "latest_attempt_status": "none",
+            "name": "Core Mail",
+            "services": [
+              "postfix",
+              "dovecot"
+            ],
+            "status": "complete",
+            "verified": false,
+            "warning": "Components are running. Run Repair to verify and reconcile the complete mail profile, including mail TLS and authenticated submission."
+          },
+          {
+            "available": true,
+            "description": "Core mail plus Nginx, PHP-FPM and Roundcube webmail.",
+            "id": "webmail",
+            "latest_attempt_status": "succeeded",
+            "name": "Webmail",
+            "services": [
+              "postfix",
+              "dovecot",
+              "nginx",
+              "php-fpm",
+              "roundcube"
+            ],
+            "status": "complete",
+            "verified": true
+          },
+          {
+            "available": true,
+            "description": "Core mail with Rspamd spam filtering.",
+            "id": "protected-mail",
+            "latest_attempt_status": "succeeded",
+            "name": "Spam-Protected Mail",
+            "services": [
+              "postfix",
+              "dovecot",
+              "rspamd"
+            ],
+            "status": "complete",
+            "verified": true
+          }
+        ],
+        "scanned_at": "2026-10-10T16:25:22Z",
+        "services": [
+          {
+            "category": "web",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/php/8.3/fpm/php-fpm.conf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/php/8.3/fpm/pool.d/www.conf"
+              }
+            ],
+            "description": "PHP FastCGI Process Manager",
+            "icon": "🐘",
+            "id": "php-fpm",
+            "installed_evidence": "systemd_unit",
+            "instances": [
+              {
+                "managed": true,
+                "path": "/etc/php/8.3",
+                "status": "active (running)",
+                "unit": "php8.3-fpm",
+                "version": "8.3"
+              }
+            ],
+            "is_installed": true,
+            "kind": "runtime",
+            "name": "PHP-FPM",
+            "packages": [
+              "php-fpm"
+            ],
+            "repair_available": true,
+            "repair_package": "php8.3-fpm",
+            "status": "active (running)",
+            "unit": "php8.3-fpm",
+            "versions": [
+              "8.3"
+            ]
+          },
+          {
+            "category": "web",
+            "config_files": [],
+            "description": "JavaScript Runtime",
+            "icon": "🟩",
+            "id": "node",
+            "instances": [],
+            "is_installed": false,
+            "kind": "runtime",
+            "name": "Node.js",
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "web",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/nginx/nginx.conf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/nginx/sites-enabled/default"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/nginx/sites-enabled/set1-owner.test.conf"
+              }
+            ],
+            "description": "Reverse Proxy Server",
+            "icon": "🔄",
+            "id": "nginx",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Nginx",
+            "packages": [
+              "nginx"
+            ],
+            "ports": [
+              "80/tcp",
+              "443/tcp"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "nginx",
+            "versions": []
+          },
+          {
+            "category": "web",
+            "config_files": [],
+            "conflict_with": "Nginx",
+            "description": "Web Server",
+            "icon": "🪶",
+            "id": "apache",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Apache",
+            "not_offered": true,
+            "not_offered_kind": "integration",
+            "not_offered_reason": "Apache virtual-host integration is not available in CelikPanel yet; use Nginx.",
+            "packages": [
+              "apache2"
+            ],
+            "ports": [
+              "80/tcp",
+              "443/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/postgresql/16/main/postgresql.conf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/postgresql/16/main/pg_hba.conf"
+              }
+            ],
+            "description": "Database Server",
+            "icon": "🐘",
+            "id": "postgresql",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "PostgreSQL",
+            "packages": [
+              "postgresql"
+            ],
+            "repair_available": true,
+            "repair_package": "postgresql-16",
+            "status": "active (running)",
+            "unit": "postgresql@16-main",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/mysql/mariadb.cnf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/mysql/mariadb.conf.d/50-server.cnf"
+              }
+            ],
+            "description": "Database Server",
+            "icon": "🦭",
+            "id": "mariadb",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "MariaDB",
+            "packages": [
+              "mariadb-server"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "mariadb",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [],
+            "description": "MariaDB/MySQL web admin tool",
+            "icon": "🐬",
+            "id": "phpmyadmin",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": false,
+            "kind": "tool",
+            "name": "phpMyAdmin",
+            "packages": [
+              "phpmyadmin"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [],
+            "description": "PostgreSQL web admin tool",
+            "icon": "🐘",
+            "id": "phppgadmin",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": false,
+            "kind": "tool",
+            "name": "phpPgAdmin",
+            "packages": [
+              "phppgadmin"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/postfix/main.cf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/postfix/master.cf"
+              }
+            ],
+            "description": "SMTP Server",
+            "icon": "📧",
+            "id": "postfix",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Postfix",
+            "packages": [
+              "postfix"
+            ],
+            "ports": [
+              "25/tcp",
+              "587/tcp",
+              "465/tcp"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "postfix",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "conflict_with": "Postfix",
+            "description": "SMTP Server",
+            "icon": "📮",
+            "id": "exim",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Exim",
+            "not_offered": true,
+            "not_offered_kind": "integration",
+            "not_offered_reason": "Exim mailbox, TLS and submission integration is not available in CelikPanel yet; use Postfix.",
+            "packages": [
+              "exim4-daemon-light"
+            ],
+            "ports": [
+              "25/tcp",
+              "587/tcp",
+              "465/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/rspamd/rspamd.conf"
+              }
+            ],
+            "description": "Spam Filter & DKIM",
+            "icon": "🧹",
+            "id": "rspamd",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Rspamd",
+            "packages": [
+              "rspamd"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "rspamd",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/dovecot/dovecot.conf"
+              }
+            ],
+            "description": "IMAP/POP3 Server",
+            "icon": "📬",
+            "id": "dovecot",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Dovecot",
+            "packages": [
+              "dovecot-imapd",
+              "dovecot-pop3d",
+              "dovecot-lmtpd"
+            ],
+            "ports": [
+              "143/tcp",
+              "993/tcp",
+              "110/tcp",
+              "995/tcp"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "dovecot",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "description": "Webmail",
+            "icon": "✉️",
+            "id": "roundcube",
+            "installed_evidence": "application_files",
+            "instances": [],
+            "is_installed": true,
+            "kind": "tool",
+            "name": "Roundcube",
+            "repair_available": true,
+            "status": "installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "conflict_with": "Rspamd",
+            "description": "Spam Filter",
+            "icon": "🛡️",
+            "id": "spamassassin",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "SpamAssassin",
+            "packages": [
+              "spamassassin",
+              "spamd",
+              "spamass-milter"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "Built-in VPN server",
+            "icon": "🔐",
+            "id": "wireguard",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "WireGuard VPN",
+            "packages": [
+              "wireguard"
+            ],
+            "ports": [
+              "51820/udp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "SSL certificate provider",
+            "icon": "🔐",
+            "id": "certbot",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": true,
+            "kind": "tool",
+            "name": "Let's Encrypt client (certbot)",
+            "packages": [
+              "certbot"
+            ],
+            "repair_available": true,
+            "status": "installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "Intrusion Prevention",
+            "icon": "🚫",
+            "id": "fail2ban",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Fail2ban",
+            "packages": [
+              "fail2ban"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "nftables — the panel firewall's packet-filtering engine",
+            "icon": "🧱",
+            "id": "nftables",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": true,
+            "kind": "tool",
+            "name": "Firewall engine",
+            "packages": [
+              "nftables"
+            ],
+            "repair_available": true,
+            "status": "installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "Antivirus / malware scanner",
+            "icon": "🦠",
+            "id": "clamav",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "ClamAV",
+            "packages": [
+              "clamav",
+              "clamav-daemon"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "dns",
+            "config_files": [],
+            "description": "DNS Server",
+            "icon": "🌐",
+            "id": "bind",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "BIND",
+            "packages": [
+              "bind9"
+            ],
+            "ports": [
+              "53/tcp",
+              "53/udp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "dns",
+            "config_files": [],
+            "description": "DNS Server",
+            "icon": "⚡",
+            "id": "pdns",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "PowerDNS",
+            "packages": [
+              "pdns-server",
+              "pdns-backend-sqlite3"
+            ],
+            "ports": [
+              "53/tcp",
+              "53/udp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "ftp",
+            "config_files": [],
+            "description": "FTP Server",
+            "icon": "📂",
+            "id": "vsftpd",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "vsftpd",
+            "not_offered": true,
+            "not_offered_kind": "integration",
+            "not_offered_reason": "vsftpd passive-mode ports, TLS and per-subscription access are not integrated in CelikPanel yet.",
+            "packages": [
+              "vsftpd"
+            ],
+            "ports": [
+              "21/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "cache",
+            "config_files": [],
+            "description": "Cache Server",
+            "icon": "⚡",
+            "id": "redis",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Redis",
+            "packages": [
+              "redis-server"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "cache",
+            "config_files": [],
+            "description": "Cache Server",
+            "icon": "🗝️",
+            "id": "valkey",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Valkey",
+            "packages": [
+              "valkey-server"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "cache",
+            "config_files": [],
+            "description": "Cache Server",
+            "icon": "💾",
+            "id": "memcached",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Memcached",
+            "packages": [
+              "memcached"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "monitoring",
+            "config_files": [],
+            "description": "Real-time metrics agent",
+            "icon": "📈",
+            "id": "netdata",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Netdata",
+            "packages": [
+              "netdata"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "system",
+            "config_files": [],
+            "description": "Native cron daemon that runs scheduled tasks",
+            "icon": "⏰",
+            "id": "cron",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Scheduled tasks (cron)",
+            "packages": [
+              "cron"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "cron",
+            "versions": []
+          }
+        ]
+      },
+      "label": "set8 d1 after: components (GET /api/v1/managed-services)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/managed-services"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:14Z",
+      "json": {
+        "entries": [
+          {
+            "action": "domain.general.update",
+            "created_at": "2026-10-10 16:28:48",
+            "id": 18,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.general.update",
+            "created_at": "2026-10-10 16:27:59",
+            "id": 17,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.general.update",
+            "created_at": "2026-10-10 16:27:10",
+            "id": 16,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.create",
+            "created_at": "2026-10-10 16:25:28",
+            "id": 15,
+            "ip_address": "127.0.0.1",
+            "resource_id": 3,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.create",
+            "created_at": "2026-10-10 16:25:26",
+            "id": 14,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.create",
+            "created_at": "2026-10-10 16:25:20",
+            "id": 13,
+            "ip_address": "127.0.0.1",
+            "resource_id": 1,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "subscription.bootstrap",
+            "created_at": "2026-10-10 16:25:19",
+            "id": 12,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "subscription",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:certbot",
+            "created_at": "2026-10-10 16:20:14",
+            "id": 11,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:protected-mail",
+            "created_at": "2026-10-10 16:20:00",
+            "id": 10,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:webmail",
+            "created_at": "2026-10-10 16:18:47",
+            "id": 9,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:postgresql",
+            "created_at": "2026-10-10 16:16:56",
+            "id": 8,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:php-fpm",
+            "created_at": "2026-10-10 16:16:26",
+            "id": 7,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:nginx",
+            "created_at": "2026-10-10 16:15:59",
+            "id": 6,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:mariadb",
+            "created_at": "2026-10-10 16:15:44",
+            "id": 5,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.start:web_mail",
+            "created_at": "2026-10-10 16:15:15",
+            "id": 4,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.draft",
+            "created_at": "2026-10-10 16:15:13",
+            "id": 3,
+            "ip_address": "127.0.0.1",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.guidance",
+            "created_at": "2026-10-10 16:10:33",
+            "id": 2,
+            "ip_address": "127.0.0.1",
+            "resource_type": "guided",
+            "username": "labadmin"
+          },
+          {
+            "action": "auth.login",
+            "created_at": "2026-10-10 16:10:33",
+            "id": 1,
+            "ip_address": "127.0.0.1",
+            "username": "labadmin"
+          }
+        ]
+      },
+      "label": "set8 d1 after: audit (GET /api/v1/audit-logs?limit=25)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/audit-logs?limit=25"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:15Z",
+      "json": [
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T16:25:27Z",
+          "disk_usage": 0,
+          "domain_name": "set8-b.test",
+          "id": 3,
+          "php_version": "8.3",
+          "project_type": "php",
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T16:25:25Z",
+          "disk_usage": 0,
+          "domain_name": "set8-a.test",
+          "id": 2,
+          "php_version": "8.3",
+          "project_type": "php",
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T16:25:19Z",
+          "disk_usage": 0,
+          "domain_name": "set1-owner.test",
+          "id": 1,
+          "php_version": "",
+          "project_type": "static",
+          "ssl_enabled": false,
+          "status": "active"
+        }
+      ],
+      "label": "set8 d3 before: domains (GET /api/v1/domains)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:15Z",
+      "json": {
+        "aliases": [],
+        "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "domain_id": 2,
+        "domain_name": "set8-a.test",
+        "redirect_https": false,
+        "redirect_www": false,
+        "redirect_www_available": true,
+        "web_server": "nginx"
+      },
+      "label": "set8 d3 before: general (GET /api/v1/domains/2/general)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/general"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:16Z",
+      "json": {
+        "available_versions": [
+          "8.3"
+        ],
+        "domain_id": 2,
+        "domain_name": "set8-a.test",
+        "php_version": "8.3",
+        "pool_config": {
+          "group": "set8_a_test",
+          "listen": "/var/run/php/php8.3-fpm-site2.sock",
+          "listen_group": "www-data",
+          "listen_mode": "0660",
+          "listen_owner": "www-data",
+          "name": "site2",
+          "pm": "dynamic",
+          "pm_max_children": 5,
+          "pm_max_requests": 500,
+          "pm_max_spare_servers": 3,
+          "pm_min_spare_servers": 1,
+          "pm_start_servers": 2,
+          "user": "set8_a_test"
+        },
+        "pool_name": "site2"
+      },
+      "label": "set8 d3 before: php (GET /api/v1/domains/2/php)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/php"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:16Z",
+      "json": {
+        "databases": 0,
+        "expiring_certs": [],
+        "mail_accounts": 1
+      },
+      "label": "set8 d3 before: dashboard (GET /api/v1/dashboard)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/dashboard"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:16Z",
+      "json": {
+        "dns_identity_ready": true,
+        "mail_hostname": {
+          "current": "dns-ubuntu",
+          "current_usable": false,
+          "hostname": "mail-ubuntu.upd1-infra.test",
+          "source": "saved",
+          "will_set_hostname": false
+        },
+        "profiles": [
+          {
+            "available": true,
+            "description": "Postfix SMTP and Dovecot IMAP/POP3 with authenticated submission.",
+            "id": "core-mail",
+            "latest_attempt_status": "none",
+            "name": "Core Mail",
+            "services": [
+              "postfix",
+              "dovecot"
+            ],
+            "status": "complete",
+            "verified": false,
+            "warning": "Components are running. Run Repair to verify and reconcile the complete mail profile, including mail TLS and authenticated submission."
+          },
+          {
+            "available": true,
+            "description": "Core mail plus Nginx, PHP-FPM and Roundcube webmail.",
+            "id": "webmail",
+            "latest_attempt_status": "succeeded",
+            "name": "Webmail",
+            "services": [
+              "postfix",
+              "dovecot",
+              "nginx",
+              "php-fpm",
+              "roundcube"
+            ],
+            "status": "complete",
+            "verified": true
+          },
+          {
+            "available": true,
+            "description": "Core mail with Rspamd spam filtering.",
+            "id": "protected-mail",
+            "latest_attempt_status": "succeeded",
+            "name": "Spam-Protected Mail",
+            "services": [
+              "postfix",
+              "dovecot",
+              "rspamd"
+            ],
+            "status": "complete",
+            "verified": true
+          }
+        ],
+        "scanned_at": "2026-10-10T16:25:22Z",
+        "services": [
+          {
+            "category": "web",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/php/8.3/fpm/php-fpm.conf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/php/8.3/fpm/pool.d/www.conf"
+              }
+            ],
+            "description": "PHP FastCGI Process Manager",
+            "icon": "🐘",
+            "id": "php-fpm",
+            "installed_evidence": "systemd_unit",
+            "instances": [
+              {
+                "managed": true,
+                "path": "/etc/php/8.3",
+                "status": "active (running)",
+                "unit": "php8.3-fpm",
+                "version": "8.3"
+              }
+            ],
+            "is_installed": true,
+            "kind": "runtime",
+            "name": "PHP-FPM",
+            "packages": [
+              "php-fpm"
+            ],
+            "repair_available": true,
+            "repair_package": "php8.3-fpm",
+            "status": "active (running)",
+            "unit": "php8.3-fpm",
+            "versions": [
+              "8.3"
+            ]
+          },
+          {
+            "category": "web",
+            "config_files": [],
+            "description": "JavaScript Runtime",
+            "icon": "🟩",
+            "id": "node",
+            "instances": [],
+            "is_installed": false,
+            "kind": "runtime",
+            "name": "Node.js",
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "web",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/nginx/nginx.conf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/nginx/sites-enabled/default"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/nginx/sites-enabled/set1-owner.test.conf"
+              }
+            ],
+            "description": "Reverse Proxy Server",
+            "icon": "🔄",
+            "id": "nginx",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Nginx",
+            "packages": [
+              "nginx"
+            ],
+            "ports": [
+              "80/tcp",
+              "443/tcp"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "nginx",
+            "versions": []
+          },
+          {
+            "category": "web",
+            "config_files": [],
+            "conflict_with": "Nginx",
+            "description": "Web Server",
+            "icon": "🪶",
+            "id": "apache",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Apache",
+            "not_offered": true,
+            "not_offered_kind": "integration",
+            "not_offered_reason": "Apache virtual-host integration is not available in CelikPanel yet; use Nginx.",
+            "packages": [
+              "apache2"
+            ],
+            "ports": [
+              "80/tcp",
+              "443/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/postgresql/16/main/postgresql.conf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/postgresql/16/main/pg_hba.conf"
+              }
+            ],
+            "description": "Database Server",
+            "icon": "🐘",
+            "id": "postgresql",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "PostgreSQL",
+            "packages": [
+              "postgresql"
+            ],
+            "repair_available": true,
+            "repair_package": "postgresql-16",
+            "status": "active (running)",
+            "unit": "postgresql@16-main",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/mysql/mariadb.cnf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/mysql/mariadb.conf.d/50-server.cnf"
+              }
+            ],
+            "description": "Database Server",
+            "icon": "🦭",
+            "id": "mariadb",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "MariaDB",
+            "packages": [
+              "mariadb-server"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "mariadb",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [],
+            "description": "MariaDB/MySQL web admin tool",
+            "icon": "🐬",
+            "id": "phpmyadmin",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": false,
+            "kind": "tool",
+            "name": "phpMyAdmin",
+            "packages": [
+              "phpmyadmin"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [],
+            "description": "PostgreSQL web admin tool",
+            "icon": "🐘",
+            "id": "phppgadmin",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": false,
+            "kind": "tool",
+            "name": "phpPgAdmin",
+            "packages": [
+              "phppgadmin"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/postfix/main.cf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/postfix/master.cf"
+              }
+            ],
+            "description": "SMTP Server",
+            "icon": "📧",
+            "id": "postfix",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Postfix",
+            "packages": [
+              "postfix"
+            ],
+            "ports": [
+              "25/tcp",
+              "587/tcp",
+              "465/tcp"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "postfix",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "conflict_with": "Postfix",
+            "description": "SMTP Server",
+            "icon": "📮",
+            "id": "exim",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Exim",
+            "not_offered": true,
+            "not_offered_kind": "integration",
+            "not_offered_reason": "Exim mailbox, TLS and submission integration is not available in CelikPanel yet; use Postfix.",
+            "packages": [
+              "exim4-daemon-light"
+            ],
+            "ports": [
+              "25/tcp",
+              "587/tcp",
+              "465/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/rspamd/rspamd.conf"
+              }
+            ],
+            "description": "Spam Filter & DKIM",
+            "icon": "🧹",
+            "id": "rspamd",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Rspamd",
+            "packages": [
+              "rspamd"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "rspamd",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/dovecot/dovecot.conf"
+              }
+            ],
+            "description": "IMAP/POP3 Server",
+            "icon": "📬",
+            "id": "dovecot",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Dovecot",
+            "packages": [
+              "dovecot-imapd",
+              "dovecot-pop3d",
+              "dovecot-lmtpd"
+            ],
+            "ports": [
+              "143/tcp",
+              "993/tcp",
+              "110/tcp",
+              "995/tcp"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "dovecot",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "description": "Webmail",
+            "icon": "✉️",
+            "id": "roundcube",
+            "installed_evidence": "application_files",
+            "instances": [],
+            "is_installed": true,
+            "kind": "tool",
+            "name": "Roundcube",
+            "repair_available": true,
+            "status": "installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "conflict_with": "Rspamd",
+            "description": "Spam Filter",
+            "icon": "🛡️",
+            "id": "spamassassin",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "SpamAssassin",
+            "packages": [
+              "spamassassin",
+              "spamd",
+              "spamass-milter"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "Built-in VPN server",
+            "icon": "🔐",
+            "id": "wireguard",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "WireGuard VPN",
+            "packages": [
+              "wireguard"
+            ],
+            "ports": [
+              "51820/udp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "SSL certificate provider",
+            "icon": "🔐",
+            "id": "certbot",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": true,
+            "kind": "tool",
+            "name": "Let's Encrypt client (certbot)",
+            "packages": [
+              "certbot"
+            ],
+            "repair_available": true,
+            "status": "installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "Intrusion Prevention",
+            "icon": "🚫",
+            "id": "fail2ban",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Fail2ban",
+            "packages": [
+              "fail2ban"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "nftables — the panel firewall's packet-filtering engine",
+            "icon": "🧱",
+            "id": "nftables",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": true,
+            "kind": "tool",
+            "name": "Firewall engine",
+            "packages": [
+              "nftables"
+            ],
+            "repair_available": true,
+            "status": "installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "Antivirus / malware scanner",
+            "icon": "🦠",
+            "id": "clamav",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "ClamAV",
+            "packages": [
+              "clamav",
+              "clamav-daemon"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "dns",
+            "config_files": [],
+            "description": "DNS Server",
+            "icon": "🌐",
+            "id": "bind",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "BIND",
+            "packages": [
+              "bind9"
+            ],
+            "ports": [
+              "53/tcp",
+              "53/udp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "dns",
+            "config_files": [],
+            "description": "DNS Server",
+            "icon": "⚡",
+            "id": "pdns",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "PowerDNS",
+            "packages": [
+              "pdns-server",
+              "pdns-backend-sqlite3"
+            ],
+            "ports": [
+              "53/tcp",
+              "53/udp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "ftp",
+            "config_files": [],
+            "description": "FTP Server",
+            "icon": "📂",
+            "id": "vsftpd",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "vsftpd",
+            "not_offered": true,
+            "not_offered_kind": "integration",
+            "not_offered_reason": "vsftpd passive-mode ports, TLS and per-subscription access are not integrated in CelikPanel yet.",
+            "packages": [
+              "vsftpd"
+            ],
+            "ports": [
+              "21/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "cache",
+            "config_files": [],
+            "description": "Cache Server",
+            "icon": "⚡",
+            "id": "redis",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Redis",
+            "packages": [
+              "redis-server"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "cache",
+            "config_files": [],
+            "description": "Cache Server",
+            "icon": "🗝️",
+            "id": "valkey",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Valkey",
+            "packages": [
+              "valkey-server"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "cache",
+            "config_files": [],
+            "description": "Cache Server",
+            "icon": "💾",
+            "id": "memcached",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Memcached",
+            "packages": [
+              "memcached"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "monitoring",
+            "config_files": [],
+            "description": "Real-time metrics agent",
+            "icon": "📈",
+            "id": "netdata",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Netdata",
+            "packages": [
+              "netdata"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "system",
+            "config_files": [],
+            "description": "Native cron daemon that runs scheduled tasks",
+            "icon": "⏰",
+            "id": "cron",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Scheduled tasks (cron)",
+            "packages": [
+              "cron"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "cron",
+            "versions": []
+          }
+        ]
+      },
+      "label": "set8 d3 before: components (GET /api/v1/managed-services)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/managed-services"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:16Z",
+      "json": {
+        "entries": [
+          {
+            "action": "domain.general.update",
+            "created_at": "2026-10-10 16:28:48",
+            "id": 18,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.general.update",
+            "created_at": "2026-10-10 16:27:59",
+            "id": 17,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.general.update",
+            "created_at": "2026-10-10 16:27:10",
+            "id": 16,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.create",
+            "created_at": "2026-10-10 16:25:28",
+            "id": 15,
+            "ip_address": "127.0.0.1",
+            "resource_id": 3,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.create",
+            "created_at": "2026-10-10 16:25:26",
+            "id": 14,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.create",
+            "created_at": "2026-10-10 16:25:20",
+            "id": 13,
+            "ip_address": "127.0.0.1",
+            "resource_id": 1,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "subscription.bootstrap",
+            "created_at": "2026-10-10 16:25:19",
+            "id": 12,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "subscription",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:certbot",
+            "created_at": "2026-10-10 16:20:14",
+            "id": 11,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:protected-mail",
+            "created_at": "2026-10-10 16:20:00",
+            "id": 10,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:webmail",
+            "created_at": "2026-10-10 16:18:47",
+            "id": 9,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:postgresql",
+            "created_at": "2026-10-10 16:16:56",
+            "id": 8,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:php-fpm",
+            "created_at": "2026-10-10 16:16:26",
+            "id": 7,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:nginx",
+            "created_at": "2026-10-10 16:15:59",
+            "id": 6,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:mariadb",
+            "created_at": "2026-10-10 16:15:44",
+            "id": 5,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.start:web_mail",
+            "created_at": "2026-10-10 16:15:15",
+            "id": 4,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.draft",
+            "created_at": "2026-10-10 16:15:13",
+            "id": 3,
+            "ip_address": "127.0.0.1",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.guidance",
+            "created_at": "2026-10-10 16:10:33",
+            "id": 2,
+            "ip_address": "127.0.0.1",
+            "resource_type": "guided",
+            "username": "labadmin"
+          },
+          {
+            "action": "auth.login",
+            "created_at": "2026-10-10 16:10:33",
+            "id": 1,
+            "ip_address": "127.0.0.1",
+            "username": "labadmin"
+          }
+        ]
+      },
+      "label": "set8 d3 before: audit (GET /api/v1/audit-logs?limit=25)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/audit-logs?limit=25"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:37Z",
+      "json": {
+        "aliases": [],
+        "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "domain_id": 2,
+        "domain_name": "set8-a.test",
+        "redirect_https": false,
+        "redirect_www": false,
+        "redirect_www_available": true,
+        "web_server": "nginx"
+      },
+      "label": "set8 d3: General settings read",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/general"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:37Z",
+      "json": {
+        "status": "success"
+      },
+      "label": "set8 d3: General settings saved unchanged (renders the vhost)",
+      "request": {
+        "body": {
+          "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+          "redirect_www": false,
+          "web_server": "nginx"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/2/general"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:42Z",
+      "json": [
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T16:25:27Z",
+          "disk_usage": 0,
+          "domain_name": "set8-b.test",
+          "id": 3,
+          "php_version": "8.3",
+          "project_type": "php",
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T16:25:25Z",
+          "disk_usage": 0,
+          "domain_name": "set8-a.test",
+          "id": 2,
+          "php_version": "8.3",
+          "project_type": "php",
+          "ssl_enabled": false,
+          "status": "active"
+        },
+        {
+          "bandwidth": 0,
+          "created_at": "2026-10-10T16:25:19Z",
+          "disk_usage": 0,
+          "domain_name": "set1-owner.test",
+          "id": 1,
+          "php_version": "",
+          "project_type": "static",
+          "ssl_enabled": false,
+          "status": "active"
+        }
+      ],
+      "label": "set8 d3 after: domains (GET /api/v1/domains)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:42Z",
+      "json": {
+        "aliases": [],
+        "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+        "domain_id": 2,
+        "domain_name": "set8-a.test",
+        "redirect_https": false,
+        "redirect_www": false,
+        "redirect_www_available": true,
+        "web_server": "nginx"
+      },
+      "label": "set8 d3 after: general (GET /api/v1/domains/2/general)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/general"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:42Z",
+      "json": {
+        "available_versions": [
+          "8.3"
+        ],
+        "domain_id": 2,
+        "domain_name": "set8-a.test",
+        "php_version": "8.3",
+        "pool_config": {
+          "group": "set8_a_test",
+          "listen": "/var/run/php/php8.3-fpm-site2.sock",
+          "listen_group": "www-data",
+          "listen_mode": "0660",
+          "listen_owner": "www-data",
+          "name": "site2",
+          "pm": "dynamic",
+          "pm_max_children": 5,
+          "pm_max_requests": 500,
+          "pm_max_spare_servers": 3,
+          "pm_min_spare_servers": 1,
+          "pm_start_servers": 2,
+          "user": "set8_a_test"
+        },
+        "pool_name": "site2"
+      },
+      "label": "set8 d3 after: php (GET /api/v1/domains/2/php)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/2/php"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:42Z",
+      "json": {
+        "databases": 0,
+        "expiring_certs": [],
+        "mail_accounts": 1
+      },
+      "label": "set8 d3 after: dashboard (GET /api/v1/dashboard)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/dashboard"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:43Z",
+      "json": {
+        "dns_identity_ready": true,
+        "mail_hostname": {
+          "current": "dns-ubuntu",
+          "current_usable": false,
+          "hostname": "mail-ubuntu.upd1-infra.test",
+          "source": "saved",
+          "will_set_hostname": false
+        },
+        "profiles": [
+          {
+            "available": true,
+            "description": "Postfix SMTP and Dovecot IMAP/POP3 with authenticated submission.",
+            "id": "core-mail",
+            "latest_attempt_status": "none",
+            "name": "Core Mail",
+            "services": [
+              "postfix",
+              "dovecot"
+            ],
+            "status": "complete",
+            "verified": false,
+            "warning": "Components are running. Run Repair to verify and reconcile the complete mail profile, including mail TLS and authenticated submission."
+          },
+          {
+            "available": true,
+            "description": "Core mail plus Nginx, PHP-FPM and Roundcube webmail.",
+            "id": "webmail",
+            "latest_attempt_status": "succeeded",
+            "name": "Webmail",
+            "services": [
+              "postfix",
+              "dovecot",
+              "nginx",
+              "php-fpm",
+              "roundcube"
+            ],
+            "status": "complete",
+            "verified": true
+          },
+          {
+            "available": true,
+            "description": "Core mail with Rspamd spam filtering.",
+            "id": "protected-mail",
+            "latest_attempt_status": "succeeded",
+            "name": "Spam-Protected Mail",
+            "services": [
+              "postfix",
+              "dovecot",
+              "rspamd"
+            ],
+            "status": "complete",
+            "verified": true
+          }
+        ],
+        "scanned_at": "2026-10-10T16:25:22Z",
+        "services": [
+          {
+            "category": "web",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/php/8.3/fpm/php-fpm.conf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/php/8.3/fpm/pool.d/www.conf"
+              }
+            ],
+            "description": "PHP FastCGI Process Manager",
+            "icon": "🐘",
+            "id": "php-fpm",
+            "installed_evidence": "systemd_unit",
+            "instances": [
+              {
+                "managed": true,
+                "path": "/etc/php/8.3",
+                "status": "active (running)",
+                "unit": "php8.3-fpm",
+                "version": "8.3"
+              }
+            ],
+            "is_installed": true,
+            "kind": "runtime",
+            "name": "PHP-FPM",
+            "packages": [
+              "php-fpm"
+            ],
+            "repair_available": true,
+            "repair_package": "php8.3-fpm",
+            "status": "active (running)",
+            "unit": "php8.3-fpm",
+            "versions": [
+              "8.3"
+            ]
+          },
+          {
+            "category": "web",
+            "config_files": [],
+            "description": "JavaScript Runtime",
+            "icon": "🟩",
+            "id": "node",
+            "instances": [],
+            "is_installed": false,
+            "kind": "runtime",
+            "name": "Node.js",
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "web",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/nginx/nginx.conf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/nginx/sites-enabled/default"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/nginx/sites-enabled/set1-owner.test.conf"
+              }
+            ],
+            "description": "Reverse Proxy Server",
+            "icon": "🔄",
+            "id": "nginx",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Nginx",
+            "packages": [
+              "nginx"
+            ],
+            "ports": [
+              "80/tcp",
+              "443/tcp"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "nginx",
+            "versions": []
+          },
+          {
+            "category": "web",
+            "config_files": [],
+            "conflict_with": "Nginx",
+            "description": "Web Server",
+            "icon": "🪶",
+            "id": "apache",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Apache",
+            "not_offered": true,
+            "not_offered_kind": "integration",
+            "not_offered_reason": "Apache virtual-host integration is not available in CelikPanel yet; use Nginx.",
+            "packages": [
+              "apache2"
+            ],
+            "ports": [
+              "80/tcp",
+              "443/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/postgresql/16/main/postgresql.conf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/postgresql/16/main/pg_hba.conf"
+              }
+            ],
+            "description": "Database Server",
+            "icon": "🐘",
+            "id": "postgresql",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "PostgreSQL",
+            "packages": [
+              "postgresql"
+            ],
+            "repair_available": true,
+            "repair_package": "postgresql-16",
+            "status": "active (running)",
+            "unit": "postgresql@16-main",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/mysql/mariadb.cnf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/mysql/mariadb.conf.d/50-server.cnf"
+              }
+            ],
+            "description": "Database Server",
+            "icon": "🦭",
+            "id": "mariadb",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "MariaDB",
+            "packages": [
+              "mariadb-server"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "mariadb",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [],
+            "description": "MariaDB/MySQL web admin tool",
+            "icon": "🐬",
+            "id": "phpmyadmin",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": false,
+            "kind": "tool",
+            "name": "phpMyAdmin",
+            "packages": [
+              "phpmyadmin"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [],
+            "description": "PostgreSQL web admin tool",
+            "icon": "🐘",
+            "id": "phppgadmin",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": false,
+            "kind": "tool",
+            "name": "phpPgAdmin",
+            "packages": [
+              "phppgadmin"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/postfix/main.cf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/postfix/master.cf"
+              }
+            ],
+            "description": "SMTP Server",
+            "icon": "📧",
+            "id": "postfix",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Postfix",
+            "packages": [
+              "postfix"
+            ],
+            "ports": [
+              "25/tcp",
+              "587/tcp",
+              "465/tcp"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "postfix",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "conflict_with": "Postfix",
+            "description": "SMTP Server",
+            "icon": "📮",
+            "id": "exim",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Exim",
+            "not_offered": true,
+            "not_offered_kind": "integration",
+            "not_offered_reason": "Exim mailbox, TLS and submission integration is not available in CelikPanel yet; use Postfix.",
+            "packages": [
+              "exim4-daemon-light"
+            ],
+            "ports": [
+              "25/tcp",
+              "587/tcp",
+              "465/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/rspamd/rspamd.conf"
+              }
+            ],
+            "description": "Spam Filter & DKIM",
+            "icon": "🧹",
+            "id": "rspamd",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Rspamd",
+            "packages": [
+              "rspamd"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "rspamd",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/dovecot/dovecot.conf"
+              }
+            ],
+            "description": "IMAP/POP3 Server",
+            "icon": "📬",
+            "id": "dovecot",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Dovecot",
+            "packages": [
+              "dovecot-imapd",
+              "dovecot-pop3d",
+              "dovecot-lmtpd"
+            ],
+            "ports": [
+              "143/tcp",
+              "993/tcp",
+              "110/tcp",
+              "995/tcp"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "dovecot",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "description": "Webmail",
+            "icon": "✉️",
+            "id": "roundcube",
+            "installed_evidence": "application_files",
+            "instances": [],
+            "is_installed": true,
+            "kind": "tool",
+            "name": "Roundcube",
+            "repair_available": true,
+            "status": "installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "conflict_with": "Rspamd",
+            "description": "Spam Filter",
+            "icon": "🛡️",
+            "id": "spamassassin",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "SpamAssassin",
+            "packages": [
+              "spamassassin",
+              "spamd",
+              "spamass-milter"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "Built-in VPN server",
+            "icon": "🔐",
+            "id": "wireguard",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "WireGuard VPN",
+            "packages": [
+              "wireguard"
+            ],
+            "ports": [
+              "51820/udp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "SSL certificate provider",
+            "icon": "🔐",
+            "id": "certbot",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": true,
+            "kind": "tool",
+            "name": "Let's Encrypt client (certbot)",
+            "packages": [
+              "certbot"
+            ],
+            "repair_available": true,
+            "status": "installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "Intrusion Prevention",
+            "icon": "🚫",
+            "id": "fail2ban",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Fail2ban",
+            "packages": [
+              "fail2ban"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "nftables — the panel firewall's packet-filtering engine",
+            "icon": "🧱",
+            "id": "nftables",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": true,
+            "kind": "tool",
+            "name": "Firewall engine",
+            "packages": [
+              "nftables"
+            ],
+            "repair_available": true,
+            "status": "installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "Antivirus / malware scanner",
+            "icon": "🦠",
+            "id": "clamav",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "ClamAV",
+            "packages": [
+              "clamav",
+              "clamav-daemon"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "dns",
+            "config_files": [],
+            "description": "DNS Server",
+            "icon": "🌐",
+            "id": "bind",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "BIND",
+            "packages": [
+              "bind9"
+            ],
+            "ports": [
+              "53/tcp",
+              "53/udp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "dns",
+            "config_files": [],
+            "description": "DNS Server",
+            "icon": "⚡",
+            "id": "pdns",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "PowerDNS",
+            "packages": [
+              "pdns-server",
+              "pdns-backend-sqlite3"
+            ],
+            "ports": [
+              "53/tcp",
+              "53/udp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "ftp",
+            "config_files": [],
+            "description": "FTP Server",
+            "icon": "📂",
+            "id": "vsftpd",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "vsftpd",
+            "not_offered": true,
+            "not_offered_kind": "integration",
+            "not_offered_reason": "vsftpd passive-mode ports, TLS and per-subscription access are not integrated in CelikPanel yet.",
+            "packages": [
+              "vsftpd"
+            ],
+            "ports": [
+              "21/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "cache",
+            "config_files": [],
+            "description": "Cache Server",
+            "icon": "⚡",
+            "id": "redis",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Redis",
+            "packages": [
+              "redis-server"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "cache",
+            "config_files": [],
+            "description": "Cache Server",
+            "icon": "🗝️",
+            "id": "valkey",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Valkey",
+            "packages": [
+              "valkey-server"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "cache",
+            "config_files": [],
+            "description": "Cache Server",
+            "icon": "💾",
+            "id": "memcached",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Memcached",
+            "packages": [
+              "memcached"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "monitoring",
+            "config_files": [],
+            "description": "Real-time metrics agent",
+            "icon": "📈",
+            "id": "netdata",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Netdata",
+            "packages": [
+              "netdata"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "system",
+            "config_files": [],
+            "description": "Native cron daemon that runs scheduled tasks",
+            "icon": "⏰",
+            "id": "cron",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Scheduled tasks (cron)",
+            "packages": [
+              "cron"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "cron",
+            "versions": []
+          }
+        ]
+      },
+      "label": "set8 d3 after: components (GET /api/v1/managed-services)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/managed-services"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-10T16:29:43Z",
+      "json": {
+        "entries": [
+          {
+            "action": "domain.general.update",
+            "created_at": "2026-10-10 16:29:37",
+            "id": 19,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.general.update",
+            "created_at": "2026-10-10 16:28:48",
+            "id": 18,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.general.update",
+            "created_at": "2026-10-10 16:27:59",
+            "id": 17,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.general.update",
+            "created_at": "2026-10-10 16:27:10",
+            "id": 16,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.create",
+            "created_at": "2026-10-10 16:25:28",
+            "id": 15,
+            "ip_address": "127.0.0.1",
+            "resource_id": 3,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.create",
+            "created_at": "2026-10-10 16:25:26",
+            "id": 14,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "domain.create",
+            "created_at": "2026-10-10 16:25:20",
+            "id": 13,
+            "ip_address": "127.0.0.1",
+            "resource_id": 1,
+            "resource_type": "domain",
+            "username": "labadmin"
+          },
+          {
+            "action": "subscription.bootstrap",
+            "created_at": "2026-10-10 16:25:19",
+            "id": 12,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "subscription",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:certbot",
+            "created_at": "2026-10-10 16:20:14",
+            "id": 11,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:protected-mail",
+            "created_at": "2026-10-10 16:20:00",
+            "id": 10,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:webmail",
+            "created_at": "2026-10-10 16:18:47",
+            "id": 9,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:postgresql",
+            "created_at": "2026-10-10 16:16:56",
+            "id": 8,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:php-fpm",
+            "created_at": "2026-10-10 16:16:26",
+            "id": 7,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:nginx",
+            "created_at": "2026-10-10 16:15:59",
+            "id": 6,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.child:mariadb",
+            "created_at": "2026-10-10 16:15:44",
+            "id": 5,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.start:web_mail",
+            "created_at": "2026-10-10 16:15:15",
+            "id": 4,
+            "ip_address": "127.0.0.1",
+            "resource_type": "service",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.draft",
+            "created_at": "2026-10-10 16:15:13",
+            "id": 3,
+            "ip_address": "127.0.0.1",
+            "username": "labadmin"
+          },
+          {
+            "action": "server.setup.guidance",
+            "created_at": "2026-10-10 16:10:33",
+            "id": 2,
+            "ip_address": "127.0.0.1",
+            "resource_type": "guided",
+            "username": "labadmin"
+          },
+          {
+            "action": "auth.login",
+            "created_at": "2026-10-10 16:10:33",
+            "id": 1,
+            "ip_address": "127.0.0.1",
+            "username": "labadmin"
+          }
+        ]
+      },
+      "label": "set8 d3 after: audit (GET /api/v1/audit-logs?limit=25)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/audit-logs?limit=25"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "after": "steps/13-d-owner-edit/files/d1-2-after-the-trigger-set8-a.test.conf.txt",
+        "edited": "steps/13-d-owner-edit/files/d1-1-edited-set8-a.test.conf.txt",
+        "journal": "steps/13-d-owner-edit/native/107-d1-journal.json",
+        "nginx_dump_after": "nginx-T/f0001c793bfa3539.txt",
+        "restored": "steps/13-d-owner-edit/files/d1-0-restored-set8-a.test.conf.txt"
+      },
+      "name": "d1: measured the file before and after the trigger, the journal window and the HTTP answers",
+      "ok": true
+    },
+    {
+      "detail": {
+        "body": "owner-include",
+        "owner_text_served": true,
+        "status": 200
+      },
+      "name": "d1: the owner's change was in service before the trigger (nginx -t passed, reloaded, served)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "api": {
+          "answering": true,
+          "seconds": 10.1,
+          "status": 200
+        },
+        "file": "steps/13-d-owner-edit/native/102-owner-d1-panel-start.json",
+        "is_active": "active",
+        "kind": "owner: systemctl start celikpanel-panel",
+        "ok": true,
+        "reconcile_lines_seen": [
+          "2026-10-10T16:28:57.580010+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:28:57 certificate startup reconcile: restored 3 hosted vhosts with one nginx validation and reload"
+        ],
+        "waited_seconds": 2.1
+      },
+      "name": "d1: the trigger ran (owner: systemctl start celikpanel-panel)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": "steps/13-d-owner-edit/files/d3-2-after-the-trigger-set8-a.test.conf.txt",
+        "edited": "steps/13-d-owner-edit/files/d3-1-edited-set8-a.test.conf.txt",
+        "journal": "steps/13-d-owner-edit/native/118-d3-journal.json",
+        "nginx_dump_after": "nginx-T/f0001c793bfa3539.txt",
+        "restored": "steps/13-d-owner-edit/files/d3-0-restored-set8-a.test.conf.txt"
+      },
+      "name": "d3: measured the file before and after the trigger, the journal window and the HTTP answers",
+      "ok": true
+    },
+    {
+      "detail": {
+        "body": "owner-include",
+        "owner_text_served": true,
+        "status": 200
+      },
+      "name": "d3: the owner's change was in service before the trigger (nginx -t passed, reloaded, served)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "is_active": "active",
+        "kind": "Panel: POST /api/v1/domains/{id}/general with the values GET answered",
+        "ok": true,
+        "read_status": 200,
+        "sent": {
+          "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+          "redirect_www": false,
+          "web_server": "nginx"
+        },
+        "status": 200
+      },
+      "name": "d3: the trigger ran (Panel: POST /api/v1/domains/{id}/general with the values GET answered)",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-10T16:29:43Z",
+  "lab_preparation": [
+    {
+      "file": "steps/13-d-owner-edit/native/096-d1-lab-restore.json",
+      "label": "d1",
+      "sha256_matches": true
+    },
+    {
+      "file": "steps/13-d-owner-edit/native/108-d3-lab-restore.json",
+      "label": "d3",
+      "sha256_matches": true
+    }
+  ],
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/096-d1-lab-restore.json",
+      "label": "d1-lab-restore",
+      "mode": "lab-restore",
+      "owner_action": false
+    },
+    {
+      "file": "native/097-d1-0-restored-read.json",
+      "label": "d1-0-restored-read",
+      "mode": "read-site",
+      "owner_action": false
+    },
+    {
+      "file": "native/098-owner-d1-panel-stop.json",
+      "label": "owner-d1-panel-stop",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/099-owner-d1-edit.json",
+      "label": "owner-d1-edit",
+      "mode": "owner-vhost",
+      "owner_action": true
+    },
+    {
+      "file": "native/100-d1-1-edited-read.json",
+      "label": "d1-1-edited-read",
+      "mode": "read-site",
+      "owner_action": false
+    },
+    {
+      "file": "native/101-http-d1-1-edited-set8-a.test_owner-include_.json",
+      "label": "http-d1-1-edited-set8-a.test_owner-include_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/102-owner-d1-panel-start.json",
+      "label": "owner-d1-panel-start",
+      "mode": "owner-panel",
+      "owner_action": true
+    },
+    {
+      "file": "native/103-d1-2-after-the-trigger-read.json",
+      "label": "d1-2-after-the-trigger-read",
+      "mode": "read-site",
+      "owner_action": false
+    },
+    {
+      "file": "native/104-http-d1-2-after-set8-a.test_owner-include_.json",
+      "label": "http-d1-2-after-set8-a.test_owner-include_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/105-http-d1-2-after-probe-set8-a.test_set4-probe.php.json",
+      "label": "http-d1-2-after-probe-set8-a.test_set4-probe.php",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/106-http-d1-2-after-probe-set8-b.test_set4-probe.php.json",
+      "label": "http-d1-2-after-probe-set8-b.test_set4-probe.php",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/107-d1-journal.json",
+      "label": "d1-journal",
+      "mode": "read-window",
+      "owner_action": false
+    },
+    {
+      "file": "native/108-d3-lab-restore.json",
+      "label": "d3-lab-restore",
+      "mode": "lab-restore",
+      "owner_action": false
+    },
+    {
+      "file": "native/109-d3-0-restored-read.json",
+      "label": "d3-0-restored-read",
+      "mode": "read-site",
+      "owner_action": false
+    },
+    {
+      "file": "native/110-owner-d3-edit.json",
+      "label": "owner-d3-edit",
+      "mode": "owner-vhost",
+      "owner_action": true
+    },
+    {
+      "file": "native/111-d3-1-edited-read.json",
+      "label": "d3-1-edited-read",
+      "mode": "read-site",
+      "owner_action": false
+    },
+    {
+      "file": "native/112-http-d3-1-edited-set8-a.test_owner-include_.json",
+      "label": "http-d3-1-edited-set8-a.test_owner-include_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/113-d3-1b-before-the-trigger-read.json",
+      "label": "d3-1b-before-the-trigger-read",
+      "mode": "read-site",
+      "owner_action": false
+    },
+    {
+      "file": "native/114-d3-2-after-the-trigger-read.json",
+      "label": "d3-2-after-the-trigger-read",
+      "mode": "read-site",
+      "owner_action": false
+    },
+    {
+      "file": "native/115-http-d3-2-after-set8-a.test_owner-include_.json",
+      "label": "http-d3-2-after-set8-a.test_owner-include_",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/116-http-d3-2-after-probe-set8-a.test_set4-probe.php.json",
+      "label": "http-d3-2-after-probe-set8-a.test_set4-probe.php",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/117-http-d3-2-after-probe-set8-b.test_set4-probe.php.json",
+      "label": "http-d3-2-after-probe-set8-b.test_set4-probe.php",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/118-d3-journal.json",
+      "label": "d3-journal",
+      "mode": "read-window",
+      "owner_action": false
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [
+    {
+      "detail": {
+        "after": {
+          "enabled": {
+            "exists": true,
+            "inode": 263451,
+            "kind": "symlink",
+            "link_target": "/etc/nginx/sites-available/set8-a.test.conf"
+          },
+          "vhost": {
+            "ctime_ns": 1791649737539432516,
+            "exists": true,
+            "group": "celikpanel",
+            "immutable": false,
+            "inode": 262697,
+            "kind": "file",
+            "lsattr": "--------------e-------",
+            "mode": "0644",
+            "mtime_ns": 1791649737536432528,
+            "owner": "root",
+            "sha256": "e2a41a2a3ef3059678aebf8c7aaf9a64e69de214d875fbbae23a3b8562f0a527",
+            "size": 1257
+          }
+        },
+        "edited": {
+          "enabled": {
+            "exists": true,
+            "inode": 263441,
+            "kind": "symlink",
+            "link_target": "/etc/nginx/sites-available/set8-a.test.conf"
+          },
+          "vhost": {
+            "ctime_ns": 1791649736330437575,
+            "exists": true,
+            "group": "celikpanel",
+            "immutable": false,
+            "inode": 263451,
+            "kind": "file",
+            "lsattr": "--------------e-------",
+            "mode": "0644",
+            "mtime_ns": 1791649736330437575,
+            "owner": "root",
+            "sha256": "b92b46867bd1862adf61ab3b18a9fac869f8a560a24e6c0c13f4d3a587dc4118",
+            "size": 1348
+          }
+        },
+        "panel_text_sha256": {
+          "creation_render": "bc753ed38bc0337a2bae46e26a93c9e48d6887a8581021a38ec4acdeaa0ff80f",
+          "start_render": "e2a41a2a3ef3059678aebf8c7aaf9a64e69de214d875fbbae23a3b8562f0a527"
+        }
+      },
+      "note": "d1: overwritten silently (file panel-text-written, inode changed, owner's answer not served after the trigger)"
+    },
+    {
+      "detail": {
+        "after": {
+          "enabled": {
+            "exists": true,
+            "inode": 263446,
+            "kind": "symlink",
+            "link_target": "/etc/nginx/sites-available/set8-a.test.conf"
+          },
+          "vhost": {
+            "ctime_ns": 1791649777777291600,
+            "exists": true,
+            "group": "celikpanel",
+            "immutable": false,
+            "inode": 262697,
+            "kind": "file",
+            "lsattr": "--------------e-------",
+            "mode": "0644",
+            "mtime_ns": 1791649777774291609,
+            "owner": "root",
+            "sha256": "e2a41a2a3ef3059678aebf8c7aaf9a64e69de214d875fbbae23a3b8562f0a527",
+            "size": 1257
+          }
+        },
+        "edited": {
+          "enabled": {
+            "exists": true,
+            "inode": 263451,
+            "kind": "symlink",
+            "link_target": "/etc/nginx/sites-available/set8-a.test.conf"
+          },
+          "vhost": {
+            "ctime_ns": 1791649756722358863,
+            "exists": true,
+            "group": "celikpanel",
+            "immutable": false,
+            "inode": 263446,
+            "kind": "file",
+            "lsattr": "--------------e-------",
+            "mode": "0644",
+            "mtime_ns": 1791649756722358863,
+            "owner": "root",
+            "sha256": "b92b46867bd1862adf61ab3b18a9fac869f8a560a24e6c0c13f4d3a587dc4118",
+            "size": 1348
+          }
+        },
+        "panel_text_sha256": {
+          "creation_render": "bc753ed38bc0337a2bae46e26a93c9e48d6887a8581021a38ec4acdeaa0ff80f",
+          "start_render": "e2a41a2a3ef3059678aebf8c7aaf9a64e69de214d875fbbae23a3b8562f0a527"
+        }
+      },
+      "note": "d3: overwritten silently (file panel-text-written, inode changed, owner's answer not served after the trigger)"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-10T16:28:56Z",
+      "label": "d1-panel-stop",
+      "mode": "owner-panel"
+    },
+    {
+      "at": "2026-10-10T16:28:56Z",
+      "label": "d1-edit",
+      "mode": "owner-vhost"
+    },
+    {
+      "at": "2026-10-10T16:28:57Z",
+      "label": "d1-panel-start",
+      "mode": "owner-panel"
+    },
+    {
+      "at": "2026-10-10T16:29:16Z",
+      "label": "d3-edit",
+      "mode": "owner-vhost"
+    }
+  ],
+  "owner_waited_for_idle": {
+    "at": "2026-10-10T16:28:54Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.2
+  },
+  "runs": [
+    {
+      "class": "panel-text-written",
+      "files": {
+        "after": "steps/13-d-owner-edit/files/d1-2-after-the-trigger-set8-a.test.conf.txt",
+        "edited": "steps/13-d-owner-edit/files/d1-1-edited-set8-a.test.conf.txt",
+        "journal": "steps/13-d-owner-edit/native/107-d1-journal.json",
+        "nginx_dump_after": "nginx-T/f0001c793bfa3539.txt",
+        "restored": "steps/13-d-owner-edit/files/d1-0-restored-set8-a.test.conf.txt"
+      },
+      "finished_at": "2026-10-10T16:29:14Z",
+      "http": {
+        "after_the_edit": {
+          "body": "owner-include",
+          "owner_text_served": true,
+          "status": 200
+        },
+        "after_the_trigger": {
+          "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set8-a.test</title>\n<style>\n  body{font-family:system-ui,sans",
+          "owner_text_served": false,
+          "status": 200
+        },
+        "owner_text": "owner-include",
+        "path": "/owner-include/",
+        "probe_pages_executed_after": {
+          "set8-a.test": true,
+          "set8-b.test": true
+        }
+      },
+      "inode_changed": true,
+      "journal": {
+        "agent": [],
+        "agent_lines": 6,
+        "panel": [
+          "2026-10-10T16:28:57.580010+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:28:57 certificate startup reconcile: restored 3 hosted vhosts with one nginx validation and reload"
+        ],
+        "panel_lines": 31
+      },
+      "nginx": {
+        "nginx_test_after": {
+          "at": "2026-10-10T16:29:12Z",
+          "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+          "returncode": 0,
+          "status": "ok"
+        },
+        "reload_lines": [
+          "2026-10-10T16:28:54.553280+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+          "2026-10-10T16:28:54.563197+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+          "2026-10-10T16:28:56.351136+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+          "2026-10-10T16:28:56.360555+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+          "2026-10-10T16:28:57.568371+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+          "2026-10-10T16:28:57.577520+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+        ],
+        "workers": {
+          "after": {
+            "active": "active",
+            "invocation": "510b943959ce4853a705498f8301b365",
+            "master": "12209",
+            "started": "Sat 2026-10-10 16:15:54 UTC",
+            "workers": [
+              "56598",
+              "56599"
+            ]
+          },
+          "edited": {
+            "active": "active",
+            "invocation": "510b943959ce4853a705498f8301b365",
+            "master": "12209",
+            "started": "Sat 2026-10-10 16:15:54 UTC",
+            "workers": [
+              "56407",
+              "56408"
+            ]
+          }
+        },
+        "workers_changed_after_the_edit": true
+      },
+      "owner_action": "add-include",
+      "owner_action_nginx_test": 0,
+      "owner_action_reload": 0,
+      "owner_view": {
+        "domains_row_changes": {},
+        "new_audit_entries": [],
+        "statuses": {
+          "audit": 200,
+          "components": 200,
+          "dashboard": 200,
+          "domains": 200,
+          "general": 200,
+          "php": 200
+        },
+        "words_found": []
+      },
+      "panel_active": true,
+      "panel_stop": "steps/13-d-owner-edit/native/098-owner-d1-panel-stop.json",
+      "panel_stopped_while_the_owner_edits": true,
+      "provisional_verdict": "overwritten silently",
+      "reported_to_the_owner_by_the_panel": false,
+      "run": "d1",
+      "scenario": "d",
+      "started_at": "2026-10-10T16:28:54Z",
+      "trigger": {
+        "api": {
+          "answering": true,
+          "seconds": 10.1,
+          "status": 200
+        },
+        "file": "steps/13-d-owner-edit/native/102-owner-d1-panel-start.json",
+        "is_active": "active",
+        "kind": "owner: systemctl start celikpanel-panel",
+        "ok": true,
+        "reconcile_lines_seen": [
+          "2026-10-10T16:28:57.580010+00:00 dns-ubuntu panel[56584]: 2026/10/10 16:28:57 certificate startup reconcile: restored 3 hosted vhosts with one nginx validation and reload"
+        ],
+        "waited_seconds": 2.1
+      },
+      "trigger_answer": null,
+      "vhost": {
+        "after": {
+          "enabled": {
+            "exists": true,
+            "inode": 263451,
+            "kind": "symlink",
+            "link_target": "/etc/nginx/sites-available/set8-a.test.conf"
+          },
+          "vhost": {
+            "ctime_ns": 1791649737539432516,
+            "exists": true,
+            "group": "celikpanel",
+            "immutable": false,
+            "inode": 262697,
+            "kind": "file",
+            "lsattr": "--------------e-------",
+            "mode": "0644",
+            "mtime_ns": 1791649737536432528,
+            "owner": "root",
+            "sha256": "e2a41a2a3ef3059678aebf8c7aaf9a64e69de214d875fbbae23a3b8562f0a527",
+            "size": 1257
+          }
+        },
+        "edited": {
+          "enabled": {
+            "exists": true,
+            "inode": 263441,
+            "kind": "symlink",
+            "link_target": "/etc/nginx/sites-available/set8-a.test.conf"
+          },
+          "vhost": {
+            "ctime_ns": 1791649736330437575,
+            "exists": true,
+            "group": "celikpanel",
+            "immutable": false,
+            "inode": 263451,
+            "kind": "file",
+            "lsattr": "--------------e-------",
+            "mode": "0644",
+            "mtime_ns": 1791649736330437575,
+            "owner": "root",
+            "sha256": "b92b46867bd1862adf61ab3b18a9fac869f8a560a24e6c0c13f4d3a587dc4118",
+            "size": 1348
+          }
+        },
+        "panel_text_sha256": {
+          "creation_render": "bc753ed38bc0337a2bae46e26a93c9e48d6887a8581021a38ec4acdeaa0ff80f",
+          "start_render": "e2a41a2a3ef3059678aebf8c7aaf9a64e69de214d875fbbae23a3b8562f0a527"
+        }
+      }
+    },
+    {
+      "class": "panel-text-written",
+      "file_before_the_trigger_equals_the_edit": true,
+      "files": {
+        "after": "steps/13-d-owner-edit/files/d3-2-after-the-trigger-set8-a.test.conf.txt",
+        "edited": "steps/13-d-owner-edit/files/d3-1-edited-set8-a.test.conf.txt",
+        "journal": "steps/13-d-owner-edit/native/118-d3-journal.json",
+        "nginx_dump_after": "nginx-T/f0001c793bfa3539.txt",
+        "restored": "steps/13-d-owner-edit/files/d3-0-restored-set8-a.test.conf.txt"
+      },
+      "finished_at": "2026-10-10T16:29:43Z",
+      "http": {
+        "after_the_edit": {
+          "body": "owner-include",
+          "owner_text_served": true,
+          "status": 200
+        },
+        "after_the_trigger": {
+          "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set8-a.test</title>\n<style>\n  body{font-family:system-ui,sans",
+          "owner_text_served": false,
+          "status": 200
+        },
+        "owner_text": "owner-include",
+        "path": "/owner-include/",
+        "probe_pages_executed_after": {
+          "set8-a.test": true,
+          "set8-b.test": true
+        }
+      },
+      "inode_changed": true,
+      "journal": {
+        "agent": [],
+        "agent_lines": 2,
+        "panel": [],
+        "panel_lines": 14
+      },
+      "nginx": {
+        "nginx_test_after": {
+          "at": "2026-10-10T16:29:41Z",
+          "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+          "returncode": 0,
+          "status": "ok"
+        },
+        "reload_lines": [
+          "2026-10-10T16:29:15.283209+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+          "2026-10-10T16:29:15.290541+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+          "2026-10-10T16:29:16.746229+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+          "2026-10-10T16:29:16.754159+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+          "2026-10-10T16:29:37.799121+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+          "2026-10-10T16:29:37.808642+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+        ],
+        "workers": {
+          "after": {
+            "active": "active",
+            "invocation": "510b943959ce4853a705498f8301b365",
+            "master": "12209",
+            "started": "Sat 2026-10-10 16:15:54 UTC",
+            "workers": [
+              "58682",
+              "58683"
+            ]
+          },
+          "edited": {
+            "active": "active",
+            "invocation": "510b943959ce4853a705498f8301b365",
+            "master": "12209",
+            "started": "Sat 2026-10-10 16:15:54 UTC",
+            "workers": [
+              "58496",
+              "58497"
+            ]
+          }
+        },
+        "workers_changed_after_the_edit": true
+      },
+      "owner_action": "add-include",
+      "owner_action_nginx_test": 0,
+      "owner_action_reload": 0,
+      "owner_view": {
+        "domains_row_changes": {},
+        "new_audit_entries": [
+          {
+            "action": "domain.general.update",
+            "created_at": "2026-10-10 16:29:37",
+            "id": 19,
+            "ip_address": "127.0.0.1",
+            "resource_id": 2,
+            "resource_type": "domain",
+            "username": "labadmin"
+          }
+        ],
+        "statuses": {
+          "audit": 200,
+          "components": 200,
+          "dashboard": 200,
+          "domains": 200,
+          "general": 200,
+          "php": 200
+        },
+        "words_found": []
+      },
+      "panel_active": true,
+      "panel_stopped_while_the_owner_edits": false,
+      "provisional_verdict": "overwritten silently",
+      "reported_to_the_owner_by_the_panel": false,
+      "run": "d3",
+      "scenario": "d",
+      "started_at": "2026-10-10T16:29:14Z",
+      "trigger": {
+        "is_active": "active",
+        "kind": "Panel: POST /api/v1/domains/{id}/general with the values GET answered",
+        "ok": true,
+        "read_status": 200,
+        "sent": {
+          "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+          "redirect_www": false,
+          "web_server": "nginx"
+        },
+        "status": 200
+      },
+      "trigger_answer": {
+        "status": "success"
+      },
+      "vhost": {
+        "after": {
+          "enabled": {
+            "exists": true,
+            "inode": 263446,
+            "kind": "symlink",
+            "link_target": "/etc/nginx/sites-available/set8-a.test.conf"
+          },
+          "vhost": {
+            "ctime_ns": 1791649777777291600,
+            "exists": true,
+            "group": "celikpanel",
+            "immutable": false,
+            "inode": 262697,
+            "kind": "file",
+            "lsattr": "--------------e-------",
+            "mode": "0644",
+            "mtime_ns": 1791649777774291609,
+            "owner": "root",
+            "sha256": "e2a41a2a3ef3059678aebf8c7aaf9a64e69de214d875fbbae23a3b8562f0a527",
+            "size": 1257
+          }
+        },
+        "edited": {
+          "enabled": {
+            "exists": true,
+            "inode": 263451,
+            "kind": "symlink",
+            "link_target": "/etc/nginx/sites-available/set8-a.test.conf"
+          },
+          "vhost": {
+            "ctime_ns": 1791649756722358863,
+            "exists": true,
+            "group": "celikpanel",
+            "immutable": false,
+            "inode": 263446,
+            "kind": "file",
+            "lsattr": "--------------e-------",
+            "mode": "0644",
+            "mtime_ns": 1791649756722358863,
+            "owner": "root",
+            "sha256": "b92b46867bd1862adf61ab3b18a9fac869f8a560a24e6c0c13f4d3a587dc4118",
+            "size": 1348
+          }
+        },
+        "panel_text_sha256": {
+          "creation_render": "bc753ed38bc0337a2bae46e26a93c9e48d6887a8581021a38ec4acdeaa0ff80f",
+          "start_render": "e2a41a2a3ef3059678aebf8c7aaf9a64e69de214d875fbbae23a3b8562f0a527"
+        }
+      }
+    }
+  ],
+  "section": "d-owner-edit",
+  "started_at": "2026-10-10T16:28:53Z",
+  "substeps": {
+    "d1": "passed",
+    "d3": "passed"
+  },
+  "title": "the owner adds an include of their own file to the vhost",
+  "verdict": "passed",
+  "verdicts": {
+    "d1": "overwritten silently",
+    "d3": "overwritten silently"
+  }
+}

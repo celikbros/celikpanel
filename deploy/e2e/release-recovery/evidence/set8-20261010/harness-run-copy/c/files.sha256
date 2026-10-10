@@ -1,0 +1,4 @@
+704ccd57a338e39e1452adbdd60d7677ccafef56fa8bcdee7abdda612ea282fb  deploy/e2e/release-recovery/set8_trial.py
+d99aad3dd2268caa4f5631cee7d22aeba09309b7620ce8d429ddeaf57a026d2f  deploy/e2e/release-recovery/guest_set8_native.py
+b13bc991cf522fb208e07c8bf704882e2f01e53a026f67617671c4096e1aa73c  deploy/e2e/release-recovery/run-set8.sh
+07fa789cee1bcf40131289e1b74cc929d1c3a0245a368403f631f33224ee9316  deploy/e2e/release-recovery/test_set8_trial.py

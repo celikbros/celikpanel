@@ -1,0 +1,46 @@
+{
+  "action": "owner-nginx-reload",
+  "after": {
+    "active": "active",
+    "invocation": "5e6b00a98f6642e4b856f5545c944bee",
+    "master": "7208",
+    "started": "Sat 2026-10-10 16:46:43 UTC",
+    "workers": [
+      "42404",
+      "42405"
+    ]
+  },
+  "at": "2026-10-10T16:57:36Z",
+  "before": {
+    "active": "active",
+    "invocation": "5e6b00a98f6642e4b856f5545c944bee",
+    "master": "7208",
+    "started": "Sat 2026-10-10 16:46:43 UTC",
+    "workers": [
+      "41859",
+      "41860"
+    ]
+  },
+  "mode": "owner-nginx-reload",
+  "nginx_test": {
+    "at": "2026-10-10T16:57:35Z",
+    "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": true,
+  "reload": {
+    "argv": [
+      "systemctl",
+      "reload",
+      "nginx.service"
+    ],
+    "at": "2026-10-10T16:57:35Z",
+    "returncode": 0,
+    "seconds": 0.039,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "schema": "celikpanel/set8-native/v1"
+}

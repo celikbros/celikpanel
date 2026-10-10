@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 3,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T16:30:03Z",
+    "notes": [
+      "e1: overwritten silently (file panel-text-written, inode changed, owner's answer not served after the trigger)"
+    ],
+    "started_at": "2026-10-10T16:29:43Z",
+    "substeps": {
+      "e1": "passed"
+    },
+    "title": "the owner removes the vhost and its sites-enabled link",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T16:30:03Z",
+  "name": "e-owner-edit",
+  "started_at": "2026-10-10T16:29:43Z",
+  "verdict": "passed"
+}

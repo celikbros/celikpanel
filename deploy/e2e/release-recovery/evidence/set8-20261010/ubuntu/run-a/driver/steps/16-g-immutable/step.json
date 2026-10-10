@@ -1,0 +1,23 @@
+{
+  "checks": {
+    "checks": 2,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T16:30:51Z",
+    "notes": [
+      "g: Panel active after the start: active; API answering: True",
+      "g: vhost files touched by the start (inode, ctime or bytes changed): {\"set8-a.test\": false, \"set8-b.test\": false, \"set1-owner.test\": true}"
+    ],
+    "started_at": "2026-10-10T16:30:33Z",
+    "substeps": {
+      "g": "passed"
+    },
+    "title": "the owner makes the vhost immutable (chattr +i)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T16:30:51Z",
+  "name": "g-immutable",
+  "started_at": "2026-10-10T16:30:33Z",
+  "verdict": "passed"
+}

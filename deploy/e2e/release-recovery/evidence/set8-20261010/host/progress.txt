@@ -1,0 +1,19 @@
+2026-10-10T15:41:36Z set8 run directory created by this session (resumable progress file)
+2026-10-10T15:41:48Z made run copy a
+2026-10-10T15:42:07Z made run copy b
+2026-10-10T15:42:07Z start build
+2026-10-10T15:42:15Z start suites
+2026-10-10T15:42:59Z end suites rc=0
+2026-10-10T15:43:43Z made run copy c
+2026-10-10T15:47:11Z build cur rc=0
+2026-10-10T15:47:11Z end build rc=0
+2026-10-10T15:47:21Z prove cur rc=0
+2026-10-10T15:47:34Z start cell-d13
+2026-10-10T16:04:30Z end cell-d13 rc=0
+2026-10-10T16:06:59Z made run copy d
+2026-10-10T16:08:32Z start cell-ub
+2026-10-10T16:30:53Z end cell-ub rc=0
+2026-10-10T16:32:13Z start cell-arch
+2026-10-10T16:42:28Z end cell-arch rc=0
+2026-10-10T16:43:28Z start cell-d13b
+2026-10-10T16:57:40Z end cell-d13b rc=0

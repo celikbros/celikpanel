@@ -1,0 +1,9 @@
+processes: qemu=0 hold=0 set8driver=0 jobs=0
+296M	/var/tmp/cp-set8-run
+69M	/var/tmp/cp-release-drill-s8-arch-a
+70M	/var/tmp/cp-release-drill-s8-d13-a
+70M	/var/tmp/cp-release-drill-s8-d13-b
+69M	/var/tmp/cp-release-drill-s8-ub-a
+1.2G	/var/tmp/cp-upd1-build/20261010t154207z
+overlay disks left in set8 labs: 0
+no dry-run lab

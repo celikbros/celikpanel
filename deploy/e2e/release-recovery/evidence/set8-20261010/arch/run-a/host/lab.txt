@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-s8-arch-a
+set8-arch-20261010t163245z

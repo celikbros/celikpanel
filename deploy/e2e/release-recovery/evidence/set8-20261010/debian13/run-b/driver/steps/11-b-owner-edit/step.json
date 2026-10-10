@@ -1,0 +1,24 @@
+{
+  "checks": {
+    "checks": 6,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-10T16:55:00Z",
+    "notes": [
+      "b1: overwritten silently (file panel-text-written, inode changed, owner's answer not served after the trigger)",
+      "b3: overwritten silently (file panel-text-written, inode changed, owner's answer not served after the trigger)"
+    ],
+    "started_at": "2026-10-10T16:54:14Z",
+    "substeps": {
+      "b1": "passed",
+      "b3": "passed"
+    },
+    "title": "the owner changes a directive the template sets (index)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-10T16:55:00Z",
+  "name": "b-owner-edit",
+  "started_at": "2026-10-10T16:54:14Z",
+  "verdict": "passed"
+}

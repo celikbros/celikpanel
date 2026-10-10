@@ -1,0 +1,68 @@
+{
+  "action": "owner-panel",
+  "after": {
+    "ActiveEnterTimestamp": "Sat 2026-10-10 16:40:27 UTC",
+    "ActiveExitTimestamp": "Sat 2026-10-10 16:40:26 UTC",
+    "ActiveState": "active",
+    "ExecMainPID": "4375",
+    "ExecMainStartTimestamp": "Sat 2026-10-10 16:40:27 UTC",
+    "ExecMainStatus": "0",
+    "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+    "InactiveEnterTimestamp": "Sat 2026-10-10 16:40:26 UTC",
+    "InactiveExitTimestamp": "Sat 2026-10-10 16:40:27 UTC",
+    "InvocationID": "47b6799b8a6a4037bdc9f069f78b00ab",
+    "LoadState": "loaded",
+    "MainPID": "4375",
+    "NRestarts": "0",
+    "ReloadResult": "success",
+    "Result": "success",
+    "StateChangeTimestamp": "Sat 2026-10-10 16:40:27 UTC",
+    "SubState": "running",
+    "Type": "simple"
+  },
+  "at": "2026-10-10T16:40:27Z",
+  "before": {
+    "ActiveEnterTimestamp": "Sat 2026-10-10 16:39:49 UTC",
+    "ActiveExitTimestamp": "Sat 2026-10-10 16:40:26 UTC",
+    "ActiveState": "inactive",
+    "ExecMainPID": "3910",
+    "ExecMainStartTimestamp": "Sat 2026-10-10 16:39:49 UTC",
+    "ExecMainStatus": "0",
+    "FragmentPath": "/etc/systemd/system/celikpanel-panel.service",
+    "InactiveEnterTimestamp": "Sat 2026-10-10 16:40:26 UTC",
+    "InactiveExitTimestamp": "Sat 2026-10-10 16:39:49 UTC",
+    "InvocationID": "d251293571be42eb9d0cb6610d6b88a4",
+    "LoadState": "loaded",
+    "MainPID": "0",
+    "NRestarts": "0",
+    "ReloadResult": "success",
+    "Result": "success",
+    "StateChangeTimestamp": "Sat 2026-10-10 16:40:26 UTC",
+    "SubState": "dead",
+    "Type": "simple"
+  },
+  "epoch": 1791650427.87829,
+  "finished_at": "2026-10-10T16:40:29Z",
+  "is_active": "active",
+  "mode": "owner-panel",
+  "owner_action": true,
+  "reconcile_lines_seen": [
+    "2026-10-10T16:40:28.127552+00:00 dns-arch panel[4375]: 2026/10/10 16:40:28 certificate startup reconcile: restored 3 hosted vhosts with one nginx validation and reload"
+  ],
+  "schema": "celikpanel/set8-native/v1",
+  "systemctl": {
+    "argv": [
+      "systemctl",
+      "start",
+      "celikpanel-panel.service"
+    ],
+    "at": "2026-10-10T16:40:27Z",
+    "returncode": 0,
+    "seconds": 0.045,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "waited_seconds": 2.1,
+  "what": "start"
+}

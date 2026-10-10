@@ -1,0 +1,81 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "f: PHP version 'switch' to the same version 8.5 (POST /php; the only installed one)",
+  "request": {
+    "body": {
+      "php_version": "8.5"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18853"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18853"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "075ac2689946d763e3a75de74c7e1dcc"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/2/php"
+  },
+  "response": {
+    "elapsed_seconds": 0.592,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 10 Oct 2026 16:42:07 GMT"
+      ],
+      [
+        "Content-Length",
+        "53"
+      ]
+    ],
+    "json": {
+      "message": "PHP version updated",
+      "status": "success"
+    },
+    "status": 200,
+    "text": null
+  }
+}

@@ -1,0 +1,27 @@
+At the start of the run (15:31Z) HEAD was a9c95d437; git diff --stat 2a0af8866 a9c95d437 -- cmd internal web/src was empty.
+At staging (17:17Z) HEAD is 7c3a058095d081983a58261f6a751c92c47f1a87 (another session committed 3 commits on the branch during the run: 7c3a05809 e508af230 b1cc63b1f ); its diff against 2a0af8866:
+ cmd/panel/known_state_gates_test.go          | 127 +++++++++++++++++++++++++++
+ cmd/panel/server_setup.go                    |  14 ++-
+ cmd/panel/server_setup_readiness.go          |  66 +++++++++++++-
+ cmd/panel/system_update_handlers.go          |  22 +++++
+ web/src/App.tsx                              |   9 +-
+ web/src/components/AccessGuidance.tsx        |  11 ++-
+ web/src/components/AccessHold.tsx            |   6 +-
+ web/src/components/LicenseOnboarding.tsx     |  45 +++++++++-
+ web/src/components/PanelUpdateCard.tsx       |  21 ++++-
+ web/src/components/RecoveryAccess.tsx        |  83 +++++++++++++----
+ web/src/components/ServerSetup.tsx           |  28 +++---
+ web/src/components/SystemUpdateOperation.tsx |  43 +++++++--
+ web/src/i18n/en.ts                           |  16 ++++
+ web/src/i18n/screens/en.ts                   |  37 ++++++++
+ web/src/i18n/screens/server/en.ts            |   7 ++
+ web/src/i18n/screens/server/tr.ts            |   7 ++
+ web/src/i18n/screens/tr.ts                   |  34 +++++++
+ web/src/i18n/tr.ts                           |  14 +++
+ web/src/lib/quietRead.ts                     |  46 ++++++++++
+ web/src/lib/recoveryObservation.ts           |  15 ++++
+ web/src/lib/serverSetup.ts                   |   3 +
+ web/src/lib/serverSetupGuidance.ts           | 113 ++++++++++++++++++++++--
+ web/src/lib/systemUpdateTracking.ts          |  61 +++++++++++++
+ 23 files changed, 773 insertions(+), 55 deletions(-)
+No build or cell of this run read the working tree's product files: the build is a clone at 2a0af8866 (build/cur/trees.txt: 0 files of cmd/, internal/, web/ differ).

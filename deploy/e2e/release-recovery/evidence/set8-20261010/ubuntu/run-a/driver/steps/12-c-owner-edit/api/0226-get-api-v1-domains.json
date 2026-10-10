@@ -1,0 +1,98 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "set8 c3 after: domains (GET /api/v1/domains)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18852"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains"
+  },
+  "response": {
+    "elapsed_seconds": 0.004,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 10 Oct 2026 16:28:53 GMT"
+      ],
+      [
+        "Content-Length",
+        "549"
+      ]
+    ],
+    "json": [
+      {
+        "bandwidth": 0,
+        "created_at": "2026-10-10T16:25:27Z",
+        "disk_usage": 0,
+        "domain_name": "set8-b.test",
+        "id": 3,
+        "php_version": "8.3",
+        "project_type": "php",
+        "ssl_enabled": false,
+        "status": "active"
+      },
+      {
+        "bandwidth": 0,
+        "created_at": "2026-10-10T16:25:25Z",
+        "disk_usage": 0,
+        "domain_name": "set8-a.test",
+        "id": 2,
+        "php_version": "8.3",
+        "project_type": "php",
+        "ssl_enabled": false,
+        "status": "active"
+      },
+      {
+        "bandwidth": 0,
+        "created_at": "2026-10-10T16:25:19Z",
+        "disk_usage": 0,
+        "domain_name": "set1-owner.test",
+        "id": 1,
+        "php_version": "",
+        "project_type": "static",
+        "ssl_enabled": false,
+        "status": "active"
+      }
+    ],
+    "status": 200,
+    "text": null
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "candidate": {
+    "commit": "9e12ed1aa9037964671540e66b7b85748c444369",
+    "sha256": "fdb005cabcdaa78ff83fd97abbebeb7a0c98f1a23062db42eead5a33334af117",
+    "version": "v0.1.0-alpha.81"
+  },
+  "cell": "set8-arch",
+  "cell_kind": "set8-owner-edits-baseline",
+  "local_port": 18443,
+  "native_evidence": false,
+  "pinned_names": [
+    "celikpanel.net",
+    "acme-v02.api.letsencrypt.org",
+    "acme-staging-v02.api.letsencrypt.org",
+    "acme.zerossl.com",
+    "dv.acme-v02.api.pki.goog"
+  ],
+  "rule": "the driver calls only the Panel's HTTP API as the logged-in owner; every native fact is an SSH reading; owner actions and lab preparation on the guest are recorded as such; no certificate authority and no licence service is contacted by the driver",
+  "runs": [
+    {
+      "owner_action": "append-location",
+      "panel_stopped_while_the_owner_edits": true,
+      "run": "a1",
+      "scenario": "a",
+      "trigger": "start"
+    },
+    {
+      "owner_action": "append-location",
+      "panel_stopped_while_the_owner_edits": false,
+      "run": "a2",
+      "scenario": "a",
+      "trigger": "restart"
+    },
+    {
+      "owner_action": "append-location",
+      "panel_stopped_while_the_owner_edits": false,
+      "run": "a3",
+      "scenario": "a",
+      "trigger": "save"
+    },
+    {
+      "owner_action": "change-index",
+      "panel_stopped_while_the_owner_edits": true,
+      "run": "b1",
+      "scenario": "b",
+      "trigger": "start"
+    },
+    {
+      "owner_action": "change-index",
+      "panel_stopped_while_the_owner_edits": false,
+      "run": "b3",
+      "scenario": "b",
+      "trigger": "save"
+    },
+    {
+      "owner_action": "replace",
+      "panel_stopped_while_the_owner_edits": true,
+      "run": "c1",
+      "scenario": "c",
+      "trigger": "start"
+    },
+    {
+      "owner_action": "replace",
+      "panel_stopped_while_the_owner_edits": false,
+      "run": "c3",
+      "scenario": "c",
+      "trigger": "save"
+    },
+    {
+      "owner_action": "add-include",
+      "panel_stopped_while_the_owner_edits": true,
+      "run": "d1",
+      "scenario": "d",
+      "trigger": "start"
+    },
+    {
+      "owner_action": "add-include",
+      "panel_stopped_while_the_owner_edits": false,
+      "run": "d3",
+      "scenario": "d",
+      "trigger": "save"
+    },
+    {
+      "owner_action": "remove",
+      "panel_stopped_while_the_owner_edits": true,
+      "run": "e1",
+      "scenario": "e",
+      "trigger": "start"
+    }
+  ],
+  "schema": "celikpanel/set8-plan/v1",
+  "setup": {
+    "components": [
+      "mariadb",
+      "nginx",
+      "php-fpm",
+      "postgresql"
+    ],
+    "dns_mode": "external",
+    "purpose": "web"
+  },
+  "steps": [
+    "set6-name-pinning",
+    "preflight",
+    "origin",
+    "baseline-install",
+    "owner-login",
+    "license",
+    "setup",
+    "site",
+    "S0-sites",
+    "a-owner-edit",
+    "b-owner-edit",
+    "c-owner-edit",
+    "d-owner-edit",
+    "e-owner-edit",
+    "f-owner-pool",
+    "g-immutable",
+    "set6-name-pinning-at-the-end",
+    "collect"
+  ],
+  "work_root": "/var/tmp/cp-release-drill-dry-set8-arch"
+}

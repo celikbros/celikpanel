@@ -1,0 +1,8 @@
+2026-10-10T15:47:34Z before cell-d13 queue (before prepare) free_GiB=129.43 free_bytes=138978160640 (Get-PSDrive C reading of 2026-10-10T15:47:23Z, 11s old) allowed=yes
+2026-10-10T15:47:37Z before set8-debian13 s8-d13-a (guest start) free_GiB=129.43 free_bytes=138978160640 (Get-PSDrive C reading of 2026-10-10T15:47:23Z, 14s old) allowed=yes
+2026-10-10T16:08:32Z before cell-ub queue (before prepare) free_GiB=128.14 free_bytes=137588224000 (Get-PSDrive C reading of 2026-10-10T16:08:27Z, 5s old) allowed=yes
+2026-10-10T16:08:34Z before set8-ubuntu s8-ub-a (guest start) free_GiB=128.14 free_bytes=137588224000 (Get-PSDrive C reading of 2026-10-10T16:08:27Z, 7s old) allowed=yes
+2026-10-10T16:32:13Z before cell-arch queue (before prepare) free_GiB=127.71 free_bytes=137128067072 (Get-PSDrive C reading of 2026-10-10T16:32:01Z, 12s old) allowed=yes
+2026-10-10T16:32:15Z before set8-arch s8-arch-a (guest start) free_GiB=127.71 free_bytes=137128067072 (Get-PSDrive C reading of 2026-10-10T16:32:01Z, 14s old) allowed=yes
+2026-10-10T16:43:28Z before cell-d13b queue (before prepare) free_GiB=127.32 free_bytes=136713162752 (Get-PSDrive C reading of 2026-10-10T16:43:02Z, 26s old) allowed=yes
+2026-10-10T16:43:30Z before set8-debian13 s8-d13-b (guest start) free_GiB=127.32 free_bytes=136713162752 (Get-PSDrive C reading of 2026-10-10T16:43:02Z, 28s old) allowed=yes

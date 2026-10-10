@@ -1,0 +1,55 @@
+{
+  "at": "2026-10-10T16:54:13Z",
+  "by_unit": {
+    "celikpanel-agent.service": [
+      "2026-10-10T16:53:46.807222+00:00 dns-debian13 agent[5183]: 2026/10/10 16:53:46 Getting pool config for site2 (PHP 8.4)",
+      "2026-10-10T16:53:47.971297+00:00 dns-debian13 agent[5183]: 2026/10/10 16:53:47 Getting pool config for site2 (PHP 8.4)"
+    ],
+    "celikpanel-panel.service": [
+      "2026-10-10T16:53:46.306771+00:00 dns-debian13 panel[33290]: 2026/10/10 16:53:46 http: TLS handshake error from 127.0.0.1:32872: EOF",
+      "2026-10-10T16:53:46.318783+00:00 dns-debian13 panel[33290]: 2026/10/10 16:53:46 http: TLS handshake error from 127.0.0.1:32896: EOF",
+      "2026-10-10T16:53:46.330005+00:00 dns-debian13 panel[33290]: 2026/10/10 16:53:46 http: TLS handshake error from 127.0.0.1:32922: EOF",
+      "2026-10-10T16:53:46.814490+00:00 dns-debian13 panel[33290]: 2026/10/10 16:53:46 http: TLS handshake error from 127.0.0.1:32944: EOF",
+      "2026-10-10T16:53:46.825511+00:00 dns-debian13 panel[33290]: 2026/10/10 16:53:46 http: TLS handshake error from 127.0.0.1:32958: EOF",
+      "2026-10-10T16:53:46.849712+00:00 dns-debian13 panel[33290]: 2026/10/10 16:53:46 http: TLS handshake error from 127.0.0.1:32982: EOF",
+      "2026-10-10T16:53:47.489674+00:00 dns-debian13 panel[33290]: 2026/10/10 16:53:47 http: TLS handshake error from 127.0.0.1:33006: EOF",
+      "2026-10-10T16:53:47.501495+00:00 dns-debian13 panel[33290]: 2026/10/10 16:53:47 http: TLS handshake error from 127.0.0.1:33038: EOF",
+      "2026-10-10T16:53:47.513420+00:00 dns-debian13 panel[33290]: 2026/10/10 16:53:47 http: TLS handshake error from 127.0.0.1:33056: EOF",
+      "2026-10-10T16:53:47.977835+00:00 dns-debian13 panel[33290]: 2026/10/10 16:53:47 http: TLS handshake error from 127.0.0.1:33070: EOF",
+      "2026-10-10T16:53:47.988133+00:00 dns-debian13 panel[33290]: 2026/10/10 16:53:47 http: TLS handshake error from 127.0.0.1:33094: EOF",
+      "2026-10-10T16:53:48.016250+00:00 dns-debian13 panel[33290]: 2026/10/10 16:53:48 http: TLS handshake error from 127.0.0.1:33112: EOF",
+      "2026-10-10T16:54:09.160834+00:00 dns-debian13 panel[33290]: 2026/10/10 16:54:09 http: TLS handshake error from 127.0.0.1:54636: EOF",
+      "2026-10-10T16:54:09.172178+00:00 dns-debian13 panel[33290]: 2026/10/10 16:54:09 http: TLS handshake error from 127.0.0.1:54642: EOF"
+    ],
+    "nginx.service": [
+      "2026-10-10T16:53:47.103019+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T16:53:47.139684+00:00 dns-debian13 nginx[34380]: 2026/10/10 16:53:47 [notice] 34380#34380: signal process started",
+      "2026-10-10T16:53:47.144391+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T16:53:48.262233+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T16:53:48.290769+00:00 dns-debian13 nginx[34464]: 2026/10/10 16:53:48 [notice] 34464#34464: signal process started",
+      "2026-10-10T16:53:48.295054+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+      "2026-10-10T16:54:09.209379+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-10T16:54:09.230093+00:00 dns-debian13 nginx[34539]: 2026/10/10 16:54:09 [notice] 34539#34539: signal process started",
+      "2026-10-10T16:54:09.232405+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+    ],
+    "php8.4-fpm.service": []
+  },
+  "mode": "read-window",
+  "owner_action": false,
+  "schema": "celikpanel/set8-native/v1",
+  "since_epoch": 1791651225,
+  "systemd_manager": [
+    "2026-10-10T16:53:47.103019+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T16:53:47.144391+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T16:53:48.262233+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T16:53:48.295054+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.",
+    "2026-10-10T16:54:09.209379+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-10T16:54:09.232405+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+  ],
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service",
+    "nginx.service",
+    "php8.4-fpm.service"
+  ]
+}

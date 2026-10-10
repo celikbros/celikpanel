@@ -1,0 +1,7 @@
+qemu: QEMU emulator version 11.1.1
+kernel (WSL): 6.18.33.2-microsoft-standard-WSL2
+python: Python 3.14.7
+rev: a9c95d437487d998737eb4dfd12731cdc7f08def
+rev: 2a0af88660773b43cbe1155c622483e2f0a2bbeb
+rev: 2a0af88660773b43cbe1155c622483e2f0a2bbeb
+rev: 988ea2eab0653ed442d20e1fc351cd9bb68a4c07

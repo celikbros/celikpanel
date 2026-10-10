@@ -1,0 +1,10 @@
+ M cmd/agent/mail_health_dns.go
+ M internal/services/nginx_generator.go
+ M internal/services/templates/nginx/vhost.conf.tmpl
+ M internal/transport/mail_observability_contracts.go
+ M internal/transport/rpc.go
+?? deploy/e2e/release-recovery/guest_set8_native.py
+?? deploy/e2e/release-recovery/run-set8.sh
+?? deploy/e2e/release-recovery/set8_trial.py
+?? deploy/e2e/release-recovery/test_set8_trial.py
+(Windows git, tracked files and the release-recovery folder; the WSL git status over /mnt/c was stopped after 15 min)

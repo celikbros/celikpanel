@@ -1,0 +1,87 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "f: PHP settings read (GET /php)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18852"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/2/php"
+  },
+  "response": {
+    "elapsed_seconds": 0.744,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 10 Oct 2026 16:30:28 GMT"
+      ],
+      [
+        "Content-Length",
+        "434"
+      ]
+    ],
+    "json": {
+      "available_versions": [
+        "8.3"
+      ],
+      "domain_id": 2,
+      "domain_name": "set8-a.test",
+      "php_version": "8.3",
+      "pool_config": {
+        "group": "set8_a_test",
+        "listen": "/var/run/php/php8.3-fpm-site2.sock",
+        "listen_group": "www-data",
+        "listen_mode": "0660",
+        "listen_owner": "www-data",
+        "name": "site2",
+        "pm": "dynamic",
+        "pm_max_children": 5,
+        "pm_max_requests": 500,
+        "pm_max_spare_servers": 3,
+        "pm_min_spare_servers": 1,
+        "pm_start_servers": 2,
+        "user": "set8_a_test"
+      },
+      "pool_name": "site2"
+    },
+    "status": 200,
+    "text": null
+  }
+}
