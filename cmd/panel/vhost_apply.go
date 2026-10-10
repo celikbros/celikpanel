@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -42,15 +41,11 @@ func (p *Panel) applyVhostForDomainWithACMEChallengeNames(
 	if err != nil {
 		return err
 	}
-
-	var resp transport.ApplyVhostResponse
-	if err := p.callAgentContext(ctx, "Agent.ApplyVhost", &req, &resp); err != nil {
-		return err
-	}
-	if resp.Error != "" {
-		return errors.New(resp.Error)
-	}
-	return nil
+	// D-031: the Agent classifies the file first. A file the owner changed,
+	// removed or locked is kept and this returns a typed refusal
+	// (siteFileHeldError), which every caller reports as such.
+	_, err = p.applySiteFileRender(ctx, req, transport.SiteFileTriggerChange)
+	return err
 }
 
 // buildVhostRequest derives the complete agent input from the durable panel

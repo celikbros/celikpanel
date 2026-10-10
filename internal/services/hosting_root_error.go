@@ -38,3 +38,18 @@ type WebServerRefusedConfigError struct {
 func (e *WebServerRefusedConfigError) Error() string {
 	return transport.WebServerRefusedConfig + ": " + e.Detail
 }
+
+// SiteConfigExistsError: site creation found, at the site's vhost path, a
+// file that is not CelikPanel's unchanged text (an owner's own vhost with this
+// name, or one CelikPanel cannot read). The file was kept, the Agent removed
+// the parts it had created for the site, and the site was not created (D-031).
+// Path is a path of this server.
+// SiteConfigExistsError: site oluşturma, sitenin vhost yolunda CelikPanel'in
+// değişmemiş metni olmayan bir dosya buldu; dosya korundu, site oluşturulmadı.
+type SiteConfigExistsError struct {
+	Path string
+}
+
+func (e *SiteConfigExistsError) Error() string {
+	return transport.SiteConfigExists + ": " + e.Path
+}

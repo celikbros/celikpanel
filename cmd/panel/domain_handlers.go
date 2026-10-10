@@ -33,6 +33,9 @@ type DomainResponse struct {
 	Bandwidth   *int64            `json:"bandwidth,omitempty"`
 	ParentID    *int              `json:"parent_id,omitempty"`
 	Access      map[string]string `json:"access,omitempty"`
+	// SiteConfig is the vhost's last observed state (D-031), for an
+	// administrator only. Absent when nothing was observed yet.
+	SiteConfig *domainSiteConfigSummary `json:"site_config,omitempty"`
 }
 
 const (
@@ -110,6 +113,16 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeServerError(w, err)
 		return
+	}
+
+	var siteConfigs map[int]domainSiteConfigSummary
+	if caller != nil && caller.hasAccountRole(roleAdmin) {
+		siteConfigs, err = p.domainSiteConfigSummaries(r.Context())
+		if err != nil {
+			// The list itself is still known; the files' states are not.
+			log.Printf("domains list: read site configuration states: %v", err)
+			siteConfigs = nil
+		}
 	}
 
 	// Build response with proper field names for frontend
@@ -202,6 +215,7 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 			Bandwidth:   bandwidthResponse,
 			ParentID:    parentID,
 			Access:      access,
+			SiteConfig:  siteConfigFor(siteConfigs, domain.ID),
 		})
 	}
 

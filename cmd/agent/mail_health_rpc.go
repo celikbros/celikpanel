@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net"
 	"os/exec"
 	"strings"
@@ -41,9 +42,7 @@ func (a *Agent) MailHealth(_ *transport.Empty, resp *MailHealthResponse) error {
 
 	if resp.ServerIP != "" {
 		ptr, aligned, forward, err := publicMailDNSIdentity(context.Background(), resp.ServerIP, resp.Myhostname)
-		if err == nil {
-			resp.PTR, resp.PTRAligned, resp.FCrDNS = ptr, aligned, forward
-		}
+		recordMailDNSLookup(resp, ptr, aligned, forward, err)
 	}
 
 	// One well-known MX, short timeout. Failure here almost always means the
@@ -58,6 +57,24 @@ func (a *Agent) MailHealth(_ *transport.Empty, resp *MailHealthResponse) error {
 		resp.OutboundPort25 = "blocked"
 	}
 	return nil
+}
+
+// recordMailDNSLookup carries the lookup outcome in the health answer: a
+// failed lookup leaves PTR, PTRAligned and FCrDNS unset and says it failed and
+// why, so the Panel reports the reverse DNS as unknown rather than as missing
+// (D-025 invariant 2, 2026-10-10). A name that cannot be looked up is not a
+// lookup and is left unmarked.
+// Basarisiz sorgu PTR'yi eksik gostermez; sonucu ve sinifi yanitta tasinir.
+func recordMailDNSLookup(resp *MailHealthResponse, ptr string, aligned, forward bool, err error) {
+	switch {
+	case err == nil:
+		resp.PTR, resp.PTRAligned, resp.FCrDNS = ptr, aligned, forward
+		resp.ReverseDNSLookup = transport.MailDNSLookupDone
+	case errors.Is(err, errMailDNSIdentityInvalid):
+	default:
+		resp.ReverseDNSLookup = transport.MailDNSLookupFailed
+		resp.ReverseDNSLookupError = mailDNSLookupErrorClass(err)
+	}
 }
 
 // isPrivateIP reports whether the server sits behind NAT (dev boxes, home

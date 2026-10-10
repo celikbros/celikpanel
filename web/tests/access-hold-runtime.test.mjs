@@ -176,6 +176,12 @@ test('the wording exists in both languages, in the screen half, and says reason,
   assert.match(value('screens/tr', 'accessHold.prolonged'), /Beklemeyi sürdürebilirsiniz.*yeniden yükleyebilirsiniz.*yazıp kaydetmediğiniz her şeyi siler/s);
   assert.match(value('screens/en', 'accessHold.sessionEnded'), /session ended.*Sign in to return to the page you were on.*not kept/s);
   assert.match(value('screens/tr', 'accessHold.sessionEnded'), /Oturumunuz sona erdi.*dönmek için giriş yapın.*korunmadı/s);
+  // The update restart is a possibility, and the license is undecided, not declared fine (2026-10-10).
+  assert.equal(value('screens/en', 'accessHold.updateTitle'), 'The Panel is not answering; an update may be restarting it');
+  assert.equal(value('screens/tr', 'accessHold.updateTitle'), 'Panel yanıt vermiyor; bir güncelleme onu yeniden başlatıyor olabilir');
+  assert.match(value('screens/en', 'accessHold.updateHelp'), /Whether the license is valid is not known until the Panel answers; nothing about it has been decided\.$/);
+  assert.match(value('screens/tr', 'accessHold.updateHelp'), /Lisansın geçerli olup olmadığı Panel yanıt verene kadar bilinmiyor; bu konuda hiçbir karar verilmedi\.$/);
+  for (const file of ['screens/en', 'screens/tr']) assert.doesNotMatch(value(file, 'accessHold.updateHelp'), /not a license problem|lisans sorunu değil/, file);
   assert.match(value('screens/en', 'accessHold.updateReload'), /most likely because CelikPanel was updated.*reloads in a moment/s);
   assert.match(value('screens/tr', 'accessHold.updateReload'), /büyük olasılıkla.*güncellendi.*birazdan yeniden yüklenir/s);
   // The reload says what it costs.
@@ -380,8 +386,10 @@ test('a decision that ran out in a hidden tab is refreshed silently on return; t
 // lisans sonucu okunamadiginda anilir.
 test('the hold layer names the cause the read showed: an update restart, an unanswered or starting Panel, the license only when the Panel answered', async () => {
   const id = 'e'.repeat(32);
-  const record = (phase, extra = {}) => JSON.stringify({ state_version: 1, phase, marker: { marker_version: 1, request_id: id }, ...extra });
+  const record = (phase, extra = {}, createdAt = Date.now()) => JSON.stringify({ state_version: 1, phase, marker: { marker_version: 1, request_id: id, created_at: createdAt }, ...extra });
   const running = record('active'), finished = record('terminal', { outcome: 'succeeded' });
+  // Started more than 30 minutes ago, or with no start time: the record no longer names the update.
+  const stale = record('active', {}, Date.now() - 31 * 60 * 1000), undated = JSON.stringify({ state_version: 1, phase: 'active', marker: { marker_version: 1, request_id: id } });
   const dropped = () => { throw new TypeError('Failed to fetch'); };
   const unavailable = () => Response.json({ can_use_panel: false, valid_until: 0, state: 'status_unavailable', observation: 'unavailable' });
   const previousStorage = globalThis.localStorage, previousTimer = window.setTimeout, previousNow = Date.now;
@@ -392,6 +400,8 @@ test('the hold layer names the cause the read showed: an update restart, an unan
     // No update in progress here, or one already finished: the Panel did not answer.
     [null, dropped, 'accessHold.availabilityTitle', 'accessHold.availabilityHelp'],
     [finished, dropped, 'accessHold.availabilityTitle', 'accessHold.availabilityHelp'],
+    [stale, dropped, 'accessHold.availabilityTitle', 'accessHold.availabilityHelp'],
+    [undated, dropped, 'accessHold.availabilityTitle', 'accessHold.availabilityHelp'],
     // The Panel answered that it is starting.
     [running, () => Response.json({ code: 'PANEL_STARTING' }, { status: 503 }), 'recovery.startingTitle', 'recovery.startingHelp'],
     // The Panel answered and could not read its license result: the license, also during an update.
@@ -728,4 +738,25 @@ test('a refusal cannot make the access gate read without pause', () => {
   const onboarding = source('../src/components/LicenseOnboarding.tsx');
   assert.match(onboarding, /if \(known \|\| Date\.now\(\) - lastRead\.current >= UNKNOWN_RECHECK_MS\) void check\(\);/);
   assert.match(onboarding, /controller\.current = request;\s*lastRead\.current = Date\.now\(\);/);
+});
+
+// The browser's update record names the update only within 30 minutes of its
+// start (2026-10-10): a browser that never saw the end would otherwise name an
+// update forever. Exactly one declaration of the record key exists.
+// Kayit guncellemeyi yalniz baslangicindan sonraki 30 dakika icinde anar.
+test('the update record names the update only within 30 minutes of its start', async () => {
+  const { savedUpdateUnfinished, UPDATE_CAUSE_WINDOW_MS } = await import(observationURL);
+  assert.equal(UPDATE_CAUSE_WINDOW_MS, 30 * 60 * 1000);
+  const id = 'f'.repeat(32), now = 1_800_000_000_000;
+  const at = (createdAt, phase = 'active') => JSON.stringify({ state_version: 1, phase, marker: { marker_version: 1, request_id: id, created_at: createdAt } });
+  assert.equal(savedUpdateUnfinished(at(now), now), true, 'just started');
+  assert.equal(savedUpdateUnfinished(at(now - UPDATE_CAUSE_WINDOW_MS), now), true, 'at the limit');
+  assert.equal(savedUpdateUnfinished(at(now - UPDATE_CAUSE_WINDOW_MS - 1), now), false, 'past the limit');
+  assert.equal(savedUpdateUnfinished(at(now + 60000), now), false, 'a start in the future is not trusted');
+  assert.equal(savedUpdateUnfinished(at(now, 'terminal'), now), false, 'an ended update');
+  for (const createdAt of [undefined, 0, -1, 'now', Number.NaN]) assert.equal(savedUpdateUnfinished(at(createdAt), now), false, String(createdAt));
+  assert.equal(savedUpdateUnfinished(null, now), false);
+  const declarations = ['../src/lib/recoveryObservation.ts', '../src/components/SystemUpdateOperation.tsx', '../src/components/AccessHold.tsx', '../src/components/RecoveryAccess.tsx', '../src/offline/page.ts']
+    .map(path => (source(path).match(/'celikpanel\.system-update-operation\.v1'/g) || []).length);
+  assert.deepEqual(declarations, [1, 0, 0, 0, 0]);
 });

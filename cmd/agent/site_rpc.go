@@ -58,9 +58,13 @@ type siteLifecycleOps struct {
 	writeFileExclusive   func(string, []byte, os.FileMode) error
 	applyLayout          func(string, string) error
 	applyVhost           func(string, string) error
-	removeVhost          func(string) error
-	removeAppUnit        func(int) error
-	removeAll            func(string) error
+	// applySiteVhost is the D-031 path: classify, then write only an absent
+	// file at creation. Nil falls back to applyVhost (component tests that
+	// exercise other stages).
+	applySiteVhost func(services.ManagedVhostItem) (transport.SiteFileResult, error)
+	removeVhost    func(string) error
+	removeAppUnit  func(int) error
+	removeAll      func(string) error
 }
 
 func (a *Agent) resolvedSiteLifecycleOps() siteLifecycleOps {
@@ -104,9 +108,16 @@ func (a *Agent) resolvedSiteLifecycleOps() siteLifecycleOps {
 			}
 			return file.Close()
 		},
-		applyLayout: applyHostingLayout,
-		applyVhost:  a.nginxGen.ApplyVhost,
-		removeVhost: a.nginxGen.RemoveVhost,
+		applyLayout:    applyHostingLayout,
+		applyVhost:     a.nginxGen.ApplyVhost,
+		applySiteVhost: a.nginxGen.ApplyManagedVhost,
+		removeVhost: func(domain string) error {
+			backup, err := a.nginxGen.RemoveSiteVhost(domain)
+			if backup != "" {
+				log.Printf("DeleteSite %s: the vhost was not CelikPanel's unchanged text; a copy is kept as %s", domain, backup)
+			}
+			return err
+		},
 		removeAppUnit: func(siteID int) error {
 			var response AppApplyResponse
 			if err := a.RemoveAppUnit(&AppControlRequest{SiteID: siteID}, &response); err != nil {
@@ -252,6 +263,13 @@ func (a *Agent) validatedCreateSiteRequest(
 		PHPSocket:           phpSocket,
 		SSLType:             "none",
 		ProjectType:         req.ProjectType,
+		FileTrigger:         transport.SiteFileTriggerCreate,
+	}
+	if len(req.ServerNames) > 0 {
+		// The Panel's managed host names: the creation vhost is then the
+		// same text the next start and every save render (D-031, set8).
+		vhostReq.ServerNames = req.ServerNames
+		vhostReq.TempDomain = ""
 	}
 	rendered, err := a.renderValidatedVhost(vhostReq)
 	if err != nil {
@@ -478,7 +496,31 @@ func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.Cre
 
 	// 7. Apply, validate and reload as one serialized transaction. The safe
 	// API restores and reactivates the previous vhost on every failure.
-	err = ops.applyVhost(rendered.Domain, rendered.Config)
+	// D-031: the file is classified first. A file at the site's path that is
+	// not CelikPanel's unchanged text (an owner's own vhost with this name)
+	// is kept and the site is not created.
+	if ops.applySiteVhost != nil {
+		result, applyErr := ops.applySiteVhost(services.ManagedVhostItem{
+			Domain:  rendered.Domain,
+			Body:    rendered.Config,
+			Trigger: transport.SiteFileTriggerCreate,
+		})
+		reply.SiteFile = &result
+		reply.NginxConfig = services.SealManagedText(rendered.Config)
+		err = applyErr
+		if err == nil && !siteFileOutcomeApplied(result.Outcome) {
+			fail("nginx vhost activation", errors.New(siteFileHeldMessage(rendered.Domain, result)))
+			reply.ErrorCode = transport.SiteConfigExists
+			if result.State == transport.SiteFileUnreadable {
+				reply.ErrorDetail = result.Path + " (" + result.Reason + ")"
+			} else {
+				reply.ErrorDetail = result.Path
+			}
+			return nil
+		}
+	} else {
+		err = ops.applyVhost(rendered.Domain, rendered.Config)
+	}
 	if err != nil {
 		fail("nginx vhost activation", err)
 		// nginx read the configuration with this vhost in it and refused it,

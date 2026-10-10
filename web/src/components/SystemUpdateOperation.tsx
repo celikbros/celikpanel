@@ -1,7 +1,7 @@
 import { prepareRecoveryShell } from '../lib/recoveryShell';
 import { systemUpdateFailureMessage } from '../lib/systemUpdateFailure';
 import { failedUpdateGuidance, type OutcomeText } from '../lib/systemUpdateOutcome';
-import { isPreflightStop, parseRecoveryObservation, reconcileRecoveryObservation, type RecoveryObservation } from '../lib/recoveryObservation';
+import { isPreflightStop, parseRecoveryObservation, reconcileRecoveryObservation, UPDATE_MARKER_KEY, type RecoveryObservation } from '../lib/recoveryObservation';
 import {
     createContext,
     useCallback,
@@ -43,7 +43,8 @@ import { decodeSystemUpdatePhase, systemUpdateClockTime, systemUpdateOperationPh
 
 type Translate = ReturnType<typeof useI18n>['t'];
 
-export const SYSTEM_UPDATE_MARKER_KEY = 'celikpanel.system-update-operation.v1';
+// The one declaration of this browser's update record key lives beside its readers (lib/recoveryObservation.ts).
+export const SYSTEM_UPDATE_MARKER_KEY = UPDATE_MARKER_KEY;
 const POST_UPDATE_RELOAD_PARAM = '_cp_update';
 const TAB_RELOADED_MARKER_KEY = 'celikpanel.system-update-reloaded.v1';
 const POST_UPDATE_RELOAD_MS = 1500;

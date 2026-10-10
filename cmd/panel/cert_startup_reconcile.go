@@ -145,7 +145,8 @@ func (p *Panel) reconcileCertificateRuntimeAtStartup() startupCertificateDeferra
 		)
 	}
 
-	hostedVhosts, err := p.reconcileHostedVhostsAtStartup(ctx)
+	hostedVhosts, err := p.reconcileHostedVhostsAtStartupDetailed(ctx, maxStartupHostedVhosts)
+	logHostedVhostStartup(hostedVhosts)
 	if err != nil {
 		rollbackCtx, rollbackCancel := sslCompensationContext()
 		rollbackErr := p.rollbackStartupCertificateActivations(
@@ -159,11 +160,12 @@ func (p *Panel) reconcileCertificateRuntimeAtStartup() startupCertificateDeferra
 			rollbackErr,
 		)
 		return startupCertificateDeferral{}
-	} else if hostedVhosts > 0 {
-		log.Printf(
-			"certificate startup reconcile: restored %d hosted vhosts with one nginx validation and reload",
-			hostedVhosts,
-		)
+	}
+	if len(hostedVhosts.notApplied) > 0 {
+		// D-031: a pending activation whose site file was kept, missing or not
+		// written is not complete; only those return to pending, the other
+		// sites' activations go on.
+		pending = p.withdrawStartupActivations(pending, hostedVhosts.notApplied)
 	}
 
 	dependentCtx, dependentCancel := context.WithTimeout(
@@ -346,6 +348,39 @@ func (p *Panel) preparePendingCertificatesAtStartup(
 	return state, nil
 }
 
+func (p *Panel) withdrawStartupActivations(
+	pending startupPendingCertificateState,
+	notApplied map[int]bool,
+) startupPendingCertificateState {
+	eligible := make([]int, 0, len(pending.eligible))
+	for _, domainID := range pending.eligible {
+		if !notApplied[domainID] {
+			eligible = append(eligible, domainID)
+		}
+	}
+	activated := make([]int, 0, len(pending.activated))
+	var rollback []int
+	for _, domainID := range pending.activated {
+		if notApplied[domainID] {
+			rollback = append(rollback, domainID)
+			continue
+		}
+		activated = append(activated, domainID)
+	}
+	if withdrawn := len(pending.eligible) - len(eligible); withdrawn > 0 {
+		rollbackCtx, rollbackCancel := sslCompensationContext()
+		err := p.rollbackStartupCertificateActivations(rollbackCtx, rollback)
+		rollbackCancel()
+		log.Printf(
+			"certificate startup reconcile: %d pending certificate activations stay pending because their site configuration file was not written; rollback: %v",
+			withdrawn, err,
+		)
+	}
+	pending.eligible = eligible
+	pending.activated = activated
+	return pending
+}
+
 func (p *Panel) rollbackStartupCertificateActivations(
 	ctx context.Context,
 	domainIDs []int,
@@ -417,8 +452,36 @@ func (p *Panel) reconcileHostedVhostsAtStartupWithLimit(
 	ctx context.Context,
 	limit int,
 ) (int, error) {
+	result, err := p.reconcileHostedVhostsAtStartupDetailed(ctx, limit)
+	if err != nil {
+		return 0, err
+	}
+	return result.applied, nil
+}
+
+// hostedVhostStartupResult is the start-up batch per site (D-031): which
+// domains did not end with the Panel's text on disk (kept, missing, refused,
+// failed), and the counts of the start line.
+type hostedVhostStartupResult struct {
+	applied     int
+	notApplied  map[int]bool
+	counts      transport.SiteFileCounts
+	agentLegacy bool
+}
+
+// reconcileHostedVhostsAtStartupDetailed renders every hosted site and sends
+// one batch. A site whose render input cannot be prepared is that site's
+// failure; the others are sent (D-031 point 5). The Agent classifies each file
+// and writes only a managed and unchanged one whose text differs: nothing is
+// written and nginx is not reloaded when every file already is the Panel's
+// text. A removed file is not recreated at start.
+func (p *Panel) reconcileHostedVhostsAtStartupDetailed(
+	ctx context.Context,
+	limit int,
+) (hostedVhostStartupResult, error) {
+	result := hostedVhostStartupResult{notApplied: map[int]bool{}}
 	if limit <= 0 {
-		return 0, errors.New("hosted vhost reconciliation limit must be positive")
+		return result, errors.New("hosted vhost reconciliation limit must be positive")
 	}
 
 	rows, err := p.db.GetDB().QueryContext(ctx, `
@@ -429,49 +492,60 @@ func (p *Panel) reconcileHostedVhostsAtStartupWithLimit(
 		ORDER BY d.id
 		LIMIT ?`, limit+1)
 	if err != nil {
-		return 0, fmt.Errorf("list hosted vhosts: %w", err)
+		return result, fmt.Errorf("list hosted vhosts: %w", err)
 	}
 	var domainIDs []int
 	for rows.Next() {
 		var domainID int
 		if err := rows.Scan(&domainID); err != nil {
 			rows.Close()
-			return 0, fmt.Errorf("scan hosted vhost: %w", err)
+			return result, fmt.Errorf("scan hosted vhost: %w", err)
 		}
 		domainIDs = append(domainIDs, domainID)
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
-		return 0, fmt.Errorf("hosted vhost rows: %w", err)
+		return result, fmt.Errorf("hosted vhost rows: %w", err)
 	}
 	if err := rows.Close(); err != nil {
-		return 0, fmt.Errorf("hosted vhost rows: %w", err)
+		return result, fmt.Errorf("hosted vhost rows: %w", err)
 	}
 	if len(domainIDs) > limit {
-		return 0, fmt.Errorf(
+		return result, fmt.Errorf(
 			"hosted vhost count exceeds safe startup limit %d; nginx was left unchanged",
 			limit,
 		)
 	}
 	if len(domainIDs) == 0 {
-		return 0, nil
+		return result, nil
 	}
 
 	if err := p.requireMatchingAgentBuild(ctx); err != nil {
-		return 0, fmt.Errorf("verify startup vhost batch capability: %w", err)
+		return result, fmt.Errorf("verify startup vhost batch capability: %w", err)
 	}
 
 	requests := make([]applyVhostRPCRequest, 0, len(domainIDs))
 	for _, domainID := range domainIDs {
 		request, err := p.buildVhostRequest(ctx, domainID, nil)
 		if err != nil {
-			return 0, fmt.Errorf(
-				"prepare hosted vhost for domain %d: %w",
-				domainID,
-				err,
-			)
+			// One site's input (an unreadable certificate) is that site's
+			// failure, named; the other sites are still rendered.
+			result.notApplied[domainID] = true
+			result.counts.Failed++
+			if siteID, domain, idErr := p.siteIDForDomain(ctx, domainID); idErr == nil {
+				log.Printf("site configuration %s (startup): not rendered: %v", domain, err)
+				p.recordSiteFile(ctx, siteID, domainID, domain, transport.SiteFileTriggerStartup, nil, siteConfigReasonRenderInput)
+			} else {
+				log.Printf("site configuration of domain %d (startup): not rendered: %v", domainID, err)
+			}
+			continue
 		}
+		request.FileTrigger = transport.SiteFileTriggerStartup
+		request.RecordedSHA256 = p.recordedVhostSHA256(ctx, request.SiteID)
 		requests = append(requests, request)
+	}
+	if len(requests) == 0 {
+		return result, nil
 	}
 
 	var resp transport.ApplyVhostsResponse
@@ -485,19 +559,94 @@ func (p *Panel) reconcileHostedVhostsAtStartupWithLimit(
 		&resp,
 	)
 	if err != nil {
-		return 0, fmt.Errorf("apply hosted vhost batch: %w", err)
+		return result, fmt.Errorf("apply hosted vhost batch: %w", err)
 	}
+
+	if len(resp.Items) == 0 {
+		// An Agent that predates D-031: its old answer, and every file's
+		// state is unknown.
+		if resp.Error != "" {
+			return result, errors.New(resp.Error)
+		}
+		if resp.Applied != len(requests) {
+			return result, fmt.Errorf(
+				"agent reported %d applied startup vhosts, want %d",
+				resp.Applied,
+				len(requests),
+			)
+		}
+		result.agentLegacy = true
+		for _, request := range requests {
+			p.recordSiteFile(ctx, request.SiteID, request.DomainID, request.Domain,
+				transport.SiteFileTriggerStartup, nil, siteConfigReasonAgentDoesNotReport)
+		}
+		result.applied = resp.Applied
+		return result, nil
+	}
+
+	byDomain := make(map[int]applyVhostRPCRequest, len(requests))
+	for _, request := range requests {
+		byDomain[request.DomainID] = request
+	}
+	for _, item := range resp.Items {
+		request, ok := byDomain[item.DomainID]
+		if !ok {
+			continue
+		}
+		file := item.File
+		if item.Error != "" {
+			log.Printf("site configuration %s (startup): not rendered: %s", request.Domain, boundedAgentDiagnostic(item.Error))
+		}
+		if file.Path == "" {
+			p.recordSiteFile(ctx, request.SiteID, request.DomainID, request.Domain,
+				transport.SiteFileTriggerStartup, nil, siteConfigReasonRenderInput)
+		} else {
+			p.recordSiteFile(ctx, request.SiteID, request.DomainID, request.Domain,
+				transport.SiteFileTriggerStartup, &file, "")
+		}
+		if !siteFileApplied(file.Outcome) {
+			result.notApplied[item.DomainID] = true
+		}
+	}
+	if resp.Counts != nil {
+		counts := *resp.Counts
+		counts.Failed += result.counts.Failed
+		result.counts = counts
+	}
+	result.applied = resp.Applied
 	if resp.Error != "" {
-		return 0, errors.New(resp.Error)
+		return result, errors.New(resp.Error)
 	}
-	if resp.Applied != len(requests) {
-		return 0, fmt.Errorf(
-			"agent reported %d applied startup vhosts, want %d",
-			resp.Applied,
-			len(requests),
+	return result, nil
+}
+
+// logHostedVhostStartup is the start line (D-031 point 5): the counts, and
+// the first state after an update from a release without the header.
+func logHostedVhostStartup(result hostedVhostStartupResult) {
+	if result.agentLegacy {
+		log.Printf(
+			"certificate startup reconcile: restored %d hosted vhosts; the Agent did not report what it found in each file, so their state is unknown",
+			result.applied,
+		)
+		return
+	}
+	counts := result.counts
+	total := counts.Written + counts.Unchanged + counts.Kept + counts.Foreign + counts.Unknown +
+		counts.Unreadable + counts.Missing + counts.Failed
+	if total == 0 {
+		return
+	}
+	log.Printf(
+		"site configuration files at start: %d written, %d unchanged, %d kept (owner-edited), %d kept (foreign), %d kept (unknown origin), %d unreadable or unwritable, %d missing (not recreated), %d failed; %d adopted from an earlier release",
+		counts.Written, counts.Unchanged, counts.Kept, counts.Foreign, counts.Unknown,
+		counts.Unreadable, counts.Missing, counts.Failed, counts.Adopted,
+	)
+	if counts.Adopted > 0 || counts.Unknown > 0 {
+		log.Printf(
+			"site configuration files at start: %d adopted, %d left alone because they differ from every known CelikPanel text",
+			counts.Adopted, counts.Unknown,
 		)
 	}
-	return resp.Applied, nil
 }
 
 // reconcileCertificateDependentsAtStartup republishes derived runtime state

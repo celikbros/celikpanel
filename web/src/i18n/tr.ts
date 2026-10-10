@@ -359,7 +359,7 @@ export const tr: Record<ShellKey, string> = {
     // --- güncelleme bildirimi: izlenen güncellemenin son okuması (2026-10-10) ---
     'panelUpdate.tracking.reading': 'Bu güncellemenin durumu sunucudan okunuyor…',
     'panelUpdate.tracking.verifyingTitle': 'Güncelleme kuruldu, doğrulanıyor',
-    'panelUpdate.tracking.verifying': '{version} kuruldu ve bu panel onu çalıştırıyor. Güncelleme doğrulanıyor ve henüz bitmedi; bu bildirim onu kendiliğinden izler.',
+    'panelUpdate.tracking.verifying': '{version} kuruldu ve bu panel onu çalıştırıyor. Güncelleme doğrulanıyor ve henüz bitmedi; bu bildirim onu kendiliğinden izler. Bir şey yapmanız gerekmiyor.',
     'panelUpdate.tracking.unknown': 'Bu güncellemenin durumu şu an okunamadı; bu yüzden hâlâ sürüp sürmediği ya da bitip bitmediği bilinmiyor. Bu bildirim kendiliğinden yeniden okur; başka bir güncelleme başlatmayın.',
     'panelUpdate.lastRead': 'Son okuma',
     // --- güncelleme bildirimi bloğunun sonu ---
@@ -438,4 +438,18 @@ export const tr: Record<ShellKey, string> = {
     'err.SERVICE_ACTION_FAILED.verify': "İşlem gönderildi ancak {unit} istenen durumda değil. Sunucuda {command} komutuyla durumunu görün, nedeni düzeltin, sonra işlemi burada yineleyin.",
     'err.SERVICE_ACTION_FAILED.command': "Sunucunun hizmet yöneticisi {unit} üzerindeki işlemi yapmadı. Sunucuda {command} komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin.",
     'err.SERVICE_ACTION_UNKNOWN': "İşlem gönderildi ancak sonucu doğrulanamadı; bu yüzden yapıldı diye gösterilmiyor. Bu doğrulanmış bir hata değildir: {unit} istediğiniz duruma zaten gelmiş olabilir. Sunucuda {command} komutuyla durumunu görün; işlemi yalnız hâlâ gerekiyorsa burada yineleyin.",
+
+    // --- ilk sayfa yüklemesi: arayüz yarım dakika sonra hâlâ yükleniyor (2026-10-10) ---
+    'recovery.waitingProlongedLoading': "CelikPanel hâlâ yükleniyor; kendiliğinden açılır. Bu sayfa böyle kalırsa yeniden yükleyin.",
+    // --- ilk sayfa yüklemesi bloğunun sonu ---
+    // --- sahibin değiştirdiği site yapılandırma dosyası: retler (D-031, 2026-10-10) ---
+    'err.SITE_CONFIG_OWNER_EDITED': 'Bu sitenin nginx yapılandırma dosyası CelikPanel’in değişmemiş metni değil; bu yüzden CelikPanel onu korudu ve bu değişikliği ona uygulamadı. Başka hiçbir şey değiştirilmedi. Alan adının Yapılandırma dosyası sayfasında dosyanızı koruyun, CelikPanel’in metnini alın (dosyanız tarihli bir kopya olarak saklanır) ya da ikisini elle birleştirin.',
+    'err.SITE_CONFIG_MISSING': 'Bu sitenin nginx yapılandırma dosyası eksik; bu yüzden bu değişiklik uygulanmadı ve dosya yeniden oluşturulmadı. Bilerek kaldırıldıysa bir şey yapmanız gerekmez; değilse alan adının Yapılandırma dosyası sayfasında Yeniden oluştur’u seçin.',
+    'err.SITE_CONFIG_UNWRITABLE': 'CelikPanel bu sitenin nginx yapılandırma dosyasını okuyamadı ya da değiştiremedi (örneğin bir bağlantı ya da değişikliğe kilitli); bu yüzden dosyayı olduğu gibi korudu ve bu değişikliği uygulamadı. Sunucu sahibi dosyayı sunucuda kontrol eder; nedeni alan adının Yapılandırma dosyası sayfasında.',
+    'err.SITE_CONFIG_EXISTS': 'Bu ad için sunucuda CelikPanel’in yazmadığı bir yapılandırma dosyası zaten var; bu yüzden CelikPanel onu korudu ve siteyi oluşturmadı. Geride hiçbir şey kalmadı. O dosya artık kullanılmıyorsa sunucuda taşıyın ya da adını değiştirin, sonra siteyi yeniden oluşturun.',
+    'err.SITE_CONFIG_CHANGED': 'Yapılandırma dosyası ya da CelikPanel’in metni, sayfa onları gösterdikten sonra değişti; bu yüzden hiçbir şey yapılmadı. Sayfa dosyayı yeniden okur; ona bakıp yeniden seçin.',
+    'err.SITE_CONFIG_NOT_APPLICABLE': 'Bu seçim dosyanın şimdiki hâline uymuyor; bu yüzden hiçbir şey yapılmadı. Sayfa dosyayı yeniden okur.',
+    'err.SITE_CONFIG_NOT_READ': 'CelikPanel bu sitenin yapılandırma dosyasının durumunu şu an okuyamadı. Bu, dosyada bir sorun olduğu anlamına gelmez ve hiçbir şey değiştirilmedi. Tekrar deneyin.',
+    'err.SITE_CONFIG_NGINX_REFUSED': 'nginx, CelikPanel’in metnini içeren yapılandırmayı reddetti; bu yüzden dosyanız olduğu gibi geri kondu ve nginx onunla çalışmayı sürdürüyor. Başka hiçbir şey değiştirilmedi.',
+    // --- site yapılandırma retleri bloğunun sonu ---
 };

@@ -51,6 +51,15 @@ const DomainCronManager = lazy(() => import('./DomainCronManager').then((module)
 const DomainLogsViewer = lazy(() => import('./DomainLogsViewer').then((module) => ({
     default: module.DomainLogsViewer,
 })));
+// The site's configuration file (D-031), for an administrator; fetched when
+// it is needed, like the panels above.
+// Sitenin yapılandırma dosyası; gerektiğinde getirilir.
+const DomainSiteConfig = lazy(() => import('./DomainSiteConfig').then((module) => ({
+    default: module.DomainSiteConfig,
+})));
+const SiteConfigNotice = lazy(() => import('./DomainSiteConfig').then((module) => ({
+    default: module.SiteConfigNotice,
+})));
 
 interface Domain {
     id: number;
@@ -63,6 +72,7 @@ interface Domain {
     disk_usage?: number;
     bandwidth?: number;
     access?: DomainAccess;
+    site_config?: { state: string };
 }
 
 // The measured usage of one domain. An answer without the numbers is not
@@ -323,6 +333,9 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
             { id: 'general', labelKey: 'domain.sub.general', capabilities: ['files'], render: () => <DomainGeneralSettings domainId={domain.id} domainName={domain.domain_name} /> } satisfies SubDef,
             { id: 'type', labelKey: 'domain.sub.hostingType', capabilities: ['files'], render: () => <HostingTypePanel domainId={domain.id} domainName={domain.domain_name} /> } satisfies SubDef,
         ] : []),
+        ...(role === 'admin' ? [
+            { id: 'config', labelKey: 'siteConfig.tab', capabilities: ['files'], render: () => <DomainSiteConfig domainId={domain.id} domainName={domain.domain_name} /> } satisfies SubDef,
+        ] : []),
         ...(projectType === 'php' && canView('php') ? [
             { id: 'php', labelKey: 'domain.sub.php', capabilities: ['php'], render: (readOnly) => <DomainPHPSettings domainId={domain.id} domainName={domain.domain_name} currentVersion={domain.php_version ?? ''} onVersionChange={(v) => setChanged((current) => ({ ...current, php_version: v }))} readOnly={readOnly} isAdditionalUser={isTeamMember} /> } satisfies SubDef,
         ] : []),
@@ -468,6 +481,17 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                     onRetry={() => void list.retry()}
                     busy={list.reading}
                 />
+            )}
+            {role === 'admin' && !isDnsOnly && domain.site_config && !(current.id === 'hosting' && subId === 'config') && (
+                <Suspense fallback={null}>
+                    <SiteConfigNotice
+                        state={domain.site_config.state}
+                        onOpen={() => {
+                            setActiveSub((currentSubs) => ({ ...currentSubs, hosting: 'config' }));
+                            setActiveTab('hosting');
+                        }}
+                    />
+                </Suspense>
             )}
             {/* Header */}
             <div className="mb-5">

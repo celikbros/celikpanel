@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/dnswire"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Mail identity is an external DNS fact. The hostname operation deliberately
@@ -18,11 +20,49 @@ func publicMailDNSIdentity(ctx context.Context, source, hostname string) (string
 	return mailDNSIdentityAt(ctx, source, hostname, []string{"1.1.1.1:53", "8.8.8.8:53"})
 }
 
+// errMailDNSIdentityInvalid: the address or host name cannot be looked up, so no
+// lookup was made. It is not a lookup failure.
+// Adres ya da ad sorgulanamaz; sorgu yapilmadi, bu bir sorgu hatasi degildir.
+var errMailDNSIdentityInvalid = errors.New("mail DNS identity is invalid")
+
+// mailDNSLookupErrorClass names why no resolver answered, without the
+// resolver's own text: timeout, no resolver reachable, refused, or other.
+// Hicbir cozumleyicinin yanit vermeme nedeni, cozumleyicinin kendi metni olmadan.
+func mailDNSLookupErrorClass(err error) string {
+	var netErr net.Error
+	switch {
+	case err == nil:
+		return ""
+	case errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &netErr) && netErr.Timeout()):
+		return transport.MailDNSLookupErrorTimeout
+	case errors.Is(err, syscall.ECONNREFUSED) || strings.HasSuffix(err.Error(), "response code 5"):
+		return transport.MailDNSLookupErrorRefused
+	case errors.Is(err, errNoMailDNSResolver) || errors.Is(err, syscall.ENETUNREACH) || errors.Is(err, syscall.EHOSTUNREACH):
+		return transport.MailDNSLookupErrorNoResolver
+	default:
+		return transport.MailDNSLookupErrorOther
+	}
+}
+
+var errNoMailDNSResolver = errors.New("no public mail DNS resolver available")
+
+// A name the resolver says does not exist (NXDOMAIN) is an answer: no PTR, or
+// no address for the host name. Only a missing answer is a lookup failure.
+// NXDOMAIN bir yanittir; yalniz yanitin olmamasi sorgu hatasidir.
+func queryMailDNSAnswer(ctx context.Context, resolver, name string, qtype uint16) ([]string, error) {
+	names, err := queryMailDNS(ctx, resolver, name, qtype)
+	var dnsErr *net.DNSError
+	if errors.As(err, &dnsErr) && dnsErr.IsNotFound {
+		return nil, nil
+	}
+	return names, err
+}
+
 func mailDNSIdentityAt(ctx context.Context, source, hostname string, resolvers []string) (string, bool, bool, error) {
 	ip := net.ParseIP(source)
 	hostname = strings.ToLower(strings.TrimSuffix(hostname, "."))
 	if ip == nil || !serviceMutationCanonicalFQDN(hostname) {
-		return "", false, false, errors.New("mail DNS identity is invalid")
+		return "", false, false, errMailDNSIdentityInvalid
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -44,7 +84,7 @@ func mailDNSIdentityAt(ctx context.Context, source, hostname string, resolvers [
 	}
 	var lastErr error
 	for _, resolver := range resolvers {
-		names, err := queryMailDNS(ctx, resolver, reverse, dnsTypePTR)
+		names, err := queryMailDNSAnswer(ctx, resolver, reverse, dnsTypePTR)
 		if err != nil {
 			lastErr = err
 			continue
@@ -57,7 +97,7 @@ func mailDNSIdentityAt(ctx context.Context, source, hostname string, resolvers [
 			if name != hostname {
 				continue
 			}
-			addresses, err := queryMailDNS(ctx, resolver, hostname, qtype)
+			addresses, err := queryMailDNSAnswer(ctx, resolver, hostname, qtype)
 			if err != nil {
 				lastErr = err
 				break
@@ -74,7 +114,7 @@ func mailDNSIdentityAt(ctx context.Context, source, hostname string, resolvers [
 		}
 	}
 	if lastErr == nil {
-		lastErr = errors.New("no public mail DNS resolver available")
+		lastErr = errNoMailDNSResolver
 	}
 	return "", false, false, lastErr
 }

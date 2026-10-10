@@ -73,6 +73,9 @@ type VhostData struct {
 	ForwardTo   string
 	ForwardCode int
 	Upstream    string
+	// OwnerIncludeDir is the site's owner include directory (D-031),
+	// derived from Domain by Render; callers do not set it.
+	OwnerIncludeDir string
 }
 
 // Render executes the vhost template over prepared data, deriving the
@@ -80,12 +83,30 @@ type VhostData struct {
 // Render, hazırlanmış veriyle vhost şablonunu çalıştırır; node/proxy
 // tiplerinde vekil upstream'ini türetir.
 func (ng *NginxGenerator) Render(data VhostData) (string, error) {
+	prepared, err := prepareVhostData(data)
+	if err != nil {
+		return "", err
+	}
+	var buf bytes.Buffer
+	if err := ng.tmpl.Execute(&buf, prepared); err != nil {
+		return "", fmt.Errorf("failed to execute template: %v", err)
+	}
+	return buf.String(), nil
+}
+
+// prepareVhostData is the data normalization every vhost template reads,
+// the current one and the frozen ones of earlier releases alike (D-031): the
+// comparison of a pre-header file with an earlier release's render is only
+// meaningful when both see the same prepared data.
+// prepareVhostData, güncel ve dondurulmuş eski şablonların okuduğu veri
+// düzenlemesidir; karşılaştırma ancak ikisi aynı veriyi görürse anlamlıdır.
+func prepareVhostData(data VhostData) (VhostData, error) {
 	data.ServerNames = normalizedServerNames(data.Domain, data.TempDomain, data.ServerNames)
 	data.ACMEChallengeNames = normalizedAdditionalServerNames(data.ACMEChallengeNames)
 	if err := validateACMEChallengeRootForTemplate(
 		data.ACMEChallengeRoot, data.DocumentRoot,
 	); err != nil {
-		return "", err
+		return VhostData{}, err
 	}
 	if !data.ForceHTTPS && data.SSLAutoRedirect {
 		data.ForceHTTPS = true
@@ -102,7 +123,7 @@ func (ng *NginxGenerator) Render(data VhostData) (string, error) {
 		// reddeder. Çalışamayacak bir yapılandırma yazmak yerine dürüstçe
 		// reddet.
 		if data.PHPSocket == "" {
-			return "", fmt.Errorf("php project has no PHP-FPM socket configured for this site")
+			return VhostData{}, fmt.Errorf("php project has no PHP-FPM socket configured for this site")
 		}
 	case "node":
 		data.Upstream = fmt.Sprintf("http://127.0.0.1:%d", data.AppPort)
@@ -112,12 +133,8 @@ func (ng *NginxGenerator) Render(data VhostData) (string, error) {
 	if data.ForwardCode == 0 {
 		data.ForwardCode = 301
 	}
-
-	var buf bytes.Buffer
-	if err := ng.tmpl.Execute(&buf, data); err != nil {
-		return "", fmt.Errorf("failed to execute template: %v", err)
-	}
-	return buf.String(), nil
+	data.OwnerIncludeDir = OwnerIncludeDir(data.Domain)
+	return data, nil
 }
 
 func validateACMEChallengeRootForTemplate(challengeRoot, documentRoot string) error {

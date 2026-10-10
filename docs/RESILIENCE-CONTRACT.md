@@ -4559,8 +4559,20 @@ that replaced the page is not changed). 2026-10-10 is the clock date.
   names an unanswered Panel (cause `availability` only) as an update's restart
   while this browser's update record is `active`
   (`savedUpdateUnfinished` in `web/src/lib/recoveryObservation.ts`, a
-  presentation hint only, with no age limit: a record this browser never saw
-  end keeps the hint). `RecoveryAccess` reads its two addresses through
+  presentation hint only). **Corrected at the second reading of this entry
+  (2026-10-10):** the record had no age limit, so a record this browser never
+  saw end kept the hint for any later outage; it now names the update only
+  within 30 minutes of the update's start (`UPDATE_CAUSE_WINDOW_MS`, read from
+  the record's `created_at`; no start time, an older or a future start leaves
+  the generic "The Panel did not answer just now"), and the words say a
+  possibility, not a verdict: "The Panel is not answering; an update may be
+  restarting it" and "Whether the license is valid is not known until the
+  Panel answers; nothing about it has been decided" (before: "... during an
+  update" and "This is not a license problem", which declared a license
+  verdict the read had not established, against invariant 2). The record's key
+  is declared once (`UPDATE_MARKER_KEY`) and imported by the update tracker.
+  The loading wait has its own half-minute sentence
+  (`recovery.waitingProlongedLoading`). `RecoveryAccess` reads its two addresses through
   `readRemote`; it leaves the remote-state ratchet list (31 to 30 files;
   `valueFromFailure` 1, `swallowedFailure` 1, `rawRead` 2 removed).
 - **Schema or version transition.** None: no API, stored record or access rule
@@ -4575,7 +4587,12 @@ that replaced the page is not changed). 2026-10-10 is the clock date.
   published code painted the gate for about 1.4 s on all three routes (the
   console output of that run is not kept in the repository; the seventh record
   measured about 1.7 s on a real Panel under the same throttle); the change
-  drew no sentence before the page on any of them in the mock.
+  drew no sentence before the page on any of them in the mock. The second
+  reading: the same tests with the 30-minute window (a stale and an undated
+  record, the window's limits, the single key) and a mock browser run
+  (`waitcopy`: the hold with a 5-minute-old and a 31-minute-old record, the
+  loading wait after half a minute; English and Turkish; screenshots looked
+  at). Component-tested and mock browser; not measured on a real system.
 - **Open.** The real-system re-measurement on a guest (set7's method) and any
   installed server; a load with the HTTP cache enabled; the hold layer's words
   during a real update; the two session reads per load (not changed here); the
@@ -4612,7 +4629,8 @@ this entry (the entry directly above addresses 3, and the words of 1).
   carries an additive `phase: "verifying"` when the record is running and the
   Panel answering has the same version and commit as the update's target
   (`panelUpdateStatusPhase`; the archive digest and sequence are not
-  compared; the abandon answer is not covered by the test); the
+  compared; the abandon answer is covered by the test since the second
+  reading); the
   notice and the card say "installed, being verified" then, "could not be read"
   with the read's reason when a read fails, and "reading" before the first
   read; a finished record leaves no notice (unchanged). The update dialog's
@@ -4636,11 +4654,208 @@ this entry (the entry directly above addresses 3, and the words of 1).
   (the typed reason was never read from a real Agent), the owner's own setup
   record, the verifying window of a real update, an installed server. On a
   phone the corner notice covers the card's status line in the mock
-  (unchanged). **Gap in the typed reason:** a failed reverse-DNS lookup in the
-  Agent is reported as no name and no error
-  (`cmd/agent/mail_health_rpc.go:42-46`, `mail_health_dns.go:75-79`), so the
-  page says no reverse DNS name was found where the result was unknown
-  (invariant 2); open. The notice is drawn by the interface the tab loaded, so
+  (unchanged). **Gap in the typed reason, closed in the code at the second
+  reading (2026-10-10):** a failed reverse-DNS lookup in the Agent was reported
+  as no name and no error (`cmd/agent/mail_health_rpc.go:42-46`,
+  `mail_health_dns.go:75-79` at `7c3a05809`), so the page said no reverse DNS
+  name was found where the result was unknown (invariant 2). Now the Agent's
+  health answer carries, additively, `reverse_dns_lookup` (`looked_up` or
+  `failed`) and `reverse_dns_lookup_error` (`timeout`, `no_resolver`,
+  `refused`, `other`); NXDOMAIN counts as an answer (a verified absence), not a
+  failure; a failed lookup makes the check `unknown`
+  (`mail_identity_unavailable`) with reason `reverse_dns_unknown` (`ip`,
+  `error`), shown as "The reverse DNS of {ip} could not be looked up just now;
+  this does not show whether it is set. Check requirements again." with the
+  step state "Could not be checked". A verified owner action earlier in the
+  order (canonical name, public address, mail name) still comes first. A plan
+  whose mail host name is not canonical now has the reason
+  `mail_name_not_canonical` (`name`). The sentence for an empty PTR from an
+  older Agent, which sends no lookup field, no longer claims "was found" but
+  "could be confirmed". A forward-lookup failure after a matching PTR is
+  reported as the same unknown; the two lookups are not told apart.
+  Schema: additive JSON fields on the Agent's health answer and on the setup
+  check; nothing stored changes. Evidence: `cmd/agent/mail_health_dns_test.go`
+  (NXDOMAIN for the PTR and for the address, REFUSED, SERVFAIL, a closed port, a
+  silent resolver, no resolver, a name that cannot be looked up),
+  `cmd/panel/known_state_gates_test.go` (the four reasons with and without a
+  lookup outcome, the unknown with each error class, the non-canonical name, the
+  abandon answer's phase), the mounted test and a mock browser run (`finalcheck`
+  90e-90g). Component-tested and mock browser; not measured on a real system:
+  no real Agent whose resolvers fail was read. The notice is drawn by the interface the tab loaded, so
   an update started from a tab on the previous release ignores `phase`. Items
   1 and 5 of the seventh-record entry stay open; item 3 is addressed in source
   by the entry above, not measured.
+
+### A site configuration file the owner changed is kept and named, never overwritten by a render (invariants 1, 2, 4 and 6; D-031; 2026-10-10)
+
+D-025 invariants 1 (the agent detects owner changes and does not replace them
+with a cached preferred configuration), 2 (unknown, absent and failed are
+different; one durable record per artifact with its version rules), 4 (a
+mutation reads its pre-image, keeps it and restores it exactly; metadata is part
+of the pre-image) and 6 (the screen renders the state the server read); D-022,
+D-024, D-029 (the three choices are guarded routes). **No P0 item is closed or
+advanced**; P0.4/P0.5 stay open. Implemented in source with component tests; the
+native cells (audit §9) come after. 2026-10-10 is the clock date.
+
+- **Before (measured, set8, published alpha.82, Debian 13 / Ubuntu 24.04 /
+  Arch).** Every start, restart and General save rendered every hosted vhost
+  from the database and wrote it over the file on disk: owner edits,
+  replacements and includes silently gone; a removed vhost recreated; unchanged
+  files rewritten (new inode) and nginx reloaded at every start; a save wrote no
+  journal line; the creation render (`server_name X;`) differed from the start
+  render (`server_name X www.X;`); an immutable file failed the whole start
+  batch and its enabled link was deleted by the failed rollback; the Panel wrote
+  `root:celikpanel 0644` over an owner's `root:root` file.
+- **Changed.**
+  - *File format v2.* Every vhost the Panel writes starts with
+    `# celikpanel-render v2 sha256=<64 hex of every byte after this line>`
+    (`internal/services/managed_vhost.go`, `SealManagedText`). The header is the
+    authority for "is this still CelikPanel's text": it travels with the file,
+    survives a database restore, and needs no Panel to read. The template's
+    "do not edit" line is replaced by the owner include point and a sentence
+    saying that an edit is kept.
+  - *Classifier in the Agent* (`inspectSiteFile`): absent, managed and unchanged
+    (header digest equals body digest, or a headerless file byte-equal to a
+    frozen earlier render), owner-edited (header, digest differs), foreign (no
+    header, the ledger has a recorded digest), unreadable (symlink, not regular,
+    permission, larger than 4 MiB, read failed; never followed), unknown origin
+    (no header, no record, matches no frozen render). It runs under the global
+    nginx mutation lock before every render; reads are no-follow.
+  - *Render rule* (`ApplyManagedVhosts`): a managed-unchanged file is replaced
+    only when the text differs (identical bytes: no write, no `nginx -t`, no
+    reload); an absent file is written only at creation and on "recreate" (never
+    at start, never by a setting); every other file is kept and the Panel's text
+    is held in `<file>.celikpanel-pending` (not `.conf`, read by no include).
+    Writes keep the previous file's mode, owner and group, go through a
+    temporary file and one rename, and re-check that the file still is the one
+    classified (`changed_since_shown` otherwise). A rename that fails (EPERM on
+    an immutable file) leaves the file and its enabled link untouched and is
+    that site's typed refusal (`write_refused`); the other sites are written,
+    tested once and reloaded once. An enabled entry is created only when absent
+    at creation/recreate and is never replaced. When `nginx -t` refuses, every
+    file written in that call is put back byte-exact with its mode and owner.
+  - *Typed answers, additive.* `ApplyVhostRequest` gains `FileTrigger`,
+    `RecordedSHA256`, `ExpectedFileSHA256`, `ExpectedRenderSHA256`;
+    `ApplyVhostResponse.File`, `ApplyVhostsResponse.Items/Counts`,
+    `CreateSiteRequest.ServerNames`, `CreateSiteResponse.SiteFile`, the error
+    code `site_config_exists`, and the read-only RPC `Agent.InspectSiteFile`
+    (`internal/transport/site_files.go`). A Panel that receives no `File`/`Items`
+    (an Agent that predates them) records the state `unknown` with reason
+    `agent_does_not_report` and never reads it as unchanged; a missing
+    `InspectSiteFile` method is shown as "not known".
+  - *Per-site isolation at start* (`cmd/panel/cert_startup_reconcile.go`): a
+    site whose render input cannot be prepared is that site's failure, the
+    others are sent; a pending certificate activation whose file was not
+    written stays pending, the others complete. The start line counts written,
+    unchanged, kept (owner-edited, foreign, unknown origin), unreadable or
+    unwritable, missing, failed and adopted; every single-site render logs one
+    line naming the site and the outcome (the save path included).
+  - *Creation equals start.* The orchestrator sends the Panel's own managed host
+    names (`managedSiteHostnames`) with `CreateSite`; the creation vhost is the
+    start render byte for byte (`TestCreationRenderIsTheStartRender`). A file at
+    a new site's path that is not CelikPanel's unchanged text is kept and the
+    site is refused (`SITE_CONFIG_EXISTS`); the Panel removes only the records,
+    never asks the Agent to delete that file.
+  - *Owner include point.* `include /etc/nginx/celikpanel-sites.d/<domain>/*.conf;`
+    in every server block that serves the site's content; the directory is
+    created (0755) when the vhost is written and nothing in it is ever written,
+    changed or removed by the Panel (site deletion included). A deleted site's
+    vhost that is not CelikPanel's unchanged text is kept as a dated copy before
+    removal.
+  - *The owner's choices* (`cmd/panel/site_config.go`): `GET
+    /api/v1/domains/{id}/site-config` (read-only: the Agent's classification and a
+    unified diff computed on the server, ≤ 4000 lines per side and 64 KiB,
+    credential-like lines hidden); `POST …/keep` (records `keep_mine` with the
+    file digest; the file's bytes, header included, are not touched — rewriting
+    the header would make the next render replace the owner's text); `POST
+    …/take` (bound to the file and text digests shown; a dated
+    `.celikpanel-backup-<UTC>` copy with the owner's bytes, mode and owner, then
+    the Panel's text, `nginx -t`, reload, put back on refusal); `POST
+    …/recreate` (absent only). Administrator only; the three POSTs are guarded
+    routes of D-029 (`X-CelikPanel-Request-Id`, replay answered, never re-run).
+- **Schema or version transition.** Migration 44 (`044_managed_site_files.sql`)
+  creates `managed_site_files` and its domain index through the ordinary ledger;
+  no existing table changes; the migration writes no row and touches no file.
+  Rows are created by the first start that classifies the files. An older Panel
+  (alpha.82, schema 43) refuses a ledger with entry 44
+  (`TestOlderReleaseRefusesALedgerWithTheManagedSiteFilesEntry`); rollback is the
+  pre-update snapshot restore, as for every migration. File format: vhosts move
+  from the unversioned "Generated by CelikPanel" header to `celikpanel-render
+  v2`; readers: this release reads both (an old file through the frozen
+  templates), an older release ignores the header line (a comment). The harness
+  pins schema 44 beside 38, 42 and 43 (`deploy/e2e/release-recovery/
+  populated_database.py`: ledger `55efb384c7d1…`, schema `afcb7db4bf3b…`,
+  computed the way its offline tests build input, which reproduces the 38/42/43
+  pins; 67 tables; `guest_populated_baseline.py --expected-version` accepts 44;
+  `database_exchange_rows.py` requires `managed_site_files` empty after a
+  migration-only exchange).
+- **Migration first state (pre-D-031 files).** The frozen templates of
+  v0.1.0-alpha.81 (commit `a0beb7263`) and v0.1.0-alpha.82 (commit `2a0af8866`)
+  are embedded (`internal/services/templates/nginx/legacy/`, SHA-256 pinned by
+  `TestLegacyVhostTemplatesAreTheFrozenReleaseTexts`). A headerless file is
+  compared byte for byte with four texts rendered from the same validated data
+  the Panel sends now: each release's start/save text and each release's
+  creation text (domain alone as `server_name`, no alias, no validation name, no
+  certificate, no redirection, same project type, document root and PHP
+  socket). Equal → adopted (rewritten with the header, `adopted_from` recorded);
+  otherwise → unknown origin, never written. No normalisation "modulo" inputs is
+  done on purpose: a file whose certificate path, aliases, PHP version or
+  validation names changed after the earlier release's last render, or that was
+  created with a temporary name, is unknown origin — a false positive on the safe
+  side that the owner resolves with "take CelikPanel's"; normalising those lines
+  could adopt an owner's edit of exactly them. The step is resumable (each start
+  re-classifies; adopted files are managed afterwards) and writes no file whose
+  verdict is not adopt. First state: the start line "N adopted, M left alone
+  because they differ from every known CelikPanel text" and the Domains list
+  line.
+- **Recovery behaviour.** Before: the Panel's start was a silent repair that
+  replaced the owner's files. After: the start repairs only CelikPanel's own
+  unchanged files; the owner's files are evidence and are kept; the owner
+  decides; nothing retries by itself. **A return to an older release loses the
+  protection** (it overwrites every vhost at its start, as before); after
+  returning forward the older release's text is recognised and adopted. The
+  release notes must say so. Native services keep running without the Panel:
+  the header is an nginx comment and the include directory is ordinary nginx.
+- **Evidence (component tests, no native run).** Services (14):
+  `TestManagedHeaderSealsTheBodyDigest`, `TestClassifierStates`,
+  `TestLegacyVhostTemplatesAreTheFrozenReleaseTexts`,
+  `TestLegacyRendersOfferCreationAndStartTexts`,
+  `TestStartWithEveryFileUnchangedWritesNothingAndDoesNotReload`,
+  `TestRenderRulePerState`, `TestLegacyFileIsAdoptedAndUnknownOriginIsNeverWritten`,
+  `TestTakeCelikPanelsKeepsADatedCopyAndPreservesModeAndOwner` (group preserved,
+  as root), `TestRecreateWritesAMissingFileOnlyWhenAsked`,
+  `TestAnUnwritableFileIsKeptAndDoesNotStopTheOtherSites` (EPERM on rename),
+  `TestNginxRefusalPutsBackEveryWrittenFileExactlyAndLeavesKeptFiles`,
+  `TestRemovingASiteKeepsACopyOfAnEditedVhostAndTheOwnerDirectory`,
+  `TestInspectionDiffIsBoundedAndHidesCredentials`, `TestUnifiedDiffHunks`; each
+  table carries the Debian 13, Ubuntu 24.04 and Arch PHP-FPM socket layouts.
+  Agent (6 + the build-gate matrix): `TestApplyVhostsIsolatesOneSitesRefusedInput`,
+  `TestSiteFileCountsNameEveryOutcome`, `TestApplyVhostReturnsTheTypedKeptFile`,
+  `TestCreationRenderIsTheStartRender`, `TestCreateSiteKeepsAnExistingOwnerFileAndRefuses`,
+  `TestCreateSiteNginxRefusalKeepsItsTypedAnswer`. Panel (7):
+  `TestStartupRecordsEverySiteAndCountsThem`, `TestStartupWithAnOlderAgentRecordsUnknownState`,
+  `TestASettingsRenderOnAKeptFileIsATypedRefusal`,
+  `TestASingleRenderFromAnOlderAgentIsUnknownNotUnchanged`,
+  `TestSiteConfigReadAndTheOwnersChoices`, `TestSiteConfigReadFromAnOlderAgentIsUnknown`,
+  `TestSiteConfigRoutesAreGuardedAndAdministratorOnly`. Orchestrator (2):
+  `TestCreateSiteSendsThePanelsHostNamesAndRecordsTheLedgerRow`,
+  `TestCreateSiteWithAKeptOwnerFileRemovesOnlyTheRecords`. Migration (3):
+  `TestManagedSiteFilesMigrationContracts`,
+  `TestManagedSiteFilesMigrationAppliesToASchema43Database`,
+  `TestOlderReleaseRefusesALedgerWithTheManagedSiteFilesEntry`. Web:
+  `web/tests/site-config-mounted.test.mjs` (14). Harness:
+  `test_populated_database.py` and `test_database_exchange_rows.py` (schema 44).
+  Browser: real Chrome against the loopback mock, scenario `siteconfig`, desktop
+  and phone, English and Turkish, light and dark; screenshots looked at.
+- **Open / not measured.** Every native cell of the audit's §9 on Debian 13,
+  Ubuntu 24.04 and Arch (owner edit kept at start and at every render path,
+  immutable file, update/return/forward, database restore from before the
+  header, keep-mine then certificate issuance, take with its backup, include
+  directory through renewals and switches, removed file not recreated). The
+  second step (PHP-FPM pool, application unit) is not implemented: pools are
+  still rewritten by a pool save and a PHP switch. `nginx -t` still judges the
+  whole configuration: an owner's broken file elsewhere fails every render
+  batch (its files are put back), as before. The Panel's own ACME vhost, the
+  webmail and database-tools vhosts are not covered. A temporary name
+  (`use_temporary`, not offered by the interface) is no longer written into a
+  new site's vhost, because the start render never carried it.

@@ -80,6 +80,9 @@ const scenarios = {
     waitingOwner: { snapshot: 'waiting', execution: run({ status: 'waiting', checks: [ptrCheck] }) },
     prerequisite: { snapshot: 'waiting', execution: run({ status: 'waiting', checks: [{ id: 'mail_delivery', state: 'action_required', code: 'mail_delivery_required' }] }) },
     unknown: { snapshot: 'waiting', execution: run({ status: 'waiting', checks: [{ id: 'mail_identity', state: 'unknown', code: 'mail_identity_unavailable' }] }) },
+    // The Agent's reverse DNS lookup got no answer: unknown, not "no PTR" (2026-10-10).
+    dnsUnknown: { snapshot: 'waiting', execution: run({ status: 'waiting', checks: [{ id: 'mail_identity', state: 'unknown', code: 'mail_identity_unavailable', reason: 'reverse_dns_unknown', vars: { ip: '203.0.113.42', error: 'timeout' } }] }) },
+    notCanonical: { snapshot: 'waiting', execution: run({ status: 'waiting', checks: [{ id: 'mail_identity', state: 'action_required', code: 'mail_identity_required', reason: 'mail_name_not_canonical', vars: { name: 'mail' } }] }) },
     failed: { snapshot: 'draft', execution: run({ status: 'failed', phase: 'firewall', steps: [{ id: 'fw', kind: 'firewall', target: 'nftables', status: 'failed' }, { id: 'verify', kind: 'verify', target: 'web', status: 'pending' }], error: { code: 'server_setup_firewall_failed', message: 'firewall apply failed' } }) },
 };
 
@@ -185,6 +188,30 @@ for (const locale of ['en', 'tr']) {
         } finally { await unmount(tree); }
     });
 
+    test(`${locale}: a reverse DNS lookup that got no answer is said as not known, with the check state "could not be checked"`, async () => {
+        const { tree } = await mount('dnsUnknown', locale);
+        try {
+            const page = textOf(tree.toJSON());
+            const unknown = c['setup.check.mailIdentity.reverseDNSUnknown'].replaceAll('{ip}', '203.0.113.42');
+            assert.ok(page.indexOf(unknown) >= 0 && page.indexOf(unknown) < page.indexOf(c['setup.kind.verify']), page);
+            assert.equal(verifyState(tree), 'unknown');
+            assert.ok(page.includes(c['setup.stepState.unknown']) && !page.includes(c['setup.stepState.waitingOwner']));
+            assert.ok(!page.includes(c['setup.check.mailIdentity.reverseDNSMissing'].split('{hostname}')[0].replaceAll('{ip}', '203.0.113.42')), 'not said as unconfirmed or missing');
+            assert.ok(!page.includes(c['setup.check.notRead'].replace('{check}', c['setup.check.name.mail_identity'])), 'its own sentence, not the generic one');
+            assert.ok(!page.includes('timeout'), 'the error class is not shown as text');
+        } finally { await unmount(tree); }
+    });
+
+    test(`${locale}: a plan whose mail host name is not a full host name names it and says to correct the plan`, async () => {
+        const { tree } = await mount('notCanonical', locale);
+        try {
+            const page = textOf(tree.toJSON());
+            const line = c['setup.check.mailIdentity.notCanonical'].replace('{name}', 'mail');
+            assert.ok(page.indexOf(line) >= 0 && page.indexOf(line) < page.indexOf(c['setup.kind.verify']), page);
+            assert.equal(verifyState(tree), 'waitingOwner');
+        } finally { await unmount(tree); }
+    });
+
     test(`${locale}: a verified step failure is said as failed, and the final check as not started`, async () => {
         const { tree } = await mount('failed', locale);
         try {
@@ -197,3 +224,29 @@ for (const locale of ['en', 'tr']) {
         } finally { await unmount(tree); }
     });
 }
+
+// The wording decided on 2026-10-10: a PTR that could not be confirmed is not
+// claimed missing; each sentence names who acts and the next action; the
+// Turkish final-check strings say "kontrol", as the button does.
+// 10 Ekim karari: dogrulanamayan PTR eksik denmez; Turkce metinler "kontrol" der.
+test('the final-check wording claims no result it lacks and names the next action', () => {
+    const en = catalogues.en, tr = catalogues.tr;
+    assert.match(en['setup.check.mailIdentity.reverseDNSMissing'], /^No reverse DNS \(PTR\) name could be confirmed for \{ip\}/);
+    assert.match(tr['setup.check.mailIdentity.reverseDNSMissing'], /^\{ip\} için bir ters DNS \(PTR\) adı doğrulanamadı/);
+    assert.equal(en['setup.check.mailIdentity.reverseDNSUnknown'], 'The reverse DNS of {ip} could not be looked up just now; this does not show whether it is set. Check requirements again.');
+    assert.match(en['setup.check.notRead'], /This does not mean the requirement is unmet\.$/);
+    assert.match(tr['setup.check.notRead'], /Bu, gereksinimin karşılanmadığı anlamına gelmez\.$/);
+    assert.match(en['setup.check.mailIdentity.forwardDNS'], /At the place where you manage the DNS of \{hostname\}, set its A record to \{ip\}, then check requirements again\.$/);
+    assert.match(tr['setup.check.mailIdentity.forwardDNS'], /\{hostname\} adının DNS kayıtlarını yönettiğiniz yerde A kaydını \{ip\} olarak ayarlayın, sonra gereksinimleri tekrar kontrol edin\.$/);
+    assert.match(tr['setup.check.mailIdentity.reverseDNS'], /Sağlayıcınızın kontrol panelinden ayarlayın ya da destek ekibinden \{ip\} için \{hostname\} PTR kaydını ayarlamasını isteyin\.$/);
+    for (const key of ['address', 'addressMissing']) assert.match(en[`setup.check.mailIdentity.${key}`], /Ask your server provider for a public IPv4 address that reaches this server, then check requirements again\.$/, key);
+    for (const key of ['mailName', 'mailNameUnread']) {
+        assert.match(en[`setup.check.mailIdentity.${key}`], /Review the plan, correct the mail host name there, and start setup again\.$/, key);
+        for (const locale of [en, tr]) assert.doesNotMatch(locale[`setup.check.mailIdentity.${key}`], /Postfix|myhostname/, key);
+    }
+    const finalCheckKeys = Object.keys(tr).filter(key => key.startsWith('setup.check.') || key.startsWith('setup.stepState.') || ['setup.guide.verificationWaiting', 'setup.guide.verificationResume', 'setup.guide.revisedChecks', 'setup.guide.revisedNext'].includes(key));
+    assert.ok(finalCheckKeys.length >= 20, String(finalCheckKeys.length));
+    for (const key of finalCheckKeys) assert.doesNotMatch(tr[key], /[Dd]enet/, key);
+    assert.equal(tr['setup.stepState.unknown'], 'Kontrol edilemedi');
+    assert.equal(Object.keys(en).filter(key => key.startsWith('setup.check.')).sort().join(), Object.keys(tr).filter(key => key.startsWith('setup.check.')).sort().join());
+});

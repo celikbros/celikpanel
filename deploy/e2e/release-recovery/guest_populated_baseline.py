@@ -504,7 +504,7 @@ def main(argv=None):
     for name in ('lab-nonce', 'vm-uuid', 'cell-id', 'node', 'seed-id'):
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--capture-id')
-    parser.add_argument('--expected-version', type=int, choices=(38, 42, 43))
+    parser.add_argument('--expected-version', type=int, choices=(38, 42, 43, 44))
     args = parser.parse_args(argv)
     if ((args.action == 'seed' and (args.capture_id is not None or args.expected_version is not None))
             or (args.action == 'capture' and (args.capture_id is None or args.expected_version is not None))

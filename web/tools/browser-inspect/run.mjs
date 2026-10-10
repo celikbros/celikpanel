@@ -1736,6 +1736,11 @@ const scenarios = {
 (await import('./scenarios-batch9.mjs')).default(scenarios, { base, vp, locale, theme, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
 // --- end of batch 9 ---
 
+// --- batch 10 (2026-10-10): a site configuration file the owner changed (D-031) ---
+// `siteconfig` lives in its own file.
+(await import('./scenarios-batch10.mjs')).default(scenarios, { base, vp, locale, theme, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
+// --- end of batch 10 ---
+
 for (const [name, run] of Object.entries(scenarios)) {
     if (wanted && !wanted.includes(name)) continue;
     const started = Date.now();

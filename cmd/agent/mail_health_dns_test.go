@@ -8,6 +8,9 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
+
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 func mailDNSFixture(t *testing.T, reply func(string, uint16) []byte, modify ...func([]byte) []byte) (string, *sync.Map) {
@@ -213,4 +216,115 @@ func TestMailDNSIdentityFollowsBoundedClasslessReverseAnswerChain(t *testing.T) 
 			}
 		})
 	}
+}
+
+// A lookup that got no answer is carried as failed with its class; NXDOMAIN is
+// an answer (no PTR, or no address), never a failure; a name that cannot be
+// looked up is not marked (D-025 invariant 2, 2026-10-10).
+// Yanitsiz sorgu sinifiyla "failed" tasinir; NXDOMAIN bir yanittir.
+func TestMailDNSLookupOutcomeSeparatesNoAnswerFromNoRecord(t *testing.T) {
+	ptrName, _ := encodeDNSName("mail.example.test")
+	rcode := func(code byte) func([]byte) []byte {
+		return func(response []byte) []byte {
+			response[3] = response[3]&0xf0 | code
+			binary.BigEndian.PutUint16(response[6:8], 0)
+			_, next, _ := decodeDNSName(response, 12)
+			return response[:next+4]
+		}
+	}
+	lookup := func(t *testing.T, ctx context.Context, resolvers []string) *MailHealthResponse {
+		t.Helper()
+		ptr, aligned, forward, err := mailDNSIdentityAt(ctx, "192.0.2.15", "mail.example.test", resolvers)
+		resp := &MailHealthResponse{}
+		recordMailDNSLookup(resp, ptr, aligned, forward, err)
+		return resp
+	}
+
+	t.Run("NXDOMAIN for the PTR is a verified absence", func(t *testing.T) {
+		server, _ := mailDNSFixture(t, func(string, uint16) []byte { return nil }, rcode(3))
+		resp := lookup(t, context.Background(), []string{server})
+		if resp.ReverseDNSLookup != transport.MailDNSLookupDone || resp.ReverseDNSLookupError != "" || resp.PTR != "" || resp.PTRAligned || resp.FCrDNS {
+			t.Fatalf("NXDOMAIN = %+v", resp)
+		}
+	})
+	t.Run("NXDOMAIN for the host name keeps the PTR and says forward is not aligned", func(t *testing.T) {
+		server, _ := mailDNSFixture(t, func(name string, kind uint16) []byte {
+			if kind == dnsTypePTR {
+				return ptrName
+			}
+			return nil
+		}, func(response []byte) []byte {
+			_, next, _ := decodeDNSName(response, 12)
+			if binary.BigEndian.Uint16(response[next:next+2]) == dnsTypePTR {
+				return response
+			}
+			return rcode(3)(response)
+		})
+		resp := lookup(t, context.Background(), []string{server})
+		if resp.ReverseDNSLookup != transport.MailDNSLookupDone || resp.PTR != "mail.example.test" || !resp.PTRAligned || resp.FCrDNS {
+			t.Fatalf("forward NXDOMAIN = %+v", resp)
+		}
+	})
+	t.Run("REFUSED is a failed lookup", func(t *testing.T) {
+		server, _ := mailDNSFixture(t, func(string, uint16) []byte { return nil }, rcode(5))
+		resp := lookup(t, context.Background(), []string{server})
+		if resp.ReverseDNSLookup != transport.MailDNSLookupFailed || resp.ReverseDNSLookupError != transport.MailDNSLookupErrorRefused || resp.PTR != "" {
+			t.Fatalf("REFUSED = %+v", resp)
+		}
+	})
+	t.Run("SERVFAIL is a failed lookup of another class", func(t *testing.T) {
+		server, _ := mailDNSFixture(t, func(string, uint16) []byte { return nil }, rcode(2))
+		resp := lookup(t, context.Background(), []string{server})
+		if resp.ReverseDNSLookup != transport.MailDNSLookupFailed || resp.ReverseDNSLookupError != transport.MailDNSLookupErrorOther {
+			t.Fatalf("SERVFAIL = %+v", resp)
+		}
+	})
+	t.Run("a closed resolver port is refused", func(t *testing.T) {
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		address := listener.Addr().String()
+		_ = listener.Close()
+		resp := lookup(t, context.Background(), []string{address})
+		if resp.ReverseDNSLookup != transport.MailDNSLookupFailed || resp.ReverseDNSLookupError != transport.MailDNSLookupErrorRefused {
+			t.Fatalf("closed port = %+v", resp)
+		}
+	})
+	t.Run("a resolver that never answers is a timeout", func(t *testing.T) {
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = listener.Close() })
+		go func() {
+			for {
+				conn, err := listener.Accept()
+				if err != nil {
+					return
+				}
+				go func(conn net.Conn) { time.Sleep(time.Second); _ = conn.Close() }(conn)
+			}
+		}()
+		ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+		defer cancel()
+		resp := lookup(t, ctx, []string{listener.Addr().String()})
+		if resp.ReverseDNSLookup != transport.MailDNSLookupFailed || resp.ReverseDNSLookupError != transport.MailDNSLookupErrorTimeout {
+			t.Fatalf("silent resolver = %+v", resp)
+		}
+	})
+	t.Run("no resolver", func(t *testing.T) {
+		resp := lookup(t, context.Background(), nil)
+		if resp.ReverseDNSLookup != transport.MailDNSLookupFailed || resp.ReverseDNSLookupError != transport.MailDNSLookupErrorNoResolver {
+			t.Fatalf("no resolver = %+v", resp)
+		}
+	})
+	t.Run("a name that cannot be looked up is not a lookup", func(t *testing.T) {
+		ptr, aligned, forward, err := mailDNSIdentityAt(context.Background(), "192.0.2.15", "debian", []string{"127.0.0.1:1"})
+		resp := &MailHealthResponse{}
+		recordMailDNSLookup(resp, ptr, aligned, forward, err)
+		if resp.ReverseDNSLookup != "" || resp.ReverseDNSLookupError != "" {
+			t.Fatalf("invalid name = %+v", resp)
+		}
+	})
 }

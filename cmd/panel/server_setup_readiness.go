@@ -334,22 +334,43 @@ func setupMailHostIdentityReady(health transport.MailHealthResponse, mailHostnam
 // setupMailIdentityCheck is the mail_identity check with the typed reason of a
 // check that needs an action: the first unmet condition, in the order the
 // readiness test reads them, and the observed values the owner acts on. The
-// state and code are those of setupCheck; an unknown or ready check carries no
-// reason. Reverse DNS is set at the server provider, never by CelikPanel.
+// state and code are those of setupCheck, except that a reverse DNS lookup that
+// got no answer makes the check unknown with reason reverse_dns_unknown; any
+// other unknown or ready check carries no reason. Reverse DNS is set at the
+// server provider, never by CelikPanel.
 // Eylem isteyen mail_identity kontrolu, karsilanmayan ilk kosulu tipli neden
 // olarak ve sahibin uzerinde islem yapacagi gozlenen degerlerle tasir.
 func setupMailIdentityCheck(health transport.MailHealthResponse, healthErr error, mailHostname string) serverSetupCheck {
 	check := setupCheck("mail_identity", setupMailHostIdentityReady(health, mailHostname), healthErr)
 	if check.State == "action_required" {
 		check.Reason, check.Vars = setupMailIdentityReason(health, mailHostname)
+		// The Agent's public DNS lookup got no answer: the reverse DNS is not
+		// known, so the check is unknown, not an action for the owner (D-025
+		// invariant 2, 2026-10-10).
+		// Ters DNS sorgusu yanit almadi: kontrol bilinmiyor, sahipten eylem istemez.
+		if check.Reason == "reverse_dns_unknown" {
+			check.State, check.Code = "unknown", "mail_identity_unavailable"
+		}
 	}
 	return check
+}
+
+// setupMailDNSLookupErrors are the error classes an Agent may report; any
+// other value is said as "other".
+var setupMailDNSLookupErrors = map[string]bool{
+	transport.MailDNSLookupErrorTimeout: true, transport.MailDNSLookupErrorNoResolver: true,
+	transport.MailDNSLookupErrorRefused: true, transport.MailDNSLookupErrorOther: true,
 }
 
 func setupMailIdentityReason(health transport.MailHealthResponse, mailHostname string) (string, map[string]string) {
 	canonical, err := hostname.CanonicalFQDN(mailHostname)
 	if err != nil || canonical != mailHostname {
-		return "", nil
+		// The plan's mail host name is not a full host name: the owner corrects
+		// the plan. The name is shown only when it is a plain DNS name.
+		if setupShownDNSName(mailHostname) {
+			return "mail_name_not_canonical", map[string]string{"name": mailHostname}
+		}
+		return "mail_name_not_canonical", nil
 	}
 	ip := net.ParseIP(health.ServerIP)
 	if ip == nil || !ip.IsGlobalUnicast() || ip.IsPrivate() || ip.IsLoopback() {
@@ -365,6 +386,13 @@ func setupMailIdentityReason(health transport.MailHealthResponse, mailHostname s
 			vars["current"] = strings.ToLower(myhostname)
 		}
 		return "mail_name_differs", vars
+	}
+	if health.ReverseDNSLookup == transport.MailDNSLookupFailed {
+		class := health.ReverseDNSLookupError
+		if !setupMailDNSLookupErrors[class] {
+			class = transport.MailDNSLookupErrorOther
+		}
+		return "reverse_dns_unknown", map[string]string{"ip": ip.String(), "error": class}
 	}
 	ptr := strings.TrimSuffix(health.PTR, ".")
 	if !health.PTRAligned || !strings.EqualFold(ptr, mailHostname) {

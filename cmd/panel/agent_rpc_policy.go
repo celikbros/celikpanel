@@ -114,6 +114,7 @@ func agentRPCAuthGroup(effect agentRPCEffect, capability agentRPCCapability, met
 
 var agentRPCAuthorizationGroups = []agentRPCAuthorizationGroup{
 	agentRPCAuthGroup(agentRPCEffectRead, "", `
+		Agent.InspectSiteFile
 		Agent.AppUnitLogs Agent.AppUnitStatus Agent.CheckInstalledServices Agent.CheckRBL
 		Agent.CheckSystemSQLiteDatabase Agent.DNSBackendReadiness Agent.DNSClusterReadiness
 		Agent.DNSEngineRollbackEvidenceV1
@@ -310,6 +311,7 @@ var agentRPCTimeouts = map[string]time.Duration{
 	"Agent.AddMailAccount":              agentRPCMutationTimeout,
 	"Agent.ApplyFirewallV2":             agentRPCMutationTimeout,
 	"Agent.ApplyVhost":                  agentRPCMutationTimeout,
+	"Agent.InspectSiteFile":             agentRPCStandardReadTimeout,
 	"Agent.ChmodFile":                   agentRPCMutationTimeout,
 	"Agent.ClearLogs":                   agentRPCMutationTimeout,
 	"Agent.ConfigureDNSClusterV2":       agentRPCMutationTimeout,

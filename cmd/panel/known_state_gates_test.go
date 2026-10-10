@@ -13,8 +13,10 @@ import (
 
 // The mail identity check names the first unmet condition and the observed
 // values the owner acts on (owner report 2026-10-10: setup waited for a reverse
-// DNS record and the screen did not say so). A ready or unknown check carries
-// no reason; the state and code are unchanged.
+// DNS record and the screen did not say so). A ready check, and a check the
+// Agent could not answer, carry no reason; the state and code are unchanged. A
+// reverse DNS lookup that got no answer is unknown with its own reason
+// (reverse_dns_unknown), never "no PTR" (D-025 invariant 2).
 // Posta kimligi kontrolu karsilanmayan ilk kosulu ve gozlenen degerleri tasir.
 func TestServerSetupMailIdentityCheckNamesTheTypedReason(t *testing.T) {
 	base := transport.MailHealthResponse{ServerIP: "203.0.113.42", Myhostname: "mail.example.test", HostnameFQDN: true, PTR: "mail.example.test.", PTRAligned: true, FCrDNS: true}
@@ -47,6 +49,18 @@ func TestServerSetupMailIdentityCheckNamesTheTypedReason(t *testing.T) {
 			"server_address_not_public", map[string]string{"ip": "192.168.1.1"}},
 		{"no address", func(h *transport.MailHealthResponse) { h.ServerIP = "" },
 			"server_address_not_public", nil},
+		// The lookup answered: an empty PTR is a verified absence, not unknown.
+		{"looked up, no PTR", func(h *transport.MailHealthResponse) {
+			h.PTR, h.PTRAligned, h.FCrDNS, h.ReverseDNSLookup = "", false, false, transport.MailDNSLookupDone
+		}, "reverse_dns_mismatch", map[string]string{"hostname": "mail.example.test", "ip": "203.0.113.42"}},
+		{"looked up, forward does not return", func(h *transport.MailHealthResponse) {
+			h.FCrDNS, h.ReverseDNSLookup = false, transport.MailDNSLookupDone
+		}, "forward_dns_mismatch", map[string]string{"hostname": "mail.example.test", "ip": "203.0.113.42"}},
+		// A verified owner action comes before a lookup that got no answer.
+		{"mail name differs, lookup failed", func(h *transport.MailHealthResponse) {
+			h.Myhostname, h.PTR, h.PTRAligned, h.FCrDNS = "other.example.test", "", false, false
+			h.ReverseDNSLookup, h.ReverseDNSLookupError = transport.MailDNSLookupFailed, transport.MailDNSLookupErrorTimeout
+		}, "mail_name_differs", map[string]string{"hostname": "mail.example.test", "ip": "203.0.113.42", "current": "other.example.test"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			health := base
@@ -59,6 +73,33 @@ func TestServerSetupMailIdentityCheckNamesTheTypedReason(t *testing.T) {
 				t.Fatalf("reason=%q vars=%v, want %q %v", check.Reason, check.Vars, test.reason, test.vars)
 			}
 		})
+	}
+	// The reverse DNS lookup got no answer: unknown, with the address and the
+	// class of the failure; never the "no PTR" reason.
+	for _, test := range []struct{ class, want string }{
+		{transport.MailDNSLookupErrorTimeout, "timeout"}, {transport.MailDNSLookupErrorNoResolver, "no_resolver"},
+		{transport.MailDNSLookupErrorRefused, "refused"}, {transport.MailDNSLookupErrorOther, "other"},
+		{"", "other"}, {"<script>", "other"},
+	} {
+		health := base
+		health.PTR, health.PTRAligned, health.FCrDNS = "", false, false
+		health.ReverseDNSLookup, health.ReverseDNSLookupError = transport.MailDNSLookupFailed, test.class
+		check := setupMailIdentityCheck(health, nil, "mail.example.test")
+		want := map[string]string{"ip": "203.0.113.42", "error": test.want}
+		if check.State != "unknown" || check.Code != "mail_identity_unavailable" || check.Reason != "reverse_dns_unknown" || !reflect.DeepEqual(check.Vars, want) {
+			t.Fatalf("failed lookup (%q) = %+v", test.class, check)
+		}
+	}
+	// The plan's mail host name is not a full host name: the owner corrects the
+	// plan. A name that is not a plain DNS name is not echoed.
+	for _, test := range []struct {
+		name string
+		vars map[string]string
+	}{{"mail", map[string]string{"name": "mail"}}, {"Mail.Example.test", map[string]string{"name": "Mail.Example.test"}}, {"mail example", nil}} {
+		check := setupMailIdentityCheck(base, nil, test.name)
+		if check.State != "action_required" || check.Code != "mail_identity_required" || check.Reason != "mail_name_not_canonical" || !reflect.DeepEqual(check.Vars, test.vars) {
+			t.Fatalf("non-canonical %q = %+v", test.name, check)
+		}
 	}
 	// A record written before the reason existed decodes to the same check.
 	var old serverSetupCheck
@@ -118,6 +159,44 @@ func TestPanelUpdateStatusSaysVerifyingWhenThisPanelIsTheTarget(t *testing.T) {
 			fixture.agent.status = status(test.state)
 			if got := read(t, fixture); got.Status != test.state || got.Phase != test.phase {
 				t.Fatalf("%s = %+v, want phase %q", test.state, got, test.phase)
+			}
+		})
+	}
+	// The abandon answer carries the same phase as the status answer.
+	abandon := func(t *testing.T, fixture systemUpdateTestFixture) panelUpdateStatusResponse {
+		t.Helper()
+		recorder := httptest.NewRecorder()
+		fixture.panel.handlePanelUpdateAbandon(recorder, systemUpdateRequest(
+			http.MethodPost, panelUpdateAbandonPath, systemUpdateStartBody(updateTestTargetVersion), roleAdmin,
+		))
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
+		}
+		var response panelUpdateStatusResponse
+		if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+			t.Fatal(err)
+		}
+		return response
+	}
+	t.Run("abandon answered by the old panel", func(t *testing.T) {
+		withSystemUpdateBuild(t)
+		fixture := newSystemUpdateTestFixture(t)
+		fixture.agent.abandon = status("running")
+		if got := abandon(t, fixture); got.Status != "running" || got.Phase != "" {
+			t.Fatalf("abandon on the old panel = %+v", got)
+		}
+	})
+	for _, test := range []struct{ state, phase string }{{"running", "verifying"}, {"failed", ""}} {
+		t.Run("abandon answered by the target panel "+test.state, func(t *testing.T) {
+			oldVersion, oldCommit := buildVersion, buildCommit
+			buildVersion, buildCommit = updateTestTargetVersion, updateTestTargetCommit
+			t.Cleanup(func() { buildVersion, buildCommit = oldVersion, oldCommit })
+			fixture := newSystemUpdateTestFixture(t)
+			fixture.agent.version.Version = updateTestTargetVersion
+			fixture.agent.version.Commit = updateTestTargetCommit
+			fixture.agent.abandon = status(test.state)
+			if got := abandon(t, fixture); got.Status != test.state || got.Phase != test.phase {
+				t.Fatalf("abandon %s = %+v, want phase %q", test.state, got, test.phase)
 			}
 		})
 	}

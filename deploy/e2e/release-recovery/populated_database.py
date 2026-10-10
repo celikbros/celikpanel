@@ -28,6 +28,8 @@ MIGRATIONS = {
     42: '4075629507fd66f6d028bafc373bbc97a1d249b513116865b432d022327101a0',
     # Migration 43 (request identities, D-029): one new table, no old one changed.
     43: 'a0b5c4247f83f86d4daa700baf272f5a666c0f688ede53e1707285126c96b7c0',
+    # Migration 44 (managed site files, D-031): one new table, no old one changed.
+    44: '55efb384c7d1b02c48932367dad06a2086f8ffcc62ca23ad24ae7e5603e9189b',
 }
 # Exact sqlite_schema SQL from the released SQL, including triggers and indexes.
 # Tests reconstruct it from unmodified migration bytes, never a downgraded ledger.
@@ -35,6 +37,7 @@ SCHEMAS = {
     38: 'e19fe19deee2e280b90be04c15fe4c3bad69ed23e428d0e579c877e9d6eaedcf',
     42: '2754d89b20e2c724c277a7072ac2d837aa41eb2a2a67106b4921e2fa7f015f68',
     43: '48cbd3b47573c2e09feefa4605fc4822df178a719c5e22a7e1c5cb94bb7770f7',
+    44: 'afcb7db4bf3b619a605af88277714cbc22e7dbe5279375b80f0eb33f54de06fc',
 }
 ADMISSION_SCHEMA = 'celikpanel/lab-populated-database-admission/v1'
 MANIFEST_SCHEMA = 'celikpanel/lab-populated-database-manifest/v1'
@@ -44,9 +47,10 @@ NEW_TABLES_42 = {'server_setup_state', 'server_setup_plans', 'server_setup_execu
                  'remote_dns_enrollments', 'remote_dns_clients', 'remote_dns_connections',
                  'remote_dns_zone_ownership', 'remote_dns_records', 'remote_dns_zones', 'remote_dns_origin_history'}
 NEW_TABLES_43 = NEW_TABLES_42 | {'request_identities'}
+NEW_TABLES_44 = NEW_TABLES_43 | {'managed_site_files'}
 # The tables each pinned schema after the baseline adds to the 55 of schema38.
 # A schema that is not a key here is the baseline itself.
-NEW_TABLES = {42: NEW_TABLES_42, 43: NEW_TABLES_43}
+NEW_TABLES = {42: NEW_TABLES_42, 43: NEW_TABLES_43, 44: NEW_TABLES_44}
 MAX_BYTES = 128 * 1024 * 1024
 MAX_MANIFEST_BYTES = 16 * 1024 * 1024
 MAX_ROWS = 100_000
@@ -186,7 +190,7 @@ def _connect(path, *, writable=False):
 
 def _schema(connection, version):
     if type(version) is not int or version not in SCHEMAS:
-        raise Refused('only exact schema38, schema42 or schema43 is supported')
+        raise Refused('only exact schema38, schema42, schema43 or schema44 is supported')
     objects = connection.execute('SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY type,name').fetchall()
     if _sha(json.dumps(objects, ensure_ascii=True, separators=(',', ':')).encode()) != SCHEMAS[version]:
         raise Refused('schema SQL differs from pinned released schema')

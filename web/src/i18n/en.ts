@@ -156,7 +156,7 @@ export const en = {
     // --- update notice: what the last read of the followed update established (2026-10-10) ---
     'panelUpdate.tracking.reading': 'Reading the state of this update from the server…',
     'panelUpdate.tracking.verifyingTitle': 'Update installed, being verified',
-    'panelUpdate.tracking.verifying': '{version} is installed and this panel is running it. The update is being verified and is not finished yet; this notice follows it by itself.',
+    'panelUpdate.tracking.verifying': '{version} is installed and this panel is running it. The update is being verified and is not finished yet; this notice follows it by itself. You do not need to do anything.',
     'panelUpdate.tracking.unknown': 'The state of this update could not be read just now, so whether it is still running or has finished is not known. This notice reads it again by itself; do not start another update.',
     'panelUpdate.lastRead': 'Last read',
     // --- end of the update notice block ---
@@ -471,6 +471,20 @@ export const en = {
     'err.SERVICE_ACTION_FAILED.verify': "The action was sent, but {unit} is not in the state that was asked for. On the server, run {command} to see its state, correct the cause, then repeat the action here.",
     'err.SERVICE_ACTION_FAILED.command': "The server's service manager did not carry out the action on {unit}. On the server, run {command} to see why, correct it, then repeat the action here.",
     'err.SERVICE_ACTION_UNKNOWN': "The action was sent, but what came of it could not be verified, so it is not shown as done. This is not a verified failure: {unit} may already be in the state you asked for. On the server, run {command} to see its state, and repeat the action here only if it is still needed.",
+
+    // --- first page load: the interface is still loading after half a minute (2026-10-10) ---
+    'recovery.waitingProlongedLoading': "CelikPanel is still loading; it opens by itself. If this page stays like this, reload it.",
+    // --- end of the first page load block ---
+    // --- a site configuration file the owner changed: refusals (D-031, 2026-10-10) ---
+    'err.SITE_CONFIG_OWNER_EDITED': 'This site’s nginx configuration file is not CelikPanel’s unchanged text, so CelikPanel kept it and did not apply this change to it. Nothing else was changed. On the domain’s Configuration file page, keep your file, take CelikPanel’s text (your file is kept as a dated copy), or merge the two by hand.',
+    'err.SITE_CONFIG_MISSING': 'This site’s nginx configuration file is missing, so this change was not applied and the file was not recreated. If it was removed on purpose, nothing needs doing; otherwise choose Recreate on the domain’s Configuration file page.',
+    'err.SITE_CONFIG_UNWRITABLE': 'CelikPanel could not read or replace this site’s nginx configuration file (for example, it is a link or it is locked against changes), so it kept the file as it is and did not apply this change. The server owner checks the file on the server; the reason is on the domain’s Configuration file page.',
+    'err.SITE_CONFIG_EXISTS': 'A configuration file for this name already exists on the server and was not written by CelikPanel, so CelikPanel kept it and did not create the site. Nothing was left behind. Move or rename that file on the server if it is no longer used, then create the site again.',
+    'err.SITE_CONFIG_CHANGED': 'The configuration file or CelikPanel’s text changed after the page showed them, so nothing was done. The page reads the file again; look at it, then choose again.',
+    'err.SITE_CONFIG_NOT_APPLICABLE': 'This choice does not apply to the file as it is now, so nothing was done. The page reads the file again.',
+    'err.SITE_CONFIG_NOT_READ': 'CelikPanel could not read the state of this site’s configuration file just now. This does not mean anything is wrong with the file, and nothing was changed. Try again.',
+    'err.SITE_CONFIG_NGINX_REFUSED': 'nginx refused the configuration with CelikPanel’s text in it, so your file was put back exactly as it was and nginx keeps running with it. Nothing else was changed.',
+    // --- end of the site configuration refusals block ---
 } as const;
 
 export type ShellKey = keyof typeof en;

@@ -1441,6 +1441,9 @@ func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) str
 		t.Fatal(err)
 	}
 	if _, err := database.GetDB().Exec(`
+        -- Reverse the managed site files ledger (migration 44, D-031).
+        DROP TABLE managed_site_files;
+
         -- Reverse the request identity table (migration 43, D-029).
         DROP TABLE request_identities;
 

@@ -1467,7 +1467,8 @@ class Upd3CellTests(unittest.TestCase):
 class Set3PublishedBaselineTests(unittest.TestCase):
     def test_the_ledger_is_judged_against_the_pinned_released_digests(self):
         pins = t.ledger_pins()
-        self.assertEqual(sorted(pins["migrations"]), [38, 42, 43])
+        # Schema 44 (managed site files, D-031) is pinned beside the published ones.
+        self.assertEqual(sorted(pins["migrations"]), [38, 42, 43, 44])
 
         def reading(version, guarded):
             return {"schema_version": version, "ledger_rows": version, "ledger_contiguous": True,

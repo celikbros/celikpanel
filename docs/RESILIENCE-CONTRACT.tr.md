@@ -3870,8 +3870,21 @@ arayüzü değişmedi). 2026-10-10 saat tarihidir.
   `AccessHold`, bu tarayıcının güncelleme kaydı `active` iken yanıt vermeyen
   Panel'i (yalnız `availability` nedeni) bir güncellemenin yeniden başlatması
   olarak adlandırır (`web/src/lib/recoveryObservation.ts` içinde
-  `savedUpdateUnfinished`; yalnızca sunum ipucu, yaş sınırı yok: bu tarayıcının
-  bitişini hiç görmediği kayıt ipucunu korur). `RecoveryAccess` iki adresini `readRemote` ile okur; uzak-durum
+  `savedUpdateUnfinished`; yalnızca sunum ipucu). **Bu girdinin ikinci
+  okumasında düzeltildi (2026-10-10):** kaydın yaş sınırı yoktu; bu tarayıcının
+  bitişini hiç görmediği kayıt ipucunu sonraki her kesinti için koruyordu. Artık
+  güncellemeyi yalnız güncellemenin başlangıcından sonraki 30 dakika içinde anar
+  (`UPDATE_CAUSE_WINDOW_MS`, kaydın `created_at` alanından okunur; başlangıç
+  zamanı olmayan, daha eski ya da gelecekte görünen başlangıç genel "Panel az
+  önce yanıt vermedi" cümlesini bırakır) ve sözcükler hüküm değil olasılık
+  söyler: "Panel yanıt vermiyor; bir güncelleme onu yeniden başlatıyor olabilir"
+  ve "Lisansın geçerli olup olmadığı Panel yanıt verene kadar bilinmiyor; bu
+  konuda hiçbir karar verilmedi" (önceden: "... bir güncelleme sırasında" ve
+  "Bu bir lisans sorunu değildir"; okumanın ortaya koymadığı bir lisans
+  hükmünü ilan ediyordu, ilke 2'ye aykırı). Kaydın anahtarı bir kez tanımlanır
+  (`UPDATE_MARKER_KEY`) ve güncelleme izleyicisi onu içe aktarır. Yükleme
+  beklemesinin yarım dakika sonraki kendi cümlesi vardır
+  (`recovery.waitingProlongedLoading`). `RecoveryAccess` iki adresini `readRemote` ile okur; uzak-durum
   mandalı listesinden çıkar (31'den 30 dosyaya; `valueFromFailure` 1,
   `swallowedFailure` 1, `rawRead` 2 kaldırıldı).
 - **Şema ya da sürüm geçişi.** Yok: hiçbir API, kalıcı kayıt ya da erişim
@@ -3886,7 +3899,11 @@ arayüzü değişmedi). 2026-10-10 saat tarihidir.
   yayımlanmış kod üç yolun hepsinde kapıyı yaklaşık 1,4 sn çizdi (o koşunun
   konsol çıktısı depoda tutulmaz; yedinci kayıt aynı kısıtlamada gerçek bir
   Panel'de yaklaşık 1,7 sn ölçtü); değişiklik taklitte hiçbirinde sayfadan önce
-  bir cümle çizmedi.
+  bir cümle çizmedi. İkinci okuma: 30 dakikalık pencereyle aynı testler (eski
+  ve tarihsiz kayıt, pencerenin sınırları, tek anahtar) ve taklit tarayıcı
+  koşusu (`waitcopy`: 5 dakikalık ve 31 dakikalık kayıtla bekletme, yarım
+  dakika sonra yükleme beklemesi; İngilizce ve Türkçe; ekran görüntülerine
+  bakıldı). Bileşen testli ve taklit tarayıcılı; gerçek bir sistemde ölçülmedi.
 - **Açık.** Konukta gerçek sistem yeniden ölçümü (set7 yöntemi) ve her kurulu
   sunucu; HTTP önbelleği açıkken yükleme; gerçek bir güncelleme sırasında
   bekletme katmanının sözcükleri; yükleme başına iki oturum okuması (burada
@@ -3917,11 +3934,13 @@ tarihidir.
   taşır (`setupMailIdentityCheck`, `server_setup_readiness.go`); sayfa yeniden
   açılan planı böyle söyler, açık denetimleri ve yardımlarını adım listesinin
   üstüne açık olarak koyar ve her adımın durumunu adlandırır (sizi bekliyor,
-  gereksinimler bekleniyor, denetlenemedi, başarısız, durduruldu, başlamadı).
+  gereksinimler bekleniyor, kontrol edilemedi, başarısız, durduruldu,
+  başlamadı).
   Güncelleme: `GET /api/v1/panel/update/status` (ve vazgeçme yanıtı), kayıt
   `running` iken yanıt veren Panel'in sürümü ve commit'i güncellemenin hedefiyle
   aynıysa ek `phase: "verifying"` taşır (`panelUpdateStatusPhase`; arşiv özeti
-  ve sıra numarası karşılaştırılmaz; vazgeçme yanıtı testle kapsanmaz); bildirim ve kart o zaman "kuruldu,
+  ve sıra numarası karşılaştırılmaz; vazgeçme yanıtı ikinci okumadan beri testle
+  kapsanır); bildirim ve kart o zaman "kuruldu,
   doğrulanıyor", okuma başarısızsa nedeniyle "okunamadı", ilk okumadan önce
   "okunuyor" der; bitmiş kayıt bildirim bırakmaz (değişmedi). Güncelleme
   penceresindeki saat "UTC" etiketli değil, dilimiyle yerel saattir.
@@ -3945,10 +3964,159 @@ tarihidir.
   (tipli neden gerçek bir Agent'tan hiç okunmadı), sahibin kendi kurulum kaydı,
   gerçek bir güncellemenin doğrulama aralığı, kurulu bir sunucu. Telefonda köşe
   bildirimi taklitte kartın durum satırını örtüyor (değiştirilmedi). **Tipli
-  nedendeki açık:** Agent'ta başarısız bir ters DNS sorgusu ad da hata da
-  bildirilmeden döner (`cmd/agent/mail_health_rpc.go:42-46`,
+  nedendeki açık, ikinci okumada kodda kapandı (2026-10-10):** Agent'ta
+  başarısız bir ters DNS sorgusu ad da hata da bildirilmeden dönüyordu
+  (`7c3a05809`'da `cmd/agent/mail_health_rpc.go:42-46`,
   `mail_health_dns.go:75-79`); bu yüzden sayfa, sonucun bilinmediği yerde ters
-  DNS adı bulunamadı der (ilke 2); açık. Bildirimi sekmenin yüklediği arayüz
+  DNS adı bulunamadı diyordu (ilke 2). Artık Agent'ın sağlık yanıtı ek olarak
+  `reverse_dns_lookup` (`looked_up` ya da `failed`) ve
+  `reverse_dns_lookup_error` (`timeout`, `no_resolver`, `refused`, `other`)
+  taşır; NXDOMAIN başarısızlık değil yanıttır (doğrulanmış yokluk); başarısız
+  sorgu denetimi `reverse_dns_unknown` nedeni (`ip`, `error`) ile `unknown`
+  (`mail_identity_unavailable`) yapar ve sayfa bunu "{ip} adresinin ters DNS
+  kaydı şu an sorgulanamadı; bu, kaydın ayarlı olup olmadığını göstermez.
+  Gereksinimleri tekrar kontrol edin." cümlesi ve "Kontrol edilemedi" adım
+  durumuyla gösterir. Sıradaki doğrulanmış sahip eylemi (kurallı ad, genel
+  adres, posta adı) yine önce gelir. Posta sunucusu adı kurallı olmayan plan
+  artık `mail_name_not_canonical` (`name`) nedenini taşır. Sorgu alanı
+  göndermeyen eski bir Agent'ın boş PTR'si için cümle artık "bulunamadı" değil
+  "doğrulanamadı" der. Eşleşen PTR'den sonra ileri sorgunun başarısızlığı aynı
+  bilinmeyen olarak bildirilir; iki sorgu ayrılmaz. Şema: Agent'ın sağlık
+  yanıtında ve kurulum denetiminde ek JSON alanları; saklanan hiçbir şey
+  değişmez. Kanıt: `cmd/agent/mail_health_dns_test.go` (PTR ve adres için
+  NXDOMAIN, REFUSED, SERVFAIL, kapalı bağlantı noktası, yanıt vermeyen
+  çözümleyici, çözümleyici yok, sorgulanamayan ad),
+  `cmd/panel/known_state_gates_test.go` (sorgu sonucu olan ve olmayan dört
+  neden, her hata sınıfıyla bilinmeyen, kurallı olmayan ad, vazgeçme yanıtının
+  aşaması), bağlanmış test ve taklit tarayıcı koşusu (`finalcheck` 90e-90g).
+  Bileşen testli ve taklit tarayıcılı; gerçek bir sistemde ölçülmedi:
+  çözümleyicileri yanıt vermeyen gerçek bir Agent okunmadı. Bildirimi sekmenin yüklediği arayüz
   çizer; önceki sürümdeki bir sekmeden başlatılan güncelleme `phase` alanını yok
   sayar. Yedinci kayıt girdisinin 1. ve 5. maddesi açık kalır; 3. madde hemen
   yukarıdaki girdiyle kaynakta ele alınır, ölçülmedi.
+
+### Sahibin değiştirdiği site yapılandırma dosyası korunur ve adlandırılır; hiçbir üretim onun üzerine yazmaz (ilke 1, 2, 4 ve 6; D-031; 2026-10-10)
+
+D-025 ilkeleri 1 (Agent sahibin değişikliğini algılar, önbellekteki tercih
+edilen yapılandırmayla değiştirmez), 2 (bilinmeyen, yok ve başarısız ayrı
+durumlardır; her yapıt için sürüm kuralıyla tek kalıcı kayıt), 4 (değişiklik
+ön görüntüsünü okur, saklar ve aynen geri koyar; üst veri ön görüntünün
+parçasıdır) ve 6 (ekran sunucunun okuduğu durumu çizer); D-022, D-024, D-029
+(üç seçim korumalı rotalardır). **Hiçbir P0 işi kapanmadı ya da ilerlemedi**;
+P0.4/P0.5 açık kalır. Kaynakta bileşen testleriyle uygulandı; gerçek sistem
+hücreleri (denetim §9) sonra gelir. 2026-10-10 saat tarihidir.
+
+- **Önce (ölçüldü, set8, yayımlanmış alpha.82, Debian 13 / Ubuntu 24.04 /
+  Arch).** Her başlangıç, yeniden başlatma ve Genel kaydı, barındırılan her
+  sanal konağı veritabanından üretip diskteki dosyanın üzerine yazıyordu:
+  sahibin düzenlemeleri, değiştirmeleri ve include'ları sessizce gidiyordu;
+  kaldırılan sanal konak yeniden yazılıyordu; değişmemiş dosyalar her başlangıçta
+  yeniden yazılıp (yeni inode) nginx yeniden yükleniyordu; kaydetme günlüğe satır
+  yazmıyordu; oluşturma metni (`server_name X;`) başlangıç metninden
+  (`server_name X www.X;`) farklıydı; değişmez (immutable) bir dosya tüm
+  başlangıç toplu işini bozuyor, başarısız geri alma etkin bağlantısını
+  siliyordu; Panel sahibin `root:root` dosyasının üzerine `root:celikpanel 0644`
+  yazıyordu.
+- **Değişen.**
+  - *Dosya biçimi v2.* Panel'in yazdığı her sanal konak
+    `# celikpanel-render v2 sha256=<bu satırdan sonraki her baytın 64 onaltılık özeti>`
+    ile başlar (`internal/services/managed_vhost.go`). "Bu hâlâ CelikPanel'in
+    metni mi" sorusunun yetkilisi başlıktır: dosyayla gider, veritabanı geri
+    yüklemesinden etkilenmez, okumak için Panel gerekmez.
+  - *Agent'ta sınıflandırıcı:* yok; yönetilen ve değişmemiş (başlık özeti
+    gövde özetine eşit ya da dondurulmuş eski bir üretime bayt bayt eşit
+    başlıksız dosya); sahip düzenlemiş; yabancı (başlık yok, defterde kayıtlı
+    özet var); okunamaz (bağlantı, sıradan dosya değil, izin, 4 MiB'den büyük,
+    okuma hatası; asla izlenmez); kökeni bilinmiyor. Her üretimden önce,
+    genel nginx değişiklik kilidi altında çalışır.
+  - *Üretim kuralı:* yönetilen ve değişmemiş dosya yalnız metin farklıysa
+    değiştirilir (aynı baytlar: yazma yok, `nginx -t` yok, yeniden yükleme yok);
+    yok olan dosya yalnız oluşturmada ve "yeniden oluştur"da yazılır (başlangıçta
+    ve ayarlarla asla); başka her dosya korunur, Panel'in metni
+    `<dosya>.celikpanel-pending` içinde tutulur. Yazma önceki dosyanın kipini,
+    sahibini ve grubunu korur, geçici dosya ve tek yeniden adlandırmayla yapılır
+    ve dosyanın hâlâ sınıflandırılan dosya olduğunu yeniden denetler. Başarısız
+    yeniden adlandırma (değişmez dosyada EPERM) dosyaya ve etkin bağlantısına
+    dokunmaz; o sitenin tipli reddidir (`write_refused`), diğer siteler yazılır,
+    bir kez sınanır, bir kez yeniden yüklenir. `nginx -t` reddederse o çağrıda
+    yazılan her dosya baytı, kipi ve sahibiyle geri konur.
+  - *Tipli yanıtlar, eklemeli:* `FileTrigger`, `RecordedSHA256`,
+    `ExpectedFileSHA256`, `ExpectedRenderSHA256`; `ApplyVhostResponse.File`,
+    `ApplyVhostsResponse.Items/Counts`, `CreateSiteRequest.ServerNames`,
+    `CreateSiteResponse.SiteFile`, `site_config_exists` kodu ve salt okunur
+    `Agent.InspectSiteFile`. Bunları göndermeyen eski bir Agent'tan gelen yanıt
+    `unknown` (`agent_does_not_report`) olarak kaydedilir; asla "değişmedi"
+    okunmaz.
+  - *Başlangıçta site başına yalıtım:* girdisi hazırlanamayan site yalnız
+    kendisinin hatasıdır; dosyası yazılmayan sitenin bekleyen sertifika
+    etkinleştirmesi beklemede kalır. Başlangıç satırı yazılan, değişmeyen,
+    korunan, okunamayan ya da değiştirilemeyen, eksik, başarısız ve devralınan
+    dosyaları sayar; her tek site üretimi siteyi ve sonucu adlandıran bir satır
+    yazar (kaydetme yolu dahil).
+  - *Oluşturma = başlangıç:* orkestratör Panel'in kendi yönetilen ana makine
+    adlarını `CreateSite` ile gönderir; oluşturma metni başlangıç metnine bayt
+    bayt eşittir. Yeni sitenin yolunda CelikPanel'in değişmemiş metni olmayan bir
+    dosya korunur ve site reddedilir (`SITE_CONFIG_EXISTS`); Panel yalnız
+    kayıtları siler, o dosyayı sildirmez.
+  - *Sahibin ekleme noktası:* `include /etc/nginx/celikpanel-sites.d/<alan adı>/*.conf;`
+    sitenin içeriğini sunan her server bloğunda; dizin sanal konak yazılırken
+    oluşturulur (0755), içindeki hiçbir şeye Panel yazmaz, dokunmaz, silmez (site
+    silme dahil). Silinen sitenin CelikPanel'in değişmemiş metni olmayan sanal
+    konağı silinmeden önce tarihli bir kopya olarak bırakılır.
+  - *Sahibin seçimleri* (`cmd/panel/site_config.go`): `GET …/site-config`
+    (salt okunur; sunucuda hesaplanan, taraf başına ≤ 4000 satır ve 64 KiB ile
+    sınırlı birleşik fark, kimlik bilgisine benzeyen satırlar gizli); `POST
+    …/keep` (`keep_mine` dosya özetiyle kaydedilir; dosyanın baytlarına,
+    başlığına bile dokunulmaz); `POST …/take` (gösterilen dosya ve metin
+    özetlerine bağlı; sahibin baytı, kipi ve sahibiyle tarihli
+    `.celikpanel-backup-<UTC>` kopyası, sonra Panel'in metni, `nginx -t`, yeniden
+    yükleme, retle geri koyma); `POST …/recreate` (yalnız yok olan dosyada).
+    Yalnız yönetici; üç POST D-029'un korumalı rotalarıdır.
+- **Şema ya da sürüm geçişi.** 44. göç (`044_managed_site_files.sql`)
+  `managed_site_files` tablosunu ve alan adı dizinini olağan defterle kurar; var
+  olan hiçbir tablo değişmez; göç satır yazmaz, dosyaya dokunmaz. Eski Panel
+  (alpha.82, şema 43) 44. girdiyi taşıyan defteri reddeder; geri alma, her göçte
+  olduğu gibi güncelleme öncesi anlık görüntünün geri yüklenmesidir. Dosya
+  biçimi: sürümsüz "Generated by CelikPanel" başlığından `celikpanel-render v2`'ye.
+  Düzenek şema 44'ü 38, 42 ve 43'ün yanına sabitler
+  (`populated_database.py`: defter `55efb384c7d1…`, şema `afcb7db4bf3b…`, 67
+  tablo; `guest_populated_baseline.py` 44'ü kabul eder;
+  `database_exchange_rows.py` yalnız göç değişiminden sonra tablonun boş
+  olmasını ister).
+- **Göçün ilk durumu (D-031 öncesi dosyalar).** v0.1.0-alpha.81 (`a0beb7263`)
+  ve v0.1.0-alpha.82 (`2a0af8866`) şablonları dondurulmuş olarak gömülüdür
+  (SHA-256 sabit). Başlıksız dosya, Panel'in şimdi gönderdiği doğrulanmış veriyle
+  üretilen dört metinle bayt bayt karşılaştırılır: her sürümün
+  başlangıç/kaydetme metni ve oluşturma metni (yalnız alan adı, takma ad yok,
+  doğrulama adı yok, sertifika yok, yönlendirme yok; aynı proje türü, belge kökü
+  ve PHP soketi). Eşit → devralınır; değilse → kökeni bilinmiyor, asla yazılmaz.
+  Girdilere göre "eşitleme" bilerek yapılmaz: sertifika yolu, takma adları, PHP
+  sürümü ya da doğrulama adları eski sürümün son üretiminden sonra değişen ya da
+  geçici adla oluşturulan dosya kökeni bilinmiyor olur — sahibin "CelikPanel'inkini
+  al" ile çözdüğü, güvenli taraftaki yanlış pozitif; o satırları eşitlemek tam
+  onlardaki sahip düzenlemesini devralabilirdi. Adım sürdürülebilirdir ve kararı
+  "devral" olmayan hiçbir dosyayı yazmaz. İlk durum: başlangıç satırı "N
+  devralındı, M bilinen her CelikPanel metninden farklı olduğu için bırakıldı" ve
+  Alan Adları listesindeki satır.
+- **Kurtarma davranışı.** Önce: Panel'in başlangıcı sahibin dosyalarını
+  değiştiren sessiz bir onarımdı. Sonra: başlangıç yalnız CelikPanel'in kendi
+  değişmemiş dosyalarını onarır; sahibin dosyaları kanıttır ve korunur; karar
+  sahibindir; hiçbir şey kendiliğinden yeniden denenmez. **Eski bir sürüme dönüş
+  korumayı kaldırır** (eski sürüm başlangıcında her sanal konağı eskisi gibi
+  yazar); yeniden ileri gelindiğinde eski sürümün metni tanınıp devralınır. Sürüm
+  notları bunu söylemelidir. Yerel hizmetler Panel olmadan çalışmayı sürdürür:
+  başlık bir nginx yorumudur, ekleme dizini sıradan nginx'tir.
+- **Kanıt (bileşen testleri, gerçek sistem koşusu yok).** Hizmetler (14),
+  Agent (6 ve derleme kapısı matrisi), Panel (7), orkestratör (2), göç (3), web
+  `web/tests/site-config-mounted.test.mjs` (14), düzenek
+  (`test_populated_database.py`, `test_database_exchange_rows.py`); adlar İngilizce
+  sürümdedir. Tarayıcı: loopback sahte sunucuya karşı gerçek Chrome, `siteconfig`
+  senaryosu, masaüstü ve telefon, İngilizce ve Türkçe, açık ve koyu; ekran
+  görüntülerine bakıldı.
+- **Açık / ölçülmedi.** Denetimin §9 hücrelerinin tamamı Debian 13, Ubuntu
+  24.04 ve Arch'ta. İkinci adım (PHP-FPM havuzu, uygulama birimi) uygulanmadı.
+  `nginx -t` hâlâ tüm yapılandırmayı yargılar: başka yerdeki bozuk bir sahip
+  dosyası her üretim toplu işini düşürür (dosyaları geri konur), eskisi gibi.
+  Panel'in kendi ACME sanal konağı, webmail ve veritabanı araçları sanal konakları
+  kapsanmaz. Geçici ad (`use_temporary`) artık yeni sitenin sanal konağına
+  yazılmaz; başlangıç metni onu hiç taşımıyordu.

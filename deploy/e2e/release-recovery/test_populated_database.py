@@ -152,7 +152,7 @@ class PopulatedDatabaseTests(unittest.TestCase):
     def test_actual_39_through_43_migrations_add_one_empty_table_and_change_no_old_row(self):
         # Migration 43 (request identities, D-029). A candidate that carries it
         # is held to its own pinned digests; schema42 evidence does not cover it.
-        self.assertEqual(len(self.sql), 43, 'a migration after 43 needs its own pin before a candidate carries it')
+        self.assertGreaterEqual(len(self.sql), 43)
         result = self.build()
         connection = sqlite3.connect(result['database'])
         connection.execute('PRAGMA foreign_keys=ON')
@@ -168,7 +168,31 @@ class PopulatedDatabaseTests(unittest.TestCase):
         self.assertEqual(proof['old_rows_missing_or_changed'], 0)
         self.assertEqual(proof['tables']['schema_migrations']['added'], 5)
         self.assertEqual(p.NEW_TABLES[43] - p.NEW_TABLES[42], {'request_identities'})
-        for version in (44, 41, '43', True):
+        for version in (45, 41, '43', True):
+            with self.subTest(version=version), self.assertRaises(p.Refused):
+                self.verify(result, version)
+
+    def test_actual_39_through_44_migrations_add_two_empty_tables_and_change_no_old_row(self):
+        # Migration 44 (managed site files, D-031). The table starts empty: the
+        # migration writes no row and touches no file; rows come from the first
+        # start that classifies the vhosts.
+        self.assertEqual(len(self.sql), 44, 'a migration after 44 needs its own pin before a candidate carries it')
+        result = self.build()
+        connection = sqlite3.connect(result['database'])
+        connection.execute('PRAGMA foreign_keys=ON')
+        apply(connection, self.sql[38:44])
+        connection.close()
+        for wrong in (42, 43):
+            with self.assertRaises(p.Refused):
+                self.verify(result, wrong)
+        proof = self.verify(result, 44)
+        self.assertEqual(proof['schema_version'], 44)
+        self.assertEqual(proof['table_count'], 67)
+        self.assertEqual(proof['old_table_count'], 55)
+        self.assertEqual(proof['old_rows_missing_or_changed'], 0)
+        self.assertEqual(proof['tables']['schema_migrations']['added'], 6)
+        self.assertEqual(p.NEW_TABLES[44] - p.NEW_TABLES[43], {'managed_site_files'})
+        for version in (45, '44', True):
             with self.subTest(version=version), self.assertRaises(p.Refused):
                 self.verify(result, version)
 

@@ -274,6 +274,14 @@ func matchDomainSubroute(r *http.Request) (domainSubroute, bool) {
 		match.kind, match.methods = "usage", []string{http.MethodGet}
 	case "connection":
 		match.kind, match.methods = "connection", []string{http.MethodGet}
+	case "site-config":
+		match.kind, match.methods = "site-config", []string{http.MethodGet}
+	case "site-config/keep":
+		match.kind, match.methods = "site-config-keep", []string{http.MethodPost}
+	case "site-config/take":
+		match.kind, match.methods = "site-config-take", []string{http.MethodPost}
+	case "site-config/recreate":
+		match.kind, match.methods = "site-config-recreate", []string{http.MethodPost}
 	case "dns/zone":
 		match.kind, match.methods = "dns", getPost
 	case "dns/records":
@@ -371,6 +379,14 @@ func (p *Panel) handleDomainSubroute(w http.ResponseWriter, r *http.Request) {
 		p.handleDomainConnection(w, r, match.domainID)
 	case "dns":
 		p.handleDomainDNS(w, r)
+	case "site-config":
+		p.handleDomainSiteConfig(w, r, match.domainID, "")
+	case "site-config-keep":
+		p.handleDomainSiteConfig(w, r, match.domainID, "keep")
+	case "site-config-take":
+		p.handleDomainSiteConfig(w, r, match.domainID, "take")
+	case "site-config-recreate":
+		p.handleDomainSiteConfig(w, r, match.domainID, "recreate")
 	default:
 		http.NotFound(w, r)
 	}
@@ -864,6 +880,8 @@ func main() {
 		panelSiteAgentClient{panel: panel},
 		buildCommit,
 	)
+	panel.orchestrator.SetReleaseLabel(siteFileReleaseLabel())
+	panel.orchestrator.SetSiteServerNames(panel.managedSiteHostnames)
 
 	// Development demo accounts (gated behind --demo).
 	// Geliştirme demo hesapları (--demo bayrağının arkasında).

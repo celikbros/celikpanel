@@ -166,7 +166,28 @@ type MailHealthResponse struct {
 	TLSEnabled     bool   `json:"tls_enabled"`
 	OutboundPort25 string `json:"outbound_port_25"`
 	Error          string `json:"error,omitempty"`
+	// Additive (2026-10-10): the outcome of the public DNS identity lookup
+	// behind PTR, PTRAligned and FCrDNS. "looked_up": those fields are what the
+	// resolvers answered (an empty PTR is a verified absence). "failed": no
+	// resolver gave an answer, so the three fields say nothing, and
+	// ReverseDNSLookupError carries the class (one of MailDNSLookupError*).
+	// Empty: no lookup was made (no public address, a host name that cannot be
+	// looked up) or an older Agent answered.
+	// Ek alan: PTR/FCrDNS arkasindaki genel DNS sorgusunun sonucu; "failed"
+	// iken bu alanlar bir sey soylemez (bilinmeyen bilinmeyen kalir).
+	ReverseDNSLookup      string `json:"reverse_dns_lookup,omitempty"`
+	ReverseDNSLookupError string `json:"reverse_dns_lookup_error,omitempty"`
 }
+
+const (
+	MailDNSLookupDone   = "looked_up"
+	MailDNSLookupFailed = "failed"
+
+	MailDNSLookupErrorTimeout    = "timeout"
+	MailDNSLookupErrorNoResolver = "no_resolver"
+	MailDNSLookupErrorRefused    = "refused"
+	MailDNSLookupErrorOther      = "other"
+)
 
 type RBLResult struct {
 	Zone   string `json:"zone"`

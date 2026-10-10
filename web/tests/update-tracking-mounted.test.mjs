@@ -177,3 +177,16 @@ test('the dialog time is the local time with its zone, in the interface language
     assert.equal(en['panelUpdate.lastRead'], 'Last read');
     assert.equal(tr['panelUpdate.lastRead'], 'Son okuma');
 });
+
+// The wording decided on 2026-10-10: while the update is verified nobody has to
+// act; while its state is unknown, a second update is not to be started.
+// Dogrulama surerken kimse bir sey yapmaz; durum bilinmezken ikinci guncelleme baslatilmaz.
+test('verifying says nobody has to act, and an unknown state says not to start another update', () => {
+    for (const key of ['panelUpdate.tracking.verifying', 'panelUpdate.card.verifying']) {
+        assert.match(catalogues.en[key], /You do not need to do anything\.$/, key);
+        assert.match(catalogues.tr[key], /Bir şey yapmanız gerekmiyor\.$/, key);
+    }
+    assert.match(catalogues.en['panelUpdate.card.unknown'], /Do not start another update\.$/);
+    assert.match(catalogues.tr['panelUpdate.card.unknown'], /İkinci bir güncelleme başlatmayın\.$/);
+    for (const key of ['panelUpdate.card.applying', 'panelUpdate.card.verifying']) assert.doesNotMatch(catalogues.tr[key], /denetle/, key);
+});

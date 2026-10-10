@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# set9 wrapper (set7's, with set9_trial.py and SET9_DISK_GATE) for the Linux QEMU host (archlinux), run as root: the
+# interface of e508af230 in a real Chrome on a cold load, a slow read, a stopped Panel and an update; as set7: across a Panel
+# restart. The driver (set9_trial.py) prepares the guest as set6's good-update cells do and then hands the signed-in
+# owner's part to the browser (web/tools/browser-inspect/live-restart.mjs and cold-load-set9.mjs); it never starts the update itself.
+#
+#   run-set9.sh dry-run CELL ARTIFACTS_JSON LAB_NAME HAND
+#       Validate the plan without any guest (no lab is created).
+#   run-set9.sh cell CELL ARTIFACTS_JSON LAB_NAME SSH_PORT LOCAL_PORT HAND [WAIT_SECONDS]
+#       Prepare and start a NEW lab /var/tmp/cp-release-drill-LAB_NAME, run the cell on its node (the browser
+#       window waits for /var/tmp/cp-set9-run/hand/HAND/done.json), then stop the lab (disks and evidence retained).
+#
+# CELL: upd1-debian13-good (upd1-ubuntu-good, upd1-arch-good offered, not used by set9).
+# One cell per new lab. SET9_DISK_GATE, when set, is a program that must exit 0 immediately before the guests are
+# started (the host's free-disk rule); otherwise no guest is started.
+set -euo pipefail
+HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+IMAGES=${UPD1_IMAGE_CACHE:-/var/tmp/cp-v3n28/images}
+LAB=(python3 "$HERE/lab.py")
+DRIVER=(python3 "$HERE/set9_trial.py")
+
+usage() { sed -n '2,16p' "${BASH_SOURCE[0]}" >&2; exit 2; }
+[[ $# -ge 1 ]] || usage
+command=$1; shift
+case $command in
+    dry-run)
+        [[ $# -eq 4 ]] || usage
+        exec "${DRIVER[@]}" plan --cell "$1" --artifacts "$2" --work-root "/var/tmp/cp-release-drill-$3" --hand "$4" --dry-run
+        ;;
+    cell)
+        [[ $# -ge 6 && $# -le 7 ]] || usage
+        cell=$1 artifacts=$2 name=$3 port=$4 local_port=$5 hand=$6 wait=${7:-14400}
+        [[ $EUID -eq 0 ]] || { echo "run as root (fixture signing keys are root-only)" >&2; exit 2; }
+        root=/var/tmp/cp-release-drill-$name
+        [[ ! -e $root ]] || { echo "lab $root exists; every cell needs a NEW lab" >&2; exit 2; }
+        "${DRIVER[@]}" plan --cell "$cell" --artifacts "$artifacts" --work-root "$root" --hand "$hand" > /dev/null
+        platform=debian13-arch
+        [[ $cell != upd1-ubuntu-* ]] || platform=ubuntu
+        "${LAB[@]}" prepare --work-root "$root" --image-cache "$IMAGES" --ssh-port "$port" --platform "$platform" --execute
+        if [[ -n ${SET9_DISK_GATE:-} ]]; then
+            bash "$SET9_DISK_GATE" "$cell $name (guest start)" || { echo "SET9 cell=$cell lab=$root NOT STARTED: the disk gate refused the guest start" >&2; exit 75; }
+        fi
+        "${LAB[@]}" start --work-root "$root" --execute
+        "${LAB[@]}" status --work-root "$root"
+        status=0
+        "${DRIVER[@]}" run --cell "$cell" --artifacts "$artifacts" --work-root "$root" --local-port "$local_port" \
+            --hand "$hand" --wait-seconds "$wait" --execute || status=$?
+        "${LAB[@]}" stop --work-root "$root" --execute || true
+        echo "SET9 cell=$cell lab=$root driver_exit=$status evidence=$root/evidence/*/upd1"
+        exit "$status"
+        ;;
+    *) usage ;;
+esac

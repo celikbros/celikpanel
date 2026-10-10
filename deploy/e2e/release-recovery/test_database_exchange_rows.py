@@ -73,6 +73,31 @@ class ExchangeRowsTests(unittest.TestCase):
             with self.subTest(version=version), self.assertRaises(r.pop.Refused):
                 r.verify_pair(old, new, result['manifest'], manifest_sha256=result['manifest_sha256'], after_version=version)
 
+    def test_schema44_candidate_adds_the_empty_managed_site_files_table(self):
+        # Migration 44 (managed site files, D-031): one more table, empty after
+        # a migration-only exchange; no old row changes.
+        item = self.pair(44); before = [p.read_bytes() for p in item[1:]]
+        proof = self.check(item)
+        self.assertEqual((proof['before_schema'], proof['after_schema']), (38, 44))
+        self.assertEqual(proof['new_table_count'], 12)
+        self.assertEqual(proof['historical_table_additions'], {'schema_migrations': 6})
+        self.assertEqual(proof['new_table_rows']['managed_site_files'], 0)
+        self.assertEqual(proof['new_table_rows']['request_identities'], 0)
+        self.assertEqual(proof['migrated_proof']['table_count'], 67)
+        self.assertEqual([p.read_bytes() for p in item[1:]], before)
+        result, old, new = item
+        for version in (42, 43):
+            with self.subTest(version=version), self.assertRaises(r.pop.Refused):
+                r.verify_pair(old, new, result['manifest'], manifest_sha256=result['manifest_sha256'], after_version=version)
+        # A row in the new table after a migration-only exchange is refused.
+        self.mutate(item, "INSERT INTO managed_site_files(site_id,domain_id,kind,path,state) SELECT s.id, s.domain_id, 'nginx_vhost', '/x', 'unknown' FROM sites s LIMIT 1")
+        connection = sqlite3.connect(new)
+        rows = connection.execute('SELECT COUNT(*) FROM managed_site_files').fetchone()[0]
+        connection.close()
+        if rows:
+            with self.assertRaises(r.pop.Refused):
+                self.check(item)
+
     def test_schema42_candidate_still_reports_42(self):
         proof = self.check(self.pair())
         self.assertEqual((proof['after_schema'], proof['new_table_count']), (42, 10))

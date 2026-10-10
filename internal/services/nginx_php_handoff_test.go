@@ -163,6 +163,11 @@ func TestNoVhostNamesADistributionSnippet(t *testing.T) {
 					if !strings.HasPrefix(directive, "include ") {
 						continue
 					}
+					// D-031: the owner's include point, a directory CelikPanel
+					// creates and never writes in; nginx accepts an empty match.
+					if directive == "include "+OwnerIncludeDir("ornek.com")+"/*.conf;" {
+						continue
+					}
 					if directive != "include fastcgi.conf;" && directive != "include fastcgi_params;" {
 						t.Errorf("%s (tls %v, www %v): the vhost includes a file that is not nginx's own: %q", shape.ProjectType, tls, www, directive)
 					}

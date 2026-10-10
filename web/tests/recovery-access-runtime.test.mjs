@@ -498,7 +498,7 @@ test('a cold load draws nothing before the quiet time, then the waiting state; a
   for(const absent of ['recovery.checkingHelp','recovery.authTitle','recovery.availabilityTitle','recovery.licenseTitle','app.reload','recovery.waitingProlonged','recovery.operationTitle'])assert.ok(!content.includes(absent),`${absent}: ${content}`);
   assert.deepEqual(labels(),['recovery.checking']);assert.equal(tree.root.findByType('button').props.disabled,true);
   assert.equal(await clock.fire(PROLONGED_MS),1);
-  assert.ok(text().includes('recovery.waitingProlonged'));assert.deepEqual(labels(),['recovery.checking','app.reload']);
+  assert.ok(text().includes('"recovery.waitingProlonged"')&&!text().includes('recovery.waitingProlongedLoading'),text());assert.deepEqual(labels(),['recovery.checking','app.reload']);
   // The next gate of the same load (the interface arrived; its own session read is in flight) continues the
   // explained wait: it does not go blank again (browser run, 2026-10-10).
   await act(async()=>tree.update(React.createElement(RecoveryAccess,{key:'next',user:null,cause:'checking',checking:true,onRetry(){}})));
@@ -536,6 +536,9 @@ test('a cold load draws nothing before the quiet time, then the waiting state; a
   assert.ok(content.includes('recovery.loadingTitle')&&content.includes('recovery.loadingHelp')&&!content.includes('recovery.checkingTitle'),content);
   assert.deepEqual(labels(),[],'there is nothing to check: the interface is on its way');
   assert.equal(await clock.fire(PROLONGED_MS),1);assert.deepEqual(labels(),['app.reload']);
+  // Half a minute later the loading wait says the interface is still loading, not that access is being checked.
+  content=text();
+  assert.ok(content.includes('recovery.waitingProlongedLoading')&&!content.includes('"recovery.waitingProlonged"'),content);
   assert.equal(calls.length,0,'no operation is read while nothing is known');
  }finally{clock.restore();await clean();}
  const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');

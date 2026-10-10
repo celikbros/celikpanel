@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	"path/filepath"
 	"strings"
@@ -22,6 +23,17 @@ type SiteOrchestrator struct {
 	agentClient         siteAgentRPCClient
 	basePath            string
 	expectedBuildCommit string
+	release             string
+	// siteServerNames derives the managed host names of a domain with the
+	// function the Panel's start and saves use (D-031). Nil: the Agent names
+	// the domain alone, as before.
+	siteServerNames func(context.Context, int) ([]string, error)
+}
+
+// SetSiteServerNames gives creation the Panel's own host-name derivation, so
+// the vhost written at creation is the text the next start renders.
+func (so *SiteOrchestrator) SetSiteServerNames(derive func(context.Context, int) ([]string, error)) {
+	so.siteServerNames = derive
 }
 
 // siteAgentRPCClient keeps the orchestrator behind the panel's reviewed Agent
@@ -55,6 +67,19 @@ type deleteCreatedSiteRequest struct {
 type deleteCreatedSiteResponse struct {
 	Success bool
 	Error   string
+}
+
+// SetReleaseLabel names the release that writes site files (ledger column
+// written_release, D-031). Unset, the build commit is used.
+func (so *SiteOrchestrator) SetReleaseLabel(label string) {
+	so.release = strings.TrimSpace(label)
+}
+
+func (so *SiteOrchestrator) releaseLabel() string {
+	if so.release != "" {
+		return so.release
+	}
+	return so.expectedBuildCommit
 }
 
 func NewSiteOrchestrator(
@@ -229,6 +254,15 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 		Password:            password,
 	}
 
+	if so.siteServerNames != nil {
+		names, err := so.siteServerNames(ctx, domain.ID)
+		if err != nil {
+			cause := fmt.Errorf("derive the site's host names: %w", err)
+			return nil, errors.Join(cause, so.rollbackCreatedSiteMetadata(domain.ID, siteID))
+		}
+		agentReq.ServerNames = names
+	}
+
 	var agentReply transport.CreateSiteResponse
 	if preflighter, ok := so.agentClient.(siteAgentRPCPreflighter); ok {
 		if err := preflighter.AuthorizeContext(ctx, "Agent.CreateSite", &agentReq); err != nil {
@@ -247,10 +281,33 @@ func (so *SiteOrchestrator) CreateSite(ctx context.Context, req *CreateSiteReque
 		if agentReply.ErrorCode == transport.HostingRootNotTraversable && agentReply.HostingRoot != nil {
 			cause = &HostingRootNotTraversableError{Block: *agentReply.HostingRoot}
 		}
+		if agentReply.ErrorCode == transport.SiteConfigExists {
+			// D-031: the file at the site's vhost path is not CelikPanel's
+			// and was kept. The Agent already removed what it created for the
+			// site; asking it to delete the site would remove that file too,
+			// so only the records are removed, and only when the Agent's own
+			// removal was complete.
+			cause = &SiteConfigExistsError{Path: agentReply.ErrorDetail}
+			if strings.Contains(agentReply.ErrorMessage, "automatic rollback is incomplete") {
+				return nil, errors.Join(cause, fmt.Errorf(
+					"rollback site metadata: retained domain %d and site %d because agent cleanup was not confirmed",
+					domain.ID, siteID,
+				))
+			}
+			return nil, errors.Join(cause, so.rollbackCreatedSiteMetadata(domain.ID, siteID))
+		}
 		if agentReply.ErrorCode == transport.WebServerRefusedConfig {
 			cause = &WebServerRefusedConfigError{Detail: agentReply.ErrorDetail}
 		}
 		return nil, errors.Join(cause, so.rollbackCreatedSite(agentReq, domain.ID, siteID))
+	}
+
+	// The vhost's ledger row (D-031). The file's header is the authority; a
+	// row that could not be written is re-created at the next render.
+	if agentReply.SiteFile != nil {
+		if err := RecordSiteFileResult(ctx, so.db, siteID, domain.ID, *agentReply.SiteFile, so.releaseLabel(), 0); err != nil {
+			log.Printf("site %d: record the vhost in the managed site files ledger: %v", siteID, err)
+		}
 	}
 
 	// 5. Update site record with PHP socket

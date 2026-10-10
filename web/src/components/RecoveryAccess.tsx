@@ -159,7 +159,7 @@ export function RecoveryAccess({ user, cause, checking = false, onRetry, onUnaut
                 {user && <p className="mb-5 break-words text-sm text-fg-muted">{user.username}</p>}
                 <h1 className="text-2xl font-semibold">{t(opening ? 'recovery.loadingTitle' : 'recovery.checkingTitle')}</h1>
                 <p className="mt-4 max-w-prose break-words text-sm leading-relaxed text-fg-muted" role="status">{t(opening ? 'recovery.loadingHelp' : 'recovery.waitingHelp')}</p>
-                {prolonged && <p className="mt-4 max-w-prose text-sm leading-relaxed text-fg-muted">{t('recovery.waitingProlonged')}</p>}
+                {prolonged && <p className="mt-4 max-w-prose text-sm leading-relaxed text-fg-muted">{t(opening ? 'recovery.waitingProlongedLoading' : 'recovery.waitingProlonged')}</p>}
                 {(!opening || prolonged) && <div className="mt-6 flex flex-wrap items-center gap-3">
                     {!opening && <Button disabled={checking} onClick={onRetry}>{checking && <Spinner />}{t(checking ? 'recovery.checking' : 'recovery.retry')}</Button>}
                     {prolonged && <Button variant="secondary" onClick={() => window.location.reload()}>{t('app.reload')}</Button>}

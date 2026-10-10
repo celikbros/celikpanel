@@ -31,10 +31,20 @@ export const setupPlanReopened = (execution: ServerSetupExecution | null | undef
 // Eylem isteyen kontrolun tipli nedeni; beklenmeyen deger genel cumleye duser.
 const dnsName = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.length <= 253 && /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/i.test(value);
 const address = (value: unknown): value is string => typeof value === 'string' && value.length <= 64 && /^[0-9a-f:.]+$/i.test(value);
+// An unknown check has a typed reason only when the Agent's reverse DNS lookup
+// got no answer (reverse_dns_unknown): said as not known, never as missing.
+// Bilinmeyen kontrolun tek tipli nedeni yanitsiz ters DNS sorgusudur.
 export function setupCheckReasonText(check: ServerSetupCheck): SetupGuidanceText | null {
-    if (check.state !== 'action_required' || check.id !== 'mail_identity' || typeof check.reason !== 'string') return null;
+    if (check.id !== 'mail_identity' || typeof check.reason !== 'string') return null;
     const vars = check.vars && typeof check.vars === 'object' && !Array.isArray(check.vars) ? check.vars : {};
-    const { hostname, ip, ptr, current } = vars as Record<string, unknown>;
+    const { hostname, ip, ptr, current, name } = vars as Record<string, unknown>;
+    if (check.state === 'unknown') {
+        return check.reason === 'reverse_dns_unknown' && address(ip) ? text('setup.check.mailIdentity.reverseDNSUnknown', { ip }) : null;
+    }
+    if (check.state !== 'action_required') return null;
+    if (check.reason === 'mail_name_not_canonical') {
+        return dnsName(name) ? text('setup.check.mailIdentity.notCanonical', { name }) : text('setup.check.mailIdentity.notCanonicalUnread');
+    }
     if (check.reason === 'server_address_not_public') {
         return address(ip) ? text('setup.check.mailIdentity.address', { ip }) : text('setup.check.mailIdentity.addressMissing');
     }
@@ -71,7 +81,7 @@ export function setupStepState(execution: ServerSetupExecution, step: ServerSetu
     if (step.kind === 'verify') {
         if (execution.status === 'waiting' && execution.phase === 'verification') {
             const open = checks.filter(check => check.state !== 'ready');
-            if (open.some(check => setupCheckReasonText(check))) return 'waitingOwner';
+            if (open.some(check => check.state === 'action_required' && setupCheckReasonText(check))) return 'waitingOwner';
             if (open.length > 0 && open.every(check => check.state === 'unknown')) return 'unknown';
             return 'waitingRequirement';
         }

@@ -106,6 +106,13 @@ type CreateSiteRequest struct {
 	SSLType     string
 	Username    string
 	Password    string
+	// ServerNames are the site's managed host names, from the same Panel
+	// function the start and every save use (D-031; set8 measured that the
+	// creation render named only the domain while the next start added
+	// www.<domain>). When set, the creation vhost is the start render: no
+	// temporary name. Additive: an older Panel leaves it empty and the Agent
+	// renders the domain alone, as before.
+	ServerNames []string
 }
 
 // CreateSiteResponse contains results of site creation
@@ -128,6 +135,9 @@ type CreateSiteResponse struct {
 	// ErrorDetail, WebServerRefusedConfig için tek ve sınırlı bir satırdır:
 	// nginx'in neyi reddettiğini adlandıran kendi satırı. Eklemelidir.
 	ErrorDetail string
+	// SiteFile is the vhost's classification and outcome (D-031). Additive;
+	// nil from an older Agent.
+	SiteFile *SiteFileResult
 }
 
 // WebServerRefusedConfig: the site's parts were created, then nginx's own test
@@ -450,11 +460,24 @@ type ApplyVhostRequest struct {
 	AppPort             int      `json:"app_port"`
 	ForwardTo           string   `json:"forward_to"`
 	ForwardCode         int      `json:"forward_code"`
+	// D-031, additive. FileTrigger says why this render runs (SiteFileTrigger*;
+	// empty is "change"). RecordedSHA256 is the body digest the Panel's ledger
+	// last recorded for this file ("" when it has none): with it a headerless
+	// file is "foreign", without it "unknown origin". ExpectedFileSHA256 and
+	// ExpectedRenderSHA256 bind "take CelikPanel's" to the file and the text
+	// the owner was shown.
+	FileTrigger          string `json:"file_trigger,omitempty"`
+	RecordedSHA256       string `json:"recorded_sha256,omitempty"`
+	ExpectedFileSHA256   string `json:"expected_file_sha256,omitempty"`
+	ExpectedRenderSHA256 string `json:"expected_render_sha256,omitempty"`
 }
 
 type ApplyVhostResponse struct {
 	Config string `json:"config"`
 	Error  string `json:"error,omitempty"`
+	// File is the classification and outcome (D-031). Nil from an Agent
+	// that predates it: the Panel then says the file's state is unknown.
+	File *SiteFileResult `json:"file,omitempty"`
 }
 
 type ApplyVhostsRequest struct {
@@ -465,6 +488,11 @@ type ApplyVhostsRequest struct {
 type ApplyVhostsResponse struct {
 	Applied int    `json:"applied"`
 	Error   string `json:"error,omitempty"`
+	// Items and Counts are per-site results (D-031). An Agent that predates
+	// them leaves both empty; the Panel then says every file's state is
+	// unknown.
+	Items  []SiteFileBatchItem `json:"items,omitempty"`
+	Counts *SiteFileCounts     `json:"counts,omitempty"`
 }
 
 // IssuePanelCertificateRequest and response are shared because the build

@@ -5365,27 +5365,61 @@ ortaya koyduğunu söyler: uygulanıyor, kuruldu ve doğrulanıyor ya da bilinmi
 `GET /api/v1/setup/operation`).** `action_required` durumundaki `mail_identity`
 denetimi ek olarak `reason` ve `vars` taşır: denetimin okuduğu sırayla
 karşılanmayan ilk koşul ve andığı değerler. `server_address_not_public`,
-`mail_name_differs`, `reverse_dns_mismatch`, `forward_dns_mismatch`. Hazır ya da
-bilinmeyen denetim ikisini de taşımaz; planlanan posta sunucusu adı kurallı bir
-ad olmayan `action_required` denetim de taşımaz; onlardan önce yazılmış kayıt
-genel cümlesini korur. Durum ve kod değişmedi. **Bilinen açık, burada
-değiştirilmedi:** Agent'ın ters DNS sorgusu tümden başarısız olursa (iki genel
-çözümleyici de) ad da hata da bildirmez (`cmd/agent/mail_health_rpc.go`,
-`mail_health_dns.go`); Panel bunu doğrulanmış yokluktan ayıramaz, bu yüzden
-sayfa `reverseDNSMissing` ("ters DNS (PTR) adı bulunamadı") der; bu, kanıtlanan
-şeyden fazlasını söyler. Algılanamayan adres algılanamadı diye yazılır
-(`addressMissing`).
+`mail_name_differs`, `reverse_dns_mismatch`, `forward_dns_mismatch` ve, bu
+değişikliğin ikinci okumasından sonra, plandaki posta sunucusu adı tam bir
+sunucu adı olmadığında `mail_name_not_canonical` (ad düz bir DNS adıysa
+`name`). Hazır denetim ikisini de taşımaz, Agent'ın yanıtlayamadığı denetim de
+taşımaz; onlardan önce yazılmış kayıt genel cümlesini korur. Durum ve kod,
+aşağıdaki yanıtsız sorgu dışında değişmedi.
+
+**Yanıt alamayan ters DNS sorgusu eksik değil, bilinmeyendir (bu değişikliğin
+ikinci okuması, 2026-10-10).** Önceden iki genel çözümleyici de yanıt
+vermediğinde Agent hatayı düşürüyordu (`cmd/agent/mail_health_rpc.go`,
+`mail_health_dns.go`): PTR boş kalıyor, Panel `reverse_dns_mismatch`
+bildiriyor ve sayfa PTR olmadığını söylüyordu. Agent'ın sağlık yanıtı artık ek
+olarak `reverse_dns_lookup` (`looked_up` ya da `failed`) ve başarısız olduğunda
+`reverse_dns_lookup_error` (`timeout`, `no_resolver`, `refused` ya da `other`;
+çözümleyicinin kendi metni aktarılmaz) taşır. Çözümleyicinin "böyle bir ad yok"
+yanıtı (NXDOMAIN), hem PTR hem sunucu adının adresi için bir yanıttır; böylece
+doğrulanmış yokluk doğrulanmış yokluk olarak kalır. Sorgu başarısız olduğunda ve
+önceki koşullar (kurallı ad, genel adres, posta adı) sağlandığında denetim
+`unknown`, kodu `mail_identity_unavailable`, nedeni `reverse_dns_unknown`
+(`ip`, `error`) olur; sayfa aşağıdaki cümleyi söyler ve son adım "Sizi
+bekliyor" değil "Kontrol edilemedi" der. Bu değişiklikten önceki bir Agent
+sorgu alanı göndermez; onun boş PTR'si hâlâ `reverse_dns_mismatch` olarak
+bildirilir; bu nedenin cümlesi artık bir sonuç iddia etmez ("doğrulanamadı").
+Eşleşen bir PTR'den sonra ileri sorgunun başarısız olması da aynı biçimde, ters
+DNS sorgulanamadı diye bildirilir; iki sorgu birbirinden ayrılmaz. Algılanamayan
+adres algılanamadı diye yazılır (`addressMissing`).
 
 - `setup.check.mailIdentity.reverseDNS`
   TR: "Bu sunucunun {ip} adresinin ters DNS (PTR) adı {ptr}; posta sunucuları
   {hostname} bekler. Bunu CelikPanel’de değil, sunucu sağlayıcınızda
-  ayarlarsınız: sağlayıcının kontrol panelinden ya da destek ekibinden {ip}
-  adresinin ters DNS kaydını {hostname} olarak ayarlamasını isteyerek."
+  ayarlarsınız. Sağlayıcınızın kontrol panelinden ayarlayın ya da destek
+  ekibinden {ip} için {hostname} PTR kaydını ayarlamasını isteyin."
+- `setup.check.mailIdentity.reverseDNSMissing` TR: "{ip} için bir ters DNS
+  (PTR) adı doğrulanamadı; posta sunucuları {hostname} bekler. ..." (önceden:
+  "... ters DNS (PTR) adı bulunamadı; ...").
+- `setup.check.mailIdentity.reverseDNSUnknown` (yeni) TR: "{ip} adresinin ters
+  DNS kaydı şu an sorgulanamadı; bu, kaydın ayarlı olup olmadığını göstermez.
+  Gereksinimleri tekrar kontrol edin."
+- `setup.check.mailIdentity.forwardDNS` TR: "... {hostname} adının DNS
+  kayıtlarını yönettiğiniz yerde A kaydını {ip} olarak ayarlayın, sonra
+  gereksinimleri tekrar kontrol edin."
+- `setup.check.mailIdentity.mailName` / `.mailNameUnread` TR: "... Planı
+  inceleyin, posta sunucusu adını orada düzeltin ve kurulumu yeniden
+  başlatın." ("Postfix myhostname" yapılandırma anahtarı artık anılmaz).
+- `setup.check.mailIdentity.address` / `.addressMissing` TR: "... Sunucu
+  sağlayıcınızdan bu sunucuya ulaşan genel bir IPv4 adresi isteyin, sonra
+  gereksinimleri tekrar kontrol edin."
+- `setup.check.mailIdentity.notCanonical` (yeni) TR: "Plandaki posta sunucusu
+  adı {name}, tam bir sunucu adı değil (mail.example.com gibi). Planı
+  inceleyin, adı düzeltin ve kurulumu yeniden başlatın." (`.notCanonicalUnread`
+  adsız).
 - `setup.check.notRead`
-  TR: "{check}: şu an denetlenemedi; bu yüzden karşılanıp karşılanmadığı
-  bilinmiyor. Bu, bir şeyin eksik ya da durmuş olduğu anlamına gelmez."
-- Diğer nedenler (`.reverseDNSMissing`, `.forwardDNS`, `.mailName`,
-  `.mailNameUnread`, `.address`, `.addressMissing`) kataloglardadır.
+  TR: "{check}: şu an kontrol edilemedi; bu yüzden karşılanıp karşılanmadığı
+  bilinmiyor. Bu, gereksinimin karşılanmadığı anlamına gelmez." (önceden: "...
+  denetlenemedi; ... Bu, bir şeyin eksik ya da durmuş olduğu anlamına gelmez.")
 
 **Planı yeniden açıldığı için durmuş çalışma.**
 
@@ -5393,24 +5427,29 @@ sayfa `reverseDNSMissing` ("ters DNS (PTR) adı bulunamadı") der; bu, kanıtlan
 - `setup.guide.revised` TR: "Bu kurulum çalışması, planı düzenlemek için
   yeniden açıldığından durdu. Bu bir hata değildir: hiçbir şey geri alınmadı ve
   kurulmuş bileşenler olduğu gibi kalır. Hiçbir şey kendiliğinden devam etmez."
-- `setup.guide.revisedChecks` TR: "Durduğunda son denetimi hâlâ şunu
+- `setup.guide.revisedChecks` TR: "Durduğunda son kontrol hâlâ şunu
   bekliyordu:" ve ardından açık denetim başına bir satır.
 - `setup.guide.revisedNext` TR: "Sonraki adım: planı inceleyip yeniden
-  başlatın. Son denetim o zaman yeniden çalışır." Yanındaki düğme mevcut
+  başlatın. Son kontrol o zaman yeniden çalışır." Yanındaki düğme mevcut
   "Düzeltilmiş planı incele" düğmesidir. "Teknik ayrıntılar" yalnız sunucunun
   satırını tutar.
 
 **Bekleyen son denetim.** `setup.guide.verificationWaiting` TR: "Bütün kurulum
-adımları bitti. Kurulum, son denetiminde şunu bekliyor:", açık denetimler,
+adımları bitti. Kurulum, son kontrolünde şunu bekliyor:", açık denetimler,
 genel yardımları (artık kapalı değil), sonra `setup.guide.verificationResume`
-TR: "Kurulum kendiliğinden yeniden denetler ve bütün denetimler geçince
-tamamlanır. Hemen denetlemek için Gereksinimleri tekrar kontrol et düğmesini
-kullanın." Çalışma beklerken yürütücü denetimleri 20 saniyede bir yeniden okur.
+TR: "Kurulum kendiliğinden yeniden kontrol eder ve bütün kontroller geçince
+tamamlanır. Hemen kontrol etmek için Gereksinimleri tekrar kontrol et
+düğmesini kullanın." Çalışma beklerken yürütücü denetimleri 20 saniyede bir
+yeniden okur.
 
 **Adımın durum sözcüğü.** "Sizi bekliyor", "Gereksinimler bekleniyor"
-(değişmedi), "Denetlenemedi", "Başarısız", "Durduruldu", "Başlamadı". Birkaç
-denetim açıkken, birinin tipli nedeni varsa "Sizi bekliyor" kullanılır; açık her
-denetim yine adımların üstünde listelenir.
+(değişmedi), "Kontrol edilemedi", "Başarısız", "Durduruldu", "Başlamadı".
+Birkaç denetim açıkken, birinin sahibin işlem yapmasını isteyen tipli nedeni
+varsa (`action_required`) "Sizi bekliyor" kullanılır; açık her denetim yine
+adımların üstünde listelenir. İkinci okumadan beri son denetimin yeni Türkçe
+metinleri, düğmesi "Gereksinimleri tekrar kontrol et" gibi "kontrol" der
+(önceden "denetim/denetle/Denetlenemedi"; `setup.check.name.other` TR
+"Gerekli bir kontrol", kart satırlarında "Güncelleme kontrolü").
 
 **Güncelleme bildirimi ve kart (`GET /api/v1/panel/update/status`).** Agent'ın
 kaydı, yeni Panel başladıktan sonra güncelleyici çıkıp son kanıtı geçene kadar
@@ -5425,7 +5464,9 @@ sıra numarası karşılaştırılmaz), ek olarak `phase: "verifying"` taşır.
 - `panelUpdate.tracking.verifyingTitle` TR: "Güncelleme kuruldu, doğrulanıyor"
 - `panelUpdate.tracking.verifying` TR: "{version} kuruldu ve bu panel onu
   çalıştırıyor. Güncelleme doğrulanıyor ve henüz bitmedi; bu bildirim onu
-  kendiliğinden izler."
+  kendiliğinden izler. Bir şey yapmanız gerekmiyor." (son cümle ikinci okumada
+  eklendi; `panelUpdate.card.verifying` sonuna da; `panelUpdate.card.unknown`
+  sonuna "İkinci bir güncelleme başlatmayın.")
 - `panelUpdate.tracking.unknown` TR: "Bu güncellemenin durumu şu an okunamadı;
   bu yüzden hâlâ sürüp sürmediği ya da bitip bitmediği bilinmiyor. Bu bildirim
   kendiliğinden yeniden okur; başka bir güncelleme başlatmayın." Başarısız
@@ -5449,7 +5490,12 @@ kartın satırını örtmesi (taklitte örttü; değiştirilmedi). Bildirimi sek
 yüklediği arayüz çizer: önceki sürümü çalıştıran bir sekmeden başlatılan
 güncelleme `phase` alanını yok sayar ve eski cümleyi korur; yeni metin bu
 değişiklikten sonra yüklenen bir sayfadan başlatılan güncellemeden itibaren
-geçerlidir. Yukarıdaki ters DNS ve adres açığı açıktır.
+geçerlidir. Burada ilk kaydedilen ters DNS açığı ikinci okumayla kodda
+kapandı (yanıt alamayan sorgu, sınıfıyla birlikte bilinmeyen olarak bildirilir):
+bileşen testli (`cmd/agent/mail_health_dns_test.go`,
+`cmd/panel/known_state_gates_test.go`, bağlanmış test) ve taklit tarayıcılı;
+gerçek bir sistemde ölçülmedi ve çözümleyicileri yanıt vermeyen gerçek bir
+Agent'tan okunmadı.
 
 ### İlk sayfa yüklemesinde yanıtlanmamış erişim sayfası yok; bekletme katmanı okuduğu nedeni söyler (2026-10-10)
 
@@ -5493,8 +5539,13 @@ sözleşme maddeleri aynı tarih ve başlıklı
   Panel hazır. Arayüz hâlâ yükleniyor ve kendiliğinden açılır." · EN "Your
   session is confirmed and the Panel is ready. The interface is still loading
   and opens by itself." Kontrol düğmesi yok (okunacak bir şey yok); yeniden
-  yükleme yarım dakika sonra. Önceden bu durum "Panel erişimi kontrol
-  ediliyor" diyordu.
+  yükleme yarım dakika sonra, ikinci okumadan beri kendi cümlesiyle:
+  `recovery.waitingProlongedLoading`, TR "CelikPanel hâlâ yükleniyor;
+  kendiliğinden açılır. Bu sayfa böyle kalırsa yeniden yükleyin." · EN
+  "CelikPanel is still loading; it opens by itself. If this page stays like
+  this, reload it." (önceden yükleme beklemesi, CelikPanel'in kontrol etmeyi
+  sürdürdüğünü söyleyen `recovery.waitingProlonged` cümlesini kullanıyordu).
+  Önceden bu durum "Panel erişimi kontrol ediliyor" diyordu.
 - *Açıklanmış bir bekleme*, aynı yüklemenin bir sonraki kapısı devraldığında
   (kurtarma sayfasının altında arayüzün gelmesi, oturum okumasından sonra
   lisans okuması) yeniden gizlenmez.
@@ -5506,22 +5557,29 @@ sözleşme maddeleri aynı tarih ve başlıklı
   olarak: `LicenseOnboarding.tsx` nedeni çözümlemeden önce ayarlar).
   Panel'den yanıt yok: `accessHold.availabilityTitle`, TR "Panel az önce yanıt
   vermedi" · EN "The Panel did not answer just now" (değişmedi). Panel
-  başladığını söylüyor: `recovery.startingTitle` (değişmedi). Bu tarayıcıdan
-  başlatılan bir güncelleme bitişini kaydetmemişken yanıt yok (yeni):
-  `accessHold.updateTitle`, TR "Panel bir güncelleme sırasında yanıt vermiyor"
-  · EN "The Panel is not answering during an update"; `accessHold.updateHelp`,
-  TR "Bu tarayıcıdan bir güncelleme başlatıldı ve bitişi burada henüz
-  görülmedi. Güncelleme uygulanırken Panel yeniden başlar; bu yüzden kısa bir
-  süre yanıt vermeyebilir. Bu bir lisans sorunu değildir." · EN "An update was
-  started from this browser, and its end has not been seen here yet. The Panel
-  restarts while an update is applied, so it may not answer for a short while.
-  This is not a license problem." Devam satırı ve kontrol eylemi değişmedi.
+  başladığını söylüyor: `recovery.startingTitle` (değişmedi). Bu tarayıcıdan son
+  30 dakika içinde başlatılan bir güncelleme bitişini kaydetmemişken yanıt yok
+  (yeni; ikinci okumada düzeltilen sözcüklerle): `accessHold.updateTitle`, TR
+  "Panel yanıt vermiyor; bir güncelleme onu yeniden başlatıyor olabilir" · EN
+  "The Panel is not answering; an update may be restarting it";
+  `accessHold.updateHelp`, TR "Bu tarayıcıdan bir güncelleme başlatıldı ve
+  bitişi burada henüz görülmedi. Güncelleme uygulanırken Panel yeniden başlar;
+  bu yüzden kısa bir süre yanıt vermeyebilir. Lisansın geçerli olup olmadığı
+  Panel yanıt verene kadar bilinmiyor; bu konuda hiçbir karar verilmedi." · EN
+  "... Whether the license is valid is not known until the Panel answers;
+  nothing about it has been decided." (ilk biçim "güncelleme sırasında" ve "Bu
+  bir lisans sorunu değildir" diyordu; okumanın ortaya koymadığı bir nedeni ve
+  bir lisans hükmünü iddia ediyordu). Devam satırı ve kontrol eylemi değişmedi.
   Tarayıcının kendi güncelleme kaydı yalnızca bu sözcükleri seçer; hiçbir
-  zaman sunucu sonucu olarak gösterilmez. Kayıt, güncelleme ne kadar önce
-  başlatılmış olursa olsun `active` dediği sürece bitmemiş sayılır
-  (`savedUpdateUnfinished`in yaş sınırı yoktur); bu tarayıcının bitişini hiç
-  görmediği bir kayıt, ilgisiz bir kesinti için de güncelleme adını verebilir;
-  sözcükler bitişin "burada henüz görülmediğini" söyler.
+  zaman sunucu sonucu olarak gösterilmez. Güncellemeyi yalnız güncellemenin
+  başlangıcından sonraki 30 dakika içinde anar (kaydın `created_at` alanı;
+  `savedUpdateUnfinished`, `UPDATE_CAUSE_WINDOW_MS`); daha eski, başlangıç
+  zamanı olmayan ya da başlangıcı gelecekte görünen kayıt genel "Panel az önce
+  yanıt vermedi" cümlesini bırakır. İkinci okumadan önce kaydın yaş sınırı
+  yoktu; bitişi hiç görmeyen bir tarayıcı güncellemeyi sonraki her kesinti için
+  anabilirdi. Kaydın anahtarı (`celikpanel.system-update-operation.v1`) bir kez,
+  `lib/recoveryObservation.ts` içinde tanımlanır ve güncelleme izleyicisi onu
+  içe aktarır.
 - *Hiçbir şeyin yerini almayan tam sayfa* (bir şey bağlanmadan ilk lisans
   okuması başarısız) aynı kararı kullanır: yanıt yoksa "Panelin hazır olma
   durumu kontrol edilemedi", başlayan Panel için "Panel başlatılıyor", "Lisans
@@ -5537,8 +5595,11 @@ değişmedi; istek eklenmedi.
 **Kanıt.** Bileşen testleri: `web/tests/recovery-access-runtime.test.mjs`
 (soğuk yükleme, bekleme durumu, bilinen olumsuzlar, kapılar arası devir,
 gerçek oturum okumalarıyla kurtarma yolu), `web/tests/access-hold-runtime.test.mjs`
-(ilk lisans okuması; bitmemiş güncelleme kaydı olan ve olmayan yedi okuma
-sonucu için bekletme nedeni). Geri döngü taklidine karşı tarayıcı koşusu
+(ilk lisans okuması; bitmemiş güncelleme kaydı olan ve olmayan dokuz okuma
+sonucu için bekletme nedeni, 30 dakikadan eski ve başlangıç zamanı olmayan kayıt
+dahil; pencerenin sınırları). İkinci okumanın ekranlarına aynı taklit
+tarayıcıda bakıldı (`finalcheck`, `updatephase`, `waitcopy` senaryoları,
+masaüstü, İngilizce ve Türkçe). Geri döngü taklidine karşı tarayıcı koşusu
 (`web/tools/browser-inspect`, `coldload` ve `coldslow` senaryoları, 2 Mbit/sn
 ve 300 ms'ye kısılmış Chrome, okumalar 300 ms yavaşlatılmış): yayımlanmış kod
 "Panel erişimi kontrol ediliyor" kapısını `/setup`, `/` ve
@@ -5551,3 +5612,157 @@ bekleme sessiz süreden sonra göründü ve sayfa kendiliğinden açıldı.
 **Ölçülmedi:** konuktaki gerçek bir Panel (set7 yöntemi), kurulu bir sunucu,
 HTTP önbelleği açıkken yükleme, gerçek bir güncelleme sırasında bekletme
 katmanı. Dil yükleyicisinin metinsiz açılış göstergesi değişmedi.
+
+### Sahibin değiştirdiği site yapılandırma dosyası korunur ve adlandırılır; seçimi sahip yapar (2026-10-10)
+
+Bileşen testleri ve loopback sahte sunucuya karşı gerçek Chrome ile kaynak
+durumu; konukta koşu yok, kurulu sunucu yok (D-031; D-022; D-024). Sekizinci
+gerçek sistem kaydı (`deploy/e2e/release-recovery/evidence/set8-20261010/`)
+yayımlanmış alpha.82'yi Debian 13, Ubuntu 24.04 ve Arch'ta ölçtü: sahibin bir
+sitenin nginx sanal konağında yaptığı değişiklik, Panel'in sonraki başlangıcında,
+yeniden başlatılmasında ya da Genel kaydında sessizce eziliyordu; sahibin
+kaldırdığı sanal konak yeniden yazılıyordu; kilitli bir dosya (`chattr +i`) tüm
+başlangıç toplu işini bozuyor ve etkin bağlantısını kaybediyordu; kaydetme
+günlüğe satır yazmıyordu; her başlangıç değişmemiş dosyaları yeniden yazıp
+nginx'i yeniden yüklüyordu.
+
+**Sahibin şimdi gördüğü.** Her üretimden önce (başlangıç, ayarlar, sertifika,
+barındırma türü, PHP sürümü, oluşturma, içe aktarma) Agent dosyayı
+sınıflandırır. Yalnız CelikPanel'in kendi değişmemiş metni değiştirilir;
+sahibin değiştirdiği, yenisiyle değiştirdiği, kaldırdığı ya da kilitlediği dosya
+olduğu gibi korunur ve onu değiştirmek isteyen işlem başarı bildirmek yerine
+bunu söyler. Alan adı sayfası durumu ve farkı gösterir, seçimi sahip yapar.
+Kim yapar: sunucu sahibi (yönetici); hiçbir şey kendiliğinden sürmez.
+
+**Nerede.** Alan adı sayfası → Barındırma → Yapılandırma dosyası (yalnız
+yöneticiler; `GET /api/v1/domains/{id}/site-config`). Alan adının sekmelerinin
+üstündeki satır (`siteConfig.notice.*`, "Yapılandırma dosyasını aç" ile) ve Alan
+Adları listesindeki rozet ("Yapılandırma korundu") oraya götürür.
+
+**Durumlar ve cümleleri** (anahtarlar `web/src/i18n/screens/server` içinde, TR):
+
+- Kontrol ediliyor: `siteConfig.checking` "Bu sitenin yapılandırma dosyası
+  okunuyor…". Kontrol edilemedi: `siteConfig.unknownRead` "Bu sitenin
+  yapılandırma dosyasının durumu şu an okunamadı. Bu, dosyada bir sorun olduğu
+  anlamına gelmez ve hiçbir şey değiştirilmedi. Tekrar deneyin." (Tekrar dene
+  yalnız okur.)
+- Bilinmiyor (durumu bildirmeyen bir Agent): `siteConfig.unknownState.title`
+  "Bu dosyanın durumu bilinmiyor" — "Bu sunucudaki CelikPanel Agent’ı bu
+  dosyanın değiştirilip değiştirilmediğini bildirmiyor; bu yüzden onun hakkında
+  bir şey söylenmiyor. Hiçbir şey değiştirilmedi. Agent panelle aynı sürüme
+  geçtiğinde bildirilir."
+- CelikPanel'in metni: `siteConfig.managed.title` "CelikPanel’in metni,
+  değişmemiş" — "Bu dosya CelikPanel’in en son yazdığının ta kendisi; bu yüzden
+  siz bu sitenin ayarlarını değiştirdikçe CelikPanel onu günceller." Önceki
+  sürümden devralınan: "Dosyayı {release} yazmış; bayt bayt o sürümün metni
+  olarak tanındı ve CelikPanel onu devraldı."
+- Düzenlenmiş / değiştirilmiş: `siteConfig.ownerEdited.title` "Yapılandırma
+  sahibi tarafından düzenlendi", `siteConfig.foreign.title` "Yapılandırma sahibi
+  tarafından değiştirildi" — `siteConfig.kept.body` "Bu dosya CelikPanel’in en
+  son yazdığı metin değil; bu yüzden CelikPanel onu olduğu gibi korudu. Bu sitede
+  CelikPanel’de yaptığınız değişiklikler (ayarlar, sertifikalar, barındırma
+  türü, PHP sürümü), aşağıda bir seçim yapana dek ona uygulanmaz. nginx siteyi bu
+  dosyayla sunmayı sürdürür."
+- Kökeni bilinmiyor: `siteConfig.unknownOrigin.title` "Yapılandırma CelikPanel’inki
+  olarak tanınmadı" — "Bu dosya CelikPanel’in bu sürümünden önce de oradaydı ve
+  önceki bir CelikPanel sürümünün bu site için yazdığı her metinden farklı; bu
+  yüzden sizin değişikliklerinizi taşıyor olabilir. CelikPanel onu olduğu gibi
+  korudu. Bu sitede CelikPanel’de yaptığınız değişiklikler, aşağıda bir seçim
+  yapana dek ona uygulanmaz. nginx siteyi bu dosyayla sunmayı sürdürür."
+- Eksik: `siteConfig.missing.title` "Yapılandırma dosyası eksik" — "Bu sitenin
+  nginx yapılandırma dosyası yerinde değil. CelikPanel onu yeniden oluşturmadı,
+  çünkü kaldırılması sizin seçiminiz olabilir; o olmadan nginx bu siteyi sunmaz.
+  Bu sitede CelikPanel’de yaptığınız değişiklikler, dosya yeniden yerinde olana
+  dek uygulanmaz." Eylem: "Yeniden oluştur" — "CelikPanel bu site için kendi
+  metnini yazar ve nginx’i yeniden yükler."
+- Okunamıyor ya da değiştirilemiyor: `siteConfig.unreadable.title` "Yapılandırma
+  dosyası okunamıyor ya da değiştirilemiyor", nedeniyle (kilitli dosyada:
+  "Değiştirilemedi (örneğin chattr +i ile değişikliğe kilitli). CelikPanel
+  dosyayı ve bağlantısını olduğu gibi korudu.") ve "Sunucu sahibi dosyayı
+  sunucuda kontrol eder. Bu arada bu sitede CelikPanel’de yaptığınız
+  değişiklikler ona uygulanmaz; dosya okunabildiğinde bu sayfa durumunu yeniden
+  gösterir."
+
+**Üç seçim** (her biri D-029 istek kimliğiyle bir POST; her biri sayfanın
+gösterdiği özetlere bağlıdır):
+
+- "CelikPanel’inkini al" — "Dosyanız önce yanına tarihli bir kopya olarak
+  bırakılır, sonra yerine CelikPanel’in metni yazılır ve nginx yeniden yüklenir.
+  nginx onu reddederse dosyanız geri konur." Yerinde bir kez sorulur: "Dosyanız
+  {path}.celikpanel-backup-<tarih ve saat> olarak saklanacak, sonra yerine
+  CelikPanel’in metni yazılacak ve nginx yeniden yüklenecek." [Dosyayı değiştir]
+  [Vazgeç]. Sonuç: "CelikPanel’in metni yerinde ve nginx yeniden yüklendi.
+  Dosyanız {backup} olarak saklandı."
+- "Benimkini koru" — "Dosyanız bayt bayt olduğu gibi kalır. CelikPanel
+  seçiminizi kaydeder ve yalnız dosya değişirse yeniden sorar." Sonra: "Bu
+  dosyayı {date} tarihinde korumayı seçtiniz. CelikPanel onu değiştirmez; bu
+  sitede CelikPanel’de yaptığınız değişiklikler ona uygulanmaz. CelikPanel’in
+  metnini dilediğiniz zaman alabilirsiniz." Dosyanın baytlarına, ilk satırına
+  bile dokunulmaz: başlığı yeniden yazmak sahibin metnini CelikPanel'in
+  değişmemiş metni gibi gösterir ve sonraki üretim onu değiştirirdi.
+- "Elle birleştir" — "Dosyayı sunucuda kendiniz düzenlersiniz; burada hiçbir
+  şey yapılmaz." Açılınca: "CelikPanel’in metni {pending} içinde. Sunucuda {path}
+  dosyasını düzenleyip gerekenleri alın. Dosyayı CelikPanel’e geri bırakmak için
+  {pending} dosyasını {path} üzerine kopyalayın."
+
+**Sahibin eklemeleri için desteklenen yer:** `siteConfig.include` "Bu site için
+kendi nginx yönergelerinizi {dir} içinde bir .conf dosyasına yazın. CelikPanel
+oraya hiç yazmaz ve bu sitede yaptığı her değişiklikte onları korur." Dizin
+`/etc/nginx/celikpanel-sites.d/<alan adı>/`; sanal konak `<dizin>/*.conf`
+dosyalarını sitenin içeriğini sunan her server bloğunda içerir (yalnız HTTPS'e
+yönlendiren blokta değil).
+
+**Üretmek isteyen işlemlerin retleri** (kabuk kataloğu, `err.<KOD>`, TR):
+
+- `SITE_CONFIG_OWNER_EDITED` (409, reason = durum): "Bu sitenin nginx
+  yapılandırma dosyası CelikPanel’in değişmemiş metni değil; bu yüzden
+  CelikPanel onu korudu ve bu değişikliği ona uygulamadı. Başka hiçbir şey
+  değiştirilmedi. Alan adının Yapılandırma dosyası sayfasında dosyanızı koruyun,
+  CelikPanel’in metnini alın (dosyanız tarihli bir kopya olarak saklanır) ya da
+  ikisini elle birleştirin."
+- `SITE_CONFIG_MISSING` (409): "Bu sitenin nginx yapılandırma dosyası eksik; bu
+  yüzden bu değişiklik uygulanmadı ve dosya yeniden oluşturulmadı. Bilerek
+  kaldırıldıysa bir şey yapmanız gerekmez; değilse alan adının Yapılandırma
+  dosyası sayfasında Yeniden oluştur’u seçin."
+- `SITE_CONFIG_UNWRITABLE` (409): "CelikPanel bu sitenin nginx yapılandırma
+  dosyasını okuyamadı ya da değiştiremedi (örneğin bir bağlantı ya da
+  değişikliğe kilitli); bu yüzden dosyayı olduğu gibi korudu ve bu değişikliği
+  uygulamadı. Sunucu sahibi dosyayı sunucuda kontrol eder; nedeni alan adının
+  Yapılandırma dosyası sayfasında."
+- `SITE_CONFIG_EXISTS` (409, site oluşturma ve içe aktarma): "Bu ad için
+  sunucuda CelikPanel’in yazmadığı bir yapılandırma dosyası zaten var; bu yüzden
+  CelikPanel onu korudu ve siteyi oluşturmadı. Geride hiçbir şey kalmadı. O dosya
+  artık kullanılmıyorsa sunucuda taşıyın ya da adını değiştirin, sonra siteyi
+  yeniden oluşturun."
+- `SITE_CONFIG_CHANGED` (409): "Yapılandırma dosyası ya da CelikPanel’in metni,
+  sayfa onları gösterdikten sonra değişti; bu yüzden hiçbir şey yapılmadı. Sayfa
+  dosyayı yeniden okur; ona bakıp yeniden seçin."
+- `SITE_CONFIG_NOT_APPLICABLE` (409), `SITE_CONFIG_NOT_READ` (502),
+  `SITE_CONFIG_NGINX_REFUSED` (502: "nginx, CelikPanel’in metnini içeren
+  yapılandırmayı reddetti; bu yüzden dosyanız olduğu gibi geri kondu ve nginx
+  onunla çalışmayı sürdürüyor. Başka hiçbir şey değiştirilmedi."; nginx'in kendi
+  satırı yöneticilere gösterilir).
+
+**Güncellemeden sonraki ilk durum.** alpha.81 ve alpha.82'nin yazdığı
+dosyalarda başlık yoktur. İlk başlangıçta her biri, bu sürümlerin dondurulmuş
+şablonlarının aynı veriyle ürettiği metinle, yazdıkları iki biçimde (oluşturma
+metni: `server_name` yalnız alan adı; başlangıç/kaydetme metni: `www.` ve takma
+adlarla) bayt bayt karşılaştırılır. Eşit dosya devralınır (başlığıyla
+CelikPanel'in metni olarak yeniden yazılır); başka her dosya "kökeni bilinmiyor"
+olur ve asla yazılmaz. Alan Adları listesi şunu söyler: `siteConfig.list.firstState`
+"Site yapılandırma dosyaları: {adopted} tanesi CelikPanel’inki olarak tanınıp
+devralındı; {left} tanesi bilinen her CelikPanel metninden farklı olduğu için
+olduğu gibi bırakıldı. Dosyasını görmek için bir alan adını açın." Başlangıçtaki
+günlük satırı yazılan, değişmeyen, korunan (sahip düzenlemiş / yenisiyle
+değiştirilmiş / kökeni bilinmiyor), okunamayan ya da değiştirilemeyen, eksik
+(yeniden yazılmayan), başarısız ve devralınan dosyaları ayrı sayar; bir sitenin
+her üretimi siteyi ve yapılanı adlandıran bir satır yazar.
+
+**Sınırlar.** Eski bir sürüme dönüş (otomatik geri alma dahil) bu korumayı
+kaldırır: eski Panel her başlangıçta her sitenin sanal konağını, sahibin
+değişikliği dahil, eskisi gibi yeniden yazar ve onun metninde başlık yoktur. Bu
+sürüm yeniden çalıştığında eski sürümün metnini bayt bayt tanır ve devralır;
+eski sürüm çalışırken ve onun sonraki başlangıcından önce yapılan değişiklik
+korunur ve gösterilir. Sürüm notları bunu söyler. PHP-FPM havuzu ve uygulama
+birimi henüz kapsanmıyor (ikinci adım). Gerçek sistemde ölçülmedi; ölçüm
+hücreleri denetimin §9'udur.

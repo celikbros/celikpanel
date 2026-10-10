@@ -136,6 +136,18 @@ var (
 	requestIdentityRouteVPNPeer = requestIdentityRoute{
 		pattern: "/api/v1/vpn/peers", timeout: 10 * time.Minute, secret: true,
 	}
+	// D-031: the owner's three choices about a site's configuration file.
+	// "Take CelikPanel's" and "recreate" write the file and reload nginx;
+	// "keep mine" records a decision. Each runs once per identity.
+	requestIdentityRouteSiteConfigKeep = requestIdentityRoute{
+		pattern: "/api/v1/domains/{id}/site-config/keep", timeout: siteConfigActionTimeout + time.Minute,
+	}
+	requestIdentityRouteSiteConfigTake = requestIdentityRoute{
+		pattern: "/api/v1/domains/{id}/site-config/take", timeout: siteConfigActionTimeout + time.Minute,
+	}
+	requestIdentityRouteSiteConfigRecreate = requestIdentityRoute{
+		pattern: "/api/v1/domains/{id}/site-config/recreate", timeout: siteConfigActionTimeout + time.Minute,
+	}
 )
 
 // requestIdentityRouteFor names the protected route a request would reach. It
@@ -166,6 +178,12 @@ func requestIdentityRouteFor(r *http.Request) (requestIdentityRoute, bool) {
 			return requestIdentityRouteLetsEncrypt, true
 		case "databases":
 			return requestIdentityRouteDomainDatabase, true
+		case "site-config-keep":
+			return requestIdentityRouteSiteConfigKeep, true
+		case "site-config-take":
+			return requestIdentityRouteSiteConfigTake, true
+		case "site-config-recreate":
+			return requestIdentityRouteSiteConfigRecreate, true
 		}
 	case strings.HasPrefix(path, "/api/v1/database-servers/"):
 		match, ok := matchDatabaseSubroute(r, "/api/v1/database-servers/")

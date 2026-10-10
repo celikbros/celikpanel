@@ -147,8 +147,9 @@ func TestOlderReleaseRefusesALedgerWithTheRequestIdentitiesEntry(t *testing.T) {
 			older = append(older, migration)
 		}
 	}
-	if len(older) != len(embedded)-1 {
-		t.Fatalf("migration %d is not the newest embedded migration", requestIdentitiesMigrationVersion)
+	// Migration 44 (D-031) came after it; the release before 43 knew neither.
+	if len(older) != len(embedded)-2 || embedded[len(embedded)-1].version != managedSiteFilesMigrationVersion {
+		t.Fatalf("the embedded migrations after %d are not exactly 43 and 44", requestIdentitiesMigrationVersion-1)
 	}
 	err = database.verifyMigrationLedgerCoverage(t.Context(), older)
 	database.Close()

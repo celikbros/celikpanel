@@ -46,21 +46,123 @@ func (a *Agent) ApplyVhost(req *ApplyVhostRequest, resp *ApplyVhostResponse) err
 		resp.Error = err.Error()
 		return nil
 	}
-	rendered, err := a.renderValidatedVhost(req)
+	rendered, data, err := a.renderValidatedVhostData(req)
 	if err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
-	if err := prepareValidatedVhostChallengeRoot(req); err != nil {
+	if err := prepareVhostChallengeRoot(req); err != nil {
 		resp.Error = err.Error()
 		return nil
 	}
-	if err := a.nginxGen.ApplyVhost(rendered.Domain, rendered.Config); err != nil {
-		resp.Error = err.Error()
+	// D-031: the file on disk is classified first; only a managed and
+	// unchanged file is replaced (an absent one only on "recreate"), and a
+	// file the owner changed is kept with the Panel's text held beside it.
+	results, applyErr := applyManagedVhostsFor(a, []services.ManagedVhostItem{managedVhostItemFor(req, data, rendered.Config)})
+	resp.Config = services.SealManagedText(rendered.Config)
+	if len(results) != 1 {
+		if applyErr == nil {
+			applyErr = fmt.Errorf("the vhost generator returned %d results for one site", len(results))
+		}
+		resp.Error = applyErr.Error()
 		return nil
 	}
+	result := results[0]
+	resp.File = &result
+	if applyErr != nil {
+		resp.Error = applyErr.Error()
+		return nil
+	}
+	if !siteFileOutcomeApplied(result.Outcome) {
+		resp.Error = siteFileHeldMessage(rendered.Domain, result)
+	}
+	return nil
+}
 
-	resp.Config = rendered.Config
+// prepareVhostChallengeRoot is a test seam for the same reason.
+var prepareVhostChallengeRoot = prepareValidatedVhostChallengeRoot
+
+// applyManagedVhostsFor is the generator call (a test seam: component tests
+// must not write the host's own nginx tree).
+var applyManagedVhostsFor = func(a *Agent, items []services.ManagedVhostItem) ([]transport.SiteFileResult, error) {
+	return a.nginxGen.ApplyManagedVhosts(items)
+}
+
+// managedVhostItemFor turns a validated request into the generator's item.
+// The frozen earlier releases' renders are offered for every trigger except
+// creation: a new site has no earlier text.
+func managedVhostItemFor(
+	req *ApplyVhostRequest,
+	data services.VhostData,
+	body string,
+) services.ManagedVhostItem {
+	item := services.ManagedVhostItem{
+		Domain:               data.Domain,
+		Body:                 body,
+		Trigger:              req.FileTrigger,
+		RecordedSHA256:       req.RecordedSHA256,
+		ExpectedFileSHA256:   req.ExpectedFileSHA256,
+		ExpectedRenderSHA256: req.ExpectedRenderSHA256,
+	}
+	if req.FileTrigger != transport.SiteFileTriggerCreate {
+		legacyData := data
+		item.Legacy = func() ([]services.LegacyVhostRender, error) {
+			return services.LegacyVhostRenders(legacyData)
+		}
+	}
+	return item
+}
+
+// siteFileOutcomeApplied: the file on disk is the Panel's text for this
+// request after the operation.
+func siteFileOutcomeApplied(outcome string) bool {
+	switch outcome {
+	case transport.SiteFileOutcomeWritten, transport.SiteFileOutcomeUnchanged,
+		transport.SiteFileOutcomeRecreated, transport.SiteFileOutcomeTaken:
+		return true
+	}
+	return false
+}
+
+// siteFileHeldMessage is the Agent's sentence for a render that was not
+// applied. The Panel reads the typed File, not this text.
+func siteFileHeldMessage(domain string, result transport.SiteFileResult) string {
+	switch result.Outcome {
+	case transport.SiteFileOutcomeKept:
+		return fmt.Sprintf("the nginx configuration of %s is not CelikPanel's unchanged text (%s); it was kept and CelikPanel's text was held beside it", domain, result.State)
+	case transport.SiteFileOutcomeMissing:
+		return fmt.Sprintf("the nginx configuration file of %s is missing; it was not recreated", domain)
+	default:
+		return fmt.Sprintf("the nginx configuration file of %s was not written (%s %s)", domain, result.State, result.Reason)
+	}
+}
+
+// InspectSiteFile classifies a site's vhost and returns the difference from
+// the Panel's text, bounded, without writing anything (D-031).
+// InspectSiteFile site vhost'unu sınıflandırır ve farkı döndürür; yazmaz.
+func (a *Agent) InspectSiteFile(
+	req *ApplyVhostRequest,
+	resp *transport.InspectSiteFileResponse,
+) error {
+	if req == nil {
+		resp.Error = "vhost request is required"
+		return nil
+	}
+	if err := requireExpectedBuildCommit(
+		req.ExpectedBuildCommit,
+		"inspecting a vhost",
+	); err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	rendered, data, err := a.renderValidatedVhostData(req)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	resp.File, resp.Diff, resp.DiffTruncated = a.nginxGen.InspectManagedVhost(
+		managedVhostItemFor(req, data, rendered.Config),
+	)
 	return nil
 }
 
@@ -92,28 +194,112 @@ func (a *Agent) ApplyVhosts(
 		return nil
 	}
 
-	rendered, err := a.renderValidatedVhostBatch(req.Vhosts)
-	if err != nil {
+	if err := rejectAmbiguousVhostBatch(req.Vhosts); err != nil {
 		resp.Error = err.Error()
 		return nil
-	}
-	for index := range req.Vhosts {
-		if err := prepareValidatedVhostChallengeRoot(&req.Vhosts[index]); err != nil {
-			resp.Error = fmt.Sprintf(
-				"prepare vhost batch item %d: %v",
-				index,
-				err,
-			)
-			return nil
-		}
 	}
 
-	if err := a.nginxGen.ApplyVhosts(rendered); err != nil {
-		resp.Error = err.Error()
-		return nil
+	// D-031: one site's refused input, unprepared challenge root, kept file or
+	// failed write is that site's result; the others go on. nginx is tested
+	// once and reloaded once, and only when a file was written.
+	resp.Items = make([]transport.SiteFileBatchItem, len(req.Vhosts))
+	items := make([]services.ManagedVhostItem, 0, len(req.Vhosts))
+	itemIndex := make([]int, 0, len(req.Vhosts))
+	for index := range req.Vhosts {
+		request := &req.Vhosts[index]
+		resp.Items[index] = transport.SiteFileBatchItem{DomainID: request.DomainID, SiteID: request.SiteID}
+		rendered, data, err := a.renderValidatedVhostData(request)
+		if err == nil {
+			err = prepareVhostChallengeRoot(request)
+		}
+		if err != nil {
+			resp.Items[index].Error = fmt.Sprintf("vhost batch item %d: %v", index, err)
+			resp.Items[index].File = transport.SiteFileResult{
+				Kind:    transport.SiteFileKindNginxVhost,
+				State:   transport.SiteFileStateUnknown,
+				Outcome: transport.SiteFileOutcomeFailed,
+				Reason:  transport.SiteFileReasonRenderFailed,
+			}
+			continue
+		}
+		items = append(items, managedVhostItemFor(request, data, rendered.Config))
+		itemIndex = append(itemIndex, index)
 	}
-	resp.Applied = len(rendered)
+
+	results, applyErr := applyManagedVhostsFor(a, items)
+	for position, result := range results {
+		resp.Items[itemIndex[position]].File = result
+	}
+	counts := countSiteFileResults(resp.Items)
+	resp.Counts = &counts
+	resp.Applied = counts.Written + counts.Unchanged
+	if applyErr != nil {
+		resp.Error = applyErr.Error()
+	}
 	return nil
+}
+
+// rejectAmbiguousVhostBatch refuses the whole batch when two items name the
+// same domain, domain identity or site identity: that is corrupt input, not
+// one site's problem.
+func rejectAmbiguousVhostBatch(requests []ApplyVhostRequest) error {
+	domains := make(map[string]struct{}, len(requests))
+	domainIDs := make(map[int]struct{}, len(requests))
+	siteIDs := make(map[int]struct{}, len(requests))
+	for index := range requests {
+		domain := strings.ToLower(strings.TrimSuffix(strings.TrimSpace(requests[index].Domain), "."))
+		if _, exists := domains[domain]; exists {
+			return fmt.Errorf("vhost batch contains duplicate domain %q", domain)
+		}
+		if _, exists := domainIDs[requests[index].DomainID]; exists {
+			return fmt.Errorf("vhost batch contains a duplicate domain identity")
+		}
+		if _, exists := siteIDs[requests[index].SiteID]; exists {
+			return fmt.Errorf("vhost batch contains a duplicate site identity")
+		}
+		domains[domain] = struct{}{}
+		domainIDs[requests[index].DomainID] = struct{}{}
+		siteIDs[requests[index].SiteID] = struct{}{}
+	}
+	return nil
+}
+
+// countSiteFileResults is the start line's summary.
+func countSiteFileResults(items []transport.SiteFileBatchItem) transport.SiteFileCounts {
+	var counts transport.SiteFileCounts
+	for _, item := range items {
+		file := item.File
+		if file.AdoptedFrom != "" && siteFileOutcomeApplied(file.Outcome) {
+			counts.Adopted++
+		}
+		switch file.Outcome {
+		case transport.SiteFileOutcomeWritten, transport.SiteFileOutcomeRecreated, transport.SiteFileOutcomeTaken:
+			counts.Written++
+		case transport.SiteFileOutcomeUnchanged:
+			counts.Unchanged++
+		case transport.SiteFileOutcomeKept:
+			switch file.State {
+			case transport.SiteFileForeign:
+				counts.Foreign++
+			case transport.SiteFileUnknownOrigin:
+				counts.Unknown++
+			default:
+				counts.Kept++
+			}
+		case transport.SiteFileOutcomeMissing:
+			counts.Missing++
+		case transport.SiteFileOutcomeRefused:
+			// Unreadable, or unwritable (an immutable file): kept as it is.
+			if file.State == transport.SiteFileUnreadable || file.Reason == transport.SiteFileReasonWriteRefused {
+				counts.Unreadable++
+			} else {
+				counts.Failed++
+			}
+		default:
+			counts.Failed++
+		}
+	}
+	return counts
 }
 
 func requireExpectedVhostBatchBuild(expectedRaw string) error {
@@ -178,18 +364,27 @@ func (a *Agent) renderValidatedVhostBatch(
 func (a *Agent) renderValidatedVhost(
 	req *ApplyVhostRequest,
 ) (services.RenderedVhost, error) {
+	rendered, _, err := a.renderValidatedVhostData(req)
+	return rendered, err
+}
+
+// renderValidatedVhostData also returns the validated data, from which the
+// frozen earlier templates render when a headerless file is classified.
+func (a *Agent) renderValidatedVhostData(
+	req *ApplyVhostRequest,
+) (services.RenderedVhost, services.VhostData, error) {
 	data, err := validatedVhostData(req)
 	if err != nil {
-		return services.RenderedVhost{}, err
+		return services.RenderedVhost{}, services.VhostData{}, err
 	}
 	config, err := a.nginxGen.Render(data)
 	if err != nil {
-		return services.RenderedVhost{}, err
+		return services.RenderedVhost{}, services.VhostData{}, err
 	}
 	return services.RenderedVhost{
 		Domain: data.Domain,
 		Config: config,
-	}, nil
+	}, data, nil
 }
 
 func prepareValidatedVhostChallengeRoot(req *ApplyVhostRequest) error {

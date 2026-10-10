@@ -44,7 +44,12 @@ interface Domain {
     bandwidth?: number;
     parent_id?: number | null;
     access?: DomainAccess;
+    // The vhost's last observed state (D-031), sent to an administrator.
+    site_config?: { state: string; adopted_from?: string; kept_by_choice?: boolean };
 }
+
+// A site whose configuration file waits for the owner's choice.
+const SITE_CONFIG_KEPT = new Set(['owner_edited', 'foreign', 'unknown_origin', 'missing', 'unreadable']);
 
 const API_BASE = '/api/v1';
 
@@ -332,6 +337,19 @@ export function Domains() {
                     <p className="px-4 pt-3 text-xs text-fg-subtle">
                         {t('common.itemsTotal', { n: filtered.length })}
                     </p>
+                    {(() => {
+                        // The first state after an update from a release that
+                        // wrote no header (D-031): how many files were taken
+                        // over and how many were left alone.
+                        // Başlıksız sürümden güncellemeden sonraki ilk durum.
+                        const adopted = domains.filter((d) => d.site_config?.adopted_from).length;
+                        const left = domains.filter((d) => d.site_config?.state === 'unknown_origin').length;
+                        return adopted + left > 0 ? (
+                            <p role="status" className="mx-4 mt-2 rounded-lg border border-border-strong bg-surface-2 p-3 text-sm text-fg" data-site-config-first-state>
+                                {t('siteConfig.list.firstState', { adopted, left })}
+                            </p>
+                        ) : null;
+                    })()}
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
@@ -390,6 +408,11 @@ export function Domains() {
                                                 {d.parent_id ? (
                                                     <span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-xs font-medium text-fg-subtle">
                                                         {t('domains.subdomain')}
+                                                    </span>
+                                                ) : null}
+                                                {d.site_config && SITE_CONFIG_KEPT.has(d.site_config.state) && !d.site_config.kept_by_choice ? (
+                                                    <span className="rounded-md border border-warning-mark/50 bg-warning-mark/20 px-1.5 py-0.5 text-xs font-medium text-fg" data-site-config-badge={d.site_config.state}>
+                                                        {t('siteConfig.list.badge')}
                                                     </span>
                                                 ) : null}
                                             </div>

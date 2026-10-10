@@ -81,8 +81,8 @@ export const enScreens = {
     // The Panel did not answer while an update started from this browser has
     // not recorded its end (2026-10-10, seventh native record, cell 1).
     // Bu tarayicidan baslatilan guncelleme sirasinda Panel yanit vermedi.
-    'accessHold.updateTitle': "The Panel is not answering during an update",
-    'accessHold.updateHelp': "An update was started from this browser, and its end has not been seen here yet. The Panel restarts while an update is applied, so it may not answer for a short while. This is not a license problem.",
+    'accessHold.updateTitle': "The Panel is not answering; an update may be restarting it",
+    'accessHold.updateHelp': "An update was started from this browser, and its end has not been seen here yet. The Panel restarts while an update is applied, so it may not answer for a short while. Whether the license is valid is not known until the Panel answers; nothing about it has been decided.",
     // End of the update-restart block.
     "license.connectionTitle": "Panel connection could not be verified",
     "license.connectionHelp": "The latest access status could not be read. This does not confirm a license problem. Check again or reload the page to reconnect. An accepted setup may still be running on the server; its saved progress will be checked after reconnecting.",
@@ -1738,13 +1738,13 @@ export const enScreens = {
     'setup.guide.revisedChecks': 'When it stopped, its final check was still waiting for this:',
     'setup.guide.revisedNext': 'Next: review the plan and start it again. Its final check then runs again.',
     'setup.check.mailIdentity.reverseDNS': 'The reverse DNS (PTR) name of this server’s address {ip} is {ptr}; mail servers expect {hostname}. You set this at your server provider, not in CelikPanel: in the provider’s control panel, or by asking its support to set the reverse DNS of {ip} to {hostname}.',
-    'setup.check.mailIdentity.reverseDNSMissing': 'No reverse DNS (PTR) name was found for this server’s address {ip}; mail servers expect {hostname}. You set this at your server provider, not in CelikPanel: in the provider’s control panel, or by asking its support to set the reverse DNS of {ip} to {hostname}.',
-    'setup.check.mailIdentity.forwardDNS': 'The reverse DNS of {ip} names {hostname}, but {hostname} does not lead back to {ip}. Whoever manages the DNS of {hostname} sets its A record to {ip}.',
-    'setup.check.mailIdentity.mailName': 'The mail service on this server uses the name {current}, not {hostname}. Check the mail host name in the plan; this server’s mail configuration (Postfix myhostname) has to use {hostname}.',
-    'setup.check.mailIdentity.mailNameUnread': 'The mail service on this server does not use the name {hostname}. Check the mail host name in the plan; this server’s mail configuration (Postfix myhostname) has to use {hostname}.',
-    'setup.check.mailIdentity.address': 'This server’s detected address {ip} is not a public internet address, so its mail identity cannot be confirmed. Mail needs a public IPv4 address that reaches this server.',
-    'setup.check.mailIdentity.addressMissing': 'This server’s public address could not be detected, so its mail identity cannot be confirmed. Mail needs a public IPv4 address that reaches this server.',
-    'setup.check.notRead': '{check}: could not be checked just now, so whether it is met is not known. This does not mean anything is missing or stopped.',
+    'setup.check.mailIdentity.reverseDNSMissing': 'No reverse DNS (PTR) name could be confirmed for {ip}; mail servers expect {hostname}. You set this at your server provider, not in CelikPanel: in the provider’s control panel, or by asking its support to set the reverse DNS of {ip} to {hostname}.',
+    'setup.check.mailIdentity.forwardDNS': 'The reverse DNS of {ip} names {hostname}, but {hostname} does not lead back to {ip}. At the place where you manage the DNS of {hostname}, set its A record to {ip}, then check requirements again.',
+    'setup.check.mailIdentity.mailName': 'The mail service on this server uses the name {current}, not {hostname}. Review the plan, correct the mail host name there, and start setup again.',
+    'setup.check.mailIdentity.mailNameUnread': 'The mail service on this server does not use the name {hostname}. Review the plan, correct the mail host name there, and start setup again.',
+    'setup.check.mailIdentity.address': 'This server’s detected address {ip} is not a public internet address, so its mail identity cannot be confirmed. Ask your server provider for a public IPv4 address that reaches this server, then check requirements again.',
+    'setup.check.mailIdentity.addressMissing': 'This server’s public address could not be detected, so its mail identity cannot be confirmed. Ask your server provider for a public IPv4 address that reaches this server, then check requirements again.',
+    'setup.check.notRead': '{check}: could not be checked just now, so whether it is met is not known. This does not mean the requirement is unmet.',
     'setup.check.name.panel_https': 'Secure panel address (HTTPS)',
     'setup.check.name.panel_renewal': 'Panel certificate renewal',
     'setup.check.name.dns': 'DNS',
@@ -1754,6 +1754,10 @@ export const enScreens = {
     'setup.check.name.mail_identity': 'Mail identity (host name and reverse DNS)',
     'setup.check.name.mail_delivery': 'Outgoing mail (port 25)',
     'setup.check.name.other': 'A required check',
+    // A reverse DNS lookup that got no answer is unknown; a plan whose mail host name is not a full host name (2026-10-10).
+    'setup.check.mailIdentity.reverseDNSUnknown': 'The reverse DNS of {ip} could not be looked up just now; this does not show whether it is set. Check requirements again.',
+    'setup.check.mailIdentity.notCanonical': 'The mail host name {name} in the plan is not a full host name (like mail.example.com). Review the plan, correct it, and start setup again.',
+    'setup.check.mailIdentity.notCanonicalUnread': 'The mail host name in the plan is not a full host name (like mail.example.com). Review the plan, correct it, and start setup again.',
     // --- end of the setup final-check block ---
 } as const;
 

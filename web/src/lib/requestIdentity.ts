@@ -31,6 +31,10 @@ const REASK_ROUTES = [
     /^\/api\/v1\/database-servers\/\d+\/admin-account$/,
     /^\/api\/v1\/vpn\/peers$/,
     /^\/api\/v1\/import\/cpanel\/apply$/,
+    // D-031 (2026-10-10): the owner's three choices about a site's
+    // configuration file; the server guards them the same way.
+    // Sahibin site yapılandırma dosyası hakkındaki üç seçimi.
+    /^\/api\/v1\/domains\/\d+\/site-config\/(?:keep|take|recreate)$/,
 ];
 
 // An answer that says nothing about the change: a gateway between the browser

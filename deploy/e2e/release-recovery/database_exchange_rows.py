@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independent schema38→42 or 38→43 comparison of two private standalone DB copies.
+"""Independent schema38→42, 38→43 or 38→44 comparison of two private standalone DB copies.
 
 No live paths, signal, update or SQLite access to captured originals. The caller
 copies both frozen files into new private directories before invoking this API.
@@ -28,7 +28,7 @@ def _defaults(connection, rowids):
 
 
 def _after_version(after):
-    """The pinned post-baseline schema the "after" copy claims to be: 42 or 43."""
+    """The pinned post-baseline schema the "after" copy claims to be: 42, 43 or 44."""
     connection = pop._connect(after)
     try:
         count = connection.execute('SELECT COUNT(*) FROM schema_migrations').fetchone()[0]
@@ -61,7 +61,7 @@ def _new_rows(connection, version):
 def verify_pair(before: Path, after: Path, manifest: dict, *, manifest_sha256: str, after_version: int | None = None) -> dict:
     """Verify all pre-exchange rows, not merely rows present when fixture was seeded.
 
-    after_version names the schema the candidate must have reached (42 or 43).
+    after_version names the schema the candidate must have reached (42, 43 or 44).
     Left out, it is read from the after copy's own ledger; either way the copy
     is then held to that schema's pinned migration and schema digests.
     """

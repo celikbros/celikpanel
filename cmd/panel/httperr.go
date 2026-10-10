@@ -418,6 +418,9 @@ func classifyStableAgentError(err error) (agentRPCPlatformErrorClassification, b
 	if classification, ok := classifyHostMutationError(err); ok {
 		return classification, true
 	}
+	if classification, ok := classifySiteFileError(err); ok {
+		return classification, true
+	}
 	return classifyAgentRPCPlatformError(err)
 }
 

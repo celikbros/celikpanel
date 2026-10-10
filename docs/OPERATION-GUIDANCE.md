@@ -5430,16 +5430,34 @@ unmet condition in the order the check reads them, and the values it names.
 `server_address_not_public` (`ip` when one was detected),
 `mail_name_differs` (`hostname`, `ip`, `current` when Postfix's own name is a
 plain DNS name), `reverse_dns_mismatch` (`hostname`, `ip`, `ptr` when a plain
-DNS name was found), `forward_dns_mismatch` (`hostname`, `ip`). A ready or
-unknown check carries neither, and neither does an `action_required` check
-whose planned mail host name is not a canonical name; a record written before
-them keeps its generic sentence. State and code are unchanged. **Known gap,
-not changed here:** when the Agent's reverse-DNS lookup fails outright (both
-public resolvers) it reports no name and no error
-(`cmd/agent/mail_health_rpc.go`, `mail_health_dns.go`); the Panel cannot tell
-that from a verified absence, so the page says `reverseDNSMissing` ("No
-reverse DNS (PTR) name was found"), which claims more than was established. An
-undetected address is worded as undetected (`addressMissing`).
+DNS name was found), `forward_dns_mismatch` (`hostname`, `ip`), and, after a
+second reading of this change, `mail_name_not_canonical` (`name` when the
+plan's mail host name is a plain DNS name) for a plan whose mail host name is
+not a full host name. A ready check carries neither, and neither does a check
+the Agent could not answer; a record written before them keeps its generic
+sentence. State and code are unchanged, except for the lookup that got no
+answer below.
+
+**A reverse DNS lookup that got no answer is unknown, not missing (second
+reading of this change, 2026-10-10).** Before, when both public resolvers
+gave no answer the Agent dropped the error (`cmd/agent/mail_health_rpc.go`,
+`mail_health_dns.go`): the PTR stayed empty, the Panel reported
+`reverse_dns_mismatch` and the page said that no PTR existed. The Agent's health
+answer now carries, additively, `reverse_dns_lookup` (`looked_up` or `failed`)
+and, when it failed, `reverse_dns_lookup_error` (`timeout`, `no_resolver`,
+`refused` or `other`; the resolver's own text is not passed on). A name the
+resolver says does not exist (NXDOMAIN) is an answer, both for the PTR and for
+the host name's address, so a verified absence stays a verified absence. When
+the lookup failed and the earlier conditions (canonical name, public address,
+mail name) hold, the check is `unknown` with code `mail_identity_unavailable`
+and the reason `reverse_dns_unknown` (`ip`, `error`); the page says the sentence
+below and the final step reads "Could not be checked", not "Waiting for you". An
+Agent from before this change sends no lookup field, so its empty PTR is still
+reported as `reverse_dns_mismatch`; the sentence for that reason no longer
+claims a result ("could be confirmed"). A failure of the forward lookup after a
+matching PTR is reported the same way, as the reverse DNS not being looked up;
+the two lookups are not told apart. An undetected address is worded as
+undetected (`addressMissing`).
 
 - `setup.check.mailIdentity.reverseDNS`
   EN: "The reverse DNS (PTR) name of this server’s address {ip} is {ptr}; mail
@@ -5447,13 +5465,30 @@ undetected address is worded as undetected (`addressMissing`).
   CelikPanel: in the provider’s control panel, or by asking its support to set
   the reverse DNS of {ip} to {hostname}."
 - `setup.check.mailIdentity.reverseDNSMissing`
-  EN: "No reverse DNS (PTR) name was found for this server’s address {ip};
-  mail servers expect {hostname}. You set this at your server provider, ..."
-- `setup.check.mailIdentity.forwardDNS`, `.mailName`, `.mailNameUnread`,
-  `.address`, `.addressMissing`: the other reasons, in the catalogues.
+  EN: "No reverse DNS (PTR) name could be confirmed for {ip}; mail servers
+  expect {hostname}. You set this at your server provider, ..." (before: "No
+  reverse DNS (PTR) name was found for this server’s address {ip}; ...").
+- `setup.check.mailIdentity.reverseDNSUnknown` (new) EN: "The reverse DNS of
+  {ip} could not be looked up just now; this does not show whether it is set.
+  Check requirements again."
+- `setup.check.mailIdentity.forwardDNS` EN: "The reverse DNS of {ip} names
+  {hostname}, but {hostname} does not lead back to {ip}. At the place where you
+  manage the DNS of {hostname}, set its A record to {ip}, then check
+  requirements again."
+- `setup.check.mailIdentity.mailName` / `.mailNameUnread` EN: "The mail service
+  on this server uses the name {current}, not {hostname}. Review the plan,
+  correct the mail host name there, and start setup again." (the configuration
+  key "Postfix myhostname" is no longer named).
+- `setup.check.mailIdentity.address` / `.addressMissing` EN: "... so its mail
+  identity cannot be confirmed. Ask your server provider for a public IPv4
+  address that reaches this server, then check requirements again."
+- `setup.check.mailIdentity.notCanonical` (new) EN: "The mail host name {name}
+  in the plan is not a full host name (like mail.example.com). Review the plan,
+  correct it, and start setup again." (`.notCanonicalUnread` without the name).
 - `setup.check.notRead`
   EN: "{check}: could not be checked just now, so whether it is met is not
-  known. This does not mean anything is missing or stopped."
+  known. This does not mean the requirement is unmet." (before: "... does not
+  mean anything is missing or stopped.")
 
 **A run stopped by reopening its plan.**
 
@@ -5479,8 +5514,11 @@ runner reads the checks again every 20 seconds while the run waits.
 `setup.stepState.unknown` "Could not be checked", `setup.stepState.failed`
 "Failed", `setup.stepState.stopped` "Stopped", `setup.stepState.notStarted`
 "Not started". When several checks are open, "Waiting for you" is used if any
-of them has a typed reason; every open check is still listed above the steps.
-The Turkish texts are in the Turkish edition.
+of them has a typed reason that asks the owner to act (`action_required`);
+every open check is still listed above the steps. The Turkish texts are in the
+Turkish edition; since the second reading, the new Turkish texts of the final
+check say "kontrol", as its button "Gereksinimleri tekrar kontrol et" does
+(`setup.stepState.unknown` TR "Kontrol edilemedi").
 
 **The update notice and the card (`GET /api/v1/panel/update/status`).** The
 Agent's record stays `running` after the new Panel has started, until the
@@ -5496,7 +5534,10 @@ as the update's target (the archive digest and sequence are not compared).
 - `panelUpdate.tracking.verifyingTitle` EN: "Update installed, being verified"
 - `panelUpdate.tracking.verifying` EN: "{version} is installed and this panel is
   running it. The update is being verified and is not finished yet; this notice
-  follows it by itself."
+  follows it by itself. You do not need to do anything." (the last sentence
+  added at the second reading; likewise at the end of
+  `panelUpdate.card.verifying`, and "Do not start another update." at the end
+  of `panelUpdate.card.unknown`)
 - `panelUpdate.tracking.unknown` EN: "The state of this update could not be read
   just now, so whether it is still running or has finished is not known. This
   notice reads it again by itself; do not start another update." The reason of
@@ -5521,7 +5562,12 @@ layout in which the corner notice covers the card's line (it did in the mock;
 unchanged). The notice is drawn by the interface the tab loaded: an update
 started from a tab that still runs the previous release ignores `phase` and
 keeps the old sentence, so the new text first applies to an update started from
-a page loaded after this change. The reverse-DNS and address gap above is open.
+a page loaded after this change. The reverse-DNS gap recorded here first is
+closed in the code by the second reading (a lookup that got no answer is
+reported as unknown, with its class): component-tested
+(`cmd/agent/mail_health_dns_test.go`, `cmd/panel/known_state_gates_test.go`,
+the mounted test) and mock browser; not measured on a real system, and not
+read from a real Agent whose resolvers fail.
 
 ### First page load without an unanswered access page, and the hold layer names the cause it read (2026-10-10)
 
@@ -5566,7 +5612,12 @@ and the contract items are in the
   and the Panel is ready. The interface is still loading and opens by itself."
   · TR "Oturumunuz doğrulandı ve Panel hazır. Arayüz hâlâ yükleniyor ve
   kendiliğinden açılır." No check button (nothing is to be read); the reload
-  after half a minute. Before, this case said "Checking panel access".
+  after half a minute, with its own sentence since the second reading:
+  `recovery.waitingProlongedLoading`, EN "CelikPanel is still loading; it opens
+  by itself. If this page stays like this, reload it." · TR "CelikPanel hâlâ
+  yükleniyor; kendiliğinden açılır. Bu sayfa böyle kalırsa yeniden yükleyin."
+  (before, the loading wait used `recovery.waitingProlonged`, which says that
+  CelikPanel keeps checking). Before, this case said "Checking panel access".
 - *A wait that was already explained* is not hidden again when the next gate
   of the same load takes over (the interface arriving under the recovery
   page, the license read after the session read).
@@ -5579,21 +5630,30 @@ and the contract items are in the
   from the Panel: `accessHold.availabilityTitle`, EN "The Panel did not answer
   just now" · TR "Panel az önce yanıt vermedi" (unchanged). The Panel answering
   that it is starting: `recovery.startingTitle` (unchanged). No answer while an
-  update started from this browser has not recorded its end (new):
-  `accessHold.updateTitle`, EN "The Panel is not answering during an update" ·
-  TR "Panel bir güncelleme sırasında yanıt vermiyor"; `accessHold.updateHelp`,
-  EN "An update was started from this browser, and its end has not been seen
-  here yet. The Panel restarts while an update is applied, so it may not
-  answer for a short while. This is not a license problem." · TR "Bu
-  tarayıcıdan bir güncelleme başlatıldı ve bitişi burada henüz görülmedi.
-  Güncelleme uygulanırken Panel yeniden başlar; bu yüzden kısa bir süre yanıt
-  vermeyebilir. Bu bir lisans sorunu değildir." The resume line and the check
-  action are unchanged. The browser's own update record only chooses these
-  words; it is never shown as a server result. The record counts as unfinished
-  for as long as it says `active`, however long ago the update was started
-  (`savedUpdateUnfinished` has no age limit), so a record this browser never
-  saw end can name an update for an unrelated outage; the words say that the
-  end "has not been seen here yet".
+  update started from this browser within the last 30 minutes has not recorded
+  its end (new; wording as corrected at the second reading):
+  `accessHold.updateTitle`, EN "The Panel is not answering; an update may be
+  restarting it" · TR "Panel yanıt vermiyor; bir güncelleme onu yeniden
+  başlatıyor olabilir"; `accessHold.updateHelp`, EN "An update was started from
+  this browser, and its end has not been seen here yet. The Panel restarts
+  while an update is applied, so it may not answer for a short while. Whether
+  the license is valid is not known until the Panel answers; nothing about it
+  has been decided." · TR "Bu tarayıcıdan bir güncelleme başlatıldı ve bitişi
+  burada henüz görülmedi. Güncelleme uygulanırken Panel yeniden başlar; bu
+  yüzden kısa bir süre yanıt vermeyebilir. Lisansın geçerli olup olmadığı Panel
+  yanıt verene kadar bilinmiyor; bu konuda hiçbir karar verilmedi." (the first
+  form said "during an update" and "This is not a license problem", which
+  claimed a cause and a license verdict the read had not established). The
+  resume line and the check action are unchanged. The browser's own update
+  record only chooses these words; it is never shown as a server result. It
+  names the update only within 30 minutes of the update's start (the record's
+  `created_at`; `savedUpdateUnfinished`, `UPDATE_CAUSE_WINDOW_MS`); an older
+  record, one without a start time, or one whose start lies in the future
+  leaves the generic "The Panel did not answer just now". Before the second
+  reading the record had no age limit, so a browser that never saw an update
+  end could name it for any later outage. The record's key
+  (`celikpanel.system-update-operation.v1`) is declared once, in
+  `lib/recoveryObservation.ts`, and imported by the update tracker.
 - *The full page that replaces nothing* (the first license read failed before
   anything was mounted) uses the same decision: "Panel readiness could not be
   checked" for no answer, "The panel is starting" for a starting Panel, "License
@@ -5611,7 +5671,11 @@ added.
 (the cold load, the waiting state, the known negatives, the handover between
 gates, the recovery route with the real session reads),
 `web/tests/access-hold-runtime.test.mjs` (the first license read; the hold
-cause for seven read outcomes with and without an unfinished update record).
+cause for nine read outcomes with and without an unfinished update record,
+including a record older than 30 minutes and one without a start time; the
+window's limits). The second reading's screens were looked at in the same mock
+browser (scenarios `finalcheck`, `updatephase`, `waitcopy`, desktop, English
+and Turkish).
 A browser run against the loopback mock (`web/tools/browser-inspect`, scenarios
 `coldload` and `coldslow`, Chrome throttled to 2 Mbit/s and 300 ms, reads slowed
 by 300 ms): with the published code the gate "Checking panel access" was
@@ -5624,3 +5688,156 @@ read held 2.5 s the explained wait appeared after the quiet time and the page
 opened by itself. **Not measured:** a real Panel on a guest (set7's method),
 an installed server, the HTTP cache enabled, the hold layer during a real
 update. The boot spinner of the language loader (text-free) is unchanged.
+
+### A site configuration file the owner changed is kept and named; the owner chooses (2026-10-10)
+
+Source state with component tests and a real Chrome against the loopback mock;
+no guest run, no installed server (D-031; D-022; D-024). The eighth native
+record (`deploy/e2e/release-recovery/evidence/set8-20261010/`) measured the
+published alpha.82 on Debian 13, Ubuntu 24.04 and Arch: an owner's edit to a
+site's nginx vhost was overwritten silently at the next Panel start, restart or
+General save; a vhost the owner removed was recreated; a locked file
+(`chattr +i`) broke the whole start batch and lost its enabled link; a save
+wrote no journal line; every start rewrote unchanged files and reloaded nginx.
+
+**What the owner sees now.** Before every render (start, settings, certificate,
+hosting type, PHP version, creation, import) the Agent classifies the file. Only
+CelikPanel's own unchanged text is replaced; a file the owner changed, replaced,
+removed or locked is kept exactly as it is, and the operation that wanted to
+change it says so instead of reporting success. The domain's page shows the
+state and the difference, and the owner chooses. Who acts: the server owner
+(an administrator); nothing continues by itself.
+
+**Where.** Domain page → Hosting → Configuration file (administrators only;
+`GET /api/v1/domains/{id}/site-config`). A line above the domain's tabs
+(`siteConfig.notice.*`, with "Open configuration file") and a badge in the
+Domains list ("Configuration kept") point to it.
+
+**The states and their sentences** (keys in `web/src/i18n/screens/server`,
+EN; the Turkish edition carries the TR text):
+
+- Checking: `siteConfig.checking` "Reading this site’s configuration file…".
+  Could not check: `siteConfig.unknownRead` "The state of this site’s
+  configuration file could not be read just now. This does not mean anything is
+  wrong with the file, and nothing was changed. Try again." (Retry only reads.)
+- Known unknown (an Agent that does not report it): `siteConfig.unknownState.title`
+  "The state of this file is not known" — "The CelikPanel Agent on this server
+  does not report whether this file was changed, so nothing is said about it.
+  Nothing was changed. It is reported once the Agent is the same release as the
+  panel."
+- CelikPanel's text: `siteConfig.managed.title` "CelikPanel’s text, unchanged" —
+  "This file is exactly what CelikPanel last wrote, so CelikPanel keeps it up to
+  date when you change this site’s settings." Adopted from an earlier release:
+  "It was written by {release} and recognised byte for byte as that release’s
+  text, so CelikPanel took it over."
+- Edited / replaced: `siteConfig.ownerEdited.title` "Configuration edited by the
+  owner", `siteConfig.foreign.title` "Configuration replaced by the owner" —
+  `siteConfig.kept.body` "This file is not the text CelikPanel last wrote, so
+  CelikPanel kept it exactly as it is. Changes you make to this site in
+  CelikPanel (settings, certificates, hosting type, PHP version) are not applied
+  to it until you choose below. nginx keeps serving the site with this file."
+- Unknown origin (a file from before this version that matches no earlier
+  CelikPanel text): `siteConfig.unknownOrigin.title` "Configuration not
+  recognised as CelikPanel’s" — "This file was there before this version of
+  CelikPanel and differs from every text an earlier CelikPanel release wrote for
+  this site, so it may hold your changes. CelikPanel kept it exactly as it is.
+  Changes you make to this site in CelikPanel are not applied to it until you
+  choose below. nginx keeps serving the site with this file."
+- Missing: `siteConfig.missing.title` "Configuration file missing" — "This
+  site’s nginx configuration file is not there. CelikPanel did not recreate it,
+  because removing it may have been your choice; without it nginx does not serve
+  this site. Changes you make to this site in CelikPanel are not applied until
+  the file is there again." Action: "Recreate" — "CelikPanel writes its text for
+  this site and reloads nginx."
+- Unreadable or unwritable: `siteConfig.unreadable.title` "The configuration
+  file cannot be read or replaced", with the reason (`symlink`, `not_regular`,
+  `permission`, `too_large`, `read_failed`, `write_refused`; for a locked file:
+  "It could not be replaced (for example, it is locked against changes with
+  chattr +i). CelikPanel kept the file and its link as they are.") and "The
+  server owner checks the file on the server. Changes you make to this site in
+  CelikPanel are not applied to it meanwhile; this page shows its state again
+  once it can be read."
+
+**The three choices** (each a POST under the request identity of D-029; each
+bound to the digests the page showed):
+
+- "Take CelikPanel’s" — "Your file is first kept as a dated copy beside it, then
+  CelikPanel’s text replaces it and nginx is reloaded. If nginx refuses it, your
+  file is put back." Asked once in place: "Your file will be kept as
+  {path}.celikpanel-backup-<date and time>, then replaced by CelikPanel’s text,
+  and nginx will be reloaded." [Replace the file] [Cancel]. Done: "CelikPanel’s
+  text is in place and nginx was reloaded. Your file is kept as {backup}."
+- "Keep mine" — "Your file stays as it is, byte for byte. CelikPanel records your
+  choice and asks again only when the file changes." Afterwards: "You chose to
+  keep this file on {date}. CelikPanel does not change it; changes you make to
+  this site in CelikPanel are not applied to it. You can take CelikPanel’s text
+  at any time." The file's bytes are not touched, not even its first line:
+  rewriting the header would make the owner's text look like CelikPanel's
+  unchanged text, and the next render would replace it.
+- "Merge by hand" — "You edit the file on the server yourself; nothing is done
+  here." Opened: "CelikPanel’s text is in {pending}. Edit {path} on the server and
+  bring in what you need. To hand the file back to CelikPanel, copy {pending} over
+  {path}."
+
+**The supported place for the owner's additions:** `siteConfig.include` "Put your
+own nginx directives for this site in a .conf file in {dir}. CelikPanel never
+writes there, and every change CelikPanel makes to this site keeps them." The
+directory is `/etc/nginx/celikpanel-sites.d/<domain>/`; the vhost includes
+`<dir>/*.conf` in every server block that serves the site's content (not in a
+block that only redirects to HTTPS).
+
+**Refusals of the operations that wanted to render** (shell catalogue,
+`err.<CODE>`, EN):
+
+- `SITE_CONFIG_OWNER_EDITED` (409, reason = the state): "This site’s nginx
+  configuration file is not CelikPanel’s unchanged text, so CelikPanel kept it
+  and did not apply this change to it. Nothing else was changed. On the domain’s
+  Configuration file page, keep your file, take CelikPanel’s text (your file is
+  kept as a dated copy), or merge the two by hand."
+- `SITE_CONFIG_MISSING` (409): "This site’s nginx configuration file is missing,
+  so this change was not applied and the file was not recreated. If it was
+  removed on purpose, nothing needs doing; otherwise choose Recreate on the
+  domain’s Configuration file page."
+- `SITE_CONFIG_UNWRITABLE` (409): "CelikPanel could not read or replace this
+  site’s nginx configuration file (for example, it is a link or it is locked
+  against changes), so it kept the file as it is and did not apply this change.
+  The server owner checks the file on the server; the reason is on the domain’s
+  Configuration file page."
+- `SITE_CONFIG_EXISTS` (409, site creation and import): "A configuration file
+  for this name already exists on the server and was not written by CelikPanel,
+  so CelikPanel kept it and did not create the site. Nothing was left behind.
+  Move or rename that file on the server if it is no longer used, then create the
+  site again."
+- `SITE_CONFIG_CHANGED` (409): "The configuration file or CelikPanel’s text
+  changed after the page showed them, so nothing was done. The page reads the
+  file again; look at it, then choose again."
+- `SITE_CONFIG_NOT_APPLICABLE` (409), `SITE_CONFIG_NOT_READ` (502),
+  `SITE_CONFIG_NGINX_REFUSED` (502: "nginx refused the configuration with
+  CelikPanel’s text in it, so your file was put back exactly as it was and nginx
+  keeps running with it. Nothing else was changed."; nginx's own line is shown to
+  administrators).
+
+**The first state after the update.** Files written by alpha.81 and alpha.82
+carry no header. At the first start each is compared byte for byte with what
+those releases' frozen templates render from the same data, in both forms they
+wrote (the creation text, `server_name` the domain alone, and the start/save
+text with `www.` and aliases). An equal file is adopted (rewritten as
+CelikPanel's text with its header); any other is "unknown origin" and is never
+written. The Domains list says: `siteConfig.list.firstState` "Site configuration
+files: {adopted} recognised as CelikPanel’s and taken over; {left} left alone
+because they differ from every known CelikPanel text. Open a domain to see its
+file." The journal line at start: `site configuration files at start: N
+written, N unchanged, N kept (owner-edited), N kept (foreign), N kept (unknown
+origin), N unreadable or unwritable, N missing (not recreated), N failed; N
+adopted from an earlier release` and, when any, `N adopted, M left alone
+because they differ from every known CelikPanel text`. Every render of one site
+logs one line naming the site and what was done.
+
+**Limits.** A return to an older release (automatic rollback included) loses
+this protection: the older Panel overwrites every site's vhost at its start as
+it always did, an owner's edit included, and its text has no header. When this
+release runs again it recognises the older release's text byte for byte and
+adopts it; an owner's edit made while the older release ran and before its next
+start is kept and shown. The release notes say this. The
+PHP-FPM pool and the application unit are not covered yet (the second step).
+Not measured on a real system; the measurement cells are the audit's §9.
