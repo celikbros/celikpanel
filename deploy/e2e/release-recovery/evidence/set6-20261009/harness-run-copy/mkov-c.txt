@@ -1,0 +1,19 @@
+run copy c (pristine, before the overlay) against commit 72b879eeaf88477133cc01bae6a615e292c00181 tree a7563a6c342f8e0ad4fd714a3e40a770614b9647
+files in the copy: 4662
+files of the copy whose blob id and path are NOT in the commit: 0
+files of the commit not in the copy: 63782
+of those, outside deploy/e2e/{release-recovery,dns-kill-matrix,dns-pair-acceptance}/evidence/: 0
+files of the copy under deploy/e2e/release-recovery/evidence/: 1094 (all under upd1-20261001: 1094)
+d7cfa4e14eb1737dc2d11085517eeba40aee9e0bac945160bf3bbbe37c3e6f91  /var/tmp/cp-set6-run/overlay-c/harness.diff
+53103dd0d81bac4c38069c506fa9bd18657e8d0d64d779bf3fd19e54cf532add  deploy/e2e/release-recovery/set6_trial.py
+b3588df501a08bdce6a812fec207b38e70274f6d30ec5fce6465eb8afbd36105  deploy/e2e/release-recovery/set6_redact.py
+7b48ad90e023ec997d23e0d78de947cc56b5dee1c755555f129360a884553807  deploy/e2e/release-recovery/run-set6.sh
+fd493b2167efc1bb9d0d498f166f05d55bec2c221b457a8d15f816bd124efed7  deploy/e2e/release-recovery/test_set6_trial.py
+9b6c76caa652dec6425d3fdb956ec06599e8de3c3ae902c5783413529564e683  deploy/e2e/release-recovery/worker_fixture_origin.py
+1301
+differs:       1 > ./deploy/e2e/release-recovery/run-set6.sh
+differs:       1 > ./deploy/e2e/release-recovery/set6_redact.py
+differs:       1 > ./deploy/e2e/release-recovery/set6_trial.py
+differs:       1 > ./deploy/e2e/release-recovery/test_set6_trial.py
+differs:       1 < ./deploy/e2e/release-recovery/worker_fixture_origin.py
+differs:       1 > ./deploy/e2e/release-recovery/worker_fixture_origin.py

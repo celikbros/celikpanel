@@ -1,0 +1,146 @@
+{
+  "checks": {
+    "asked_with": [
+      "getent -s files ahosts NAME and getent -s files hosts NAME (the hosts file only; no DNS question is sent)",
+      "getent ahosts NAME and getent hosts NAME (the lookup order of this guest's nsswitch.conf)"
+    ],
+    "at": "2026-10-09T23:21:11Z",
+    "boot_id": "f6a163c8-d962-4e2a-91e2-0e30762cc9c3",
+    "boot_id_at_the_pinning": "f6a163c8-d962-4e2a-91e2-0e30762cc9c3",
+    "certbot_directories": [
+      {
+        "entries": null,
+        "path": "/var/log/letsencrypt",
+        "reason": "FileNotFoundError"
+      },
+      {
+        "entries": null,
+        "path": "/etc/letsencrypt/accounts",
+        "reason": "FileNotFoundError"
+      },
+      {
+        "entries": null,
+        "path": "/etc/letsencrypt/live",
+        "reason": "FileNotFoundError"
+      },
+      {
+        "entries": null,
+        "path": "/etc/letsencrypt/renewal",
+        "reason": "FileNotFoundError"
+      }
+    ],
+    "certbot_program": "/usr/bin/certbot",
+    "default_path_answers": {
+      "acme-staging-v02.api.letsencrypt.org": {
+        "ahosts": "::1             STREAM acme-staging-v02.api.letsencrypt.org\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW",
+        "hosts": "::1             acme-staging-v02.api.letsencrypt.org"
+      },
+      "acme-v02.api.letsencrypt.org": {
+        "ahosts": "::1             STREAM acme-v02.api.letsencrypt.org\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW",
+        "hosts": "::1             acme-v02.api.letsencrypt.org"
+      },
+      "acme.zerossl.com": {
+        "ahosts": "::1             STREAM acme.zerossl.com\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW",
+        "hosts": "::1             acme.zerossl.com"
+      },
+      "celikpanel.net": {
+        "ahosts": "127.0.0.1       STREAM celikpanel.net\n127.0.0.1       DGRAM  \n127.0.0.1       RAW",
+        "hosts": "127.0.0.1       celikpanel.net"
+      },
+      "dv.acme-v02.api.pki.goog": {
+        "ahosts": "::1             STREAM dv.acme-v02.api.pki.goog\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW",
+        "hosts": "::1             dv.acme-v02.api.pki.goog"
+      }
+    },
+    "file": "name-pinning-at-the-end.json",
+    "hosts_lines": [
+      "127.0.0.1 localhost",
+      "::1 ip6-localhost ip6-loopback",
+      "fe00::0 ip6-localnet",
+      "ff00::0 ip6-mcastprefix",
+      "ff02::1 ip6-allnodes",
+      "ff02::2 ip6-allrouters",
+      "ff02::3 ip6-allhosts",
+      "127.0.0.1 celikpanel.net # disposable CelikPanel lab pin before provisioning",
+      "127.0.0.1 acme-v02.api.letsencrypt.org",
+      "::1 acme-v02.api.letsencrypt.org",
+      "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+      "::1 acme-staging-v02.api.letsencrypt.org",
+      "127.0.0.1 acme.zerossl.com",
+      "::1 acme.zerossl.com",
+      "127.0.0.1 dv.acme-v02.api.pki.goog",
+      "::1 dv.acme-v02.api.pki.goog"
+    ],
+    "kernel": "6.8.0-138-generic",
+    "loopback_only": {
+      "acme-staging-v02.api.letsencrypt.org": {
+        "default_path": true,
+        "hosts_file": true
+      },
+      "acme-v02.api.letsencrypt.org": {
+        "default_path": true,
+        "hosts_file": true
+      },
+      "acme.zerossl.com": {
+        "default_path": true,
+        "hosts_file": true
+      },
+      "celikpanel.net": {
+        "default_path": true,
+        "hosts_file": true
+      },
+      "dv.acme-v02.api.pki.goog": {
+        "default_path": true,
+        "hosts_file": true
+      }
+    },
+    "names": [
+      "celikpanel.net",
+      "acme-v02.api.letsencrypt.org",
+      "acme-staging-v02.api.letsencrypt.org",
+      "acme.zerossl.com",
+      "dv.acme-v02.api.pki.goog"
+    ],
+    "nsswitch_hosts": [
+      "hosts:          files dns"
+    ],
+    "os_release": {
+      "ID": "ubuntu",
+      "PRETTY_NAME": "Ubuntu 24.04.4 LTS",
+      "VERSION_CODENAME": "noble",
+      "VERSION_ID": "24.04"
+    },
+    "packages_installed": {
+      "certbot": "2.9.0-1",
+      "cron": "3.0pl1-184ubuntu2",
+      "dovecot-core": "1:2.3.21+dfsg1-2ubuntu6.5",
+      "mariadb-server": "1:10.11.14-0ubuntu0.24.04.1",
+      "nginx": "1.24.0-2ubuntu7.18",
+      "nginx-common": "1.24.0-2ubuntu7.18",
+      "openssl": "3.0.13-0ubuntu3.15",
+      "php-fpm": "2:8.3+93ubuntu2",
+      "php8.3-fpm": "8.3.6-0ubuntu0.24.04.11",
+      "postfix": "3.8.6-1ubuntu0.1",
+      "rspamd": "3.8.1-1ubuntu3",
+      "systemd": "255.4-1ubuntu8.17"
+    },
+    "product_paths_present": [
+      "/opt/celikpanel",
+      "/etc/celikpanel",
+      "/var/lib/celikpanel",
+      "/usr/libexec/celikpanel"
+    ],
+    "resolved_total_transactions": {
+      "after_them": 243,
+      "before_the_default_path_lookups": 243,
+      "difference": 0,
+      "what_it_is": "systemd-resolved's own counter of lookups it sent to a DNS server; not a capture of traffic, and None where resolvectl is absent"
+    },
+    "systemd_resolved": "active",
+    "uptime_seconds": 1162.17
+  },
+  "finished_at": "2026-10-09T23:21:10Z",
+  "name": "set6-name-pinning-at-the-end",
+  "started_at": "2026-10-09T23:21:09Z",
+  "verdict": "passed"
+}

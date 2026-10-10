@@ -1,0 +1,20 @@
+read at 2026-10-09T23:37:47Z: /var/tmp before the run (425 entries, from host/hostcheck-before.txt) against now (434 entries)
+--- entries that were there before the run and are not there now: 1
+celikpanel-license-entry60-panel
+--- entries that are there now and were not there before the run: 10
+cp-release-drill-s6-arch-fresh-a
+cp-release-drill-s6-arch-fresh-b
+cp-release-drill-s6-arch-good-a
+cp-release-drill-s6-d13-fresh-a
+cp-release-drill-s6-d13-good-a
+cp-release-drill-s6-ub-fresh-a
+cp-release-drill-s6-ub-good-a
+cp-set6-run
+systemd-private-e55db6fe128d4d38af53d35148d4bc67-dbus-broker.service-NJ5W3B
+systemd-private-e55db6fe128d4d38af53d35148d4bc67-systemd-logind.service-Jr8A6o
+--- the WSL host's own cleaner of temporary directories (tmpfiles.d: q /var/tmp 1777 root root 30d), its runs since the host's boot
+q /var/tmp 1777 root root 30d
+    Oct 10 00:48:25 systemd[1]: Starting Cleanup of Temporary Directories...
+    Oct 10 00:48:55 systemd[1]: Finished Cleanup of Temporary Directories.
+    (journal times are the host's local time, UTC+3; boot at 2026-10-10 00:30:00 local)
+    (the two systemd-private-* directories are systemd's own and are remade with another suffix by themselves; not of this run)

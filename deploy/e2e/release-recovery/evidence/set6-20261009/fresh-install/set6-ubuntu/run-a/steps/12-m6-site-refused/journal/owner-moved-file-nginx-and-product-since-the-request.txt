@@ -1,0 +1,18 @@
+##### nginx.service
+2026-10-09T22:36:02.422624+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:36:02.428132+00:00 dns-ubuntu nginx[45535]: 2026/10/09 22:36:02 [notice] 45535#45535: signal process started
+2026-10-09T22:36:02.431865+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:36:02.602755+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:36:02.610020+00:00 dns-ubuntu nginx[45560]: 2026/10/09 22:36:02 [notice] 45560#45560: signal process started
+2026-10-09T22:36:02.611786+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+##### celikpanel-agent.service and celikpanel-panel.service
+2026-10-09T22:36:00.697112+00:00 dns-ubuntu panel[7644]: 2026/10/09 22:36:00 http: TLS handshake error from 127.0.0.1:47088: EOF
+2026-10-09T22:36:02.226525+00:00 dns-ubuntu useradd[45514]: new group: name=set4_refused_test, GID=5002
+2026-10-09T22:36:02.226628+00:00 dns-ubuntu useradd[45514]: new user: name=set4_refused_test, UID=5002, GID=5002, home=/var/www/celikpanel/subscriptions/2/sites/3, shell=/bin/bash, from=none
+2026-10-09T22:36:02.303242+00:00 dns-ubuntu chpasswd[45521]: pam_unix(chpasswd:chauthtok): password changed for set4_refused_test
+2026-10-09T22:36:02.537384+00:00 dns-ubuntu userdel[45548]: delete user 'set4_refused_test'
+2026-10-09T22:36:02.538861+00:00 dns-ubuntu userdel[45548]: removed group 'set4_refused_test' owned by 'set4_refused_test'
+2026-10-09T22:36:02.538972+00:00 dns-ubuntu userdel[45548]: removed shadow group 'set4_refused_test' owned by 'set4_refused_test'
+2026-10-09T22:36:02.588156+00:00 dns-ubuntu agent[7447]: 2026/10/09 22:36:02 CreateSite set4-refused.test: nginx vhost activation: nginx validation failed: nginx validation failed: 2026/10/09 22:36:02 [emerg] 45532#45532: open() "/etc/nginx/fastcgi.conf" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31
+2026-10-09T22:36:02.588156+00:00 dns-ubuntu agent[7447]: nginx: configuration file /etc/nginx/nginx.conf test failed: exit status 1; rollback restored and reloaded the previous vhost
+2026-10-09T22:36:02.629485+00:00 dns-ubuntu panel[7644]: 2026/10/09 22:36:02 [502][domain] set4-refused.test: SITE_WEB_SERVER_REFUSED removed: 2026/10/09 22:36:02 [emerg] 45532#45532: open() "/etc/nginx/fastcgi.conf" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31

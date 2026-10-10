@@ -1,0 +1,2 @@
+2026-10-09T23:01:43Z before upd1-ubuntu-good run-a (lab prepare) free_GiB=167.9 free_bytes=180278894592 (Get-PSDrive C reading of 2026-10-09T23:01:32Z, 11s old) allowed=yes
+2026-10-09T23:01:44Z before upd1-ubuntu-good run-a (guest start) free_GiB=167.9 free_bytes=180278894592 (Get-PSDrive C reading of 2026-10-09T23:01:32Z, 12s old) allowed=yes

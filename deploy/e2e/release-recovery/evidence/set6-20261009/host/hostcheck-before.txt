@@ -1,0 +1,511 @@
+wsl: Failed to start the systemd user session for 'root'. See journalctl for more details.
+2026-10-09T21:32:39Z
+--- whoami
+root
+--- uptime
+ 00:32:39 up 2 min,  1 user,  load average: 0.97, 0.41, 0.15
+--- memory
+               total        used        free      shared  buff/cache   available
+Mem:           15697         971       13643          71        1355       14725
+Swap:           4096           0        4096
+--- cpus
+16
+--- qemu
+QEMU emulator version 11.1.1
+--- kvm
+crw-rw-rw- 1 root kvm 10, 232 Oct 10 00:32 /dev/kvm
+--- go
+go version go1.26.5 linux/amd64
+--- node
+v26.8.1
+12.0.2
+--- python
+Python 3.14.7
+--- images
+total 1486060
+drwx------ 2 root root      4096 Oct  1 15:57 .
+drwx------ 5 root root      4096 Sep 28 21:06 ..
+-r--r--r-- 5 root root 556609024 Sep 27 02:09 Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+-r--r--r-- 5 root root 340262912 Sep 27 02:09 debian-13-genericcloud-amd64-20260826-2582.qcow2
+-r--r--r-- 2 root root 624829952 Sep  8 20:39 ubuntu-24.04-server-cloudimg-amd64-20260826.img
+--- existing cp-set6*
+none
+--- other jobs
+--- repo head
+72b879eeaf88477133cc01bae6a615e292c00181
+--- 72b879eea
+72b879eeaf88477133cc01bae6a615e292c00181
+a7563a6c342f8e0ad4fd714a3e40a770614b9647
+--- tag alpha.81
+a0beb7263d1f4ca72258f6b306f9111ba4e2a334
+b1dffa78bcaca9e3514e5b2bc42f0e2cf47dca2f
+--- /var/tmp entries
+total 223372
+drwxrwxrwt 308 root   root      73728 Oct 10 00:32 .
+drwxr-xr-x  14 root   root       4096 Sep  9 16:17 ..
+drwx------   7 root   root       4096 Aug 17 22:37 celikpanel-alpha27-portal-prep-native-01e16e90
+-rwxr-xr-x   1 root   root   58629666 Sep 11 09:00 celikpanel-alpha65-agent-nonroot.test
+drwx------  13 root   root       4096 Sep 13 12:48 celikpanel-alpha74-preflight-20260913
+drwx------  13 root   root       4096 Sep 15 08:20 celikpanel-authority-v3-tests.9eiMhHt8
+drwx------  13 root   root       4096 Sep 15 08:16 celikpanel-authority-v3-tests.tcvUYiJ0
+drwx------  13 root   root       4096 Sep 15 08:22 celikpanel-authority-v3-tests.YQiUah4a
+drwx------  13 root   root       4096 Sep 15 08:17 celikpanel-authority-v3-tests.zcgg2JSH
+drwx------  13 root   root       4096 Sep 15 02:00 celikpanel-completion-db-tests.EIu1oYl8
+drwx------  13 root   root       4096 Sep 15 02:01 celikpanel-completion-db-tests.KaR6iriY
+drwx------  13 root   root       4096 Sep 15 02:01 celikpanel-completion-db-tests.RGXOEvTH
+drwx------  13 root   root       4096 Sep 15 08:47 celikpanel-db-committed-check.opjHuMHM
+drwx------   2 root   root       4096 Sep 15 08:39 celikpanel-db-core-283vgfmb
+drwx------   2 root   root       4096 Sep 15 08:35 celikpanel-db-core-83nyf7e7
+drwx------   2 root   root       4096 Sep 15 08:51 celikpanel-db-core-race-q5o70jmy
+drwx------   2 root   root       4096 Sep 15 08:45 celikpanel-db-legacy-l1k1cq2v
+drwx------   2 root   root       4096 Sep 15 08:52 celikpanel-db-legacy-race-jzrr8iwx
+drwx------  13 root   root       4096 Sep 15 09:05 celikpanel-db-privileged-guard.U6mONlYL
+drwx------  13 root   root       4096 Sep 15 08:29 celikpanel-db-shell-contracts.asMsohTq
+drwx------  13 root   root       4096 Sep 15 08:31 celikpanel-db-shell-contracts.R355AbmB
+drwx------  13 root   root       4096 Sep 15 08:25 celikpanel-db-shell-contracts.t0BLwc2F
+drwx------  13 root   root       4096 Sep 11 01:11 celikpanel-dns-review.lsbAar7X
+-rw-------   1 root   root      10000 Sep 16 00:17 celikpanel-exchange-offline.2x4i2O.log
+-rw-------   1 root   root      15649 Sep 15 23:18 celikpanel-exchange-offline.5qV0tI.log
+-rw-------   1 root   root       9999 Sep 15 23:23 celikpanel-exchange-offline.c9zzk3.log
+-rw-------   1 root   root       8412 Sep 15 21:08 celikpanel-exchange-offline.MfNhL0.log
+-rw-------   1 root   root       9994 Sep 15 23:19 celikpanel-exchange-offline.PG41EH.log
+-rw-------   1 root   root       8412 Sep 15 16:52 celikpanel-exchange-offline.rdVdZj.log
+-rw-------   1 root   root       8412 Sep 15 22:02 celikpanel-exchange-offline.SJeVra.log
+-rw-------   1 root   root      10902 Sep 15 23:21 celikpanel-exchange-offline.U91Ws3.log
+-rw-------   1 root   root      10000 Sep 15 23:35 celikpanel-exchange-offline.vdK3a3.log
+drwxr-xr-x   5 root   root       4096 Sep 15 16:47 celikpanel-exchange-trace-48ze055p
+drwxr-xr-x   5 root   root       4096 Sep 15 16:50 celikpanel-exchange-trace-final-gab3kv8i
+-rw-------   1 root   root        148 Sep 15 22:01 celikpanel-exchange-tracer.1Rd4rE.log
+-rw-------   1 root   root       2535 Sep 15 22:00 celikpanel-exchange-tracer.Bw0Arl.log
+-rw-------   1 root   root        144 Sep 15 21:13 celikpanel-exchange-tracer.GSCTXa.log
+-rw-------   1 root   root        144 Sep 15 21:13 celikpanel-exchange-tracer-user.9GOvme.log
+-rw-------   1 root   root        148 Sep 15 22:01 celikpanel-exchange-tracer-user.9xSUKe.log
+-rw-------   1 root   root        148 Sep 15 23:21 celikpanel-exchange-tracer-user.Q3V81X.log
+-rw-------   1 root   root        148 Sep 15 23:21 celikpanel-exchange-tracer.zNkrc4.log
+drwx------   4 root   root       4096 Sep 16 08:43 celikpanel-exit-before.tDhmIWNF
+drwx------   4 root   root       4096 Sep 16 08:50 celikpanel-exit-diagnostic.lohqqlgt
+drwx------   4 root   root       4096 Sep 16 09:01 celikpanel-exit-stop-diagnostic.px_w2qqi
+drwx------   4 root   root       4096 Sep 16 14:49 celikpanel-exit-trace.bIVuSpkR
+drwx------   4 root   root       4096 Sep 16 08:41 celikpanel-exit-trace.BSsii90t
+drwx------   4 root   root       4096 Sep 16 14:47 celikpanel-exit-wait-diagnostic.ip1mp5_0
+drwx------   3 root   root       4096 Jul 28 03:45 celikpanel-go1.26.5
+drwx------   3 root   root       4096 Aug  2 16:47 celikpanel-go1265-audit.RqrD4DGc
+drwxr-xr-x 258 root   root       4096 Sep  8 20:31 celikpanel-go-cache
+drwxr-xr-x   6 root   root       4096 Jul 28 03:46 celikpanel-go-mod-cache
+drwx------   2 root   root       4096 Aug  4 12:39 celikpanel-go-test
+drwx------  13 root   root       4096 Sep 15 08:51 celikpanel-isolated-db-integration.DjNJNdmB
+drwx------  13 root   root       4096 Sep 15 08:31 celikpanel-isolated-db-integration.k6InLt36
+drwx------  13 root   root       4096 Sep 15 08:48 celikpanel-isolated-db-integration.or70WON9
+drwx------   3 root   root       4096 Sep 15 08:27 celikpanel-isolated-db-shell.MmuwES5r
+drwx------   3 root   root       4096 Sep 15 08:28 celikpanel-isolated-db-shell.NW4NkSfZ
+drwx------   4 root   root       4096 Sep 10 19:39 celikpanel-key-save-review.LEVC5rKU
+drwx------   4 root   root       4096 Sep 10 19:41 celikpanel-key-save-review.liMIpbNS
+drwx------   4 root   root       4096 Sep 10 19:40 celikpanel-key-save-review.rfBiBxXo
+-rwxr-xr-x   1 root   root   29484711 Sep  9 23:59 celikpanel-license-entry60-panel
+-rwxr-xr-x   1 root   root    7077514 Sep 22 05:52 celikpanel-mail-schema-agent-checker
+drwx------   3 root   root       4096 Sep 15 15:12 celikpanel-native-trace-tests.m_kp6wjc
+drwx------   3 root   root       4096 Sep 15 15:09 celikpanel-native-trace-tests.xy0hxefx
+drwx------   3 root   root       4096 Sep 15 15:19 celikpanel-native-trace-tests.yo70bd0o
+drwxr-xr-x   4 root   root       4096 Sep 15 15:49 celikpanel-native-wal-ci.wrc26qb_
+-rw-------   1 root   root       7322 Sep 15 15:56 celikpanel-nativewal-offline.2xxlQD.log
+-rw-------   1 root   root       7316 Sep 15 15:48 celikpanel-nativewal-offline.dQ2Sw7.log
+-rw-------   1 root   root       7321 Sep 15 15:51 celikpanel-nativewal-offline.jMXp25.log
+-rw-------   1 root   root      21656 Sep 15 15:38 celikpanel-nativewal-offline.MWC7EZ.log
+-rw-------   1 root   root       7323 Sep 15 15:58 celikpanel-nativewal-offline.q5bvkK.log
+-rw-------   1 root   root       6277 Sep 15 15:46 celikpanel-nativewal-offline.QtGgDh.log
+drwx------   3 root   root       4096 Sep 15 15:50 celikpanel-native-wal-reader-ci.xekgehso
+drwx------   3 root   root       4096 Sep 14 17:20 celikpanel-recovery-kit-gq476f3m
+drwx------   4 root   root       4096 Sep 11 09:35 celikpanel-release-alpha65-20260911
+drwx------   4 root   root       4096 Sep 11 11:18 celikpanel-release-alpha66-20260911
+drwx------   4 root   root       4096 Sep 11 19:14 celikpanel-release-alpha67-20260911
+drwx------   4 root   root       4096 Sep 11 21:36 celikpanel-release-alpha68-20260911
+drwx------   4 root   root       4096 Sep 12 10:56 celikpanel-release-alpha69-20260912
+drwx------   4 root   root       4096 Sep 12 16:22 celikpanel-release-alpha70-20260912
+drwx------   4 root   root       4096 Sep 12 17:56 celikpanel-release-alpha71-20260912
+drwx------   4 root   root       4096 Sep 12 23:39 celikpanel-release-alpha72-20260912
+drwx------   4 root   root       4096 Sep 13 03:00 celikpanel-release-alpha73-20260913
+drwx------   4 root   root       4096 Sep 13 13:17 celikpanel-release-alpha74-20260913
+drwx------   4 root   root       4096 Sep 13 17:40 celikpanel-release-alpha75-20260913
+drwx------   4 root   root       4096 Sep 13 20:15 celikpanel-release-alpha76-20260913
+drwxr-xr-x   6 root   root       4096 Sep 13 21:53 celikpanel-release-alpha77-20260913
+drwxr-xr-x   5 root   root       4096 Sep 14 01:01 celikpanel-release-alpha78-20260914
+drwxr-xr-x   5 root   root       4096 Sep 14 04:11 celikpanel-release-alpha79-20260914
+drwxr-xr-x   5 root   root       4096 Sep 14 09:39 celikpanel-release-alpha80-20260914
+drwx------  13 root   root       4096 Sep 11 03:29 celikpanel-remote-build.2JETSTO6
+drwx------  13 root   root       4096 Sep 11 04:05 celikpanel-remote-build.nAQZrCzj
+drwx------  13 root   root       4096 Sep 11 03:30 celikpanel-remote-dns.6VeTEUMM
+drwx------  13 root   root       4096 Sep 11 03:37 celikpanel-remote-dns.cIUuARIw
+drwx------  13 root   root       4096 Sep 11 03:34 celikpanel-remote-dns.FxaJWS8Z
+drwx------  13 root   root       4096 Sep 11 03:26 celikpanel-remote-dns.fy02pEEk
+drwx------  13 root   root       4096 Sep 11 03:19 celikpanel-remote-dns.reuRzgmp
+drwx------  13 root   root       4096 Sep 11 03:47 celikpanel-remote-final.aajHEQf4
+drwx------  13 root   root       4096 Sep 11 04:06 celikpanel-remote-followup.t056OpNf
+drwx------  13 root   root       4096 Sep 11 04:51 celikpanel-setup-bind-build.GAH9eySV
+drwx------  13 root   root       4096 Sep 11 04:51 celikpanel-setup-bind.ssuoKpK2
+drwx------  13 root   root       4096 Sep 11 00:47 celikpanel-setup-check.Fv2U2CCJ
+drwx------  13 root   root       4096 Sep 11 00:59 celikpanel-setup-check.nZZN8PFp
+drwx------  13 root   root       4096 Sep 13 15:46 celikpanel-setup-dns-82dckma4
+drwx------  13 root   root       4096 Sep 11 04:26 celikpanel-setup-lifecycle.7moVy8B7
+drwx------  13 root   root       4096 Sep 11 04:25 celikpanel-setup-recovery.6sxtAnSJ
+-rw-------   1 root   root        401 Sep 22 18:49 celikpanel-tls-tree.1Lc6jD8Z
+-rw-------   1 root   root        392 Sep 22 18:49 celikpanel-tls-tree.1Pv1u1AI
+-rw-------   1 root   root        392 Sep 22 18:49 celikpanel-tls-tree.6AN5ynfb
+-rw-------   1 root   root        401 Sep 22 18:49 celikpanel-tls-tree.8hFj8PKA
+-rw-------   1 root   root        392 Sep 22 18:49 celikpanel-tls-tree.AO4yfZ88
+-rw-------   1 root   root        413 Sep 22 18:49 celikpanel-tls-tree.CMASPpEY
+-rw-------   1 root   root        389 Sep 22 18:49 celikpanel-tls-tree.Ix6cxeGu
+-rw-------   1 root   root        392 Sep 22 18:49 celikpanel-tls-tree.m3sKoRvz
+-rw-------   1 root   root        386 Sep 22 18:49 celikpanel-tls-tree.mkvPqjJi
+-rw-------   1 root   root        401 Sep 22 18:49 celikpanel-tls-tree.R4CyKDvu
+-rw-------   1 root   root        413 Sep 22 18:49 celikpanel-tls-tree.Sk990lZN
+-rw-------   1 root   root        389 Sep 22 18:49 celikpanel-tls-tree.tuxeAN3w
+-rw-------   1 root   root        401 Sep 22 18:49 celikpanel-tls-tree.UkxGejNP
+-rw-------   1 root   root        386 Sep 22 18:49 celikpanel-tls-tree.xR6mMfbt
+drwx------   3 root   root       4096 Sep 14 14:13 celikpanel-unit-transition-bd77acd0cd55
+-rw-------   1 root   root      67053 Sep 15 13:23 celikpanel-wal-offline.742wHRKf.log
+-rw-------   1 root   root      67500 Sep 15 13:32 celikpanel-wal-offline.FxRpzokU.log
+drwx------   5 root   root       4096 Sep 15 13:20 celikpanel-waltrace.4lXhA4pe
+drwx------   5 root   root       4096 Sep 15 13:27 celikpanel-waltrace.AGkdkTpF
+drwx------   4 root   root       4096 Sep 15 13:16 celikpanel-waltrace.fFjXhrAR
+drwx------   3 root   root       4096 Sep 15 13:29 celikpanel-waltrace-go-check.5s80sbyr
+drwx------   5 root   root       4096 Sep 15 13:24 celikpanel-waltrace.hAo6dQga
+drwx------   5 root   root       4096 Sep 15 13:22 celikpanel-waltrace.SUOYxS4f
+drwx------   4 nobody nobody     4096 Sep 15 13:27 celikpanel-waltrace-unprivileged.dkfc_xhi
+drwx------   4 nobody nobody     4096 Sep 15 13:25 celikpanel-waltrace-unprivileged.e0lfopkk
+drwx------   5 root   root       4096 Sep 15 13:38 celikpanel-waltrace.VYKN71pl
+-rw-r--r--   1 root   root      11943 Oct 10 00:02 cleanup-20261009.log
+drwx------   2 root   root       4096 Sep 22 06:11 cp-av-fixture-avyrvo7s
+drwx------   2 root   root       4096 Sep 22 06:06 cp-av-fixture-sd1wfmiz
+-rw-r--r--   1 root   root      10102 Sep 30 05:53 cp-b10-build.log
+-rw-r--r--   1 root   root       2123 Sep 30 06:02 cp-b10-setup.log
+-rw-r--r--   1 root   root      25812 Sep 30 05:53 cp-b10-triggertest.log
+-rw-r--r--   1 root   root      27171 Sep 30 05:54 cp-b10-webbuild.log
+-rw-r--r--   1 root   root      10315 Sep 30 05:54 cp-b10-webdist.sha256
+-rw-r--r--   1 root   root      10572 Sep 30 08:06 cp-b11-build.log
+-rw-r--r--   1 root   root       4246 Sep 30 08:20 cp-b11-setup.log
+-rw-r--r--   1 root   root       1117 Sep 30 08:08 cp-b11-tcount.log
+-rw-r--r--   1 root   root      25812 Sep 30 08:06 cp-b11-triggertest.log
+-rw-r--r--   1 root   root      27171 Sep 30 08:09 cp-b11-webbuild.log
+-rw-r--r--   1 root   root      10315 Sep 30 08:09 cp-b11-webdist.sha256
+-rw-r--r--   1 root   root      10247 Sep 30 11:09 cp-b12-build.log
+-rw-r--r--   1 root   root       4246 Sep 30 11:47 cp-b12-setup.log
+-rw-r--r--   1 root   root       1117 Sep 30 11:10 cp-b12-tcount.log
+-rw-r--r--   1 root   root      25812 Sep 30 11:09 cp-b12-triggertest.log
+-rw-r--r--   1 root   root      10403 Sep 30 11:08 cp-b12-webdist.sha256
+-rw-r--r--   1 root   root       4819 Sep 29 15:54 cp-b4-build.log
+-rw-r--r--   1 root   root       1920 Sep 29 15:55 cp-b4-setup.log
+-rw-r--r--   1 root   root      10135 Sep 29 15:54 cp-b4-webdist.sha256
+-rw-r--r--   1 root   root       5996 Sep 29 16:50 cp-b5-build.log
+-rw-r--r--   1 root   root       4098 Sep 29 16:51 cp-b5-setup.log
+-rw-r--r--   1 root   root      10135 Sep 29 16:50 cp-b5-webdist.sha256
+-rw-r--r--   1 root   root       7940 Sep 29 17:36 cp-b6a-build.log
+-rw-r--r--   1 root   root       4124 Sep 29 17:36 cp-b6a-setup.log
+-rw-r--r--   1 root   root      10135 Sep 29 17:35 cp-b6a-webdist.sha256
+-rw-r--r--   1 root   root       7936 Sep 29 19:07 cp-b6b-build.log
+-rw-r--r--   1 root   root       4124 Sep 29 19:08 cp-b6b-setup.log
+-rw-r--r--   1 root   root      10135 Sep 29 19:07 cp-b6b-webdist.sha256
+-rw-r--r--   1 root   root       7569 Sep 29 21:51 cp-b7-build.log
+-rw-r--r--   1 root   root       2096 Sep 29 21:52 cp-b7-setup.log
+-rw-r--r--   1 root   root      10135 Sep 29 21:51 cp-b7-webdist.sha256
+-rw-r--r--   1 root   root       6292 Sep 29 23:11 cp-b8-build.log
+-rw-r--r--   1 root   root       6144 Sep 30 01:48 cp-b8r-build.log
+-rw-r--r--   1 root   root       6355 Sep 30 01:51 cp-b8r-setup.log
+-rw-r--r--   1 root   root       9047 Sep 30 01:49 cp-b8r-webbuild.log
+-rw-r--r--   1 root   root      10135 Sep 30 01:49 cp-b8r-webdist.sha256
+-rw-r--r--   1 root   root       6316 Sep 29 23:16 cp-b8-setup.log
+-rw-r--r--   1 root   root       9877 Sep 29 23:12 cp-b8-webbuild.log
+-rw-r--r--   1 root   root      10135 Sep 29 23:12 cp-b8-webdist.sha256
+-rw-r--r--   1 root   root       8602 Sep 30 03:39 cp-b9-build.log
+-rw-r--r--   1 root   root       8426 Sep 30 03:41 cp-b9-setup.log
+-rw-r--r--   1 root   root      25512 Sep 30 03:39 cp-b9-triggertest.log
+-rw-r--r--   1 root   root      27170 Sep 30 03:41 cp-b9-webbuild.log
+-rw-r--r--   1 root   root      10315 Sep 30 03:41 cp-b9-webdist.sha256
+drwxr-xr-x   3 root   root       4096 Sep 15 09:33 cp-baseline-fixture-uid.q1ngnbs2
+drwxr-xr-x   3 root   root       4096 Sep 15 09:33 cp-baseline-fixture-uid.u_nxx47h
+drwxr-xr-x   4 root   root       4096 Sep 27 14:44 cp-bind-adoption-inverse-20260927
+-rw-r--r--   1 root   root       8356 Sep 26 00:29 cp-bind-delete26-evidence.tar.gz
+drwx------   4 root   root       4096 Sep 27 10:49 cp-bind-inverse-fixture-20260927
+-rw-r--r--   1 root   root      12007 Sep 26 15:45 cp-bind-late26-evidence.tar.gz
+drwxr-xr-x   3 root   root       4096 Sep 27 12:14 cp-bind-source-inverse-20260927
+drwx------ 258 nobody nobody     4096 Sep 21 22:10 cp-boot-wait-go-36pn180o
+drwx------   3 root   root       4096 Sep 21 19:56 cp-bound-baseline-ii7qz7j2
+drwx------   3 root   root       4096 Sep 21 20:32 cp-bound-baseline-z547hojy
+-rw-r--r--   1 ali    ali      108409 Sep 21 20:40 cp-bound-offline-tests-aj.log
+drwx------   2 root   root       4096 Sep 21 20:31 cp-bound-policy-8j6rzf7p
+drwx------   2 root   root       4096 Sep 21 20:31 cp-bound-policy-hy847huu
+drwx------   3 root   root       4096 Sep 21 19:45 cp-bound-target-3auom2n6
+drwx------   3 root   root       4096 Sep 21 20:32 cp-bound-target-57h3jjp2
+drwx------   3 root   root       4096 Sep 21 19:58 cp-bound-target-b19t7en1
+drwx------   3 root   root       4096 Sep 22 01:13 cp-bound-target-ixykkao3
+drwx------   3 root   root       4096 Sep 21 23:53 cp-bound-target-mgi_1c1w
+drwx------   3 root   root       4096 Sep 22 01:52 cp-bound-target-pxkarvox
+drwx------   3 root   root       4096 Sep 21 19:33 cp-bound-worker-dba4z5f1
+drwx------   2 root   root       4096 Sep 21 23:52 cp-budget-source-84ve5240
+-rw-r--r--   1 root   root       5359 Sep 15 02:04 cp-completion-fixtures-final.log
+drwx------   2 root   root       4096 Sep 15 02:04 cp-completion-go-mtye27oo
+-rw-r--r--   1 root   root       7555 Sep 15 02:04 cp-completion-shell-final.log
+-rw-r--r--   1 root   root       1153 Sep 29 07:10 cp-d026b-build.log
+-rw-r--r--   1 root   root       1598 Sep 29 07:10 cp-d026b-setup.log
+-rw-r--r--   1 root   root       1145 Sep 29 01:22 cp-d026-build.log
+-rw-r--r--   1 root   root      10135 Sep 29 07:10 cp-d026b-webdist.sha256
+-rw-r--r--   1 root   root       1590 Sep 29 01:23 cp-d026-setup.log
+-rw-r--r--   1 root   root      10135 Sep 29 01:22 cp-d026-webdist.sha256
+drwx------   2 root   root       4096 Sep 15 09:30 cp-db-parent-green-_a_b471w
+drwx------   2 root   root       4096 Sep 15 09:32 cp-db-parent-race-3_9rtxc7
+drwx------   2 root   root       4096 Sep 15 09:29 cp-db-parent-red-lhw5voai
+drwx------  13 root   root       4096 Sep 22 18:41 cp-dns-alpha81-producer-r7n62idw
+drwx------   6 root   root       4096 Sep 25 06:27 cp-dns-arch-20260925
+drwxr-xr-x   3 root   root       4096 Sep 25 04:21 cp-dns-bind-stop-20260925
+drwxr-xr-x   3 root   root       4096 Sep 23 21:54 cp-dns-build-fddd595
+drwx------   5 root   root       4096 Sep 25 05:33 cp-dns-guard-20260925
+drwx------  10 root   root       4096 Sep 26 19:59 cp-dns-inverse-20260926
+drwx------   2 root   root       4096 Sep 25 15:48 cp-dns-native-config-20260925
+drwx------   5 root   root       4096 Sep 25 13:56 cp-dns-native-observer-20260925
+drwx------   2 root   root       4096 Sep 25 15:19 cp-dns-native-soa-20260925
+drwx------   2 root   root       4096 Sep 25 14:35 cp-dns-native-sql-20260925
+drwxr-xr-x   4 root   root       4096 Sep 26 18:38 cp-dns-owner-cli-20260926
+drwx------   2 root   root       4096 Sep 25 18:48 cp-dns-parser-native-20260925
+drwx------   7 root   root       4096 Sep 25 06:49 cp-dns-pdnsadopt-20260925
+drwx------   4 root   root       4096 Sep 25 10:15 cp-dns-pdnsadopt-cancel-20260925
+drwxr-xr-x   2 root   root       4096 Sep 25 10:21 cp-dns-pdnsadopt-cancel-artifacts
+drwx------   6 root   root       4096 Sep 25 06:10 cp-dns-phase-20260925
+drwx------   2 root   root       4096 Sep 25 07:09 cp-dns-preretry-20260925
+drwx------   2 root   root       4096 Sep 25 07:21 cp-dns-preretry-bind-20260925
+drwx------   2 root   root       4096 Sep 25 08:06 cp-dns-preretry-serving-20260925
+drwxr-xr-x   2 root   root       4096 Sep 25 17:27 cp-dns-proof-20260925
+drwx------   5 root   root       4096 Sep 25 04:05 cp-dns-rollback-20260925
+drwx------   4 root   root       4096 Sep 25 10:56 cp-dns-shared-reader-20260925
+drwxr-xr-x   2 root   root       4096 Sep 25 10:58 cp-dns-shared-reader-artifacts
+drwx------   6 root   root       4096 Sep 22 03:34 cp-firewall-artifact-awfxdq1m
+drwx------   2 root   root       4096 Sep 22 04:46 cp-firewall-fixture-commit-wx88_eee
+-rwxr-xr-x   1 root   root   32281885 Sep 22 03:16 cp-firewall-lock-agent
+-rwxr-xr-x   1 root   root   32280831 Sep 22 03:22 cp-firewall-lock-agent-final
+-rwxr-xr-x   1 root   root    3855039 Sep 22 03:16 cp-firewall-lock-boot
+-rwxr-xr-x   1 root   root    3850875 Sep 22 03:01 cp-firewall-native-test
+drwx------   4 root   root       4096 Sep 22 04:05 cp-firewall-publication-native
+-rwxr-xr-x   1 root   root    7180450 Sep 22 04:02 cp-firewall-publication-recovery
+drwx------   3 root   root       4096 Sep 22 04:47 cp-firewall-unit-target-c9icrsrv
+drwx------   3 root   root       4096 Sep 22 06:11 cp-firewall-unit-target-p7g6bizw
+drwx------   3 root   root       4096 Sep 22 04:39 cp-firewall-unit-target-vmwtizg_
+drwx------   3 root   root       4096 Sep 15 02:25 cp-forward-final-shell.5gUb8y78
+drwx------  13 root   root       4096 Sep 22 08:52 cp-host-lock-58czi7ve
+drwx------   3 root   root       4096 Sep 15 02:05 cp-independent-candidate.adKFbesG
+drwx------   3 root   root       4096 Sep 14 17:53 cp-independent-candidate.eQy7G5IG
+drwx------   3 root   root       4096 Sep 14 18:28 cp-independent-candidate.gwlJ7JN7
+drwx------   3 root   root       4096 Sep 14 23:41 cp-independent-candidate.inUlujJA
+drwx------   3 root   root       4096 Sep 15 00:22 cp-independent-candidate.mASwHoqi
+drwx------   3 root   root       4096 Sep 14 20:42 cp-independent-candidate.Mhe7tLKu
+drwx------   3 root   root       4096 Sep 15 02:28 cp-independent-candidate.NZy4Xswa
+drwx------   3 root   root       4096 Sep 14 21:00 cp-independent-candidate.RF6B1zqY
+drwx------   3 root   root       4096 Sep 14 20:55 cp-independent-candidate.VviYAs3k
+drwx------   5 root   root       4096 Sep  8 21:27 cp-install-vm
+drwx------   3 root   root       4096 Sep 15 08:46 cp-isolated-db-candidate.frFtoecd
+drwx------   3 root   root       4096 Sep 15 08:53 cp-isolated-db-final-candidate.HYoeVYHE
+drwx------   3 root   root       4096 Sep 15 09:36 cp-isolated-db-parent-candidate.MRg2hEBV
+drwx------  13 root   root       4096 Sep 22 09:49 cp-ledger-alpha81-moyvk0ol
+drwx------  13 root   root       4096 Sep 22 09:59 cp-ledger-native-_9frc04y
+drwx------   5 root   root       4096 Sep 10 00:06 cp-license60
+drwx------   5 root   root       4096 Sep 10 02:03 cp-license61
+-rw-r--r--   1 root   root      43295 Sep 10 15:50 cp-license62.patch
+drwxr-xr-x  13 root   root       4096 Sep 10 15:50 cp-license62-source
+drwx------  13 root   root       4096 Sep 22 13:32 cp-mail-ack-ch6lidc3
+drwx------  14 root   root       4096 Sep 22 20:05 cp-mail-activity-bound-9nma3tfu
+drwx------  13 root   root       4096 Sep 22 19:53 cp-mail-activity-so75tvqn
+drwx------  14 root   root       4096 Sep 23 08:17 cp-mail-admission-4xtq8lh9
+drwx------  14 root   root       4096 Sep 22 22:35 cp-mail-app-bound-e8sc7b5z
+drwx------  14 root   root       4096 Sep 22 23:13 cp-mail-app-contract-udym2bea
+drwx------  13 root   root       4096 Sep 22 20:48 cp-mail-before-check-ej4u26gd
+drwx------  13 root   root       4096 Sep 22 20:39 cp-mail-before-gspc0sdr
+drwx------  14 root   root       4096 Sep 22 21:46 cp-mail-boot-bound-c_o4t22a
+drwx------  14 root   root       4096 Sep 23 16:07 cp-mail-boot-runtime-rbms22w9
+drwx------  14 root   root       4096 Sep 22 19:13 cp-mail-bootstrap-bound-01k0_i7b
+drwx------  13 root   root       4096 Sep 22 19:20 cp-mail-bootstrap-guard-bound-i1_ti9bs
+drwx------  13 root   root       4096 Sep 22 19:04 cp-mail-bootstrap-load-n9wi9m45
+drwx------  14 root   root       4096 Sep 22 15:50 cp-mail-budget-bound-a72hl_dr
+drwx------  13 root   root       4096 Sep 22 15:46 cp-mail-budget-zkhxhjpv
+drwx------  13 root   root       4096 Sep 22 17:10 cp-mail-capture-bound-9ylrpj9x
+drwx------  13 root   root       4096 Sep 22 08:34 cp-mail-cleanup-native-mpcgcdq_
+drwx------  13 root   root       4096 Sep 22 09:10 cp-mail-config-alpha81-hhqf1lyw
+drwx------   7 root   root       4096 Sep 23 17:24 cp-mail-continue-h1rap81y
+drwx------   6 root   root       4096 Sep 23 16:31 cp-mail-continue-n5njpnq9
+drwx------  13 root   root       4096 Sep 22 09:24 cp-mail-dialect-j3vg32kh
+drwx------  14 root   root       4096 Sep 22 19:42 cp-mail-enable-bound-s596recq
+drwx------  13 root   root       4096 Sep 22 19:31 cp-mail-enable-w8ywjxos
+drwx------  14 root   root       4096 Sep 22 23:14 cp-mail-enrollment-2bhs44ul
+drwx------  13 root   root       4096 Sep 23 00:10 cp-mail-enrollment-ledger-0r62a47r
+drwx------  13 root   root       4096 Sep 22 13:50 cp-mail-executor-u2kmqvfl
+drwx------  13 root   root       4096 Sep 22 18:27 cp-mail-failed-budget-bound-8bg6s1ih
+drwx------  13 root   root       4096 Sep 22 17:25 cp-mail-files-bc_5xvoc
+drwx------  14 root   root       4096 Sep 22 17:33 cp-mail-files-bound-egy67xfs
+drwx------  13 root   root       4096 Sep 22 16:40 cp-mail-hook-bound-0u0kit78
+drwx------  13 root   root       4096 Sep 22 16:34 cp-mail-hook-c0r24huo
+drwx------  13 root   root       4096 Sep 22 16:46 cp-mail-hook-native-le3ybj9s
+drwx------  14 root   root       4096 Sep 23 00:38 cp-mail-joined-final-3i3apwk3
+drwx------  14 root   root       4096 Sep 23 00:35 cp-mail-joined-vb51rhgg
+drwx------  13 root   root       4096 Sep 22 14:49 cp-mail-kit-3mak6aoj
+drwx------  14 root   root       4096 Sep 22 14:52 cp-mail-kit-bound-lp9652z7
+drwx------  13 root   root       4096 Sep 22 17:55 cp-mail-loaded-88f1sg4s
+drwx------  14 root   root       4096 Sep 22 18:03 cp-mail-loaded-bound-fdr3ckho
+drwx------   3 root   root       4096 Sep 22 06:45 cp-mail-native-aw-frj4ku9t
+drwx------   3 root   root       4096 Sep 22 06:51 cp-mail-native-aw-real-xrtvbnbn
+drwx------   3 root   root       4096 Sep 22 06:57 cp-mail-native-ax-final-qaq2hwzn
+drwx------   3 root   root       4096 Sep 22 06:54 cp-mail-native-ax-krd1ch3v
+drwx------  13 root   root       4096 Sep 22 08:11 cp-mail-native-ay-dt0rudie
+drwx------  13 root   root       4096 Sep 22 09:12 cp-mail-native-config-bn0vofs9
+drwx------  13 root   root       4096 Sep 22 09:30 cp-mail-native-dialect-y4zbtqcd
+drwx------  13 root   root       4096 Sep 22 10:54 cp-mail-observe-1u1px1do
+drwx------  14 root   root       4096 Sep 22 20:24 cp-mail-parent-bound-j9e21et2
+drwx------  13 root   root       4096 Sep 22 20:19 cp-mail-parent-yl4evx43
+drwx------  13 root   root       4096 Sep 22 16:05 cp-mail-prepare-1aobqzsz
+drwx------  14 root   root       4096 Sep 22 16:13 cp-mail-prepare-bound-0ygj_ujj
+drwx------  13 root   root       4096 Sep 22 08:09 cp-mail-publish-contract-djwc6nv4
+drwx------  14 root   root       4096 Sep 23 02:13 cp-mail-recorded-ffuftlf1
+drwx------  13 root   root       4096 Sep 22 16:24 cp-mail-release-6ntzjzmz
+drwx------  15 root   root       4096 Sep 22 16:28 cp-mail-release-bound-6s_owpgy
+drwx------  13 root   root       4096 Sep 22 13:07 cp-mail-reload-msk5vz89
+drwx------  14 root   root       4096 Sep 23 00:33 cp-mail-reserved-v_b_9nin
+drwx------  14 root   root       4096 Sep 23 19:15 cp-mail-retained-8t1z73uq
+drwx------  14 root   root       4096 Sep 23 11:38 cp-mail-rpc-agrzwec2
+drwx------  13 root   root       4096 Sep 22 14:34 cp-mail-runtime-3dhpqgcn
+drwx------  13 root   root       4096 Sep 22 17:46 cp-mail-schedule-07ea96vj
+drwx------  13 root   root       4096 Sep 22 12:38 cp-mail-scope-odb0_m9b
+drwx------  14 root   root       4096 Sep 22 15:33 cp-mail-selected-bound-1yb6pocc
+drwx------  13 root   root       4096 Sep 22 15:18 cp-mail-selected-rb4cu9c9
+drwx------  14 root   root       4096 Sep 23 11:43 cp-mail-settle-9klh2_tj
+drwx------  14 root   root       4096 Sep 23 18:44 cp-mail-setup-native-k9__nxn_
+drwx------  14 root   root       4096 Sep 23 01:00 cp-mail-source-binding-yrkgixfz
+drwx------  13 root   root       4096 Sep 22 16:54 cp-mail-transition-u1r9iuqz
+drwx------  14 root   root       4096 Sep 22 21:16 cp-mail-unselected-bound-8pvaagnw
+drwx------  14 root   root       4096 Sep 22 21:24 cp-mail-unselected-bound-v2-lhunih1h
+drwx------  13 root   root       4096 Sep 22 21:13 cp-mail-unselected-final-0ig4taq2
+drwx------  13 root   root       4096 Sep 14 20:47 cp-material-go.UGAteSXs
+drwx------  13 root   root       4096 Sep 22 09:46 cp-mutation-ledger-6eu6_ij9
+drwx------  13 root   root       4096 Sep 22 10:19 cp-mutation-reader-ywcgx4k0
+-rw-r--r--   1 root   root      11992 Sep 25 23:20 cp-native-bind-pair-20260925-evidence.tar.gz
+drwx------   4 root   root       4096 Sep 12 21:53 cp-native-dns-20260912
+drwx------   6 root   root       4096 Sep 26 23:17 cp-native-inspector26
+drwx------   2 root   root       4096 Sep 25 22:27 cp-native-pair-recheck-20260925
+drwx------   5 root   root       4096 Sep  8 22:57 cp-official56
+-rw-r--r--   1 root   root       4483 Sep 29 11:21 cp-oi2-build.log
+-rw-r--r--   1 root   root       1926 Sep 29 11:23 cp-oi2-setup.log
+-rw-r--r--   1 root   root      10135 Sep 29 11:21 cp-oi2-webdist.sha256
+-rw-r--r--   1 root   root       4836 Sep 29 12:25 cp-oi3-build.log
+-rw-r--r--   1 root   root       1926 Sep 29 12:25 cp-oi3-setup.log
+-rw-r--r--   1 root   root      10135 Sep 29 12:25 cp-oi3-webdist.sha256
+-rw-r--r--   1 root   root       4396 Sep 29 10:11 cp-oi-build.log
+-rw-r--r--   1 root   root       1916 Sep 29 10:12 cp-oi-setup.log
+-rw-r--r--   1 root   root      10135 Sep 29 10:11 cp-oi-webdist.sha256
+drwx------   2 root   root       4096 Sep 22 01:51 cp-owner-view-index-4bh5xahj
+drwx------   2 root   root       4096 Sep 22 01:52 cp-owner-view-index-rob2oik0
+-rwxr-xr-x   1 root   root   10464603 Sep 22 01:46 cp-owner-view-production
+-rwxr-xr-x   1 root   root   11394660 Sep 22 01:45 cp-owner-view-tests
+drwx------   6 root   root       4096 Sep 30 16:14 cp-p2-1001
+drwx------   6 root   root       4096 Sep 30 19:48 cp-p3-1001
+drwxr-xr-x   6 root   root       4096 Oct  2 23:31 cp-pair-accept
+drwx------   5 root   root       4096 Sep 25 21:17 cp-pdns-absence25
+drwx------   4 root   root       4096 Sep 25 19:07 cp-pdns-after-20260925
+drwx------   5 root   root       4096 Sep 25 20:31 cp-pdns-del25
+drwx------   5 root   root       4096 Sep 25 21:42 cp-pdns-owner2-25
+drwx------   5 root   root       4096 Sep 25 21:30 cp-pdns-owner25
+drwx------   5 root   root       4096 Sep 25 21:52 cp-pdns-owner3-25
+drwx------   5 root   root       4096 Sep 25 20:59 cp-pdns-parity25
+drwx------   4 nobody nobody     4096 Sep 15 13:31 cp-populated-binaries-fdgfxdd2
+drwx------   4 nobody nobody     4096 Sep 15 13:27 cp-populated-binaries-qa01sj61
+drwxr-xr-x   3 root   root       4096 Sep 15 13:22 cp-populated-cli.bx8xbdhc
+drwxr-xr-x   3 root   root       4096 Sep 15 13:20 cp-populated-cli.nqjykbel
+drwx------   2 root   root       4096 Sep 15 00:12 cp-promotion-fd-observe.1AWkhz6G
+drwx------   2 root   root       4096 Sep 15 00:11 cp-promotion-fd-observe.Mwjbgdnd
+drwx------  13 root   root       4096 Sep 14 23:56 cp-promotion-final-source.iqlnStxV
+drwx------   2 root   root       4096 Sep 14 23:47 cp-promotion-portability.NbhFJHBZ
+drwx------  13 root   root       4096 Sep 22 10:24 cp-reader-native-0wrr0yxl
+drwx------   3 root   root       4096 Sep 16 06:36 cp-readiness-candidate.AoYvKjRO
+drwx------   3 root   root       4096 Sep 16 06:37 cp-readiness-candidate.IosEdaNZ
+drwx------   3 root   root       4096 Sep 16 06:44 cp-readiness-candidate.ZzdRUbvA
+drwx------  13 root   root       4096 Sep 16 06:26 cp-recovery-readiness.chU6fEO2
+drwx------  13 root   root       4096 Sep 16 06:35 cp-recovery-readiness.MOBWBVBk
+drwx------   5 root   root       4096 Sep 12 17:07 cp-secondary-hosting-20260912
+drwx------   5 root   root       4096 Sep 12 17:21 cp-secondary-hosting-20260912-v2
+drwx------   5 root   root       4096 Sep 11 01:19 cp-server-setup-20260911
+drwx------  13 root   root       4096 Sep 11 03:57 cp-setup-dns-build.PBR3CR5H
+drwx------  13 root   root       4096 Sep 11 04:09 cp-setup-dns-build.PsJ9wAay
+drwx------   5 root   root       4096 Sep 11 04:45 cp-setup-dns-profile-20260911
+drwx------   5 root   root       4096 Sep 11 04:58 cp-setup-dns-profile-20260911-v2
+drwx------   6 root   root       4096 Sep 11 03:40 cp-setup-profiles-20260911
+drwx------   5 root   root       4096 Sep 11 03:51 cp-setup-profiles-20260911-v2
+drwx------   6 root   root       4096 Sep 11 04:25 cp-setup-profiles-20260911-v3
+drwx------   2 root   root       4096 Sep 22 06:33 cp-shared-cert-lock-check-wduk8hhf
+drwx------   2 root   root       4096 Sep 22 06:39 cp-shared-source-check-zwp1_rcl
+drwx------   6 root   root       4096 Sep 27 01:56 cp-stage2-bind-owner27
+drwx------   5 root   root       4096 Sep 27 02:08 cp-stage2-bind-owner-conflict27
+drwx------   6 root   root       4096 Sep 27 02:34 cp-stage2-bind-owner-fix27
+drwx------   5 root   root       4096 Sep 27 04:02 cp-stage2-pdns-absentreboot27
+drwx------   5 root   root       4096 Sep 27 03:04 cp-stage2-pdns-bind27
+drwx------   6 root   root       4096 Sep 27 01:51 cp-stage2-pdns-peer27c
+drwx------   6 root   root       4096 Sep 27 02:14 cp-stage2-pdns-peer27d
+drwx------   5 root   root       4096 Sep 27 03:47 cp-stage2-pdns-ssh27
+drwx------   2 root   root       4096 Sep 15 02:24 cp-terminal-proof-final-4syjdexe
+drwx------   2 root   root       4096 Sep 15 02:21 cp-terminal-proof-green-sugca5ma
+drwx------   2 root   root       4096 Sep 15 02:20 cp-terminal-proof-red-xgtd7gr4
+drwx------   2 root   root       4096 Sep 15 02:19 cp-terminal-proof-red-yhe678rq
+drwx------   3 root   root       4096 Sep 16 08:37 cp-trace-exit-fixed.77g9VVsT
+drwx------   3 root   root       4096 Sep 16 08:38 cp-trace-exit-fixed.94z2FnT4
+drwx------   3 root   root       4096 Sep 16 08:38 cp-trace-exit-fixed.j6Y4Jrt3
+drwx------   3 root   root       4096 Sep 16 08:37 cp-trace-exit-fixed.x2U4XXRT
+drwx------   2 root   root       4096 Sep 16 08:31 cp-trace-exit-race.1wRzTXWL
+drwx------   3 root   root       4096 Sep 16 08:31 cp-trace-exit-race.q4wo92Bq
+drwxr-xr-x   2 root   root       4096 Oct 10 00:00 cp-upd1-build
+drwxr-xr-x   2 root   root       4096 Oct  1 15:43 cp-upd8-img
+drwxr-xr-x   3 root   root       4096 Oct  1 15:55 cp-upd8-quick
+drwxr-xr-x   2 root   root       4096 Sep 26 01:01 cp-v3-delete26-evidence
+-rw-r--r--   1 root   root       3805 Sep 26 01:02 cp-v3-delete26-failure-evidence.tar.gz
+-rw-r--r--   1 root   root       9207 Sep 26 09:08 cp-v3-delete26-pending-evidence.tar.gz
+drwx------   5 root   root       4096 Sep 28 21:06 cp-v3n28
+-rw-r--r--   1 root   root      71680 Sep 26 15:15 cp-v3-parent26-terminal-evidence.tar
+drwx------  13 root   root       4096 Sep 16 18:09 cp-wait-guidance-wyf7gwl4
+drwxr-xr-x   2 root   root       4096 Aug  1 02:48 gotest
+-rwxr-xr-x   1 root   root   29484711 Sep 10 01:25 license-entry61-panel
+drwxrwxrwx   2 root   root       4096 Aug  1 02:53 nb
+drwxr-xr-x   2 root   root       4096 Aug  1 02:50 ov
+drwx------   3 root   root       4096 Oct 10 00:32 systemd-private-e55db6fe128d4d38af53d35148d4bc67-dbus-broker.service-HwZKR4
+drwx------   3 root   root       4096 Oct 10 00:32 systemd-private-e55db6fe128d4d38af53d35148d4bc67-systemd-logind.service-8o0a5P
+--- builds
+--- pair-accept
+/var/tmp/cp-pair-accept/:
+total 104
+drwxr-xr-x   6 root root  4096 Oct  2 23:31 .
+drwxrwxrwt 308 root root 73728 Oct 10 00:32 ..
+drwxr-xr-x   3 root root  4096 Oct 10 00:02 dist
+drwx------   6 root root  4096 Sep 29 21:36 evidence
+drwx------   5 root root  4096 Sep 30 00:47 evidence-pair2
+-rw-------   1 root root   411 Sep 29 20:08 id_ed25519
+-rw-r--r--   1 root root    96 Sep 29 20:08 id_ed25519.pub
+drwx------   4 root root  4096 Sep 29 20:08 work
+
+/var/tmp/cp-pair-accept/dist/:
+total 12
+drwxr-xr-x 3 root root 4096 Oct 10 00:02 .
+drwxr-xr-x 6 root root 4096 Oct  2 23:31 ..
+drwxr-xr-x 4 root root 4096 Oct  9 09:49 a0beb7263d1f4ca72258f6b306f9111ba4e2a334-acceptance-license
+--- a81 dist
+total 64184
+drwxr-xr-x  4 root root     4096 Oct  9 09:49 .
+drwxr-xr-x  3 root root     4096 Oct 10 00:02 ..
+-rw-r--r--  1 root root      628 Oct  9 09:49 archive-evidence-entries.json
+-rw-r--r--  1 root root     9742 Oct  9 09:49 build.log
+-rw-r--r--  1 root root 65661321 Oct  9 09:49 celikpanel-v0.1.0-alpha.81-acceptance-license.tar.gz
+-rw-r--r--  1 root root     1177 Oct  9 09:49 dist.json
+-rw-r--r--  1 root root       32 Oct  9 09:49 go-version.txt
+-rw-r--r--  1 root root      623 Oct  9 09:49 guard-refusal.txt
+drwxrwxr-x 11 root root     4096 Oct  9 09:49 product-web-src
+drwxr-xr-x 15 root root     4096 Oct  9 09:49 src
+-rw-r--r--  1 root root    10496 Oct  9 09:49 web-dist.sha256
+3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109  /var/tmp/cp-pair-accept/dist/a0beb7263d1f4ca72258f6b306f9111ba4e2a334-acceptance-license/celikpanel-v0.1.0-alpha.81-acceptance-license.tar.gz
+--- var/tmp disk
+/dev/sde       1007G   88G  869G  10% /
+/dev/sde       1081101176832 94092681216 932016140288  10% /
+--- listening ports 4xxx / 18xxx
+none
+--- labs
+0
+--- tmpfs mounts under /var/tmp
+none

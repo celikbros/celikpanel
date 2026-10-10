@@ -1,0 +1,81 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "cron add: read after the change",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18661"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/1/cron"
+  },
+  "response": {
+    "elapsed_seconds": 0.006,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 23:20:24 GMT"
+      ],
+      [
+        "Content-Length",
+        "367"
+      ]
+    ],
+    "json": {
+      "jobs": [
+        {
+          "command": "/bin/date -u -Iseconds > \"$HOME/upd1-cron-stamp.txt\"",
+          "comment": "upd1 owner cron",
+          "enabled": true,
+          "id": "2455b30ed819fb8f",
+          "schedule": "* * * * *"
+        },
+        {
+          "command": "/usr/bin/true set3-after-update",
+          "enabled": true,
+          "id": "3edda52fbe77a2c7",
+          "schedule": "*/30 * * * *"
+        }
+      ],
+      "version": "ct1-af0653e215e758984720703a7c0f1cbcb64f7839303f71c087aa4f1ed964e28d"
+    },
+    "status": 200,
+    "text": null
+  }
+}

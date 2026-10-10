@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-s6-arch-fresh-a
+set6-arch-20261009t214727z

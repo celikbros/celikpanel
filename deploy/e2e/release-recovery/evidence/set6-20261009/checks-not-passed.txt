@@ -1,0 +1,7 @@
+step | fresh-install/set6-arch/run-a | M5-import-absolute | failed | item 5: `imported` and `not_imported` are the steps' own results; the member is in `not_imported` and every chosen part is in `imported`
+step | fresh-install/set6-arch/run-a | M10-postfix-stop | skipped | 
+check | fresh-install/set6-arch/run-a/steps/14-m5-import-absolute/section.json | FAIL | item 5: `imported` and `not_imported` are the steps' own results; the member is in `not_imported` and every chosen part is in `imported`
+step | fresh-install/set6-arch/run-b | M10-postfix-stop | skipped | 
+step | update-alpha81/upd1-arch-good/run-a | owner-continuation (required) | skipped | 
+step | update-alpha81/upd1-debian13-good/run-a | owner-continuation (required) | skipped | 
+step | update-alpha81/upd1-ubuntu-good/run-a | owner-continuation (required) | skipped | 

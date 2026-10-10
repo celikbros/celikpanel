@@ -1,0 +1,18 @@
+##### nginx.service
+2026-10-09T22:36:13.241680+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:36:13.249726+00:00 dns-ubuntu nginx[46736]: 2026/10/09 22:36:13 [notice] 46736#46736: signal process started
+2026-10-09T22:36:13.250641+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:36:13.424824+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:36:13.432475+00:00 dns-ubuntu nginx[46761]: 2026/10/09 22:36:13 [notice] 46761#46761: signal process started
+2026-10-09T22:36:13.432945+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+##### celikpanel-agent.service and celikpanel-panel.service
+2026-10-09T22:36:11.533290+00:00 dns-ubuntu panel[7644]: 2026/10/09 22:36:11 http: TLS handshake error from 127.0.0.1:44560: EOF
+2026-10-09T22:36:13.052341+00:00 dns-ubuntu useradd[46715]: new group: name=set4_a_long_site_name_an_owner_c, GID=5002
+2026-10-09T22:36:13.052508+00:00 dns-ubuntu useradd[46715]: new user: name=set4_a_long_site_name_an_owner_c, UID=5002, GID=5002, home=/var/www/celikpanel/subscriptions/2/sites/5, shell=/bin/bash, from=none
+2026-10-09T22:36:13.128130+00:00 dns-ubuntu chpasswd[46722]: pam_unix(chpasswd:chauthtok): password changed for set4_a_long_site_name_an_owner_c
+2026-10-09T22:36:13.360540+00:00 dns-ubuntu userdel[46749]: delete user 'set4_a_long_site_name_an_owner_c'
+2026-10-09T22:36:13.361371+00:00 dns-ubuntu userdel[46749]: removed group 'set4_a_long_site_name_an_owner_c' owned by 'set4_a_long_site_name_an_owner_c'
+2026-10-09T22:36:13.361468+00:00 dns-ubuntu userdel[46749]: removed shadow group 'set4_a_long_site_name_an_owner_c' owned by 'set4_a_long_site_name_an_owner_c'
+2026-10-09T22:36:13.410265+00:00 dns-ubuntu agent[7447]: 2026/10/09 22:36:13 CreateSite set4-a-long-site-name-an-owner-could-plausibly-choose.test: nginx vhost activation: nginx validation failed: nginx validation failed: 2026/10/09 22:36:13 [emerg] 46733#46733: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64
+2026-10-09T22:36:13.410265+00:00 dns-ubuntu agent[7447]: nginx: configuration file /etc/nginx/nginx.conf test failed: exit status 1; rollback restored and reloaded the previous vhost
+2026-10-09T22:36:13.449730+00:00 dns-ubuntu panel[7644]: 2026/10/09 22:36:13 [502][domain] set4-a-long-site-name-an-owner-could-plausibly-choose.test: SITE_WEB_SERVER_REFUSED removed: 2026/10/09 22:36:13 [emerg] 46733#46733: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64

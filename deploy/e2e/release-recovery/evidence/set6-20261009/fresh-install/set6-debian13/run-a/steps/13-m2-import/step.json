@@ -1,0 +1,27 @@
+{
+  "checks": {
+    "checks": 18,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T22:17:54Z",
+    "notes": [
+      "imported-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 404"
+    ],
+    "started_at": "2026-10-09T22:17:48Z",
+    "substeps": {
+      "S1": "passed",
+      "imported-site": "passed",
+      "item 2": "passed",
+      "item 3": "passed",
+      "item 5": "passed",
+      "section": "passed"
+    },
+    "title": "the cPanel-archive import of set3's fixture: the imported site served, and what the answer lists",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T22:17:54Z",
+  "name": "M2-import",
+  "started_at": "2026-10-09T22:17:48Z",
+  "verdict": "passed"
+}

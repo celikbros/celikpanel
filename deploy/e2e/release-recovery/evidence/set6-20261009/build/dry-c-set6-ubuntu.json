@@ -1,0 +1,56 @@
+{
+  "candidate": {
+    "commit": "2159bb202d7bf69fe650c95910c6506a47f730c9",
+    "sha256": "c81bf6b337c0460054e0ab96aa21d853dc2c8ff8945563207b3c2a8865768b0b",
+    "version": "v0.1.0-alpha.81"
+  },
+  "cell": "set6-ubuntu",
+  "cell_kind": "set6-fresh-install",
+  "local_port": 18443,
+  "native_evidence": false,
+  "pinned_names": [
+    "celikpanel.net",
+    "acme-v02.api.letsencrypt.org",
+    "acme-staging-v02.api.letsencrypt.org",
+    "acme.zerossl.com",
+    "dv.acme-v02.api.pki.goog"
+  ],
+  "rule": "the driver calls only the Panel's HTTP API as the logged-in owner; every native fact is a read-only SSH inspection; owner actions and lab preparation on the guest are recorded as such; no certificate authority and no licence service is contacted by the driver",
+  "schema": "celikpanel/set6-plan/v1",
+  "setup": {
+    "components": [
+      "dovecot",
+      "mariadb",
+      "nginx",
+      "php-fpm",
+      "postfix",
+      "postgresql",
+      "roundcube",
+      "rspamd"
+    ],
+    "dns_mode": "external",
+    "purpose": "web_mail"
+  },
+  "steps": [
+    "set6-name-pinning",
+    "preflight",
+    "origin",
+    "baseline-install",
+    "owner-login",
+    "license",
+    "setup",
+    "site",
+    "M0-prepare",
+    "B-headers-after-setup",
+    "M1-php-site",
+    "M6-site-refused",
+    "M2-import",
+    "M5-import-absolute",
+    "M10-postfix-stop",
+    "M4-reload-stopped",
+    "B-headers-at-the-end",
+    "set6-name-pinning-at-the-end",
+    "collect"
+  ],
+  "work_root": "/var/tmp/cp-release-drill-dry-set6-ubuntu"
+}

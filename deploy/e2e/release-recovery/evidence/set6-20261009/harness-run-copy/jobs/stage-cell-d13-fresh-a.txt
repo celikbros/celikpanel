@@ -1,0 +1,20 @@
+driver SHA256SUMS verified on the staged copy (343 files)
+digest sweep at staging: host-side files changed 0, driver files changed 0, places {"learned_value": 0, "migration_directory": 0, "named_field": 0}, inside base64 text 0
+count after the sweep: 0 file(s) would change, 0 inside base64 text, values known: 0
+driver SHA256SUMS verified again after the sweep
+2026-10-09T22:19:39Z removed /var/tmp/cp-release-drill-s6-d13-fresh-a/cells/b35ba70bfea4f0a22ab43dd1/arch/overlay.qcow2 bytes=171376640 allocated=70656000 (overlay disk of this run's lab, on the WSL disk; evidence staged at set6-20261009/fresh-install/set6-debian13/run-a, checksums verified)
+2026-10-09T22:19:39Z removed /var/tmp/cp-release-drill-s6-d13-fresh-a/cells/b35ba70bfea4f0a22ab43dd1/debian13/overlay.qcow2 bytes=1738473472 allocated=1728643072 (overlay disk of this run's lab, on the WSL disk; evidence staged at set6-20261009/fresh-install/set6-debian13/run-a, checksums verified)
+2026-10-09T22:19:39Z removed /var/tmp/cp-release-drill-s6-d13-fresh-a/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 (this lab's hard link to the cached base image /var/tmp/cp-v3n28/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2; the cached file stays, link count now 5)
+2026-10-09T22:19:39Z removed /var/tmp/cp-release-drill-s6-d13-fresh-a/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 (this lab's hard link to the cached base image /var/tmp/cp-v3n28/images/debian-13-genericcloud-amd64-20260826-2582.qcow2; the cached file stays, link count now 5)
+356
+overall: complete-for-review | native_evidence: False | outcome: set6-measured | final: None None
+  section B-headers-after-setup passed | checks: 5 | failed: [] | unknown: [] | error: None
+  section B-headers-at-the-end passed | checks: 5 | failed: [] | unknown: [] | error: None
+  section M0-prepare passed | checks: 5 | failed: [] | unknown: [] | error: None
+  section M1-php-site passed | checks: 12 | failed: [] | unknown: [] | error: None
+  section M10-postfix-stop passed | checks: 11 | failed: [] | unknown: [] | error: None
+  section M2-import passed | checks: 18 | failed: [] | unknown: [] | error: None
+  section M4-reload-stopped passed | checks: 21 | failed: [] | unknown: [] | error: None
+  section M5-import-absolute passed | checks: 12 | failed: [] | unknown: [] | error: None
+  section M6-site-refused passed | checks: 13 | failed: [] | unknown: [] | error: None
+  finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['12-panel_certificate', '13-access_dns', '14-mail_certificate', '15-mail_enrollment', '16-verify']

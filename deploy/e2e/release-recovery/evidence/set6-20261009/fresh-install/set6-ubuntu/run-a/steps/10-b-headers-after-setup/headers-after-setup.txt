@@ -1,0 +1,237 @@
+# header reading on the guest, 2026-10-09T22:35:47Z to 2026-10-09T22:35:47Z; Panel unit {"ActiveState": "active", "ExecMainStartTimestamp": "Fri 2026-10-09 22:20:57 UTC", "MainPID": "7644", "SubState": "running"}; program /opt/celikpanel/bin/panel
+# TCP listeners of the Panel's process: ['*:2083 users:(("panel",pid=7644,fd=8))']
+# TCP listeners on 80, 443 and the Panel's port: ['0.0.0.0:80 users:(("nginx",pid=42852,fd=5),("nginx",pid=42851,fd=5),("nginx",pid=12032,fd=5))', '127.0.0.1:443 users:(("python3",pid=4123,fd=3))', '*:2083 users:(("panel",pid=7644,fd=8))', '[::]:80 users:(("nginx",pid=42852,fd=6),("nginx",pid=42851,fd=6),("nginx",pid=12032,fd=6))']
+# TLS leaf SHA-256 seen: ['7608edc5a2201255383cd4c89b5a364e7baaac4e88a0ee65f8e2d9f0d5a181c3']
+
+### spa-root: GET https://127.0.0.1:2083/ (session cookie sent: no)
+> Host: 127.0.0.1:2083
+> Accept: */*
+> User-Agent: set6-header-reading
+< HTTP/1.1 200 OK
+< Accept-Ranges: bytes
+< Cache-Control: no-cache
+< Content-Length: 703
+< Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+< Content-Type: text/html; charset=utf-8
+< Last-Modified: Fri, 09 Oct 2026 22:20:23 GMT
+< Referrer-Policy: no-referrer
+< Strict-Transport-Security: max-age=31536000
+< X-Content-Type-Options: nosniff
+< X-Frame-Options: DENY
+< Date: Fri, 09 Oct 2026 22:35:47 GMT
+(body: 703 bytes, sha256 5e2928d138ad0c956332997e5afabbf8ef4ee72b2e15adfbbff415d22b7449ec)
+
+### spa-unknown-page: GET https://127.0.0.1:2083/set6-no-such-page (session cookie sent: no)
+> Host: 127.0.0.1:2083
+> Accept: */*
+> User-Agent: set6-header-reading
+< HTTP/1.1 200 OK
+< Accept-Ranges: bytes
+< Cache-Control: no-cache
+< Content-Length: 703
+< Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+< Content-Type: text/html; charset=utf-8
+< Last-Modified: Fri, 09 Oct 2026 22:20:23 GMT
+< Referrer-Policy: no-referrer
+< Strict-Transport-Security: max-age=31536000
+< X-Content-Type-Options: nosniff
+< X-Frame-Options: DENY
+< Date: Fri, 09 Oct 2026 22:35:47 GMT
+(body: 703 bytes, sha256 5e2928d138ad0c956332997e5afabbf8ef4ee72b2e15adfbbff415d22b7449ec)
+
+### spa-asset: GET https://127.0.0.1:2083/assets/app-U1Dtbfwf.js (session cookie sent: no)
+> Host: 127.0.0.1:2083
+> Accept: */*
+> User-Agent: set6-header-reading
+< HTTP/1.1 200 OK
+< Accept-Ranges: bytes
+< Cache-Control: public, max-age=31536000, immutable
+< Content-Length: 238308
+< Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+< Content-Type: text/javascript; charset=utf-8
+< Last-Modified: Fri, 09 Oct 2026 22:20:23 GMT
+< Referrer-Policy: no-referrer
+< Strict-Transport-Security: max-age=31536000
+< X-Content-Type-Options: nosniff
+< X-Frame-Options: DENY
+< Date: Fri, 09 Oct 2026 22:35:47 GMT
+(body: 238308 bytes, sha256 d91aac3f4e1f471c8ae40b5eb005fe9d3200d96ffa55e926fdc6762efaddc661)
+
+### api-public: GET https://127.0.0.1:2083/api/v1/panel/access-address (session cookie sent: no)
+> Host: 127.0.0.1:2083
+> Accept: */*
+> User-Agent: set6-header-reading
+< HTTP/1.1 200 OK
+< Cache-Control: no-store
+< Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+< Content-Type: application/json
+< Referrer-Policy: no-referrer
+< Strict-Transport-Security: max-age=31536000
+< X-Content-Type-Options: nosniff
+< X-Frame-Options: DENY
+< Date: Fri, 09 Oct 2026 22:35:47 GMT
+< Content-Length: 16
+(body: 16 bytes, sha256 c0d3392599aed96320eb77695c62eca2ff268f426ba4447c2f5418a4f3078e93)
+(body starts: "{\"hostname\":\"\"}\n")
+
+### api-version-as-owner: GET https://127.0.0.1:2083/api/v1/panel/version (session cookie sent: yes)
+> Host: 127.0.0.1:2083
+> Accept: */*
+> User-Agent: set6-header-reading
+> Cookie: [REDACTED]
+< HTTP/1.1 200 OK
+< Cache-Control: no-store
+< Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+< Content-Type: application/json
+< Pragma: no-cache
+< Referrer-Policy: no-referrer
+< Strict-Transport-Security: max-age=31536000
+< X-Content-Type-Options: nosniff
+< X-Frame-Options: DENY
+< Date: Fri, 09 Oct 2026 22:35:47 GMT
+< Content-Length: 225
+(body: 225 bytes, sha256 b65ab3b3f8b0ccb748b3fdd4e33e08f56054fdcb64ca0b83c20014e6a62f6338)
+
+### api-domains-as-owner: GET https://127.0.0.1:2083/api/v1/domains (session cookie sent: yes)
+> Host: 127.0.0.1:2083
+> Accept: */*
+> User-Agent: set6-header-reading
+> Cookie: [REDACTED]
+< HTTP/1.1 200 OK
+< Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+< Content-Type: application/json
+< Referrer-Policy: no-referrer
+< Strict-Transport-Security: max-age=31536000
+< X-Content-Type-Options: nosniff
+< X-Frame-Options: DENY
+< Date: Fri, 09 Oct 2026 22:35:47 GMT
+< Content-Length: 187
+(body: 187 bytes, sha256 f7af5d02f562421c40fd6e5d01d7b85c2db7cc9e8a3a2885364b8b60b1a075e0)
+
+### api-domains-no-login: GET https://127.0.0.1:2083/api/v1/domains (session cookie sent: no)
+> Host: 127.0.0.1:2083
+> Accept: */*
+> User-Agent: set6-header-reading
+< HTTP/1.1 401 Unauthorized
+< Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+< Content-Type: application/json
+< Referrer-Policy: no-referrer
+< Strict-Transport-Security: max-age=31536000
+< X-Content-Type-Options: nosniff
+< X-Frame-Options: DENY
+< Date: Fri, 09 Oct 2026 22:35:47 GMT
+< Content-Length: 59
+(body: 59 bytes, sha256 037b0bc32ef5d1c59e94885f2e135ca8985b70b03ab6c3a953b08ff32027ca58)
+(body starts: "{\"error\":\"authentication required\",\"code\":\"AUTH_REQUIRED\"}\n")
+
+### api-unknown-no-login: GET https://127.0.0.1:2083/api/v1/set6-no-such-route (session cookie sent: no)
+> Host: 127.0.0.1:2083
+> Accept: */*
+> User-Agent: set6-header-reading
+< HTTP/1.1 401 Unauthorized
+< Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+< Content-Type: application/json
+< Referrer-Policy: no-referrer
+< Strict-Transport-Security: max-age=31536000
+< X-Content-Type-Options: nosniff
+< X-Frame-Options: DENY
+< Date: Fri, 09 Oct 2026 22:35:47 GMT
+< Content-Length: 59
+(body: 59 bytes, sha256 037b0bc32ef5d1c59e94885f2e135ca8985b70b03ab6c3a953b08ff32027ca58)
+(body starts: "{\"error\":\"authentication required\",\"code\":\"AUTH_REQUIRED\"}\n")
+
+### api-post-without-origin: POST https://127.0.0.1:2083/api/v1/set6-no-such-route (session cookie sent: no)
+> Host: 127.0.0.1:2083
+> Accept: */*
+> User-Agent: set6-header-reading
+> Content-Length: 0
+< HTTP/1.1 403 Forbidden
+< Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+< Content-Type: application/json
+< Referrer-Policy: no-referrer
+< Strict-Transport-Security: max-age=31536000
+< X-Content-Type-Options: nosniff
+< X-Frame-Options: DENY
+< Date: Fri, 09 Oct 2026 22:35:47 GMT
+< Content-Length: 41
+(body: 41 bytes, sha256 8af8223db9819a0edbe3df176d496c0621e63b076d63c9048530498c8519c85e)
+(body starts: "{\"error\":\"cross-origin request blocked\"}\n")
+
+### api-unknown-as-owner: GET https://127.0.0.1:2083/api/v1/set6-no-such-route (session cookie sent: yes)
+> Host: 127.0.0.1:2083
+> Accept: */*
+> User-Agent: set6-header-reading
+> Cookie: [REDACTED]
+< HTTP/1.1 404 Not Found
+< Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+< Content-Type: text/plain; charset=utf-8
+< Referrer-Policy: no-referrer
+< Strict-Transport-Security: max-age=31536000
+< X-Content-Type-Options: nosniff
+< X-Frame-Options: DENY
+< Date: Fri, 09 Oct 2026 22:35:47 GMT
+< Content-Length: 19
+(body: 19 bytes, sha256 b16e15764b8bc06c5c3f9f19bc8b99fa48e7894aa5a6ccdad65da49bbf564793)
+(body starts: "404 page not found\n")
+
+### api-options-preflight: OPTIONS https://127.0.0.1:2083/api/v1/domains (session cookie sent: no)
+> Host: 127.0.0.1:2083
+> Accept: */*
+> User-Agent: set6-header-reading
+< HTTP/1.1 204 No Content
+< Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+< Referrer-Policy: no-referrer
+< Strict-Transport-Security: max-age=31536000
+< X-Content-Type-Options: nosniff
+< X-Frame-Options: DENY
+< Date: Fri, 09 Oct 2026 22:35:47 GMT
+(body: 0 bytes, sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855)
+
+### plain-http-to-the-panel-port-2083: GET http://127.0.0.1:2083/ (session cookie sent: no)
+> Host: 127.0.0.1:2083
+> Accept: */*
+> User-Agent: set6-header-reading
+> Connection: close
+< HTTP/1.0 400 Bad Request
+(76 bytes came back; body starts: "Client sent an HTTP request to an HTTPS server.\n")
+
+### plain-http-to-the-panel-port-2083-api: GET http://127.0.0.1:2083/api/v1/panel/access-address (session cookie sent: no)
+> Host: 127.0.0.1:2083
+> Accept: */*
+> User-Agent: set6-header-reading
+> Connection: close
+< HTTP/1.0 400 Bad Request
+(76 bytes came back; body starts: "Client sent an HTTP request to an HTTPS server.\n")
+
+### plain-http-port-80-panel-host-name: GET http://127.0.0.1:80/ (session cookie sent: no)
+> Host: panel-ubuntu.upd1-infra.test
+> Accept: */*
+> User-Agent: set6-header-reading
+> Connection: close
+< HTTP/1.1 200 OK
+< Server: nginx/1.24.0 (Ubuntu)
+< Date: Fri, 09 Oct 2026 22:35:47 GMT
+< Content-Type: text/html
+< Content-Length: 615
+< Last-Modified: Fri, 09 Oct 2026 22:26:31 GMT
+< Connection: close
+< ETag: "6ac96a17-267"
+< Accept-Ranges: bytes
+(857 bytes came back; body starts: "<!DOCTYPE html>\n<html>\n<head>\n<title>Welcome to nginx!</title>\n<style>\nhtml { color-scheme: light dark; }\nbody { width: 35em; margin: 0 auto;\nfont-family: Tahoma, Verdana, Arial, sans-serif; }\n</style")
+
+### plain-http-port-80-address: GET http://127.0.0.1:80/ (session cookie sent: no)
+> Host: 127.0.0.1
+> Accept: */*
+> User-Agent: set6-header-reading
+> Connection: close
+< HTTP/1.1 200 OK
+< Server: nginx/1.24.0 (Ubuntu)
+< Date: Fri, 09 Oct 2026 22:35:47 GMT
+< Content-Type: text/html
+< Content-Length: 615
+< Last-Modified: Fri, 09 Oct 2026 22:26:31 GMT
+< Connection: close
+< ETag: "6ac96a17-267"
+< Accept-Ranges: bytes
+(857 bytes came back; body starts: "<!DOCTYPE html>\n<html>\n<head>\n<title>Welcome to nginx!</title>\n<style>\nhtml { color-scheme: light dark; }\nbody { width: 35em; margin: 0 auto;\nfont-family: Tahoma, Verdana, Arial, sans-serif; }\n</style")
+

@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T22:07:27Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791583645",
+      "-n",
+      "400",
+      "-u",
+      "mariadb.service"
+    ],
+    "at": "2026-10-09T22:07:27Z",
+    "returncode": 0,
+    "seconds": 0.004,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T22:07:25.353198+00:00 dns-arch mariadbd[947]: 2026-10-09 22:07:25 0 [Note] /usr/bin/mariadbd (initiated by: unknown): Normal shutdown\n2026-10-09T22:07:25.353753+00:00 dns-arch systemd[1]: Stopping MariaDB 13.0.2 database server...\n2026-10-09T22:07:25.354485+00:00 dns-arch mariadbd[947]: 2026-10-09 22:07:25 0 [Note] InnoDB: FTS optimize thread exiting.\n2026-10-09T22:07:25.385885+00:00 dns-arch mariadbd[947]: 2026-10-09 22:07:25 0 [Note] InnoDB: Starting shutdown...\n2026-10-09T22:07:25.394080+00:00 dns-arch mariadbd[947]: 2026-10-09 22:07:25 0 [Note] InnoDB: Dumping buffer pool(s) to /var/lib/mysql/ib_buffer_pool\n2026-10-09T22:07:25.394080+00:00 dns-arch mariadbd[947]: 2026-10-09 22:07:25 0 [Note] InnoDB: Buffer pool(s) dump completed at 261009 22:07:25\n2026-10-09T22:07:25.467026+00:00 dns-arch mariadbd[947]: 2026-10-09 22:07:25 0 [Note] InnoDB: Removed temporary tablespace data file: \"./ibtmp1\"\n2026-10-09T22:07:25.467026+00:00 dns-arch mariadbd[947]: 2026-10-09 22:07:25 0 [Note] Shutdown completed; log sequence number 90494; transaction id 31\n2026-10-09T22:07:25.490086+00:00 dns-arch mariadbd[947]: 2026-10-09 22:07:25 0 [Note] /usr/bin/mariadbd: Shutdown complete\n2026-10-09T22:07:25.493613+00:00 dns-arch systemd[1]: mariadb.service: Deactivated successfully.\n2026-10-09T22:07:25.493947+00:00 dns-arch systemd[1]: Stopped MariaDB 13.0.2 database server.\n2026-10-09T22:07:25.494405+00:00 dns-arch systemd[1]: mariadb.service: Consumed 761ms CPU time over 4min 1.193s wall clock time, 189.5M memory peak.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791583645,
+  "units": [
+    "mariadb.service"
+  ]
+}

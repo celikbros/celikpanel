@@ -1,0 +1,6 @@
+Kernel-Power events (System log) of the last 4 hours, read at 2026-10-09T23:28:24Z, UTC; 42 = entering sleep, 107 = resumed from sleep, 506 = entering modern standby, 507 = leaving it, 105 = power source change
+2026-10-09T19:31:37Z id=506
+2026-10-09T20:38:53Z id=507
+2026-10-09T21:06:07Z id=506
+2026-10-09T21:11:29Z id=507
+2026-10-09T21:38:17Z id=506

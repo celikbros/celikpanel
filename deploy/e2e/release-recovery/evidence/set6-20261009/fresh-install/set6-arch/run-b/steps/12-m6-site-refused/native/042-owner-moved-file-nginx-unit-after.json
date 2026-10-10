@@ -1,0 +1,68 @@
+{
+  "at": "2026-10-09T22:06:47Z",
+  "is_active": {
+    "nginx.service": "active"
+  },
+  "is_failed": {
+    "nginx.service": "active"
+  },
+  "journal": {
+    "nginx.service": [
+      "2026-10-09T22:06:46.322191+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+      "2026-10-09T22:06:46.351292+00:00 dns-arch nginx[3316]: 2026/10/09 22:06:46 [warn] 3316#3316: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+      "2026-10-09T22:06:46.354803+00:00 dns-arch nginx[3316]: 2026/10/09 22:06:46 [notice] 3316#3316: signal process started",
+      "2026-10-09T22:06:46.356627+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+      "2026-10-09T22:06:46.567970+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+      "2026-10-09T22:06:46.593076+00:00 dns-arch nginx[3330]: 2026/10/09 22:06:46 [warn] 3330#3330: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+      "2026-10-09T22:06:46.596370+00:00 dns-arch nginx[3330]: 2026/10/09 22:06:46 [notice] 3330#3330: signal process started",
+      "2026-10-09T22:06:46.598597+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+    ]
+  },
+  "journal_product": [
+    "2026-10-09T22:06:44.879238+00:00 dns-arch panel[420]: 2026/10/09 22:06:44 http: TLS handshake error from 127.0.0.1:54896: EOF",
+    "2026-10-09T22:06:46.057393+00:00 dns-arch useradd[3295]: new group: name=set4_refused_test, GID=1003",
+    "2026-10-09T22:06:46.057587+00:00 dns-arch useradd[3295]: new user: name=set4_refused_test, UID=1003, GID=1003, home=/var/www/celikpanel/subscriptions/2/sites/3, shell=/bin/bash, from=none",
+    "2026-10-09T22:06:46.167166+00:00 dns-arch chpasswd[3296]: pam_unix(chpasswd:chauthtok): password changed for set4_refused_test",
+    "2026-10-09T22:06:46.217339+00:00 dns-arch php-fpm[3301]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful",
+    "2026-10-09T22:06:46.398312+00:00 dns-arch php-fpm[3319]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful",
+    "2026-10-09T22:06:46.490214+00:00 dns-arch userdel[3324]: delete user 'set4_refused_test'",
+    "2026-10-09T22:06:46.492237+00:00 dns-arch userdel[3324]: removed group 'set4_refused_test' owned by 'set4_refused_test'",
+    "2026-10-09T22:06:46.492269+00:00 dns-arch userdel[3324]: removed shadow group 'set4_refused_test' owned by 'set4_refused_test'",
+    "2026-10-09T22:06:46.550624+00:00 dns-arch agent[410]: 2026/10/09 22:06:46 CreateSite set4-refused.test: nginx vhost activation: nginx validation failed: nginx validation failed: 2026/10/09 22:06:46 [emerg] 3308#3308: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31",
+    "2026-10-09T22:06:46.550624+00:00 dns-arch agent[410]: nginx: configuration file /etc/nginx/nginx.conf test failed: exit status 1; rollback restored and reloaded the previous vhost",
+    "2026-10-09T22:06:46.617680+00:00 dns-arch panel[420]: 2026/10/09 22:06:46 [502][domain] set4-refused.test: SITE_WEB_SERVER_REFUSED removed: 2026/10/09 22:06:46 [emerg] 3308#3308: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31"
+  ],
+  "journal_systemd_manager": [
+    "2026-10-09T22:06:46.322191+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+    "2026-10-09T22:06:46.356627+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+    "2026-10-09T22:06:46.567970+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+    "2026-10-09T22:06:46.598597+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+  ],
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "since_epoch": 1791583603,
+  "units": {
+    "nginx.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 22:03:32 UTC",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "active",
+      "ExecMainPID": "1198",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 22:03:32 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 22:06:46 UTC] ; stop_time=[Fri 2026-10-09 22:06:46 UTC] ; pid=3330 ; code=exited ; status=0 }",
+      "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "Fri 2026-10-09 22:03:31 UTC",
+      "InvocationID": "3a03a1d785a946938bbcc635c761073e",
+      "LoadState": "loaded",
+      "MainPID": "1198",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 22:06:46 UTC",
+      "SubState": "running",
+      "Type": "forking"
+    }
+  }
+}

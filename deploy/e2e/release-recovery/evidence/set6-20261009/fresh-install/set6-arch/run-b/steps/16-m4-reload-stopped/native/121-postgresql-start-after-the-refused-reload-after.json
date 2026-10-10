@@ -1,0 +1,47 @@
+{
+  "at": "2026-10-09T22:07:53Z",
+  "epoch": 1791583673.1423275,
+  "mode": "read-service",
+  "owner_action": false,
+  "postgres": {
+    "answers": true,
+    "conf_load_time": "2026-10-09 22:07:51.542616+00",
+    "postmaster_alive": true,
+    "postmaster_pid": 5177,
+    "postmaster_start_time": "2026-10-09 22:07:51.573348+00",
+    "server_version": "18.6",
+    "stderr": ""
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "postgresql.service": {
+      "is_active": "active",
+      "properties": {
+        "ActiveEnterTimestamp": "Fri 2026-10-09 22:07:51 UTC",
+        "ActiveState": "active",
+        "ConsistsOf": "",
+        "DropInPaths": "",
+        "ExecMainPID": "5177",
+        "ExecMainStartTimestamp": "Fri 2026-10-09 22:07:51 UTC",
+        "ExecReload": "{ path=/bin/kill ; argv[]=/bin/kill -HUP ${MAINPID} ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "ExecStart": "{ path=/usr/bin/postgres ; argv[]=/usr/bin/postgres -D ${PGROOT}/data ; ignore_errors=no ; start_time=[Fri 2026-10-09 22:07:51 UTC] ; stop_time=[n/a] ; pid=5177 ; code=(null) ; status=0/0 }",
+        "FragmentPath": "/usr/lib/systemd/system/postgresql.service",
+        "InactiveEnterTimestamp": "Fri 2026-10-09 22:07:40 UTC",
+        "LoadState": "loaded",
+        "MainPID": "5177",
+        "NRestarts": "0",
+        "PartOf": "",
+        "PropagatesReloadTo": "",
+        "ReloadPropagatedFrom": "",
+        "ReloadResult": "success",
+        "RemainAfterExit": "no",
+        "Result": "success",
+        "SubState": "running",
+        "Type": "notify",
+        "WantedBy": "multi-user.target",
+        "Wants": "network-online.target tmp.mount"
+      },
+      "returncode": 0
+    }
+  }
+}

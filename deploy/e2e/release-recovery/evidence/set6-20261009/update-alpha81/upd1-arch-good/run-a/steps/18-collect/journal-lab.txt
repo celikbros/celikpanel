@@ -1,0 +1,16 @@
+2026-10-09T22:39:31.674512+00:00 dns-arch systemd[1]: Started Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority).
+2026-10-09T22:39:36.501080+00:00 dns-arch systemd[1]: Starting [systemd-run] /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/current-worker-baseline-driver.py...
+2026-10-09T22:40:27.658127+00:00 dns-arch groupadd[6083]: group added to /etc/group: name=celikpanel, GID=969
+2026-10-09T22:40:27.663096+00:00 dns-arch groupadd[6083]: group added to /etc/gshadow: name=celikpanel
+2026-10-09T22:40:27.663182+00:00 dns-arch groupadd[6083]: new group: name=celikpanel, GID=969
+2026-10-09T22:40:27.684957+00:00 dns-arch useradd[6085]: new user: name=celikpanel, UID=969, GID=969, home=/var/lib/celikpanel, shell=/usr/sbin/nologin, from=none
+2026-10-09T22:40:37.546813+00:00 dns-arch systemd[1]: celikpanel-lab-current-worker-baseline.service: Deactivated successfully.
+2026-10-09T22:40:37.547152+00:00 dns-arch systemd[1]: Finished [systemd-run] /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/current-worker-baseline-driver.py.
+2026-10-09T22:40:37.547645+00:00 dns-arch systemd[1]: celikpanel-lab-current-worker-baseline.service: Consumed 33.389s CPU time over 1min 1.045s wall clock time, 1.2G memory peak.
+2026-10-09T22:40:39.354683+00:00 dns-arch systemd[1]: Stopping Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority)...
+2026-10-09T22:40:39.771766+00:00 dns-arch systemd[1]: cp-lab-upd1-origin.service: Deactivated successfully.
+2026-10-09T22:40:39.772054+00:00 dns-arch systemd[1]: Stopped Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority).
+2026-10-09T22:40:39.775312+00:00 dns-arch systemd[1]: cp-lab-upd1-origin.service: Consumed 160ms CPU time over 1min 8.097s wall clock time, 77M memory peak.
+-- Boot 84442f4733524ea887e17f72fe6a69cb --
+2026-10-09T22:40:56.019331+00:00 dns-arch systemd[1]: Started Disposable upd1 celikpanel.net fixture origin (guest loopback only; lab, no product authority).
+2026-10-09T22:45:19.276069+00:00 dns-arch systemd[1]: Started Disposable upd1 workload sampler (lab only; no product authority).

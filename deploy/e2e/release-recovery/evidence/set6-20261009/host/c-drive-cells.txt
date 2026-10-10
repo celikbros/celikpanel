@@ -1,0 +1,14 @@
+2026-10-09T21:46:23Z before set6-arch run-a (lab prepare) free_GiB=170.11 free_bytes=182651613184 (Get-PSDrive C reading of 2026-10-09T21:46:21Z, 2s old) allowed=yes
+2026-10-09T21:46:26Z before set6-arch run-a (guest start) free_GiB=170.11 free_bytes=182651613184 (Get-PSDrive C reading of 2026-10-09T21:46:21Z, 5s old) allowed=yes
+2026-10-09T21:58:42Z before set6-arch run-b (lab prepare) free_GiB=168.05 free_bytes=180445827072 (Get-PSDrive C reading of 2026-10-09T21:58:22Z, 20s old) allowed=yes
+2026-10-09T21:58:45Z before set6-arch run-b (guest start) free_GiB=168.05 free_bytes=180445827072 (Get-PSDrive C reading of 2026-10-09T21:58:22Z, 23s old) allowed=yes
+2026-10-09T22:08:20Z before set6-debian13 run-a (lab prepare) free_GiB=167.98 free_bytes=180361953280 (Get-PSDrive C reading of 2026-10-09T22:07:54Z, 26s old) allowed=yes
+2026-10-09T22:08:22Z before set6-debian13 run-a (guest start) free_GiB=167.98 free_bytes=180361953280 (Get-PSDrive C reading of 2026-10-09T22:07:54Z, 28s old) allowed=yes
+2026-10-09T22:19:39Z before set6-ubuntu run-a (lab prepare) free_GiB=167.97 free_bytes=180352180224 (Get-PSDrive C reading of 2026-10-09T22:19:26Z, 13s old) allowed=yes
+2026-10-09T22:19:41Z before set6-ubuntu run-a (guest start) free_GiB=167.97 free_bytes=180352180224 (Get-PSDrive C reading of 2026-10-09T22:19:26Z, 15s old) allowed=yes
+2026-10-09T22:38:17Z before upd1-arch-good run-a (lab prepare) free_GiB=167.97 free_bytes=180354416640 (Get-PSDrive C reading of 2026-10-09T22:37:58Z, 19s old) allowed=yes
+2026-10-09T22:38:19Z before upd1-arch-good run-a (guest start) free_GiB=167.97 free_bytes=180354416640 (Get-PSDrive C reading of 2026-10-09T22:37:58Z, 21s old) allowed=yes
+2026-10-09T22:48:22Z before upd1-debian13-good run-a (lab prepare) free_GiB=167.97 free_bytes=180352274432 (Get-PSDrive C reading of 2026-10-09T22:48:00Z, 22s old) allowed=yes
+2026-10-09T22:48:24Z before upd1-debian13-good run-a (guest start) free_GiB=167.97 free_bytes=180352274432 (Get-PSDrive C reading of 2026-10-09T22:48:00Z, 24s old) allowed=yes
+2026-10-09T23:01:43Z before upd1-ubuntu-good run-a (lab prepare) free_GiB=167.9 free_bytes=180278894592 (Get-PSDrive C reading of 2026-10-09T23:01:32Z, 11s old) allowed=yes
+2026-10-09T23:01:44Z before upd1-ubuntu-good run-a (guest start) free_GiB=167.9 free_bytes=180278894592 (Get-PSDrive C reading of 2026-10-09T23:01:32Z, 12s old) allowed=yes

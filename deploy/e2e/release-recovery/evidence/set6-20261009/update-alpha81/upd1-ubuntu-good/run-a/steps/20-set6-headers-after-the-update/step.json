@@ -1,0 +1,221 @@
+{
+  "checks": {
+    "checks": [
+      {
+        "detail": {
+          "answers_read": 11,
+          "by_request": {
+            "api-domains-as-owner": {
+              "Strict-Transport-Security": [
+                "max-age=31536000"
+              ],
+              "as_logged_in_owner": true,
+              "request": "GET /api/v1/domains",
+              "status": 200
+            },
+            "api-domains-no-login": {
+              "Strict-Transport-Security": [
+                "max-age=31536000"
+              ],
+              "as_logged_in_owner": false,
+              "request": "GET /api/v1/domains",
+              "status": 401
+            },
+            "api-options-preflight": {
+              "Strict-Transport-Security": [
+                "max-age=31536000"
+              ],
+              "as_logged_in_owner": false,
+              "request": "OPTIONS /api/v1/domains",
+              "status": 204
+            },
+            "api-post-without-origin": {
+              "Strict-Transport-Security": [
+                "max-age=31536000"
+              ],
+              "as_logged_in_owner": false,
+              "request": "POST /api/v1/set6-no-such-route",
+              "status": 403
+            },
+            "api-public": {
+              "Strict-Transport-Security": [
+                "max-age=31536000"
+              ],
+              "as_logged_in_owner": false,
+              "request": "GET /api/v1/panel/access-address",
+              "status": 200
+            },
+            "api-unknown-as-owner": {
+              "Strict-Transport-Security": [
+                "max-age=31536000"
+              ],
+              "as_logged_in_owner": true,
+              "request": "GET /api/v1/set6-no-such-route",
+              "status": 404
+            },
+            "api-unknown-no-login": {
+              "Strict-Transport-Security": [
+                "max-age=31536000"
+              ],
+              "as_logged_in_owner": false,
+              "request": "GET /api/v1/set6-no-such-route",
+              "status": 401
+            },
+            "api-version-as-owner": {
+              "Strict-Transport-Security": [
+                "max-age=31536000"
+              ],
+              "as_logged_in_owner": true,
+              "request": "GET /api/v1/panel/version",
+              "status": 200
+            },
+            "spa-asset": {
+              "Strict-Transport-Security": [
+                "max-age=31536000"
+              ],
+              "as_logged_in_owner": false,
+              "request": "GET /assets/app-U1Dtbfwf.js",
+              "status": 200
+            },
+            "spa-root": {
+              "Strict-Transport-Security": [
+                "max-age=31536000"
+              ],
+              "as_logged_in_owner": false,
+              "request": "GET /",
+              "status": 200
+            },
+            "spa-unknown-page": {
+              "Strict-Transport-Security": [
+                "max-age=31536000"
+              ],
+              "as_logged_in_owner": false,
+              "request": "GET /set6-no-such-page",
+              "status": 200
+            }
+          },
+          "not_read": [],
+          "other": {},
+          "with_exactly_the_expected_value": 11
+        },
+        "name": "B: every HTTPS answer of the running Panel carries Strict-Transport-Security exactly `max-age=31536000` (one header line, that value)",
+        "ok": true
+      },
+      {
+        "detail": {
+          "a 404": true,
+          "an API route answered 200": true,
+          "an API route answered 401 or 403": true,
+          "the SPA root answered 200": true
+        },
+        "name": "B: the readings cover the SPA root (200), an API route answered 200, an API route answered 401 or 403, and a 404",
+        "ok": true
+      },
+      {
+        "detail": {},
+        "name": "B: no HTTPS answer names includeSubDomains or preload in Strict-Transport-Security",
+        "ok": true
+      },
+      {
+        "detail": {
+          "plain_requests": {
+            "plain-http-port-80-address": {
+              "answered": true,
+              "body_start": "<!DOCTYPE html>\n<html>\n<head>\n<title>Welcome to nginx!</title>\n<style>\nhtml { color-scheme: light dark; }\nbody { width: ",
+              "error": null,
+              "location": [],
+              "server": [
+                "nginx/1.24.0 (Ubuntu)"
+              ],
+              "status_line": "HTTP/1.1 200 OK",
+              "to": "127.0.0.1:80"
+            },
+            "plain-http-port-80-panel-host-name": {
+              "answered": true,
+              "body_start": "<!DOCTYPE html>\n<html>\n<head>\n<title>Welcome to nginx!</title>\n<style>\nhtml { color-scheme: light dark; }\nbody { width: ",
+              "error": null,
+              "location": [],
+              "server": [
+                "nginx/1.24.0 (Ubuntu)"
+              ],
+              "status_line": "HTTP/1.1 200 OK",
+              "to": "127.0.0.1:80"
+            },
+            "plain-http-to-the-panel-port-2083": {
+              "answered": true,
+              "body_start": "Client sent an HTTP request to an HTTPS server.\n",
+              "error": null,
+              "location": [],
+              "server": [],
+              "status_line": "HTTP/1.0 400 Bad Request",
+              "to": "127.0.0.1:2083"
+            },
+            "plain-http-to-the-panel-port-2083-api": {
+              "answered": true,
+              "body_start": "Client sent an HTTP request to an HTTPS server.\n",
+              "error": null,
+              "location": [],
+              "server": [],
+              "status_line": "HTTP/1.0 400 Bad Request",
+              "to": "127.0.0.1:2083"
+            }
+          },
+          "with_the_header": {}
+        },
+        "name": "B: no answer to plain HTTP carries Strict-Transport-Security (what each plain-HTTP request got is recorded)",
+        "ok": true
+      },
+      {
+        "detail": {
+          "expected_commit": "9cb2339f10a0445f26ad7ddcc6058a4c359133f3",
+          "panel": {
+            "agent_commit": "9cb2339f10a0445f26ad7ddcc6058a4c359133f3",
+            "agent_matches": true,
+            "commit": "9cb2339f10a0445f26ad7ddcc6058a4c359133f3",
+            "schema_version": 43,
+            "version": "v0.1.0-alpha.82"
+          }
+        },
+        "name": "B: the Panel that answered is the build this reading is about (the commit its own version route names)",
+        "ok": true
+      }
+    ],
+    "expected": "max-age=31536000",
+    "expected_build": "good",
+    "files": [
+      "headers-after-the-update.json",
+      "headers-after-the-update.txt"
+    ],
+    "label": "after-the-update",
+    "listening_tcp_of_the_panel_process": [
+      "*:2083 users:((\"panel\",pid=54703,fd=8))"
+    ],
+    "listening_tcp_on_80_443_and_the_panel_port": [
+      "127.0.0.1:443 users:((\"python3\",pid=4070,fd=3))",
+      "0.0.0.0:80 users:((\"nginx\",pid=61538,fd=5),(\"nginx\",pid=61537,fd=5),(\"nginx\",pid=10961,fd=5))",
+      "*:2083 users:((\"panel\",pid=54703,fd=8))",
+      "[::]:80 users:((\"nginx\",pid=61538,fd=6),(\"nginx\",pid=61537,fd=6),(\"nginx\",pid=10961,fd=6))"
+    ],
+    "panel": {
+      "agent_commit": "9cb2339f10a0445f26ad7ddcc6058a4c359133f3",
+      "agent_matches": true,
+      "commit": "9cb2339f10a0445f26ad7ddcc6058a4c359133f3",
+      "schema_version": 43,
+      "version": "v0.1.0-alpha.82"
+    },
+    "panel_ports": [
+      2083
+    ],
+    "panel_unit": {
+      "ActiveState": "active",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 23:18:53 UTC",
+      "MainPID": "54703",
+      "SubState": "running"
+    },
+    "terminal_verdict": "passed"
+  },
+  "finished_at": "2026-10-09T23:20:37Z",
+  "name": "set6-headers-after-the-update",
+  "started_at": "2026-10-09T23:20:37Z",
+  "verdict": "passed"
+}

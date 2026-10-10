@@ -1,0 +1,9 @@
+{
+  "checks": {
+    "reason": "mail is not supported on this platform"
+  },
+  "finished_at": "2026-10-09T22:07:09Z",
+  "name": "M10-postfix-stop",
+  "started_at": "2026-10-09T22:07:09Z",
+  "verdict": "skipped"
+}

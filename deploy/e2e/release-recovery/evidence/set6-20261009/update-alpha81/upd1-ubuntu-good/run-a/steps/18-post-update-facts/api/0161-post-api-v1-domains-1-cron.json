@@ -1,0 +1,83 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "cron add: the change without a version (an old page)",
+  "request": {
+    "body": {
+      "command": "/usr/bin/true set3-after-update",
+      "schedule": "*/30 * * * *"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18661"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18661"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "0edf41d688604f112c974a4a53e74e06"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/1/cron"
+  },
+  "response": {
+    "elapsed_seconds": 0.003,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 23:20:24 GMT"
+      ],
+      [
+        "Content-Length",
+        "235"
+      ]
+    ],
+    "json": {
+      "code": "SETTINGS_VERSION_REQUIRED",
+      "error": "This request did not say which settings it was built from, so nothing was changed. Reload the page so it reads the current settings, then make the change again.",
+      "reason": "scheduled_tasks"
+    },
+    "status": 409,
+    "text": null
+  }
+}

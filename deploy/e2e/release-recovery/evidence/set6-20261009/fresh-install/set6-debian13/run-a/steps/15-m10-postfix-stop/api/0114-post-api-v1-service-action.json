@@ -1,0 +1,95 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S8 postfix stop (main.cf holds a line Postfix refuses)",
+  "request": {
+    "body": {
+      "action": "stop",
+      "name": "postfix"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18621"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18621"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "5a910fa4cd8464b2fca02ef39a38d69b"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/service/action"
+  },
+  "response": {
+    "elapsed_seconds": 3.365,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 22:18:09 GMT"
+      ],
+      [
+        "Content-Length",
+        "961"
+      ]
+    ],
+    "json": {
+      "applied": "stopped",
+      "note": {
+        "code": "SERVICE_ACTION_NOTE",
+        "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+        "reason": "unit_marked_failed_config",
+        "vars": {
+          "command": "sudo systemctl reset-failed postfix.service",
+          "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+          "failed_unit": "postfix.service",
+          "result": "exit-code",
+          "unit": "postfix"
+        }
+      },
+      "outcome": "verified",
+      "success": true
+    },
+    "status": 200,
+    "text": null
+  }
+}

@@ -1,0 +1,15 @@
+##### postfix.service
+2026-10-09T22:36:34.965046+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-09T22:36:34.965346+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+##### postfix@-.service
+2026-10-09T22:36:34.981866+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T22:36:34.986107+00:00 dns-ubuntu postmulti[49026]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T22:36:35.987055+00:00 dns-ubuntu systemd[1]: postfix@-.service: Control process exited, code=exited, status=1/FAILURE
+2026-10-09T22:36:35.987216+00:00 dns-ubuntu postfix/master[39261]: terminating on signal 15
+2026-10-09T22:36:35.988909+00:00 dns-ubuntu systemd[1]: postfix@-.service: Failed with result 'exit-code'.
+2026-10-09T22:36:35.989168+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+##### celikpanel-agent.service and celikpanel-panel.service
+2026-10-09T22:36:34.879173+00:00 dns-ubuntu panel[7644]: 2026/10/09 22:36:34 http: TLS handshake error from 127.0.0.1:49680: EOF
+2026-10-09T22:36:36.114209+00:00 dns-ubuntu postfix[49064]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T22:36:37.147312+00:00 dns-ubuntu cron[49069]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 806: Resource temporarily unavailable)
+2026-10-09T22:36:38.813723+00:00 dns-ubuntu panel[7644]: 2026/10/09 22:36:38 [200][service action] stop postfix: SERVICE_ACTION_NOTE unit_marked_failed_config: postfix@-.service

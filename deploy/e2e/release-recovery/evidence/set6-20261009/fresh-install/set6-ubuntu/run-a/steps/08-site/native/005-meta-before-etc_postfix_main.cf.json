@@ -1,0 +1,23 @@
+{
+  "backups": [],
+  "candidates_left": [],
+  "file": {
+    "exists": true,
+    "gid": 988,
+    "group": "celikpanel",
+    "inode": 531804,
+    "mode": "0644",
+    "mtime_ns": 1791585016010290608,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/postfix/main.cf",
+    "sha256": "f78b1d0bc43ffb2c210581208c26b0b76995360e1c8d4f7a96f10b95e34ebd56",
+    "size": 1898,
+    "text": "# See /usr/share/postfix/main.cf.dist for a commented, more complete version\n\n\n# Debian specific:  Specifying a file name will cause the first\n# line of that file to be used as the name.  The Debian default\n# is /etc/mailname.\n#myorigin = /etc/mailname\n\nsmtpd_banner = $myhostname ESMTP $mail_name (Ubuntu)\nbiff = no\n\n# appending .domain is the MUA's job.\nappend_dot_mydomain = no\n\n# Uncomment the next line to generate \"delayed mail\" warnings\n#delay_warning_time = 4h\n\nreadme_directory = no\n\n# See http://www.postfix.org/COMPATIBILITY_README.html -- default to 3.6 on\n# fresh installs.\ncompatibility_level = 3.6\n\n\n\n# TLS parameters\nsmtpd_tls_cert_file = /etc/ssl/celikpanel/_mail/default-cert.pem\nsmtpd_tls_key_file = /etc/ssl/celikpanel/_mail/default-key.pem\nsmtpd_tls_security_level = may\n\nsmtp_tls_CApath=/etc/ssl/certs\nsmtp_tls_security_level = may\nsmtp_tls_session_cache_database = btree:${data_directory}/smtp_scache\n\n\nsmtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination\nmyhostname = mail-ubuntu.upd1-infra.test\nalias_maps = hash:/etc/aliases\nalias_database = hash:/etc/aliases\nmydestination = $myhostname, dns-ubuntu, localhost.localdomain, , localhost\nrelayhost = \nmynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128\nmailbox_size_limit = 0\nrecipient_delimiter = +\ninet_interfaces = all\ninet_protocols = all\nvirtual_mailbox_base = /var/mail/vhosts\nvirtual_mailbox_domains = hash:/etc/postfix/vmailbox_domains\nvirtual_mailbox_maps = hash:/etc/postfix/vmailbox\nvirtual_alias_maps = hash:/etc/postfix/virtual\nvirtual_transport = virtual\nvirtual_uid_maps = static:5000\nvirtual_gid_maps = static:5000\nvirtual_minimum_uid = 100\nsmtpd_milters = inet:localhost:11332\nnon_smtpd_milters = \nmilter_default_action = accept\nmilter_protocol = 6\nsmtpd_tls_protocols = >=TLSv1.2\nsmtp_tls_protocols = >=TLSv1.2\nsmtpd_tls_loglevel = 1\ntls_server_sni_maps = \n",
+    "type": "regular",
+    "uid": 0
+  },
+  "mode": "read-file",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1"
+}

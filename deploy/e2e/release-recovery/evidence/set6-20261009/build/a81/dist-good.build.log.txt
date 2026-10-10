@@ -1,0 +1,77 @@
+make: Entering directory '/var/tmp/cp-pair-accept/dist/9cb2339f10a0445f26ad7ddcc6058a4c359133f3-acceptance-license/src'
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -ldflags "-s -w -X main.buildVersion=v0.1.0-alpha.82 -X main.buildCommit=9cb2339f10a0445f26ad7ddcc6058a4c359133f3" -o bin/panel ./cmd/panel
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -ldflags "-s -w -X main.buildVersion=v0.1.0-alpha.82 -X main.buildCommit=9cb2339f10a0445f26ad7ddcc6058a4c359133f3" -o bin/agent ./cmd/agent
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -tags celikpanel_mail_renewal -trimpath -buildvcs=false -ldflags "-s -w -X main.buildVersion=v0.1.0-alpha.82 -X main.buildCommit=9cb2339f10a0445f26ad7ddcc6058a4c359133f3" -o bin/mail-renewal ./cmd/agent
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" run ./deploy/mail-renewal/bundle --binary bin/mail-renewal --output bin/mail-renewal-runtime
+f57ff890e095e6fffb0f11c45f68c30b88c4c8325fdd041bd04dc7ebe0f802c2
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" run ./deploy/agent-native-contract --agent bin/agent --commit "9cb2339f10a0445f26ad7ddcc6058a4c359133f3" --output bin/agent-native-contract.json --mail-runtime bin/mail-renewal-runtime
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -o bin/schema17-bridge ./deploy/schema17bridge
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -ldflags "-s -w -X main.buildVersion=v0.1.0-alpha.82 -X main.buildCommit=9cb2339f10a0445f26ad7ddcc6058a4c359133f3" -o bin/recovery ./cmd/recovery
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -o bin/agent-checker $(cat deploy/recovery/agent-checker.sources)
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -o bin/panel-checker $(cat deploy/recovery/panel-checker.sources)
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" run ./deploy/recovery/bundle --source-root . --binary-root bin --output bin/recovery-runtime
+90a954387014d015f1842a3d723d7a7b6200691a69c7df7a5665919b7a20a20b
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/firewall-restore ./cmd/firewall-restore
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" run ./deploy/firewall/bundle --binary bin/firewall-restore --output bin/firewall-runtime
+6c1c51b4f07155f52e1e9fc88f529e9c5beaeee53c127eeccfb66eaab86031b0
+mkdir -p bin/dns-owner-tools
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/dns-peer-enroll ./cmd/dns-peer-enroll
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/bind-peer-inspect ./cmd/bind-peer-inspect
+env -i HOME="$HOME" PATH="$PATH" LC_ALL=C GOTOOLCHAIN=local GOENV=off GOWORK=off CGO_ENABLED=0 "/opt/celikpanel-test-toolchains/go1.26.5/go/bin/go" build -trimpath -buildvcs=false -ldflags "-s -w" -o bin/dns-owner-tools/pdns-peer-inspect ./cmd/pdns-peer-inspect
+cp cmd/dns-peer-enroll/README.md bin/dns-owner-tools/README.md
+cd web && PATH="/var/tmp/cp-set6-run/.bin/node/bin:$PATH" true ci --no-audit --no-fund
+cd web && PATH="/var/tmp/cp-set6-run/.bin/node/bin:$PATH" true run build
+# Mirror the operational release layout so initial installation has all
+# reviewed helpers. Privileged updates still enter through bootstrap-update.sh,
+# which publishes and verifies an immutable release before changing /opt.
+# İlk kurulum için incelenmiş yardımcıların tamamını taşı. Yetkili güncellemeler
+# yine değişmez sürümü yayımlayıp doğrulayan bootstrap-update.sh yolunu kullanır.
+rm -rf dist/celikpanel-v0.1.0-alpha.82
+mkdir -p dist/celikpanel-v0.1.0-alpha.82/bin dist/celikpanel-v0.1.0-alpha.82/web/dist dist/celikpanel-v0.1.0-alpha.82/deploy dist/celikpanel-v0.1.0-alpha.82/libexec
+cp bin/panel bin/agent bin/agent-native-contract.json bin/schema17-bridge dist/celikpanel-v0.1.0-alpha.82/bin/
+cp -r web/dist/. dist/celikpanel-v0.1.0-alpha.82/web/dist/
+cp -r deploy/. dist/celikpanel-v0.1.0-alpha.82/deploy/
+cp -r bin/recovery-runtime dist/celikpanel-v0.1.0-alpha.82/recovery-runtime
+cp -r bin/firewall-runtime dist/celikpanel-v0.1.0-alpha.82/firewall-runtime
+cp -r bin/mail-renewal-runtime dist/celikpanel-v0.1.0-alpha.82/mail-renewal-runtime
+cp -r bin/dns-owner-tools dist/celikpanel-v0.1.0-alpha.82/dns-owner-tools
+cp bin/firewall-runtime/celikpanel-firewall-restore.service dist/celikpanel-v0.1.0-alpha.82/deploy/systemd/celikpanel-firewall-restore.service
+cp install.sh bootstrap-update.sh bootstrap-prebuilt-update.sh update.sh rollback.sh Makefile README.md SECURITY.md NOTICE dist/celikpanel-v0.1.0-alpha.82/
+cp download-portal/get.sh dist/celikpanel-v0.1.0-alpha.82/libexec/get.sh
+echo 1 > dist/celikpanel-v0.1.0-alpha.82/release.version
+echo 9cb2339f10a0445f26ad7ddcc6058a4c359133f3 > dist/celikpanel-v0.1.0-alpha.82/release.commit
+echo f48cfe7b09245185bad982d39ffb4c2e1cad35a2 > dist/celikpanel-v0.1.0-alpha.82/release.tree
+# The customer archive carries only run-time material. Development and test
+# material (deploy/e2e, deploy/test-*, *_test.go, *_test.sh, test_*.py,
+# *.test.mjs, __pycache__, evidence directories) is never read by an
+# installed server; prune it from the complete staged tree before the
+# manifest (whose content guard refuses it) and the archive.
+bash deploy/prune-release-harness.sh dist/celikpanel-v0.1.0-alpha.82
+find dist/celikpanel-v0.1.0-alpha.82 -type d -exec chmod 0755 {} +
+find dist/celikpanel-v0.1.0-alpha.82 -type f -exec chmod 0644 {} +
+chmod 0755 dist/celikpanel-v0.1.0-alpha.82/bin/panel dist/celikpanel-v0.1.0-alpha.82/bin/agent dist/celikpanel-v0.1.0-alpha.82/bin/schema17-bridge
+chmod 0755 dist/celikpanel-v0.1.0-alpha.82/install.sh dist/celikpanel-v0.1.0-alpha.82/bootstrap-update.sh dist/celikpanel-v0.1.0-alpha.82/bootstrap-prebuilt-update.sh
+chmod 0755 dist/celikpanel-v0.1.0-alpha.82/update.sh dist/celikpanel-v0.1.0-alpha.82/rollback.sh
+chmod 0755 dist/celikpanel-v0.1.0-alpha.82/libexec/get.sh
+chmod 0755 dist/celikpanel-v0.1.0-alpha.82/firewall-runtime/restore
+chmod 0755 dist/celikpanel-v0.1.0-alpha.82/dns-owner-tools/dns-peer-enroll dist/celikpanel-v0.1.0-alpha.82/dns-owner-tools/bind-peer-inspect dist/celikpanel-v0.1.0-alpha.82/dns-owner-tools/pdns-peer-inspect
+chmod 0755 dist/celikpanel-v0.1.0-alpha.82/mail-renewal-runtime/renew dist/celikpanel-v0.1.0-alpha.82/mail-renewal-runtime/celikpanel-mail-host-cert
+chmod 0755 dist/celikpanel-v0.1.0-alpha.82/deploy/write-release-manifest.sh
+chmod 0755 dist/celikpanel-v0.1.0-alpha.82/recovery-runtime/bin/recovery dist/celikpanel-v0.1.0-alpha.82/recovery-runtime/bin/agent-checker dist/celikpanel-v0.1.0-alpha.82/recovery-runtime/bin/panel-checker dist/celikpanel-v0.1.0-alpha.82/recovery-runtime/bin/schema17-bridge
+chmod 0755 dist/celikpanel-v0.1.0-alpha.82/recovery-runtime/update.sh dist/celikpanel-v0.1.0-alpha.82/recovery-runtime/rollback.sh dist/celikpanel-v0.1.0-alpha.82/recovery-runtime/deploy/recovery/runtime-entry.sh
+chmod 0755 dist/celikpanel-v0.1.0-alpha.82/deploy/release-recovery-runner.sh
+chmod 0644 dist/celikpanel-v0.1.0-alpha.82/deploy/release-recovery-foundation.sh
+chmod 0644 dist/celikpanel-v0.1.0-alpha.82/deploy/release-recovery.protocol
+chmod 0644 dist/celikpanel-v0.1.0-alpha.82/deploy/systemd/celikpanel-release-recovery.service
+chmod 0644 dist/celikpanel-v0.1.0-alpha.82/deploy/systemd/celikpanel-release-recovery.timer
+bash dist/celikpanel-v0.1.0-alpha.82/deploy/write-release-manifest.sh dist/celikpanel-v0.1.0-alpha.82
+# Normalize archive modes as well as time/order/ownership. Plain cp applies
+# the caller's umask, so the same source must not package differently on
+# hosts using 022 and 077.
+tar --sort=name --mtime="@1791581994" --owner=0 --group=0 --numeric-owner --mode='u=rwX,go=rX' --format=gnu -cf dist/celikpanel-v0.1.0-alpha.82.tar -C dist celikpanel-v0.1.0-alpha.82
+gzip -n -f dist/celikpanel-v0.1.0-alpha.82.tar
+rm -rf dist/celikpanel-v0.1.0-alpha.82
+cd dist && sha256sum "celikpanel-v0.1.0-alpha.82.tar.gz" > "celikpanel-v0.1.0-alpha.82.tar.gz.sha256"
+→ dist/celikpanel-v0.1.0-alpha.82.tar.gz
+→ dist/celikpanel-v0.1.0-alpha.82.tar.gz.sha256
+make: Leaving directory '/var/tmp/cp-pair-accept/dist/9cb2339f10a0445f26ad7ddcc6058a4c359133f3-acceptance-license/src'

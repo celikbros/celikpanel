@@ -1,0 +1,736 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "useManagedServices (component config files)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18631"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/managed-services"
+  },
+  "response": {
+    "elapsed_seconds": 0.004,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 22:35:44 GMT"
+      ],
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ]
+    ],
+    "json": {
+      "dns_identity_ready": true,
+      "mail_hostname": {
+        "current": "dns-ubuntu",
+        "current_usable": false,
+        "hostname": "mail-ubuntu.upd1-infra.test",
+        "source": "saved",
+        "will_set_hostname": false
+      },
+      "profiles": [
+        {
+          "available": true,
+          "description": "Postfix SMTP and Dovecot IMAP/POP3 with authenticated submission.",
+          "id": "core-mail",
+          "latest_attempt_status": "none",
+          "name": "Core Mail",
+          "services": [
+            "postfix",
+            "dovecot"
+          ],
+          "status": "complete",
+          "verified": false,
+          "warning": "Components are running. Run Repair to verify and reconcile the complete mail profile, including mail TLS and authenticated submission."
+        },
+        {
+          "available": true,
+          "description": "Core mail plus Nginx, PHP-FPM and Roundcube webmail.",
+          "id": "webmail",
+          "latest_attempt_status": "succeeded",
+          "name": "Webmail",
+          "services": [
+            "postfix",
+            "dovecot",
+            "nginx",
+            "php-fpm",
+            "roundcube"
+          ],
+          "status": "complete",
+          "verified": true
+        },
+        {
+          "available": true,
+          "description": "Core mail with Rspamd spam filtering.",
+          "id": "protected-mail",
+          "latest_attempt_status": "succeeded",
+          "name": "Spam-Protected Mail",
+          "services": [
+            "postfix",
+            "dovecot",
+            "rspamd"
+          ],
+          "status": "complete",
+          "verified": true
+        }
+      ],
+      "scanned_at": "2026-10-09T22:35:44Z",
+      "services": [
+        {
+          "category": "web",
+          "config_files": [
+            {
+              "is_managed": true,
+              "path": "/etc/php/8.3/fpm/php-fpm.conf"
+            },
+            {
+              "is_managed": true,
+              "path": "/etc/php/8.3/fpm/pool.d/www.conf"
+            }
+          ],
+          "description": "PHP FastCGI Process Manager",
+          "icon": "🐘",
+          "id": "php-fpm",
+          "installed_evidence": "systemd_unit",
+          "instances": [
+            {
+              "managed": true,
+              "path": "/etc/php/8.3",
+              "status": "active (running)",
+              "unit": "php8.3-fpm",
+              "version": "8.3"
+            }
+          ],
+          "is_installed": true,
+          "kind": "runtime",
+          "name": "PHP-FPM",
+          "packages": [
+            "php-fpm"
+          ],
+          "repair_available": true,
+          "repair_package": "php8.3-fpm",
+          "status": "active (running)",
+          "unit": "php8.3-fpm",
+          "versions": [
+            "8.3"
+          ]
+        },
+        {
+          "category": "web",
+          "config_files": [],
+          "description": "JavaScript Runtime",
+          "icon": "🟩",
+          "id": "node",
+          "instances": [],
+          "is_installed": false,
+          "kind": "runtime",
+          "name": "Node.js",
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "web",
+          "config_files": [
+            {
+              "is_managed": true,
+              "path": "/etc/nginx/nginx.conf"
+            },
+            {
+              "is_managed": true,
+              "path": "/etc/nginx/sites-enabled/default"
+            },
+            {
+              "is_managed": true,
+              "path": "/etc/nginx/sites-enabled/set1-owner.test.conf"
+            }
+          ],
+          "description": "Reverse Proxy Server",
+          "icon": "🔄",
+          "id": "nginx",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": true,
+          "kind": "service",
+          "name": "Nginx",
+          "packages": [
+            "nginx"
+          ],
+          "ports": [
+            "80/tcp",
+            "443/tcp"
+          ],
+          "repair_available": true,
+          "status": "active (running)",
+          "unit": "nginx",
+          "versions": []
+        },
+        {
+          "category": "web",
+          "config_files": [],
+          "conflict_with": "Nginx",
+          "description": "Web Server",
+          "icon": "🪶",
+          "id": "apache",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Apache",
+          "not_offered": true,
+          "not_offered_kind": "integration",
+          "not_offered_reason": "Apache virtual-host integration is not available in CelikPanel yet; use Nginx.",
+          "packages": [
+            "apache2"
+          ],
+          "ports": [
+            "80/tcp",
+            "443/tcp"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "database",
+          "config_files": [
+            {
+              "is_managed": true,
+              "path": "/etc/postgresql/16/main/postgresql.conf"
+            },
+            {
+              "is_managed": true,
+              "path": "/etc/postgresql/16/main/pg_hba.conf"
+            }
+          ],
+          "description": "Database Server",
+          "icon": "🐘",
+          "id": "postgresql",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": true,
+          "kind": "service",
+          "name": "PostgreSQL",
+          "packages": [
+            "postgresql"
+          ],
+          "repair_available": true,
+          "repair_package": "postgresql-16",
+          "status": "active (running)",
+          "unit": "postgresql@16-main",
+          "versions": []
+        },
+        {
+          "category": "database",
+          "config_files": [
+            {
+              "is_managed": true,
+              "path": "/etc/mysql/mariadb.cnf"
+            },
+            {
+              "is_managed": true,
+              "path": "/etc/mysql/mariadb.conf.d/50-server.cnf"
+            }
+          ],
+          "description": "Database Server",
+          "icon": "🦭",
+          "id": "mariadb",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": true,
+          "kind": "service",
+          "name": "MariaDB",
+          "packages": [
+            "mariadb-server"
+          ],
+          "repair_available": true,
+          "status": "active (running)",
+          "unit": "mariadb",
+          "versions": []
+        },
+        {
+          "category": "database",
+          "config_files": [],
+          "description": "MariaDB/MySQL web admin tool",
+          "icon": "🐬",
+          "id": "phpmyadmin",
+          "installed_evidence": "package",
+          "instances": [],
+          "is_installed": false,
+          "kind": "tool",
+          "name": "phpMyAdmin",
+          "packages": [
+            "phpmyadmin"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "database",
+          "config_files": [],
+          "description": "PostgreSQL web admin tool",
+          "icon": "🐘",
+          "id": "phppgadmin",
+          "installed_evidence": "package",
+          "instances": [],
+          "is_installed": false,
+          "kind": "tool",
+          "name": "phpPgAdmin",
+          "packages": [
+            "phppgadmin"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "email",
+          "config_files": [
+            {
+              "is_managed": true,
+              "path": "/etc/postfix/main.cf"
+            },
+            {
+              "is_managed": true,
+              "path": "/etc/postfix/master.cf"
+            }
+          ],
+          "description": "SMTP Server",
+          "icon": "📧",
+          "id": "postfix",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": true,
+          "kind": "service",
+          "name": "Postfix",
+          "packages": [
+            "postfix"
+          ],
+          "ports": [
+            "25/tcp",
+            "587/tcp",
+            "465/tcp"
+          ],
+          "repair_available": true,
+          "status": "active (running)",
+          "unit": "postfix",
+          "versions": []
+        },
+        {
+          "category": "email",
+          "config_files": [],
+          "conflict_with": "Postfix",
+          "description": "SMTP Server",
+          "icon": "📮",
+          "id": "exim",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Exim",
+          "not_offered": true,
+          "not_offered_kind": "integration",
+          "not_offered_reason": "Exim mailbox, TLS and submission integration is not available in CelikPanel yet; use Postfix.",
+          "packages": [
+            "exim4-daemon-light"
+          ],
+          "ports": [
+            "25/tcp",
+            "587/tcp",
+            "465/tcp"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "email",
+          "config_files": [
+            {
+              "is_managed": true,
+              "path": "/etc/rspamd/rspamd.conf"
+            }
+          ],
+          "description": "Spam Filter & DKIM",
+          "icon": "🧹",
+          "id": "rspamd",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": true,
+          "kind": "service",
+          "name": "Rspamd",
+          "packages": [
+            "rspamd"
+          ],
+          "repair_available": true,
+          "status": "active (running)",
+          "unit": "rspamd",
+          "versions": []
+        },
+        {
+          "category": "email",
+          "config_files": [
+            {
+              "is_managed": true,
+              "path": "/etc/dovecot/dovecot.conf"
+            }
+          ],
+          "description": "IMAP/POP3 Server",
+          "icon": "📬",
+          "id": "dovecot",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": true,
+          "kind": "service",
+          "name": "Dovecot",
+          "packages": [
+            "dovecot-imapd",
+            "dovecot-pop3d",
+            "dovecot-lmtpd"
+          ],
+          "ports": [
+            "143/tcp",
+            "993/tcp",
+            "110/tcp",
+            "995/tcp"
+          ],
+          "repair_available": true,
+          "status": "active (running)",
+          "unit": "dovecot",
+          "versions": []
+        },
+        {
+          "category": "email",
+          "config_files": [],
+          "description": "Webmail",
+          "icon": "✉️",
+          "id": "roundcube",
+          "installed_evidence": "application_files",
+          "instances": [],
+          "is_installed": true,
+          "kind": "tool",
+          "name": "Roundcube",
+          "repair_available": true,
+          "status": "installed",
+          "versions": []
+        },
+        {
+          "category": "email",
+          "config_files": [],
+          "conflict_with": "Rspamd",
+          "description": "Spam Filter",
+          "icon": "🛡️",
+          "id": "spamassassin",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "SpamAssassin",
+          "packages": [
+            "spamassassin",
+            "spamd",
+            "spamass-milter"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "security",
+          "config_files": [],
+          "description": "Built-in VPN server",
+          "icon": "🔐",
+          "id": "wireguard",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "WireGuard VPN",
+          "packages": [
+            "wireguard"
+          ],
+          "ports": [
+            "51820/udp"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "security",
+          "config_files": [],
+          "description": "SSL certificate provider",
+          "icon": "🔐",
+          "id": "certbot",
+          "installed_evidence": "package",
+          "instances": [],
+          "is_installed": true,
+          "kind": "tool",
+          "name": "Let's Encrypt client (certbot)",
+          "packages": [
+            "certbot"
+          ],
+          "repair_available": true,
+          "status": "installed",
+          "versions": []
+        },
+        {
+          "category": "security",
+          "config_files": [],
+          "description": "Intrusion Prevention",
+          "icon": "🚫",
+          "id": "fail2ban",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Fail2ban",
+          "packages": [
+            "fail2ban"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "security",
+          "config_files": [],
+          "description": "nftables — the panel firewall's packet-filtering engine",
+          "icon": "🧱",
+          "id": "nftables",
+          "installed_evidence": "package",
+          "instances": [],
+          "is_installed": true,
+          "kind": "tool",
+          "name": "Firewall engine",
+          "packages": [
+            "nftables"
+          ],
+          "repair_available": true,
+          "status": "installed",
+          "versions": []
+        },
+        {
+          "category": "security",
+          "config_files": [],
+          "description": "Antivirus / malware scanner",
+          "icon": "🦠",
+          "id": "clamav",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "ClamAV",
+          "packages": [
+            "clamav",
+            "clamav-daemon"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "dns",
+          "config_files": [],
+          "description": "DNS Server",
+          "icon": "🌐",
+          "id": "bind",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "BIND",
+          "packages": [
+            "bind9"
+          ],
+          "ports": [
+            "53/tcp",
+            "53/udp"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "dns",
+          "config_files": [],
+          "description": "DNS Server",
+          "icon": "⚡",
+          "id": "pdns",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "PowerDNS",
+          "packages": [
+            "pdns-server",
+            "pdns-backend-sqlite3"
+          ],
+          "ports": [
+            "53/tcp",
+            "53/udp"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "ftp",
+          "config_files": [],
+          "description": "FTP Server",
+          "icon": "📂",
+          "id": "vsftpd",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "vsftpd",
+          "not_offered": true,
+          "not_offered_kind": "integration",
+          "not_offered_reason": "vsftpd passive-mode ports, TLS and per-subscription access are not integrated in CelikPanel yet.",
+          "packages": [
+            "vsftpd"
+          ],
+          "ports": [
+            "21/tcp"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "cache",
+          "config_files": [],
+          "description": "Cache Server",
+          "icon": "⚡",
+          "id": "redis",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Redis",
+          "packages": [
+            "redis-server"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "cache",
+          "config_files": [],
+          "description": "Cache Server",
+          "icon": "🗝️",
+          "id": "valkey",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Valkey",
+          "packages": [
+            "valkey-server"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "cache",
+          "config_files": [],
+          "description": "Cache Server",
+          "icon": "💾",
+          "id": "memcached",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Memcached",
+          "packages": [
+            "memcached"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "monitoring",
+          "config_files": [],
+          "description": "Real-time metrics agent",
+          "icon": "📈",
+          "id": "netdata",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": false,
+          "kind": "service",
+          "name": "Netdata",
+          "packages": [
+            "netdata"
+          ],
+          "repair_available": true,
+          "status": "not_installed",
+          "versions": []
+        },
+        {
+          "category": "system",
+          "config_files": [],
+          "description": "Native cron daemon that runs scheduled tasks",
+          "icon": "⏰",
+          "id": "cron",
+          "installed_evidence": "systemd_unit",
+          "instances": [],
+          "is_installed": true,
+          "kind": "service",
+          "name": "Scheduled tasks (cron)",
+          "packages": [
+            "cron"
+          ],
+          "repair_available": true,
+          "status": "active (running)",
+          "unit": "cron",
+          "versions": []
+        }
+      ]
+    },
+    "status": 200,
+    "text": null
+  }
+}

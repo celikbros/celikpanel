@@ -1,0 +1,8 @@
+Windows C: watcher: 230 readings from 2026-10-09T21:33:18Z to 2026-10-09T23:28:05Z; largest gap 31 s; gaps over 45 s: 0
+fresh-install/set6-arch/run-a: 19 steps; largest pause between two steps 0 s; longest step setup 222 s; watcher readings inside the wrapper window: 20, largest gap between them 31 s; watcher gaps over 45 s that touch the window: 0
+fresh-install/set6-arch/run-b: 19 steps; largest pause between two steps 0 s; longest step setup 211 s; watcher readings inside the wrapper window: 19, largest gap between them 31 s; watcher gaps over 45 s that touch the window: 0
+fresh-install/set6-debian13/run-a: 19 steps; largest pause between two steps 0 s; longest step setup 402 s; watcher readings inside the wrapper window: 22, largest gap between them 31 s; watcher gaps over 45 s that touch the window: 0
+fresh-install/set6-ubuntu/run-a: 19 steps; largest pause between two steps 0 s; longest step setup 695 s; watcher readings inside the wrapper window: 36, largest gap between them 31 s; watcher gaps over 45 s that touch the window: 0
+update-alpha81/upd1-arch-good/run-a: 20 steps; largest pause between two steps 0 s; longest step setup 176 s; watcher readings inside the wrapper window: 20, largest gap between them 31 s; watcher gaps over 45 s that touch the window: 0
+update-alpha81/upd1-debian13-good/run-a: 24 steps; largest pause between two steps 0 s; longest step setup 362 s; watcher readings inside the wrapper window: 26, largest gap between them 31 s; watcher gaps over 45 s that touch the window: 0
+update-alpha81/upd1-ubuntu-good/run-a: 24 steps; largest pause between two steps 1 s; longest step setup 639 s; watcher readings inside the wrapper window: 39, largest gap between them 31 s; watcher gaps over 45 s that touch the window: 0

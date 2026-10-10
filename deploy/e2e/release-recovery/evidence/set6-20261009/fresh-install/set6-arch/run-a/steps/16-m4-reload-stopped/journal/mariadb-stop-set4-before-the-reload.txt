@@ -1,0 +1,12 @@
+2026-10-09T21:56:07.077879+00:00 dns-arch systemd[1]: Stopping MariaDB 13.0.2 database server...
+2026-10-09T21:56:07.078070+00:00 dns-arch mariadbd[982]: 2026-10-09 21:56:07 0 [Note] /usr/bin/mariadbd (initiated by: unknown): Normal shutdown
+2026-10-09T21:56:07.080402+00:00 dns-arch mariadbd[982]: 2026-10-09 21:56:07 0 [Note] InnoDB: FTS optimize thread exiting.
+2026-10-09T21:56:07.101534+00:00 dns-arch mariadbd[982]: 2026-10-09 21:56:07 0 [Note] InnoDB: Starting shutdown...
+2026-10-09T21:56:07.109800+00:00 dns-arch mariadbd[982]: 2026-10-09 21:56:07 0 [Note] InnoDB: Dumping buffer pool(s) to /var/lib/mysql/ib_buffer_pool
+2026-10-09T21:56:07.110478+00:00 dns-arch mariadbd[982]: 2026-10-09 21:56:07 0 [Note] InnoDB: Buffer pool(s) dump completed at 261009 21:56:07
+2026-10-09T21:56:07.177104+00:00 dns-arch mariadbd[982]: 2026-10-09 21:56:07 0 [Note] InnoDB: Removed temporary tablespace data file: "./ibtmp1"
+2026-10-09T21:56:07.177104+00:00 dns-arch mariadbd[982]: 2026-10-09 21:56:07 0 [Note] Shutdown completed; log sequence number 90494; transaction id 31
+2026-10-09T21:56:07.199406+00:00 dns-arch mariadbd[982]: 2026-10-09 21:56:07 0 [Note] /usr/bin/mariadbd: Shutdown complete
+2026-10-09T21:56:07.203551+00:00 dns-arch systemd[1]: mariadb.service: Deactivated successfully.
+2026-10-09T21:56:07.203910+00:00 dns-arch systemd[1]: Stopped MariaDB 13.0.2 database server.
+2026-10-09T21:56:07.204586+00:00 dns-arch systemd[1]: mariadb.service: Consumed 589ms CPU time over 4min 18.660s wall clock time, 187.6M memory peak.

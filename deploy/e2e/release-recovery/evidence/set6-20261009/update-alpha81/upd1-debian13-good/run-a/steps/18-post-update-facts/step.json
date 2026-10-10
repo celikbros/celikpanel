@@ -1,0 +1,374 @@
+{
+  "checks": {
+    "a_ledger": {
+      "expected_version": 43,
+      "facts": {
+        "integrity": true,
+        "ledger_is_the_released_one": true,
+        "request_identities": true,
+        "schema_is_the_released_one": true,
+        "version": true
+      },
+      "ledger_last": [
+        {
+          "filename": "041_server_setup_execution.sql",
+          "sha256": "5939ee55623ec7dd2ea5eecfdd8fe3c9c48000d4a50b0c2dbbe0b1680ce809bd",
+          "version": 41
+        },
+        {
+          "filename": "042_remote_dns_publish.sql",
+          "sha256": "60b4c3ee2c0c1348072d74ef505d4f7368552f35503e90871aa7eeb4f7b9e8d5",
+          "version": 42
+        },
+        {
+          "filename": "043_request_identities.sql",
+          "sha256": "92302046d132465b5048d4c2a4a4e2e737fe9e50494ece60b679109309c89daa",
+          "version": 43
+        }
+      ],
+      "ledger_rows": 43,
+      "ledger_sha256": "a0b5c4247f83f86d4daa700baf272f5a666c0f688ede53e1707285126c96b7c0",
+      "pinned_ledger_sha256": "a0b5c4247f83f86d4daa700baf272f5a666c0f688ede53e1707285126c96b7c0",
+      "pinned_schema_sha256": "48cbd3b47573c2e09feefa4605fc4822df178a719c5e22a7e1c5cb94bb7770f7",
+      "request_identities": {
+        "columns": [
+          "id",
+          "actor_user_id",
+          "method",
+          "route",
+          "request_sha256",
+          "status",
+          "response_status",
+          "response_retained",
+          "response_content_type",
+          "response_body",
+          "created_at",
+          "finished_at",
+          "expires_at"
+        ],
+        "exists": true,
+        "rows": 0
+      },
+      "schema_sha256": "48cbd3b47573c2e09feefa4605fc4822df178a719c5e22a7e1c5cb94bb7770f7",
+      "schema_sha256_without_statistics": "48cbd3b47573c2e09feefa4605fc4822df178a719c5e22a7e1c5cb94bb7770f7",
+      "schema_version": 43,
+      "statistics_tables": [],
+      "table_count": 66,
+      "verdict": "as-expected"
+    },
+    "b_guard": {
+      "archives": [
+        0,
+        0,
+        1
+      ],
+      "body": {
+        "type": "full"
+      },
+      "identity_rows": [
+        0,
+        0
+      ],
+      "new_archives": [
+        "full-20261009T230033.364528844Z-84ed99ad0d815e7b.cpbak"
+      ],
+      "refused_and_nothing_changed": true,
+      "route": "POST /api/v1/domains/1/backups",
+      "row": {
+        "response_retained": 1,
+        "response_status": 200,
+        "route": "/api/v1/domains/{id}/backups",
+        "status": "done"
+      },
+      "with_the_header": {
+        "backup": "full-20261009T230033.364528844Z-84ed99ad0d815e7b.cpbak",
+        "code": null,
+        "error": null,
+        "http": 200
+      },
+      "without_the_header": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)",
+        "http": 428,
+        "screen_text": {
+          "en": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again.",
+          "tr": "Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "works_with_the_header": true
+    },
+    "c_version_tokens": {
+      "backup_schedule": {
+        "ok": true,
+        "read_after": {
+          "backup_type": "full",
+          "enabled": true,
+          "frequency": "weekly",
+          "last_attempt": null,
+          "last_error": null,
+          "last_run": null,
+          "last_status": null,
+          "retention": 30,
+          "version": "bs1-4f75b6db4a759e7a59f7dd36b346af84183b80ba887d440bf303357b5b217f89"
+        },
+        "read_http": 200,
+        "version_after": "bs1-4f75b6db4a759e7a59f7dd36b346af84183b80ba887d440bf303357b5b217f89",
+        "version_before": "bs1-a451686b962008db0e385f50feb14a1922948fda32d1f34fccc0688d7752a682",
+        "with_the_version": {
+          "body": {
+            "success": true,
+            "version": "bs1-4f75b6db4a759e7a59f7dd36b346af84183b80ba887d440bf303357b5b217f89"
+          },
+          "http": 200
+        },
+        "without_a_version": {
+          "code": "SETTINGS_VERSION_REQUIRED",
+          "error": "This request did not say which settings it was built from, so nothing was changed. Reload the page so it reads the current settings, then make the change again.",
+          "http": 409,
+          "reason": "backup_schedule"
+        }
+      },
+      "cron": {
+        "native_crontab_lines_with_the_command": 1,
+        "ok": true,
+        "read_after": {
+          "jobs": [
+            {
+              "command": "/bin/date -u -Iseconds > \"$HOME/upd1-cron-stamp.txt\"",
+              "comment": "upd1 owner cron",
+              "enabled": true,
+              "id": "2455b30ed819fb8f",
+              "schedule": "* * * * *"
+            },
+            {
+              "command": "/usr/bin/true set3-after-update",
+              "enabled": true,
+              "id": "3edda52fbe77a2c7",
+              "schedule": "*/30 * * * *"
+            }
+          ],
+          "version": "ct1-af0653e215e758984720703a7c0f1cbcb64f7839303f71c087aa4f1ed964e28d"
+        },
+        "read_http": 200,
+        "version_after": "ct1-af0653e215e758984720703a7c0f1cbcb64f7839303f71c087aa4f1ed964e28d",
+        "version_before": "ct1-6c9e025a95e461ac5a888e3ff347c496a910cf2756ea42f5207c7f724504e7c9",
+        "with_the_version": {
+          "body": {
+            "success": true
+          },
+          "http": 200
+        },
+        "without_a_version": {
+          "code": "SETTINGS_VERSION_REQUIRED",
+          "error": "This request did not say which settings it was built from, so nothing was changed. Reload the page so it reads the current settings, then make the change again.",
+          "http": 409,
+          "reason": "scheduled_tasks"
+        }
+      },
+      "mail_policy": {
+        "native_postconf": "37",
+        "ok": true,
+        "read_after": {
+          "dnsbl_zones": [],
+          "message_size_mb": 9,
+          "outbound_rate_limit": 37,
+          "version": "mp1-5b786b06cee5ee2104d7c2048495b719821b157c70faefdaf46602a04d673aa9"
+        },
+        "read_http": 200,
+        "version_after": "mp1-5b786b06cee5ee2104d7c2048495b719821b157c70faefdaf46602a04d673aa9",
+        "version_before": "mp1-d66482b5c93bee71398427c4cd13255aa7a00375dcd7942d90e3a015bd30f0cc",
+        "with_the_version": {
+          "body": {
+            "applied": "reloaded",
+            "policy": {
+              "dnsbl_zones": [],
+              "message_size_mb": 9,
+              "outbound_rate_limit": 37,
+              "version": "mp1-5b786b06cee5ee2104d7c2048495b719821b157c70faefdaf46602a04d673aa9"
+            },
+            "success": true
+          },
+          "http": 200
+        },
+        "without_a_version": {
+          "code": "SETTINGS_VERSION_REQUIRED",
+          "error": "This request did not say which settings it was built from, so nothing was changed. Reload the page so it reads the current settings, then make the change again.",
+          "http": 409,
+          "reason": "mail_policy"
+        }
+      }
+    },
+    "d_deferred_mail": {
+      "completed": true,
+      "last": {
+        "deferred": [
+          "mail certificate publication",
+          "mail filter wiring"
+        ],
+        "finished": true,
+        "gave_up": false,
+        "pid": "37682",
+        "ready_at": "2026-10-09T22:58:56.546432+00:00",
+        "repeated": [],
+        "resolved": {
+          "mail certificate publication": [
+            {
+              "at": "2026-10-09T22:59:38.486257+00:00",
+              "attempt": 1,
+              "outcome": "completed"
+            }
+          ],
+          "mail filter wiring": [
+            {
+              "at": "2026-10-09T22:59:38.486257+00:00",
+              "attempt": 1,
+              "outcome": "completed"
+            }
+          ]
+        },
+        "started_at": "2026-10-09T22:58:56.423908+00:00"
+      },
+      "measured": true,
+      "source": "the deferred-mail-watch step of this cell"
+    },
+    "e_agreement": {
+      "agreement": {
+        "known_sources": [
+          "api",
+          "cli"
+        ],
+        "phase": {
+          "api": "succeeded",
+          "cli": "succeeded"
+        },
+        "reasons": [],
+        "sources": [
+          "api",
+          "cli",
+          "shell"
+        ],
+        "verdict": "agree"
+      },
+      "api_pair": [
+        "succeeded",
+        "update_verified"
+      ],
+      "card": {
+        "keys": [
+          "panelUpdate.succeeded",
+          "panelUpdate.succeeded"
+        ],
+        "missing_keys": [],
+        "observation_error": null,
+        "role": "good",
+        "server_message": null,
+        "source": {
+          "observation": {
+            "path": "lib/recoveryObservation.ts",
+            "sha256": "511f922c36fe4bae5feddde6abc18580a7e767a63f9fbaca85bb6d33f3a2685d"
+          },
+          "outcome": {
+            "path": "lib/systemUpdateOutcome.ts",
+            "sha256": "7329a488a436f12637f3c46a60521bbe22027de032044c4963f5686b0a83f67c"
+          },
+          "screen": {
+            "path": "components/RecoveryAccess.tsx",
+            "sha256": "d5e44cfcd69ac883b817da07b9f09e6a987bc453af287ce0d5b6e1a4cca568f9"
+          },
+          "typed": {
+            "path": "lib/systemUpdateFailure.ts",
+            "sha256": "b12d9a0d2989bd70670e02481159128ba716bb21f15db5084b9631475a610af4"
+          }
+        },
+        "state": "succeeded",
+        "texts": {
+          "en": [
+            "The update completed. The panel and agent restarted on the new version.",
+            "The update completed. The panel and agent restarted on the new version."
+          ],
+          "tr": [
+            "Güncelleme tamamlandı. Panel ve agent yeni sürümle yeniden başladı.",
+            "Güncelleme tamamlandı. Panel ve agent yeni sürümle yeniden başladı."
+          ]
+        },
+        "unavailable": null
+      },
+      "card_judged": {
+        "findings": [],
+        "server_message_line": null,
+        "verdict": "as-expected"
+      },
+      "card_state": "succeeded",
+      "cli_pair": [
+        "succeeded",
+        "update_verified"
+      ],
+      "cli_text": {
+        "en": "The update completed and the new version was verified when it finished. Nothing else is needed on the server. Open the panel to check that everything works now.\nRequest: 757b446c7f998fc21b7ce872be52aaf6\nRecorded at: 2026-10-09T22:59:07Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=succeeded reason=update_verified proof=update_verified\n",
+        "tr": "Güncelleme tamamlandı ve yeni sürüm bittiği anda doğrulandı. Sunucuda başka bir işlem gerekmiyor. Her şeyin şu an çalıştığını görmek için paneli açın.\nİşlem: 757b446c7f998fc21b7ce872be52aaf6\nKayıt zamanı: 2026-10-09T22:59:07Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=succeeded reason=update_verified proof=update_verified\n"
+      },
+      "expected": [
+        "succeeded",
+        "update_verified"
+      ],
+      "recovery_screen": {
+        "actionable": true,
+        "keys": [
+          "recovery.phase.succeeded",
+          "recovery.next.succeeded"
+        ],
+        "missing_keys": [],
+        "no_actor_or_action": false,
+        "observation": {
+          "automatic_recovery": null,
+          "failure_code": null,
+          "first_failure_code": null,
+          "observation": "known",
+          "observed_at": "2026-10-09T22:59:07Z",
+          "panel_state": "ready",
+          "phase": "succeeded",
+          "previous_failure": null,
+          "reason": "update_verified",
+          "renewal_before_update": null,
+          "request_id": "757b446c7f998fc21b7ce872be52aaf6",
+          "terminal_proof": "update_verified",
+          "waiting_for": null
+        },
+        "observation_unavailable": false,
+        "texts": {
+          "en": [
+            "Update verified",
+            "The server verified this update. Reload CelikPanel to load the installed interface."
+          ],
+          "tr": [
+            "Güncelleme doğrulandı",
+            "Sunucu bu güncellemeyi doğruladı. Kurulu arayüzü yüklemek için CelikPanel’i yeniden yükleyin."
+          ]
+        }
+      },
+      "update_status": {
+        "body": {
+          "created_at": "2026-10-09T22:58:11.690708834Z",
+          "found": true,
+          "request_id": "757b446c7f998fc21b7ce872be52aaf6",
+          "status": "succeeded",
+          "target": {
+            "arch": "amd64",
+            "archive_sha256": "86efd86a0cffcf5c8956ab55ce32144ec1ac52da77fb8f3c69a350cc185f149e",
+            "archive_size": "65906701",
+            "commit": "9cb2339f10a0445f26ad7ddcc6058a4c359133f3",
+            "os": "linux",
+            "sequence": "82",
+            "version": "v0.1.0-alpha.82"
+          },
+          "updated_at": "2026-10-09T22:59:07.097996026Z"
+        },
+        "http": 200
+      }
+    }
+  },
+  "finished_at": "2026-10-09T23:00:37Z",
+  "name": "post-update-facts",
+  "started_at": "2026-10-09T23:00:30Z",
+  "verdict": "passed"
+}

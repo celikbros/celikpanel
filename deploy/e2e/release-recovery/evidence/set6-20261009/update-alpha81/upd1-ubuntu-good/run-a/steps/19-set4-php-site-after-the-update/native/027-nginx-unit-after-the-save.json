@@ -1,0 +1,50 @@
+{
+  "at": "2026-10-09T23:20:35Z",
+  "is_active": {
+    "nginx.service": "active"
+  },
+  "is_failed": {
+    "nginx.service": "active"
+  },
+  "journal": {
+    "nginx.service": [
+      "2026-10-09T23:20:33.633798+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-09T23:20:33.640232+00:00 dns-ubuntu nginx[61535]: 2026/10/09 23:20:33 [notice] 61535#61535: signal process started",
+      "2026-10-09T23:20:33.640764+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+    ]
+  },
+  "journal_product": [
+    "2026-10-09T23:20:33.598682+00:00 dns-ubuntu panel[54703]: 2026/10/09 23:20:33 http: TLS handshake error from 127.0.0.1:37130: EOF"
+  ],
+  "journal_systemd_manager": [
+    "2026-10-09T23:20:33.633798+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-09T23:20:33.640764+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+  ],
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "since_epoch": 1791588032,
+  "units": {
+    "nginx.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 23:08:04 UTC",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "active",
+      "ExecMainPID": "10961",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 23:08:05 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; master_process on; -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 23:20:33 UTC] ; stop_time=[Fri 2026-10-09 23:20:33 UTC] ; pid=61535 ; code=exited ; status=0 }",
+      "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "Fri 2026-10-09 23:08:04 UTC",
+      "InvocationID": "dde5266da7594205a8ca8c739995f543",
+      "LoadState": "loaded",
+      "MainPID": "10961",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 23:20:33 UTC",
+      "SubState": "running",
+      "Type": "forking"
+    }
+  }
+}

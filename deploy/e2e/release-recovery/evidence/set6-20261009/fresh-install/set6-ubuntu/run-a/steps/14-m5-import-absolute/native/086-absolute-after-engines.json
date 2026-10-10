@@ -1,0 +1,41 @@
+{
+  "at": "2026-10-09T22:36:25Z",
+  "lab_action": false,
+  "mariadb": {
+    "databases": [
+      "s4abs_app",
+      "s4imp_app"
+    ],
+    "returncode": 0,
+    "stderr": "",
+    "users": [
+      "celikpanel_admin@localhost",
+      "mariadb.sys@localhost",
+      "mysql@localhost",
+      "root@localhost"
+    ]
+  },
+  "mode": "read-engines",
+  "owner_action": false,
+  "postgresql": {
+    "databases": [],
+    "returncode": 0,
+    "roles": [
+      "celikpanel_admin",
+      "postgres"
+    ],
+    "stderr": ""
+  },
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "seed_tables": {
+    "s4abs_app": {
+      "checksum": [
+        "632373810"
+      ],
+      "max_id": "300",
+      "rows": "300",
+      "sum_id": "45150",
+      "table_exists": true
+    }
+  }
+}

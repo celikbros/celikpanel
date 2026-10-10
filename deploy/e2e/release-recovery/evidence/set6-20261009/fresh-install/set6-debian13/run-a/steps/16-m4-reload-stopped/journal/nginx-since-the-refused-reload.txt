@@ -1,0 +1,9 @@
+##### nginx.service (journalctl -u nginx.service --since @1791584310)
+(no lines)
+##### systemd (PID 1) lines naming the unit
+(no lines)
+##### celikpanel-agent.service and celikpanel-panel.service
+2026-10-09T22:18:32.380740+00:00 dns-debian13 panel[5364]: 2026/10/09 22:18:32 http: TLS handshake error from 127.0.0.1:36454: EOF
+2026-10-09T22:18:32.451122+00:00 dns-debian13 agent[5167]: 2026/10/09 22:18:32 ERROR service reload nginx: failed not_running: nginx.service is inactive (dead); nothing was reloaded
+2026-10-09T22:18:32.474436+00:00 dns-debian13 cron[33457]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 29469: Resource temporarily unavailable)
+2026-10-09T22:18:33.584366+00:00 dns-debian13 panel[5364]: 2026/10/09 22:18:33 [409][service action] reload nginx: SERVICE_ACTION_FAILED not_running: nginx.service is inactive (dead); nothing was reloaded

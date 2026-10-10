@@ -1,0 +1,37 @@
+read at 2026-10-09T23:23:03Z with the Windows git (git status --short; git rev-parse HEAD; git rev-parse --abbrev-ref HEAD; git log -1 --format=%H%x20%s; git diff --stat HEAD -- cmd internal web)
+--- HEAD
+72b879eeaf88477133cc01bae6a615e292c00181
+fix/setup-handover-guidance
+72b879eeaf88477133cc01bae6a615e292c00181 The Panel's secure-connection rule covers its own host name only (D-030)
+--- git status --short
+ M README.md
+ M README.tr.md
+ M deploy/e2e/release-recovery/worker_fixture_origin.py
+ M deploy/release-sequence-policy
+ M deploy/test-download-portal-contract.sh
+ M deploy/test-release-sequence-policy.sh
+ M deploy/test-signed-release-manifest-contract.sh
+ M docs/RELEASE-NOTES-v0.1.0-alpha.82.md
+ M docs/RELEASE-NOTES-v0.1.0-alpha.82.tr.md
+ M download-portal/get.sh
+?? .agents/
+?? .attic/
+?? .claude/
+?? .codex/
+?? .github/agents/
+?? .github/hooks/
+?? .github/skills/
+?? .impeccable/review-final/
+?? .impeccable/review/
+?? deploy/e2e/release-recovery/evidence/set6-20261009/
+?? deploy/e2e/release-recovery/run-set6.sh
+?? deploy/e2e/release-recovery/set6_redact.py
+?? deploy/e2e/release-recovery/set6_trial.py
+?? deploy/e2e/release-recovery/test_set6_trial.py
+--- git diff --stat HEAD -- cmd internal web (product code)
+(end)
+--- git diff --stat HEAD -- deploy/e2e/release-recovery (harness, tracked files)
+ .../e2e/release-recovery/worker_fixture_origin.py  | 22 ++++++++++++++++------
+ 1 file changed, 16 insertions(+), 6 deletions(-)
+--- git stash list (count)
+0

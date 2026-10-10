@@ -1,0 +1,20 @@
+{
+  "checks": {
+    "checks": 5,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T22:17:27Z",
+    "notes": [],
+    "started_at": "2026-10-09T22:17:27Z",
+    "substeps": {
+      "B": "passed"
+    },
+    "title": "the Panel's own response headers, read on the guest (Strict-Transport-Security)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T22:17:27Z",
+  "name": "B-headers-after-setup",
+  "started_at": "2026-10-09T22:17:27Z",
+  "verdict": "passed"
+}

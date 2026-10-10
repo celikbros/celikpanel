@@ -1,0 +1,18 @@
+driver SHA256SUMS verified on the staged copy (342 files)
+digest sweep at staging: host-side files changed 0, driver files changed 0, places {"learned_value": 0, "migration_directory": 0, "named_field": 0}, inside base64 text 0
+count after the sweep: 0 file(s) would change, 0 inside base64 text, values known: 0
+driver SHA256SUMS verified again after the sweep
+2026-10-09T22:38:17Z removed /var/tmp/cp-release-drill-s6-ub-fresh-a/cells/c81c209b49b13fa1c3b2e580/ubuntu/overlay.qcow2 bytes=1666449408 allocated=1649979392 (overlay disk of this run's lab, on the WSL disk; evidence staged at set6-20261009/fresh-install/set6-ubuntu/run-a, checksums verified)
+2026-10-09T22:38:17Z removed /var/tmp/cp-release-drill-s6-ub-fresh-a/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img (this lab's hard link to the cached base image /var/tmp/cp-v3n28/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img; the cached file stays, link count now 2)
+355
+overall: complete-for-review | native_evidence: False | outcome: set6-measured | final: None None
+  section B-headers-after-setup passed | checks: 5 | failed: [] | unknown: [] | error: None
+  section B-headers-at-the-end passed | checks: 5 | failed: [] | unknown: [] | error: None
+  section M0-prepare passed | checks: 5 | failed: [] | unknown: [] | error: None
+  section M1-php-site passed | checks: 12 | failed: [] | unknown: [] | error: None
+  section M10-postfix-stop passed | checks: 11 | failed: [] | unknown: [] | error: None
+  section M2-import passed | checks: 18 | failed: [] | unknown: [] | error: None
+  section M4-reload-stopped passed | checks: 21 | failed: [] | unknown: [] | error: None
+  section M5-import-absolute passed | checks: 12 | failed: [] | unknown: [] | error: None
+  section M6-site-refused passed | checks: 13 | failed: [] | unknown: [] | error: None
+  finding: ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']

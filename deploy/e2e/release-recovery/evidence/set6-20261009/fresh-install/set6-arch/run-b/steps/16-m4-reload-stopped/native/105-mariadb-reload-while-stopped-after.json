@@ -1,0 +1,44 @@
+{
+  "at": "2026-10-09T22:07:33Z",
+  "epoch": 1791583653.32671,
+  "mariadb": {
+    "answers": false,
+    "server_alive": false,
+    "server_pid": null,
+    "stderr": "ERROR 2002 (HY000): Can't connect to local server through socket '/run/mysqld/mysqld.sock' (2)\n",
+    "version": ""
+  },
+  "mode": "read-service",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "mariadb.service": {
+      "is_active": "inactive",
+      "properties": {
+        "ActiveEnterTimestamp": "Fri 2026-10-09 22:03:24 UTC",
+        "ActiveState": "inactive",
+        "ConsistsOf": "",
+        "DropInPaths": "/usr/lib/systemd/system/mariadb.service.d/galera.conf",
+        "ExecMainPID": "947",
+        "ExecMainStartTimestamp": "Fri 2026-10-09 22:03:24 UTC",
+        "ExecStart": "{ path=/bin/sh ; argv[]=/bin/sh -c set -f; [ ! -e /usr/bin/galera_recovery ] && VAR= ||   VAR=`/usr/bin/galera_recovery`; [ $? -eq 0 ] || exit 1;   exec /usr/bin/mariadbd $MYSQLD_OPTS $_WSREP_NEW_CLUSTER $VAR ; ignore_errors=no ; start_time=[Fri 2026-10-09 22:03:24 UTC] ; stop_time=[Fri 2026-10-09 22:07:25 UTC] ; pid=947 ; code=exited ; status=0 }",
+        "FragmentPath": "/usr/lib/systemd/system/mariadb.service",
+        "InactiveEnterTimestamp": "Fri 2026-10-09 22:07:25 UTC",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "NRestarts": "0",
+        "PartOf": "",
+        "PropagatesReloadTo": "",
+        "ReloadPropagatedFrom": "",
+        "ReloadResult": "success",
+        "RemainAfterExit": "no",
+        "Result": "success",
+        "SubState": "dead",
+        "Type": "notify",
+        "WantedBy": "multi-user.target",
+        "Wants": "tmp.mount"
+      },
+      "returncode": 0
+    }
+  }
+}

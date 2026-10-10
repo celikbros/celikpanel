@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-s6-ub-fresh-a
+set6-ubuntu-20261009t222000z

@@ -1,0 +1,71 @@
+{
+  "action": "owner-cpmove-fixture",
+  "at": "2026-10-09T21:55:47Z",
+  "bytes": 2570,
+  "database": "s4abs_app",
+  "directory": {
+    "mode": "0700",
+    "uid": 0
+  },
+  "docroot_expected": {
+    "assets/site.css": [
+      34,
+      "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+    ],
+    "index.html": [
+      64,
+      "4356e006d113cdde4a2cf2fa8ebd2dee74fb95099c81620b39e7481ec005dd1c"
+    ]
+  },
+  "domain": "set4-absolute.test",
+  "hostile": "absolute",
+  "hostile_members": [
+    {
+      "name": "/etc/set3-escape-absolute.txt",
+      "type": "file"
+    }
+  ],
+  "lab_action": false,
+  "mailbox_shadow": "the sha512-crypt hash (openssl passwd -6) of a password the lab chose; neither is recorded",
+  "members": [
+    {
+      "bytes": 52,
+      "name": "cpmove-s4abs/cp/s4abs"
+    },
+    {
+      "bytes": 64,
+      "name": "cpmove-s4abs/homedir/public_html/index.html"
+    },
+    {
+      "bytes": 34,
+      "name": "cpmove-s4abs/homedir/public_html/assets/site.css"
+    },
+    {
+      "bytes": 124,
+      "name": "cpmove-s4abs/homedir/etc/set4-absolute.test/shadow"
+    },
+    {
+      "bytes": 15,
+      "name": "cpmove-s4abs/homedir/etc/set4-absolute.test/quota"
+    },
+    {
+      "bytes": 50,
+      "name": "cpmove-s4abs/va/set4-absolute.test"
+    },
+    {
+      "bytes": 29,
+      "name": "cpmove-s4abs/mysql/s4abs_app.create"
+    },
+    {
+      "bytes": 7388,
+      "name": "cpmove-s4abs/mysql/s4abs_app.sql"
+    }
+  ],
+  "mode": "owner-cpmove-fixture",
+  "owner_action": true,
+  "path": "/var/lib/celikpanel-imports/cpmove-s4abs.tar.gz",
+  "public_html_directory_member": true,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "sha256": "508ed2d99080a47ee3ab4a85e4d971c82aecb6a579f3bc4b280864dc154f2c32",
+  "user": "s4abs"
+}

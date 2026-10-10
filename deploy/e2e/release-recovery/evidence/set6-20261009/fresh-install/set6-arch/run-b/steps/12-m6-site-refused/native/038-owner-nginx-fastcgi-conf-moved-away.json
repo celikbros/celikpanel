@@ -1,0 +1,52 @@
+{
+  "action": "owner-nginx-file",
+  "after": {
+    "file": {
+      "error": "FileNotFoundError",
+      "exists": false,
+      "path": "/etc/nginx/fastcgi.conf"
+    },
+    "moved": {
+      "exists": true,
+      "group": "root",
+      "kind": "file",
+      "mode": "0644",
+      "owner": "root",
+      "path": "/etc/nginx/fastcgi.conf.set4-owner-moved"
+    },
+    "nginx_test": {
+      "at": "2026-10-09T22:06:42Z",
+      "output": "2026/10/09 22:06:42 [warn] 3243#3243: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+      "returncode": 0,
+      "status": "ok"
+    }
+  },
+  "at": "2026-10-09T22:06:42Z",
+  "before": {
+    "file": {
+      "exists": true,
+      "group": "root",
+      "kind": "file",
+      "mode": "0644",
+      "owner": "root",
+      "path": "/etc/nginx/fastcgi.conf"
+    },
+    "moved": {
+      "error": "FileNotFoundError",
+      "exists": false,
+      "path": "/etc/nginx/fastcgi.conf.set4-owner-moved"
+    },
+    "nginx_test": {
+      "at": "2026-10-09T22:06:42Z",
+      "output": "2026/10/09 22:06:42 [warn] 3242#3242: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+      "returncode": 0,
+      "status": "ok"
+    }
+  },
+  "mode": "owner-nginx-file",
+  "moved_to": "/etc/nginx/fastcgi.conf.set4-owner-moved",
+  "owner_action": true,
+  "path": "/etc/nginx/fastcgi.conf",
+  "schema": "celikpanel/set4-native/v1",
+  "what": "move-away"
+}

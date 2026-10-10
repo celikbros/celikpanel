@@ -1,0 +1,531 @@
+2026-10-09T22:50:28.145267+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:50:28.456479+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:50:28.456735+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:50:30.339664+00:00 dns-debian13 systemd[1]: Starting celikpanel-agent.service - CelikPanel privileged agent...
+2026-10-09T22:50:30.371253+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-10-09T22:50:30.392958+00:00 dns-debian13 agent[5151]: 2026/10/09 22:50:30 Starting CelikPanel Agent...
+2026-10-09T22:50:30.394250+00:00 dns-debian13 agent[5151]: 2026/10/09 22:50:30 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-09T22:50:30.394384+00:00 dns-debian13 agent[5151]: 2026/10/09 22:50:30 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-10-09T22:50:33.448293+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-09T22:50:33.490739+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-09T22:50:33.699495+00:00 dns-debian13 panel[5277]: 2026/10/09 22:50:33 Starting CelikPanel Backend...
+2026-10-09T22:50:33.707253+00:00 dns-debian13 panel[5277]: 2026/10/09 22:50:33 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-09T22:50:33.709173+00:00 dns-debian13 panel[5277]: 2026/10/09 22:50:33 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-09T22:50:33.710393+00:00 dns-debian13 panel[5277]: 2026/10/09 22:50:33 Connected to Agent RPC; preparing normal management access
+2026-10-09T22:50:33.737798+00:00 dns-debian13 panel[5277]: 2026/10/09 22:50:33 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-09T22:50:33.741435+00:00 dns-debian13 panel[5277]: 2026/10/09 22:50:33 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-09T22:50:33.741435+00:00 dns-debian13 panel[5277]: 2026/10/09 22:50:33 Panel ready on :2083 (HTTPS)
+2026-10-09T22:50:34.512600+00:00 dns-debian13 systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-09T22:50:34.529666+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-09T22:50:34.529997+00:00 dns-debian13 systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-09T22:50:34.530197+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 403ms CPU time, 76.8M memory peak.
+2026-10-09T22:50:34.627190+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-09T22:50:34.676434+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-09T22:50:34.875812+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:34 Starting CelikPanel Backend...
+2026-10-09T22:50:34.881617+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:34 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-09T22:50:34.882138+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:34 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-09T22:50:34.882917+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:34 Connected to Agent RPC; preparing normal management access
+2026-10-09T22:50:34.894430+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:34 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-debian13": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-09T22:50:34.897698+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:34 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-09T22:50:34.897698+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:34 Panel ready on :2083 (HTTPS)
+2026-10-09T22:50:43.045207+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:43 http: TLS handshake error from 127.0.0.1:44112: EOF
+2026-10-09T22:50:43.268003+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:43 http: TLS handshake error from 127.0.0.1:44140: EOF
+2026-10-09T22:50:43.467882+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:43 http: TLS handshake error from 127.0.0.1:44162: EOF
+2026-10-09T22:50:43.482429+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:43 http: TLS handshake error from 127.0.0.1:44176: EOF
+2026-10-09T22:50:43.494349+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:43 http: TLS handshake error from 127.0.0.1:44196: EOF
+2026-10-09T22:50:43.505599+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:43 http: TLS handshake error from 127.0.0.1:44218: EOF
+2026-10-09T22:50:43.526014+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:43 http: TLS handshake error from 127.0.0.1:44236: EOF
+2026-10-09T22:50:43.536903+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:43 http: TLS handshake error from 127.0.0.1:44258: EOF
+2026-10-09T22:50:43.550378+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:43 http: TLS handshake error from 127.0.0.1:44270: EOF
+2026-10-09T22:50:43.563122+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:43 http: TLS handshake error from 127.0.0.1:44284: EOF
+2026-10-09T22:50:43.742456+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:43 http: TLS handshake error from 127.0.0.1:44312: EOF
+2026-10-09T22:50:43.764631+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:43 http: TLS handshake error from 127.0.0.1:44326: EOF
+2026-10-09T22:50:44.471995+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:44 http: TLS handshake error from 127.0.0.1:44332: EOF
+2026-10-09T22:50:45.085548+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:45 http: TLS handshake error from 127.0.0.1:44350: EOF
+2026-10-09T22:50:45.659721+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:45 http: TLS handshake error from 127.0.0.1:44362: EOF
+2026-10-09T22:50:50.680477+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:50 http: TLS handshake error from 127.0.0.1:43626: EOF
+2026-10-09T22:50:55.696497+00:00 dns-debian13 panel[5343]: 2026/10/09 22:50:55 http: TLS handshake error from 127.0.0.1:43642: EOF
+2026-10-09T22:50:58.603541+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:50:58.925554+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:50:58.925839+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:50:58.950306+00:00 dns-debian13 php8.4-common[6649]: php_invoke calendar: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:50:58.984972+00:00 dns-debian13 php8.4-common[6681]: php_invoke calendar: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:50:59.260583+00:00 dns-debian13 php8.4-common[6901]: php_invoke ctype: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:50:59.505964+00:00 dns-debian13 php8.4-common[7090]: php_invoke exif: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:50:59.536450+00:00 dns-debian13 php8.4-common[7122]: php_invoke exif: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:50:59.781755+00:00 dns-debian13 php8.4-common[7312]: php_invoke fileinfo: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:50:59.812503+00:00 dns-debian13 php8.4-common[7344]: php_invoke fileinfo: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:00.055658+00:00 dns-debian13 php8.4-common[7534]: php_invoke ffi: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:00.087284+00:00 dns-debian13 php8.4-common[7566]: php_invoke ffi: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:00.340011+00:00 dns-debian13 php8.4-common[7756]: php_invoke ftp: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:00.370109+00:00 dns-debian13 php8.4-common[7788]: php_invoke ftp: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:00.614102+00:00 dns-debian13 php8.4-common[7978]: php_invoke gettext: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:00.646144+00:00 dns-debian13 php8.4-common[8010]: php_invoke gettext: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:00.713433+00:00 dns-debian13 panel[5343]: 2026/10/09 22:51:00 http: TLS handshake error from 127.0.0.1:37830: EOF
+2026-10-09T22:51:00.895238+00:00 dns-debian13 php8.4-common[8200]: php_invoke iconv: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:00.926561+00:00 dns-debian13 php8.4-common[8232]: php_invoke iconv: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:01.214100+00:00 dns-debian13 php8.4-common[8454]: php_invoke pdo: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:01.466914+00:00 dns-debian13 php8.4-common[8644]: php_invoke phar: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:01.498185+00:00 dns-debian13 php8.4-common[8676]: php_invoke phar: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:01.742712+00:00 dns-debian13 php8.4-common[8866]: php_invoke posix: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:01.773796+00:00 dns-debian13 php8.4-common[8898]: php_invoke posix: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:02.020350+00:00 dns-debian13 php8.4-common[9088]: php_invoke shmop: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:02.050539+00:00 dns-debian13 php8.4-common[9120]: php_invoke shmop: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:02.296434+00:00 dns-debian13 php8.4-common[9310]: php_invoke sockets: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:02.327695+00:00 dns-debian13 php8.4-common[9342]: php_invoke sockets: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:02.572650+00:00 dns-debian13 php8.4-common[9532]: php_invoke sysvmsg: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:02.603526+00:00 dns-debian13 php8.4-common[9564]: php_invoke sysvmsg: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:02.849334+00:00 dns-debian13 php8.4-common[9754]: php_invoke sysvsem: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:02.879882+00:00 dns-debian13 php8.4-common[9786]: php_invoke sysvsem: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:03.126128+00:00 dns-debian13 php8.4-common[9976]: php_invoke sysvshm: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:03.156025+00:00 dns-debian13 php8.4-common[10008]: php_invoke sysvshm: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:03.406100+00:00 dns-debian13 php8.4-common[10198]: php_invoke tokenizer: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:03.436722+00:00 dns-debian13 php8.4-common[10230]: php_invoke tokenizer: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:03.739023+00:00 dns-debian13 php8.4-opcache[10453]: php_invoke opcache: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:04.015665+00:00 dns-debian13 php8.4-readline[10644]: php_invoke readline: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.047466+00:00 dns-debian13 php8.4-readline[10676]: php_invoke readline: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:04.295251+00:00 dns-debian13 php8.4-cli[10810]: php_invoke iconv: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.325386+00:00 dns-debian13 php8.4-cli[10843]: php_invoke ffi: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.355452+00:00 dns-debian13 php8.4-cli[10876]: php_invoke fileinfo: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.385459+00:00 dns-debian13 php8.4-cli[10909]: php_invoke opcache: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.415970+00:00 dns-debian13 php8.4-cli[10942]: php_invoke tokenizer: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.443918+00:00 dns-debian13 php8.4-cli[10975]: php_invoke shmop: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.475927+00:00 dns-debian13 php8.4-cli[11008]: php_invoke readline: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.506551+00:00 dns-debian13 php8.4-cli[11041]: php_invoke posix: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.535735+00:00 dns-debian13 php8.4-cli[11074]: php_invoke ftp: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.568125+00:00 dns-debian13 php8.4-cli[11107]: php_invoke calendar: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.598315+00:00 dns-debian13 php8.4-cli[11140]: php_invoke sysvsem: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.656409+00:00 dns-debian13 php8.4-cli[11206]: php_invoke gettext: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.687925+00:00 dns-debian13 php8.4-cli[11239]: php_invoke pdo: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.718279+00:00 dns-debian13 php8.4-cli[11272]: php_invoke sockets: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.746880+00:00 dns-debian13 php8.4-cli[11305]: php_invoke phar: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.776713+00:00 dns-debian13 php8.4-cli[11338]: php_invoke sysvmsg: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.807347+00:00 dns-debian13 php8.4-cli[11371]: php_invoke sysvshm: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:04.838401+00:00 dns-debian13 php8.4-cli[11404]: php_invoke ctype: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:51:05.109285+00:00 dns-debian13 php8.4-fpm[11535]: php_invoke iconv: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.140053+00:00 dns-debian13 php8.4-fpm[11568]: php_invoke ffi: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.175822+00:00 dns-debian13 php8.4-fpm[11601]: php_invoke fileinfo: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.206334+00:00 dns-debian13 php8.4-fpm[11634]: php_invoke opcache: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.236132+00:00 dns-debian13 php8.4-fpm[11667]: php_invoke tokenizer: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.268261+00:00 dns-debian13 php8.4-fpm[11700]: php_invoke shmop: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.298731+00:00 dns-debian13 php8.4-fpm[11733]: php_invoke readline: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.330105+00:00 dns-debian13 php8.4-fpm[11766]: php_invoke posix: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.360884+00:00 dns-debian13 php8.4-fpm[11799]: php_invoke ftp: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.391579+00:00 dns-debian13 php8.4-fpm[11832]: php_invoke calendar: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.419985+00:00 dns-debian13 php8.4-fpm[11865]: php_invoke sysvsem: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.451084+00:00 dns-debian13 php8.4-fpm[11898]: php_invoke exif: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.483020+00:00 dns-debian13 php8.4-fpm[11931]: php_invoke gettext: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.513263+00:00 dns-debian13 php8.4-fpm[11964]: php_invoke pdo: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.541857+00:00 dns-debian13 php8.4-fpm[11997]: php_invoke sockets: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.572720+00:00 dns-debian13 php8.4-fpm[12030]: php_invoke phar: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.602684+00:00 dns-debian13 php8.4-fpm[12063]: php_invoke sysvmsg: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.632423+00:00 dns-debian13 php8.4-fpm[12096]: php_invoke sysvshm: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.661357+00:00 dns-debian13 php8.4-fpm[12129]: php_invoke ctype: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:51:05.728741+00:00 dns-debian13 panel[5343]: 2026/10/09 22:51:05 http: TLS handshake error from 127.0.0.1:37850: EOF
+2026-10-09T22:51:10.743943+00:00 dns-debian13 panel[5343]: 2026/10/09 22:51:10 http: TLS handshake error from 127.0.0.1:55868: EOF
+2026-10-09T22:51:15.986726+00:00 dns-debian13 panel[5343]: 2026/10/09 22:51:15 http: TLS handshake error from 127.0.0.1:55896: EOF
+2026-10-09T22:51:21.002833+00:00 dns-debian13 panel[5343]: 2026/10/09 22:51:21 http: TLS handshake error from 127.0.0.1:48146: EOF
+2026-10-09T22:51:26.019777+00:00 dns-debian13 panel[5343]: 2026/10/09 22:51:26 http: TLS handshake error from 127.0.0.1:48170: EOF
+2026-10-09T22:51:29.060579+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:51:29.382661+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:51:29.382954+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:51:31.036351+00:00 dns-debian13 panel[5343]: 2026/10/09 22:51:31 http: TLS handshake error from 127.0.0.1:44132: EOF
+2026-10-09T22:51:36.052957+00:00 dns-debian13 panel[5343]: 2026/10/09 22:51:36 http: TLS handshake error from 127.0.0.1:44148: EOF
+2026-10-09T22:51:41.069733+00:00 dns-debian13 panel[5343]: 2026/10/09 22:51:41 http: TLS handshake error from 127.0.0.1:37984: EOF
+2026-10-09T22:51:46.336045+00:00 dns-debian13 panel[5343]: 2026/10/09 22:51:46 http: TLS handshake error from 127.0.0.1:38008: EOF
+2026-10-09T22:51:51.054284+00:00 dns-debian13 addgroup[13002]: Selecting GID from range 100 to 999 ...
+2026-10-09T22:51:51.056910+00:00 dns-debian13 addgroup[13002]: Adding group `mysql' (GID 104) ...
+2026-10-09T22:51:51.073304+00:00 dns-debian13 groupadd[13005]: group added to /etc/group: name=mysql, GID=104
+2026-10-09T22:51:51.078562+00:00 dns-debian13 groupadd[13005]: group added to /etc/gshadow: name=mysql
+2026-10-09T22:51:51.079546+00:00 dns-debian13 groupadd[13005]: new group: name=mysql, GID=104
+2026-10-09T22:51:51.123294+00:00 dns-debian13 adduser[13010]: Selecting UID from range 100 to 999 ...
+2026-10-09T22:51:51.126228+00:00 dns-debian13 adduser[13010]: Adding system user `mysql' (UID 103) ...
+2026-10-09T22:51:51.128515+00:00 dns-debian13 adduser[13010]: Adding new user `mysql' (UID 103) with group `mysql' ...
+2026-10-09T22:51:51.142924+00:00 dns-debian13 useradd[13014]: new user: name=mysql, UID=103, GID=104, home=/nonexistent, shell=/bin/false, from=none
+2026-10-09T22:51:51.176060+00:00 dns-debian13 adduser[13010]: Not creating `/nonexistent'.
+2026-10-09T22:51:51.351845+00:00 dns-debian13 panel[5343]: 2026/10/09 22:51:51 http: TLS handshake error from 127.0.0.1:49552: EOF
+2026-10-09T22:51:56.369661+00:00 dns-debian13 panel[5343]: 2026/10/09 22:51:56 http: TLS handshake error from 127.0.0.1:49574: EOF
+2026-10-09T22:51:59.454800+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:51:59.962022+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:51:59.962398+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:52:01.389076+00:00 dns-debian13 panel[5343]: 2026/10/09 22:52:01 http: TLS handshake error from 127.0.0.1:49096: EOF
+2026-10-09T22:52:06.043498+00:00 dns-debian13 adduser[13856]: Selecting UID from range 100 to 999 ...
+2026-10-09T22:52:06.046145+00:00 dns-debian13 adduser[13856]: Selecting GID from range 100 to 999 ...
+2026-10-09T22:52:06.048541+00:00 dns-debian13 adduser[13856]: Adding system user `postfix' (UID 104) ...
+2026-10-09T22:52:06.050799+00:00 dns-debian13 adduser[13856]: Adding new group `postfix' (GID 105) ...
+2026-10-09T22:52:06.066627+00:00 dns-debian13 groupadd[13861]: group added to /etc/group: name=postfix, GID=105
+2026-10-09T22:52:06.072858+00:00 dns-debian13 groupadd[13861]: group added to /etc/gshadow: name=postfix
+2026-10-09T22:52:06.073811+00:00 dns-debian13 groupadd[13861]: new group: name=postfix, GID=105
+2026-10-09T22:52:06.076660+00:00 dns-debian13 adduser[13856]: Adding new user `postfix' (UID 104) with group `postfix' ...
+2026-10-09T22:52:06.095788+00:00 dns-debian13 useradd[13866]: new user: name=postfix, UID=104, GID=105, home=/var/spool/postfix, shell=/usr/sbin/nologin, from=none
+2026-10-09T22:52:06.130389+00:00 dns-debian13 adduser[13856]: Not creating home directory `/var/spool/postfix' as requested.
+2026-10-09T22:52:06.169170+00:00 dns-debian13 addgroup[13878]: Selecting GID from range 100 to 999 ...
+2026-10-09T22:52:06.171597+00:00 dns-debian13 addgroup[13878]: Adding group `postdrop' (GID 106) ...
+2026-10-09T22:52:06.186984+00:00 dns-debian13 groupadd[13881]: group added to /etc/group: name=postdrop, GID=106
+2026-10-09T22:52:06.193590+00:00 dns-debian13 groupadd[13881]: group added to /etc/gshadow: name=postdrop
+2026-10-09T22:52:06.194504+00:00 dns-debian13 groupadd[13881]: new group: name=postdrop, GID=106
+2026-10-09T22:52:06.402038+00:00 dns-debian13 panel[5343]: 2026/10/09 22:52:06 http: TLS handshake error from 127.0.0.1:49120: EOF
+2026-10-09T22:52:11.417039+00:00 dns-debian13 panel[5343]: 2026/10/09 22:52:11 http: TLS handshake error from 127.0.0.1:33126: EOF
+2026-10-09T22:52:14.490835+00:00 dns-debian13 groupadd[14247]: group added to /etc/group: name=vmail, GID=5000
+2026-10-09T22:52:14.496857+00:00 dns-debian13 groupadd[14247]: group added to /etc/gshadow: name=vmail
+2026-10-09T22:52:14.497713+00:00 dns-debian13 groupadd[14247]: new group: name=vmail, GID=5000
+2026-10-09T22:52:14.526995+00:00 dns-debian13 useradd[14256]: new user: name=vmail, UID=5000, GID=5000, home=/var/mail/vhosts, shell=/usr/sbin/nologin, from=none
+2026-10-09T22:52:14.563890+00:00 dns-debian13 postfix/postmap[14267]: warning: unsupported dictionary type: lmdb. Is the postfix-lmdb package installed?
+2026-10-09T22:52:14.563912+00:00 dns-debian13 postfix/postmap[14267]: fatal: unsupported map type: lmdb
+2026-10-09T22:52:16.668223+00:00 dns-debian13 panel[5343]: 2026/10/09 22:52:16 http: TLS handshake error from 127.0.0.1:33148: EOF
+2026-10-09T22:52:21.683433+00:00 dns-debian13 panel[5343]: 2026/10/09 22:52:21 http: TLS handshake error from 127.0.0.1:46664: EOF
+2026-10-09T22:52:25.301798+00:00 dns-debian13 addgroup[14734]: Selecting GID from range 100 to 999 ...
+2026-10-09T22:52:25.304174+00:00 dns-debian13 addgroup[14734]: Adding group `ssl-cert' (GID 107) ...
+2026-10-09T22:52:25.318903+00:00 dns-debian13 groupadd[14737]: group added to /etc/group: name=ssl-cert, GID=107
+2026-10-09T22:52:25.324299+00:00 dns-debian13 groupadd[14737]: group added to /etc/gshadow: name=ssl-cert
+2026-10-09T22:52:25.325290+00:00 dns-debian13 groupadd[14737]: new group: name=ssl-cert, GID=107
+2026-10-09T22:52:25.573432+00:00 dns-debian13 adduser[14759]: Selecting UID from range 100 to 999 ...
+2026-10-09T22:52:25.575987+00:00 dns-debian13 adduser[14759]: Selecting GID from range 100 to 999 ...
+2026-10-09T22:52:25.578575+00:00 dns-debian13 adduser[14759]: Adding system user `dovecot' (UID 105) ...
+2026-10-09T22:52:25.580764+00:00 dns-debian13 adduser[14759]: Adding new group `dovecot' (GID 108) ...
+2026-10-09T22:52:25.595734+00:00 dns-debian13 groupadd[14764]: group added to /etc/group: name=dovecot, GID=108
+2026-10-09T22:52:25.601874+00:00 dns-debian13 groupadd[14764]: group added to /etc/gshadow: name=dovecot
+2026-10-09T22:52:25.602845+00:00 dns-debian13 groupadd[14764]: new group: name=dovecot, GID=108
+2026-10-09T22:52:25.605921+00:00 dns-debian13 adduser[14759]: Adding new user `dovecot' (UID 105) with group `dovecot' ...
+2026-10-09T22:52:25.621194+00:00 dns-debian13 useradd[14769]: new user: name=dovecot, UID=105, GID=108, home=/usr/lib/dovecot, shell=/usr/sbin/nologin, from=none
+2026-10-09T22:52:25.656523+00:00 dns-debian13 adduser[14759]: Not creating home directory `/usr/lib/dovecot' as requested.
+2026-10-09T22:52:25.694370+00:00 dns-debian13 adduser[14780]: Selecting UID from range 100 to 999 ...
+2026-10-09T22:52:25.697100+00:00 dns-debian13 adduser[14780]: Selecting GID from range 100 to 999 ...
+2026-10-09T22:52:25.699289+00:00 dns-debian13 adduser[14780]: Adding system user `dovenull' (UID 106) ...
+2026-10-09T22:52:25.701779+00:00 dns-debian13 adduser[14780]: Adding new group `dovenull' (GID 109) ...
+2026-10-09T22:52:25.717195+00:00 dns-debian13 groupadd[14785]: group added to /etc/group: name=dovenull, GID=109
+2026-10-09T22:52:25.724611+00:00 dns-debian13 groupadd[14785]: group added to /etc/gshadow: name=dovenull
+2026-10-09T22:52:25.725568+00:00 dns-debian13 groupadd[14785]: new group: name=dovenull, GID=109
+2026-10-09T22:52:25.728399+00:00 dns-debian13 adduser[14780]: Adding new user `dovenull' (UID 106) with group `dovenull' ...
+2026-10-09T22:52:25.746641+00:00 dns-debian13 useradd[14790]: new user: name=dovenull, UID=106, GID=109, home=/nonexistent, shell=/usr/sbin/nologin, from=none
+2026-10-09T22:52:25.781115+00:00 dns-debian13 adduser[14780]: Not creating `/nonexistent'.
+2026-10-09T22:52:26.701117+00:00 dns-debian13 panel[5343]: 2026/10/09 22:52:26 http: TLS handshake error from 127.0.0.1:46676: EOF
+2026-10-09T22:52:29.981252+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:52:30.341225+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:52:30.341451+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:52:31.714965+00:00 dns-debian13 panel[5343]: 2026/10/09 22:52:31 http: TLS handshake error from 127.0.0.1:56398: EOF
+2026-10-09T22:52:36.733338+00:00 dns-debian13 panel[5343]: 2026/10/09 22:52:36 http: TLS handshake error from 127.0.0.1:56406: EOF
+2026-10-09T22:52:41.750085+00:00 dns-debian13 panel[5343]: 2026/10/09 22:52:41 http: TLS handshake error from 127.0.0.1:33558: EOF
+2026-10-09T22:52:47.333343+00:00 dns-debian13 panel[5343]: 2026/10/09 22:52:47 http: TLS handshake error from 127.0.0.1:33580: EOF
+2026-10-09T22:52:50.802554+00:00 dns-debian13 php8.4-sqlite3[18638]: php_invoke sqlite3: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:52:51.056049+00:00 dns-debian13 php8.4-sqlite3[18828]: php_invoke pdo_sqlite: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:52:51.398970+00:00 dns-debian13 php8.4-zip[19083]: php_invoke zip: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:52:51.689739+00:00 dns-debian13 php8.4-xml[19274]: php_invoke dom: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:52:51.721424+00:00 dns-debian13 php8.4-xml[19306]: php_invoke dom: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:52:51.971632+00:00 dns-debian13 php8.4-xml[19496]: php_invoke simplexml: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:52:52.254427+00:00 dns-debian13 php8.4-xml[19718]: php_invoke xml: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:52:52.283802+00:00 dns-debian13 php8.4-xml[19750]: php_invoke xml: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:52:52.349376+00:00 dns-debian13 panel[5343]: 2026/10/09 22:52:52 http: TLS handshake error from 127.0.0.1:44082: EOF
+2026-10-09T22:52:52.536656+00:00 dns-debian13 php8.4-xml[19940]: php_invoke xmlreader: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:52:52.565965+00:00 dns-debian13 php8.4-xml[19972]: php_invoke xmlreader: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:52:52.847359+00:00 dns-debian13 php8.4-xml[20194]: php_invoke xmlwriter: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:52:53.099610+00:00 dns-debian13 php8.4-xml[20384]: php_invoke xsl: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:52:53.126534+00:00 dns-debian13 php8.4-xml[20416]: php_invoke xsl: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:52:53.408342+00:00 dns-debian13 php8.4-intl[20607]: php_invoke intl: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:52:53.436458+00:00 dns-debian13 php8.4-intl[20639]: php_invoke intl: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:52:53.707375+00:00 dns-debian13 php8.4-mbstring[20830]: php_invoke mbstring: already enabled for PHP 8.4 cli sapi
+2026-10-09T22:52:53.734147+00:00 dns-debian13 php8.4-mbstring[20862]: php_invoke mbstring: already enabled for PHP 8.4 fpm sapi
+2026-10-09T22:52:57.365673+00:00 dns-debian13 panel[5343]: 2026/10/09 22:52:57 http: TLS handshake error from 127.0.0.1:44100: EOF
+2026-10-09T22:53:01.060421+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:53:01.382970+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:53:01.383421+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:53:02.382076+00:00 dns-debian13 panel[5343]: 2026/10/09 22:53:02 http: TLS handshake error from 127.0.0.1:47332: EOF
+2026-10-09T22:53:06.637902+00:00 dns-debian13 postfix/postfix-script[21755]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T22:53:07.319798+00:00 dns-debian13 postfix/postfix-script[21957]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T22:53:07.397432+00:00 dns-debian13 panel[5343]: 2026/10/09 22:53:07 http: TLS handshake error from 127.0.0.1:47350: EOF
+2026-10-09T22:53:12.413273+00:00 dns-debian13 panel[5343]: 2026/10/09 22:53:12 http: TLS handshake error from 127.0.0.1:50422: EOF
+2026-10-09T22:53:17.937981+00:00 dns-debian13 panel[5343]: 2026/10/09 22:53:17 http: TLS handshake error from 127.0.0.1:50448: EOF
+2026-10-09T22:53:22.953643+00:00 dns-debian13 panel[5343]: 2026/10/09 22:53:22 http: TLS handshake error from 127.0.0.1:35612: EOF
+2026-10-09T22:53:27.970402+00:00 dns-debian13 panel[5343]: 2026/10/09 22:53:27 http: TLS handshake error from 127.0.0.1:35638: EOF
+2026-10-09T22:53:32.062063+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:53:32.392900+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:53:32.393155+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:53:32.986670+00:00 dns-debian13 panel[5343]: 2026/10/09 22:53:32 http: TLS handshake error from 127.0.0.1:45264: EOF
+2026-10-09T22:53:38.002951+00:00 dns-debian13 panel[5343]: 2026/10/09 22:53:38 http: TLS handshake error from 127.0.0.1:45270: EOF
+2026-10-09T22:53:43.020319+00:00 dns-debian13 panel[5343]: 2026/10/09 22:53:43 http: TLS handshake error from 127.0.0.1:44640: EOF
+2026-10-09T22:53:48.272995+00:00 dns-debian13 panel[5343]: 2026/10/09 22:53:48 http: TLS handshake error from 127.0.0.1:44664: EOF
+2026-10-09T22:53:53.289331+00:00 dns-debian13 panel[5343]: 2026/10/09 22:53:53 http: TLS handshake error from 127.0.0.1:48006: EOF
+2026-10-09T22:53:58.305758+00:00 dns-debian13 panel[5343]: 2026/10/09 22:53:58 http: TLS handshake error from 127.0.0.1:48030: EOF
+2026-10-09T22:54:01.514539+00:00 dns-debian13 adduser[23207]: Selecting UID from range 100 to 999 ...
+2026-10-09T22:54:01.517337+00:00 dns-debian13 adduser[23207]: Selecting GID from range 100 to 999 ...
+2026-10-09T22:54:01.538626+00:00 dns-debian13 groupadd[23212]: group added to /etc/group: name=_rspamd, GID=110
+2026-10-09T22:54:01.545834+00:00 dns-debian13 groupadd[23212]: group added to /etc/gshadow: name=_rspamd
+2026-10-09T22:54:01.546695+00:00 dns-debian13 groupadd[23212]: new group: name=_rspamd, GID=110
+2026-10-09T22:54:01.566365+00:00 dns-debian13 useradd[23217]: new user: name=_rspamd, UID=107, GID=110, home=/var/lib/rspamd, shell=/usr/sbin/nologin, from=none
+2026-10-09T22:54:01.605200+00:00 dns-debian13 adduser[23207]: Not creating home directory `/var/lib/rspamd' as requested.
+2026-10-09T22:54:02.929305+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:54:03.322563+00:00 dns-debian13 panel[5343]: 2026/10/09 22:54:03 http: TLS handshake error from 127.0.0.1:56020: EOF
+2026-10-09T22:54:03.558167+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:54:03.559461+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:54:08.343302+00:00 dns-debian13 panel[5343]: 2026/10/09 22:54:08 http: TLS handshake error from 127.0.0.1:56050: EOF
+2026-10-09T22:54:13.359291+00:00 dns-debian13 panel[5343]: 2026/10/09 22:54:13 http: TLS handshake error from 127.0.0.1:45934: EOF
+2026-10-09T22:54:18.612387+00:00 dns-debian13 panel[5343]: 2026/10/09 22:54:18 http: TLS handshake error from 127.0.0.1:45952: EOF
+2026-10-09T22:54:20.499827+00:00 dns-debian13 postfix/postfix-script[24644]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T22:54:23.628018+00:00 dns-debian13 panel[5343]: 2026/10/09 22:54:23 http: TLS handshake error from 127.0.0.1:34140: EOF
+2026-10-09T22:54:28.645170+00:00 dns-debian13 panel[5343]: 2026/10/09 22:54:28 http: TLS handshake error from 127.0.0.1:34154: EOF
+2026-10-09T22:54:29.997482+00:00 dns-debian13 cron[25130]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 24947: Resource temporarily unavailable)
+2026-10-09T22:54:33.661320+00:00 dns-debian13 panel[5343]: 2026/10/09 22:54:33 http: TLS handshake error from 127.0.0.1:35702: EOF
+2026-10-09T22:54:33.664826+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:54:34.001492+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:54:34.001743+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:54:36.529430+00:00 dns-debian13 cron[25522]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 24947: Resource temporarily unavailable)
+2026-10-09T22:54:38.686303+00:00 dns-debian13 panel[5343]: 2026/10/09 22:54:38 http: TLS handshake error from 127.0.0.1:35716: EOF
+2026-10-09T22:54:43.706990+00:00 dns-debian13 panel[5343]: 2026/10/09 22:54:43 http: TLS handshake error from 127.0.0.1:55450: EOF
+2026-10-09T22:54:48.957216+00:00 dns-debian13 panel[5343]: 2026/10/09 22:54:48 http: TLS handshake error from 127.0.0.1:55456: EOF
+2026-10-09T22:54:53.976111+00:00 dns-debian13 panel[5343]: 2026/10/09 22:54:53 http: TLS handshake error from 127.0.0.1:40440: EOF
+2026-10-09T22:54:58.994698+00:00 dns-debian13 panel[5343]: 2026/10/09 22:54:58 http: TLS handshake error from 127.0.0.1:50324: EOF
+2026-10-09T22:55:04.013707+00:00 dns-debian13 panel[5343]: 2026/10/09 22:55:04 http: TLS handshake error from 127.0.0.1:50354: EOF
+2026-10-09T22:55:04.061839+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:55:04.400984+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:55:04.401250+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:55:09.029659+00:00 dns-debian13 panel[5343]: 2026/10/09 22:55:09 http: TLS handshake error from 127.0.0.1:57030: EOF
+2026-10-09T22:55:14.047751+00:00 dns-debian13 panel[5343]: 2026/10/09 22:55:14 http: TLS handshake error from 127.0.0.1:57038: EOF
+2026-10-09T22:55:19.296461+00:00 dns-debian13 panel[5343]: 2026/10/09 22:55:19 http: TLS handshake error from 127.0.0.1:39324: EOF
+2026-10-09T22:55:24.312786+00:00 dns-debian13 panel[5343]: 2026/10/09 22:55:24 http: TLS handshake error from 127.0.0.1:39338: EOF
+2026-10-09T22:55:29.329501+00:00 dns-debian13 panel[5343]: 2026/10/09 22:55:29 http: TLS handshake error from 127.0.0.1:43926: EOF
+2026-10-09T22:55:34.347780+00:00 dns-debian13 panel[5343]: 2026/10/09 22:55:34 http: TLS handshake error from 127.0.0.1:43932: EOF
+2026-10-09T22:55:35.060987+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:55:35.394089+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:55:35.394363+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:55:39.365238+00:00 dns-debian13 panel[5343]: 2026/10/09 22:55:39 http: TLS handshake error from 127.0.0.1:57362: EOF
+2026-10-09T22:55:44.382057+00:00 dns-debian13 panel[5343]: 2026/10/09 22:55:44 http: TLS handshake error from 127.0.0.1:57376: EOF
+2026-10-09T22:55:49.638382+00:00 dns-debian13 panel[5343]: 2026/10/09 22:55:49 http: TLS handshake error from 127.0.0.1:45218: EOF
+2026-10-09T22:55:54.653171+00:00 dns-debian13 panel[5343]: 2026/10/09 22:55:54 http: TLS handshake error from 127.0.0.1:45240: EOF
+2026-10-09T22:55:59.671101+00:00 dns-debian13 panel[5343]: 2026/10/09 22:55:59 http: TLS handshake error from 127.0.0.1:33994: EOF
+2026-10-09T22:56:04.689349+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:04 http: TLS handshake error from 127.0.0.1:34010: EOF
+2026-10-09T22:56:06.060296+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:56:06.382732+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:56:06.382988+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:56:09.705784+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:09 http: TLS handshake error from 127.0.0.1:60160: EOF
+2026-10-09T22:56:14.722616+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:14 http: TLS handshake error from 127.0.0.1:60172: EOF
+2026-10-09T22:56:19.981407+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:19 http: TLS handshake error from 127.0.0.1:49876: EOF
+2026-10-09T22:56:24.997648+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:24 http: TLS handshake error from 127.0.0.1:49886: EOF
+2026-10-09T22:56:30.014346+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:30 http: TLS handshake error from 127.0.0.1:38150: EOF
+2026-10-09T22:56:35.030602+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:35 http: TLS handshake error from 127.0.0.1:38166: EOF
+2026-10-09T22:56:37.060891+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:56:37.385635+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:56:37.385922+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:56:40.046635+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:40 http: TLS handshake error from 127.0.0.1:48066: EOF
+2026-10-09T22:56:45.064037+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:45 http: TLS handshake error from 127.0.0.1:48078: EOF
+2026-10-09T22:56:46.075493+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:46 http: TLS handshake error from 127.0.0.1:48092: EOF
+2026-10-09T22:56:46.995153+00:00 dns-debian13 agent[5151]: 2026/10/09 22:56:46 hosting root: created /var/www/celikpanel at 0755 0:0
+2026-10-09T22:56:47.026386+00:00 dns-debian13 useradd[25938]: new group: name=upd1_owner_test, GID=5001
+2026-10-09T22:56:47.026507+00:00 dns-debian13 useradd[25938]: new user: name=upd1_owner_test, UID=5001, GID=5001, home=/var/www/celikpanel/subscriptions/2/sites/1, shell=/bin/bash, from=none
+2026-10-09T22:56:47.099181+00:00 dns-debian13 chpasswd[25943]: pam_unix(chpasswd:chauthtok): password changed for upd1_owner_test
+2026-10-09T22:56:47.178893+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:47 http: TLS handshake error from 127.0.0.1:48108: EOF
+2026-10-09T22:56:47.196923+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:47 http: TLS handshake error from 127.0.0.1:48120: EOF
+2026-10-09T22:56:47.208103+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:47 http: TLS handshake error from 127.0.0.1:48144: EOF
+2026-10-09T22:56:47.220218+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:47 http: TLS handshake error from 127.0.0.1:48162: EOF
+2026-10-09T22:56:47.245698+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:47 http: TLS handshake error from 127.0.0.1:48190: EOF
+2026-10-09T22:56:47.336242+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:47 http: TLS handshake error from 127.0.0.1:48206: EOF
+2026-10-09T22:56:47.347849+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:47 http: TLS handshake error from 127.0.0.1:48224: EOF
+2026-10-09T22:56:47.355886+00:00 dns-debian13 crontab[25963]: (root) LIST (upd1_owner_test)
+2026-10-09T22:56:47.361784+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:47 http: TLS handshake error from 127.0.0.1:48252: EOF
+2026-10-09T22:56:47.380534+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:47 http: TLS handshake error from 127.0.0.1:48270: EOF
+2026-10-09T22:56:47.389255+00:00 dns-debian13 crontab[25966]: (root) LIST (upd1_owner_test)
+2026-10-09T22:56:47.395466+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:47 http: TLS handshake error from 127.0.0.1:48284: EOF
+2026-10-09T22:56:48.171592+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:48 http: TLS handshake error from 127.0.0.1:48296: EOF
+2026-10-09T22:56:48.492429+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:48 http: TLS handshake error from 127.0.0.1:48318: EOF
+2026-10-09T22:56:49.427953+00:00 dns-debian13 useradd[26041]: new group: name=set4_upd_php_test, GID=5002
+2026-10-09T22:56:49.428082+00:00 dns-debian13 useradd[26041]: new user: name=set4_upd_php_test, UID=5002, GID=5002, home=/var/www/celikpanel/subscriptions/2/sites/2, shell=/bin/bash, from=none
+2026-10-09T22:56:49.494047+00:00 dns-debian13 chpasswd[26046]: pam_unix(chpasswd:chauthtok): password changed for set4_upd_php_test
+2026-10-09T22:56:52.585715+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:52 http: TLS handshake error from 127.0.0.1:35442: EOF
+2026-10-09T22:56:52.902206+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:52 http: TLS handshake error from 127.0.0.1:35560: client sent an HTTP request to an HTTPS server
+2026-10-09T22:56:52.902637+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:52 http: TLS handshake error from 127.0.0.1:35568: client sent an HTTP request to an HTTPS server
+2026-10-09T22:56:57.392653+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:57 http: TLS handshake error from 127.0.0.1:35594: EOF
+2026-10-09T22:56:58.412046+00:00 dns-debian13 panel[5343]: 2026/10/09 22:56:58 http: TLS handshake error from 127.0.0.1:35616: EOF
+2026-10-09T22:57:03.393069+00:00 dns-debian13 panel[5343]: 2026/10/09 22:57:03 http: TLS handshake error from 127.0.0.1:41748: EOF
+2026-10-09T22:57:08.060352+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:57:08.386822+00:00 dns-debian13 panel[5343]: 2026/10/09 22:57:08 http: TLS handshake error from 127.0.0.1:41780: EOF
+2026-10-09T22:57:08.394251+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:57:08.394518+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:57:13.396960+00:00 dns-debian13 panel[5343]: 2026/10/09 22:57:13 http: TLS handshake error from 127.0.0.1:53750: EOF
+2026-10-09T22:57:18.396434+00:00 dns-debian13 panel[5343]: 2026/10/09 22:57:18 http: TLS handshake error from 127.0.0.1:53766: EOF
+2026-10-09T22:57:23.397040+00:00 dns-debian13 panel[5343]: 2026/10/09 22:57:23 http: TLS handshake error from 127.0.0.1:41828: EOF
+2026-10-09T22:57:28.393452+00:00 dns-debian13 panel[5343]: 2026/10/09 22:57:28 http: TLS handshake error from 127.0.0.1:41864: EOF
+2026-10-09T22:57:33.416269+00:00 dns-debian13 panel[5343]: 2026/10/09 22:57:33 http: TLS handshake error from 127.0.0.1:39962: EOF
+2026-10-09T22:57:38.401357+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:57:38.415963+00:00 dns-debian13 panel[5343]: 2026/10/09 22:57:38 http: TLS handshake error from 127.0.0.1:39990: EOF
+2026-10-09T22:57:38.708454+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:57:38.708752+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:57:43.393833+00:00 dns-debian13 panel[5343]: 2026/10/09 22:57:43 http: TLS handshake error from 127.0.0.1:50746: EOF
+2026-10-09T22:57:48.404508+00:00 dns-debian13 panel[5343]: 2026/10/09 22:57:48 http: TLS handshake error from 127.0.0.1:50762: EOF
+2026-10-09T22:57:53.398867+00:00 dns-debian13 panel[5343]: 2026/10/09 22:57:53 http: TLS handshake error from 127.0.0.1:57786: EOF
+2026-10-09T22:57:58.404699+00:00 dns-debian13 panel[5343]: 2026/10/09 22:57:58 http: TLS handshake error from 127.0.0.1:57826: EOF
+2026-10-09T22:58:03.388742+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:03 http: TLS handshake error from 127.0.0.1:33978: EOF
+2026-10-09T22:58:08.388826+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:08 http: TLS handshake error from 127.0.0.1:34008: EOF
+2026-10-09T22:58:09.060347+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:58:09.382836+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:58:09.383064+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:58:11.039841+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:11 http: TLS handshake error from 127.0.0.1:54122: EOF
+2026-10-09T22:58:11.419848+00:00 dns-debian13 systemd[1]: Started celikpanel-lab-owner-update-observer-757b446c7f998fc21b7ce872be52aaf6.service - [systemd-run] /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/guest_owner_update_observer.py --lab-nonce 1130a5bb9246ba574dc99c9ebc0704d41b51b3ecf048b8cb5845c2d921bf7202 --vm-uuid 87b9acbb-4d55-5a08-afe4-fbc1189c482e --cell-id release-recovery__1130a5bb9246ba57 --node debian13 --operation-id 757b446c7f998fc21b7ce872be52aaf6 --execute.
+2026-10-09T22:58:11.620564+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:11 http: TLS handshake error from 127.0.0.1:54150: EOF
+2026-10-09T22:58:11.637948+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:11 http: TLS handshake error from 127.0.0.1:54156: EOF
+2026-10-09T22:58:11.725361+00:00 dns-debian13 systemd[1]: Starting celikpanel-self-update-757b446c7f998fc21b7ce872be52aaf6.service - [systemd-run] /opt/celikpanel/bin/agent --self-update-worker 757b446c7f998fc21b7ce872be52aaf6...
+2026-10-09T22:58:11.728278+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:11 http: TLS handshake error from 127.0.0.1:54192: EOF
+2026-10-09T22:58:11.728278+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:11 http: TLS handshake error from 127.0.0.1:54174: EOF
+2026-10-09T22:58:11.728278+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:11 http: TLS handshake error from 127.0.0.1:54180: EOF
+2026-10-09T22:58:11.747329+00:00 dns-debian13 systemd[1]: Started celikpanel-self-update-757b446c7f998fc21b7ce872be52aaf6.service - [systemd-run] /opt/celikpanel/bin/agent --self-update-worker 757b446c7f998fc21b7ce872be52aaf6.
+2026-10-09T22:58:11.756473+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:11 http: TLS handshake error from 127.0.0.1:54200: EOF
+2026-10-09T22:58:13.429821+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:13 http: TLS handshake error from 127.0.0.1:54230: EOF
+2026-10-09T22:58:13.624581+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:13 http: TLS handshake error from 127.0.0.1:54238: EOF
+2026-10-09T22:58:13.624718+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:13 http: TLS handshake error from 127.0.0.1:54250: EOF
+2026-10-09T22:58:13.625258+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:13 http: TLS handshake error from 127.0.0.1:54244: EOF
+2026-10-09T22:58:13.650399+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:13 http: TLS handshake error from 127.0.0.1:54268: EOF
+2026-10-09T22:58:15.475807+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:15 http: TLS handshake error from 127.0.0.1:54300: EOF
+2026-10-09T22:58:15.475807+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:15 http: TLS handshake error from 127.0.0.1:54318: EOF
+2026-10-09T22:58:15.475807+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:15 http: TLS handshake error from 127.0.0.1:54308: EOF
+2026-10-09T22:58:15.556431+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:15 http: TLS handshake error from 127.0.0.1:54348: EOF
+2026-10-09T22:58:18.402684+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:18 http: TLS handshake error from 127.0.0.1:54376: EOF
+2026-10-09T22:58:18.458755+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:18 http: TLS handshake error from 127.0.0.1:54406: EOF
+2026-10-09T22:58:18.458877+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:18 http: TLS handshake error from 127.0.0.1:54400: EOF
+2026-10-09T22:58:18.459350+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:18 http: TLS handshake error from 127.0.0.1:54420: EOF
+2026-10-09T22:58:18.493267+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:18 http: TLS handshake error from 127.0.0.1:54440: EOF
+2026-10-09T22:58:22.657549+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:22 http: TLS handshake error from 127.0.0.1:52964: EOF
+2026-10-09T22:58:22.657549+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:22 http: TLS handshake error from 127.0.0.1:52988: EOF
+2026-10-09T22:58:22.657549+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:22 http: TLS handshake error from 127.0.0.1:52974: EOF
+2026-10-09T22:58:22.684836+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:22 http: TLS handshake error from 127.0.0.1:53000: EOF
+2026-10-09T22:58:23.436725+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:23 http: TLS handshake error from 127.0.0.1:53020: EOF
+2026-10-09T22:58:28.113526+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:58:28.411792+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:28 http: TLS handshake error from 127.0.0.1:53036: EOF
+2026-10-09T22:58:28.561537+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:58:28.561779+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:58:29.256567+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:29 http: TLS handshake error from 127.0.0.1:59978: EOF
+2026-10-09T22:58:29.257462+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:29 http: TLS handshake error from 127.0.0.1:59956: EOF
+2026-10-09T22:58:29.257462+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:29 http: TLS handshake error from 127.0.0.1:59972: EOF
+2026-10-09T22:58:29.283725+00:00 dns-debian13 panel[5343]: 2026/10/09 22:58:29 http: TLS handshake error from 127.0.0.1:59996: EOF
+2026-10-09T22:58:31.189089+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Sent signal SIGSTOP to main process 5343 (panel) on client request.
+2026-10-09T22:58:31.343481+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Sent signal SIGSTOP to main process 5151 (agent) on client request.
+2026-10-09T22:58:31.908307+00:00 dns-debian13 systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-09T22:58:31.919412+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Sent signal SIGKILL to main process 5343 (panel) on client request.
+2026-10-09T22:58:31.919475+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Killed unit cgroup with SIGKILL on client request.
+2026-10-09T22:58:31.921422+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-09T22:58:31.921642+00:00 dns-debian13 systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-09T22:58:31.921801+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 1.820s CPU time, 150.5M memory peak.
+2026-10-09T22:58:32.035721+00:00 dns-debian13 systemd[1]: Stopping celikpanel-agent.service - CelikPanel privileged agent...
+2026-10-09T22:58:32.037758+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
+2026-10-09T22:58:32.038814+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
+2026-10-09T22:58:32.038964+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Consumed 56.490s CPU time, 773.7M memory peak.
+2026-10-09T22:58:49.944077+00:00 dns-debian13 sudo[36824]:     root : PWD=/var/backups/celikpanel/releases/9cb2339f10a0-eda4ba5e4425387e2067e71d ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/var/lib/celikpanel LC_ALL=C CELIKPANEL_DATA_DIR=/var/lib/celikpanel/.release-db-migrations/[REDACTED-SHA256]/work /opt/celikpanel/bin/panel --migrate-only
+2026-10-09T22:58:49.944365+00:00 dns-debian13 sudo[36824]: pam_unix(sudo:session): session opened for user celikpanel(uid=999) by (uid=0)
+2026-10-09T22:58:50.159786+00:00 dns-debian13 sudo[36824]: pam_unix(sudo:session): session closed for user celikpanel
+2026-10-09T22:58:54.282022+00:00 dns-debian13 sudo[37174]:     root : PWD=/var/backups/celikpanel/releases/9cb2339f10a0-eda4ba5e4425387e2067e71d ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/var/lib/celikpanel LC_ALL=C CELIKPANEL_DATA_DIR=/var/lib/celikpanel CELIKPANEL_LISTEN=:2083 CELIKPANEL_TLS=1 CELIKPANEL_PANEL_DEMO_FLAG= CELIKPANEL_WEB_DIR=/opt/celikpanel/web CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG= /opt/celikpanel/bin/panel --check-startup-readiness
+2026-10-09T22:58:54.282625+00:00 dns-debian13 sudo[37174]: pam_unix(sudo:session): session opened for user celikpanel(uid=999) by (uid=0)
+2026-10-09T22:58:54.592837+00:00 dns-debian13 sudo[37174]: pam_unix(sudo:session): session closed for user celikpanel
+2026-10-09T22:58:55.239719+00:00 dns-debian13 systemd[1]: Starting celikpanel-agent.service - CelikPanel privileged agent...
+2026-10-09T22:58:55.312892+00:00 dns-debian13 systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-10-09T22:58:55.369279+00:00 dns-debian13 agent[37467]: 2026/10/09 22:58:55 Starting CelikPanel Agent...
+2026-10-09T22:58:55.381796+00:00 dns-debian13 agent[37467]: 2026/10/09 22:58:55 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-09T22:58:56.088492+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-09T22:58:56.161197+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-09T22:58:56.423908+00:00 dns-debian13 panel[37682]: 2026/10/09 22:58:56 Starting CelikPanel Backend...
+2026-10-09T22:58:56.442215+00:00 dns-debian13 panel[37682]: 2026/10/09 22:58:56 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-09T22:58:56.443004+00:00 dns-debian13 panel[37682]: 2026/10/09 22:58:56 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-09T22:58:56.444377+00:00 dns-debian13 panel[37682]: 2026/10/09 22:58:56 Connected to Agent RPC; preparing normal management access
+2026-10-09T22:58:56.541133+00:00 dns-debian13 panel[37682]: 2026/10/09 22:58:56 certificate startup reconcile: restored 2 hosted vhosts with one nginx validation and reload
+2026-10-09T22:58:56.542587+00:00 dns-debian13 panel[37682]: 2026/10/09 22:58:56 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: another server change or package-manager task is still running; preserve pending outbox: <nil>; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+2026-10-09T22:58:56.545192+00:00 dns-debian13 panel[37682]: 2026/10/09 22:58:56 milter wiring at startup: another server change or package-manager task is still running; the Panel retries this by itself every 30 seconds for up to 10 minutes once no other server change is running; nothing needs to be done now
+2026-10-09T22:58:56.546432+00:00 dns-debian13 panel[37682]: 2026/10/09 22:58:56 Panel ready on :2083 (HTTPS)
+2026-10-09T22:58:58.398643+00:00 dns-debian13 panel[37682]: 2026/10/09 22:58:58 http: TLS handshake error from 127.0.0.1:40654: EOF
+2026-10-09T22:58:58.585304+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:58:59.024701+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:58:59.024981+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:59:03.426811+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:03 http: TLS handshake error from 127.0.0.1:47988: EOF
+2026-10-09T22:59:04.906346+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:04 http: TLS handshake error from 127.0.0.1:48026: EOF
+2026-10-09T22:59:04.906346+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:04 http: TLS handshake error from 127.0.0.1:48020: EOF
+2026-10-09T22:59:04.906346+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:04 http: TLS handshake error from 127.0.0.1:48004: EOF
+2026-10-09T22:59:04.945225+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:04 http: TLS handshake error from 127.0.0.1:48046: EOF
+2026-10-09T22:59:06.766077+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:06 http: TLS handshake error from 127.0.0.1:48078: EOF
+2026-10-09T22:59:06.766593+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:06 http: TLS handshake error from 127.0.0.1:48076: EOF
+2026-10-09T22:59:06.766593+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:06 http: TLS handshake error from 127.0.0.1:48068: EOF
+2026-10-09T22:59:07.118284+00:00 dns-debian13 systemd[1]: celikpanel-self-update-757b446c7f998fc21b7ce872be52aaf6.service: Deactivated successfully.
+2026-10-09T22:59:07.118692+00:00 dns-debian13 systemd[1]: celikpanel-self-update-757b446c7f998fc21b7ce872be52aaf6.service: Consumed 43.872s CPU time, 490.6M memory peak.
+2026-10-09T22:59:07.132897+00:00 dns-debian13 systemd[1]: celikpanel-self-update-757b446c7f998fc21b7ce872be52aaf6.service: Failed to open /run/systemd/transient/celikpanel-self-update-757b446c7f998fc21b7ce872be52aaf6.service: No such file or directory
+2026-10-09T22:59:07.187777+00:00 dns-debian13 systemd[1]: celikpanel-self-update-757b446c7f998fc21b7ce872be52aaf6.service: Failed to open /run/systemd/transient/celikpanel-self-update-757b446c7f998fc21b7ce872be52aaf6.service: No such file or directory
+2026-10-09T22:59:07.187907+00:00 dns-debian13 systemctl[39027]: Failed to add reference to unit celikpanel-self-update-757b446c7f998fc21b7ce872be52aaf6.service: Unit celikpanel-self-update-757b446c7f998fc21b7ce872be52aaf6.service not found.
+2026-10-09T22:59:07.188591+00:00 dns-debian13 systemd[1]: celikpanel-lab-owner-update-observer-757b446c7f998fc21b7ce872be52aaf6.service: Deactivated successfully.
+2026-10-09T22:59:07.188907+00:00 dns-debian13 systemd[1]: celikpanel-lab-owner-update-observer-757b446c7f998fc21b7ce872be52aaf6.service: Consumed 12.222s CPU time, 11.9M memory peak.
+2026-10-09T22:59:07.758665+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:07 http: TLS handshake error from 127.0.0.1:48094: EOF
+2026-10-09T22:59:08.806972+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:08 http: TLS handshake error from 127.0.0.1:48110: EOF
+2026-10-09T22:59:13.292908+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:13 http: TLS handshake error from 127.0.0.1:47556: EOF
+2026-10-09T22:59:13.404693+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:13 http: TLS handshake error from 127.0.0.1:47572: EOF
+2026-10-09T22:59:13.521241+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:13 http: TLS handshake error from 127.0.0.1:47584: EOF
+2026-10-09T22:59:13.718316+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:13 http: TLS handshake error from 127.0.0.1:47610: EOF
+2026-10-09T22:59:13.729965+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:13 http: TLS handshake error from 127.0.0.1:47634: EOF
+2026-10-09T22:59:13.742495+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:13 http: TLS handshake error from 127.0.0.1:47656: EOF
+2026-10-09T22:59:13.783882+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:13 http: TLS handshake error from 127.0.0.1:47676: EOF
+2026-10-09T22:59:14.416498+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:14 http: TLS handshake error from 127.0.0.1:47688: EOF
+2026-10-09T22:59:14.427811+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:14 http: TLS handshake error from 127.0.0.1:47718: EOF
+2026-10-09T22:59:14.438993+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:14 http: TLS handshake error from 127.0.0.1:47744: EOF
+2026-10-09T22:59:14.450810+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:14 http: TLS handshake error from 127.0.0.1:47760: EOF
+2026-10-09T22:59:14.465742+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:14 http: TLS handshake error from 127.0.0.1:47784: EOF
+2026-10-09T22:59:18.391858+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:18 http: TLS handshake error from 127.0.0.1:47808: EOF
+2026-10-09T22:59:23.404245+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:23 http: TLS handshake error from 127.0.0.1:39980: EOF
+2026-10-09T22:59:28.401258+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:28 http: TLS handshake error from 127.0.0.1:40020: EOF
+2026-10-09T22:59:29.060423+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T22:59:29.482642+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T22:59:29.483128+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T22:59:29.581470+00:00 dns-debian13 postfix/postfix-script[40034]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T22:59:29.879869+00:00 dns-debian13 postfix/postfix-script[40144]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T22:59:29.940824+00:00 dns-debian13 postfix/postfix-script[40174]: the Postfix mail system is running: PID: 24107
+2026-10-09T22:59:30.007156+00:00 dns-debian13 postfix/postfix-script[40193]: refreshing the Postfix mail system
+2026-10-09T22:59:30.465845+00:00 dns-debian13 postfix/postfix-script[40212]: the Postfix mail system is running: PID: 24107
+2026-10-09T22:59:32.237354+00:00 dns-debian13 postfix/postmap[40439]: warning: unsupported dictionary type: lmdb. Is the postfix-lmdb package installed?
+2026-10-09T22:59:32.237364+00:00 dns-debian13 postfix/postmap[40439]: fatal: unsupported map type: lmdb
+2026-10-09T22:59:33.397906+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:33 http: TLS handshake error from 127.0.0.1:35424: EOF
+2026-10-09T22:59:37.851759+00:00 dns-debian13 postfix/postfix-script[40667]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T22:59:37.980336+00:00 dns-debian13 postfix/postfix-script[40717]: refreshing the Postfix mail system
+2026-10-09T22:59:38.403768+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:38 http: TLS handshake error from 127.0.0.1:35456: EOF
+2026-10-09T22:59:38.444189+00:00 dns-debian13 postfix/postfix-script[40748]: the Postfix mail system is running: PID: 24107
+2026-10-09T22:59:38.486257+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:38 startup mail work, attempt 1 of 20: mail certificate publication completed (mail SNI from 0 active secure-mail certificates); mail filter wiring completed (milters="inet:localhost:11332" maps=hash)
+2026-10-09T22:59:43.411273+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:43 http: TLS handshake error from 127.0.0.1:33398: EOF
+2026-10-09T22:59:48.401176+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:48 http: TLS handshake error from 127.0.0.1:33426: EOF
+2026-10-09T22:59:53.397473+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:53 http: TLS handshake error from 127.0.0.1:33476: EOF
+2026-10-09T22:59:58.417161+00:00 dns-debian13 panel[37682]: 2026/10/09 22:59:58 http: TLS handshake error from 127.0.0.1:33496: EOF
+2026-10-09T22:59:59.663268+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T23:00:00.089187+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T23:00:00.089469+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T23:00:03.414638+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:03 http: TLS handshake error from 127.0.0.1:44550: EOF
+2026-10-09T23:00:08.404108+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:08 http: TLS handshake error from 127.0.0.1:44578: EOF
+2026-10-09T23:00:13.412413+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:13 http: TLS handshake error from 127.0.0.1:41714: EOF
+2026-10-09T23:00:18.396006+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:18 http: TLS handshake error from 127.0.0.1:41748: EOF
+2026-10-09T23:00:23.396087+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:23 http: TLS handshake error from 127.0.0.1:52018: EOF
+2026-10-09T23:00:28.397170+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:28 http: TLS handshake error from 127.0.0.1:52030: EOF
+2026-10-09T23:00:31.064175+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...
+2026-10-09T23:00:31.492811+00:00 dns-debian13 systemd[1]: celikpanel-release-recovery.service: Deactivated successfully.
+2026-10-09T23:00:31.493076+00:00 dns-debian13 systemd[1]: Finished celikpanel-release-recovery.service - CelikPanel verified release transaction recovery.
+2026-10-09T23:00:32.875659+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:32 http: TLS handshake error from 127.0.0.1:58682: EOF
+2026-10-09T23:00:33.345622+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:33 http: TLS handshake error from 127.0.0.1:58688: EOF
+2026-10-09T23:00:33.410166+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:33 http: TLS handshake error from 127.0.0.1:58694: EOF
+2026-10-09T23:00:33.825989+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:33 http: TLS handshake error from 127.0.0.1:58716: EOF
+2026-10-09T23:00:33.832544+00:00 dns-debian13 crontab[41646]: (root) LIST (upd1_owner_test)
+2026-10-09T23:00:33.839604+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:33 http: TLS handshake error from 127.0.0.1:58734: EOF
+2026-10-09T23:00:33.845973+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:33 [409][settings] scheduled_tasks refused: SETTINGS_VERSION_REQUIRED
+2026-10-09T23:00:33.851646+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:33 http: TLS handshake error from 127.0.0.1:58752: EOF
+2026-10-09T23:00:33.859650+00:00 dns-debian13 crontab[41647]: (root) LIST (upd1_owner_test)
+2026-10-09T23:00:33.864918+00:00 dns-debian13 crontab[41648]: (root) REPLACE (upd1_owner_test)
+2026-10-09T23:00:33.873138+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:33 http: TLS handshake error from 127.0.0.1:58772: EOF
+2026-10-09T23:00:34.052843+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:34 http: TLS handshake error from 127.0.0.1:58790: EOF
+2026-10-09T23:00:34.092037+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:34 http: TLS handshake error from 127.0.0.1:58808: EOF
+2026-10-09T23:00:34.130142+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:34 http: TLS handshake error from 127.0.0.1:58832: EOF
+2026-10-09T23:00:34.136415+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:34 [409][settings] mail_policy refused: SETTINGS_VERSION_REQUIRED
+2026-10-09T23:00:34.141938+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:34 http: TLS handshake error from 127.0.0.1:58848: EOF
+2026-10-09T23:00:36.860738+00:00 dns-debian13 postfix/postfix-script[41768]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T23:00:36.948503+00:00 dns-debian13 postfix/postfix-script[41802]: refreshing the Postfix mail system
+2026-10-09T23:00:37.436208+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:37 http: TLS handshake error from 127.0.0.1:58878: EOF
+2026-10-09T23:00:37.659025+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:37 http: TLS handshake error from 127.0.0.1:58892: EOF
+2026-10-09T23:00:37.672077+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:37 http: TLS handshake error from 127.0.0.1:58908: EOF
+2026-10-09T23:00:37.678168+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:37 [409][settings] backup_schedule refused: SETTINGS_VERSION_REQUIRED
+2026-10-09T23:00:37.684032+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:37 http: TLS handshake error from 127.0.0.1:58926: EOF
+2026-10-09T23:00:37.704836+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:37 http: TLS handshake error from 127.0.0.1:58940: EOF
+2026-10-09T23:00:37.717062+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:37 http: TLS handshake error from 127.0.0.1:58968: EOF
+2026-10-09T23:00:37.717062+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:37 http: TLS handshake error from 127.0.0.1:58954: EOF
+2026-10-09T23:00:38.351169+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:38 http: TLS handshake error from 127.0.0.1:58994: EOF
+2026-10-09T23:00:38.401103+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:38 http: TLS handshake error from 127.0.0.1:59006: EOF
+2026-10-09T23:00:38.616546+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:38 http: TLS handshake error from 127.0.0.1:59022: EOF
+2026-10-09T23:00:41.081887+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:41 http: TLS handshake error from 127.0.0.1:42570: EOF
+2026-10-09T23:00:42.831471+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:42 http: TLS handshake error from 127.0.0.1:42598: EOF
+2026-10-09T23:00:43.401128+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:43 http: TLS handshake error from 127.0.0.1:42622: EOF
+2026-10-09T23:00:47.070910+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:47 http: TLS handshake error from 127.0.0.1:42648: EOF
+2026-10-09T23:00:47.396212+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:47 http: TLS handshake error from 127.0.0.1:42770: client sent an HTTP request to an HTTPS server
+2026-10-09T23:00:47.396605+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:47 http: TLS handshake error from 127.0.0.1:42778: client sent an HTTP request to an HTTPS server
