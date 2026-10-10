@@ -652,3 +652,9 @@ the root `SHA256SUMS` were recomputed. The list of touched files with their SHA-
 `host/post-collection-redaction.txt`. The harness diff (`harness-run-copy/overlay-*/harness.diff`) still shows how the
 fixture builds the prefix; that is source code, not a value. The results recorded elsewhere in this README (that the preview
 answers the hash back) are unchanged; only the retained copy of the value is gone.
+
+## Corrections after intake (2026-10-10)
+
+After this directory was published (2026-10-10), the operator's machine name was replaced by `<operator-host>` in the SSH public-key comments (and in the text that named it) of this directory: 14 occurrences in 9 files; the key material itself, a lab public key, is unchanged.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

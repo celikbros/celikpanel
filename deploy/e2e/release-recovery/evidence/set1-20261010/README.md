@@ -360,3 +360,9 @@ platform's latest run; it merges request labels across platforms (Ubuntu did not
   markers). The seven 43-character strings it lists are folder names inside the run-copy file list, not secrets.
   No database was created through the Panel in this cell, so no database password exists.
 - Root `SHA256SUMS` covers every file; the longest repository-relative path is under 240 characters.
+
+## Corrections after intake (2026-10-10)
+
+After this directory was published (2026-10-10), the operator's machine name was replaced by `<operator-host>` in the SSH public-key comments (and in the text that named it) of this directory: 7 occurrences in 4 files; the key material itself, a lab public key, is unchanged.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

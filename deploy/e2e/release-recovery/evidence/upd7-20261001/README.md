@@ -246,3 +246,10 @@ folder.
 - Any Arch path from alpha.80; the start-check and real-start kinds; management-off; the Arch kill fault.
 - That the record never stays `running` after success: one good update, resolved in about 4 s.
 - Repeatability: one run per Debian cell.
+
+## Corrections after intake (2026-10-10)
+
+After this directory was published (2026-10-10), the operator's machine name was replaced by `<operator-host>` in the SSH public-key comments (and in the text that named it) of this directory: 10 occurrences in 5 files; the key material itself, a lab public key, is unchanged.
+After this directory was published (2026-10-10), 14 digest values of the one-shot update-transaction token (12 in plain text in 7 files, as `transaction_token_sha256` values and as `.release-db-migrations/<digest>` directory names; 2 inside base64 `events_base64` text in 1 file) were replaced by `[REDACTED-SHA256]`.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

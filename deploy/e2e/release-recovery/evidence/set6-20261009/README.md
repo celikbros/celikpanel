@@ -735,7 +735,7 @@ Left as it is, and why:
   the scripts in `tools/` are kept as they ran.
 - `PrivateTmp` and the unit `phpsessionclean.service` are shown as `[REDACTED]` in some native records (presumably a name-based
   redaction rule matched them; neither is a secret, so the value is lost, not leaked).
-- `host/fixture-plan.json` of every run holds the owner's SSH public key and its comment `root@ALIASUSPC` (cloud-init
+- `host/fixture-plan.json` of every run holds the owner's SSH public key and its comment `root@<operator-host>` (cloud-init
   user-data of the guest). A public key is not a secret; earlier committed sets hold the same line.
 - The seven per-run `SHA256SUMS` list the run's `result.json`, `steps/` and sweep reports, not its `host/` directory
   or themselves; the root `SHA256SUMS` lists every file but itself.
@@ -743,3 +743,7 @@ Left as it is, and why:
   largest is `harness-run-copy/pristine-files.sha256` (644 033 bytes). No archive, image or binary is in the folder.
 - Not confirmed and not refuted: that no guest traffic reached an outside host (not captured); the WSL kernel version;
   the interval of the WSL host's cleaner timer; the cause of the five whole-suite errors beyond the failed `git` call.
+
+**Correction after publication (2026-10-10).** After this directory was published (2026-10-10), the operator's machine name was replaced by `<operator-host>` in the SSH public-key comments (and in the text that named it) of this directory: 13 occurrences in 8 files; the key material itself, a lab public key, is unchanged.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

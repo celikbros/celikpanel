@@ -494,7 +494,7 @@
 2026-10-02T02:03:39.482829+00:00 dns-ubuntu systemd[1]: celikpanel-agent.service: Deactivated successfully.
 2026-10-02T02:03:39.483116+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
 2026-10-02T02:03:39.483268+00:00 dns-ubuntu systemd[1]: celikpanel-agent.service: Consumed 1min 22.045s CPU time, 765.2M memory peak, 0B memory swap peak.
-2026-10-02T02:04:00.151527+00:00 dns-ubuntu sudo[53551]:     root : PWD=/var/backups/celikpanel/releases/73eef2862644-c749d4a92615d43731150ce0 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/var/lib/celikpanel LC_ALL=C CELIKPANEL_DATA_DIR=/var/lib/celikpanel/.release-db-migrations/ab8acdc64664936333e574651d47c7a21ee8174d8f926938f98bcddfc3f95d83/work /opt/celikpanel/bin/panel --migrate-only
+2026-10-02T02:04:00.151527+00:00 dns-ubuntu sudo[53551]:     root : PWD=/var/backups/celikpanel/releases/73eef2862644-c749d4a92615d43731150ce0 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/var/lib/celikpanel LC_ALL=C CELIKPANEL_DATA_DIR=/var/lib/celikpanel/.release-db-migrations/[REDACTED-SHA256]/work /opt/celikpanel/bin/panel --migrate-only
 2026-10-02T02:04:00.152633+00:00 dns-ubuntu sudo[53551]: pam_unix(sudo:session): session opened for user celikpanel(uid=999) by (uid=0)
 2026-10-02T02:04:00.460828+00:00 dns-ubuntu sudo[53551]: pam_unix(sudo:session): session closed for user celikpanel
 2026-10-02T02:04:05.132194+00:00 dns-ubuntu systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...

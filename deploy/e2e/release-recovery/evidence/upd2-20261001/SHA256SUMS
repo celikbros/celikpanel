@@ -1,4 +1,4 @@
-a4b5a6510da12fa03aa7b880037240865f385780d3ecce22d22b5f89e178b93e  README.md
+3d29e6418515e4afaa01b1555268895dc93110a2f92f77e3cd5c41d690514290  README.md
 ababb416f50325a6aae46a6d007d3be04553dc0d8ddc95d05ad8630c2c624e3a  build/archive-entries-baseline.json
 696522dc6d85510737b2fbee1d719ac8a3bf38eedb9ee94de585d88fdca40cc5  build/archive-entries-defective.json
 9d070d9ccd31b40cbcd5ca0b9ee8a76e390770e0488ad445ededaa9d286c3e79  build/archive-entries-good.json
@@ -60,7 +60,7 @@ b05576f9b22fd0fe231d78940e9427514b52cc799e6b30a5dfb9f93dd25cad41  observer-tools
 cd71bfc2fb0c5e20e94f1f1d09c5d44e87a7ae75620ade629c643ec0be3e65f4  observer-tools/res.sh
 0eb968b78daaa5c640f05d3502cea032ca0bf0bedb88b63eccb1cc976ad320a9  observer-tools/sidecar.sh
 f354bca6a0050c679be8fc8cc607e99301dbb0014257de308350b33ec394e001  observer-tools/trk.sh
-0b6483b5fbd9a190025c678c92619984355a84bbd6bc229df3ca3d007148a6a6  secret-scan.txt
+38a8863675bd811764f3ad82b4ae3eac1d6fadb05ed1933bf65366a5f4e3ab19  secret-scan.txt
 b9f9ea7816b3de0e25b3c40c416a11fe38b8fd90cd50798c43e64179648a1c7a  upd1-arch-defective/run-a/SHA256SUMS
 01bedcc95d9094d49ecf36b7855cb24f749cc8b813b0075b0175549462f76bd2  upd1-arch-defective/run-a/host/cell.end
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  upd1-arch-defective/run-a/host/cell.err
@@ -421,7 +421,7 @@ ea3f5666d35011a295670ec3942bf2a00fee23846468d976da1c544f8ff4ac10  upd1-debian13-
 8407271b38d64f89d0bbfb1ae1278f9493d6dc7bd3227f573406ad5ca1e21811  upd1-debian13-defective/run-a/steps/14-collect/observation-records.json
 ed23b345c06b319cce0f10d53f7eb880919e628cb1c4a2dc6cca3eb0fd3b3df1  upd1-debian13-defective/run-a/steps/14-collect/observer-events.json
 4bcfd5e2d37d704e7de511edf5b11e9d48260b84a7a8e499a258b0b47de0e48c  upd1-debian13-defective/run-a/steps/14-collect/step.json
-5500f5fdd9b2c0fe4699bd4b5696adcfa6f0b82c0fbc3ef82c3c40da027fe6a4  upd1-debian13-defective/run-b/SHA256SUMS
+d447d4e1fae099516ed91bbd199bbede512243e6598947a1f71f704e3959753f  upd1-debian13-defective/run-b/SHA256SUMS
 f8e4b88a3d940495d8bae35e0b882f6175f15c51724b135bed0cf238bdc8e4f8  upd1-debian13-defective/run-b/host/cell.end
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  upd1-debian13-defective/run-b/host/cell.err
 76f7bee4de7ba49bad3414a8d953260ca4f72bacd98e6b89daa9c18c32396eab  upd1-debian13-defective/run-b/host/cell.out
@@ -432,8 +432,8 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  upd1-debian13-
 0615647fe43eaefde48a56b1e2404e0c74a599c5cce812140d0596effb61a385  upd1-debian13-defective/run-b/host/harness.txt
 5215be9cbd0dee3f431036dc6068e57ded8231cc86ad5d4df9bf301ed3724620  upd1-debian13-defective/run-b/host/lab-name.txt
 ea34006924a54e5defbd1f700ef6a3d040cb8e570660b10ff7d3a0d25f14a425  upd1-debian13-defective/run-b/host/owner-update-observer-169fdd91d71ad361c9ffc5396e0ee572.json
-ff09c5dd6d828021964fb988b9a77a8dc56533af4addd6d3cf420dab0cb40b86  upd1-debian13-defective/run-b/host/recovery-fault-collection-1790783538129459937.json
-b9b5bbab18fd8241c204c62bc34461ff3261bf3984eb9bf87c439dcc929b2178  upd1-debian13-defective/run-b/host/recovery-fault-collection-1790783538129459937.jsonl
+22258f1e764af8020a5c34074bcae22b5fc03751bc5c96237f3613993b9205ed  upd1-debian13-defective/run-b/host/recovery-fault-collection-1790783538129459937.json
+9a496fc5f2c6a654451126082d18bb35278eae3e9729a97f64b63cecd922164d  upd1-debian13-defective/run-b/host/recovery-fault-collection-1790783538129459937.jsonl
 5029f33c6085a26cb80885b79017f23fdba3eac72e620674752de579c4b9ec4f  upd1-debian13-defective/run-b/host/run-id.txt
 6fec41ad7920556a8df4f2346fa88028a52a8e5e8fb4f5d8482e340f4906bd0f  upd1-debian13-defective/run-b/host/status-samples-extract.txt
 117a8b453eb7d74240cd8b982a0ccc7d53589f96241c342feaf97188536a6b0e  upd1-debian13-defective/run-b/host/upd1-intent.json
@@ -646,14 +646,14 @@ f4d38129f3bf658c81ec7133a1b2a4c01fbe4dc9e8207762c196a8486998831e  upd1-debian13-
 b070a773dd44ffa67c7ce910af9aa7bbc0f20e4466df4bab9d10ff785ac44bd0  upd1-debian13-defective/run-b/steps/14-collect/guest-samples.jsonl
 a7b8e94b73f38e293daf5d1c1d689ec06de02527ef1568614a564191e572cebd  upd1-debian13-defective/run-b/steps/14-collect/host-samples.jsonl
 838c79c432e3f04e4ee4545e8e19fa659531f37cff020de85c66fb67335b9853  upd1-debian13-defective/run-b/steps/14-collect/journal-lab.txt
-25c05c095f3ae396f49d40797d9843ddba020228efeca453559716e516d3614e  upd1-debian13-defective/run-b/steps/14-collect/journal-product.txt
+c724b63d723851b0add08bf591fe6d98a18e46231d1debdf06698c02cd63a3a7  upd1-debian13-defective/run-b/steps/14-collect/journal-product.txt
 4d62a26bbf6cd46f9f98e69476bf88f4ff60c068a666e1d5dfa7339a86fa5900  upd1-debian13-defective/run-b/steps/14-collect/journal-setup-services.txt
 923956f21642a7683dc72ac9759c139e07019867884e03f4953aecb004d4bacc  upd1-debian13-defective/run-b/steps/14-collect/observation-records.json
-347091577a4d61246a859e27943dd1d9bc9e825a3030bb1906d2e1e414df6fd4  upd1-debian13-defective/run-b/steps/14-collect/observer-events.json
-b9b5bbab18fd8241c204c62bc34461ff3261bf3984eb9bf87c439dcc929b2178  upd1-debian13-defective/run-b/steps/14-collect/recovery-fault-events.jsonl
+49ccb37eacee547d5f83aeee55ab2908fe4d7b4fba848fff1e6d62c97fcff00e  upd1-debian13-defective/run-b/steps/14-collect/observer-events.json
+9a496fc5f2c6a654451126082d18bb35278eae3e9729a97f64b63cecd922164d  upd1-debian13-defective/run-b/steps/14-collect/recovery-fault-events.jsonl
 35075c58ba0dc7283b2d3b4e1e6425029e4795fde056e2ac6774a29a3b166dbf  upd1-debian13-defective/run-b/steps/14-collect/step.json
 2729820cec762ad375283bc04a18892ed021106b0617092462439267aa129e10  upd1-debian13-defective/run-b/steps/15-verdicts/step.json
-e164634b1cbdc1d4c25e40e21dc22c4bf16f188b8da33013b4707289caa65d70  upd1-debian13-good/run-a/SHA256SUMS
+981f07627f56eeae7df829f0fa50f55d8b239632d196675630cfaaa840756e72  upd1-debian13-good/run-a/SHA256SUMS
 d3305f6bfe7253b4399d59ee99229d2ca5d7a4e356418339a4dea2312659b7b9  upd1-debian13-good/run-a/host/cell.end
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  upd1-debian13-good/run-a/host/cell.err
 cb2035dc3c0346f487903f357e83922b9a4f6dbedd96b0fd7633bea0e3197246  upd1-debian13-good/run-a/host/cell.out
@@ -843,7 +843,7 @@ ea3f5666d35011a295670ec3942bf2a00fee23846468d976da1c544f8ff4ac10  upd1-debian13-
 8adc8cc75fedcb7268c3cc43b88e2f29b75f4a89ab9b701274ff38625d52e196  upd1-debian13-good/run-a/steps/14-collect/guest-samples.jsonl
 d280b623efd0f62d633cf5a4bc828966fe76a612af2163588f092a9dd8a463a5  upd1-debian13-good/run-a/steps/14-collect/host-samples.jsonl
 f220df00c91ac8a1009e8c909071d7c8f9d159078382b6d8bf94199780e0b7dd  upd1-debian13-good/run-a/steps/14-collect/journal-lab.txt
-f852c240282ce4d4f7cb33fe57d606d6f000f8b4df9eb8e3a01ad0f5d715430c  upd1-debian13-good/run-a/steps/14-collect/journal-product.txt
+6e6eda42ec263d4803d9ffdd5b9b8476c015b59c203386edbb68d75fa1ef8a5f  upd1-debian13-good/run-a/steps/14-collect/journal-product.txt
 47c2db6b51591faffc3bf435a7a1d1514e17a7699b0e3ce33c3ca68b4ae0ac9c  upd1-debian13-good/run-a/steps/14-collect/journal-setup-services.txt
 c498494a63d63f3d6a76289821b02b0dcaa7eee53d3666371c0f569004f5f4bf  upd1-debian13-good/run-a/steps/14-collect/observation-records.json
 267dc6b0583794a9323e953ffbebb5d3edb063051a42fce33db97b303282b7e7  upd1-debian13-good/run-a/steps/14-collect/observer-events.json

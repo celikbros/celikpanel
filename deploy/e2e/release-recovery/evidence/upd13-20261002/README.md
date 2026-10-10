@@ -347,3 +347,10 @@ leftovers, keep-awake log, power events, queue log), one folder per run with the
 
 It closes no P0 row. Wall time: host check 20:30Z; builds 20:30:47-20:37:22Z; cells 20:38:24Z-02:31:41Z (2026-10-03);
 staging, scan and sums after.
+
+## Corrections after intake (2026-10-10)
+
+After this directory was published (2026-10-10), the operator's machine name was replaced by `<operator-host>` in the SSH public-key comments (and in the text that named it) of this directory: 36 occurrences in 21 files; the key material itself, a lab public key, is unchanged.
+After this directory was published (2026-10-10), 86 digest values of the one-shot update-transaction token (76 in plain text in 47 files, as `transaction_token_sha256` values and as `.release-db-migrations/<digest>` directory names; 10 inside base64 `events_base64` text in 5 files) were replaced by `[REDACTED-SHA256]`.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

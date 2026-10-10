@@ -242,3 +242,10 @@ this folder.
   card could not be), DNS, panel/mail certificate issuance or renewal execution, power loss.
 - That the record never stays `running` after success: one good update, resolved in about 0.5 s.
 - Repeatability: one final run per cell (the setup pattern repeated identically in all three).
+
+## Corrections after intake (2026-10-10)
+
+After this directory was published (2026-10-10), the operator's machine name was replaced by `<operator-host>` in the SSH public-key comments (and in the text that named it) of this directory: 6 occurrences in 6 files; the key material itself, a lab public key, is unchanged.
+After this directory was published (2026-10-10), 14 digest values of the one-shot update-transaction token (12 in plain text in 7 files, as `transaction_token_sha256` values and as `.release-db-migrations/<digest>` directory names; 2 inside base64 `events_base64` text in 1 file) were replaced by `[REDACTED-SHA256]`.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

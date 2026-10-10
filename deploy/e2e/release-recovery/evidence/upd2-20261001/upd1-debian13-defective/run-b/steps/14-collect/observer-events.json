@@ -175,7 +175,7 @@
       "snapshot": "20260930T155135Z-from-unknown-to-ae713f912af8d8e9153a2053cc2ad6f7abe66851-a8044b953fa34db0ba2f47920c34c384",
       "target_commit": "ae713f912af8d8e9153a2053cc2ad6f7abe66851",
       "terminal_proof": "none",
-      "transaction_token_sha256": "7c58ad95f2d09ef63b8378642eb268f9ecf7b6374fda432990b5443da26be4dd",
+      "transaction_token_sha256": "[REDACTED-SHA256]",
       "worker_state_sha256": "2ab6690d5871da27ff525062550e59a948a2ea25d1762bae1632395d1ecbc428"
     },
     "event": "candidate_installed_checkpoint",
@@ -230,7 +230,7 @@
         "schema": "celikpanel/recovery-fault-intent/v1",
         "snapshot": "20260930T155135Z-from-unknown-to-ae713f912af8d8e9153a2053cc2ad6f7abe66851-a8044b953fa34db0ba2f47920c34c384",
         "snapshot_manifest_sha256": "0e98165a8ae58546a34e1f4013ceaa3671e1b5174b0d07534233397b71c0c384",
-        "transaction_token_sha256": "7c58ad95f2d09ef63b8378642eb268f9ecf7b6374fda432990b5443da26be4dd",
+        "transaction_token_sha256": "[REDACTED-SHA256]",
         "worker_command": [
           "/bin/bash",
           "/usr/libexec/celikpanel/recovery-runtimes/v1/c4b01fa81afa4006b26e46d490467f06f30365d2f7c7ccd123786ff560388339/deploy/recovery/runtime-entry.sh"

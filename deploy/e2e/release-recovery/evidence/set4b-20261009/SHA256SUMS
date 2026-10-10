@@ -50,7 +50,7 @@ b34da7452d24abdb3b1390a365cffd30c2d3bfebf703400254f6a027cfddb186  build/trees.tx
 497ab4d8e533be6f91acde25902085aa4c5860581f22755ed90d65d5f4fbd266  build/upd1-artifacts.json
 62da9cd1e778410371b32c193be7ae9b44712adfada63deaa071ccc217b21d56  checks-all.txt
 bb11f7f05875a9417d70f6866c9d5c48be04fe25ac265e023b27015b85fa87b7  checks-not-passed.txt
-ba6424655e5b2e3011f5ec70b0627f94cba5e97d375285f859f12f2449fe8eba  diagnostic/set4b-diag-ubuntu/run-a/host/fixture-plan.json
+f81203be90ddf01cea50c928db00cc46eb74925caf37c066fa0dcf52aa41add5  diagnostic/set4b-diag-ubuntu/run-a/host/fixture-plan.json
 7a469c8b56c779e5219b58b35fb0dba0c1a0f5c5370d1c458c423dd9b51e2b9e  diagnostic/set4b-diag-ubuntu/run-a/host/harness.txt
 aa583d7872f8b9f0875280e7be8fbe0b4b71ff7e6afe3ecceaf6d344b62c1d21  diagnostic/set4b-diag-ubuntu/run-a/host/job.sh
 2bf73476f662394c36342566de6f0a6a9e562cc2ced05d9b97198d51c1328fa3  diagnostic/set4b-diag-ubuntu/run-a/host/lab.txt
@@ -266,7 +266,7 @@ f878c405bcf4a305da8488850a39fa9b7cb8ce3d45a0cca3dbcba553ba2bab5f  diagnostic/set
 bf1677c1087a1dc5ae2e722d23aefe0d0f90b32018a9bf88b68c4a43c422806d  diagnostic/set4b-diag-ubuntu/run-a/steps/10-collect/journal-services.txt
 0f4d3a9d15daba5c53d00683a686720fcd1ad0e77578ff9ff88068e3671c7ebd  diagnostic/set4b-diag-ubuntu/run-a/steps/10-collect/native/018-rows-at-end.json
 fc2f7345b5636405e90bad50a0eebe69ebeb992837ccc7cd60d94c2d355e6847  diagnostic/set4b-diag-ubuntu/run-a/steps/10-collect/step.json
-b51ebb5032b73669df7a4f044a2707f931ff4fe707df85269021dc10345127f5  diagnostic/set4b-diag-ubuntu/run-b/host/fixture-plan.json
+d94553b5329c8c4283406fb1b86dc734bc9d2780ab550fd5cff7274f136a2490  diagnostic/set4b-diag-ubuntu/run-b/host/fixture-plan.json
 f22c3fb802284f0a7b433273d8de30dec4573ccc0a3e7db0d2bb1d3171633d1a  diagnostic/set4b-diag-ubuntu/run-b/host/harness.txt
 f6633ca21805d35b39f8291838b29b47e65f467ecae1f358bef140f11591a6f1  diagnostic/set4b-diag-ubuntu/run-b/host/job.sh
 29a39bef0373600a21f8c6f1e438e44121879c34fc92aef7df35fb0beafd1a4f  diagnostic/set4b-diag-ubuntu/run-b/host/lab.txt
@@ -565,8 +565,8 @@ a759a1cf367aac4a7be45a16187e57409efb929183c76d99aa9fb3ec47dd05bb  host/host-left
 a0c97168e54dfc320f22e058f6a719281ec4da5570b29d6b9f684db35f45ea1b  host/progress.txt
 db62efc2cdac3013a256d9258fa6ecba2e9c13175967365b797a53ed0f09781f  host/removals.txt
 6fc1f5b89f2e989c90da645ea95045f0f97c439255fd2635a05fc6646c0a31fa  host/sleep-events.txt
-b063c9f2bf17280364d3a07a19e1e32f56fe12aec53730c1acc838f6cda7f44a  README.md
-90f6044afb934789577181b547fbf2fa8f736b91eb26b662d8957ea06782c74a  remeasure/set4b-debian13/run-a/host/fixture-plan.json
+c40027550d56665abb23b86a2ee273981e29f7b9ce264ba7a8d7cfdffaf096cf  README.md
+291b33239b4400449b4b081609776cc5d87e5401ce757e97ffe9799015170ae3  remeasure/set4b-debian13/run-a/host/fixture-plan.json
 3f600a0f90f4a75818419c0b42a3106b8adc434d010f88d623297312ed0c7617  remeasure/set4b-debian13/run-a/host/harness.txt
 6e707b455f2d5eca80ef17d3705b5da73934155fdf79dbe363253e429f97b5c7  remeasure/set4b-debian13/run-a/host/job.sh
 842676008ac26c17ba2ce14fc078ef55aec49c3b3a968bfd9cf5efed6b678bd3  remeasure/set4b-debian13/run-a/host/lab.txt
@@ -849,7 +849,7 @@ eb82e0b6576e794f05ceba60d24f264f636f3cedb0fafb77ed6a29b08544fc90  remeasure/set4
 c6ffac4c98eb80621173f4a4ae9163a4fd9ceec1d3f3ebe449d650c866e993a5  remeasure/set4b-debian13/run-a/steps/12-collect/journal-services.txt
 8bda1ee8f94073571734145e8ab7a2c48cd381a57610a13dd710329b49667dcc  remeasure/set4b-debian13/run-a/steps/12-collect/native/095-rows-at-end.json
 133fda3332dba3e802f725096faebcb407f915df48ead6962d4ace23ebb0b0ea  remeasure/set4b-debian13/run-a/steps/12-collect/step.json
-4dcac76e56f7085f5e454e8e78ccb8e64e2006d84bcf71feb2fe039bf3dc83d8  remeasure/set4b-ubuntu/run-a/host/fixture-plan.json
+4b4eae463b758a28ccc1cab5f1533e25bf9bcefd1a976c6012f8708cfed82b06  remeasure/set4b-ubuntu/run-a/host/fixture-plan.json
 3f600a0f90f4a75818419c0b42a3106b8adc434d010f88d623297312ed0c7617  remeasure/set4b-ubuntu/run-a/host/harness.txt
 59b5926f21592dbf6009a54447f551c0e4df0831229afe1977cb9501f942c5cc  remeasure/set4b-ubuntu/run-a/host/job.sh
 0ee94c63bd70db27e8fc70a37be01a141ad9826030975e55b4b1ecad0329231c  remeasure/set4b-ubuntu/run-a/host/lab.txt
@@ -1125,7 +1125,7 @@ ae0c81381cc7b9344018a699ed6ccb27c19aedf09a10e19a8e56344d63f9acf6  remeasure/set4
 d4b640b09aa9fc58438d97e60bdde78e75909da2e5ccb9a4ac192a77f00c53d9  remeasure/set4b-ubuntu/run-a/steps/12-collect/journal-services.txt
 6f2adc677125950dc83a551ed87810bee68f1e3fbd953d06b38e1f67b8455ca9  remeasure/set4b-ubuntu/run-a/steps/12-collect/native/095-rows-at-end.json
 ed6d61063de4fb057ed6d1801b4efd8915f83221a06a7026baaa61403e4541f3  remeasure/set4b-ubuntu/run-a/steps/12-collect/step.json
-2c3e686ab8efea2c29cc93a3a9b1881905f81e4373aeb323199fd4d2cf41909f  secret-scan.txt
+920a299a5c7f4f6b6e5efa5d49c78a7d49972d2e4c1c2dc09098ec02cf01b09c  secret-scan.txt
 ef7cf9ac512924be70b143ef38c2e2ef512304436664aa46bcae963360cc1487  tools/bg.sh
 7f9151e9c096e8d99ae6d41c07e73dfcca968b536da451a40bc4e58a6475edb6  tools/buildinfo.sh
 49e7d233ba8a510e80fc5cd000ff8dc8506cfb5d3311dbbb7bf76f7df5e9858f  tools/candidate-files.txt

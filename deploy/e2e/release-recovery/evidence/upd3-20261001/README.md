@@ -495,3 +495,10 @@ It does **not** show:
 
 It closes no P0 row. Wall time: 17:39Z to about 21:05Z (cell 1 alone took 100 min, 90 of them the
 unchanged track deadline).
+
+## Corrections after intake (2026-10-10)
+
+After this directory was published (2026-10-10), the operator's machine name was replaced by `<operator-host>` in the SSH public-key comments (and in the text that named it) of this directory: 16 occurrences in 8 files; the key material itself, a lab public key, is unchanged.
+After this directory was published (2026-10-10), 37 digest values of the one-shot update-transaction token (33 in plain text in 19 files, as `transaction_token_sha256` values and as `.release-db-migrations/<digest>` directory names; 4 inside base64 `events_base64` text in 2 files) were replaced by `[REDACTED-SHA256]`.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

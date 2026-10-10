@@ -155,7 +155,7 @@ eaa8002c746ec62cf76179c246de310290a76e5ce9f7b1880f1cc210b8b48fbe  steps/14-manag
 cd84f8e8d08d21c21a8ab946be9c3148245715c3c04ff8af67fc36516e10d207  steps/14-management-off/api/0107-get-api-v1-domains-1-databases.json
 183b55146fb55edfe619563982e2f6037339044be00b2b1ed89abc792544d08c  steps/14-management-off/api/0108-get-api-v1-panel-update-status-request-id-74ca76ea66.json
 1f975b1967dce38e05bb73f611ea5470000c04751ff044b51196c3932cd6fb3e  steps/14-management-off/api/0109-get-api-v1-recovery-status-request-id-74ca76ea665bc9.json
-cd88bd079e12713a4c807e5b41398b96683843e178c4dad9ed1e0cd6654bebf0  steps/14-management-off/journal-product-before-reboot.txt
+4e538bd694a5a62f71979430241e1eb749b7d726ef319da6a8d05261f4d68540  steps/14-management-off/journal-product-before-reboot.txt
 c4aa801a5a1625134096c670f2a4a1f532787d42b2271990d5294b0f5baa4cac  steps/14-management-off/panel-truth-before-management-off.json
 f656cfd9c8dad13e59b55251c99f6f239e3c1647b73b68803fb91b4f8a4bef8b  steps/14-management-off/step.json
 80debf846fbdba2c35da3deb660ef34475c3b391634c498eed71c70b6ac290d5  steps/14-management-off/workload-before-management-off.json
@@ -181,7 +181,7 @@ ea3f5666d35011a295670ec3942bf2a00fee23846468d976da1c544f8ff4ac10  steps/18-colle
 11da7fd90aea49a78f7756932966665bf1e500d14c63cc144659fcd0694d2eea  steps/18-collect/guest-samples.jsonl
 9a08560390a9652bad10576f4d7e0911b85dd41da1b2fdb062a036450b3dde02  steps/18-collect/host-samples.jsonl
 36a1b224dcf65c2c391d20ec60704e742ad458222a424b3aa8b44a258d813324  steps/18-collect/journal-lab.txt
-74d4bb13c2d17c650df1d319130d315b83ca5451449dd907e0f2e2ef64781711  steps/18-collect/journal-product.txt
+0e4ea7a5e1d3ec390c80089e05eb956bd316cf01377b817290a75191a9e24833  steps/18-collect/journal-product.txt
 32663576d08896d4a9084ffe1d489f686c682182d49e8e0e8cc55189e6fe1797  steps/18-collect/journal-setup-services.txt
 2caa782a254b0e904673e1610fef0be60a0cec3c52ae28f70de1b82bd6082f02  steps/18-collect/observation-records.json
 edc85171a98681bc506aa95e71603fad18b992d1832afd3b1e217cfb8e7ddcc0  steps/18-collect/observer-events.json

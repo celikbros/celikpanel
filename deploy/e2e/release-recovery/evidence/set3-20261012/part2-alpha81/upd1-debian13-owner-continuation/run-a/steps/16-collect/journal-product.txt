@@ -423,7 +423,7 @@
 2026-10-09T08:19:40.036609+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Deactivated successfully.
 2026-10-09T08:19:40.036954+00:00 dns-debian13 systemd[1]: Stopped celikpanel-agent.service - CelikPanel privileged agent.
 2026-10-09T08:19:40.037292+00:00 dns-debian13 systemd[1]: celikpanel-agent.service: Consumed 1min 944ms CPU time, 761.8M memory peak.
-2026-10-09T08:20:01.010436+00:00 dns-debian13 sudo[37469]:     root : PWD=/var/backups/celikpanel/releases/c309f79e64d1-c107b302f72ff9d3ddf9ea80 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/var/lib/celikpanel LC_ALL=C CELIKPANEL_DATA_DIR=/var/lib/celikpanel/.release-db-migrations/131459aba0987bc3f50b8e8bbe8d93c5a9e0debc2a9a770a40be2508362eea7e/work /opt/celikpanel/bin/panel --migrate-only
+2026-10-09T08:20:01.010436+00:00 dns-debian13 sudo[37469]:     root : PWD=/var/backups/celikpanel/releases/c309f79e64d1-c107b302f72ff9d3ddf9ea80 ; USER=celikpanel ; COMMAND=/usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/var/lib/celikpanel LC_ALL=C CELIKPANEL_DATA_DIR=/var/lib/celikpanel/.release-db-migrations/[REDACTED-SHA256]/work /opt/celikpanel/bin/panel --migrate-only
 2026-10-09T08:20:01.010743+00:00 dns-debian13 sudo[37469]: pam_unix(sudo:session): session opened for user celikpanel(uid=999) by (uid=0)
 2026-10-09T08:20:01.281654+00:00 dns-debian13 sudo[37469]: pam_unix(sudo:session): session closed for user celikpanel
 2026-10-09T08:20:05.816497+00:00 dns-debian13 systemd[1]: Starting celikpanel-release-recovery.service - CelikPanel verified release transaction recovery...

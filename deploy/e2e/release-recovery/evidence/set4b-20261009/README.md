@@ -346,3 +346,7 @@ changed (none of the changed files is listed in them).
 Not corrected, left as they are: `harness-run-copy/runcopy-e2be8af30-files.sha256` is 12 MB (a checksum list of the
 whole archive of `e2be8af30`, reproducible from git); the dry-run plans in `build/` still name set4's archive; the
 capture time of `host/sleep-events.txt` is not recorded.
+
+**Correction after publication (2026-10-10).** After this directory was published (2026-10-10), the operator's machine name was replaced by `<operator-host>` in the SSH public-key comments (and in the text that named it) of this directory: 6 occurrences in 5 files; the key material itself, a lab public key, is unchanged.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

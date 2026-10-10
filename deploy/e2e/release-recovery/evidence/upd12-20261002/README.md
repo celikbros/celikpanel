@@ -244,3 +244,10 @@ step list predates D1; the watch step is in each run's `result.json`), `outage-w
 - A second fault while the retry runs, power loss, browser rendering, panel removal.
 
 It closes no P0 row. Wall time: host check 13:58Z; build 14:00-14:05Z; cells 14:06-14:52Z; staging and scan after.
+
+## Corrections after intake (2026-10-10)
+
+After this directory was published (2026-10-10), the operator's machine name was replaced by `<operator-host>` in the SSH public-key comments (and in the text that named it) of this directory: 6 occurrences in 3 files; the key material itself, a lab public key, is unchanged.
+After this directory was published (2026-10-10), 14 digest values of the one-shot update-transaction token (12 in plain text in 7 files, as `transaction_token_sha256` values and as `.release-db-migrations/<digest>` directory names; 2 inside base64 `events_base64` text in 1 file) were replaced by `[REDACTED-SHA256]`.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

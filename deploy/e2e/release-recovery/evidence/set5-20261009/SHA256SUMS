@@ -229,9 +229,9 @@ bff1b047a68fa160201ebee688d4261c0ee9757a9b2af88f721c866f2bdd827d  item9.md
 893577534d60166229d9abbbeda23f5da20fa095e55cb890a909d674586e3853  m10.md
 d9c33dd537103574d81edff3268b58593edce311337307971f331943b5940657  part2-table.md
 0f5d75296cb02d905da56e2b7cd405696f5efcf5d2a0c5e78924ade9c5457bb3  pinning.md
-caf4ba2bdad31498f5eaa32b3e64420fb31f6a77ed3d54fcc187a2e4de4d1dfc  README.md
+0ae192fe4d490a91ab5d2f4a3c75fb6d672a0cf2f175d7488905c76442bbd173  README.md
 63bf2be7658acf43119bed731bc554e4cbf5fcac84ac4a8fc120673e44d98fcd  sampler-gaps.txt
-7767f863d2b35000e591e0f615d4f9cdf1e28f464eb015d8952a9c7df8d5dbeb  secret-scan.txt
+c1322ce10bc71171879ea2935c2d2cbc98d26db332c34b0e6ed503d38c6631b1  secret-scan.txt
 d8248846269c1a5c7840c38e4130cc6ed4006c7c6cfd749e2588d7b7372c09b2  summary-per-cell.txt
 f8553af6137f9a35d0e600ef2ac0ab5947d8d95162260e1c796b11224afec487  timeline.md
 58ab11beb2616a3cf485ac84cb47dba5fdc9d275be11b54a0566f621bdbc19c2  tools/abstat.sh
@@ -319,7 +319,7 @@ e86ee991b87eeb590ed72860599d8d9cbc6f1bb9132c85a8b098317016f8e0a8  tools/summary.
 7a765b93f32e0b238879806d63593b99e392bb273069c28fd831fa1099d4a7c7  tools/waitjob.sh
 310ad533576cfb2c97d4b73f531af8563357553a208a33c36964fd94afec1218  tools/wtcheck.sh
 bbf6f189b2ee5f22a73097af562c605078fe338fa898614855b45437d35b2cc7  update-alpha81/upd1-arch-defective/run-a/host/c-drive-gate.txt
-07eb1826b95a59ca4f3aff7a7f7b33442a6b4eea89cde077b4f0df68b48e0d19  update-alpha81/upd1-arch-defective/run-a/host/fixture-plan.json
+46a165ebaad5158bd1c4cc84cad15d0aac65fa63fc6c08c70f9a3dbdeb9dc42a  update-alpha81/upd1-arch-defective/run-a/host/fixture-plan.json
 04883752b4fec3868ed1e849fdc0ede8bf6b85028cded4164a40fad6e8e19613  update-alpha81/upd1-arch-defective/run-a/host/harness.txt
 596a33d817376044304449ba95afb49930264c7a3c3ecf21a561419a3003277f  update-alpha81/upd1-arch-defective/run-a/host/job.sh
 9f50153a105c65035b7ddc2d03b5638cb9a1d76a5afedd51f1948e6599530a5f  update-alpha81/upd1-arch-defective/run-a/host/lab.txt
@@ -521,7 +521,7 @@ df2bebac17b63b5f787bdceb280fb3e0a392885b32cab0bfc100425eece7e60e  update-alpha81
 d446971246beec5336465064a9d020c523023b7282e2ed41d44bd8205cdbed40  update-alpha81/upd1-arch-defective/run-a/steps/18-set5-name-pinning-at-the-end/name-pinning-at-the-end.json
 60020cbf0058efaf2ac0062b8135c479774e5a7c23ae58e6179c0409afab3be4  update-alpha81/upd1-arch-defective/run-a/steps/18-set5-name-pinning-at-the-end/step.json
 345b7e096d61d417bffccec4aa36bb2ec17a4ca7efee53eb2dcec5d1482c0f08  update-alpha81/upd1-arch-good/run-a/host/c-drive-gate.txt
-569fdb5db5760315122f3f5ec39c316c8098c8180d7b5e63f9d392fad2c37b77  update-alpha81/upd1-arch-good/run-a/host/fixture-plan.json
+159924478c1e0bbe91662ce584320ffac6438314701b0f5d7e66e6b6b0000471  update-alpha81/upd1-arch-good/run-a/host/fixture-plan.json
 04883752b4fec3868ed1e849fdc0ede8bf6b85028cded4164a40fad6e8e19613  update-alpha81/upd1-arch-good/run-a/host/harness.txt
 41779210f156469f1a21dbbbe1b507401b88fbcac5094106fbd021d2a46a6bb3  update-alpha81/upd1-arch-good/run-a/host/job.sh
 27319725b23155ff2dee60d10b0a908bb5c9764f8aa58cad6f295a0c1dd34f8c  update-alpha81/upd1-arch-good/run-a/host/lab.txt
@@ -703,7 +703,7 @@ ce43ff35803a5155c611bbca58dc33624ed3b09ead1d73bfaeea29326a604aa9  update-alpha81
 db2979026fb762b552ba3c230263967e653e1a03bf89921a938d270891974543  update-alpha81/upd1-arch-good/run-a/steps/18-set5-name-pinning-at-the-end/name-pinning-at-the-end.json
 ed26085270beb4f835ed6e59055737924d640cec8807278e15759ddf87f7f1aa  update-alpha81/upd1-arch-good/run-a/steps/18-set5-name-pinning-at-the-end/step.json
 5e5f1bbf513333cc26cd108a0aeeb8fd2883d5293e43a46fbceff4c76bdc4389  update-alpha81/upd1-debian13-defective/run-a/host/c-drive-gate.txt
-75394186fced929cb90890967ce6ddba08a98bd63c82ea9021a646a8dad257fd  update-alpha81/upd1-debian13-defective/run-a/host/fixture-plan.json
+0f1a8fdd7593148cbb8c267b08d5f4254e25e7a0ee6c948d72a29ee3773a4ddc  update-alpha81/upd1-debian13-defective/run-a/host/fixture-plan.json
 04883752b4fec3868ed1e849fdc0ede8bf6b85028cded4164a40fad6e8e19613  update-alpha81/upd1-debian13-defective/run-a/host/harness.txt
 700bd33fecdf351ac9b5a7f965af6829d4749126a2082855d67ef1bbf424d602  update-alpha81/upd1-debian13-defective/run-a/host/job.sh
 84b29d4242bb4e729e23537a2e7f0bbe6deaf958c496c1f0339f06617ccf12b6  update-alpha81/upd1-debian13-defective/run-a/host/lab.txt
@@ -965,7 +965,7 @@ c94223754c1cf1d77c30f453849d90b8ecdb6b046a5396d94e77e48a5e396711  update-alpha81
 102cdba9052d45f3520c3df6f9a7c3ad080efac0b2d63bb7e1d04c032671040e  update-alpha81/upd1-debian13-defective/run-a/steps/19-set5-name-pinning-at-the-end/name-pinning-at-the-end.json
 da99f3822cf233cca7ad73a985b22f2b63186d16739bda7ea83fe7db2c16fbdf  update-alpha81/upd1-debian13-defective/run-a/steps/19-set5-name-pinning-at-the-end/step.json
 70cb2df12f52c19bc56611e15ed48e9f87d233c88dd8dde75f9e670f213e3136  update-alpha81/upd1-debian13-good/run-a/host/c-drive-gate.txt
-fc5e330b411649b148389313ce803e9bae7f492eeafec423f24ae49443dfe0be  update-alpha81/upd1-debian13-good/run-a/host/fixture-plan.json
+7cd27cb49bbe996436abc6035a845ec448e7d560b060a4d7f0981fea40da8156  update-alpha81/upd1-debian13-good/run-a/host/fixture-plan.json
 9f0e1ecdef84189b27a949193090244a8fd5de8fd6de9be594fce8934beda705  update-alpha81/upd1-debian13-good/run-a/host/harness.txt
 57b61557d95c3ae702beff46bbeb82b39e6c03ee6173db413cce3593c4f1123b  update-alpha81/upd1-debian13-good/run-a/host/job.sh
 bc311009be64976fd7befa6a9efe31d940b0544b5a3e0d0abd9acecaffc8c955  update-alpha81/upd1-debian13-good/run-a/host/lab.txt
@@ -1272,7 +1272,7 @@ a3eb3d4531cdd74eed7c70e372e094817456452d5b7135250595d6f6aaa76464  update-alpha81
 ce3d73e4f5731d2e7de474fa983a8c8c042b94667aa69378f8cafd6ebaad1b06  update-alpha81/upd1-debian13-good/run-a/steps/22-set5-name-pinning-at-the-end/name-pinning-at-the-end.json
 7f603d9c6a39f337231f766e49d1f1770fb53b146e7413497eaba9eca049bcff  update-alpha81/upd1-debian13-good/run-a/steps/22-set5-name-pinning-at-the-end/step.json
 a8bf239d54c0ffdf3c63cd6585189e844d51f276db7672107b9d12a953a1178b  update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/host/c-drive-gate.txt
-4676796e75aef8cda4c980076736ed99cfe47ab6559f75354f8f220f16de3152  update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/host/fixture-plan.json
+229ad3c577386fb308f499a8bc244e17f9061c4e61a3e1f579f9bce3638dca78  update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/host/fixture-plan.json
 04883752b4fec3868ed1e849fdc0ede8bf6b85028cded4164a40fad6e8e19613  update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/host/harness.txt
 a4519efd1198d5003697a53e528218a5cab90dcddedcd3277b1695253aa9e81c  update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/host/job.sh
 b551ead1d0622d839a85128b7e05e18e11f304cd356f252c9abf557a4c021a62  update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/host/lab.txt
@@ -1534,7 +1534,7 @@ d46222d05d72ad75b33e2ca5569a3a60535496b15a6e204dca750a16428b3c30  update-alpha81
 a2f34d1215f3b67ca80e6ebfee34ed7118b2024c2ff02c3a63f2e71da754d3e8  update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/21-set5-name-pinning-at-the-end/step.json
 0f203bfd5a535b6024c3b4221cbd92e9bb4488de0d84e320834cf923274c3e0c  update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/22-kind-expectation/step.json
 e0103acbdcd61c1604bb2cb6e9a7d653d5d79f43d3b7ed7d9c94542d9303854f  update-alpha81/upd1-debian13-owner-continuation/run-a/host/c-drive-gate.txt
-f748ecae3e35b7488b3b77c7c807d19e7013815d133c87352d778843e059f295  update-alpha81/upd1-debian13-owner-continuation/run-a/host/fixture-plan.json
+64e82606f928ae69b5ad1e27ff9f0184bc88b6cbf062adf04bbc48e5008fdd0a  update-alpha81/upd1-debian13-owner-continuation/run-a/host/fixture-plan.json
 04883752b4fec3868ed1e849fdc0ede8bf6b85028cded4164a40fad6e8e19613  update-alpha81/upd1-debian13-owner-continuation/run-a/host/harness.txt
 0d78f6aa6e768d28cc6b09428f6768d7921cb5aabe6a9cc206afb2f1268206d0  update-alpha81/upd1-debian13-owner-continuation/run-a/host/job.sh
 eb18a8430b0fcbef04eaafa1ab74ed0be30b9fc5c83aea4e8062a3bc05196f9e  update-alpha81/upd1-debian13-owner-continuation/run-a/host/lab.txt
@@ -1793,7 +1793,7 @@ e6bb1c75875c6dbd5ca83bc6db9f3851bdb5b2667dd12f3df68032703941cc31  update-alpha81
 b8c32f9ec8bbfdc1a30ec8315caca3601813a297d23873f57dbf14a091cd36fb  update-alpha81/upd1-debian13-owner-continuation/run-a/steps/19-set5-name-pinning-at-the-end/step.json
 4cbbe823b514cc7446b07188caf6a8ccf6df5c0fa47b480a566f01b5334445ab  update-alpha81/upd1-debian13-owner-continuation/run-a/steps/20-kind-expectation/step.json
 00a681f404730d5e2816d59029e67bb9e3211b4902c2806b4ac30f8c2662e429  update-alpha81/upd1-debian13-startcheck/run-a/host/c-drive-gate.txt
-cf606eff97ea1d450523f7f3270a299d9a70e861c55eb49025201b96602a3123  update-alpha81/upd1-debian13-startcheck/run-a/host/fixture-plan.json
+e29f2ddcabb20dbee7d615067a40bb7639af5abad8417e736c8cd7b278d0abf7  update-alpha81/upd1-debian13-startcheck/run-a/host/fixture-plan.json
 04883752b4fec3868ed1e849fdc0ede8bf6b85028cded4164a40fad6e8e19613  update-alpha81/upd1-debian13-startcheck/run-a/host/harness.txt
 60261b73d04746376103bb023e99a0e78a4f0c954c6702e8cca30197e4f53b76  update-alpha81/upd1-debian13-startcheck/run-a/host/job.sh
 7509ea285a5e9fe15a2545e7d810cc75bf4590b76dc6507c58e825829aecc302  update-alpha81/upd1-debian13-startcheck/run-a/host/lab.txt
@@ -2053,7 +2053,7 @@ f61d56eacdb579c8d8949577d644afed1f982ec0dc6591363bf2f7a0e950e0d0  update-alpha81
 992d153bf2148b01bab3e637d161ffa7c2576cc41c8e1db769124812136ad385  update-alpha81/upd1-debian13-startcheck/run-a/steps/19-set5-name-pinning-at-the-end/step.json
 36178a49078269cc73d19dfd9e1d97638adc4c77bd5d3c1d54023c3553388cda  update-alpha81/upd1-debian13-startcheck/run-a/steps/20-kind-expectation/step.json
 3c4f60d81e0887c8d27acbf46b81985b1f9037be6e662933b21bd2c65a4dd3b7  update-alpha81/upd1-ubuntu-defective/run-a/host/c-drive-gate.txt
-761b149600cec713ecdd44d713ea83a4281a8d59015f369b4d4015b25235eeda  update-alpha81/upd1-ubuntu-defective/run-a/host/fixture-plan.json
+c90dfdc5554ee0d653007951e1671b21147788e6d96edddabdcf77d9823d018b  update-alpha81/upd1-ubuntu-defective/run-a/host/fixture-plan.json
 04883752b4fec3868ed1e849fdc0ede8bf6b85028cded4164a40fad6e8e19613  update-alpha81/upd1-ubuntu-defective/run-a/host/harness.txt
 5964ed106366ee196390029f4cdb3182cc33189cdde0e17365440b98f2e263e8  update-alpha81/upd1-ubuntu-defective/run-a/host/job.sh
 37cfaa7c407af2377056965358df638876d73dc50df1d98ae8da065a764f7574  update-alpha81/upd1-ubuntu-defective/run-a/host/lab.txt
@@ -2342,7 +2342,7 @@ e05fa0af81e42f72d5f4b72e00623cf7cd6f4f21d9c6d7bcad1d4897c1a6a935  update-alpha81
 5f64d87ef8deb322bfa0e884f93c3badd3bfce9c22c63336ea1663dba39b5bab  update-alpha81/upd1-ubuntu-defective/run-a/steps/19-set5-name-pinning-at-the-end/name-pinning-at-the-end.json
 e2f940950173352738bfdfc66d6d0452fd752987aaddc547dc548372a3935bd1  update-alpha81/upd1-ubuntu-defective/run-a/steps/19-set5-name-pinning-at-the-end/step.json
 c7f74bb26328f98ecb98c8a1adc5defc08c203b86efce24f7a86feecdc9bfdf8  update-alpha81/upd1-ubuntu-good/run-a/host/c-drive-gate.txt
-44c2cfba2faad6905c94eda79298acb7c53fd914abc25c62adce720aca90d822  update-alpha81/upd1-ubuntu-good/run-a/host/fixture-plan.json
+244615d47999b9ddb03729b03134582d48660ce55bf823f371f1938ec8612bab  update-alpha81/upd1-ubuntu-good/run-a/host/fixture-plan.json
 9f0e1ecdef84189b27a949193090244a8fd5de8fd6de9be594fce8934beda705  update-alpha81/upd1-ubuntu-good/run-a/host/harness.txt
 531b9446e4f457f1634f33235c445e7af24bd8685714272ab4d72b7ec0ed31c0  update-alpha81/upd1-ubuntu-good/run-a/host/job.sh
 99523508c362076c1e9416747b28ee81456d80e6fb04cb6baad6eec070fc9b9b  update-alpha81/upd1-ubuntu-good/run-a/host/lab.txt
@@ -2683,7 +2683,7 @@ a0337d0f2193ed3720480768b951cbfe36e109432e3113bef2aa4831b8da49b8  update-alpha81
 3793252cd4ac9408263a09565a3727a66933248a2805350016d570cd3dc5b905  update-alpha81/upd1-ubuntu-good/run-a/steps/22-set5-name-pinning-at-the-end/name-pinning-at-the-end.json
 621357ba8af5e042bcb13da19e39368a37e7958cb2548e6c6237e9b8fc8d9607  update-alpha81/upd1-ubuntu-good/run-a/steps/22-set5-name-pinning-at-the-end/step.json
 4bb098d00305ab53cab68690f175bfac39d9d9ef8cc98fc109d57315ac0f5724  update-alpha81/upd1-ubuntu-owner-continuation/run-a/host/c-drive-gate.txt
-d653b11a7a01e3ced29f5e9ca8f9a1dfb584a5c0db15c27de903f68d4467ef38  update-alpha81/upd1-ubuntu-owner-continuation/run-a/host/fixture-plan.json
+3d2340298e0c0326aeb7dcdaa6db1c21283a93db8e69fef771c3f0840942086a  update-alpha81/upd1-ubuntu-owner-continuation/run-a/host/fixture-plan.json
 04883752b4fec3868ed1e849fdc0ede8bf6b85028cded4164a40fad6e8e19613  update-alpha81/upd1-ubuntu-owner-continuation/run-a/host/harness.txt
 e5e45f4942f6fc9fafff2ab123c247c89e70065ab0c7fe787751c5c8f2384895  update-alpha81/upd1-ubuntu-owner-continuation/run-a/host/job.sh
 6aa30eb47b61b84aa7f8ce53817db3ab5d5f23714a960ca5ff8af5f5025a9f48  update-alpha81/upd1-ubuntu-owner-continuation/run-a/host/lab.txt

@@ -304,3 +304,10 @@ harness files above and this folder.
   headline commit `fb04289b` is not in the candidate.
 - Production signing, the real release origin, licence behaviour, DNS, certificate issuance, power loss; repeatability
   (one run per cell).
+
+## Corrections after intake (2026-10-10)
+
+After this directory was published (2026-10-10), the operator's machine name was replaced by `<operator-host>` in the SSH public-key comments (and in the text that named it) of this directory: 3 occurrences in 3 files; the key material itself, a lab public key, is unchanged.
+After this directory was published (2026-10-10), 2 digest values of the one-shot update-transaction token (2 in plain text in 2 files, as `transaction_token_sha256` values and as `.release-db-migrations/<digest>` directory names; 0 inside base64 `events_base64` text in 0 files) were replaced by `[REDACTED-SHA256]`.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

@@ -410,3 +410,9 @@ It does **not** show:
   or certificate issuance.
 
 It closes no P0 row. Wall time: about 15:25Z to 16:50Z.
+
+## Corrections after intake (2026-10-10)
+
+After this directory was published (2026-10-10), 13 digest values of the one-shot update-transaction token (11 in plain text in 6 files, as `transaction_token_sha256` values and as `.release-db-migrations/<digest>` directory names; 2 inside base64 `events_base64` text in 1 file) were replaced by `[REDACTED-SHA256]`.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

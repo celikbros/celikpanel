@@ -178,8 +178,8 @@ fb4e3102ea35cdafad59e8d4b173a2548c91d03232b3fb53a5e8a35445d277f8  harness-run-co
 000dc4fed676bcbbb5515bd6e15318f48ee8cd37d22d522287ae49bc51dc091b  host/post-collection-redaction.txt
 dec9269460676e04ee160d2a60582cc11ce7ab00c6011ef958749bb0eec4583f  host/removals.txt
 34e95131d6de1ca07a14f384a233ae97270fc9bf217725412ee6bb4b829ab3d9  native-facts.json
-ce2ec340807c4a06b14d6d11d3a7cc8d0046b4505b9a90553a149adbd83c6f8e  README.md
-c7c89175651c68c0af28f6e404ec8454f706f95237b8d4c34e2593b3c3c96bde  rid-arch/run-a/host/fixture-plan.json
+9e6b96c48205cca00558f412cbf25d86c93b286909d3a725477306a19b9f798f  README.md
+9e8e49549f92dd55027393bb38b58ffab910771daa330c58c78437196db650b2  rid-arch/run-a/host/fixture-plan.json
 d07b4c6e917d5f0eaf50f904456617a771e372435c41d2a11fe9059d03bcedfd  rid-arch/run-a/host/harness.txt
 e52c693ed9fe9e59e06b7b49c96a003edac43c4ce2cb7fcd4d6b8329c3278e12  rid-arch/run-a/host/job.sh
 8f1742f8b61b345f9dfcce2311d67e178a317fe370e714d5d0ab667c924840d8  rid-arch/run-a/host/lab.txt
@@ -356,7 +356,7 @@ c746882f961235a186eea9f6c5d3f7fd7ccf4b65d3d8788cb19c14cd9e635dc8  rid-arch/run-a
 4bc76000768180a2117f1e442ff743ce70c2ba0f6d1c9cfecc5004ebed4cefce  rid-arch/run-a/steps/11-c3-server-databases/step.json
 124fca6ba857e39f768216e727a9306417e792ce24b4c1960f55ac865b1f2fc0  rid-arch/run-a/steps/12-c4-backup/native/072-backup-before.json
 14d4f0d1372b64ebe0987b175753a666b413217b78777ccfae2854040e0823fe  rid-arch/run-a/steps/12-c4-backup/native/073-backup-after-iii.json
-3b9fe9dbbd40a1bb3306eede56d1282497bb1ee8b1942b0e34d9dade9af9b83b  rid-arch/run-b/host/fixture-plan.json
+38207586a2a7b7af93d4e864e2b85846f8db2c1e68a141ca5e8e08663279665c  rid-arch/run-b/host/fixture-plan.json
 f15dca7f4a98841aa8fe89bd4d5456f454af5344af3cc38526901eb3bd2d22e9  rid-arch/run-b/host/harness.txt
 14f6cbe1bf1e7d268a42b229416bcb06ebe4ecddea83e440b09461790a722c7a  rid-arch/run-b/host/job.sh
 325ff9b1943c85680926deebbbd3b2695a72e2c78f1a091a29a33edd19a0a87d  rid-arch/run-b/host/lab.txt
@@ -738,7 +738,7 @@ ece21a718c66535857eed643c7c6f4f55fabf7f19c4cd83b2bdbeb9dab78967d  rid-arch/run-b
 35a00bd53deff782dae87f3fafdf3e3d3f420d582b6973e662233bc7192c7297  rid-arch/run-b/steps/18-collect/journal-services.txt
 535b9f95bad55c23f3106ba98f7d6d854d4449dac1ddf80ed8a1a9df18caf3ad  rid-arch/run-b/steps/18-collect/native/235-rows-at-end.json
 7a8de025827b962baaf604f080b92cf6faa90ba62222c14c642e81f57687f84b  rid-arch/run-b/steps/18-collect/step.json
-8c5c958084019a34b3372ff7387f003bc204907d1e79b8535a176c9f0bfe8910  rid-debian13/run-a/host/fixture-plan.json
+641cd15bc74b59337b82008add481c3144a7f9396e50f1f811b5b18b6f1a14f0  rid-debian13/run-a/host/fixture-plan.json
 d07b4c6e917d5f0eaf50f904456617a771e372435c41d2a11fe9059d03bcedfd  rid-debian13/run-a/host/harness.txt
 0fd6b30c06bd748016b74fa432033a98dbb17e365114cdd916d502d643a93681  rid-debian13/run-a/host/job.sh
 52fa8c702849a45d2b8c3e4358351419e907c8bfba6e5890903594305c142752  rid-debian13/run-a/host/lab.txt
@@ -1201,7 +1201,7 @@ c4b977e971141d34b93bd35bd95d1c7c71e714b16ade62a630010a9df254372c  rid-debian13/r
 89cac892ee3cfef1370f592faa6ab30dbd4208343d8a6d356d5b9bbd3879ce4c  rid-debian13/run-a/steps/18-collect/journal-services.txt
 918612d02b0748ed343e1b0bf10fcde49dad1d7a02ac0c3ac6e6d31abf7f1b09  rid-debian13/run-a/steps/18-collect/native/232-rows-at-end.json
 60283563cac1e8eae80786844fd52db64b56603e6d85dbc6632833abb82727c7  rid-debian13/run-a/steps/18-collect/step.json
-d54a4fb02fb64e0e4b9f2a9a85fc4713f2dfc2830fd982e83fecb0cc3e03ffa5  rid-ubuntu/run-a/host/fixture-plan.json
+35396ab503f3d6f091429f1700dff5355190cff82377699645975d6b1a749d65  rid-ubuntu/run-a/host/fixture-plan.json
 d4a52674bc05398c82342f5270fec01ade9d8cebdb693a5047eb33578f215624  rid-ubuntu/run-a/host/harness.txt
 4c867a49ff17923384f8550ba363bd352b23d4813c9e971bac9470a6ca6f1979  rid-ubuntu/run-a/host/job.sh
 4c9baffa0429a4d8e93015a34abf924cf63ec328d439d0b20f702ea644dc06c7  rid-ubuntu/run-a/host/lab.txt
@@ -1493,7 +1493,7 @@ a2007cafdcbb159e38289b413f79f3bc536894d97d4189356e18344d7a8d49bf  rid-ubuntu/run
 e55992cfe5e59d4f074b767be0ebe6a4796a2378370c1816c4f2d3e6a3f05e45  rid-ubuntu/run-a/steps/18-collect/journal-services.txt
 04513b645777f578cc6ecab9fec7e0e367cdee06741d5a7b64c6df76452cbb1e  rid-ubuntu/run-a/steps/18-collect/native/108-rows-at-end.json
 c6b17b2d9dddd2da9f1bdf7b2e024e7e610b51efa356264a053a60220823ecf7  rid-ubuntu/run-a/steps/18-collect/step.json
-c3d7a8992338557820787948b2a2776536bba48db2d15d31dc75301ccf302085  rid-ubuntu/run-b/host/fixture-plan.json
+17d8ec09b763f97c5e588065f66a8d86fa1fca5f8224a18a31e2f46d48ea3816  rid-ubuntu/run-b/host/fixture-plan.json
 d07b4c6e917d5f0eaf50f904456617a771e372435c41d2a11fe9059d03bcedfd  rid-ubuntu/run-b/host/harness.txt
 bde638031c4a3b7846914cbf4a28134baa1d96b109d568510af8db6673376c37  rid-ubuntu/run-b/host/job.sh
 c5167d7e3754d4ba687c2f8ad4af2c3a46c049770a95e035112aadd7b2641e82  rid-ubuntu/run-b/host/lab.txt
@@ -1949,9 +1949,9 @@ abd0ef80b278a994c85311df083febe43bb422454bf59c3246247c7a820d7103  rid-ubuntu/run
 f3b0d10cbf98fa94127f710e4089d3370d7e5c0555ae9387c06596ea58444e5b  rid-ubuntu/run-b/steps/18-collect/journal-services.txt
 4aa81152a29e19d798d1b4f32ecdb02c1eab388930ee085a709e6a441f92fa95  rid-ubuntu/run-b/steps/18-collect/native/232-rows-at-end.json
 c1169b175a73d4957527281f90c208e7ae7ad33a02b816448ac990f96410991c  rid-ubuntu/run-b/steps/18-collect/step.json
-b24eed0328b93de30d3d050ea3635165ae9dd2ae227011d136bcde02a4b9195e  secret-scan.txt
+c773c52212ec2d58c2b422ea764345934e4dba8a0f26bd3ef84c8e8698f68d80  secret-scan.txt
 4cb85cddf4112a75fd469e2f612f9bb2289394746a61ee5953d5997c251a928a  sections-table.md
-20fb8542bc399142256e6eaa0db6de3b5524e61e4ad17792b799f49cdcac76a3  set2-debian13/run-a/host/fixture-plan.json
+48381f428fb0d66a81f9b53748035e5b85117a870369cc505b17921d5deeef23  set2-debian13/run-a/host/fixture-plan.json
 d4a52674bc05398c82342f5270fec01ade9d8cebdb693a5047eb33578f215624  set2-debian13/run-a/host/harness.txt
 20303b3a2152ebac9936d390fd62336eb6b38a85fd98957d34131ba690a9a5da  set2-debian13/run-a/host/job.sh
 b37519b56c0d8c816cfc66650043e29b1e7fc81b635c8ac658ead8ebbcc0144f  set2-debian13/run-a/host/lab.txt
@@ -2583,7 +2583,7 @@ a08e0f6c10a9e7ffca4cec785c799f4bb8c2d00e4934054a095485c8b9ae5d8f  set2-debian13/
 30c9d5be658553f6354a30838e8b3602a46c217c9461ff9e1e29d4a82c01ee8b  set2-debian13/run-a/steps/16-collect/journal-services.txt
 9e054e133032b63326efafe364544036ea4ab25f45d0a3814763b3b14051e27d  set2-debian13/run-a/steps/16-collect/native/280-rows-at-end.json
 10eb4dfb61b731ee5ce31d32408ac60b7a594c8354ff70d8d95e97f36a7e4157  set2-debian13/run-a/steps/16-collect/step.json
-dc4c5d13d0b6c17cc02253ba1a28b8dcb2561c8d848c4365836e6961314411c2  set2-debian13/run-b/host/fixture-plan.json
+10e023b69c012097a48a62c57515e936ec1b92eaac936a45be5e1abbd6258a67  set2-debian13/run-b/host/fixture-plan.json
 8171e688b156f75f51da1dd876b896839fd86d1a9a732e8494913aa9ad564883  set2-debian13/run-b/host/harness.txt
 375d51d293bfa3903895eb50f6ae39a46b9e20fcc5634c1c130e56c899fc02e7  set2-debian13/run-b/host/job.sh
 2e2ec78913e572b36eeafa02c8b4372f64a04e89fcccfebe3fa26a379aa6e7d9  set2-debian13/run-b/host/lab.txt
@@ -3227,7 +3227,7 @@ ff6b604744c70b470d834db175634f7efb4b0d50a8954ebd89a99d358422aef7  set2-debian13/
 079b31f1a4065ab500092f0fd2b76d19254e55045b490646e96a3cc8214ed014  set2-debian13/run-b/steps/16-collect/journal-services.txt
 17322c4d680bcf60a314f6074592ecf8b10d51112fa67ae0f6eed95b6659cd0a  set2-debian13/run-b/steps/16-collect/native/280-rows-at-end.json
 57e34fe5d1c98980a1bada7537e847b0330ed4ec026c17a6dc495f08295ea6f2  set2-debian13/run-b/steps/16-collect/step.json
-2e840f0ed89bde054f0505f4b0d8585bd0ea98587b7c75394cd9f725817c9369  set2-ubuntu/run-a/host/fixture-plan.json
+7457de7a8b25c3ae7fdae473f04c5e0c84bd43bfef972a88e3d70120e07d4e5d  set2-ubuntu/run-a/host/fixture-plan.json
 d4a52674bc05398c82342f5270fec01ade9d8cebdb693a5047eb33578f215624  set2-ubuntu/run-a/host/harness.txt
 18132f1b016c7d9704a5b511ca05130e3557b590cc58d96fa310c6642f62b1a2  set2-ubuntu/run-a/host/job.sh
 cd5b0b6ff2b595d7396f25b5f83ae6fcd7a9fb5dd25bce5d110c2fd09b90b7da  set2-ubuntu/run-a/host/lab.txt
@@ -3864,7 +3864,7 @@ ba6ae2a27f8299ce17a6223a494b1f6234a2e8cc55643ada20e41868283f74fb  set2-ubuntu/ru
 5cecf3453b60cdf3515a4c1021e7d4460ec2bd2cac794672d501831500612c9e  set2-ubuntu/run-a/steps/16-collect/journal-services.txt
 efca00f557ccecd5a78f525ab383ba030cf5fb7626af91d0015b215649a18a3c  set2-ubuntu/run-a/steps/16-collect/native/285-rows-at-end.json
 05b7510b28f7b6352d0630412c845658c9f117aafe42ea8f1ca2258c87ac580a  set2-ubuntu/run-a/steps/16-collect/step.json
-4e2aadd06701646c92d2f9108cd50c04894c89b2ab44ad15f3b93e6bc5d19e63  set2-ubuntu/run-b/host/fixture-plan.json
+d5019af268fa1465de9a746eddc45ac5bad061f7ebe69755102239243debb147  set2-ubuntu/run-b/host/fixture-plan.json
 8171e688b156f75f51da1dd876b896839fd86d1a9a732e8494913aa9ad564883  set2-ubuntu/run-b/host/harness.txt
 93c651a037a1913e528fd985e8374bba07b3d26321ec639def65f0f92715ae4d  set2-ubuntu/run-b/host/job.sh
 dae344544c51e6f60cb1eb1b186aae653b9f639faf2797baf0e886b28ecc9b7a  set2-ubuntu/run-b/host/lab.txt

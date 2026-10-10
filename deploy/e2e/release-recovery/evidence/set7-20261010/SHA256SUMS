@@ -1,4 +1,4 @@
-c5a9bfbb2cce3fde059dafc65542c4d834ea3b22b06396ab11eaaf5a996c0a8b *./README.md
+ed2a79e82c941fb0612d4dac036fcbaab1c8ad56ed8e63fa5d026a81863816be *./README.md
 141fd03efbe4cd02bd2263953021786708f607045a82daba14856ac92d9bdfe0 *./build/a81-prove.json
 d1829e801d8d590801f4b56ec5c12f2c9942f58bd467234bbb6980ed758d8485 *./build/a81/baseline-ref-proof.txt
 0024e57ce1d54093da18f41045cb9da6156301f77b5700de73fa499268dfd8fe *./build/a81/dist-baseline.json
@@ -384,7 +384,7 @@ ddea2c554da50b60037d6af2791ac644d6d535d01c221aa521f60942bd64fe03 *./lab1-alpha82
 25e703c4ec6502ebc29c22f4766cd681ebe4b24eb9c85b3c4d81d3f822a94dff *./lab1-alpha82-interface/driver/steps/12-set6-name-pinning-at-the-end/step.json
 6e78de4ae70c88f51f6ff4ac6ec371729d1eca9fb61fa7126b3f98a77e810c69 *./lab1-alpha82-interface/host/c-drive-gate.txt
 9c5c55dcbadc7e0f4f3ba14eefc3511bcd68d59c5923117bfc6ffe584a04ddfd *./lab1-alpha82-interface/host/digest-sweep-at-staging.json
-afa64c15b9e3386e422f32020d441ec3a65f0f4577aba654bba94991a43afa68 *./lab1-alpha82-interface/host/fixture-plan.json
+1560e3dce7a3a2d6d6b082d74587f2fbe23fb47b504ae215cd4962883e92b009 *./lab1-alpha82-interface/host/fixture-plan.json
 10daabcc6b57955aae24506f4140e83c767609b4143fac76a1a6d98279bf41c4 *./lab1-alpha82-interface/host/job.sh
 342e29cc864f718e2dab3d73a7aab202b44ae4986b1670beb7929fd34d22708b *./lab1-alpha82-interface/host/lab.txt
 d028b3e555a339ca361622ba97e51326f8f2b87668c2a01beea87fcdd8babf2b *./lab1-alpha82-interface/host/upd1-intent.json
@@ -683,7 +683,7 @@ f78bca09056f7ae7c4ecd7290b62a703bb2739db8e70b22ecede2420d35d4a8f *./lab2-alpha81
 2c219644c7f96e2ee7275d1f5d31275806575378437aec96fbc3a82410ee272b *./lab2-alpha81-interface/driver/steps/12-set6-name-pinning-at-the-end/step.json
 2387693e6774fc2a47cdb3e9214ff892ec0053f54ec0acd23d363375d63436e0 *./lab2-alpha81-interface/host/c-drive-gate.txt
 989bd17ff53b42ac4bfa03c7071924c0ae4241fc551f548d0b7654fd6df2b4a5 *./lab2-alpha81-interface/host/digest-sweep-at-staging.json
-1cd7ed230748afd899102a0e8b56dad820fd35e0b643b708c5dfd6c40760f832 *./lab2-alpha81-interface/host/fixture-plan.json
+16b76dd49b0a682ee859c3479f83fcf8d94ae998a2f6d6f3cd1b6173a6407208 *./lab2-alpha81-interface/host/fixture-plan.json
 2223bd270c5b9ee861efd854875c1e2ea6941d06150588b188d725f198f2ab3b *./lab2-alpha81-interface/host/job.sh
 2ed9af720050ae6d43ca11ca6702026506959852dc1169ca1b5634e52479d262 *./lab2-alpha81-interface/host/lab.txt
 dfc5c8bcf36bb0d9683769f2a226b3e89da10c30cf9647358826f790094f713e *./lab2-alpha81-interface/host/upd1-intent.json
@@ -1957,7 +1957,7 @@ f7034685f3867e17f28d8cd604da0ed4fd67ef5de35ca0834c2577312c5e6ab6 *./lab3-alpha82
 f29014ea7e1fbd046424f374b71b6d970a32627e27d3bad2dfeb647b78275f80 *./lab3-alpha82-interface-page-load/flash-summary.txt
 566f21c62ecfc801e60541d251c3ddfc0b923b5b1db6c12cfe004b7f04daf1ac *./lab3-alpha82-interface-page-load/host/c-drive-gate.txt
 45c3aad5bed5ed698b2970d86911bb26caf931ace13da404e6f57cf6f8983052 *./lab3-alpha82-interface-page-load/host/digest-sweep-at-staging.json
-e3d19687cacc62f7194e8e0661b12c863c73b9a00431a9c189a9be2b2d7c7769 *./lab3-alpha82-interface-page-load/host/fixture-plan.json
+1deebf7b0036a8a21f0023195645a4301d83ffbbf612821f89c1c47c7d25834d *./lab3-alpha82-interface-page-load/host/fixture-plan.json
 a4291bc5775013ba318b9e7e002290b0e666efaa01b43f7010ef842664149c58 *./lab3-alpha82-interface-page-load/host/job.sh
 a58f8b914ec699f16e3ce93d6f472c9a4b7325f9e9dc922be12957029d060080 *./lab3-alpha82-interface-page-load/host/lab.txt
 61d757cfa5df9f006db12a60c1157876c7cbee8f5187a3e6e05f832eb4d3b282 *./lab3-alpha82-interface-page-load/host/upd1-intent.json
@@ -1966,7 +1966,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 *./lab3-alpha82
 aadc68210e1f42b81c3e07ce9f8580f67ab96126ccc1f23ea8fcb20830d89afc *./lab3-alpha82-interface-page-load/host/wrapper.out.txt
 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa *./lab3-alpha82-interface-page-load/host/wrapper.rc.txt
 5f66613d90bb87e6732f24c8def6e4b333cae3c156882a6925da11760cc827a3 *./lab3-alpha82-interface-page-load/host/wrapper.start.txt
-c54854706ed8f5fcb3c7a21a2f2d8aef7a53a297f661d028c21ead6bb90fc009 *./secret-scan.txt
+51069ebcb6d0edf266577d48d8183fe6cb4338d81e93d875a967c766fcc753f6 *./secret-scan.txt
 4f3730c5b1dfbb4b48b449bc29990d824fa30e084f0f46deeae8dabbcff903b6 *./tools/afterbuild.sh
 906c43ae7088a5e3d90b5da76459127227c8c622c04fffaee74010a885467de9 *./tools/bg.sh
 4f3b5f3263724ca62be3db906f03fea56a7b020d904c1be23e6bbe665ea7a72b *./tools/cleanup.sh

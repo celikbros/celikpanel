@@ -323,7 +323,7 @@ what was changed in this folder (no measurement was changed; only wording, paths
 - **Stated here only, with no raw record:** `puppeteer-core` 24.10.0 (Chrome 154.0.8037.98 is recorded in every `run.json`;
   "headless" only in `live-restart.mjs`); the guests' package versions (only the image name, kernel and QEMU version are recorded).
 - **Kept as they are, noted for the reader:** the fixture-plan files hold three throw-away public SSH keys whose comment
-  is the author's machine name (`root@ALIASUSPC`; public keys, one per lab, not secrets); four files use CRLF line ends
+  is the author's machine name (`root@<operator-host>`; public keys, one per lab, not secrets); four files use CRLF line ends
   (`host/watch-gaps.txt`, `lab1-alpha82-interface/timeline.md`, `lab2-alpha81-interface/timeline.md`,
   `lab3-alpha82-interface-page-load/flash-summary.txt`; not converted, the sums cover the bytes); 3 684 of the 3 958 pictures are the
   cell 5 screencast frames, which are named by pattern (`shots/<load>/NNN-<ms>ms.jpg`) in this record and counted per load in
@@ -336,3 +336,7 @@ what was changed in this folder (no measurement was changed; only wording, paths
   ms from navigation, but it does not list the screencast frames, so a deleted picture is known only from `PRUNED.txt`; the
   picture counts quoted above ("3 958", "3 684") describe the folder before this pruning.
 - `SHA256SUMS` was regenerated last, after these changes.
+
+**Correction after publication (2026-10-10).** After this directory was published (2026-10-10), the operator's machine name was replaced by `<operator-host>` in the SSH public-key comments (and in the text that named it) of this directory: 8 occurrences in 5 files; the key material itself, a lab public key, is unchanged.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

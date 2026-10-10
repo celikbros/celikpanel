@@ -1,4 +1,4 @@
-461a411f7f62ce8221820a6dd1fca61dea556d437f54a4039f45332e5bf9d069  README.md
+b63ba3f9954b843a0a034083afb18a39962fbb88ece9b8f7769d5fdd1cc9003a  README.md
 0d77273fe25ff3ed42ed6a078c737cb0b4728c4387ba4c492cc0d542249e35a5  build/build.end.txt
 f36fb7c73783d271c02c5b60c6b31295b88aee37064c50ad5c3c173c72b9b3d6  build/build.err.txt
 b55e4ae3e9b3cd10b469b45c1f03396529ecb10f7a29b7953e5975b032db59b5  build/build.out.txt
@@ -42,7 +42,7 @@ f716b062b3a47cb4b69c896e465a21550b25c72168a454127b03f9751dab1949  harness-run-co
 eb6c9e40a87fa8a1ae21e46a4c86358aba47f5364fc55f7142d7a54b1aa820e2  host/host-df-before.txt
 e5634d6be177ff2867de462792e461e9f02c34b203363f7193b6732ea81e017d  host/host-leftovers.txt
 3e981ae2e0a3b6f3669c55fe77845c74d962c9f9434560415291d51a9d0ca57c  host/hostcheck-before.txt
-15ad6814ba5a309f40faa64ff689174144950f9337a5fa80ec25c099d308e605  secret-scan.txt
+d0cceed6e2aba2fda1b9304bb1d5ccbfa21f430ebd9485f1a36806af71fce786  secret-scan.txt
 a472dfe80369141f1247fc4640ad2331d86540eb09904977574fea2f3f2d3512  tools/ext6.py
 64ac73c62e4361b3f835741e52f675bd7b60af6fa848fd48eb2335e7150239b1  tools/hostcheck.sh
 ed7b57ee9646ae43365b81f30f512195a05c41a204b9083367f93ad221e585e6  tools/jobstat.sh
@@ -55,7 +55,7 @@ c90455ab8faa63e087af2fbf075e35882114e16287bb514a927ee8a340dbec02  tools/scan6.py
 f6a687174fb62cc07d82bac611849c661580e3312253054149de3c552ffe915c  tools/waitpeek.sh
 dd9417878cd44cd1e27d3a293d22323b6d26e3e41df29cc6f2b95d928da0fc00  upd1-arch-owner-continuation/run-a/host/current-worker-baseline-arch-current-worker-baseline-result.json
 75690b1603d10cf985f209203de9cc8d0997f10e1b1be76526297cf683efa3d8  upd1-arch-owner-continuation/run-a/host/current-worker-baseline-arch-current-worker-baseline.log
-d0d46a9dab86c816d5aa404c8853deb89d95733ac2f482ee61611bb1f1d57ef0  upd1-arch-owner-continuation/run-a/host/fixture-plan.json
+48bcf89cf240477264431638ee406f43c0ffbb0201914c838beee2c95d712f66  upd1-arch-owner-continuation/run-a/host/fixture-plan.json
 5fe151dce25b359dfee8fdcd7814496a70dce227a786fa3f24571469b166fbad  upd1-arch-owner-continuation/run-a/host/harness.txt
 06da68d88051e905618db011b78434ee2e4ae2b3ccdf3c04ec6a78a2034ddf0c  upd1-arch-owner-continuation/run-a/host/job.sh
 7a87adfa30553cb664569f6378c0a44250cc803d8c7bcd0455e62836b189784a  upd1-arch-owner-continuation/run-a/host/lab.json
@@ -248,7 +248,7 @@ cf30129d36535b7e170482f256cbc4a8532101fe4b64ba41ce3ef4b12bab42d4  upd1-arch-owne
 fde0f435f99687620110b0841f13860b86075cab0a6c3de7ecfbbf1ccf7ff3fc  upd1-arch-owner-continuation/run-a/steps/15-collect/guest-samples.jsonl
 95b2a3001b842da6fabc19facebfde51359d43e180f2600d30e8229692c80f6a  upd1-arch-owner-continuation/run-a/steps/15-collect/host-samples.jsonl
 9c29dc2e897c34d507c4893fd51a72298238dc07c8cda418bd463509279f7a4c  upd1-arch-owner-continuation/run-a/steps/15-collect/journal-lab.txt
-58f17059ebb2c20180171ec7666ebd7d23280111f088d64c541e1f66a769808b  upd1-arch-owner-continuation/run-a/steps/15-collect/journal-product.txt
+48a587b2acf060da6b329449c52fc2f752b7e6cda58da3b3ec881b64c6b9dec1  upd1-arch-owner-continuation/run-a/steps/15-collect/journal-product.txt
 f3632d745a21835d7b5d5126922e73c3438a9db174926493a5c5d4ca7b4babf2  upd1-arch-owner-continuation/run-a/steps/15-collect/journal-setup-services.txt
 9a5757236f204c15460665a52b5d3252a8bcf69cca1edf6ab01cbbb7167f00a4  upd1-arch-owner-continuation/run-a/steps/15-collect/observation-records.json
 de5df24ad6b213a71043259e1b759ceff39316d791316425f6530659a88da7dd  upd1-arch-owner-continuation/run-a/steps/15-collect/observer-events.json

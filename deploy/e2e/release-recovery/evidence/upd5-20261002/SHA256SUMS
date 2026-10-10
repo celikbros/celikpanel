@@ -63,8 +63,8 @@ b093aad1de01b59d502a486825b647c3c57897333208b8e71265ab65dafbf01f  ./harness-run-
 bdbcd2b4371b20f80e8cb9ab1f572fdf341051dc4a2bce5ac3685cab84c9f882  ./harness-run-copy/stop-ocb.sh
 3f6f6642814eb9a5c2c32e4e2346075ff390ea7dc7b7d5600cadfca75c11b639  ./host/hostcheck-before.txt
 2451016b9d582ebdc3cc255da1d1397e9f921a0b539f9d88859713dc5489799e  ./host/host-df-before.txt
-773440effe38c49d6a1a1187e04abe21cd6019fd69717c6aa564a55c2a91f837  ./README.md
-8300b1feb5c37fbffb2392e6e0e8ede597226ade2eb51171b41184e5d4ea92a4  ./secret-scan.txt
+945085b7adc515ee57d5e9cf8708378f0ce22362a467c24069da75288ba42494  ./README.md
+04409de7a0950b3d425e6562599c6c6ce2d807844a3a6a1e7bbef0b1ff2a36ea  ./secret-scan.txt
 58bcf87f48c7f387e5e51e632e37f35b32900142fff179dabf88bb8cf68a3462  ./tools/ext5.py
 8e60fa0c99aadbe01232ecc516b415b44e1bc89c228cd610b1b4956c473dadf4  ./tools/failpeek2.sh
 1043d01100ebce27f58dc5b4ad29954c174c6b46fe51506a68142b64b5d82876  ./tools/failpeek.sh
@@ -86,7 +86,7 @@ bcaceb021cffce8253c92aea3995c7bbd18ad2575c493d8fc3b2bc46906e8695  ./tools/views.
 dddf021121f893a80fc1b06ec603906bb479c6b8af6262e948894e63461e298c  ./tools/waitjob.sh
 9e55047c8621b8f61820582c4093453c7e3ba03f83a6a05545462b8277b3c2fe  ./upd1-arch-good/run-a/host/current-worker-baseline-arch-current-worker-baseline.log
 e5c381fbfaed352d76a90cf278030ec6b11789c02194862c698ff1b0377666fb  ./upd1-arch-good/run-a/host/current-worker-baseline-arch-current-worker-baseline-result.json
-19b5a909158580f49c15d3b6035da02d6727f629a6e0b38b542466dc8aedda5f  ./upd1-arch-good/run-a/host/fixture-plan.json
+c9608864dcdd9b84f31e4bc44160bc5099c6c94898cf370cd656ef826e8b9e05  ./upd1-arch-good/run-a/host/fixture-plan.json
 12347280e5b451db8b98f3e7fc64f3800100107f05c7824f5c31d463c9068de5  ./upd1-arch-good/run-a/host/harness.txt
 70042efd1c822c886d4a1826ebc13ff19d4711a23bee7bd426ad46ab77f92857  ./upd1-arch-good/run-a/host/job.sh
 6597b1773820f643d1444e498251cabc5f711543b3ccac0700745248e20a5b67  ./upd1-arch-good/run-a/host/lab.json
@@ -102,7 +102,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./upd1-arch-go
 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  ./upd1-arch-good/run-a/host/wrapper.rc.txt
 7d27f0c606f584561ba8e31d50a904db9ad19fa9046ec7363482a5b792266234  ./upd1-arch-good/run-a/host/wrapper.start.txt
 5af5f7175ab95ffa53f48acee3f1ccfbebc35a11f9f1471d9250b1953180b4bf  ./upd1-arch-good/run-a/result.json
-7e9e3faed8fdd7051fc3ca55188d2eeb79a36700f066654dd4425761e5881dd8  ./upd1-arch-good/run-a/SHA256SUMS
+105b4ba53b2e24cff99670edea1864cb87a6a0ca877cf25c1c9c1a358afba7ca  ./upd1-arch-good/run-a/SHA256SUMS
 893d6cf62deb67cd8142f25b36a07e321b5589a77e34a21c907e52491834fd0b  ./upd1-arch-good/run-a/side/extract.txt
 3801b32eeeaab907e928164cc9e1aefb9f9a1d650371302925e2356ed652524d  ./upd1-arch-good/run-a/steps/01-preflight/preflight.json
 9cd2374b42c4ddaa93aaa4ab5e2439bbb06027df646f10e2c9638b75d4449bb9  ./upd1-arch-good/run-a/steps/01-preflight/step.json
@@ -249,13 +249,13 @@ ea3f5666d35011a295670ec3942bf2a00fee23846468d976da1c544f8ff4ac10  ./upd1-arch-go
 e123fdc8372ccbc1d8c68490556891e03e48227ac836cfc2569e1cb52ab0ad5c  ./upd1-arch-good/run-a/steps/14-collect/guest-samples.jsonl
 7c70f58ddaa7340d9f825653edfb67e5bc89b05f83eaed4fdc2e2cdc96f24a41  ./upd1-arch-good/run-a/steps/14-collect/host-samples.jsonl
 1c898e9a105d7d68e2eacdfdd2b54be86a3197353f4cbaed71e46ba432ef0b06  ./upd1-arch-good/run-a/steps/14-collect/journal-lab.txt
-b74ebd08f67bcc62c10149a2b504102dedadf2c32cfb724791c692312ec745ce  ./upd1-arch-good/run-a/steps/14-collect/journal-product.txt
+60fb0ac982007e715a1d36d20570fb812e8c68f834a73a386f2a6d059151cbba  ./upd1-arch-good/run-a/steps/14-collect/journal-product.txt
 1a1eaab83ed3765f6584ee696d1464b78595bf4ac5956e71546910d48df86990  ./upd1-arch-good/run-a/steps/14-collect/journal-setup-services.txt
 19eefdf54024b035a689afc7fb320efc101d2c4a6a1723f66c4082c49b05f4e8  ./upd1-arch-good/run-a/steps/14-collect/observation-records.json
 fcf7b269edb976ba618def3397bc09ff820d7ec8276dda78fa85af4493fe8124  ./upd1-arch-good/run-a/steps/14-collect/observer-events.json
 3ac464673da2844e70a4182ee2b10ad48ed496e75f88ba91f5a511782e8a37fc  ./upd1-arch-good/run-a/steps/14-collect/step.json
 500f318e5575e7a297276dba8b8c3dd197a8d29479a6b707d3f653045a6aa8d5  ./upd1-arch-good/run-a/steps/15-verdicts/step.json
-a5bf31f95bae2e50625becad5feae3f7ac53e31661dc74c22a6b5c7119b25223  ./upd1-arch-owner-continuation/run-a/host/fixture-plan.json
+01da14bdcb82f38e986840344a9fd2d2c31be0c90d7ef7357281cfa262d49887  ./upd1-arch-owner-continuation/run-a/host/fixture-plan.json
 12347280e5b451db8b98f3e7fc64f3800100107f05c7824f5c31d463c9068de5  ./upd1-arch-owner-continuation/run-a/host/harness.txt
 9fc89d4ddc51672e9bd795fe93658f57e210f61682774e33865928f3f1fc28c8  ./upd1-arch-owner-continuation/run-a/host/job.sh
 66b5cc42220e89f1da7dfcc8ffc2eb23c3ca450ea38210ddd2f1cdccfda81588  ./upd1-arch-owner-continuation/run-a/host/lab.json
@@ -286,7 +286,7 @@ b278bb8f2ed413a8f3f024d9f63d3d6d988efe20133cbdbd9a58bf1903d8b06b  ./upd1-arch-ow
 f6ee8968d8fd53baf6281fef508a11ae93cb3095d8634d871127000e541cf846  ./upd1-arch-owner-continuation/run-a/steps/14-collect/step.json
 89d473e0dd3c593d0a29a3e639e01ced68a9accdc76786f0636fac4a00b2a95e  ./upd1-arch-realstart/run-a/host/current-worker-baseline-arch-current-worker-baseline.log
 f148796314b3f00a94133b9529f4faa44397ae9956d874de3c0a51eeebf71057  ./upd1-arch-realstart/run-a/host/current-worker-baseline-arch-current-worker-baseline-result.json
-489618373b907045ef085d476c3d0527b2806ff3d5f59836cb62dec910f299b8  ./upd1-arch-realstart/run-a/host/fixture-plan.json
+fe71f9c36a81c0c4115e61e902af7a10a3962732069aa59a78a566d8de101423  ./upd1-arch-realstart/run-a/host/fixture-plan.json
 12347280e5b451db8b98f3e7fc64f3800100107f05c7824f5c31d463c9068de5  ./upd1-arch-realstart/run-a/host/harness.txt
 fcfcb2d1ca911ea2804285037a18c347296fc704e2e5692219ac9feaccaea963  ./upd1-arch-realstart/run-a/host/job.sh
 e6947c45857eea0dec3318c77c58863b39a971ab2be9cc4af1c27fccf1d507cf  ./upd1-arch-realstart/run-a/host/lab.json
@@ -302,7 +302,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./upd1-arch-re
 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  ./upd1-arch-realstart/run-a/host/wrapper.rc.txt
 aff9a7e7634c53a24943bc4145f91f90c88bd7d63bb6ff27c55b634c2a4e52e2  ./upd1-arch-realstart/run-a/host/wrapper.start.txt
 577f2b3f827371045bcc99e75c2536f2336190bad3cd8170bb9947f638b16cee  ./upd1-arch-realstart/run-a/result.json
-899ebf2da7147fa739b63da433a6bcb26010013f81497819f8ff3db5c530eeb8  ./upd1-arch-realstart/run-a/SHA256SUMS
+d45fcc0961b034c681f4bd4f9c2b7a9fd7eb97721f7900ce699dc55443d6f9e1  ./upd1-arch-realstart/run-a/SHA256SUMS
 800018ce0b009b947c9efb9659ac55510529a6aa68a5a5f17338a83fb6ed6623  ./upd1-arch-realstart/run-a/side/extract.txt
 4df50b0a7f6d88f7aee283495f677f827ddde638529ba767515654bca45a0428  ./upd1-arch-realstart/run-a/steps/01-preflight/preflight.json
 494bd15fa867b62e263651ea6e763dfbe4f76082a60b5a521183f6219ed4f9e6  ./upd1-arch-realstart/run-a/steps/01-preflight/step.json
@@ -519,7 +519,7 @@ ddc219307345416f617389db4e0e908fa514e8ff2668d651e69163439adeddd4  ./upd1-arch-re
 926b7037a0db5df22b7ac235e8a41e8b04ac61d80fe33a0bbf849f4dc406cdec  ./upd1-arch-realstart/run-a/steps/14-collect/guest-samples.jsonl
 0de70b115bd3e918d78672db7e82299296792b61d45522ef38d201d081c9fecc  ./upd1-arch-realstart/run-a/steps/14-collect/host-samples.jsonl
 c22d0b424c3790e00a5aa5c2897f29790b8afd4229d72b59ead607805bd2a01b  ./upd1-arch-realstart/run-a/steps/14-collect/journal-lab.txt
-210dc91bb02845a3a9dd6a4cd354c18d3170c24c20886b7593102a61a337705c  ./upd1-arch-realstart/run-a/steps/14-collect/journal-product.txt
+6c4429a95fdf3363bd1b987fe23a8540bebfb26b52bf1c99dd8578014ee3831b  ./upd1-arch-realstart/run-a/steps/14-collect/journal-product.txt
 82e9a9daa3363f4445b2c223d8bbd24024972e60826eb6c49def1bf999322051  ./upd1-arch-realstart/run-a/steps/14-collect/journal-setup-services.txt
 1650fa4278bcd45cb43682395fccff0204cd1b3c1ecca32f11fe4208870c59d0  ./upd1-arch-realstart/run-a/steps/14-collect/observation-records.json
 e18c41ba73d9aefe30260a4554a60124a10fcc5e03a8f98d934e5047c01288db  ./upd1-arch-realstart/run-a/steps/14-collect/observer-events.json
@@ -528,7 +528,7 @@ e18c41ba73d9aefe30260a4554a60124a10fcc5e03a8f98d934e5047c01288db  ./upd1-arch-re
 81f3fc4df9c8e28f6cb5d445bc80f842dc897a83ed22a5587ccc3e91b101415e  ./upd1-arch-realstart/run-a/steps/16-kind-expectation/step.json
 fb391d08faf5d4b39c6fb511ee8f248f9a305eb3a5e3ed9f27a745825d250c3e  ./upd1-debian13-good/run-a/host/current-worker-baseline-debian13-current-worker-baseline.log
 46a032c7fb4d22287de7e8695fe7ab29991e364174c26380f9dc0387783befc5  ./upd1-debian13-good/run-a/host/current-worker-baseline-debian13-current-worker-baseline-result.json
-2d83e45d44aba389a2bd0a8963b361efe4cfdf4201452525f3b752cb650b4a77  ./upd1-debian13-good/run-a/host/fixture-plan.json
+bfaeac00259f47abdecd66723699c40182ac9fa2d733c50281531d472aaad6bd  ./upd1-debian13-good/run-a/host/fixture-plan.json
 12347280e5b451db8b98f3e7fc64f3800100107f05c7824f5c31d463c9068de5  ./upd1-debian13-good/run-a/host/harness.txt
 42b212df55d30b270fd0efbbe8e2b11ece8d60234df5787a65b6c27f32e3fcf5  ./upd1-debian13-good/run-a/host/job.sh
 ef5a4eabd3c809e9f3d9cc862952c5326563fd400266fa387f5bc9283e2d0d47  ./upd1-debian13-good/run-a/host/lab.json
@@ -544,7 +544,7 @@ e54c4afd80a82aaeada3e9b010fef57f4a19dc11bb31411a1d21c333eab23081  ./upd1-debian1
 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  ./upd1-debian13-good/run-a/host/wrapper.rc.txt
 d42f65f12a2cc3d69952754d2327818522f1daffb119df1742ce09b46230e513  ./upd1-debian13-good/run-a/host/wrapper.start.txt
 a3e239f697e2a7da8c75be3855bece986dda44ddb694d8ca006233a20e817a39  ./upd1-debian13-good/run-a/result.json
-141e2ae8180d0e20544ae00a1644a52224248478c509f6945c8673750ee35d27  ./upd1-debian13-good/run-a/SHA256SUMS
+197431e94b37f55b32809b6ef93ad728f70f8a4d3d20c608a3fd08bdb64ead9a  ./upd1-debian13-good/run-a/SHA256SUMS
 56fe2ad77e6716f943d6f41aa10a6e0eb78cb03cb5c43b279f6d019ef24ce114  ./upd1-debian13-good/run-a/side/extract.txt
 ad4c0b47f5f4d530bd5e723fc61effdc34ffb7179d1ca47db0e2f4f54db43eff  ./upd1-debian13-good/run-a/steps/01-preflight/preflight.json
 52de6e64fe102e211ca0d42e744e37186519bd3c27a4f47b6261dbbe04a4ed35  ./upd1-debian13-good/run-a/steps/01-preflight/step.json
@@ -743,7 +743,7 @@ ea3f5666d35011a295670ec3942bf2a00fee23846468d976da1c544f8ff4ac10  ./upd1-debian1
 f6fbcfc8637f4467ed971513d840e72106d9a1067d6807faa221dd9b43369192  ./upd1-debian13-good/run-a/steps/14-collect/guest-samples.jsonl
 4e46d733107c1408c2aba67b75f5a7b6fd02496779e3f1f89bebd3fd198b7b2b  ./upd1-debian13-good/run-a/steps/14-collect/host-samples.jsonl
 2c3348792b5687f40a4a378959078f385f7555faf48caf337509722619c5eae5  ./upd1-debian13-good/run-a/steps/14-collect/journal-lab.txt
-3a399fc0831b1da97549814aa50a142265ab83d4550cf71b04d7665c9172c5c0  ./upd1-debian13-good/run-a/steps/14-collect/journal-product.txt
+4206db96f864b7319f1a04d665b8a6bd1ae54c6f462eebe4804bf161f977e827  ./upd1-debian13-good/run-a/steps/14-collect/journal-product.txt
 d7d28fdfac6e25610ba2de90dd75b397067f72412e28b44defce1f37fb81b0e5  ./upd1-debian13-good/run-a/steps/14-collect/journal-setup-services.txt
 9b599db056bf720fa9bab2db97f75f96e7fcb7424135083e7b380a059811c18c  ./upd1-debian13-good/run-a/steps/14-collect/observation-records.json
 45588096e140858b40c4dbe58acd06fc520b4afaaa87774db60bdffd7ae2feec  ./upd1-debian13-good/run-a/steps/14-collect/observer-events.json
@@ -751,7 +751,7 @@ d7d28fdfac6e25610ba2de90dd75b397067f72412e28b44defce1f37fb81b0e5  ./upd1-debian1
 cecf5cdb277832de8d97f3753599bd43fc3e8a95ee87b1402ad2ebb5dbb86345  ./upd1-debian13-good/run-a/steps/15-verdicts/step.json
 3f05aa69267928603c7c64fdc755f77da1329c6f31311a5bf93544c3cc5d204d  ./upd1-debian13-owner-continuation/run-a/host/current-worker-baseline-debian13-current-worker-baseline.log
 4be4e09b44a2bfb6f73491454b10c120ae7ce24cae786a928e8088f0ace9e1cd  ./upd1-debian13-owner-continuation/run-a/host/current-worker-baseline-debian13-current-worker-baseline-result.json
-ae510215aea3c97a5883b884d3052f71ff37cc8e271e9a72363ad1ccbe64d973  ./upd1-debian13-owner-continuation/run-a/host/fixture-plan.json
+24fef34122f9933e656375cfaebbff3893762db6c6aa40cf1c9b6a732f14a46b  ./upd1-debian13-owner-continuation/run-a/host/fixture-plan.json
 12347280e5b451db8b98f3e7fc64f3800100107f05c7824f5c31d463c9068de5  ./upd1-debian13-owner-continuation/run-a/host/harness.txt
 08c488ff77cefc01d05b54f9987c2ee136b98eebef11051c3a33dcf51a7bcf7c  ./upd1-debian13-owner-continuation/run-a/host/job.sh
 3243766d29bb1338999d8b14e9fceecf37d7e16dc18df224ec6c477039579390  ./upd1-debian13-owner-continuation/run-a/host/lab.json
@@ -768,7 +768,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./upd1-debian1
 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  ./upd1-debian13-owner-continuation/run-a/host/wrapper.rc.txt
 538714e65d21e9639b2939fec19b2c03183993d424ea95b07ce10b11eb972e47  ./upd1-debian13-owner-continuation/run-a/host/wrapper.start.txt
 1a4bdc434794f56a6aab449044d36943dde55def2268aea1c6a815bdb3ca7199  ./upd1-debian13-owner-continuation/run-a/result.json
-593e4450be59e734b015b7c80015f48885aca9e9a7f1e45aaefc7a73c5a0166f  ./upd1-debian13-owner-continuation/run-a/SHA256SUMS
+166bbbc50543e3b6ced51aebf93cdf176fe479f033db0c45247ce66a168c904a  ./upd1-debian13-owner-continuation/run-a/SHA256SUMS
 52d90387a5c43a219d8fad6ede7dbfddef6acd3bcdc4d618644e9cc88a6c20eb  ./upd1-debian13-owner-continuation/run-a/side/extract.txt
 ad4c0b47f5f4d530bd5e723fc61effdc34ffb7179d1ca47db0e2f4f54db43eff  ./upd1-debian13-owner-continuation/run-a/steps/01-preflight/preflight.json
 77b80338442dbabbba6c8ed3ef0be61ae188c5a30f56319b7790b395fbec6f78  ./upd1-debian13-owner-continuation/run-a/steps/01-preflight/step.json
@@ -1000,7 +1000,7 @@ bf9b5ce29decba585e24fa61992dd7ec51fd879bceddb0ef6042512b33f6421c  ./upd1-debian1
 56d802477f31b44ccaffe5ff21268ae1bc4f31d824d2eaaae6510d64b60c7113  ./upd1-debian13-owner-continuation/run-a/steps/15-collect/guest-samples.jsonl
 228327c9e426d92ebab26744a60511b75aa80076a608d9a147644c5f5b32580e  ./upd1-debian13-owner-continuation/run-a/steps/15-collect/host-samples.jsonl
 15866f64f2fc995567e11a13cb195a8cac7972f137db2a536c893ade3862f715  ./upd1-debian13-owner-continuation/run-a/steps/15-collect/journal-lab.txt
-0abf371917a6029d66fb6285c9c1783a667b4e27d7dc482c0cbbc0268e9e48f8  ./upd1-debian13-owner-continuation/run-a/steps/15-collect/journal-product.txt
+dabe62517a628d901d976fc3836851fb5f4c5cfd17f18aa6acd2f3902d8e1707  ./upd1-debian13-owner-continuation/run-a/steps/15-collect/journal-product.txt
 7e959b8d6de5006f056b1cae260d1a1d22f8729a9f0136bfe3c6a288b8d78c50  ./upd1-debian13-owner-continuation/run-a/steps/15-collect/journal-setup-services.txt
 c53d8e942028489f48cd9b8dcadff30b80d92295e5267cf3d51388a3b6ff07ac  ./upd1-debian13-owner-continuation/run-a/steps/15-collect/observation-records.json
 cae61962d46d10f16208ab2d6b5a83fbddaefb0d38aa0848d19f5ba178096b56  ./upd1-debian13-owner-continuation/run-a/steps/15-collect/observer-events.json
@@ -1010,7 +1010,7 @@ cae61962d46d10f16208ab2d6b5a83fbddaefb0d38aa0848d19f5ba178096b56  ./upd1-debian1
 420c9b6bf34eef6ecd44e39976431d22af834e7e2b0cf7963212db6731a698bf  ./upd1-debian13-owner-continuation/run-a/steps/17-kind-expectation/step.json
 845d2a65ef45ec3ba2910a6895a07e9be7a9dcd7bc7fe812a43d7db40e5328c3  ./upd1-debian13-realstart/run-a/host/current-worker-baseline-debian13-current-worker-baseline.log
 738afb0c24fc6ddc38929c29ca656cebb0d4418991e6e555ba061f762f395ca6  ./upd1-debian13-realstart/run-a/host/current-worker-baseline-debian13-current-worker-baseline-result.json
-7ce31ba1c57f55eb01ef88e05938ba2601c6fc7b08fe2f0e21500b4366bbe17f  ./upd1-debian13-realstart/run-a/host/fixture-plan.json
+da551283c92eb7f316d056a18e9481bb140d2ecd786003d56a49c761a8311f8c  ./upd1-debian13-realstart/run-a/host/fixture-plan.json
 12347280e5b451db8b98f3e7fc64f3800100107f05c7824f5c31d463c9068de5  ./upd1-debian13-realstart/run-a/host/harness.txt
 66a041f44c59657243683823fe357464f6a83508c8f5180e68ee970c6572b791  ./upd1-debian13-realstart/run-a/host/job.sh
 410376186dc17d80f22255e5a753765d4842cd95a4170e43192ca9fe59bf1c2f  ./upd1-debian13-realstart/run-a/host/lab.json
@@ -1026,7 +1026,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./upd1-debian1
 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  ./upd1-debian13-realstart/run-a/host/wrapper.rc.txt
 3fe3e5457e480b2e0f3a0b933af242cf1274e66f25ea95a1e290d7e491984b03  ./upd1-debian13-realstart/run-a/host/wrapper.start.txt
 9a2de8fda21f771723f770559ee6050f2b6e77b08fd9adcc8e278169414bb821  ./upd1-debian13-realstart/run-a/result.json
-e71527344ba1898870b4005aaf7477f2da2eeead607f7f1693884e6318049d68  ./upd1-debian13-realstart/run-a/SHA256SUMS
+4e67b38c9ea306b0755bd97be10d9bda7cd5b58a6592c95123973c2843d060ed  ./upd1-debian13-realstart/run-a/SHA256SUMS
 4cf0abfa64404a6efb3e469f7a83327c57c62ea2864d7eae6555e23960b34964  ./upd1-debian13-realstart/run-a/side/extract.txt
 56837e71cc2e59a5f7d24e024f755eb038c4a5d202479803c242b9653aafb075  ./upd1-debian13-realstart/run-a/steps/01-preflight/preflight.json
 a2145382ab3dedab24e1a095a68a017f1ba18345abce90d73c363724abc3bda7  ./upd1-debian13-realstart/run-a/steps/01-preflight/step.json
@@ -1293,7 +1293,7 @@ a46831cc04b4a90882d4b8885210033e517b6686a1ca4a4c3f3dfe2e1d51605f  ./upd1-debian1
 164575658700ebdbe012b4afebd4c12a6ea9a2cec2c68eae5a46480acfe59fc9  ./upd1-debian13-realstart/run-a/steps/14-collect/guest-samples.jsonl
 e39381dae8617d068a162fe4206a545875852119864613d16d627bf43c4b4421  ./upd1-debian13-realstart/run-a/steps/14-collect/host-samples.jsonl
 b024c56ad8747b524d7f8269ce9b5b45243c2812a2db829f9dff08465a74e17b  ./upd1-debian13-realstart/run-a/steps/14-collect/journal-lab.txt
-00234a81fc4c11086af8a1ce0574070188e98f13a1152387d8a08889a1321a3a  ./upd1-debian13-realstart/run-a/steps/14-collect/journal-product.txt
+3e28f9fc6c5df6ec16eecc6ddb488525945eb349c2b4230c05e0ddd0ca315df4  ./upd1-debian13-realstart/run-a/steps/14-collect/journal-product.txt
 b44c2fb1ed3d543d3781e9cb42ee97f344237a3db67271ffb2abb98541d29f3b  ./upd1-debian13-realstart/run-a/steps/14-collect/journal-setup-services.txt
 6e6aa574a83493dd9cab73b1497d69c31672d2d2e484cc62bbe72e36be3e3323  ./upd1-debian13-realstart/run-a/steps/14-collect/observation-records.json
 1fe2c43c85b350eabecd528c696c6da0b25bc93aa6349732a9d4c388d6880a94  ./upd1-debian13-realstart/run-a/steps/14-collect/observer-events.json

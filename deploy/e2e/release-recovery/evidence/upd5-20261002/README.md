@@ -203,3 +203,10 @@ It does **not** show:
   (external mode), mail on Arch, certificate issuance or renewal execution, production signing.
 
 It closes no P0 row.
+
+## Corrections after intake (2026-10-10)
+
+After this directory was published (2026-10-10), the operator's machine name was replaced by `<operator-host>` in the SSH public-key comments (and in the text that named it) of this directory: 12 occurrences in 6 files; the key material itself, a lab public key, is unchanged.
+After this directory was published (2026-10-10), 5 digest values of the one-shot update-transaction token (5 in plain text in 5 files, as `transaction_token_sha256` values and as `.release-db-migrations/<digest>` directory names; 0 inside base64 `events_base64` text in 0 files) were replaced by `[REDACTED-SHA256]`.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

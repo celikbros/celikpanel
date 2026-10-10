@@ -502,3 +502,8 @@ else was altered; every other file is as collected.
 5. **`SHA256SUMS`** regenerated last (same format and ordering; it does not list itself).
 
 Remaining gaps, unchanged: no capture of the guests' traffic; item 13 not built; nothing was rendered in a browser.
+
+**Correction after publication (2026-10-10).** After this directory was published (2026-10-10), the operator's machine name was replaced by `<operator-host>` in the SSH public-key comments (and in the text that named it) of this directory: 21 occurrences in 12 files; the key material itself, a lab public key, is unchanged.
+After this directory was published (2026-10-10), 3 digest values of the one-shot update-transaction token (3 in plain text in 3 files, as `transaction_token_sha256` values and as `.release-db-migrations/<digest>` directory names; 0 inside base64 `events_base64` text in 0 files) were replaced by `[REDACTED-SHA256]`.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

@@ -1,4 +1,4 @@
-aa0bc33e7a96fc61c8df6813104a6d69df14fa4dec2541dbd9eb4058de3dcc96  ./README.md
+70e0b3409682b7d02f6bad358aaba5283e0a514186de7a9d08202cea982d9a06  ./README.md
 49ae0a997161e18119caa9fc62f457e02a2de24dd277767805f465f534cada35  ./build/a80-dry-run-upd1-ubuntu-good.json
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./build/a80-dry-run-upd1-ubuntu-good.stderr.txt
 35377a4f89d27274f3398952d62636c9dd101b014b34191bbfd9f1cd9e16ef40  ./build/a80-prove.json
@@ -101,7 +101,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./host/package
 8ba711a72cb429efba7565b0b21e2a6ca3fbc31e9d78e35dfc9a8e39012af250  ./host/packagekit-probe-a.out.txt
 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  ./host/packagekit-probe-a.rc.txt
 506facab7ee73ed5390cb1336303a4058cacca456cf39e2871f8924fb0afce7e  ./host/packagekit-probe-a.start.txt
-ca7d7e1a3250bc3c8317ec9326a5a08f86df9309886226984b0eb1aa242b97a3  ./secret-scan.txt
+1f0b42ca41f5c305ed44d477e6375dccb0bc7a8655c9615a97db48b6710fb275  ./secret-scan.txt
 fa4452981796aa4201c616b2ce6aeb397e9b6135a6db8697489947cd3664db11  ./tools/attempts.sh
 49ad9533d200edd4dfe764b5614780c703a3617301c94f8efec309cdc328e8b9  ./tools/cjrn.sh
 5dc378c2e1b9c8669e4b6fab62f915ac292f8a4e04aa814fa7b1f1479c3ba520  ./tools/ext9.py
@@ -128,10 +128,10 @@ d441eb1a870df1159861418ccfe1d732230cc3214e1b87bf285a1cbdf10820ef  ./tools/sv.sh
 4a5c67ff3177dc50303c2cda336e30ac8d4620a64fdaeada389e70c6c2beffbb  ./tools/tsum.sh
 43a15497a5c456a46beea93039fd0cd849d261abb04af817fa111e9f713f81fc  ./tools/waitcell.sh
 d932a3de1b5f3fd8dbd750a842ff33399ede1b88f71fedbbf7b7b97a776b815a  ./tools/waitjob.sh
-0f3e501ba1cc9f16e884bee7e3ff6b7f9a28dcfbad892781cd0856b4c8bb2df9  ./upd1-ubuntu-busystart/run-a/SHA256SUMS
+f21727e3dfb8ef6e706604fc8596c91b38773bc96b18537c3c8a6c1e31055181  ./upd1-ubuntu-busystart/run-a/SHA256SUMS
 193c588115a489030c1279af2984dafd6598d92f74372c56fb3a43f5b6300338  ./upd1-ubuntu-busystart/run-a/host/current-worker-baseline-ubuntu-current-worker-baseline-result.json
 9d4c6b69098db75aaad43a1c71dc0caf3f205842d6fe9f3252a70388cffd1269  ./upd1-ubuntu-busystart/run-a/host/current-worker-baseline-ubuntu-current-worker-baseline.log
-241eb6c38a6dc712ee562d5c7835e5d4e00b53130e632ce2c5c6659bac48bcdb  ./upd1-ubuntu-busystart/run-a/host/fixture-plan.json
+57becddf2c05969325845263053b459784e6467900f4b5aee51d24a7f537b652  ./upd1-ubuntu-busystart/run-a/host/fixture-plan.json
 83a5c1a8e33365191c83b7f7da4950bd1cbb99a48033603aa0a6c3f0a8ad4219  ./upd1-ubuntu-busystart/run-a/host/harness.txt
 948aa5c3971ac07551a20f53f339486b64ae27852a90e630f3b6ceb81353923f  ./upd1-ubuntu-busystart/run-a/host/job.sh
 3534053813b6a3bc5ab42f06cca9303c0d6af31fb2df7cb944d454dacdfe91b2  ./upd1-ubuntu-busystart/run-a/host/lab.json
@@ -547,16 +547,16 @@ ea3f5666d35011a295670ec3942bf2a00fee23846468d976da1c544f8ff4ac10  ./upd1-ubuntu-
 17bfee2c6d919623a214606e3e2dc0b424863990b17e300a27f6eff3a596bfb6  ./upd1-ubuntu-busystart/run-a/steps/15-collect/host-samples.jsonl
 2705e7ed07f2767090504b1826a9a5476805689fae19056f7ffa0cd4bd3a4c61  ./upd1-ubuntu-busystart/run-a/steps/15-collect/journal-lab.txt
 99d5bafb1d5b46712266fe68562110da7d2f6ed11de7f5f51a97717165000bbb  ./upd1-ubuntu-busystart/run-a/steps/15-collect/journal-packagekit.txt
-b07baa2d832393a799661894d8c19455f1f7457c0feeaee654ca477c9edd5283  ./upd1-ubuntu-busystart/run-a/steps/15-collect/journal-product.txt
+c04f21887a5d8a10bba163445e9fa2ce701c656e796dcb0c2c107158f3b7cbf5  ./upd1-ubuntu-busystart/run-a/steps/15-collect/journal-product.txt
 354436ed2c04177e77d62379031cd6b9b3eb949992b4ccb9e8659166984bd798  ./upd1-ubuntu-busystart/run-a/steps/15-collect/journal-setup-services.txt
 bce8971e9172052509a46f2e2e8efcf40a27f6915db5638cae41621ebe9670fa  ./upd1-ubuntu-busystart/run-a/steps/15-collect/observation-records.json
 cd3f6da8123cbea9359aaf371a737bf8de4ac6035b9417fa10fc27f2c7a26875  ./upd1-ubuntu-busystart/run-a/steps/15-collect/observer-events.json
 4c1e7c26b568a954c313562d9ca0f2447bfb2b6945f597bbf1502a85ea23dd68  ./upd1-ubuntu-busystart/run-a/steps/15-collect/step.json
 f5291ba5ca47c09f6bfe35ec255d2a230679822a9e36d66ddf9d406b9fea49d9  ./upd1-ubuntu-busystart/run-a/steps/16-verdicts/step.json
-a017a0ede5fc588dcedd1ce1f58571106ca87675c01ea313ce030f12cb8f15f5  ./upd1-ubuntu-good/run-a/SHA256SUMS
+9296615d5cc246077bb07843cbb2613f1363437704afa1aa423eceed1f4629d5  ./upd1-ubuntu-good/run-a/SHA256SUMS
 a2e3b7579bd7c7b22457f99f0d495e4bc4a8d1b72abd12e74a2687a65bf0c3c1  ./upd1-ubuntu-good/run-a/host/current-worker-baseline-ubuntu-current-worker-baseline-result.json
 4cfd72be6bcf05a382ee984a7e862a7cea053d5ed1f1efeaa31ee54cfceb1d56  ./upd1-ubuntu-good/run-a/host/current-worker-baseline-ubuntu-current-worker-baseline.log
-85f9c5c923814dc265e1fe9394836bd922c6c3d7c8d58aa3eff512205f2f678e  ./upd1-ubuntu-good/run-a/host/fixture-plan.json
+5c4e91a0a0495f4031108c43704aa3e43e67db7561b73291048aa6a864e744a7  ./upd1-ubuntu-good/run-a/host/fixture-plan.json
 83a5c1a8e33365191c83b7f7da4950bd1cbb99a48033603aa0a6c3f0a8ad4219  ./upd1-ubuntu-good/run-a/host/harness.txt
 e26f8029d4ebd500c75123e387510ed5ca49b312bec4fd69741c80560ae09ab3  ./upd1-ubuntu-good/run-a/host/job.sh
 cf0760015fb12702439a892708e5fac378c0a37918a332da1d83b41d6eecc251  ./upd1-ubuntu-good/run-a/host/lab.json
@@ -934,7 +934,7 @@ ea3f5666d35011a295670ec3942bf2a00fee23846468d976da1c544f8ff4ac10  ./upd1-ubuntu-
 bd582d99aa6dc7f3ee61de055481dd6c992fb0e40a73babca259460f15786f4f  ./upd1-ubuntu-good/run-a/steps/14-collect/guest-samples.jsonl
 d457ea982c1941de99dce16d6af88f4a0d145b96c28e33e5138c1050ec0c3615  ./upd1-ubuntu-good/run-a/steps/14-collect/host-samples.jsonl
 348bf8aec4aab7af59616ee853ec9a684f93a2afa1ce07f5a18f1c0b584d0d51  ./upd1-ubuntu-good/run-a/steps/14-collect/journal-lab.txt
-709d6f4b7f4bc0073fd841be6720a4ca0c23d23afd9204c5db5658d6dcd2a713  ./upd1-ubuntu-good/run-a/steps/14-collect/journal-product.txt
+d3527c696b43d947dbd9bb6433ba2fb4d74b1f2bc1b73c3757aa76b9a8f3fa9c  ./upd1-ubuntu-good/run-a/steps/14-collect/journal-product.txt
 3853ff48dd46acd1a3abc8ca20e9f7a62adfd4c6725e58c3ab4dbe2f5c581e3f  ./upd1-ubuntu-good/run-a/steps/14-collect/journal-setup-services.txt
 79ad13c63b69f6642708494947b7ab9cfc23fb87f17777f76d9d0cc435e99ff3  ./upd1-ubuntu-good/run-a/steps/14-collect/observation-records.json
 460f3e19a231ae81504a3b4707e96dc747acf383553b4fe85003b1ff37330dad  ./upd1-ubuntu-good/run-a/steps/14-collect/observer-events.json
@@ -943,7 +943,7 @@ d457ea982c1941de99dce16d6af88f4a0d145b96c28e33e5138c1050ec0c3615  ./upd1-ubuntu-
 d0e03c9af3ac1b59daa530e709e47bf7c07ebe48f9e949f33229ab724b24926f  ./upd1-ubuntu-setuponce/run-a/SHA256SUMS
 d81bb9d9bae6f1c3810db75222a33ad0d9d9c15c1e5d0866ea0ecba4d08cd4d8  ./upd1-ubuntu-setuponce/run-a/host/current-worker-baseline-ubuntu-current-worker-baseline-result.json
 3b647140c0cc483ec3c052e609f3497639a17b9d1803f7107984cece071ba0d0  ./upd1-ubuntu-setuponce/run-a/host/current-worker-baseline-ubuntu-current-worker-baseline.log
-5c176cf93e0589bf7af7a5e8a2e44c9ab77f23facbd804b905af90e0d5ef4ca1  ./upd1-ubuntu-setuponce/run-a/host/fixture-plan.json
+5307147454f3fb9bb5050d403a341868ece8460a78be7184186711c8d41784da  ./upd1-ubuntu-setuponce/run-a/host/fixture-plan.json
 1ca4f39fe35f09d9981e5eac3efaa2a4c974362a42951bfe5561153882db8285  ./upd1-ubuntu-setuponce/run-a/host/harness.txt
 bfe9dd4d7564a2fd33af78c2a1a1ac78b048a4a2c803f1fbfbd824240b5d42b4  ./upd1-ubuntu-setuponce/run-a/host/job.sh
 bb1aec01b5e09b9ee410666f03942c821fc41ee4fbeeaa82dfa1e426536e0bc5  ./upd1-ubuntu-setuponce/run-a/host/lab.json

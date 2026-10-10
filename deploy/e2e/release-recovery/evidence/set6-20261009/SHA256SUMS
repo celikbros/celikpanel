@@ -112,7 +112,7 @@ d339d5dc65045f9254436dd906f3646d1d6a4c442123314ee064dbffa991c924  checks-all.txt
 56828f78ac1a87865698e9a0313256f6ad0b785dad5c8384dbe76b0a5e91b2e1  facts.json
 c2b6db17329f9c301652630c86b136fc0d856d5e8117cc4a1ba57467186bf0a4  fresh-install/set6-arch/run-a/host/c-drive-gate.txt
 c07860ef6bf368d3288955e371749504048daa99cd9825be6ec61a45caa73294  fresh-install/set6-arch/run-a/host/digest-sweep-at-staging.json
-57180f032642a09bb6008be36fc3b28580453e37ef0e566a2be967c45d011f74  fresh-install/set6-arch/run-a/host/fixture-plan.json
+cd1ccad1359ca3bcb27d8e3c0fdb8c7734736184f7eb106e2f012e6ed4c9d648  fresh-install/set6-arch/run-a/host/fixture-plan.json
 0997e94a437cddc1743d0f40e25b1f72f10b947e29b8cbe444ee5261ba7d54e5  fresh-install/set6-arch/run-a/host/harness.txt
 ae04d3d8d8368be9ceccdf03dd2e0867cfdaf7c047400ce21d1bb0d17a248a02  fresh-install/set6-arch/run-a/host/job.sh
 533970eec23500ed341c8cbf0acf715309730f2c5007df59cec7c91ebedd377e  fresh-install/set6-arch/run-a/host/lab.txt
@@ -398,7 +398,7 @@ ec9c8e38f8bb3b2db52238719667025e7dca9e9db7a21b8d6c03e1a04af3d01b  fresh-install/
 3220cc99f0859d3b4d77328e76a76b8d31945046d4af4dd2a1426eb212f8dc82  fresh-install/set6-arch/run-a/steps/19-collect/step.json
 422c446b7dbdf8f999620df7a209ac4875baee8aaaf054496c6ae1b229542c7e  fresh-install/set6-arch/run-b/host/c-drive-gate.txt
 972c9c83fe9ce8c1162f8b8a98ed9406a4d96a1bc7c9d803f8cafd181adcbc61  fresh-install/set6-arch/run-b/host/digest-sweep-at-staging.json
-102306eb6c202e0d8cd53f912f29281866cc73990a7962b9b554b3ee1f273e7e  fresh-install/set6-arch/run-b/host/fixture-plan.json
+6f5596d77780941b0fbce93d13103759807ad63dd6955bced839e37154d559a9  fresh-install/set6-arch/run-b/host/fixture-plan.json
 9c250bf25c1bc333547bbb8c2433f661df1084d5558827f9404378503845397a  fresh-install/set6-arch/run-b/host/harness.txt
 027b501163880a12d879c16baefb06a031c6a473e52537a685f5d90cb64c0d7d  fresh-install/set6-arch/run-b/host/job.sh
 b8eb2931e234707d0a226d531032f58e4ece78a8871a7b47eef34e06dfe87a41  fresh-install/set6-arch/run-b/host/lab.txt
@@ -681,7 +681,7 @@ a69789b967a99a536dce5d7920e69ef7c8f0c2c05860c4819444edb6b92c385e  fresh-install/
 51c1b37f7b9c01abf7e15c53617d2be67ab50bda120e3cc439e8ba5500f824df  fresh-install/set6-arch/run-b/steps/19-collect/step.json
 24ec392802554f63e38ce6252017f027b4bac329a2c2a788793e2a62c514fadb  fresh-install/set6-debian13/run-a/host/c-drive-gate.txt
 85a22e0b23be4374be7a3cda232b067fb3244ad1b1612d7b24cd82c722760fa1  fresh-install/set6-debian13/run-a/host/digest-sweep-at-staging.json
-5bf5de19b7ef24c6e8953f18d73caa53b73edad99ed6cf50948b73b64ae94f66  fresh-install/set6-debian13/run-a/host/fixture-plan.json
+36741ce39aa4165c55324108f0cde4c1a28f1e1defdc92b1c1a7c0bb9cdff43f  fresh-install/set6-debian13/run-a/host/fixture-plan.json
 9c250bf25c1bc333547bbb8c2433f661df1084d5558827f9404378503845397a  fresh-install/set6-debian13/run-a/host/harness.txt
 48440bf1a6f164949178a232cf33e86e2c80e5245089f59d037ec69bfafe939f  fresh-install/set6-debian13/run-a/host/job.sh
 1b83aaebf6ce7350f861e8615aec442c8e0478b3ff3a7abdf579a7f57a96972e  fresh-install/set6-debian13/run-a/host/lab.txt
@@ -1037,7 +1037,7 @@ f5bef2bdd91c0725239e7cf2341d93bb52d3f111a35757a1f45283ce2daf7d6d  fresh-install/
 395a6719ec225b499f04550a79b0e3865649396f1a9169df828dcb71c1ce0738  fresh-install/set6-debian13/run-a/steps/19-collect/step.json
 47914eaf8ea221e23f625172c7d2e1f78193d67ec658405e9549016825dbb482  fresh-install/set6-ubuntu/run-a/host/c-drive-gate.txt
 ef7a0e515742f886a9c5e4d5ecde167282fff3a10b2989f3193f9575b120b6f5  fresh-install/set6-ubuntu/run-a/host/digest-sweep-at-staging.json
-96115bed31de312bf9eb161f8c161a6f8ed095f9666bc14f8b1789f696a45830  fresh-install/set6-ubuntu/run-a/host/fixture-plan.json
+e7b00075a41cb355be6b21bcb1a4c6b3e92576398cbc4c397c77c76e38cd058e  fresh-install/set6-ubuntu/run-a/host/fixture-plan.json
 9c250bf25c1bc333547bbb8c2433f661df1084d5558827f9404378503845397a  fresh-install/set6-ubuntu/run-a/host/harness.txt
 ddc10cbf127daca1292f589ff67edf702e2203690d66b300887d99dddb54ddff  fresh-install/set6-ubuntu/run-a/host/job.sh
 3f41386c42509ecde74f4c0be5812f3468ca0dfe8992054e9218d0977ff9f58e  fresh-install/set6-ubuntu/run-a/host/lab.txt
@@ -1461,8 +1461,8 @@ f69daa69396d9c8c7c17a950faf21696f5c2ad09d2285601d59188f455d648ed  host/working-t
 174f863ecde6c16625cde6a9c0fd870bd8af19912a2e299d0f59dc791caa32fc  part-a-table.md
 35dcd8375383d00f1a0ec8bb996afeab53da92c8fb27e0a2d09cfaa861eb4c3d  part-b-headers.md
 d86f4cf6a6417af34bc741ba58b750a4ba5f5626626aed3c1be4541683d0d257  pinning.md
-ed6edc631de4e9b93af55fc01e490cb81a2ca343648555c753b02dd83eff8bd7  README.md
-a00cf0a16c7e05e78c8e60044941a9a2059edc5708e855f30c510e460394c4fa  secret-scan.txt
+34d8001da774650a78e192d08d995d627258ab702109e0b274f5a6c46fe4c12c  README.md
+d5a4ec0065583ee8ec480981d6e87ef251b2eefeeeed01fbe8bf59a8ba3788b5  secret-scan.txt
 2a98f328a40c6bebf174959bdcdd9290abdb8ac8e0139af7433fe19011f2a943  tools/afterbuild.sh
 2c890a0e8f46a5d85a444acb362681333d9a7e1ceacf035614df3ac5600045bd  tools/bg.sh
 65e624c2cc572631fc32487265ef4631f6f1b2f1e62e6037b7e73b2e8f35e957  tools/buildstat.sh
@@ -1521,7 +1521,7 @@ ad07032c3761b118c16ce34bd323f82e97fd6fbae389b3c29909cf66d9a27573  tools/watchste
 1dc9ad82b135971024fd4a8c0c274125ab56c0b0ffb72335c70712bb03e2fdb1  tools/wtcompare.sh
 7030306b1d1c33c824c52050129357ad92e28975bf8c5b62ae87d2921e7c19ef  update-alpha81/upd1-arch-good/run-a/host/c-drive-gate.txt
 34ac40a078bb1291b38452705d3ad69c7650961cd46d383de70f8145b5e5df3e  update-alpha81/upd1-arch-good/run-a/host/digest-sweep-at-staging.json
-43ccf40f554e8d57439e2ec9b062bdde19b63700412c74d9cc6de2526b41cadd  update-alpha81/upd1-arch-good/run-a/host/fixture-plan.json
+358f7fa94f484e77f563e152012e5797d2b6ff4bfcb294ec4ddd327e57d2c7d0  update-alpha81/upd1-arch-good/run-a/host/fixture-plan.json
 9c250bf25c1bc333547bbb8c2433f661df1084d5558827f9404378503845397a  update-alpha81/upd1-arch-good/run-a/host/harness.txt
 8bcae3875611f03b58cccb36624042bb6d44d9a438c619648b709492e0acbdfe  update-alpha81/upd1-arch-good/run-a/host/job.sh
 7e59eaec2482f8ddd4e5b418d6d1c2bef80cd37a7a4ca3757da86d64ae6a98ec  update-alpha81/upd1-arch-good/run-a/host/lab.txt
@@ -1709,7 +1709,7 @@ d545a58fd632807a551e6613ce57cea26f326da7fa44c25ddc2aee3b65bedbd0  update-alpha81
 5edc98c87e5e6a961ebb97f9a8b028ae2b97e775f324e229d718ce3b171dc9fe  update-alpha81/upd1-arch-good/run-a/steps/20-set6-name-pinning-at-the-end/step.json
 62e3792625034905d8052ed577b7d3fd743c5a391b4fcfcb91dcc587e250b756  update-alpha81/upd1-debian13-good/run-a/host/c-drive-gate.txt
 d8d5cc8b869428473d955c0cad8b40bc9e6011ab90010ede61e3fbfc03d25cd4  update-alpha81/upd1-debian13-good/run-a/host/digest-sweep-at-staging.json
-b1b1d7fa7061e342afc0af2d750271adf0f37ce0a7902f0bbc7e22314f10e238  update-alpha81/upd1-debian13-good/run-a/host/fixture-plan.json
+1ddbbbf9dcdf01112f7577799611586fe882d4bc13d9412b75aefcf6d0b033a2  update-alpha81/upd1-debian13-good/run-a/host/fixture-plan.json
 9c250bf25c1bc333547bbb8c2433f661df1084d5558827f9404378503845397a  update-alpha81/upd1-debian13-good/run-a/host/harness.txt
 977b3c78df3e4976a2568acc1f8009e6e98676dcad64087a14d88c7e4b3e85ae  update-alpha81/upd1-debian13-good/run-a/host/job.sh
 a8f9d9019a6999ffa31a809276e320cd059cb2adaf7bbc3d58a0002f29d6b4d3  update-alpha81/upd1-debian13-good/run-a/host/lab.txt
@@ -2025,7 +2025,7 @@ b536e5b6e348c041896eeb30eb217a2c276d3c727dea3c3c81d478ec78087f16  update-alpha81
 19c6400611ec7a79eb735a5b1562899a30d1eea16171cac773126b937ecf96fd  update-alpha81/upd1-debian13-good/run-a/steps/24-set6-name-pinning-at-the-end/step.json
 c74d0b83b7189dc28ae00958856d51ecf7ac853d06d84c8162ae82bb4db69e77  update-alpha81/upd1-ubuntu-good/run-a/host/c-drive-gate.txt
 a7c068722cc9e97856d14e3640532cef43ca2513928cb37aff69015c1aebe058  update-alpha81/upd1-ubuntu-good/run-a/host/digest-sweep-at-staging.json
-36b39521cc059074b876bba358066ba8cad317dcb23d2981f6b0223ab295e608  update-alpha81/upd1-ubuntu-good/run-a/host/fixture-plan.json
+a1d747ba5978ba6b2c3a90ab6df1da2b0fa3e89bbe2b5e735d8dbb482a464610  update-alpha81/upd1-ubuntu-good/run-a/host/fixture-plan.json
 9c250bf25c1bc333547bbb8c2433f661df1084d5558827f9404378503845397a  update-alpha81/upd1-ubuntu-good/run-a/host/harness.txt
 1022036b21b934039ad485e2bf0c5ca4a1a7adc26dfeacfd646013a777006c27  update-alpha81/upd1-ubuntu-good/run-a/host/job.sh
 12f285ad330844f7f0fae9c681f0bd866ebf37d073df6b96fbc3d6bca49029e4  update-alpha81/upd1-ubuntu-good/run-a/host/lab.txt

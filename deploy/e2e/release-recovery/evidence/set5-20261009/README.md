@@ -735,3 +735,7 @@ the guests' SSH public key and its comment in each `host/fixture-plan.json` (a p
 `qualifier` values in `setup-execution.json` (the digest of a mail-renewal runtime script, not a credential); the per-run
 `SHA256SUMS` files do not list that run's `host/` files (the root file does); the 15 to 17 such files per run are covered by
 the root file only.
+
+**Correction after publication (2026-10-10).** After this directory was published (2026-10-10), the operator's machine name was replaced by `<operator-host>` in the SSH public-key comments (and in the text that named it) of this directory: 17 occurrences in 10 files; the key material itself, a lab public key, is unchanged.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

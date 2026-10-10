@@ -576,3 +576,10 @@ It does **not** show:
 
 It closes no P0 row. Wall time: 22:18Z (host check) to about 01:45Z; the twelve cells and two re-runs ran
 22:23:40Z to 01:37:03Z.
+
+## Corrections after intake (2026-10-10)
+
+After this directory was published (2026-10-10), the operator's machine name was replaced by `<operator-host>` in the SSH public-key comments (and in the text that named it) of this directory: 28 occurrences in 14 files; the key material itself, a lab public key, is unchanged.
+After this directory was published (2026-10-10), 46 digest values of the one-shot update-transaction token (42 in plain text in 28 files, as `transaction_token_sha256` values and as `.release-db-migrations/<digest>` directory names; 4 inside base64 `events_base64` text in 2 files) were replaced by `[REDACTED-SHA256]`.
+
+The affected `SHA256SUMS` lines (per-run lists and this directory's list) were recomputed afterwards; nothing else in this directory was changed.

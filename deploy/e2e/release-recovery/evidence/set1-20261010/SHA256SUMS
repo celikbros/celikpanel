@@ -1,4 +1,4 @@
-9053437276b1c5903ed6e2f7d0145400a10bcd68b991a7c3ec704963eb94fe0f  ./README.md
+f2256a6fb9da8029762335c5528d76b16d28516c769a3bbb49cb7b8aeee558b6  ./README.md
 622fd231d39274f627de0a0387d8758d9e5279afa1678ef49949682eb00bca6c  ./build/cur-prove.json
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./build/cur-prove.stderr.txt
 71f3e22ba2c421661c722e601ee58a7d79946e030ecef21419b3816405088726  ./build/cur/baseline-tree-equals-source.txt
@@ -108,12 +108,12 @@ a24869ebabacb972ea98f09c3078b284e5be2deba0969e88ba40418f19975a0b  ./harness-run-
 39bc6a9cf7cc790935ced9c62e59824d9dae0bc52bf8db56c0f8b44c11be2441  ./host/keepawake.log
 5367247f64f6b3e2c14b9220f41d40861f3864a584fb2ed3f79aeba9147ac9bc  ./host/removals.txt
 d19731eb176ccf4d36c7a9d8087f23baf2fa482a336ab221ea1c7271b67d66d7  ./native-facts.json
-b60f971088de74ffbce562b83e5abf28ea07b45f3194e26ac23cd5b1932948b6  ./secret-scan.txt
+c24b29a108da9de4ba758e3cfaba25c1957511069aa6049c24d33cf166e74f36  ./secret-scan.txt
 478898f1204988460127fe5b40f158fb79946f70fe729d6e32a3c7a68994bc6f  ./sections-table.md
 1aa2aa1b54f4e996853c4aa2282d675119b53b6bb932d449a05ed14c4d9fc9c0  ./set1-arch/run-a/SHA256SUMS
 3256761728ce06eec39419da624211f4846cf0637f86ce6f5eac77e7be33f61a  ./set1-arch/run-a/host/current-worker-baseline-arch-current-worker-baseline-result.json
 8bdf11fef886a40a0b0386eae8dc544df9fe20113670139bca8b40ac830236b2  ./set1-arch/run-a/host/current-worker-baseline-arch-current-worker-baseline.log
-5ce6a81fda41dce01ae8628418623e331c6f16b2d0711e8a487ef63cd72daf0c  ./set1-arch/run-a/host/fixture-plan.json
+ebc209268bb7e901fd4be3145fc2256ab4166b9a6b41fd9213248000b471e649  ./set1-arch/run-a/host/fixture-plan.json
 67eb587f1c48574eefa3b1be931345c803300366c228c6e49c87e9f8da9e3a30  ./set1-arch/run-a/host/harness.txt
 aae6ceee14a06248eede350e5d81bc4193eb9e4103d3dfa6fa0b2df542fc57e5  ./set1-arch/run-a/host/job.sh
 d21b4b32e301acaf689d482ff81dbf7a381e4a9d57f5e45f7404010ed86ac46d  ./set1-arch/run-a/host/lab.txt
@@ -354,7 +354,7 @@ d181316f296716ee0cadb85c0c5e05ee00b7649ba53cd1cd987f6083cdcbba49  ./set1-arch/ru
 fed141ba3c026e88a19be0187c431b0d77e925865a2d52f2769cd2d6c7ee3bd7  ./set1-debian13/run-a/SHA256SUMS
 1429de315acbd7c5b35da54ee93eb471847631fa24aab2dc9e0aa55dce9588bd  ./set1-debian13/run-a/host/current-worker-baseline-debian13-current-worker-baseline-result.json
 e211b5f52f2e7290c9f991249e55119b2ab47a242aa57b3d13ff583f2871e375  ./set1-debian13/run-a/host/current-worker-baseline-debian13-current-worker-baseline.log
-e6a0bf1c71a76fd608d19dc0e58124a4e804df29af9bfdbe793512ff3bfc9d19  ./set1-debian13/run-a/host/fixture-plan.json
+4f4306f0b6b14c59472f90fe09a6c935a9c7e9076482e2ace50fb7c5cbdc2224  ./set1-debian13/run-a/host/fixture-plan.json
 82829c3c66f7feb45310e138c2b1a799dca329b2478f5e6f2cee30f816bd13cd  ./set1-debian13/run-a/host/harness.txt
 cb464357a1931e9db0a33f5cbb0a43b5024350f0f341e1eb514143ff2d8736db  ./set1-debian13/run-a/host/job.sh
 af5c0da923d16255829fbbe5491e577efec3543a599086d34cd1e72cd6b01211  ./set1-debian13/run-a/host/lab.txt
@@ -723,7 +723,7 @@ d35c9829db98053ee24e6464a7f79118c3666340cbd1a08e80e1dba1737dc03a  ./set1-debian1
 73d899d3589ba569326e46556b397caa0640cf601dc521630fca661b9934f957  ./set1-debian13/run-b/SHA256SUMS
 7f86e94fb88601dcc7d839406e221d62e57e741902c40df2819d04e0d37dd249  ./set1-debian13/run-b/host/current-worker-baseline-debian13-current-worker-baseline-result.json
 d61d1c9d26852601f495dbbc375fd8fb09a6cd629b8b29e9ddcd2e997b64ed4d  ./set1-debian13/run-b/host/current-worker-baseline-debian13-current-worker-baseline.log
-a6a160893ab683df358d3165c067a992a1b387dea36192c69a1eaee3a9b0732e  ./set1-debian13/run-b/host/fixture-plan.json
+4143594a0d56e3ea0eff5cb40ecb55d83a6ed671898f1bef00f3ead0a02703b8  ./set1-debian13/run-b/host/fixture-plan.json
 67eb587f1c48574eefa3b1be931345c803300366c228c6e49c87e9f8da9e3a30  ./set1-debian13/run-b/host/harness.txt
 9bbfef7c6291c9aef7b5e6ef4e763187702826ce3bca064e5aef359c1e7345f4  ./set1-debian13/run-b/host/job.sh
 23de8d534ac9cb895e7e34d5a5697cbdb8316485cf02c84e31db1e1af11769ae  ./set1-debian13/run-b/host/lab.txt
@@ -1091,7 +1091,7 @@ a38595db8b17d02abd2200bc952212f6d41729148bc2c8bdee92287950691359  ./set1-debian1
 9ccc3c1b19d5603adc8169f1e065afe3b509df215aac7cdf67b04953d5aa1cc7  ./set1-ubuntu/run-a/SHA256SUMS
 733eb8096a3c2acd842fc3707e51877a9439abb94bfca77f488d6f0601fa7386  ./set1-ubuntu/run-a/host/current-worker-baseline-ubuntu-current-worker-baseline-result.json
 2845fcec42b890317d2cb424b809d989ae12890b2047be9aabdea1be8c60800e  ./set1-ubuntu/run-a/host/current-worker-baseline-ubuntu-current-worker-baseline.log
-7520a2acab692b76208c044cb827581a56d0b56169afddae0b74840e62a4aa49  ./set1-ubuntu/run-a/host/fixture-plan.json
+4b49e5fc086a2fb2f009563cc621a8ac414de84e31da76654f18965e78b49449  ./set1-ubuntu/run-a/host/fixture-plan.json
 6a514d3d449100f284720ceeeacf314a4e5d692767484ebcdf68dc1ddfeb17a0  ./set1-ubuntu/run-a/host/harness.txt
 8b4101af8ef2472732b9a9e3c53ca8273112d7fa06ec4dc4b3d83ca73d588109  ./set1-ubuntu/run-a/host/job.sh
 febf58ed87b407d30feace0cc46d6ac53a10cf17982ade47e773c58ecf9160c1  ./set1-ubuntu/run-a/host/lab.txt
