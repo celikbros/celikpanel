@@ -5637,7 +5637,13 @@ Kim yapar: sunucu sahibi (yönetici); hiçbir şey kendiliğinden sürmez.
 **Nerede.** Alan adı sayfası → Barındırma → Yapılandırma dosyası (yalnız
 yöneticiler; `GET /api/v1/domains/{id}/site-config`). Alan adının sekmelerinin
 üstündeki satır (`siteConfig.notice.*`, "Yapılandırma dosyasını aç" ile) ve Alan
-Adları listesindeki rozet ("Yapılandırma korundu") oraya götürür.
+Adları listesindeki rozet ("Yapılandırma korundu") oraya götürür. Rozet sahip
+düzenlemiş, yabancı, kökeni bilinmiyor, eksik ve okunamaz durumlarında çizilir
+("korundu" sözü bu yüzden eksik bir dosyada da görünür) ve sahip dosyanın şimdiki
+hâli için "benimkini koru"yu seçtiyse gizlenir; sekmelerin üstündeki satır bu
+seçime bakmaz ve seçim yapıldıktan sonra da "seçiminizi bekliyor" demeyi sürdürür.
+İkisi de Panel'in kaydettiği son durumdan okunur (yöneticiye defterden okuma;
+Agent çağrısı yok), o andaki dosyadan değil.
 
 **Durumlar ve cümleleri** (anahtarlar `web/src/i18n/screens/server` içinde, TR):
 
@@ -5655,7 +5661,9 @@ Adları listesindeki rozet ("Yapılandırma korundu") oraya götürür.
   değişmemiş" — "Bu dosya CelikPanel’in en son yazdığının ta kendisi; bu yüzden
   siz bu sitenin ayarlarını değiştirdikçe CelikPanel onu günceller." Önceki
   sürümden devralınan: "Dosyayı {release} yazmış; bayt bayt o sürümün metni
-  olarak tanındı ve CelikPanel onu devraldı."
+  olarak tanındı ve CelikPanel onu devraldı." ({release}, API'nin `adopted_from`
+  değeridir, olduğu gibi; örneğin `v0.1.0-alpha.82` ya da `v0.1.0-alpha.82
+  (creation)`; sonek çevrilmez.)
 - Düzenlenmiş / değiştirilmiş: `siteConfig.ownerEdited.title` "Yapılandırma
   sahibi tarafından düzenlendi", `siteConfig.foreign.title` "Yapılandırma sahibi
   tarafından değiştirildi" — `siteConfig.kept.body` "Bu dosya CelikPanel’in en
@@ -5708,9 +5716,15 @@ gösterdiği özetlere bağlıdır):
 **Sahibin eklemeleri için desteklenen yer:** `siteConfig.include` "Bu site için
 kendi nginx yönergelerinizi {dir} içinde bir .conf dosyasına yazın. CelikPanel
 oraya hiç yazmaz ve bu sitede yaptığı her değişiklikte onları korur." Dizin
-`/etc/nginx/celikpanel-sites.d/<alan adı>/`; sanal konak `<dizin>/*.conf`
-dosyalarını sitenin içeriğini sunan her server bloğunda içerir (yalnız HTTPS'e
-yönlendiren blokta değil).
+`/etc/nginx/celikpanel-sites.d/<alan adı>/` (sanal konak yazılırken 0755 ile
+oluşturulur; içindeki hiçbir şey yazılmaz, değiştirilmez ya da silinmez). Sanal
+konak server bağlamında `include <dizin>/*.conf;` satırını, posta adlarının
+yalnız doğrulama bloğu ile yalnızca HTTPS'e yönlendiren düz HTTP bloğu dışındaki
+her blokta taşır. Yönlendirme sitesinin hedef adrese yönlendiren blokları da
+taşır. Satır sitenin `location` bloklarından sonra durur; sahibin dosyası
+onlardan birini yinelerse (örneğin `location /`) nginx'in kendi kuralıyla
+`nginx -t` bunu reddeder (CelikPanel ile ölçülmedi) ve dosya yazan her üretim de
+onunla birlikte reddedilir.
 
 **Üretmek isteyen işlemlerin retleri** (kabuk kataloğu, `err.<KOD>`, TR):
 
@@ -5737,11 +5751,23 @@ yönlendiren blokta değil).
 - `SITE_CONFIG_CHANGED` (409): "Yapılandırma dosyası ya da CelikPanel’in metni,
   sayfa onları gösterdikten sonra değişti; bu yüzden hiçbir şey yapılmadı. Sayfa
   dosyayı yeniden okur; ona bakıp yeniden seçin."
-- `SITE_CONFIG_NOT_APPLICABLE` (409), `SITE_CONFIG_NOT_READ` (502),
-  `SITE_CONFIG_NGINX_REFUSED` (502: "nginx, CelikPanel’in metnini içeren
-  yapılandırmayı reddetti; bu yüzden dosyanız olduğu gibi geri kondu ve nginx
-  onunla çalışmayı sürdürüyor. Başka hiçbir şey değiştirilmedi."; nginx'in kendi
-  satırı yöneticilere gösterilir).
+- `SITE_CONFIG_NOT_APPLICABLE` (409; sahip düzenlemiş, yabancı ya da kökeni
+  bilinmiyor olmayan dosyada koru, ya da var olan ve korunmuş dosyada yeniden
+  oluştur): "Bu seçim dosyanın şimdiki hâline uymuyor; bu yüzden hiçbir şey
+  yapılmadı. Sayfa dosyayı yeniden okur."
+- `SITE_CONFIG_NOT_READ` (502; Agent yanıt vermedi, hata ile yanıtladı ya da
+  üretim girdisi hazırlanamadı): "CelikPanel bu sitenin yapılandırma dosyasının
+  durumunu şu an okuyamadı. Bu, dosyada bir sorun olduğu anlamına gelmez ve hiçbir
+  şey değiştirilmedi. Tekrar deneyin."
+- `SITE_CONFIG_NGINX_REFUSED` (502, `reason` `nginx_refused` ya da
+  `reload_failed`; `details[0]` yöneticiler için nginx'in kendi ilk satırı):
+  "nginx, CelikPanel’in metnini içeren yapılandırmayı reddetti; bu yüzden
+  dosyanız olduğu gibi geri kondu ve nginx onunla çalışmayı sürdürüyor. Başka
+  hiçbir şey değiştirilmedi." nginx metni kabul edip yeniden yükleme başarısız
+  olduğunda da (`reload_failed`) aynı kod ve cümle kullanılır; iki durumda da
+  dosya geri konur. "Al"ın yazmadan önce yaptığı tarihli kopya dosyanın yanında
+  kalır. nginx tüm yapılandırmayı denetler; ret başka bir sitenin dosyasından ya
+  da sahibin include dizininden gelebilir, CelikPanel'in metninden değil.
 
 **Güncellemeden sonraki ilk durum.** alpha.81 ve alpha.82'nin yazdığı
 dosyalarda başlık yoktur. İlk başlangıçta her biri, bu sürümlerin dondurulmuş
@@ -5755,14 +5781,129 @@ devralındı; {left} tanesi bilinen her CelikPanel metninden farklı olduğu iç
 olduğu gibi bırakıldı. Dosyasını görmek için bir alan adını açın." Başlangıçtaki
 günlük satırı yazılan, değişmeyen, korunan (sahip düzenlemiş / yenisiyle
 değiştirilmiş / kökeni bilinmiyor), okunamayan ya da değiştirilemeyen, eksik
-(yeniden yazılmayan), başarısız ve devralınan dosyaları ayrı sayar; bir sitenin
-her üretimi siteyi ve yapılanı adlandıran bir satır yazar.
+(yeniden yazılmayan), başarısız ve devralınan dosyaları ayrı sayar. Siteye ait
+sonuçları bildirmeyen bir Agent'a karşı satır şudur: `restored N hosted vhosts;
+the Agent did not report what it found in each file, so their state is
+unknown`. Agent'ın yanıtladığı bir sitenin her üretimi siteyi ve yapılanı
+adlandıran bir satır yazar (`site configuration <alan adı> (<tetikleyici>): …`);
+Agent'ın hiç yanıtlamadığı üretim yalnız hatayı yazar. Devralmayı 044. göçün SQL'i
+değil (o satır yazmaz, dosyaya dokunmaz), başlıksız dosyayı gören ilk üretim,
+normalde ilk başlangıç yapar.
+
+Alan Adları listesi satırı yalnız ilk başlangıçla sınırlı değildir: defter
+satırı devralınan bir sürümü adlandıran siteleri (`adopted_from`, hiç
+temizlenmez) ve dosyası şimdi kökeni bilinmiyor olan siteleri sayar. Bu yüzden
+devralınmış tek bir dosya bile varken ilk başlangıçtan sonra da durur, sahibin ne
+yapması gerektiğini söylemez ve kapatılamaz.
+
+**Şema ve sürüm (D-025).** Şema 43'ten 44'e (göç 044, `managed_site_files`,
+var olan hiçbir tablo değişmez); site dosyası biçimi v2 (ilk satır olarak
+`# celikpanel-render v2 sha256=<64 onaltılık>`). Derleme eşleşmesi
+(`ExpectedBuildCommit`), başka sürümden bir Agent'ın Panel'in üretimlerini
+yanıtlamasını normalde engeller (başlangıç toplu işi reddedilir). Bir Agent
+siteye ait sonuç olmadan yanıtlarsa (bileşen testleri bu değişiklikten önceki bir
+Agent'ı benzetir) Panel dosyayı "bilinmiyor" (`unknown`,
+`agent_does_not_report`) diye kaydeder ve gösterir, asla "değişmedi" diye değil;
+`Agent.InspectSiteFile` olmayan bir Agent sayfada aynı durumu verir. Önceki sürüm
+Paneli (alpha.82, şema 43) defterinde 44. girdi olan veritabanını reddeder; bu
+yüzden alpha.81 ya da alpha.82'ye dönüş, her göçte olduğu gibi güncelleme öncesi
+anlık görüntünün geri yüklenmesidir; aşağı göç yoktur.
 
 **Sınırlar.** Eski bir sürüme dönüş (otomatik geri alma dahil) bu korumayı
-kaldırır: eski Panel her başlangıçta her sitenin sanal konağını, sahibin
-değişikliği dahil, eskisi gibi yeniden yazar ve onun metninde başlık yoktur. Bu
-sürüm yeniden çalıştığında eski sürümün metnini bayt bayt tanır ve devralır;
-eski sürüm çalışırken ve onun sonraki başlangıcından önce yapılan değişiklik
-korunur ve gösterilir. Sürüm notları bunu söyler. PHP-FPM havuzu ve uygulama
-birimi henüz kapsanmıyor (ikinci adım). Gerçek sistemde ölçülmedi; ölçüm
-hücreleri denetimin §9'udur.
+kaldırır. alpha.81 ve alpha.82 başlangıcı her siteyi `Agent.ApplyVhosts`'a
+gönderir; o, her sanal konağı karşılaştırmadan veritabanından yazar (iki
+sürümün kaynağında okundu; bu değişiklikten sonra ölçülmedi): sahibin
+değişikliği ezilir, başlık satırı ve sahibin include satırı o metinde yoktur;
+böylece `/etc/nginx/celikpanel-sites.d/<alan adı>/` içindeki dosyalar diskte
+kalır ama güncelleme yeniden uygulanana dek nginx onları okumaz; tarihli
+kopyalar, bekleyen dosyalar ve include dizinleri yerinde kalır. Bu sürüm yeniden
+çalıştığında eski sürümün metnini bayt bayt tanır ve devralır; eski sürüm
+çalışırken ve onun sonraki başlangıcından önce yapılan değişiklik korunur ve
+gösterilir. Sürüm notları bunu söyler.
+Sertifika alımı ve yenilemesi de önce sanal konağı üretir (doğrulama adlarını
+yayımlamak için). Dosyası korunmuş bir sitede bu adımda, sertifika istenmeden
+önce dururlar: alım, `SITE_CONFIG_*` kodu olmayan ve Yapılandırma dosyası
+sayfasını göstermeyen "certificate request was not started because the
+validation web server configuration could not be prepared" cümlesiyle 409 verir;
+otomatik yenileme başarısız diye kaydedilir ("prepare renewal validation vhost:
+…"); kullanımdaki sertifika süresi dolana dek sunulur. Sahip CelikPanel'in
+metnini alır ya da elle birleştirirse sürer. Kaynaktan okundu; denetimin "benimkini
+koru, sonra sertifika alımı" hücresi açık ve bu açık kapanmadı. PHP-FPM havuzu
+ve uygulama birimi henüz kapsanmıyor (ikinci adım). Sayfada gösterilen farkın iki
+İngilizce başlığı çevrilmez (`--- <yol> (on this server)` ve `+++ CelikPanel's
+text`). Gerçek sistemde ölçülmedi; ölçüm hücreleri denetimin §9'udur.
+
+**Entegratörler için: API (sürüm notlarına dek başvuru).** Tüm rotalar yönetici
+içindir (aksi hâlde `403 {"error":"administrator access is required"}`);
+barındırılan sitesi olmayan alan adı `404`. Üç POST rotası D-029'un istek
+kimliğiyle korunur: `X-CelikPanel-Request-Id` başlığı (32 küçük harfli onaltılık
+karakter, her eylem için yeni) zorunludur (yoksa `428 REQUEST_ID_REQUIRED`,
+biçimi bozuksa `400`); aynı kimlik ve aynı gövde saklı yanıttan yanıtlanır
+(`X-CelikPanel-Request-Replayed: 1`), farklı gövdede `409 REQUEST_ID_REUSED`,
+çalışırken `409 REQUEST_IN_PROGRESS`, Panel yeniden başlamışsa `409
+REQUEST_OUTCOME_UNKNOWN`. Hatalar `{"error": <İngilizce cümle>, "code": …,
+"reason"?: …, "details"?: […]}` biçimindedir; ekranlar `code`'a göre çevirir.
+
+- `GET /api/v1/domains/{id}/site-config` (Agent'ı okur; hiçbir şey yazmaz) → 200
+  ```json
+  {"domain_id":12,"domain":"example.test","kind":"nginx_vhost",
+   "path":"/etc/nginx/sites-available/example.test.conf",
+   "state":"owner_edited","reason":"","detail":"","adopted_from":"",
+   "include_dir":"/etc/nginx/celikpanel-sites.d/example.test",
+   "enabled":"link","file_sha256":"<64 hex>","render_sha256":"<64 hex>",
+   "pending_path":"…/example.test.conf.celikpanel-pending",
+   "diff":"--- …\n+++ …\n@@ … @@\n…","diff_truncated":false,
+   "actions":["keep","take","merge"],
+   "decision":{"kind":"keep_mine","decided_at":"2026-10-10T12:00:00Z","current":true},
+   "ledger":{"written_release":"…","written_at":"…","observed_at":"…","backup_path":"…"}}
+  ```
+  `state`: `absent`, `managed_unchanged`, `owner_edited`, `foreign`,
+  `unreadable`, `unknown_origin` ya da `unknown` (`reason`
+  `agent_does_not_report`; `path` ve özet yok). `reason` (unreadable):
+  `symlink`, `not_regular`, `permission`, `too_large`, `read_failed`; `detail`
+  sınırlı tek satırdır. `enabled`: `link`, `absent` ya da `other`
+  (sites-enabled girdisi). `actions` (hep dizi): owner_edited, foreign ve
+  unknown_origin için `["keep","take","merge"]`; absent için `["recreate"]`;
+  diğerlerinde `[]`. `merge`'in rotası yoktur: sunucuda yapılır. `diff`,
+  diskteki dosya ile CelikPanel'in metninin (başlık satırı hariç) birleşik
+  farkıdır; taraf başına en çok 4000 satır ve 64 KiB; `diff_truncated` kesildiğini
+  söyler; authorization, password, passwd, secret, token, api key, private key ya
+  da cookie sözcüklerinden birini (büyük/küçük harf fark etmez) anan satır
+  yönergesini korur ve `[hidden by CelikPanel: this value may be a credential]`
+  gösterir (`auth_basic_user_file`, `ssl_certificate_key`, `ssl_password_file`
+  yolları kalır); böyle bir sözcüklü yorum satırı bütünüyle değiştirilir. Bu
+  sözcükleri kullanmayan bir kimlik bilgisi gizlenmez; alan yalnız yöneticiler
+  içindir. `decision.current`, yalnız dosya kararın verildiği özetle aynı
+  kaldıkça doğrudur. Hata: `502 SITE_CONFIG_NOT_READ`.
+- `POST …/keep` gövde `{"file_sha256":"<GET'ten 64 hex>"}` (zorunlu; gelen
+  `render_sha256` yok sayılır) → 200, karardan sonraki GET ile aynı nesne.
+  `400` (özet eksik ya da bozuk), `409 SITE_CONFIG_NOT_APPLICABLE`, `409
+  SITE_CONFIG_CHANGED` (dosyanın özeti farklı), `502 SITE_CONFIG_NOT_READ`.
+  Dosyaya hiçbir şey yazılmaz.
+- `POST …/take` gövde `{"file_sha256":"…","render_sha256":"…"}` (ikisi de
+  zorunlu, ikisi de GET'ten: sahibe gösterilen dosya ve CelikPanel'in metni) → 200
+  ```json
+  {"domain_id":12,"domain":"example.test","kind":"nginx_vhost","path":"…",
+   "state":"managed_unchanged","include_dir":"…","enabled":"link",
+   "file_sha256":"<yeni dosya>","render_sha256":"…","actions":[],
+   "outcome":"taken","backup_path":"….celikpanel-backup-20261010T120000Z",
+   "decision":{…},"ledger":{…}}
+  ```
+  `outcome` `taken`, dosya zaten CelikPanel'in metniyse `unchanged`;
+  kopya gerekmediyse `backup_path` boştur. Hatalar: `400`, `409
+  SITE_CONFIG_CHANGED`, `409 SITE_CONFIG_MISSING` (dosya yok), `409
+  SITE_CONFIG_UNWRITABLE` (`reason` `symlink`, `not_regular`, `permission`,
+  `too_large`, `read_failed`, `write_refused`), `502 SITE_CONFIG_NGINX_REFUSED`
+  (`reason` `nginx_refused` ya da `reload_failed`), `502 SITE_CONFIG_NOT_READ`.
+- `POST …/recreate` gövde `{}` (ya da yok) → 200, `take` gibi, `outcome`
+  `recreated`; var olan ve CelikPanel'in kendi metni olan dosyada yazar ya da
+  `unchanged` bildirir. Hatalar: `409 SITE_CONFIG_NOT_APPLICABLE` (dosya var ve
+  korunmuş), `409 SITE_CONFIG_UNWRITABLE`, `502 SITE_CONFIG_NGINX_REFUSED`,
+  `502 SITE_CONFIG_NOT_READ`.
+- Alan adları listesi (`GET /api/v1/domains`) yalnız yönetici için
+  `site_config: {"state":…,"adopted_from"?:…,"kept_by_choice"?:true}` taşır;
+  Panel'in kaydettiği son gözlemden gelir (`missing` saklanan bir durumdur; yukarıdaki
+  GET onu hiç döndürmez, `absent` döndürür).
+- Dosyayı üreten diğer işlemler `409` verir: `SITE_CONFIG_OWNER_EDITED` (`reason`
+  = durum), `SITE_CONFIG_MISSING` ya da `SITE_CONFIG_UNWRITABLE` (`reason` yukarıdaki
+  gibi); site oluşturma ve içe aktarma `409 SITE_CONFIG_EXISTS` verir.

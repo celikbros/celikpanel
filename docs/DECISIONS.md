@@ -23,7 +23,7 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ## D-031 · A site configuration file the owner changed is kept and named, never overwritten by a render
 
-*October 10, 2026 (clock date) · Owner decision on a finding of the read-only audit [SITE-CONFIG-OWNER-EDITS-2026-10-10](audit/SITE-CONFIG-OWNER-EDITS-2026-10-10.md); design decided, implementation and native measurement pending*
+*October 10, 2026 (clock date) · Owner decision on a finding of the read-only audit [SITE-CONFIG-OWNER-EDITS-2026-10-10](audit/SITE-CONFIG-OWNER-EDITS-2026-10-10.md); design decided; first step in source (commit of 2026-10-10), native measurement pending; second step (pool, application unit) pending*
 
 The audit read, from source only, that the Panel's start renders every hosted
 site's nginx configuration again and writes it with no comparison, no digest

@@ -5711,7 +5711,13 @@ state and the difference, and the owner chooses. Who acts: the server owner
 **Where.** Domain page → Hosting → Configuration file (administrators only;
 `GET /api/v1/domains/{id}/site-config`). A line above the domain's tabs
 (`siteConfig.notice.*`, with "Open configuration file") and a badge in the
-Domains list ("Configuration kept") point to it.
+Domains list ("Configuration kept") point to it. The badge is drawn for the
+states owner-edited, foreign, unknown origin, missing and unreadable (the word
+"kept" is therefore also on a missing file) and is hidden once the owner chose
+"keep mine" for the file as it is now; the line above the tabs does not look
+at that choice and keeps saying "is waiting for your choice" after it was made.
+Both are read from the last state the Panel recorded (a ledger read for an
+administrator; no Agent call), not from the file at that moment.
 
 **The states and their sentences** (keys in `web/src/i18n/screens/server`,
 EN; the Turkish edition carries the TR text):
@@ -5729,7 +5735,9 @@ EN; the Turkish edition carries the TR text):
   "This file is exactly what CelikPanel last wrote, so CelikPanel keeps it up to
   date when you change this site’s settings." Adopted from an earlier release:
   "It was written by {release} and recognised byte for byte as that release’s
-  text, so CelikPanel took it over."
+  text, so CelikPanel took it over." ({release} is the API's `adopted_from`
+  verbatim, for example `v0.1.0-alpha.82` or `v0.1.0-alpha.82 (creation)`; the
+  suffix is not translated.)
 - Edited / replaced: `siteConfig.ownerEdited.title` "Configuration edited by the
   owner", `siteConfig.foreign.title` "Configuration replaced by the owner" —
   `siteConfig.kept.body` "This file is not the text CelikPanel last wrote, so
@@ -5782,9 +5790,15 @@ bound to the digests the page showed):
 **The supported place for the owner's additions:** `siteConfig.include` "Put your
 own nginx directives for this site in a .conf file in {dir}. CelikPanel never
 writes there, and every change CelikPanel makes to this site keeps them." The
-directory is `/etc/nginx/celikpanel-sites.d/<domain>/`; the vhost includes
-`<dir>/*.conf` in every server block that serves the site's content (not in a
-block that only redirects to HTTPS).
+directory is `/etc/nginx/celikpanel-sites.d/<domain>/` (created 0755 when the
+vhost is written; nothing in it is ever written, changed or removed). The
+vhost holds `include <dir>/*.conf;` in server context in every block except
+the validation-only block of mail names (`mail.<domain>`) and the plain-HTTP
+block that only redirects to HTTPS. A forwarding site's blocks, which redirect
+to the target address, carry it too. It is placed after the site's
+`location` blocks, so an owner file that repeats one of them (for example
+`location /`) would, by nginx's own rule, make `nginx -t` refuse (not measured
+with CelikPanel) and with it every render that writes a file.
 
 **Refusals of the operations that wanted to render** (shell catalogue,
 `err.<CODE>`, EN):
@@ -5811,11 +5825,23 @@ block that only redirects to HTTPS).
 - `SITE_CONFIG_CHANGED` (409): "The configuration file or CelikPanel’s text
   changed after the page showed them, so nothing was done. The page reads the
   file again; look at it, then choose again."
-- `SITE_CONFIG_NOT_APPLICABLE` (409), `SITE_CONFIG_NOT_READ` (502),
-  `SITE_CONFIG_NGINX_REFUSED` (502: "nginx refused the configuration with
-  CelikPanel’s text in it, so your file was put back exactly as it was and nginx
-  keeps running with it. Nothing else was changed."; nginx's own line is shown to
-  administrators).
+- `SITE_CONFIG_NOT_APPLICABLE` (409; keep on a file that is not owner-edited,
+  foreign or unknown origin, or recreate on a file that exists and was kept):
+  "This choice does not apply to the file as it is now, so nothing was done. The
+  page reads the file again."
+- `SITE_CONFIG_NOT_READ` (502; the Agent did not answer, answered with an
+  error, or the render input could not be prepared): "CelikPanel could not read
+  the state of this site’s configuration file just now. This does not mean
+  anything is wrong with the file, and nothing was changed. Try again."
+- `SITE_CONFIG_NGINX_REFUSED` (502, `reason` `nginx_refused` or `reload_failed`;
+  `details[0]` is nginx's own first line, for administrators): "nginx refused the
+  configuration with CelikPanel’s text in it, so your file was put back exactly
+  as it was and nginx keeps running with it. Nothing else was changed." The
+  same code and sentence are used when nginx accepted the text but the reload
+  failed (`reload_failed`); the file is put back in both cases. The dated copy
+  that "take" made before the write stays beside the file. nginx checks the
+  whole configuration, so the refusal can come from another site's file or from
+  the owner's include directory, not from CelikPanel's text.
 
 **The first state after the update.** Files written by alpha.81 and alpha.82
 carry no header. At the first start each is compared byte for byte with what
@@ -5830,14 +5856,133 @@ file." The journal line at start: `site configuration files at start: N
 written, N unchanged, N kept (owner-edited), N kept (foreign), N kept (unknown
 origin), N unreadable or unwritable, N missing (not recreated), N failed; N
 adopted from an earlier release` and, when any, `N adopted, M left alone
-because they differ from every known CelikPanel text`. Every render of one site
-logs one line naming the site and what was done.
+because they differ from every known CelikPanel text`. Against an Agent that
+does not report per-site results the line is instead `restored N hosted vhosts;
+the Agent did not report what it found in each file, so their state is
+unknown`. Every render of one site that the Agent answered logs one line naming
+the site and what was done (`site configuration <domain> (<trigger>): …`); a
+render the Agent never answered logs the error only. The adoption itself is
+done by the first render that sees the headerless file (normally the first
+start), not by migration 044, whose SQL writes no row and touches no file.
+
+The Domains list line is not limited to the first start: it counts the sites
+whose ledger row names an adopted release (`adopted_from`, which is never
+cleared) and the sites whose file is unknown origin now. It therefore stays
+after the first start for as long as one adopted file exists, says nothing
+about what the owner has to do, and has no way to dismiss it.
+
+**Schema and version (D-025).** Schema 43 to 44 (migration 044,
+`managed_site_files`, no existing table changes); site file format v2
+(`# celikpanel-render v2 sha256=<64 hex>` as the first line). The build match
+(`ExpectedBuildCommit`) is what normally keeps an Agent of another release
+from answering the Panel's renders at all (the start refuses the batch). Should
+an Agent answer without a per-file result (the component tests simulate an
+Agent that predates this change), the Panel records and shows the file as "not
+known" (`unknown`, `agent_does_not_report`), never as unchanged; an Agent
+without `Agent.InspectSiteFile` gives the same state on the page. A Panel of an earlier release
+(alpha.82, schema 43) refuses a database whose ledger holds entry 44, so a
+return to alpha.81 or alpha.82 is the pre-update snapshot restore, as for every
+migration; there is no down migration.
 
 **Limits.** A return to an older release (automatic rollback included) loses
-this protection: the older Panel overwrites every site's vhost at its start as
-it always did, an owner's edit included, and its text has no header. When this
-release runs again it recognises the older release's text byte for byte and
-adopts it; an owner's edit made while the older release ran and before its next
-start is kept and shown. The release notes say this. The
-PHP-FPM pool and the application unit are not covered yet (the second step).
+this protection. The alpha.81 and alpha.82 start sends every site to
+`Agent.ApplyVhosts`, which writes each vhost from the database without
+comparing it (read in the source of both releases; not measured after this
+change): an owner's edit is overwritten, the header line and the owner include
+line are not in that text, so the files in
+`/etc/nginx/celikpanel-sites.d/<domain>/` stay on disk but nginx stops reading
+them until the update is applied again; the dated copies, pending files and
+include directories are left in place. When this release runs again it
+recognises the older release's text byte for byte and adopts it; an owner's
+edit made while the older release ran and before its next start is kept and
+shown. The release notes say this.
+Certificate issuance and renewal also render the vhost first (to publish the
+validation names). For a site whose file is kept they stop at that step, before
+a certificate is requested: issuance answers 409 with the untyped sentence
+"certificate request was not started because the validation web server
+configuration could not be prepared" (no `SITE_CONFIG_*` code, no pointer to
+the Configuration file page), and the automatic renewal is recorded as failed
+("prepare renewal validation vhost: …"); the certificate in use keeps being
+served until it expires. The owner takes CelikPanel's text, or merges by hand,
+to let it continue. Read from the source; the audit's "keep mine, then
+certificate issuance" cell is still open and this gap is not closed. The PHP-FPM pool and the application unit are not covered yet (the
+second step). The difference shown on the page has two English captions that
+are not translated (`--- <path> (on this server)` and `+++ CelikPanel's text`).
 Not measured on a real system; the measurement cells are the audit's §9.
+
+**For integrators: the API (reference until the release notes).** All routes
+are for an administrator (`403 {"error":"administrator access is required"}`
+otherwise); a domain without a hosted site is `404`. The three POST routes are
+guarded by the request identity of D-029: the header `X-CelikPanel-Request-Id`
+(32 lowercase hexadecimal characters, new for each action) is required (`428
+REQUEST_ID_REQUIRED` without it, `400` if malformed); the same identity with
+the same body is answered from the stored answer (`X-CelikPanel-Request-Replayed:
+1`), with a different body `409 REQUEST_ID_REUSED`, while running `409
+REQUEST_IN_PROGRESS`, after a Panel restart `409 REQUEST_OUTCOME_UNKNOWN`.
+Errors are `{"error": <English sentence>, "code": …, "reason"?: …, "details"?:
+[…]}`; screens translate by `code`.
+
+- `GET /api/v1/domains/{id}/site-config` (reads the Agent; writes nothing) → 200
+  ```json
+  {"domain_id":12,"domain":"example.test","kind":"nginx_vhost",
+   "path":"/etc/nginx/sites-available/example.test.conf",
+   "state":"owner_edited","reason":"","detail":"","adopted_from":"",
+   "include_dir":"/etc/nginx/celikpanel-sites.d/example.test",
+   "enabled":"link","file_sha256":"<64 hex>","render_sha256":"<64 hex>",
+   "pending_path":"…/example.test.conf.celikpanel-pending",
+   "diff":"--- …\n+++ …\n@@ … @@\n…","diff_truncated":false,
+   "actions":["keep","take","merge"],
+   "decision":{"kind":"keep_mine","decided_at":"2026-10-10T12:00:00Z","current":true},
+   "ledger":{"written_release":"…","written_at":"…","observed_at":"…","backup_path":"…"}}
+  ```
+  `state`: `absent`, `managed_unchanged`, `owner_edited`, `foreign`,
+  `unreadable`, `unknown_origin`, or `unknown` (`reason` `agent_does_not_report`;
+  no `path`, no digests). `reason` (unreadable): `symlink`, `not_regular`,
+  `permission`, `too_large`, `read_failed`; `detail` is one bounded line.
+  `enabled`: `link`, `absent` or `other` (sites-enabled entry). `actions`
+  (always an array): `["keep","take","merge"]` for owner_edited, foreign and
+  unknown_origin; `["recreate"]` for absent; `[]` otherwise. `merge` has no
+  route: it is done on the server. `diff` is a unified diff of the file on disk
+  against CelikPanel's text (header line left out), at most 4000 lines per side
+  and 64 KiB; `diff_truncated` says it was cut; a line that mentions
+  authorization, password, passwd, secret, token, api key, private key or cookie
+  (case-insensitive) keeps its directive and shows
+  `[hidden by CelikPanel: this value may be a credential]` (paths of
+  `auth_basic_user_file`, `ssl_certificate_key`, `ssl_password_file` stay);
+  a comment line with such a word is replaced entirely. A credential that does
+  not use those words is not hidden; the field is for administrators only.
+  `decision.current` is true only while the file still has the digest the
+  decision was made on. Failure: `502 SITE_CONFIG_NOT_READ`.
+- `POST …/keep` body `{"file_sha256":"<64 hex from the GET>"}` (required; any
+  `render_sha256` is ignored) → 200, the same object as the GET after the
+  decision. `400` (missing or malformed digest), `409 SITE_CONFIG_NOT_APPLICABLE`,
+  `409 SITE_CONFIG_CHANGED` (the file's digest differs), `502 SITE_CONFIG_NOT_READ`.
+  Nothing is written to the file.
+- `POST …/take` body `{"file_sha256":"…","render_sha256":"…"}` (both required,
+  both from the GET: the file and CelikPanel's text the owner was shown) → 200
+  ```json
+  {"domain_id":12,"domain":"example.test","kind":"nginx_vhost","path":"…",
+   "state":"managed_unchanged","include_dir":"…","enabled":"link",
+   "file_sha256":"<new file>","render_sha256":"…","actions":[],
+   "outcome":"taken","backup_path":"….celikpanel-backup-20261010T120000Z",
+   "decision":{…},"ledger":{…}}
+  ```
+  `outcome` is `taken`, or `unchanged` when the file already was CelikPanel's
+  text; `backup_path` is empty when no copy was needed. Errors: `400`, `409
+  SITE_CONFIG_CHANGED`, `409 SITE_CONFIG_MISSING` (the file is gone),
+  `409 SITE_CONFIG_UNWRITABLE` (`reason` `symlink`, `not_regular`, `permission`,
+  `too_large`, `read_failed`, `write_refused`), `502 SITE_CONFIG_NGINX_REFUSED`
+  (`reason` `nginx_refused` or `reload_failed`), `502 SITE_CONFIG_NOT_READ`.
+- `POST …/recreate` body `{}` (or none) → 200 as `take` with `outcome`
+  `recreated`; on a file that exists and is CelikPanel's own text it writes or
+  reports `unchanged`. Errors: `409 SITE_CONFIG_NOT_APPLICABLE` (the file exists
+  and was kept), `409 SITE_CONFIG_UNWRITABLE`, `502 SITE_CONFIG_NGINX_REFUSED`,
+  `502 SITE_CONFIG_NOT_READ`.
+- The domains list (`GET /api/v1/domains`) carries, for an administrator only,
+  `site_config: {"state":…,"adopted_from"?:…,"kept_by_choice"?:true}` from the
+  Panel's last recorded observation (`missing` is a stored state; the GET above
+  never returns it, it returns `absent`).
+- Other operations that render the file answer `409` with
+  `SITE_CONFIG_OWNER_EDITED` (`reason` = the state), `SITE_CONFIG_MISSING` or
+  `SITE_CONFIG_UNWRITABLE` (`reason` as above); site creation and import answer
+  `409 SITE_CONFIG_EXISTS`.

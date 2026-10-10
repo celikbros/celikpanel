@@ -4720,7 +4720,12 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
     header, the ledger has a recorded digest), unreadable (symlink, not regular,
     permission, larger than 4 MiB, read failed; never followed), unknown origin
     (no header, no record, matches no frozen render). It runs under the global
-    nginx mutation lock before every render; reads are no-follow.
+    nginx mutation lock before every render; the path is lstat'ed first, a link
+    or non-regular file is never followed, and the opened file must be the same
+    file. A headerless file byte-equal to a frozen render is reported as managed
+    and unchanged with `adopted_from`; it is rewritten with the header by the
+    first render that sees it. A first line that ends in CR (CRLF editors) is
+    still read as the header, so that edit is owner-edited, not foreign.
   - *Render rule* (`ApplyManagedVhosts`): a managed-unchanged file is replaced
     only when the text differs (identical bytes: no write, no `nginx -t`, no
     reload); an absent file is written only at creation and on "recreate" (never
@@ -4732,8 +4737,10 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
     an immutable file) leaves the file and its enabled link untouched and is
     that site's typed refusal (`write_refused`); the other sites are written,
     tested once and reloaded once. An enabled entry is created only when absent
-    at creation/recreate and is never replaced. When `nginx -t` refuses, every
-    file written in that call is put back byte-exact with its mode and owner.
+    at creation/recreate and is never replaced. When `nginx -t` refuses or the
+    reload fails, every file written in that call (and a link it made) is put
+    back byte-exact with its mode and owner; the dated copy of "take" stays. A
+    kept file's pending text is removed once the file is CelikPanel's text again.
   - *Typed answers, additive.* `ApplyVhostRequest` gains `FileTrigger`,
     `RecordedSHA256`, `ExpectedFileSHA256`, `ExpectedRenderSHA256`;
     `ApplyVhostResponse.File`, `ApplyVhostsResponse.Items/Counts`,
@@ -4749,7 +4756,8 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
     written stays pending, the others complete. The start line counts written,
     unchanged, kept (owner-edited, foreign, unknown origin), unreadable or
     unwritable, missing, failed and adopted; every single-site render logs one
-    line naming the site and the outcome (the save path included).
+    line naming the site and the outcome (the save path included) when the
+    Agent answered; a render the Agent never answered logs the error only.
   - *Creation equals start.* The orchestrator sends the Panel's own managed host
     names (`managedSiteHostnames`) with `CreateSite`; the creation vhost is the
     start render byte for byte (`TestCreationRenderIsTheStartRender`). A file at
@@ -4757,15 +4765,20 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
     site is refused (`SITE_CONFIG_EXISTS`); the Panel removes only the records,
     never asks the Agent to delete that file.
   - *Owner include point.* `include /etc/nginx/celikpanel-sites.d/<domain>/*.conf;`
-    in every server block that serves the site's content; the directory is
+    in every server block except the validation-only block of mail names and
+    the plain-HTTP block that only redirects to HTTPS (a forwarding site's
+    redirect blocks carry it); the directory is
     created (0755) when the vhost is written and nothing in it is ever written,
     changed or removed by the Panel (site deletion included). A deleted site's
     vhost that is not CelikPanel's unchanged text is kept as a dated copy before
     removal.
   - *The owner's choices* (`cmd/panel/site_config.go`): `GET
     /api/v1/domains/{id}/site-config` (read-only: the Agent's classification and a
-    unified diff computed on the server, ≤ 4000 lines per side and 64 KiB,
-    credential-like lines hidden); `POST …/keep` (records `keep_mine` with the
+    unified diff computed on the server, ≤ 4000 lines per side and 64 KiB;
+    a line matching `authorization|password|passwd|secret|token|api[_-]?key|
+    private[_-]?key|cookie` (case-insensitive) keeps its directive and its value
+    is hidden, a comment line is replaced; other credentials are not
+    recognised); `POST …/keep` (records `keep_mine` with the
     file digest; the file's bytes, header included, are not touched — rewriting
     the header would make the next render replace the owner's text); `POST
     …/take` (bound to the file and text digests shown; a dated
@@ -4779,17 +4792,25 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
   Rows are created by the first start that classifies the files. An older Panel
   (alpha.82, schema 43) refuses a ledger with entry 44
   (`TestOlderReleaseRefusesALedgerWithTheManagedSiteFilesEntry`); rollback is the
-  pre-update snapshot restore, as for every migration. File format: vhosts move
+  pre-update snapshot restore, as for every migration (there is no down
+  migration). File format: vhosts move
   from the unversioned "Generated by CelikPanel" header to `celikpanel-render
   v2`; readers: this release reads both (an old file through the frozen
-  templates), an older release ignores the header line (a comment). The harness
+  templates); an older release does not read the header at all, it overwrites
+  the file (below). Version skew: the build match (`ExpectedBuildCommit`) keeps
+  an Agent of another release from answering the Panel's renders; the start
+  refuses the batch; an Agent that answers without a per-file result, or lacks
+  `Agent.InspectSiteFile`, is recorded and shown as `unknown`
+  (`agent_does_not_report`). The harness
   pins schema 44 beside 38, 42 and 43 (`deploy/e2e/release-recovery/
   populated_database.py`: ledger `55efb384c7d1…`, schema `afcb7db4bf3b…`,
   computed the way its offline tests build input, which reproduces the 38/42/43
   pins; 67 tables; `guest_populated_baseline.py --expected-version` accepts 44;
   `database_exchange_rows.py` requires `managed_site_files` empty after a
   migration-only exchange).
-- **Migration first state (pre-D-031 files).** The frozen templates of
+- **Migration first state (pre-D-031 files).** Not done by the SQL of migration
+  44 (it writes no row and touches no file) but by the first render that sees a
+  headerless file, normally the first start after the update. The frozen templates of
   v0.1.0-alpha.81 (commit `a0beb7263`) and v0.1.0-alpha.82 (commit `2a0af8866`)
   are embedded (`internal/services/templates/nginx/legacy/`, SHA-256 pinned by
   `TestLegacyVhostTemplatesAreTheFrozenReleaseTexts`). A headerless file is
@@ -4797,7 +4818,8 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
   the Panel sends now: each release's start/save text and each release's
   creation text (domain alone as `server_name`, no alias, no validation name, no
   certificate, no redirection, same project type, document root and PHP
-  socket). Equal → adopted (rewritten with the header, `adopted_from` recorded);
+  socket). Equal → adopted (rewritten with the header, `adopted_from` recorded,
+  `v0.1.0-alpha.8x` or `v0.1.0-alpha.8x (creation)`, kept in the ledger for good);
   otherwise → unknown origin, never written. No normalisation "modulo" inputs is
   done on purpose: a file whose certificate path, aliases, PHP version or
   validation names changed after the earlier release's last render, or that was
@@ -4814,8 +4836,18 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
   decides; nothing retries by itself. **A return to an older release loses the
   protection** (it overwrites every vhost at its start, as before); after
   returning forward the older release's text is recognised and adopted. The
-  release notes must say so. Native services keep running without the Panel:
-  the header is an nginx comment and the include directory is ordinary nginx.
+  release notes must say so. What the old start does to a headed file (read in
+  `cmd/panel/cert_startup_reconcile.go` and `NginxGenerator.ApplyVhosts` of
+  `2a0af8866`, the same path in `a0beb7263`; not run): it renders every hosted
+  site from the database and writes it unconditionally, so the header line, an
+  owner's edit and the `include …/celikpanel-sites.d/<domain>/*.conf` line are
+  gone from the file; the owner's `.conf` files, the dated copies, the pending
+  files and the include directories stay on disk but nginx stops reading the
+  owner's additions until the Panel of this release has run again (and its
+  ledger, if the snapshot restore lost it, is rebuilt from the files). Native
+  services keep running without the Panel: the header is an nginx comment and
+  the include directory is ordinary nginx. **Nothing in this entry was
+  measured on a real system.**
 - **Evidence (component tests, no native run).** Services (14):
   `TestManagedHeaderSealsTheBodyDigest`, `TestClassifierStates`,
   `TestLegacyVhostTemplatesAreTheFrozenReleaseTexts`,
@@ -4857,5 +4889,17 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
   whole configuration: an owner's broken file elsewhere fails every render
   batch (its files are put back), as before. The Panel's own ACME vhost, the
   webmail and database-tools vhosts are not covered. A temporary name
-  (`use_temporary`, not offered by the interface) is no longer written into a
-  new site's vhost, because the start render never carried it.
+  (`<domain with dashes>.celik.panel`, from `CreateSiteRequest.UseTemporary`;
+  no Panel route or screen sets it) is no longer written into a new site's
+  vhost when the Panel sends its host names (`SetSiteServerNames`, always set
+  in `cmd/panel/main.go`): the Panel's derivation (`managedSiteHostnames`: the
+  domain, `www.` for a top-level domain, the aliases) has no temporary name, so
+  the next start or save had always removed it; creation now writes the text
+  the start writes. Open gap, read from the source: certificate issuance and
+  renewal render the vhost first, so for a kept file they stop before a
+  certificate is requested (issuance with an untyped 409, renewal recorded as
+  failed) and the certificate in use is served until it expires; the typed
+  refusal and a pointer to the Configuration file page are not yet there, and
+  this is the audit's "keep mine, then certificate issuance" cell. The domains
+  list line "N recognised and taken over" stays for as long as one ledger row
+  carries `adopted_from`.

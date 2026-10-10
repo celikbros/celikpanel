@@ -23,7 +23,7 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ## D-031 · Sahibin değiştirdiği site yapılandırma dosyası korunur ve adlandırılır; üretim onun üstüne yazmaz
 
-*10 Ekim 2026 (saat tarihi) · Salt-okur denetimin bulgusu üzerine sahip kararı ([SITE-CONFIG-OWNER-EDITS-2026-10-10](audit/SITE-CONFIG-OWNER-EDITS-2026-10-10.md)); tasarım kararlaştırıldı, uygulama ve gerçek sistem ölçümü bekliyor*
+*10 Ekim 2026 (saat tarihi) · Salt-okur denetimin bulgusu üzerine sahip kararı ([SITE-CONFIG-OWNER-EDITS-2026-10-10](audit/SITE-CONFIG-OWNER-EDITS-2026-10-10.md)); tasarım kararlaştırıldı; ilk adım kaynakta (10 Ekim 2026 kaydı), gerçek sistem ölçümü bekliyor; ikinci adım (havuz, uygulama birimi) bekliyor*
 
 Denetim, yalnız kaynaktan okuyarak şunu buldu: Panelin açılışı barındırılan
 her sitenin nginx yapılandırmasını yeniden üretir ve karşılaştırmasız,
