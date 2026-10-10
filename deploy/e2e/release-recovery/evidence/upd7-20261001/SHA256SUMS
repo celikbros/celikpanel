@@ -1,4 +1,4 @@
-b8315e4b46a9004065fc77607a57e224d5c9bf35e86e34837b0ac7c2a017adab  ./README.md
+019eae24b606eb003093da92ff0880bd5977702e2e1836aa451c85645536df6d  ./README.md
 b3f3bde3ae8c0ed63083d921dc3b05ae14faa14a4d26a56b3267f98e0d06ce3c  ./build/agent-deps.txt
 a672d16982a715949371cbd9a23b46e96a78514f1509c588a59e00a324936b6a  ./build/baseline-ref-proof.txt
 b1b17407a3a2393ef975313d0121c0d9460da55db010ccfbafeb552c7ea98269  ./build/build-log-notes-baseline.txt
@@ -66,7 +66,7 @@ bcac83c2add7cdbfef3f95b138e264eb4a55110b382016913e458db3d5b87f8f  ./harness-run-
 25a606521351dbfb786263c28629ca505560086a96b1858f3865ec0a9a3f6659  ./harness-run-copy/setart.sh
 b795b9a03f0caad7bde892dd72f23b780837bb6b55d0a38bbdcf9b13442198fa  ./harness-run-copy/setup-runcopy.sh
 72d73cea97174cf36b199744996f3fab16123cd3f8d89bc7bcb62e5e0e447e2b  ./harness-run-copy/startcell.sh
-3834e2873392d2c2a726f3e49137542fb03dcddc08b74bd8029d6dfa8d9e66e6  ./host/c-drive.txt
+c0d3a440b61da3c2dbdb31c79abecb1bedfbc2c38f28462cac136b1c7b4bb17f  ./host/c-drive.txt
 d07ad6879a0a47133f50295cd3afd5666ddfeafddae2fa13ddba6bf15de9ed3a  ./host/host-leftovers.txt
 48b3eb50a108f9fa7cea93387a71c498f608eca63ecd693982e7559b860e6810  ./host/hostcheck-before.txt
 989953be0153137e7e75c2628011d887b1025b56155abcfb59935d7c48bf0362  ./secret-scan.txt

@@ -1,4 +1,4 @@
-85a37e0dd40088c68b130326f8e5bcb16a2b36fbd2f1d402262802da879be858  ./README.md
+7170aae6a7365d0321ae8f819f1e6201be5dcea92fa2bc17a292b9d21d212d6c  ./README.md
 87b29923a1dae26b553107ff1962fd919f57057e6a17c0c1f032ca83a5fabd23  ./build/cur-dry-run-upd1-ubuntu-busystart.json
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  ./build/cur-dry-run-upd1-ubuntu-busystart.stderr.txt
 db65fc7d4dcbfff8b9ea4c05b51eba27a3bf371d65b2e809aca37e30a275df5d  ./build/cur-dry-run-upd1-ubuntu-setuponce.json
@@ -60,7 +60,7 @@ fcad23c19df1ac1f33b000df2e0be9f58fc3f79fd2118b0ef58b69c6ef14783c  ./harness-run-
 377f60b6f747b01e4e6e222db3e1dce14e972022fcc292af357422b51ac7b9e5  ./harness-run-copy/runcopy-c67d1861-files.sha256
 dabadfdc77d5ca65ae0bb052a8618593859e982e4f52315b3322868a9e8676ff  ./harness-run-copy/setup-runcopy.sh
 d218d62096bdba4b5c1eb869639974a2c2b2485bde0d889ef1e9b36d8db7e772  ./harness-run-copy/startcell.sh
-0208e1c0aac7463e24ad4f3feb8fbfa411e4a56926300b56cf0aac69e1d900ee  ./host/c-drive.txt
+e61da355b1fa8b87fc282c4633fdcffa373b9b35dee2be8a89f8c44530130a4c  ./host/c-drive.txt
 d9960e025d1a8933b07aa87e966fd6963b8d49a97b491419ef86bcb7f9203d01  ./host/debian13-probe-c.end.txt
 e6c6525563daf1b338a238d59ad551938f964883ae127251a1c9541de75b5462  ./host/debian13-probe-c.err.txt
 6c75fb3a407455e09c80dd693ea1d44fd551a77caf0fdb409c708736875adfe1  ./host/debian13-probe-c.out.txt
