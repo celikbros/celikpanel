@@ -1,0 +1,30 @@
+{
+  "at": "2026-10-09T07:18:16Z",
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791530291",
+      "-n",
+      "2000",
+      "-u",
+      "nginx.service"
+    ],
+    "at": "2026-10-09T07:18:16Z",
+    "returncode": 0,
+    "seconds": 0.006,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T07:18:12.844629+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...\n2026-10-09T07:18:12.851152+00:00 dns-ubuntu nginx[48917]: 2026/10/09 07:18:12 [notice] 48917#48917: signal process started\n2026-10-09T07:18:12.852944+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.\n2026-10-09T07:18:14.305810+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...\n2026-10-09T07:18:14.314104+00:00 dns-ubuntu nginx[48924]: 2026/10/09 07:18:14 [notice] 48924#48924: signal process started\n2026-10-09T07:18:14.314956+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.\n"
+  },
+  "lab_action": false,
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "units": [
+    "nginx.service"
+  ]
+}

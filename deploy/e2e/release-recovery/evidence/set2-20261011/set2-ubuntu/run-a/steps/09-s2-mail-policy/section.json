@@ -1,0 +1,1458 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-09T03:44:30Z",
+      "json": {
+        "dnsbl_zones": [],
+        "message_size_mb": 9,
+        "outbound_rate_limit": 0,
+        "version": "mp1-d66482b5c93bee71398427c4cd13255aa7a00375dcd7942d90e3a015bd30f0cc"
+      },
+      "label": "S2a read",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:34Z",
+      "json": {
+        "dnsbl_zones": [],
+        "message_size_mb": 9,
+        "outbound_rate_limit": 0,
+        "version": "mp1-6d9a17a0811d42298d05b2225339db4a24348318c60e6265a17dc9e57336b69b"
+      },
+      "label": "S2b read after the owner's edit",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "mail_policy"
+      },
+      "at": "2026-10-09T03:44:34Z",
+      "catalogue_texts": {
+        "mailpolicy.stale": {
+          "en": "The mail policy changed on the server after this page loaded, so nothing was saved. What you entered is still shown below. Reload the current settings, then make your change again.",
+          "tr": "Posta politikası bu sayfa yüklendikten sonra sunucuda değişti; bu yüzden hiçbir şey kaydedilmedi. Girdikleriniz aşağıda duruyor. Geçerli ayarları yeniden yükleyin, sonra değişikliğinizi tekrar yapın."
+        }
+      },
+      "json": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "mail_policy"
+      },
+      "label": "S2b save with the old version",
+      "request": {
+        "body": {
+          "dnsbl_zones": [
+            "dnsbl.set1-lab.test"
+          ],
+          "message_size_mb": 9,
+          "outbound_rate_limit": 30,
+          "version": "mp1-d66482b5c93bee71398427c4cd13255aa7a00375dcd7942d90e3a015bd30f0cc"
+        },
+        "method": "PUT",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:38Z",
+      "json": {
+        "applied": "reloaded",
+        "policy": {
+          "dnsbl_zones": [
+            "dnsbl.set1-lab.test"
+          ],
+          "message_size_mb": 9,
+          "outbound_rate_limit": 30,
+          "version": "mp1-ee44ef262228d425a1a9935a2a9d1a5c321a54bd6c5e04a829c8ede0c3b61b0a"
+        },
+        "success": true
+      },
+      "label": "S2c save a DNSBL zone and a rate limit",
+      "request": {
+        "body": {
+          "dnsbl_zones": [
+            "dnsbl.set1-lab.test"
+          ],
+          "message_size_mb": 9,
+          "outbound_rate_limit": 30,
+          "version": "mp1-6d9a17a0811d42298d05b2225339db4a24348318c60e6265a17dc9e57336b69b"
+        },
+        "method": "PUT",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:39Z",
+      "json": {
+        "dnsbl_zones": [
+          "dnsbl.set1-lab.test"
+        ],
+        "message_size_mb": 9,
+        "outbound_rate_limit": 30,
+        "version": "mp1-ee44ef262228d425a1a9935a2a9d1a5c321a54bd6c5e04a829c8ede0c3b61b0a"
+      },
+      "label": "S2d read",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:42Z",
+      "json": {
+        "applied": "reloaded",
+        "policy": {
+          "dnsbl_zones": [],
+          "message_size_mb": 9,
+          "outbound_rate_limit": 30,
+          "version": "mp1-09f52b580c01a771bfffb13462050f31e5ce3644df94a71f6a93a2d07ef3f659"
+        },
+        "success": true
+      },
+      "label": "S2d remove the DNSBL zone",
+      "request": {
+        "body": {
+          "dnsbl_zones": [],
+          "message_size_mb": 9,
+          "outbound_rate_limit": 30,
+          "version": "mp1-ee44ef262228d425a1a9935a2a9d1a5c321a54bd6c5e04a829c8ede0c3b61b0a"
+        },
+        "method": "PUT",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:45Z",
+      "catalogue_texts": {
+        "mailpolicy.dnsblLocked.variable": {
+          "en": "DNSBL cannot be changed from this page: the recipient restrictions in Postfix refer to another setting ($name), so CelikPanel cannot tell which checks they contain and will not rewrite them.",
+          "tr": "DNSBL bu sayfadan değiştirilemiyor: Postfix’teki alıcı kısıtları başka bir ayara ($ad) başvuruyor; CelikPanel hangi denetimleri içerdiklerini bilemediği için onları yeniden yazmaz."
+        },
+        "mailpolicy.dnsblLockedAction": {
+          "en": "To change it, edit the reject_rbl_client entries of smtpd_recipient_restrictions in /etc/postfix/main.cf, run sudo systemctl reload postfix, then reload this page. Message size and the rate limit can still be saved here.",
+          "tr": "Değiştirmek için /etc/postfix/main.cf içindeki smtpd_recipient_restrictions değerinin reject_rbl_client girdilerini düzenleyin, sudo systemctl reload postfix komutunu çalıştırın, sonra bu sayfayı yenileyin. İleti boyutu ve hız sınırı buradan kaydedilebilir."
+        }
+      },
+      "json": {
+        "dnsbl_locked": "variable",
+        "dnsbl_zones": [],
+        "message_size_mb": 9,
+        "outbound_rate_limit": 30,
+        "version": "mp1-5f3ec425e112f4591aa8e0fe1e63fb592070cf0f51fedf6a8fee2a44e3674beb"
+      },
+      "label": "S2e read with a ${variable} in the list",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "MAIL_POLICY_RESTRICTIONS_UNMANAGED",
+        "error": "The DNSBL setting was not changed: the recipient restrictions on this server refer to another Postfix setting ($name), so CelikPanel cannot tell which checks they contain and will not rewrite them. The server owner changes the reject_rbl_client entries of smtpd_recipient_restrictions in /etc/postfix/main.cf and runs sudo systemctl reload postfix. Then reload this page. Message size and the outgoing rate limit can still be saved here.",
+        "reason": "variable"
+      },
+      "at": "2026-10-09T03:44:45Z",
+      "catalogue_texts": {
+        "mailpolicy.dnsblLocked.variable": {
+          "en": "DNSBL cannot be changed from this page: the recipient restrictions in Postfix refer to another setting ($name), so CelikPanel cannot tell which checks they contain and will not rewrite them.",
+          "tr": "DNSBL bu sayfadan değiştirilemiyor: Postfix’teki alıcı kısıtları başka bir ayara ($ad) başvuruyor; CelikPanel hangi denetimleri içerdiklerini bilemediği için onları yeniden yazmaz."
+        },
+        "mailpolicy.dnsblLockedAction": {
+          "en": "To change it, edit the reject_rbl_client entries of smtpd_recipient_restrictions in /etc/postfix/main.cf, run sudo systemctl reload postfix, then reload this page. Message size and the rate limit can still be saved here.",
+          "tr": "Değiştirmek için /etc/postfix/main.cf içindeki smtpd_recipient_restrictions değerinin reject_rbl_client girdilerini düzenleyin, sudo systemctl reload postfix komutunu çalıştırın, sonra bu sayfayı yenileyin. İleti boyutu ve hız sınırı buradan kaydedilebilir."
+        }
+      },
+      "json": {
+        "code": "MAIL_POLICY_RESTRICTIONS_UNMANAGED",
+        "error": "The DNSBL setting was not changed: the recipient restrictions on this server refer to another Postfix setting ($name), so CelikPanel cannot tell which checks they contain and will not rewrite them. The server owner changes the reject_rbl_client entries of smtpd_recipient_restrictions in /etc/postfix/main.cf and runs sudo systemctl reload postfix. Then reload this page. Message size and the outgoing rate limit can still be saved here.",
+        "reason": "variable"
+      },
+      "label": "S2e save a DNSBL zone over the ${variable} list",
+      "request": {
+        "body": {
+          "dnsbl_zones": [
+            "dnsbl.set1-lab.test"
+          ],
+          "message_size_mb": 9,
+          "outbound_rate_limit": 31,
+          "version": "mp1-5f3ec425e112f4591aa8e0fe1e63fb592070cf0f51fedf6a8fee2a44e3674beb"
+        },
+        "method": "PUT",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:49Z",
+      "json": {
+        "applied": "reloaded",
+        "policy": {
+          "dnsbl_locked": "variable",
+          "dnsbl_zones": [],
+          "message_size_mb": 30,
+          "outbound_rate_limit": 45,
+          "version": "mp1-3166bb4e0d7d38c3f63df2a907467fd81cb030dce34be0021d96ad1b4be98971"
+        },
+        "success": true
+      },
+      "label": "S2e save size and rate only",
+      "request": {
+        "body": {
+          "dnsbl_zones": [],
+          "message_size_mb": 30,
+          "outbound_rate_limit": 45,
+          "version": "mp1-5f3ec425e112f4591aa8e0fe1e63fb592070cf0f51fedf6a8fee2a44e3674beb"
+        },
+        "method": "PUT",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:57Z",
+      "json": {
+        "dnsbl_zones": [],
+        "message_size_mb": 30,
+        "outbound_rate_limit": 45,
+        "version": "mp1-96d5c35c7c8de3358a96aea4965b2e47688e02447ff17617ebc3fb86e8902f34"
+      },
+      "label": "S2f read with the owner's unfinished edit",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "MAIL_POLICY_NOT_RELOADED",
+        "error": "The mail policy was saved to /etc/postfix/main.cf, but Postfix was not reloaded: Postfix's own check refuses its configuration as it is now. A running Postfix keeps the settings it had before, so the saved values are not in effect. What Postfix said is shown with this message; it can be about a line this page did not write. Nothing was rolled back. The server owner corrects that line, runs sudo postfix check until it prints no error, then runs sudo postfix reload. Reload this page afterwards; the saved values are the ones shown.",
+        "mutation_applied": true,
+        "partial_success": true,
+        "reason": "check",
+        "vars": {
+          "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign"
+        }
+      },
+      "at": "2026-10-09T03:45:01Z",
+      "catalogue_texts": {
+        "err.MAIL_POLICY_NOT_RELOADED": {
+          "en": "The mail policy was saved to /etc/postfix/main.cf, but Postfix could not be reloaded, so Postfix is still running with the previous settings. Nothing was rolled back. On the server, run sudo postfix check to see what Postfix objects to, correct it, then run sudo systemctl reload postfix. The values shown below are the saved ones.",
+          "tr": "Posta politikası /etc/postfix/main.cf dosyasına kaydedildi ancak Postfix yeniden yüklenemedi; bu yüzden Postfix hâlâ önceki ayarlarla çalışıyor. Hiçbir şey geri alınmadı. Sunucuda sudo postfix check komutuyla Postfix’in neye itiraz ettiğini görün, düzeltin, sonra sudo systemctl reload postfix komutunu çalıştırın. Aşağıda gösterilen değerler kaydedilen değerlerdir."
+        },
+        "err.MAIL_POLICY_NOT_RELOADED.check": {
+          "en": "Saved to /etc/postfix/main.cf, but Postfix was not reloaded: its own check refuses the configuration. A running Postfix keeps the settings it had before, so the saved values are not in effect. The line it names is below and may be one this page did not write. Nothing was rolled back. On the server, correct that line, run sudo postfix check until it prints no error, then run sudo postfix reload. The values shown below are the saved ones.",
+          "tr": "/etc/postfix/main.cf dosyasına kaydedildi ancak Postfix yeniden yüklenmedi: Postfix’in kendi denetimi yapılandırmayı reddediyor. Çalışan bir Postfix önceki ayarlarını korur; bu yüzden kaydedilen değerler yürürlükte değil. Adını verdiği satır aşağıda; bu sayfanın yazmadığı bir satır olabilir. Hiçbir şey geri alınmadı. Sunucuda o satırı düzeltin, hata yazmayana kadar sudo postfix check komutunu çalıştırın, sonra sudo postfix reload komutunu çalıştırın. Aşağıda gösterilen değerler kaydedilen değerlerdir."
+        },
+        "mailpolicy.reloadSaid": {
+          "en": "The reload said:",
+          "tr": "Yeniden yükleme yanıtı:"
+        }
+      },
+      "json": {
+        "code": "MAIL_POLICY_NOT_RELOADED",
+        "error": "The mail policy was saved to /etc/postfix/main.cf, but Postfix was not reloaded: Postfix's own check refuses its configuration as it is now. A running Postfix keeps the settings it had before, so the saved values are not in effect. What Postfix said is shown with this message; it can be about a line this page did not write. Nothing was rolled back. The server owner corrects that line, runs sudo postfix check until it prints no error, then runs sudo postfix reload. Reload this page afterwards; the saved values are the ones shown.",
+        "mutation_applied": true,
+        "partial_success": true,
+        "policy": {
+          "dnsbl_zones": [],
+          "message_size_mb": 30,
+          "outbound_rate_limit": 46,
+          "version": "mp1-5f2c0bcc7deeb8776def80077947a51865c0863080cabd44ae30f811aa6bad59"
+        },
+        "reason": "check",
+        "vars": {
+          "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign"
+        }
+      },
+      "label": "S2f save while Postfix cannot reload",
+      "request": {
+        "body": {
+          "dnsbl_zones": [],
+          "message_size_mb": 30,
+          "outbound_rate_limit": 46,
+          "version": "mp1-96d5c35c7c8de3358a96aea4965b2e47688e02447ff17617ebc3fb86e8902f34"
+        },
+        "method": "PUT",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 502,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:04Z",
+      "json": {
+        "dnsbl_zones": [],
+        "message_size_mb": 30,
+        "outbound_rate_limit": 46,
+        "version": "mp1-5f2c0bcc7deeb8776def80077947a51865c0863080cabd44ae30f811aa6bad59"
+      },
+      "label": "S2f read after the save",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:08Z",
+      "json": {
+        "dnsbl_zones": [],
+        "message_size_mb": 30,
+        "outbound_rate_limit": 46,
+        "version": "mp1-5f2c0bcc7deeb8776def80077947a51865c0863080cabd44ae30f811aa6bad59"
+      },
+      "label": "S2g read after the owner's correction",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:09Z",
+      "json": {
+        "applied": "unchanged_reloaded",
+        "policy": {
+          "dnsbl_zones": [],
+          "message_size_mb": 30,
+          "outbound_rate_limit": 46,
+          "version": "mp1-5f2c0bcc7deeb8776def80077947a51865c0863080cabd44ae30f811aa6bad59"
+        },
+        "success": true
+      },
+      "label": "S2g save without a change",
+      "request": {
+        "body": {
+          "dnsbl_zones": [],
+          "message_size_mb": 30,
+          "outbound_rate_limit": 46,
+          "version": "mp1-5f2c0bcc7deeb8776def80077947a51865c0863080cabd44ae30f811aa6bad59"
+        },
+        "method": "PUT",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:11Z",
+      "json": {
+        "dnsbl_zones": [],
+        "message_size_mb": 30,
+        "outbound_rate_limit": 46,
+        "version": "mp1-5f2c0bcc7deeb8776def80077947a51865c0863080cabd44ae30f811aa6bad59"
+      },
+      "label": "S2h read while Postfix is stopped",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:14Z",
+      "json": {
+        "applied": "not_running",
+        "policy": {
+          "dnsbl_zones": [],
+          "message_size_mb": 30,
+          "outbound_rate_limit": 47,
+          "version": "mp1-69eb8961242bac79f0f1ef4b3e86c4f334d199e45965e4fdec8c4cd87e6490a7"
+        },
+        "success": true
+      },
+      "label": "S2h save while Postfix is stopped",
+      "request": {
+        "body": {
+          "dnsbl_zones": [],
+          "message_size_mb": 30,
+          "outbound_rate_limit": 47,
+          "version": "mp1-5f2c0bcc7deeb8776def80077947a51865c0863080cabd44ae30f811aa6bad59"
+        },
+        "method": "PUT",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:15Z",
+      "json": {
+        "dnsbl_zones": [],
+        "message_size_mb": 30,
+        "outbound_rate_limit": 47,
+        "version": "mp1-69eb8961242bac79f0f1ef4b3e86c4f334d199e45965e4fdec8c4cd87e6490a7"
+      },
+      "label": "S2h read after the save",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:45:15Z",
+      "json": {
+        "applied": "unchanged",
+        "policy": {
+          "dnsbl_zones": [],
+          "message_size_mb": 30,
+          "outbound_rate_limit": 47,
+          "version": "mp1-69eb8961242bac79f0f1ef4b3e86c4f334d199e45965e4fdec8c4cd87e6490a7"
+        },
+        "success": true
+      },
+      "label": "S2h save without a change while Postfix is stopped",
+      "request": {
+        "body": {
+          "dnsbl_zones": [],
+          "message_size_mb": 30,
+          "outbound_rate_limit": 47,
+          "version": "mp1-69eb8961242bac79f0f1ef4b3e86c4f334d199e45965e4fdec8c4cd87e6490a7"
+        },
+        "method": "PUT",
+        "path": "/api/v1/mail/policy"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "25": {
+          "banner": "220 mail-ubuntu.upd1-infra.test ESMTP Postfix (Ubuntu)",
+          "ehlo": "250",
+          "ehlo_last_line": "250 CHUNKING",
+          "mail": "250",
+          "mail_last_line": "250 2.1.0 Ok",
+          "ok": true,
+          "port": 25,
+          "rcpt": "250",
+          "rcpt_last_line": "250 2.1.5 Ok",
+          "rset": "250",
+          "rset_last_line": "250 2.0.0 Ok"
+        },
+        "587": {
+          "banner": "220 mail-ubuntu.upd1-infra.test ESMTP Postfix (Ubuntu)",
+          "ehlo": "250",
+          "ehlo_last_line": "250 CHUNKING",
+          "ok": true,
+          "port": 587
+        },
+        "at": "2026-10-09T03:44:30Z",
+        "mode": "read-smtp",
+        "owner_action": false,
+        "schema": "celikpanel/set1-native/v1"
+      },
+      "name": "a: before any change mail is accepted on 25 (to the site's mailbox) and 587 answers",
+      "ok": true
+    },
+    {
+      "detail": {
+        "api": {
+          "dnsbl_zones": [],
+          "message_size_mb": 9,
+          "outbound_rate_limit": 0,
+          "version": "mp1-d66482b5c93bee71398427c4cd13255aa7a00375dcd7942d90e3a015bd30f0cc"
+        },
+        "native": {
+          "anvil_rate_time_unit": "60s",
+          "message_size_limit": "10240000",
+          "smtpd_client_message_rate_limit": "0",
+          "smtpd_recipient_restrictions": ""
+        }
+      },
+      "name": "a: the read answers the server's values with a version",
+      "ok": true
+    },
+    {
+      "detail": {
+        "check": {
+          "argv": [
+            "postfix",
+            "check"
+          ],
+          "at": "2026-10-09T03:44:34Z",
+          "returncode": 0,
+          "seconds": 0.369,
+          "status": "ok",
+          "stderr": "",
+          "stdout": ""
+        },
+        "reload": {
+          "argv": [
+            "systemctl",
+            "reload",
+            "postfix.service"
+          ],
+          "at": "2026-10-09T03:44:33Z",
+          "returncode": 0,
+          "seconds": 2.181,
+          "status": "ok",
+          "stderr": "",
+          "stdout": ""
+        },
+        "value": "permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf"
+      },
+      "name": "b: the owner's edit is in place: `postfix check` and the reload succeeded and postconf reads the owner's list",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": "mp1-6d9a17a0811d42298d05b2225339db4a24348318c60e6265a17dc9e57336b69b",
+        "before": "mp1-d66482b5c93bee71398427c4cd13255aa7a00375dcd7942d90e3a015bd30f0cc",
+        "dnsbl_locked": null,
+        "zones": []
+      },
+      "name": "b: the Panel read shows a new version",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "mail_policy",
+        "status": 409,
+        "vars": null
+      },
+      "name": "b: a Save with the old version is refused 409 SETTINGS_CHANGED (mail_policy)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "1c92ce26e98d875b67be2e1de6c8e6dce1a370056c71ad4994ce17b4ba1b6c3f",
+        "1c92ce26e98d875b67be2e1de6c8e6dce1a370056c71ad4994ce17b4ba1b6c3f"
+      ],
+      "name": "b: main.cf is unchanged by the refused save",
+      "ok": true
+    },
+    {
+      "detail": {
+        "dnsbl_zones": [
+          "dnsbl.set1-lab.test"
+        ],
+        "message_size_mb": 9,
+        "outbound_rate_limit": 30,
+        "version": "mp1-ee44ef262228d425a1a9935a2a9d1a5c321a54bd6c5e04a829c8ede0c3b61b0a"
+      },
+      "name": "c: the save answers 200 with the saved policy",
+      "ok": true
+    },
+    {
+      "detail": "reloaded",
+      "name": "c: the answer says what Postfix did with it (applied = reloaded)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "expected_prefix": [
+          "permit_mynetworks",
+          "permit_sasl_authenticated",
+          "reject_unauth_destination",
+          "reject_unknown_sender_domain",
+          "check_policy_service",
+          "unix:private/policyd-spf"
+        ],
+        "got": [
+          "permit_mynetworks",
+          "permit_sasl_authenticated",
+          "reject_unauth_destination",
+          "reject_unknown_sender_domain",
+          "check_policy_service",
+          "unix:private/policyd-spf",
+          "reject_rbl_client",
+          "dnsbl.set1-lab.test"
+        ]
+      },
+      "name": "c: the owner's restrictions are all there in the same order and only `reject_rbl_client <zone>` was added",
+      "ok": true
+    },
+    {
+      "detail": {
+        "anvil_rate_time_unit": "60s",
+        "message_size_limit": "10240000",
+        "smtpd_client_message_rate_limit": "30",
+        "smtpd_recipient_restrictions": "permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf, reject_rbl_client dnsbl.set1-lab.test"
+      },
+      "name": "c: the rate limit and its window are written; the message size was not touched",
+      "ok": true
+    },
+    {
+      "detail": {
+        "argv": [
+          "postfix",
+          "check"
+        ],
+        "at": "2026-10-09T03:44:39Z",
+        "returncode": 0,
+        "seconds": 0.364,
+        "status": "ok",
+        "stderr": "",
+        "stdout": ""
+      },
+      "name": "c: `postfix check` is clean after the save (exit 0, same output as after the owner's own edit)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "master_pid": [
+          39133,
+          39133
+        ],
+        "reload_lines": [
+          "2026-10-09T03:44:37.915989+00:00 dns-ubuntu postfix/postfix-script[45621]: refreshing the Postfix mail system",
+          "2026-10-09T03:44:37.922651+00:00 dns-ubuntu postfix/master[39133]: reload -- version 3.8.6, configuration /etc/postfix"
+        ]
+      },
+      "name": "c: Postfix was reloaded (its journal has the reload line; the master process is the same one)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "2026-10-09T03:44:37.922651+00:00 dns-ubuntu postfix/master[39133]: reload -- version 3.8.6, configuration /etc/postfix"
+      ],
+      "name": "c: the journal has a `postfix/master ... reload` line from the same master process",
+      "ok": true
+    },
+    {
+      "detail": {
+        "25": {
+          "banner": "220 mail-ubuntu.upd1-infra.test ESMTP Postfix (Ubuntu)",
+          "ehlo": "250",
+          "ehlo_last_line": "250 CHUNKING",
+          "mail": "250",
+          "mail_last_line": "250 2.1.0 Ok",
+          "ok": true,
+          "port": 25,
+          "rcpt": "250",
+          "rcpt_last_line": "250 2.1.5 Ok",
+          "rset": "250",
+          "rset_last_line": "250 2.0.0 Ok"
+        },
+        "587": {
+          "banner": "220 mail-ubuntu.upd1-infra.test ESMTP Postfix (Ubuntu)",
+          "ehlo": "250",
+          "ehlo_last_line": "250 CHUNKING",
+          "ok": true,
+          "port": 587
+        },
+        "at": "2026-10-09T03:44:39Z",
+        "mode": "read-smtp",
+        "owner_action": false,
+        "schema": "celikpanel/set1-native/v1"
+      },
+      "name": "c: mail is still accepted on 25 and 587 answers",
+      "ok": true
+    },
+    {
+      "detail": {
+        "expected": [
+          "permit_mynetworks",
+          "permit_sasl_authenticated",
+          "reject_unauth_destination",
+          "reject_unknown_sender_domain",
+          "check_policy_service",
+          "unix:private/policyd-spf"
+        ],
+        "got": [
+          "permit_mynetworks",
+          "permit_sasl_authenticated",
+          "reject_unauth_destination",
+          "reject_unknown_sender_domain",
+          "check_policy_service",
+          "unix:private/policyd-spf"
+        ]
+      },
+      "name": "d: removing the zone answers 200 and the list is the owner's list exactly (same elements, same order)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "check": {
+          "argv": [
+            "postfix",
+            "check"
+          ],
+          "at": "2026-10-09T03:44:45Z",
+          "returncode": 0,
+          "seconds": 0.338,
+          "status": "ok",
+          "stderr": "",
+          "stdout": ""
+        },
+        "value": "${set1_owner_checks}, reject_unknown_sender_domain"
+      },
+      "name": "e: the owner's macro form is valid for Postfix (`postfix check` and reload succeeded)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "dnsbl_locked": "variable",
+        "dnsbl_zones": [],
+        "message_size_mb": 9,
+        "outbound_rate_limit": 30,
+        "version": "mp1-5f3ec425e112f4591aa8e0fe1e63fb592070cf0f51fedf6a8fee2a44e3674beb"
+      },
+      "name": "e: the read reports the DNSBL setting as locked (variable)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "MAIL_POLICY_RESTRICTIONS_UNMANAGED",
+        "error": "The DNSBL setting was not changed: the recipient restrictions on this server refer to another Postfix setting ($name), so CelikPanel cannot tell which checks they contain and will not rewrite them. The server owner changes the reject_rbl_client entries of smtpd_recipient_restrictions in /etc/postfix/main.cf and runs sudo systemctl reload postfix. Then reload this page. Message size and the outgoing rate limit can still be saved here.",
+        "reason": "variable",
+        "status": 409,
+        "vars": null
+      },
+      "name": "e: the DNSBL change is refused 409 MAIL_POLICY_RESTRICTIONS_UNMANAGED (variable)",
+      "ok": true
+    },
+    {
+      "detail": [
+        "c780649194d5efa768b6ab496b868a1bb9b039f879a47b370c8fc77d2cbb743a",
+        "c780649194d5efa768b6ab496b868a1bb9b039f879a47b370c8fc77d2cbb743a"
+      ],
+      "name": "e: main.cf is unchanged by the refused DNSBL save",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": 200,
+        "values": {
+          "anvil_rate_time_unit": "60s",
+          "message_size_limit": "31457280",
+          "smtpd_client_message_rate_limit": "45",
+          "smtpd_recipient_restrictions": "${set1_owner_checks}, reject_unknown_sender_domain"
+        }
+      },
+      "name": "e: message size and rate still save (200; 31457280 and 45 in main.cf) and the owner's list is untouched",
+      "ok": true
+    },
+    {
+      "detail": {
+        "argv": [
+          "postfix",
+          "check"
+        ],
+        "at": "2026-10-09T03:44:56Z",
+        "returncode": 1,
+        "seconds": 1.008,
+        "status": "ok",
+        "stderr": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n",
+        "stdout": ""
+      },
+      "name": "f: the owner's unfinished edit makes Postfix refuse its configuration (`postfix check` fails)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "MAIL_POLICY_NOT_RELOADED",
+        "error": "The mail policy was saved to /etc/postfix/main.cf, but Postfix was not reloaded: Postfix's own check refuses its configuration as it is now. A running Postfix keeps the settings it had before, so the saved values are not in effect. What Postfix said is shown with this message; it can be about a line this page did not write. Nothing was rolled back. The server owner corrects that line, runs sudo postfix check until it prints no error, then runs sudo postfix reload. Reload this page afterwards; the saved values are the ones shown.",
+        "reason": "check",
+        "status": 502,
+        "vars": {
+          "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign"
+        }
+      },
+      "name": "f: the save answers 502 MAIL_POLICY_NOT_RELOADED with the reason `check`",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "MAIL_POLICY_NOT_RELOADED",
+        "error": "The mail policy was saved to /etc/postfix/main.cf, but Postfix was not reloaded: Postfix's own check refuses its configuration as it is now. A running Postfix keeps the settings it had before, so the saved values are not in effect. What Postfix said is shown with this message; it can be about a line this page did not write. Nothing was rolled back. The server owner corrects that line, runs sudo postfix check until it prints no error, then runs sudo postfix reload. Reload this page afterwards; the saved values are the ones shown.",
+        "mutation_applied": true,
+        "partial_success": true,
+        "reason": "check",
+        "vars": {
+          "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign"
+        }
+      },
+      "name": "f: the answer says the change was applied (mutation_applied)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "dnsbl_zones": [],
+        "message_size_mb": 30,
+        "outbound_rate_limit": 46,
+        "version": "mp1-5f2c0bcc7deeb8776def80077947a51865c0863080cabd44ae30f811aa6bad59"
+      },
+      "name": "f: the body carries the written policy (rate 46) with its new version",
+      "ok": true
+    },
+    {
+      "detail": {
+        "postfix_check": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n",
+        "vars.detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign"
+      },
+      "name": "f: the answer carries Postfix's own line",
+      "ok": true
+    },
+    {
+      "detail": {
+        "master_pid": [
+          39133,
+          39133
+        ],
+        "postfix_status": {
+          "argv": [
+            "postfix",
+            "status"
+          ],
+          "at": "2026-10-09T03:45:03Z",
+          "returncode": 1,
+          "seconds": 1.008,
+          "status": "ok",
+          "stderr": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n",
+          "stdout": ""
+        },
+        "rate": "46",
+        "units": {
+          "postfix.service": {
+            "ActiveEnterTimestamp": "Fri 2026-10-09 03:38:51 UTC",
+            "ActiveState": "active",
+            "DropInPaths": "",
+            "ExecMainStartTimestamp": "Fri 2026-10-09 03:38:51 UTC",
+            "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "NRestarts": "0",
+            "Result": "success",
+            "SubState": "exited"
+          },
+          "postfix@-.service": {
+            "ActiveEnterTimestamp": "Fri 2026-10-09 03:38:51 UTC",
+            "ActiveState": "active",
+            "DropInPaths": "",
+            "ExecMainStartTimestamp": "",
+            "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "NRestarts": "0",
+            "Result": "success",
+            "SubState": "running"
+          }
+        }
+      },
+      "name": "f: the value is written in main.cf (46) and Postfix keeps running with its previous process",
+      "ok": false
+    },
+    {
+      "detail": "-- No entries --\n",
+      "name": "f: nothing was reloaded (the journal has no reload line since the save)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "dnsbl_zones": [],
+        "message_size_mb": 30,
+        "outbound_rate_limit": 46,
+        "version": "mp1-5f2c0bcc7deeb8776def80077947a51865c0863080cabd44ae30f811aa6bad59"
+      },
+      "name": "f: the saved values are the ones a reload of the page shows, with the version the answer carried",
+      "ok": true
+    },
+    {
+      "detail": {
+        "argv": [
+          "postfix",
+          "check"
+        ],
+        "at": "2026-10-09T03:45:08Z",
+        "returncode": 0,
+        "seconds": 0.338,
+        "status": "ok",
+        "stderr": "",
+        "stdout": ""
+      },
+      "name": "f: after the owner's correction `postfix check` succeeds (Postfix was not reloaded by the owner)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "applied": "unchanged_reloaded",
+        "success": true
+      },
+      "name": "g: a save without a change answers 200 with applied = unchanged_reloaded",
+      "ok": true
+    },
+    {
+      "detail": [
+        "8c870b03b3c0b657b77627f3a4d623a45b9648af85bc3b99fb7e8ae6752b0391",
+        "8c870b03b3c0b657b77627f3a4d623a45b9648af85bc3b99fb7e8ae6752b0391"
+      ],
+      "name": "g: main.cf is byte-identical (nothing was written)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "master_pid": [
+          39133,
+          39133
+        ],
+        "reload_lines": [
+          "2026-10-09T03:45:09.561707+00:00 dns-ubuntu postfix/master[39133]: reload -- version 3.8.6, configuration /etc/postfix"
+        ]
+      },
+      "name": "g: Postfix was reloaded (a `postfix/master ... reload` line; the same master process)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "status": {
+          "argv": [
+            "postfix",
+            "status"
+          ],
+          "at": "2026-10-09T03:45:11Z",
+          "returncode": 1,
+          "seconds": 0.028,
+          "status": "ok",
+          "stderr": "postfix/postlog: the Postfix mail system is not running\n",
+          "stdout": ""
+        },
+        "units": {
+          "postfix.service": {
+            "ActiveEnterTimestamp": "Fri 2026-10-09 03:38:51 UTC",
+            "ActiveState": "inactive",
+            "DropInPaths": "",
+            "ExecMainStartTimestamp": "Fri 2026-10-09 03:38:51 UTC",
+            "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "NRestarts": "0",
+            "Result": "success",
+            "SubState": "dead"
+          },
+          "postfix@-.service": {
+            "ActiveEnterTimestamp": "Fri 2026-10-09 03:38:51 UTC",
+            "ActiveState": "inactive",
+            "DropInPaths": "",
+            "ExecMainStartTimestamp": "",
+            "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "NRestarts": "0",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "name": "h: the owner stopped Postfix (`postfix status` says it is not running)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "applied": "not_running",
+        "success": true
+      },
+      "name": "h: the save answers 200 with applied = not_running",
+      "ok": true
+    },
+    {
+      "detail": {
+        "rate": "47",
+        "status": {
+          "argv": [
+            "postfix",
+            "status"
+          ],
+          "at": "2026-10-09T03:45:15Z",
+          "returncode": 1,
+          "seconds": 0.029,
+          "status": "ok",
+          "stderr": "postfix/postlog: the Postfix mail system is not running\n",
+          "stdout": ""
+        },
+        "units": {
+          "postfix.service": {
+            "ActiveEnterTimestamp": "Fri 2026-10-09 03:38:51 UTC",
+            "ActiveState": "inactive",
+            "DropInPaths": "",
+            "ExecMainStartTimestamp": "Fri 2026-10-09 03:38:51 UTC",
+            "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "NRestarts": "0",
+            "Result": "success",
+            "SubState": "dead"
+          },
+          "postfix@-.service": {
+            "ActiveEnterTimestamp": "Fri 2026-10-09 03:38:51 UTC",
+            "ActiveState": "inactive",
+            "DropInPaths": "",
+            "ExecMainStartTimestamp": "",
+            "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "NRestarts": "0",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "name": "h: the value is written (47) and Postfix stays stopped (not started by the save)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": "unchanged",
+        "status": {
+          "argv": [
+            "postfix",
+            "status"
+          ],
+          "at": "2026-10-09T03:45:16Z",
+          "returncode": 1,
+          "seconds": 0.024,
+          "status": "ok",
+          "stderr": "postfix/postlog: the Postfix mail system is not running\n",
+          "stdout": ""
+        }
+      },
+      "name": "h: a save without a change while stopped answers 200 with applied = unchanged, still stopped",
+      "ok": true
+    },
+    {
+      "detail": {
+        "check": {
+          "argv": [
+            "postfix",
+            "check"
+          ],
+          "at": "2026-10-09T03:45:18Z",
+          "returncode": 0,
+          "seconds": 0.323,
+          "status": "ok",
+          "stderr": "",
+          "stdout": ""
+        },
+        "reload": {
+          "argv": [
+            "systemctl",
+            "reload",
+            "postfix.service"
+          ],
+          "at": "2026-10-09T03:45:17Z",
+          "returncode": 0,
+          "seconds": 0.07,
+          "status": "ok",
+          "stderr": "",
+          "stdout": ""
+        },
+        "start": {
+          "argv": [
+            "systemctl",
+            "start",
+            "postfix.service"
+          ],
+          "at": "2026-10-09T03:45:17Z",
+          "returncode": 0,
+          "seconds": 0.531,
+          "status": "ok",
+          "stderr": "",
+          "stdout": ""
+        },
+        "status": {
+          "argv": [
+            "postfix",
+            "status"
+          ],
+          "at": "2026-10-09T03:45:18Z",
+          "returncode": 0,
+          "seconds": 0.026,
+          "status": "ok",
+          "stderr": "postfix/postlog: the Postfix mail system is running: PID: 51317\n",
+          "stdout": ""
+        }
+      },
+      "name": "h: the owner starts Postfix again; `postfix check`, `postfix status` and `systemctl reload postfix` succeed",
+      "ok": true
+    },
+    {
+      "detail": {
+        "25": {
+          "banner": "220 mail-ubuntu.upd1-infra.test ESMTP Postfix (Ubuntu)",
+          "ehlo": "250",
+          "ehlo_last_line": "250 CHUNKING",
+          "mail": "250",
+          "mail_last_line": "250 2.1.0 Ok",
+          "ok": true,
+          "port": 25,
+          "rcpt": "250",
+          "rcpt_last_line": "250 2.1.5 Ok",
+          "rset": "250",
+          "rset_last_line": "250 2.0.0 Ok"
+        },
+        "587": {
+          "banner": "220 mail-ubuntu.upd1-infra.test ESMTP Postfix (Ubuntu)",
+          "ehlo": "250",
+          "ehlo_last_line": "250 CHUNKING",
+          "ok": true,
+          "port": 587
+        },
+        "at": "2026-10-09T03:45:18Z",
+        "mode": "read-smtp",
+        "owner_action": false,
+        "schema": "celikpanel/set1-native/v1"
+      },
+      "name": "h: mail is accepted on 25 and 587 answers at the end",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T03:45:18Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/025-a-postfix-before.json",
+      "label": "a-postfix-before",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/026-a-smtp-before.json",
+      "label": "a-smtp-before",
+      "mode": "read-smtp",
+      "owner_action": false
+    },
+    {
+      "file": "native/027-owner-b-owner-restrictions-main-cf.json",
+      "label": "owner-b-owner-restrictions-main-cf",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/028-owner-b-owner-restrictions-reload-postfix.json",
+      "label": "owner-b-owner-restrictions-reload-postfix",
+      "mode": "owner-systemctl",
+      "owner_action": true
+    },
+    {
+      "file": "native/029-b-postfix-after-owner-edit.json",
+      "label": "b-postfix-after-owner-edit",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/030-b-postfix-after-stale-save.json",
+      "label": "b-postfix-after-stale-save",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/031-c-postfix-after-save.json",
+      "label": "c-postfix-after-save",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/032-c-postfix-journal.json",
+      "label": "c-postfix-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/033-c-smtp-after-save.json",
+      "label": "c-smtp-after-save",
+      "mode": "read-smtp",
+      "owner_action": false
+    },
+    {
+      "file": "native/034-d-postfix-after-remove.json",
+      "label": "d-postfix-after-remove",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/035-owner-e-owner-macro-main-cf.json",
+      "label": "owner-e-owner-macro-main-cf",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/036-owner-e-owner-macro-reload-postfix.json",
+      "label": "owner-e-owner-macro-reload-postfix",
+      "mode": "owner-systemctl",
+      "owner_action": true
+    },
+    {
+      "file": "native/037-e-postfix-after-owner-macro.json",
+      "label": "e-postfix-after-owner-macro",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/038-e-postfix-after-refused-dnsbl.json",
+      "label": "e-postfix-after-refused-dnsbl",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/039-e-postfix-after-size-rate.json",
+      "label": "e-postfix-after-size-rate",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/040-owner-e-owner-plain-list-again-main-cf.json",
+      "label": "owner-e-owner-plain-list-again-main-cf",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/041-owner-e-owner-plain-list-again-reload-postfix.json",
+      "label": "owner-e-owner-plain-list-again-reload-postfix",
+      "mode": "owner-systemctl",
+      "owner_action": true
+    },
+    {
+      "file": "native/042-f-postfix-before-typo.json",
+      "label": "f-postfix-before-typo",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/043-owner-f-owner-typo-main-cf.json",
+      "label": "owner-f-owner-typo-main-cf",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/044-f-postfix-with-typo.json",
+      "label": "f-postfix-with-typo",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/045-f-postfix-after-save.json",
+      "label": "f-postfix-after-save",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/046-f-postfix-journal.json",
+      "label": "f-postfix-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/047-f-postfix-before-restore.json",
+      "label": "f-postfix-before-restore",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/048-owner-f-owner-removes-typo-main-cf.json",
+      "label": "owner-f-owner-removes-typo-main-cf",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/049-f-postfix-after-owner-correction.json",
+      "label": "f-postfix-after-owner-correction",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/050-g-postfix-after-unchanged-save.json",
+      "label": "g-postfix-after-unchanged-save",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/051-g-postfix-journal.json",
+      "label": "g-postfix-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/052-owner-h-stop-postfix.json",
+      "label": "owner-h-stop-postfix",
+      "mode": "owner-systemctl",
+      "owner_action": true
+    },
+    {
+      "file": "native/053-h-postfix-stopped.json",
+      "label": "h-postfix-stopped",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/054-h-postfix-after-save.json",
+      "label": "h-postfix-after-save",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/055-h-postfix-after-unchanged-save.json",
+      "label": "h-postfix-after-unchanged-save",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/056-owner-h-start-postfix.json",
+      "label": "owner-h-start-postfix",
+      "mode": "owner-systemctl",
+      "owner_action": true
+    },
+    {
+      "file": "native/057-owner-h-owner-reload-postfix.json",
+      "label": "owner-h-owner-reload-postfix",
+      "mode": "owner-systemctl",
+      "owner_action": true
+    },
+    {
+      "file": "native/058-h-postfix-end.json",
+      "label": "h-postfix-end",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/059-h-smtp-end.json",
+      "label": "h-smtp-end",
+      "mode": "read-smtp",
+      "owner_action": false
+    }
+  ],
+  "node": "ubuntu",
+  "not_reloaded_answer_carries_policy": true,
+  "notes": [
+    {
+      "detail": {
+        "after_panel_save": "smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf, reject_rbl_client dnsbl.set1-lab.test",
+        "after_zone_removed": "smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf",
+        "owner_wrote": "smtpd_recipient_restrictions =\n    permit_mynetworks,\n    permit_sasl_authenticated,\n    reject_unauth_destination,\n    reject_unknown_sender_domain,\n    check_policy_service unix:private/policyd-spf"
+      },
+      "note": "the owner's one-restriction-per-line layout in main.cf was rewritten as a single line by the save (`postconf -e`); the elements and their order are the owner's"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T03:44:31Z",
+      "label": "b-owner-restrictions-main-cf",
+      "mode": "owner-edit"
+    },
+    {
+      "at": "2026-10-09T03:44:33Z",
+      "label": "b-owner-restrictions-reload-postfix",
+      "mode": "owner-systemctl"
+    },
+    {
+      "at": "2026-10-09T03:44:43Z",
+      "label": "e-owner-macro-main-cf",
+      "mode": "owner-edit"
+    },
+    {
+      "at": "2026-10-09T03:44:45Z",
+      "label": "e-owner-macro-reload-postfix",
+      "mode": "owner-systemctl"
+    },
+    {
+      "at": "2026-10-09T03:44:50Z",
+      "label": "e-owner-plain-list-again-main-cf",
+      "mode": "owner-edit"
+    },
+    {
+      "at": "2026-10-09T03:44:52Z",
+      "label": "e-owner-plain-list-again-reload-postfix",
+      "mode": "owner-systemctl"
+    },
+    {
+      "at": "2026-10-09T03:44:53Z",
+      "label": "f-owner-typo-main-cf",
+      "mode": "owner-edit"
+    },
+    {
+      "at": "2026-10-09T03:45:06Z",
+      "label": "f-owner-removes-typo-main-cf",
+      "mode": "owner-edit"
+    },
+    {
+      "at": "2026-10-09T03:45:11Z",
+      "label": "h-stop-postfix",
+      "mode": "owner-systemctl"
+    },
+    {
+      "at": "2026-10-09T03:45:17Z",
+      "label": "h-start-postfix",
+      "mode": "owner-systemctl"
+    },
+    {
+      "at": "2026-10-09T03:45:17Z",
+      "label": "h-owner-reload-postfix",
+      "mode": "owner-systemctl"
+    }
+  ],
+  "owner_waited_for_idle": {
+    "at": "2026-10-09T03:44:29Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.2
+  },
+  "read_under_typo": {
+    "answer": null,
+    "status": 200,
+    "version": "mp1-96d5c35c7c8de3358a96aea4965b2e47688e02447ff17617ebc3fb86e8902f34"
+  },
+  "restrictions_layout": {
+    "after_panel_save": "smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf, reject_rbl_client dnsbl.set1-lab.test",
+    "after_zone_removed": "smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf",
+    "owner_wrote": "smtpd_recipient_restrictions =\n    permit_mynetworks,\n    permit_sasl_authenticated,\n    reject_unauth_destination,\n    reject_unknown_sender_domain,\n    check_policy_service unix:private/policyd-spf"
+  },
+  "section": "S2-mail-policy",
+  "started_at": "2026-10-09T03:44:29Z",
+  "substeps": {
+    "a": "passed",
+    "b": "passed",
+    "c": "passed",
+    "d": "passed",
+    "e": "passed",
+    "f": "failed",
+    "g": "passed",
+    "h": "passed"
+  },
+  "title": "server mail policy: the owner's main.cf",
+  "verdict": "failed"
+}

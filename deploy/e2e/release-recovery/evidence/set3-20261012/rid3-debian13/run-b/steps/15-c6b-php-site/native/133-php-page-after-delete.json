@@ -1,0 +1,16 @@
+{
+  "at": "2026-10-09T08:30:59Z",
+  "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n",
+  "bytes": 146,
+  "headers": {
+    "content-type": "text/html",
+    "server": "nginx"
+  },
+  "host": "set3-php.test",
+  "lab_action": false,
+  "mode": "read-http",
+  "owner_action": false,
+  "path": "/set3-probe.php",
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "status": 404
+}

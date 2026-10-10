@@ -1,0 +1,82 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S6 catch-all set without a version",
+  "request": {
+    "body": {
+      "destination": "owner@set1-owner.test"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18462"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18462"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "39dafe64d04259b3c449be6acc2fc1d4"
+      ]
+    ],
+    "method": "PUT",
+    "path": "/api/v1/domains/1/mail/catch-all"
+  },
+  "response": {
+    "elapsed_seconds": 0.004,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 07:18:43 GMT"
+      ],
+      [
+        "Content-Length",
+        "234"
+      ]
+    ],
+    "json": {
+      "code": "SETTINGS_VERSION_REQUIRED",
+      "error": "This request did not say which settings it was built from, so nothing was changed. Reload the page so it reads the current settings, then make the change again.",
+      "reason": "mail_catch_all"
+    },
+    "status": 409,
+    "text": null
+  }
+}

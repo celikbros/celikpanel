@@ -1,0 +1,44 @@
+2026-10-09T17:13:54Z cp-release-drill-s5-d13-good-a: MemAvailable 14721 MiB before the mounts; tmpfs mounts of other labs present: 0
+2026-10-09T17:13:54Z cp-release-drill-s5-d13-good-a: /var/tmp/cp-release-drill-s5-d13-good-a/cells/5a738a003ed5ce7f6220395f/arch is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing 982ae9b4c558a53ab301352ad6d288a7c37ea93483ab04370d9aad34cc59f3c6)
+2026-10-09T17:13:54Z cp-release-drill-s5-d13-good-a: /var/tmp/cp-release-drill-s5-d13-good-a/cells/5a738a003ed5ce7f6220395f/debian13 is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing 604dc0a775f9f54ffb46214fd408761c8d32155482943aea45f754053bb4cbb6)
+/var/tmp/cp-release-drill-s5-d13-good-a/cells/5a738a003ed5ce7f6220395f/arch 8G 576K
+/var/tmp/cp-release-drill-s5-d13-good-a/cells/5a738a003ed5ce7f6220395f/debian13 8G 576K
+2026-10-09T17:27:00Z cp-release-drill-s5-ub-good-a: MemAvailable 14714 MiB before the mounts; tmpfs mounts of other labs present: 0
+2026-10-09T17:27:00Z cp-release-drill-s5-ub-good-a: /var/tmp/cp-release-drill-s5-ub-good-a/cells/a05cda80fcc7f547fb8ec7a6/ubuntu is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing f782ee5d09fb45f882bdffb523dacc141ba029910fc8b97345f128e1b052bb1a)
+/var/tmp/cp-release-drill-s5-ub-good-a/cells/a05cda80fcc7f547fb8ec7a6/ubuntu 8G 576K
+2026-10-09T17:48:02Z cp-release-drill-s5-d13-def-a: MemAvailable 14811 MiB before the mounts; tmpfs mounts of other labs present: 0
+2026-10-09T17:48:02Z cp-release-drill-s5-d13-def-a: /var/tmp/cp-release-drill-s5-d13-def-a/cells/6912b36b2aba364c37e04bc0/arch is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing da28a8858c837564e7021e6e18edcec065b0dbc4d1ce597c473dacdfaf09b8d1)
+2026-10-09T17:48:02Z cp-release-drill-s5-d13-def-a: /var/tmp/cp-release-drill-s5-d13-def-a/cells/6912b36b2aba364c37e04bc0/debian13 is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing cdae620b03e361cfc016a9553b09168dee25bc30fe91273639acc4f90161ed8a)
+/var/tmp/cp-release-drill-s5-d13-def-a/cells/6912b36b2aba364c37e04bc0/arch 8G 576K
+/var/tmp/cp-release-drill-s5-d13-def-a/cells/6912b36b2aba364c37e04bc0/debian13 8G 576K
+2026-10-09T18:02:31Z cp-release-drill-s5-arch-good-a: MemAvailable 14838 MiB before the mounts; tmpfs mounts of other labs present: 0
+2026-10-09T18:02:32Z cp-release-drill-s5-arch-good-a: /var/tmp/cp-release-drill-s5-arch-good-a/cells/a55279cd36f5a5fe8d01f6f3/arch is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing 5c8d8da3c88c5556d866c66e11f4330df2a33ba3b3e0f11691977d72da5195c0)
+2026-10-09T18:02:32Z cp-release-drill-s5-arch-good-a: /var/tmp/cp-release-drill-s5-arch-good-a/cells/a55279cd36f5a5fe8d01f6f3/debian13 is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing 4dff4facc63f9d9961c12aaed2cdd9b07a8fc8b410b4db6779191b2a655e4de6)
+/var/tmp/cp-release-drill-s5-arch-good-a/cells/a55279cd36f5a5fe8d01f6f3/arch 8G 576K
+/var/tmp/cp-release-drill-s5-arch-good-a/cells/a55279cd36f5a5fe8d01f6f3/debian13 8G 576K
+2026-10-09T18:12:36Z cp-release-drill-s5-ub-def-a: MemAvailable 14766 MiB before the mounts; tmpfs mounts of other labs present: 0
+2026-10-09T18:12:36Z cp-release-drill-s5-ub-def-a: /var/tmp/cp-release-drill-s5-ub-def-a/cells/46f30bf03e476379986f74f0/ubuntu is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing c737f86a200cd56b0a61f81261799a73dc0af774098e28ff08f63e9754761b8f)
+/var/tmp/cp-release-drill-s5-ub-def-a/cells/46f30bf03e476379986f74f0/ubuntu 8G 576K
+2026-10-09T18:33:23Z cp-release-drill-s5-arch-def-a: MemAvailable 14799 MiB before the mounts; tmpfs mounts of other labs present: 0
+2026-10-09T18:33:23Z cp-release-drill-s5-arch-def-a: /var/tmp/cp-release-drill-s5-arch-def-a/cells/3be8e1383530ceb9cd1823ae/arch is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing aa3049af163e468ea20f32cb6120954456becbc01fb36fd4d9e84f6658e047f3)
+2026-10-09T18:33:23Z cp-release-drill-s5-arch-def-a: /var/tmp/cp-release-drill-s5-arch-def-a/cells/3be8e1383530ceb9cd1823ae/debian13 is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing 6275dac344ac1c7f58b70535b4ca1161f4978a338156cbbafd8b7f3751b6d674)
+/var/tmp/cp-release-drill-s5-arch-def-a/cells/3be8e1383530ceb9cd1823ae/arch 8G 576K
+/var/tmp/cp-release-drill-s5-arch-def-a/cells/3be8e1383530ceb9cd1823ae/debian13 8G 576K
+2026-10-09T18:44:17Z cp-release-drill-s5-d13-sc-a: MemAvailable 14738 MiB before the mounts; tmpfs mounts of other labs present: 0
+2026-10-09T18:44:17Z cp-release-drill-s5-d13-sc-a: /var/tmp/cp-release-drill-s5-d13-sc-a/cells/35c361679fa97dbd7a30e049/arch is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing 188c273b033ac28ed5a1948a07e25ce39bb5ff9694e77b28ce06736ca59aa2cd)
+2026-10-09T18:44:17Z cp-release-drill-s5-d13-sc-a: /var/tmp/cp-release-drill-s5-d13-sc-a/cells/35c361679fa97dbd7a30e049/debian13 is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing cb1834bcddedd9f0e1339b5df47d34ecc18d7f2f1e03d2f737165ab071a94039)
+/var/tmp/cp-release-drill-s5-d13-sc-a/cells/35c361679fa97dbd7a30e049/arch 8G 576K
+/var/tmp/cp-release-drill-s5-d13-sc-a/cells/35c361679fa97dbd7a30e049/debian13 8G 576K
+2026-10-09T18:58:29Z cp-release-drill-s5-d13-oc-a: MemAvailable 14838 MiB before the mounts; tmpfs mounts of other labs present: 0
+2026-10-09T18:58:29Z cp-release-drill-s5-d13-oc-a: /var/tmp/cp-release-drill-s5-d13-oc-a/cells/7b35331b551e4f15b07e594e/arch is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing 89e2e49bd6f5452451f8e0a766302b0bfcfcbd2fe48bcb7b0ad3d019aeb97265)
+2026-10-09T18:58:29Z cp-release-drill-s5-d13-oc-a: /var/tmp/cp-release-drill-s5-d13-oc-a/cells/7b35331b551e4f15b07e594e/debian13 is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing 80fab6064da2e32b9dc2c1d919e7f36bea6a22931a92d29753c95826b513c5e7)
+/var/tmp/cp-release-drill-s5-d13-oc-a/cells/7b35331b551e4f15b07e594e/arch 8G 576K
+/var/tmp/cp-release-drill-s5-d13-oc-a/cells/7b35331b551e4f15b07e594e/debian13 8G 576K
+2026-10-09T19:18:28Z cp-release-drill-s5-ub-oc-a: MemAvailable 14798 MiB before the mounts; tmpfs mounts of other labs present: 0
+2026-10-09T19:18:28Z cp-release-drill-s5-ub-oc-a: /var/tmp/cp-release-drill-s5-ub-oc-a/cells/4fbfbd34be526857d2fe59f4/ubuntu is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing 4c411aadd3039d7df2ba8ca7d3fbe7b610a66c5d754883bbad947c241f9f9f26)
+/var/tmp/cp-release-drill-s5-ub-oc-a/cells/4fbfbd34be526857d2fe59f4/ubuntu 8G 576K
+2026-10-09T19:46:48Z cp-release-drill-s5-d13-mr-a: MemAvailable 14834 MiB before the mounts; tmpfs mounts of other labs present: 0
+2026-10-09T19:46:48Z cp-release-drill-s5-d13-mr-a: /var/tmp/cp-release-drill-s5-d13-mr-a/cells/3dabb952c210877d0207675b/arch is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing 2b213514f4a6587aa37eff1f4e3173bdf44a26a1d53355de101eef314575a483)
+2026-10-09T19:46:48Z cp-release-drill-s5-d13-mr-a: /var/tmp/cp-release-drill-s5-d13-mr-a/cells/3dabb952c210877d0207675b/debian13 is a tmpfs mount now (size limit 8g, mode 700, owner 0:0); its 5 files are byte-equal to the prepared ones (digest of the listing ddeb2d479456f48259942e6a607ef3edbbc56d06ac71fae988aedf02103e49f6)
+/var/tmp/cp-release-drill-s5-d13-mr-a/cells/3dabb952c210877d0207675b/arch 8G 576K
+/var/tmp/cp-release-drill-s5-d13-mr-a/cells/3dabb952c210877d0207675b/debian13 8G 576K

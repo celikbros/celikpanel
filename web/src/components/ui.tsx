@@ -1,8 +1,10 @@
 import { useEffect, useRef, type FormEvent, type ReactNode } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import { AlertTriangle, type LucideIcon } from 'lucide-react';
 import { useNavigate } from '../router';
 import { useI18n } from '../i18n';
 import { apiErrorActionLabel, apiErrorText, type ApiError } from '../lib/apiError';
+import type { Observed, Remote } from '../lib/remote';
+import type { LostAnswerHandle } from '../lib/lostAnswer';
 // Shared UI primitives so every page speaks one visual language: a page
 // header with breadcrumb, raised cards with an icon+title, and a labelled
 // usage bar. Reused across the panel to keep density consistent.
@@ -158,12 +160,27 @@ export function Button({
         secondary: 'bg-surface text-fg border-border-strong hover:bg-surface-2',
         danger: 'bg-surface text-danger border-border-strong hover:bg-danger/10 hover:border-danger/40',
     }[variant];
+    // 9 Oct 2026, seen in a browser: in the dark theme the recessed fill was
+    // a navy block with a light label, and it read as a filled call to action
+    // - more like a button to press than the enabled one beside it. A control
+    // that cannot be used now has no fill at all and a dashed outline in the
+    // colour of its own label, which says "not available" by shape as well as
+    // by colour, in both themes, in every skin and on every surface a button
+    // stands on. A button that is working keeps the recessed fill: it is busy,
+    // not unavailable, and its spinner says so.
+    // 9 Eki 2026, tarayicida goruldu: koyu temada cukur dolgu, acik etiketli
+    // lacivert bir bloktu ve yanindaki etkin dugmeden daha cok basilacak bir
+    // dugmeye benziyordu. Kullanilamayan denetimin artik dolgusu yoktur ve
+    // cercevesi kesik cizgilidir; calisan dugme ise cukur dolguyu korur.
+    const off = loading
+        ? 'disabled:border-transparent disabled:bg-surface-2'
+        : 'disabled:border-dashed disabled:border-current disabled:bg-transparent';
     return (
         <button
             {...props}
             disabled={props.disabled || loading}
             aria-busy={loading || undefined}
-            className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:pointer-events-none disabled:border-transparent disabled:bg-surface-2 disabled:text-fg-muted ${styles} ${props.className ?? ''}`}
+            className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:pointer-events-none disabled:text-fg-muted ${off} ${styles} ${props.className ?? ''}`}
         >
             {loading ? <Spinner size="xs" tone="current" /> : Icon && <Icon className="h-4 w-4" />}
             {children}
@@ -520,6 +537,254 @@ export function EmptyState({
             {hint && <p className="mt-1 text-sm text-fg-muted">{hint}</p>}
             {action && <div className="mt-5">{action}</div>}
         </div>
+    );
+}
+
+// --- No negative UI unless known (9 Oct 2026, D-024) -------------------------
+//
+// A screen that reads the server is in one of three states, and they never
+// look alike (see lib/remote.ts):
+//
+//   Checking       not known yet: one quiet line, the colour of ordinary text.
+//                  Nothing has failed, so nothing here looks like a problem.
+//   CouldNotCheck  the read failed: the screen's own sentence and Retry.
+//   known          only now "missing", "not ready", "none" or an empty list.
+//
+// RemoteGate is the three of them in order. Its children receive a value the
+// server really sent and nothing else, so whatever they draw - an empty state,
+// a blocker, a disabled control with its reason - cannot be drawn before the
+// answer exists. KnownEmpty is EmptyState with that proof as a required prop.
+//
+// Sunucuyu okuyan ekran üç durumdan birindedir ve bunlar birbirine benzemez:
+// Checking (henüz bilinmiyor; sakin tek satır, hiçbir şey başarısız değil),
+// CouldNotCheck (okuma başarısız; ekranın kendi cümlesi ve Tekrar dene) ve
+// biliniyor (ancak şimdi "eksik", "hazır değil", "yok" ya da boş liste).
+// RemoteGate üçünü sırayla çizer; çocukları yalnız sunucunun gerçekten
+// gönderdiği değeri alır.
+export function Checking({ label, className }: { label: string; className?: string }) {
+    return (
+        <div className={`flex items-center gap-2 text-sm text-fg-muted ${className ?? ''}`}>
+            <Spinner size="xs" label={label} />
+            <span aria-hidden="true">{label}</span>
+        </div>
+    );
+}
+
+export function CouldNotCheck({
+    text,
+    onRetry,
+    busy,
+    actionLabel,
+    beside,
+    className,
+}: {
+    /** The screen's own sentence: what could not be read, and that nothing changed. */
+    text: ReactNode;
+    /** Reads again. It must not change anything on the server. */
+    onRetry: () => void;
+    busy?: boolean;
+    actionLabel?: string;
+    /** A second way to look, beside the read: a link that only opens something. */
+    beside?: ReactNode;
+    className?: string;
+}) {
+    const { t } = useI18n();
+    return (
+        <div
+            role="alert"
+            className={`flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-sm leading-relaxed text-fg ${className ?? ''}`}
+        >
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+            <div className="min-w-0">
+                <p className="max-w-[75ch] break-words">{text}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Button type="button" loading={busy} onClick={onRetry}>
+                        {actionLabel ?? t('common.retry')}
+                    </Button>
+                    {beside}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/** A value the server really sent, and whether a later read of it failed. */
+export interface Shown<T> extends Observed<T> {
+    stale: boolean;
+}
+
+export function RemoteGate<T>({
+    remote,
+    checking,
+    failed,
+    onRetry,
+    busy,
+    className,
+    children,
+}: {
+    remote: Remote<T>;
+    /** The checking line, about this one thing: "Reading the domains…". */
+    checking: string;
+    /** The screen's own "could not check" sentence. */
+    failed: string;
+    onRetry: () => void;
+    busy?: boolean;
+    /** Spacing for the checking line and the notice, where the content has its own. */
+    className?: string;
+    children: (shown: Shown<T>) => ReactNode;
+}) {
+    const { t, locale } = useI18n();
+    if (remote.state === 'loading') return <Checking label={checking} className={className} />;
+    if (remote.state === 'known') return <>{children({ value: remote.value, observedAt: remote.observedAt, stale: false })}</>;
+    if (!remote.previous) return <CouldNotCheck text={failed} onRetry={onRetry} busy={busy} className={className} />;
+    // The earlier answer stays on screen, under a notice that says it is the
+    // earlier answer and when it was read.
+    // Önceki yanıt ekranda kalır; üstündeki bildirim bunun önceki yanıt
+    // olduğunu ve ne zaman okunduğunu söyler.
+    const at = new Date(remote.previous.observedAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    return (
+        <>
+            <CouldNotCheck
+                text={t('common.staleNotice', { time: at })}
+                onRetry={onRetry}
+                busy={busy}
+                className={`mb-4 ${className ?? ''}`}
+            />
+            {children({ ...remote.previous, stale: true })}
+        </>
+    );
+}
+
+export function KnownEmpty({
+    of,
+    ...props
+}: {
+    /** The answer that proves there is nothing: an empty state is a claim. */
+    of: Observed<unknown>;
+    icon: LucideIcon;
+    title: string;
+    hint?: string;
+    action?: ReactNode;
+}) {
+    void of;
+    return <EmptyState {...props} />;
+}
+
+// ResultUnknown: a change was sent and its answer did not arrive, so it is not
+// known whether it was made (lib/lostAnswer.ts). The notice stands where the
+// change was asked for and is scrolled into view. It is the attention surface,
+// not the failure one: nothing is known to have failed. "Check again" only
+// reads. Until that read has answered, the screen keeps its changing controls
+// off; after it, the notice says when the state was read again and stays until
+// the person closes it.
+//
+// Where the form that sent the change asked the re-read state a question
+// (10 Oct 2026), the notice says the answer. The state shows the change: it was
+// saved, the form is closed, and the notice is a plain confirmation with a
+// check mark, no longer the attention surface. The state does not show it: the
+// attention surface stays and the sentence says so, and that what was typed is
+// still there. In both cases it stays until the person closes it.
+// ResultUnknown: bir değişiklik gönderildi ve yanıtı gelmedi; yapılıp
+// yapılmadığı bilinmiyor. Bildirim değişikliğin istendiği yerde durur ve
+// görünür alana kaydırılır. "Tekrar kontrol et" yalnız okur. Değişikliği
+// gönderen form yeniden okunan duruma soru sorduysa bildirim yanıtı söyler:
+// durum değişikliği gösteriyorsa kaydedilmiştir (onay işaretli sade bildirim),
+// göstermiyorsa bunu ve yazılanın yerinde durduğunu söyler.
+export function ResultUnknown({
+    answer,
+    where,
+    className,
+}: {
+    answer: LostAnswerHandle;
+    /** Where to look, when what is read again here cannot show what the change did. */
+    where?: string;
+    className?: string;
+}) {
+    const { t, locale } = useI18n();
+    const box = useRef<HTMLDivElement>(null);
+    const raised = answer.lost?.at;
+    useEffect(() => {
+        if (raised !== undefined) box.current?.scrollIntoView?.({ block: 'nearest' });
+    }, [raised]);
+    const lost = answer.lost;
+    if (!lost) return null;
+    const made = lost.readAt !== null && lost.shows === true;
+    const time = lost.readAt !== null
+        ? new Date(lost.readAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+        : '';
+    // A change on a route that carries an identity (D-029) was not simply
+    // dropped: the same answer was asked for once more, or the Panel said
+    // itself that the result is not known. The first sentence says which; the
+    // second says what the state that was read again shows. Once that state
+    // shows the change, one sentence is left.
+    // Kimlik taşıyan rotadaki değişiklik yalnızca kopmamıştır: aynı yanıt bir
+    // kez daha sorulmuş ya da Panel sonucun bilinmediğini kendisi söylemiştir.
+    // İlk cümle hangisi olduğunu, ikincisi yeniden okunan durumun ne
+    // gösterdiğini söyler.
+    const identified = lost.cause !== 'dropped';
+    const why = !identified || made
+        ? null
+        : t(lost.cause === 'asked' ? 'common.lostAsked' : lost.cause === 'running' ? 'common.lostRunning' : 'common.lostInterrupted');
+    const readKey = identified
+        ? (lost.shows === true ? 'common.lostStateMade' : lost.shows === false ? 'common.lostStateNotMade' : 'common.lostStateRead')
+        : (lost.shows === true ? 'common.resultUnknownMade' : lost.shows === false ? 'common.resultUnknownNotMade' : 'common.resultUnknownRead');
+    const text = lost.readAt !== null
+        ? t(readKey, { time })
+        : identified
+            ? t(answer.checking ? 'common.lostStateReading' : 'common.lostStateUnread')
+            : t(answer.checking ? 'common.resultUnknown' : 'common.resultUnknownUnread');
+    return (
+        <div
+            ref={box}
+            role={made ? 'status' : 'alert'}
+            data-result-unknown={lost.readAt === null ? 'holding' : made ? 'made' : lost.shows === false ? 'not-made' : 'read'}
+            data-lost-cause={lost.cause}
+            className={`flex items-start gap-2 rounded-lg border p-3 text-sm leading-relaxed text-fg ${made ? 'border-border-strong bg-surface-2' : 'border-warning-mark/50 bg-warning-mark/20'} ${className ?? ''}`}
+        >
+            {made ? <CheckMark /> : <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />}
+            <div className="min-w-0">
+                {why && <p className="mb-1 max-w-[75ch] break-words">{why}</p>}
+                <p className="max-w-[75ch] break-words">{text}</p>
+                {where && !made && <p className="mt-1 max-w-[75ch] break-words">{where}</p>}
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {/* Once the state shows the change there is nothing left
+                        to check: only "Close".
+                        Durum değişikliği gösterdiğinde kontrol edilecek bir şey
+                        kalmaz: yalnız "Kapat". */}
+                    {!made && (
+                        <Button type="button" loading={answer.checking} onClick={() => void answer.check()}>
+                            {t('common.checkAgain')}
+                        </Button>
+                    )}
+                    {lost.readAt !== null && (
+                        <Button type="button" onClick={answer.dismiss}>
+                            {t('common.close')}
+                        </Button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// The mark of something the server confirmed. Drawn here, like SearchIcon, so
+// the shared layer needs no icon beyond the triangle.
+// Sunucunun doğruladığı şeyin işareti.
+function CheckMark() {
+    return (
+        <svg
+            className="mt-0.5 h-4 w-4 shrink-0 text-success"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+        >
+            <circle cx="12" cy="12" r="10" />
+            <path d="m9 12 2 2 4-4" />
+        </svg>
     );
 }
 

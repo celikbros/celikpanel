@@ -1,0 +1,12 @@
+prove a81 (rebuilt) rc=0
+dry a81 upd1-debian13-good rc=0 native_evidence=False
+dry a81 upd1-debian13-defective rc=0 native_evidence=False
+dry a81 upd1-debian13-startcheck rc=0 native_evidence=False
+dry a81 upd1-debian13-owner-continuation rc=0 native_evidence=False
+dry a81 upd1-debian13-mgmt-off-reboot rc=0 native_evidence=False
+dry a81 upd1-ubuntu-good rc=0 native_evidence=False
+dry a81 upd1-ubuntu-defective rc=0 native_evidence=False
+dry a81 upd1-ubuntu-owner-continuation rc=0 native_evidence=False
+dry a81 upd1-arch-good rc=0 native_evidence=False
+dry a81 upd1-arch-defective rc=0 native_evidence=False
+no dry-run lab exists

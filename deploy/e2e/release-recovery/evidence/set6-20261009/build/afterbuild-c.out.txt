@@ -1,0 +1,37 @@
+prove cur rc=0
+prove a81 rc=0
+dry set6-arch rc=0 steps=18
+dry set6-debian13 rc=0 steps=19
+dry set6-ubuntu rc=0 steps=19
+dry upd1-arch-good rc=0 added=['set6-name-pinning', 'set6-headers-before-the-update', 'set6-headers-after-the-update', 'set6-name-pinning-at-the-end']
+dry upd1-debian13-good rc=0 added=['set6-name-pinning', 'set4-php-site-before-the-update', 'set6-headers-before-the-update', 'set4-php-site-after-the-update', 'set6-headers-after-the-update', 'M10-postfix-stop', 'set6-name-pinning-at-the-end']
+dry upd1-ubuntu-good rc=0 added=['set6-name-pinning', 'set4-php-site-before-the-update', 'set6-headers-before-the-update', 'set4-php-site-after-the-update', 'set6-headers-after-the-update', 'M10-postfix-stop', 'set6-name-pinning-at-the-end']
+no dry-run lab was created
+cur-baseline built-by-this-run /var/tmp/cp-pair-accept/dist/2159bb202d7bf69fe650c95910c6506a47f730c9-acceptance-license
+cur-good built-by-this-run /var/tmp/cp-pair-accept/dist/ecfe39e5b6ab707ba5b7d1c025f225f3147f67a3-acceptance-license
+cur-defective built-by-this-run /var/tmp/cp-pair-accept/dist/47f8edc4ed3fa0bbb018962548fe0166f62d7454-acceptance-license
+cur-startcheck built-by-this-run /var/tmp/cp-pair-accept/dist/11093fa2ae0cc5f947ff6ab0c217b63d3f7e1335-acceptance-license
+cur-realstart built-by-this-run /var/tmp/cp-pair-accept/dist/28a3f803fad474795b91de8bbaf32853be5f84df-acceptance-license
+a81-baseline reused /var/tmp/cp-pair-accept/dist/a0beb7263d1f4ca72258f6b306f9111ba4e2a334-acceptance-license
+a81-good built-by-this-run /var/tmp/cp-pair-accept/dist/9cb2339f10a0445f26ad7ddcc6058a4c359133f3-acceptance-license
+a81-defective built-by-this-run /var/tmp/cp-pair-accept/dist/5ca497cf7ffd2b32a84d6d6c8383d41beec4c48a-acceptance-license
+a81-startcheck built-by-this-run /var/tmp/cp-pair-accept/dist/f21f5373edf66c7354f1ad5f6ab78b6a7d79940d-acceptance-license
+2026-10-09T23:22:28Z removed /var/tmp/cp-pair-accept/dist/2159bb202d7bf69fe650c95910c6506a47f730c9-acceptance-license/src bytes=844318531 (build intermediate of this run's cur-baseline dist: extracted source and compiled binaries; the archive, dist.json, build.log and product-web-src stay)
+2026-10-09T23:22:30Z removed /var/tmp/cp-pair-accept/dist/ecfe39e5b6ab707ba5b7d1c025f225f3147f67a3-acceptance-license/src bytes=844319001 (build intermediate of this run's cur-good dist: extracted source and compiled binaries; the archive, dist.json, build.log and product-web-src stay)
+2026-10-09T23:22:32Z removed /var/tmp/cp-pair-accept/dist/47f8edc4ed3fa0bbb018962548fe0166f62d7454-acceptance-license/src bytes=844318786 (build intermediate of this run's cur-defective dist: extracted source and compiled binaries; the archive, dist.json, build.log and product-web-src stay)
+2026-10-09T23:22:34Z removed /var/tmp/cp-pair-accept/dist/11093fa2ae0cc5f947ff6ab0c217b63d3f7e1335-acceptance-license/src bytes=844312836 (build intermediate of this run's cur-startcheck dist: extracted source and compiled binaries; the archive, dist.json, build.log and product-web-src stay)
+2026-10-09T23:22:37Z removed /var/tmp/cp-pair-accept/dist/28a3f803fad474795b91de8bbaf32853be5f84df-acceptance-license/src bytes=844319430 (build intermediate of this run's cur-realstart dist: extracted source and compiled binaries; the archive, dist.json, build.log and product-web-src stay)
+2026-10-09T23:22:38Z removed /var/tmp/cp-pair-accept/dist/9cb2339f10a0445f26ad7ddcc6058a4c359133f3-acceptance-license/src bytes=844320394 (build intermediate of this run's a81-good dist: extracted source and compiled binaries; the archive, dist.json, build.log and product-web-src stay)
+2026-10-09T23:22:40Z removed /var/tmp/cp-pair-accept/dist/5ca497cf7ffd2b32a84d6d6c8383d41beec4c48a-acceptance-license/src bytes=844318935 (build intermediate of this run's a81-defective dist: extracted source and compiled binaries; the archive, dist.json, build.log and product-web-src stay)
+2026-10-09T23:22:42Z removed /var/tmp/cp-pair-accept/dist/f21f5373edf66c7354f1ad5f6ab78b6a7d79940d-acceptance-license/src bytes=844313123 (build intermediate of this run's a81-startcheck dist: extracted source and compiled binaries; the archive, dist.json, build.log and product-web-src stay)
+67M	/var/tmp/cp-pair-accept/dist/11093fa2ae0cc5f947ff6ab0c217b63d3f7e1335-acceptance-license
+67M	/var/tmp/cp-pair-accept/dist/2159bb202d7bf69fe650c95910c6506a47f730c9-acceptance-license
+67M	/var/tmp/cp-pair-accept/dist/28a3f803fad474795b91de8bbaf32853be5f84df-acceptance-license
+67M	/var/tmp/cp-pair-accept/dist/47f8edc4ed3fa0bbb018962548fe0166f62d7454-acceptance-license
+67M	/var/tmp/cp-pair-accept/dist/5ca497cf7ffd2b32a84d6d6c8383d41beec4c48a-acceptance-license
+67M	/var/tmp/cp-pair-accept/dist/9cb2339f10a0445f26ad7ddcc6058a4c359133f3-acceptance-license
+839M	/var/tmp/cp-pair-accept/dist/a0beb7263d1f4ca72258f6b306f9111ba4e2a334-acceptance-license
+67M	/var/tmp/cp-pair-accept/dist/ecfe39e5b6ab707ba5b7d1c025f225f3147f67a3-acceptance-license
+67M	/var/tmp/cp-pair-accept/dist/f21f5373edf66c7354f1ad5f6ab78b6a7d79940d-acceptance-license
+1.1G	/var/tmp/cp-upd1-build/20261009t213352z
+1.1G	/var/tmp/cp-upd1-build/20261009t213912z

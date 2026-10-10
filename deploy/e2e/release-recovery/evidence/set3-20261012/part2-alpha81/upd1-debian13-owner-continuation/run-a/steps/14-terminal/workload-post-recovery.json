@@ -1,0 +1,192 @@
+{
+  "boot_id": "e1046840-c2d4-4ff1-be16-a65865b9eae6",
+  "budget": {
+    "present": true,
+    "receipts": [
+      {
+        "mtime": 1791534072.070951,
+        "mtime_utc": "2026-10-09T08:21:12.070951Z",
+        "name": "1",
+        "sha256": "4f582e7ff36d440468feb3534972d2e2eeecffa313ba2c08df396e587806cfc8",
+        "snapshot": "20261009T081937Z-from-unknown-to-c309f79e64d144f374d9b98fe5c67a34f9bc885c-c1dd980b20efbf29b08e075f06424572",
+        "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261009T081937Z-from-unknown-to-c309f79e64d144f374d9b98fe5c67a34f9bc885c-c1dd980b20efbf29b08e075f06424572\nattempt=1\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+      },
+      {
+        "mtime": 1791534173.8873641,
+        "mtime_utc": "2026-10-09T08:22:53.887364Z",
+        "name": "2",
+        "sha256": "16f6a2817110ef231dc04b43ffccc5a715d6672fc631540a2669f58e92ba21f2",
+        "snapshot": "20261009T081937Z-from-unknown-to-c309f79e64d144f374d9b98fe5c67a34f9bc885c-c1dd980b20efbf29b08e075f06424572",
+        "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261009T081937Z-from-unknown-to-c309f79e64d144f374d9b98fe5c67a34f9bc885c-c1dd980b20efbf29b08e075f06424572\nattempt=2\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+      },
+      {
+        "mtime": 1791534275.7316332,
+        "mtime_utc": "2026-10-09T08:24:35.731633Z",
+        "name": "3",
+        "sha256": "12b4f7fe61cfaed8f99ca93bdd1dd7763ca7e43246ad9a4460e15605219e7401",
+        "snapshot": "20261009T081937Z-from-unknown-to-c309f79e64d144f374d9b98fe5c67a34f9bc885c-c1dd980b20efbf29b08e075f06424572",
+        "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261009T081937Z-from-unknown-to-c309f79e64d144f374d9b98fe5c67a34f9bc885c-c1dd980b20efbf29b08e075f06424572\nattempt=3\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+      },
+      {
+        "mtime": 1791534406.3444858,
+        "mtime_utc": "2026-10-09T08:26:46.344486Z",
+        "name": "owner.4DzgQb80",
+        "sha256": "c701b70771fd0777707d61776cebad68e95d86ab497ef4eff4198c7dedd370a1",
+        "snapshot": "20261009T081937Z-from-unknown-to-c309f79e64d144f374d9b98fe5c67a34f9bc885c-c1dd980b20efbf29b08e075f06424572",
+        "text": "schema=celikpanel-recovery-dispatch/v1\nsnapshot=20261009T081937Z-from-unknown-to-c309f79e64d144f374d9b98fe5c67a34f9bc885c-c1dd980b20efbf29b08e075f06424572\nattempt=owner\ntoken_sha256=[REDACTED]\noperation=update\nphase=completion\n"
+      }
+    ]
+  },
+  "build": {
+    "agent": {
+      "identity": "version=v0.1.0-alpha.82\ncommit=c309f79e64d144f374d9b98fe5c67a34f9bc885c\n",
+      "returncode": 0,
+      "sha256": "9802ae01b47bdfec311670b67b257d5f0efde2ebccffe9baee9044973416bb28"
+    },
+    "panel": {
+      "identity": "version=v0.1.0-alpha.82\ncommit=c309f79e64d144f374d9b98fe5c67a34f9bc885c\n",
+      "returncode": 0,
+      "sha256": "a15ad5f1843b783b7a2514153b2aa3801604c6cfa5ae4809f1623b4136d125b1"
+    }
+  },
+  "captured_at": "2026-10-09T08:27:13.539901Z",
+  "cron": {
+    "content": "2026-10-09T08:27:01+00:00",
+    "mtime": 1791534421.068604,
+    "ok": true,
+    "path": "/var/www/celikpanel/subscriptions/2/sites/1/upd1-cron-stamp.txt"
+  },
+  "db": {
+    "ok": null,
+    "skipped": "no-owner-database"
+  },
+  "dns_server": "127.0.0.1",
+  "dns_tcp": {
+    "error": "ConnectionRefusedError",
+    "ok": false
+  },
+  "dns_udp": {
+    "error": "TimeoutError",
+    "ok": false
+  },
+  "firewall": {
+    "bytes": 316,
+    "returncode": 0,
+    "sha256": "62da8f9f1843193d5cc776589fc2cb0232478dab1ed164a868ce658a491dc2a2",
+    "status": "ok",
+    "tables": [
+      "table inet celikpanel_fw"
+    ]
+  },
+  "floor": {
+    "present": true,
+    "sha256": "fb2c2ef4d514862e2d1e9e08d4d756d697b63e1e8508d27aae418f184f1ebc9c",
+    "text": "format=celikpanel-release-sequence-floor-v1\nsequence=82\nversion=v0.1.0-alpha.82\n"
+  },
+  "foundation": {
+    "present": true,
+    "sha256": "f09585cb7726ca0f04c06adb3f77140ae711e9b5dc2f18a71eb98cdfd675e48b",
+    "text": "format=celikpanel-release-recovery-foundation-v1\nprotocol=1\nsequence=82\nrelease-version=v0.1.0-alpha.82\nrelease-commit=c309f79e64d144f374d9b98fe5c67a34f9bc885c\nrunner-sha256=659a2f6e6f14d2255ea6fe0de1e391b06e579c3b18ecec13d29ebc35aa79e7b5\nservice-sha256=c570e53138a416a6faf531c2f53e9502ca7aa5cc1131a1f6f6ae870b940fe530\ntimer-sha256=33148e5b0fbc209ff6fd725aaaff2c569bd7470751341d4b83b301d0fa54cd86\nstart-guard-sha256=6abd30be38302b4ad09bd5c7db893aa49b97db779514b3236a2f0a4afb60cc12\nagent-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\npanel-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\nprotocol-sha256=a29874f40088f2b5e960b4ce63651657b1ff2622334dcc5cc11c8f338215034c\n"
+  },
+  "mailbox": {
+    "checked": true,
+    "present": true,
+    "returncode": 0,
+    "status": "ok"
+  },
+  "sampler": {
+    "argv": [
+      "/usr/bin/systemctl",
+      "show",
+      "cp-lab-upd1-sampler.service",
+      "-p",
+      "ActiveState",
+      "-p",
+      "UnitFileState"
+    ],
+    "returncode": 0,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "ActiveState=active\nUnitFileState=enabled\n"
+  },
+  "schema": "celikpanel/upd1-workload-snapshot/v1",
+  "services": {
+    "celikpanel-agent.service": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    },
+    "celikpanel-firewall-restore.service": {
+      "ActiveState": "inactive",
+      "LoadState": "loaded",
+      "SubState": "dead",
+      "UnitFileState": "enabled"
+    },
+    "celikpanel-panel.service": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    },
+    "cron.service": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    },
+    "dovecot.service": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    },
+    "nftables.service": {
+      "ActiveState": "inactive",
+      "LoadState": "loaded",
+      "SubState": "dead",
+      "UnitFileState": "disabled"
+    },
+    "nginx.service": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    },
+    "postfix.service": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "running",
+      "UnitFileState": "enabled"
+    }
+  },
+  "smtp": {
+    "banner_code": "220",
+    "ok": true
+  },
+  "timers": {
+    "celikpanel-release-recovery.timer": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "waiting",
+      "UnitFileState": "enabled"
+    },
+    "certbot.timer": {
+      "ActiveState": "active",
+      "LoadState": "loaded",
+      "SubState": "waiting",
+      "UnitFileState": "enabled"
+    }
+  },
+  "transaction": {
+    "fields": {},
+    "present": false,
+    "status": "ok"
+  },
+  "web": {
+    "marker": true,
+    "ms": 2,
+    "ok": true,
+    "status": 200
+  }
+}

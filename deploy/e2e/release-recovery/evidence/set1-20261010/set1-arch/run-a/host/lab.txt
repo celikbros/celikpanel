@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-set1-arch-a
+set1-arch-20261008t215046z

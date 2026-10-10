@@ -37,6 +37,13 @@ func (a *configHandlerRPCAgent) UpdateConfig(_ *transport.UpdateConfigArgs, repl
 
 func newConfigHandlerPanel(t *testing.T, agent *configHandlerRPCAgent) *Panel {
 	t.Helper()
+	return newConfigHandlerPanelFor(t, agent)
+}
+
+// newConfigHandlerPanelFor builds the panel around any agent that answers the
+// two configuration RPCs.
+func newConfigHandlerPanelFor(t *testing.T, agent any) *Panel {
+	t.Helper()
 	database, err := paneldb.NewSQLiteDB(filepath.Join(t.TempDir(), "panel.sqlite"))
 	if err != nil {
 		t.Fatalf("open test database: %v", err)
@@ -107,7 +114,7 @@ func TestConfigHandlerMapsTypedValidationFailure(t *testing.T) {
 			Message: "config validation failed (nginx): bad directive",
 		}},
 	})
-	payload := []byte(`{"path":"/etc/nginx/nginx.conf","content":"bad directive"}`)
+	payload := []byte(`{"path":"/etc/nginx/nginx.conf","content":"bad directive","version":"cf1-abc"}`)
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/config", bytes.NewReader(payload))
 
@@ -142,7 +149,7 @@ func TestConfigHandlerFailsClosedOnUnknownTypedCode(t *testing.T) {
 			Message: "symbolic link text must not downgrade this protocol failure",
 		}},
 	})
-	payload := []byte(`{"path":"/etc/nginx/nginx.conf","content":"x"}`)
+	payload := []byte(`{"path":"/etc/nginx/nginx.conf","content":"x","version":"cf1-abc"}`)
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/config", bytes.NewReader(payload))
 

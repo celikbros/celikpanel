@@ -1,0 +1,2 @@
+/var/tmp/cp-release-drill-s5-d13-oc-a/cells/7b35331b551e4f15b07e594e/arch 8G 576K
+/var/tmp/cp-release-drill-s5-d13-oc-a/cells/7b35331b551e4f15b07e594e/debian13 8G 576K

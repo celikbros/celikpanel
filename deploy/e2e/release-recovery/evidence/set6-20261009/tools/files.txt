@@ -1,0 +1,5 @@
+set6_trial.py
+set6_redact.py
+run-set6.sh
+test_set6_trial.py
+worker_fixture_origin.py

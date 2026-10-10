@@ -1,0 +1,45 @@
+{
+  "at": "2026-10-09T03:45:54Z",
+  "master_pid": 57140,
+  "mode": "read-queue",
+  "owner_action": false,
+  "postqueue": {
+    "argv": [
+      "postqueue",
+      "-j"
+    ],
+    "at": "2026-10-09T03:45:54Z",
+    "returncode": 69,
+    "seconds": 1.813,
+    "status": "ok",
+    "stderr": "postqueue: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n",
+    "stdout": ""
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "postfix.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 03:45:51 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 03:45:51 UTC",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "exited"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 03:45:51 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "running"
+    }
+  }
+}

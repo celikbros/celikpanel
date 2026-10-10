@@ -1,0 +1,525 @@
+{
+  "calls": [],
+  "checks": [
+    {
+      "detail": {
+        "identities_used": 31,
+        "missing_rows": [],
+        "rows": 31,
+        "unknown_rows": []
+      },
+      "name": "rows (vii): every identity this driver used has exactly one row, and there is no other row",
+      "ok": true
+    },
+    {
+      "detail": {
+        "rows_holding_one": [],
+        "sensitive_values_compared": 21
+      },
+      "name": "rows (vii): no stored answer holds a secret this run was shown (VPN keys, minted and stored passwords)",
+      "ok": true
+    },
+    {
+      "detail": [],
+      "name": "rows (vii): the engine-account and VPN peer rows keep the status only (no stored body)",
+      "ok": true
+    },
+    {
+      "detail": {},
+      "name": "rows (vii): no stored answer contains a private key, a client configuration, a delivery token or a password field",
+      "ok": true
+    },
+    {
+      "detail": {
+        "lifetimes": [
+          86400
+        ],
+        "states": {
+          "done": 30,
+          "interrupted": 1
+        }
+      },
+      "name": "rows (vii): every row lives 24 hours and none is still `running`",
+      "ok": true
+    },
+    {
+      "detail": [
+        "restore (vi, kill)"
+      ],
+      "name": "rows (vii): the interrupted rows are restores of arrival (vi) only, the killed one among them",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T04:32:11Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/231-identities-at-end.json",
+      "lab_action": false,
+      "label": "identities-at-end",
+      "mode": "read-identities",
+      "owner_action": false
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [],
+  "owner_actions": [],
+  "owner_waited_for_idle": {
+    "at": "2026-10-09T04:32:10Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.2
+  },
+  "rows": {
+    "by_route": {
+      "/api/v1/database-servers/{id}/admin-account": {
+        "retained": 0,
+        "rows": 4,
+        "states": {
+          "done": 4
+        },
+        "status_only": 4
+      },
+      "/api/v1/database-servers/{id}/databases": {
+        "retained": 2,
+        "rows": 5,
+        "states": {
+          "done": 5
+        },
+        "status_only": 3
+      },
+      "/api/v1/domains/{id}/backups": {
+        "retained": 2,
+        "rows": 2,
+        "states": {
+          "done": 2
+        },
+        "status_only": 0
+      },
+      "/api/v1/domains/{id}/backups/restore": {
+        "retained": 6,
+        "rows": 7,
+        "states": {
+          "done": 6,
+          "interrupted": 1
+        },
+        "status_only": 1
+      },
+      "/api/v1/domains/{id}/databases": {
+        "retained": 4,
+        "rows": 4,
+        "states": {
+          "done": 4
+        },
+        "status_only": 0
+      },
+      "/api/v1/domains/{id}/ssl/letsencrypt": {
+        "retained": 3,
+        "rows": 3,
+        "states": {
+          "done": 3
+        },
+        "status_only": 0
+      },
+      "/api/v1/import/cpanel/apply": {
+        "retained": 4,
+        "rows": 4,
+        "states": {
+          "done": 4
+        },
+        "status_only": 0
+      },
+      "/api/v1/vpn/peers": {
+        "retained": 0,
+        "rows": 2,
+        "states": {
+          "done": 2
+        },
+        "status_only": 2
+      }
+    },
+    "count": 31,
+    "rows_holding_a_sensitive_value_of_this_run": [],
+    "sensitive_values_compared": 21,
+    "states": {
+      "done": 30,
+      "interrupted": 1
+    },
+    "table": [
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/databases",
+        "status": "done",
+        "stored_bytes": 106,
+        "stored_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "used_for": "domain-database-mariadb (i)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/databases",
+        "status": "done",
+        "stored_bytes": 106,
+        "stored_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "used_for": "domain-database-mariadb (ii)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/databases",
+        "status": "done",
+        "stored_bytes": 111,
+        "stored_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "used_for": "domain-database-postgresql (i)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/databases",
+        "status": "done",
+        "stored_bytes": 111,
+        "stored_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "used_for": "domain-database-postgresql (ii)"
+      },
+      {
+        "response_status": 200,
+        "retained": 0,
+        "route": "/api/v1/database-servers/{id}/admin-account",
+        "status": "done",
+        "stored_bytes": null,
+        "stored_keys": null,
+        "used_for": "admin-account-mariadb (i)"
+      },
+      {
+        "response_status": 200,
+        "retained": 0,
+        "route": "/api/v1/database-servers/{id}/admin-account",
+        "status": "done",
+        "stored_bytes": null,
+        "stored_keys": null,
+        "used_for": "admin-account-mariadb (ii)"
+      },
+      {
+        "response_status": 200,
+        "retained": 0,
+        "route": "/api/v1/database-servers/{id}/admin-account",
+        "status": "done",
+        "stored_bytes": null,
+        "stored_keys": null,
+        "used_for": "admin-account-postgresql (i)"
+      },
+      {
+        "response_status": 200,
+        "retained": 0,
+        "route": "/api/v1/database-servers/{id}/admin-account",
+        "status": "done",
+        "stored_bytes": null,
+        "stored_keys": null,
+        "used_for": "admin-account-postgresql (ii)"
+      },
+      {
+        "response_status": 200,
+        "retained": 0,
+        "route": "/api/v1/database-servers/{id}/databases",
+        "status": "done",
+        "stored_bytes": null,
+        "stored_keys": null,
+        "used_for": "server-database-mariadb (i)"
+      },
+      {
+        "response_status": 200,
+        "retained": 0,
+        "route": "/api/v1/database-servers/{id}/databases",
+        "status": "done",
+        "stored_bytes": null,
+        "stored_keys": null,
+        "used_for": "server-database-mariadb (ii)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/database-servers/{id}/databases",
+        "status": "done",
+        "stored_bytes": 98,
+        "stored_keys": [
+          "created_at",
+          "id",
+          "name",
+          "user"
+        ],
+        "used_for": "server-database-postgresql (i)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/database-servers/{id}/databases",
+        "status": "done",
+        "stored_bytes": 98,
+        "stored_keys": [
+          "created_at",
+          "id",
+          "name",
+          "user"
+        ],
+        "used_for": "server-database-postgresql (ii)"
+      },
+      {
+        "response_status": 200,
+        "retained": 0,
+        "route": "/api/v1/database-servers/{id}/databases",
+        "status": "done",
+        "stored_bytes": null,
+        "stored_keys": null,
+        "used_for": "server-database-postgresql (a password the owner sent)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/backups",
+        "status": "done",
+        "stored_bytes": 204,
+        "stored_keys": [
+          "backup",
+          "success"
+        ],
+        "used_for": "backup (i)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/backups",
+        "status": "done",
+        "stored_bytes": 205,
+        "stored_keys": [
+          "backup",
+          "success"
+        ],
+        "used_for": "backup (ii)"
+      },
+      {
+        "response_status": 500,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/ssl/letsencrypt",
+        "status": "done",
+        "stored_bytes": 52,
+        "stored_keys": [
+          "code",
+          "error"
+        ],
+        "used_for": "letsencrypt (one entry, for comparison)"
+      },
+      {
+        "response_status": 500,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/ssl/letsencrypt",
+        "status": "done",
+        "stored_bytes": 52,
+        "stored_keys": [
+          "code",
+          "error"
+        ],
+        "used_for": "letsencrypt (i)"
+      },
+      {
+        "response_status": 500,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/ssl/letsencrypt",
+        "status": "done",
+        "stored_bytes": 52,
+        "stored_keys": [
+          "code",
+          "error"
+        ],
+        "used_for": "letsencrypt (ii)"
+      },
+      {
+        "response_status": 200,
+        "retained": 0,
+        "route": "/api/v1/vpn/peers",
+        "status": "done",
+        "stored_bytes": null,
+        "stored_keys": null,
+        "used_for": "vpn-peer (i)"
+      },
+      {
+        "response_status": 200,
+        "retained": 0,
+        "route": "/api/v1/vpn/peers",
+        "status": "done",
+        "stored_bytes": null,
+        "stored_keys": null,
+        "used_for": "vpn-peer (ii)"
+      },
+      {
+        "response_status": 202,
+        "retained": 1,
+        "route": "/api/v1/import/cpanel/apply",
+        "status": "done",
+        "stored_bytes": 698,
+        "stored_keys": [
+          "domain_id",
+          "site_id",
+          "status",
+          "steps"
+        ],
+        "used_for": "import (an archive as tar writes it)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/import/cpanel/apply",
+        "status": "done",
+        "stored_bytes": 689,
+        "stored_keys": [
+          "domain_id",
+          "site_id",
+          "status",
+          "steps"
+        ],
+        "used_for": "import (i)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/import/cpanel/apply",
+        "status": "done",
+        "stored_bytes": 689,
+        "stored_keys": [
+          "domain_id",
+          "site_id",
+          "status",
+          "steps"
+        ],
+        "used_for": "import (ii)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/import/cpanel/apply",
+        "status": "done",
+        "stored_bytes": 696,
+        "stored_keys": [
+          "domain_id",
+          "site_id",
+          "status",
+          "steps"
+        ],
+        "used_for": "import (v)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/backups/restore",
+        "status": "done",
+        "stored_bytes": 217,
+        "stored_keys": [
+          "safety_backup",
+          "success"
+        ],
+        "used_for": "restore (i)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/backups/restore",
+        "status": "done",
+        "stored_bytes": 217,
+        "stored_keys": [
+          "safety_backup",
+          "success"
+        ],
+        "used_for": "restore (ii)"
+      },
+      {
+        "response_status": 409,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/backups/restore",
+        "status": "done",
+        "stored_bytes": 230,
+        "stored_keys": [
+          "code",
+          "error"
+        ],
+        "used_for": "restore (two identities at once)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/backups/restore",
+        "status": "done",
+        "stored_bytes": 217,
+        "stored_keys": [
+          "safety_backup",
+          "success"
+        ],
+        "used_for": "restore (two identities at once)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/backups/restore",
+        "status": "done",
+        "stored_bytes": 217,
+        "stored_keys": [
+          "safety_backup",
+          "success"
+        ],
+        "used_for": "restore (v)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/backups/restore",
+        "status": "done",
+        "stored_bytes": 217,
+        "stored_keys": [
+          "safety_backup",
+          "success"
+        ],
+        "used_for": "restore (vi, restart)"
+      },
+      {
+        "response_status": 0,
+        "retained": 0,
+        "route": "/api/v1/domains/{id}/backups/restore",
+        "status": "interrupted",
+        "stored_bytes": null,
+        "stored_keys": null,
+        "used_for": "restore (vi, kill)"
+      }
+    ]
+  },
+  "section": "C9-identities",
+  "started_at": "2026-10-09T04:32:10Z",
+  "substeps": {
+    "rows": "passed"
+  },
+  "title": "the request_identities rows",
+  "verdict": "passed"
+}

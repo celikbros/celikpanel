@@ -1,0 +1,38 @@
+{
+  "action": "owner-edit",
+  "after": {
+    "exists": true,
+    "gid": 989,
+    "group": "celikpanel",
+    "inode": 269851,
+    "mode": "0644",
+    "mtime_ns": 1791517211970790697,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/postfix/main.cf",
+    "sha256": "6504c22bf4b97216d0d4ded391b04969074d910e331ba6a4f3f9cb17e7ef16c8",
+    "size": 3986,
+    "type": "regular",
+    "uid": 0
+  },
+  "at": "2026-10-09T03:40:11Z",
+  "before": {
+    "exists": true,
+    "gid": 989,
+    "group": "celikpanel",
+    "inode": 269851,
+    "mode": "0644",
+    "mtime_ns": 1791517208546817388,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/postfix/main.cf",
+    "sha256": "c24aada9da037e4d58e1a4612e0c83744e5afadf794460f80e21489868211c65",
+    "size": 3992,
+    "type": "regular",
+    "uid": 0
+  },
+  "mode": "owner-edit",
+  "owner_action": true,
+  "path": "/etc/postfix/main.cf",
+  "schema": "celikpanel/set1-native/v1"
+}

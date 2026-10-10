@@ -1,0 +1,319 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-09T07:24:01Z",
+      "json": {
+        "enabled": false,
+        "version": "bs1-a451686b962008db0e385f50feb14a1922948fda32d1f34fccc0688d7752a682"
+      },
+      "label": "S3 read (no schedule)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/backups/schedule"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SETTINGS_VERSION_REQUIRED",
+        "error": "This request did not say which settings it was built from, so nothing was changed. Reload the page so it reads the current settings, then make the change again.",
+        "reason": "backup_schedule"
+      },
+      "at": "2026-10-09T07:24:01Z",
+      "catalogue_texts": {
+        "backup.auto.stale": {
+          "en": "The automatic backup settings changed on the server after this page loaded, so nothing was saved. What you chose is still shown below. Reload the current settings, then make your change again.",
+          "tr": "Otomatik yedek ayarları bu sayfa yüklendikten sonra sunucuda değişti; bu yüzden hiçbir şey kaydedilmedi. Seçtikleriniz aşağıda duruyor. Geçerli ayarları yeniden yükleyin, sonra değişikliğinizi tekrar yapın."
+        }
+      },
+      "json": {
+        "code": "SETTINGS_VERSION_REQUIRED",
+        "error": "This request did not say which settings it was built from, so nothing was changed. Reload the page so it reads the current settings, then make the change again.",
+        "reason": "backup_schedule"
+      },
+      "label": "S3 create without a version",
+      "request": {
+        "body": {
+          "backup_type": "full",
+          "frequency": "weekly",
+          "retention": 30
+        },
+        "method": "PUT",
+        "path": "/api/v1/domains/1/backups/schedule"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:24:01Z",
+      "json": {
+        "success": true,
+        "version": "bs1-4f75b6db4a759e7a59f7dd36b346af84183b80ba887d440bf303357b5b217f89"
+      },
+      "label": "S3 create weekly/full/30",
+      "request": {
+        "body": {
+          "backup_type": "full",
+          "frequency": "weekly",
+          "retention": 30,
+          "version": "bs1-a451686b962008db0e385f50feb14a1922948fda32d1f34fccc0688d7752a682"
+        },
+        "method": "PUT",
+        "path": "/api/v1/domains/1/backups/schedule"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "backup_schedule"
+      },
+      "at": "2026-10-09T07:24:01Z",
+      "catalogue_texts": {
+        "backup.auto.stale": {
+          "en": "The automatic backup settings changed on the server after this page loaded, so nothing was saved. What you chose is still shown below. Reload the current settings, then make your change again.",
+          "tr": "Otomatik yedek ayarları bu sayfa yüklendikten sonra sunucuda değişti; bu yüzden hiçbir şey kaydedilmedi. Seçtikleriniz aşağıda duruyor. Geçerli ayarları yeniden yükleyin, sonra değişikliğinizi tekrar yapın."
+        }
+      },
+      "json": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "backup_schedule"
+      },
+      "label": "S3 stale write (the version from before the create)",
+      "request": {
+        "body": {
+          "backup_type": "files",
+          "frequency": "daily",
+          "retention": 7,
+          "version": "bs1-a451686b962008db0e385f50feb14a1922948fda32d1f34fccc0688d7752a682"
+        },
+        "method": "PUT",
+        "path": "/api/v1/domains/1/backups/schedule"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:24:02Z",
+      "json": {
+        "success": true,
+        "version": "bs1-db12901d6968df0617f8320a2c6507433bc7d4c4662b289d4d1b7ce616a48cce"
+      },
+      "label": "S3 change retention to 14 with the current version",
+      "request": {
+        "body": {
+          "backup_type": "full",
+          "frequency": "weekly",
+          "retention": 14,
+          "version": "bs1-4f75b6db4a759e7a59f7dd36b346af84183b80ba887d440bf303357b5b217f89"
+        },
+        "method": "PUT",
+        "path": "/api/v1/domains/1/backups/schedule"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:24:02Z",
+      "json": {
+        "backup_type": "full",
+        "enabled": true,
+        "frequency": "weekly",
+        "last_attempt": null,
+        "last_error": null,
+        "last_run": null,
+        "last_status": null,
+        "retention": 14,
+        "version": "bs1-db12901d6968df0617f8320a2c6507433bc7d4c4662b289d4d1b7ce616a48cce"
+      },
+      "label": "S3 read after the change",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/backups/schedule"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:24:02Z",
+      "json": {
+        "backups": null
+      },
+      "label": "S3 backups list (read-only)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/backups"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": null,
+      "name": "the domain has no schedule row before the section",
+      "ok": true
+    },
+    {
+      "detail": {
+        "enabled": false,
+        "version": "bs1-a451686b962008db0e385f50feb14a1922948fda32d1f34fccc0688d7752a682"
+      },
+      "name": "read answers 200, off, with a version",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SETTINGS_VERSION_REQUIRED",
+        "error": "This request did not say which settings it was built from, so nothing was changed. Reload the page so it reads the current settings, then make the change again.",
+        "reason": "backup_schedule",
+        "status": 409,
+        "vars": null
+      },
+      "name": "a write without a version is refused 409 SETTINGS_VERSION_REQUIRED (backup_schedule)",
+      "ok": true
+    },
+    {
+      "detail": null,
+      "name": "no row was written by the refused write",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "success": true,
+          "version": "bs1-4f75b6db4a759e7a59f7dd36b346af84183b80ba887d440bf303357b5b217f89"
+        },
+        "row": [
+          "weekly",
+          "full",
+          30,
+          1
+        ]
+      },
+      "name": "the schedule is created (200) and the database row is weekly/full/30/on",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SETTINGS_CHANGED",
+        "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+        "reason": "backup_schedule",
+        "status": 409,
+        "vars": null
+      },
+      "name": "a stale write is refused 409 SETTINGS_CHANGED (backup_schedule)",
+      "ok": true
+    },
+    {
+      "detail": null,
+      "name": "the row is unchanged by the stale write",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "success": true,
+          "version": "bs1-db12901d6968df0617f8320a2c6507433bc7d4c4662b289d4d1b7ce616a48cce"
+        },
+        "row": [
+          "weekly",
+          "full",
+          14,
+          1
+        ]
+      },
+      "name": "a valid change is applied (200; row weekly/full/14/on)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "backup_type": "full",
+        "enabled": true,
+        "frequency": "weekly",
+        "last_attempt": null,
+        "last_error": null,
+        "last_run": null,
+        "last_status": null,
+        "retention": 14,
+        "version": "bs1-db12901d6968df0617f8320a2c6507433bc7d4c4662b289d4d1b7ce616a48cce"
+      },
+      "name": "the read shows the saved settings and the version the change answered",
+      "ok": true
+    },
+    {
+      "detail": {
+        "listed": 0,
+        "retention": 14,
+        "scheduled_files_or_full": 0,
+        "would_keep": [],
+        "would_prune": []
+      },
+      "name": "what the next scheduled run would prune follows the saved retention (the product's rule over the listed scheduled copies; the row holds 14)",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T07:24:02Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/060-a-rows-before.json",
+      "label": "a-rows-before",
+      "mode": "read-panel-rows",
+      "owner_action": false
+    },
+    {
+      "file": "native/061-b-rows-after-versionless.json",
+      "label": "b-rows-after-versionless",
+      "mode": "read-panel-rows",
+      "owner_action": false
+    },
+    {
+      "file": "native/062-c-rows-after-create.json",
+      "label": "c-rows-after-create",
+      "mode": "read-panel-rows",
+      "owner_action": false
+    },
+    {
+      "file": "native/063-d-rows-after-stale.json",
+      "label": "d-rows-after-stale",
+      "mode": "read-panel-rows",
+      "owner_action": false
+    },
+    {
+      "file": "native/064-e-rows-after-change.json",
+      "label": "e-rows-after-change",
+      "mode": "read-panel-rows",
+      "owner_action": false
+    }
+  ],
+  "next_run_prune": {
+    "listed": 0,
+    "retention": 14,
+    "scheduled_files_or_full": 0,
+    "would_keep": [],
+    "would_prune": []
+  },
+  "node": "debian13",
+  "notes": [
+    {
+      "detail": null,
+      "note": "only 0 scheduled copies exist, so no copy would be pruned; the prune itself was not exercised"
+    }
+  ],
+  "owner_actions": [],
+  "section": "S3-backup-schedule",
+  "started_at": "2026-10-09T07:24:00Z",
+  "substeps": {
+    "section": "passed"
+  },
+  "title": "automatic backup schedule",
+  "verdict": "passed"
+}

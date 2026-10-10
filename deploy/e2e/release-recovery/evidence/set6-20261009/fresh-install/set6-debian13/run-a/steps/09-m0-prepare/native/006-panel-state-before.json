@@ -1,0 +1,150 @@
+{
+  "at": "2026-10-09T22:17:27Z",
+  "lab_action": false,
+  "mode": "read-panel-state",
+  "owner_action": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "state": {
+    "audit_counts": {
+      "auth.login": 1,
+      "domain.create": 1,
+      "server.setup.child:certbot": 1,
+      "server.setup.child:cron": 1,
+      "server.setup.child:mariadb": 1,
+      "server.setup.child:nginx": 1,
+      "server.setup.child:php-fpm": 1,
+      "server.setup.child:postgresql": 1,
+      "server.setup.child:protected-mail": 1,
+      "server.setup.child:webmail": 1,
+      "server.setup.draft": 1,
+      "server.setup.guidance": 1,
+      "server.setup.start:web_mail": 1,
+      "subscription.bootstrap": 1
+    },
+    "audit_logs": [
+      {
+        "action": "auth.login",
+        "created_at": "2026-10-09 22:10:42",
+        "id": 1,
+        "resource_id": null,
+        "resource_type": null
+      },
+      {
+        "action": "server.setup.guidance",
+        "created_at": "2026-10-09 22:10:42",
+        "id": 2,
+        "resource_id": null,
+        "resource_type": "guided"
+      },
+      {
+        "action": "server.setup.draft",
+        "created_at": "2026-10-09 22:10:42",
+        "id": 3,
+        "resource_id": null,
+        "resource_type": null
+      },
+      {
+        "action": "server.setup.start:web_mail",
+        "created_at": "2026-10-09 22:10:43",
+        "id": 4,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "server.setup.child:mariadb",
+        "created_at": "2026-10-09 22:11:33",
+        "id": 5,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "server.setup.child:nginx",
+        "created_at": "2026-10-09 22:11:42",
+        "id": 6,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "server.setup.child:php-fpm",
+        "created_at": "2026-10-09 22:11:59",
+        "id": 7,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "server.setup.child:postgresql",
+        "created_at": "2026-10-09 22:12:24",
+        "id": 8,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "server.setup.child:webmail",
+        "created_at": "2026-10-09 22:13:39",
+        "id": 9,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "server.setup.child:protected-mail",
+        "created_at": "2026-10-09 22:15:03",
+        "id": 10,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "server.setup.child:cron",
+        "created_at": "2026-10-09 22:15:11",
+        "id": 11,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "server.setup.child:certbot",
+        "created_at": "2026-10-09 22:15:20",
+        "id": 12,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "subscription.bootstrap",
+        "created_at": "2026-10-09 22:17:25",
+        "id": 13,
+        "resource_id": 2,
+        "resource_type": "subscription"
+      },
+      {
+        "action": "domain.create",
+        "created_at": "2026-10-09 22:17:25",
+        "id": 14,
+        "resource_id": 1,
+        "resource_type": "domain"
+      }
+    ],
+    "audit_max_id": 14,
+    "database_servers": [],
+    "database_user_grants": [],
+    "database_users": [],
+    "databases_v2": [],
+    "domains": [
+      {
+        "id": 1,
+        "name": "set1-owner.test",
+        "status": "active",
+        "subscription_id": 2
+      }
+    ],
+    "email_accounts": [
+      {
+        "address": "owner@set1-owner.test",
+        "domain_id": 1,
+        "id": 1,
+        "quota_mb": 100
+      }
+    ],
+    "email_forwardings": [],
+    "ssl_certificates": [],
+    "subscription_entitlements": [],
+    "vpn_peers": []
+  }
+}

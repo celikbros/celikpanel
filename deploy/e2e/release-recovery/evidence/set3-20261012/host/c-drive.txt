@@ -1,0 +1,4 @@
+﻿2026-10-09T06:15:30Z before any work free_bytes=122611552256 free_GiB=114.2
+2026-10-09T06:46:06Z stock-take after the stall free_bytes=122573209600 free_GiB=114.2
+2026-10-09T06:59:16Z before set3-ubuntu, rid3-ubuntu, rid3-debian13 (run-a) free_bytes=119067242496 free_GiB=110.9
+2026-10-09T08:40:26Z end (all cells staged, all overlays of this run removed) free_bytes=86782107648 free_GiB=80.8

@@ -1,0 +1,8 @@
+2026-10-09T10:30:41.150683+00:00 dns-arch systemd[1]: Starting [systemd-run] /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/current-worker-baseline-driver.py...
+2026-10-09T10:31:20.295629+00:00 dns-arch groupadd[6020]: group added to /etc/group: name=celikpanel, GID=969
+2026-10-09T10:31:20.318852+00:00 dns-arch groupadd[6020]: group added to /etc/gshadow: name=celikpanel
+2026-10-09T10:31:20.318940+00:00 dns-arch groupadd[6020]: new group: name=celikpanel, GID=969
+2026-10-09T10:31:20.377603+00:00 dns-arch useradd[6022]: new user: name=celikpanel, UID=969, GID=969, home=/var/lib/celikpanel, shell=/usr/sbin/nologin, from=none
+2026-10-09T10:31:31.770206+00:00 dns-arch systemd[1]: celikpanel-lab-current-worker-baseline.service: Deactivated successfully.
+2026-10-09T10:31:31.770524+00:00 dns-arch systemd[1]: Finished [systemd-run] /usr/bin/python3 -I /root/celikpanel-release-recovery-lab/current-worker-baseline-driver.py.
+2026-10-09T10:31:31.770844+00:00 dns-arch systemd[1]: celikpanel-lab-current-worker-baseline.service: Consumed 33.444s CPU time over 50.619s wall clock time, 1.2G memory peak.

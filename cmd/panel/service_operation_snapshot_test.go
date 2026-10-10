@@ -1441,6 +1441,9 @@ func createPreLedgerPanelDatabaseInDirectory(t *testing.T, directory string) str
 		t.Fatal(err)
 	}
 	if _, err := database.GetDB().Exec(`
+        -- Reverse the request identity table (migration 43, D-029).
+        DROP TABLE request_identities;
+
         -- Reverse remote DNS associations before the DNS ownership column.
         DROP TRIGGER remote_dns_domain_delete_requires_receipt;
         DROP TRIGGER domain_dns_remote_connection_immutable;

@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Users, Plus, Trash2, LogIn, Pause, Play, Pencil, Save, X, Layers } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import { useAuth } from '../auth/AuthContext';
 import { type PanelUser, type ServicePlan } from '../lib/api';
-import { Button, EmptyState, Spinner, StatusDot, inputClass } from './ui';
+import { Button, CouldNotCheck, KnownEmpty, RemoteGate, StatusDot, inputClass } from './ui';
 import { PageHeader } from './PageHeader';
 import { readApiError, apiErrorText } from '../lib/apiError';
+import { countText, mapRemote, useRemote } from '../lib/remote';
+import { PLANS_URL, USERS_URL, decodePlans, decodeUsers } from '../lib/accounts';
 import { TeamMembersPage } from './TeamMembersPage';
 
 // Account management: the admin/reseller view over the role hierarchy.
@@ -52,9 +54,8 @@ function AccountUsersPage({ role }: { role: 'admin' | 'reseller' }) {
 
 function AccountsTab({ isAdmin }: { isAdmin: boolean }) {
     const { t } = useI18n();
-    const [users, setUsers] = useState<PanelUser[]>([]);
-    const [plans, setPlans] = useState<ServicePlan[]>([]);
-    const [loading, setLoading] = useState(true);
+    const users = useRemote(USERS_URL, decodeUsers);
+    const plans = useRemote(PLANS_URL, decodePlans);
     const [showForm, setShowForm] = useState(false);
 
     const [username, setUsername] = useState('');
@@ -64,24 +65,19 @@ function AccountsTab({ isAdmin }: { isAdmin: boolean }) {
     const [planID, setPlanID] = useState(0);
     const [saving, setSaving] = useState(false);
 
-    const load = async () => {
-        try {
-            const [ur, pr] = await Promise.all([
-                fetch('/api/v1/users').then((r) => (r.ok ? r.json() : { users: [] })),
-                fetch('/api/v1/plans').then((r) => (r.ok ? r.json() : { plans: [] })),
-            ]);
-            setUsers(ur.users || []);
-            setPlans(pr.plans || []);
-        } catch {
-            showToast('error', t('common.error'));
-        } finally {
-            setLoading(false);
-        }
+    const load = () => {
+        void users.retry();
+        void plans.retry();
     };
-
-    useEffect(() => {
-        load();
-    }, []);
+    // An account is created with one of the plans the server named, and a row
+    // is changed as the server last listed it. Neither is offered on a list
+    // that is being read again or could not be read.
+    // Hesap, sunucunun adlandırdığı planlardan biriyle oluşturulur; satır da
+    // sunucunun son listelediği hâliyle değiştirilir. Liste yeniden okunurken
+    // ya da okunamadığında ikisi de sunulmaz.
+    const usersKnown = users.remote.state === 'known' && !users.reading;
+    const plansKnown = plans.remote.state === 'known';
+    const planOptions = plans.remote.state === 'known' ? plans.remote.value : [];
 
     // Conflict answers (quota, children, duplicates) carry real reasons from
     // the API; the coded contract picks a localized text when the refusal
@@ -92,17 +88,31 @@ function AccountsTab({ isAdmin }: { isAdmin: boolean }) {
     const apiError = async (res: Response) => {
         showToast('error', apiErrorText(await readApiError(res), t));
     };
+    // The answer to a change did not arrive: it is not known whether it was
+    // made. Nothing is sent again; the list is read so the person can look.
+    // Değişikliğin yanıtı gelmedi: yapılıp yapılmadığı bilinmiyor. Hiçbir şey
+    // yeniden gönderilmez; kişi bakabilsin diye liste okunur.
+    const send = async (url: string, init: RequestInit): Promise<Response | null> => {
+        try {
+            return await fetch(url, init);
+        } catch {
+            showToast('error', t('common.resultUnknown'));
+            load();
+            return null;
+        }
+    };
 
     const createUser = async () => {
         setSaving(true);
         try {
             const body: Record<string, unknown> = { username, email, password, role: newRole };
             if (planID > 0) body.plan_id = planID;
-            const res = await fetch('/api/v1/users', {
+            const res = await send('/api/v1/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
             });
+            if (!res) return;
             if (!res.ok) {
                 await apiError(res);
                 return;
@@ -120,11 +130,12 @@ function AccountsTab({ isAdmin }: { isAdmin: boolean }) {
 
     const setStatus = async (u: PanelUser, status: 'active' | 'suspended') => {
         if (status === 'suspended' && !confirm(t('users.suspendConfirm', { name: u.username }))) return;
-        const res = await fetch(`/api/v1/users/${u.id}`, {
+        const res = await send(`/api/v1/users/${u.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status }),
         });
+        if (!res) return;
         if (!res.ok) {
             await apiError(res);
             return;
@@ -135,7 +146,8 @@ function AccountsTab({ isAdmin }: { isAdmin: boolean }) {
 
     const deleteUser = async (u: PanelUser) => {
         if (!confirm(t('users.deleteConfirm', { name: u.username }))) return;
-        const res = await fetch(`/api/v1/users/${u.id}`, { method: 'DELETE' });
+        const res = await send(`/api/v1/users/${u.id}`, { method: 'DELETE' });
+        if (!res) return;
         if (!res.ok) {
             await apiError(res);
             return;
@@ -145,7 +157,8 @@ function AccountsTab({ isAdmin }: { isAdmin: boolean }) {
     };
 
     const impersonate = async (u: PanelUser) => {
-        const res = await fetch(`/api/v1/users/${u.id}/impersonate`, { method: 'POST' });
+        const res = await send(`/api/v1/users/${u.id}/impersonate`, { method: 'POST' });
+        if (!res) return;
         if (!res.ok) {
             await apiError(res);
             return;
@@ -161,13 +174,22 @@ function AccountsTab({ isAdmin }: { isAdmin: boolean }) {
     return (
         <div>
             <div className="mb-3 flex items-center justify-between">
-                <span className="text-xs text-fg-subtle">{t('common.itemsTotal', { n: users.length })}</span>
-                <Button variant="primary" icon={Plus} onClick={() => setShowForm((s) => !s)}>
+                <span className="text-xs text-fg-subtle">{t('common.itemsTotal', { n: countText(mapRemote(users.remote, (rows) => rows.length)) })}</span>
+                <Button variant="primary" icon={Plus} disabled={!usersKnown || !plansKnown} onClick={() => setShowForm((s) => !s)}>
                     {t('users.add')}
                 </Button>
             </div>
 
-            {showForm && (
+            {plans.remote.state === 'unknown' && (
+                <CouldNotCheck
+                    className="mb-4"
+                    text={t('users.plansUnknown')}
+                    onRetry={() => void plans.retry()}
+                    busy={plans.reading}
+                />
+            )}
+
+            {showForm && plansKnown && (
                 <div className="mb-4 rounded-xl border border-border bg-surface-2/50 p-4">
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
                         <label>
@@ -198,7 +220,7 @@ function AccountsTab({ isAdmin }: { isAdmin: boolean }) {
                             <span className="mb-1 block text-xs text-fg-muted">{t('users.form.plan')}</span>
                             <select value={planID} onChange={(e) => setPlanID(Number(e.target.value))} className={inputClass}>
                                 <option value={0}>{t('users.form.noPlan')}</option>
-                                {plans.map((p) => (
+                                {planOptions.map((p) => (
                                     <option key={p.id} value={p.id}>
                                         {p.name}
                                     </option>
@@ -212,7 +234,7 @@ function AccountsTab({ isAdmin }: { isAdmin: boolean }) {
                             variant="primary"
                             icon={Plus}
                             onClick={createUser}
-                            disabled={saving || !username || !email || password.length < 8}
+                            disabled={saving || !usersKnown || !username || !email || password.length < 8}
                         >
                             {t('users.create')}
                         </Button>
@@ -220,82 +242,87 @@ function AccountsTab({ isAdmin }: { isAdmin: boolean }) {
                 </div>
             )}
 
-            {loading ? (
-                <div className="flex items-center justify-center py-16">
-                    <Spinner />
-                </div>
-            ) : users.length === 0 ? (
-                <EmptyState icon={Users} title={t('users.empty')} hint={t('users.emptyHint')} />
-            ) : (
-                <div className="overflow-x-auto rounded-xl border border-border-strong bg-surface">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
-                                <th className="px-4 py-2.5">{t('users.col.user')}</th>
-                                <th className="px-4 py-2.5">{t('users.col.role')}</th>
-                                <th className="px-4 py-2.5">{t('users.col.status')}</th>
-                                {isAdmin && <th className="px-4 py-2.5">{t('users.col.parent')}</th>}
-                                <th className="px-4 py-2.5">{t('users.col.usage')}</th>
-                                <th className="px-4 py-2.5" />
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {users.map((u) => (
-                                <tr key={u.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-                                    <td className="px-4 py-3">
-                                        <div className="text-base font-medium text-fg">{u.username}</div>
-                                        <div className="text-xs text-fg-subtle">{u.email}</div>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <span
-                                            className={`rounded-md px-2 py-0.5 text-xs font-medium ${
-                                                u.role === 'admin'
-                                                    ? 'bg-danger/10 text-danger'
-                                                    : u.role === 'reseller'
-                                                      ? 'bg-warning/15 text-warning'
-                                                      : 'bg-primary/10 text-primary'
-                                            }`}
-                                        >
-                                            {t(roleKey(u.role))}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <span className="inline-flex items-center gap-1.5 text-fg-muted">
-                                            <StatusDot ok={u.status === 'active'} />
-                                            {u.status === 'active' ? t('users.status.active') : t('users.status.suspended')}
-                                        </span>
-                                    </td>
-                                    {isAdmin && <td className="px-4 py-3 text-fg-muted">{u.parent_name || '—'}</td>}
-                                    <td className="px-4 py-3 text-fg-muted">
-                                        {u.subscriptions} / {u.domains}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        {u.role !== 'admin' && (
-                                            <div className="flex items-center justify-end gap-0.5">
-                                                <RowBtn title={t('users.loginAs')} onClick={() => impersonate(u)}>
-                                                    <LogIn className="h-4 w-4" />
-                                                </RowBtn>
-                                                {u.status === 'active' ? (
-                                                    <RowBtn title={t('users.suspend')} onClick={() => setStatus(u, 'suspended')}>
-                                                        <Pause className="h-4 w-4" />
-                                                    </RowBtn>
-                                                ) : (
-                                                    <RowBtn title={t('users.activate')} onClick={() => setStatus(u, 'active')}>
-                                                        <Play className="h-4 w-4" />
-                                                    </RowBtn>
-                                                )}
-                                                <RowBtn danger title={t('users.delete')} onClick={() => deleteUser(u)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </RowBtn>
-                                            </div>
-                                        )}
-                                    </td>
+            <RemoteGate
+                remote={users.remote}
+                checking={t('users.checking')}
+                failed={t('users.unknown')}
+                onRetry={() => void users.retry()}
+                busy={users.reading}
+                className="py-3"
+            >
+                {(shown) => (shown.value.length === 0 ? (
+                    <KnownEmpty of={shown} icon={Users} title={t('users.empty')} hint={t('users.emptyHint')} />
+                ) : (
+                    <div className="overflow-x-auto rounded-xl border border-border-strong bg-surface">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
+                                    <th className="px-4 py-2.5">{t('users.col.user')}</th>
+                                    <th className="px-4 py-2.5">{t('users.col.role')}</th>
+                                    <th className="px-4 py-2.5">{t('users.col.status')}</th>
+                                    {isAdmin && <th className="px-4 py-2.5">{t('users.col.parent')}</th>}
+                                    <th className="px-4 py-2.5">{t('users.col.usage')}</th>
+                                    <th className="px-4 py-2.5" />
                                 </tr>
-                            ))}
+                            </thead>
+                            <tbody>
+                                {shown.value.map((u) => (
+                                    <tr key={u.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                                        <td className="px-4 py-3">
+                                            <div className="text-base font-medium text-fg">{u.username}</div>
+                                            <div className="text-xs text-fg-subtle">{u.email}</div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span
+                                                className={`rounded-md px-2 py-0.5 text-xs font-medium ${
+                                                    u.role === 'admin'
+                                                        ? 'bg-danger/10 text-danger'
+                                                        : u.role === 'reseller'
+                                                          ? 'bg-warning/15 text-warning'
+                                                          : 'bg-primary/10 text-primary'
+                                                }`}
+                                            >
+                                                {t(roleKey(u.role))}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className="inline-flex items-center gap-1.5 text-fg-muted">
+                                                <StatusDot ok={u.status === 'active'} />
+                                                {u.status === 'active' ? t('users.status.active') : t('users.status.suspended')}
+                                            </span>
+                                        </td>
+                                        {isAdmin && <td className="px-4 py-3 text-fg-muted">{u.parent_name || '—'}</td>}
+                                        <td className="px-4 py-3 text-fg-muted">
+                                            {u.subscriptions} / {u.domains}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {u.role !== 'admin' && (
+                                                <div className="flex items-center justify-end gap-0.5">
+                                                    <RowBtn disabled={!usersKnown} title={t('users.loginAs')} onClick={() => impersonate(u)}>
+                                                        <LogIn className="h-4 w-4" />
+                                                    </RowBtn>
+                                                    {u.status === 'active' ? (
+                                                        <RowBtn disabled={!usersKnown} title={t('users.suspend')} onClick={() => setStatus(u, 'suspended')}>
+                                                            <Pause className="h-4 w-4" />
+                                                        </RowBtn>
+                                                    ) : (
+                                                        <RowBtn disabled={!usersKnown} title={t('users.activate')} onClick={() => setStatus(u, 'active')}>
+                                                            <Play className="h-4 w-4" />
+                                                        </RowBtn>
+                                                    )}
+                                                    <RowBtn danger disabled={!usersKnown} title={t('users.delete')} onClick={() => deleteUser(u)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </RowBtn>
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                ))}
                         </tbody>
                     </table>
                 </div>
-            )}
+            ))}
+            </RemoteGate>
         </div>
     );
 }
@@ -312,29 +339,37 @@ const emptyPlan: ServicePlan = {
 
 function PlansTab() {
     const { t } = useI18n();
-    const [plans, setPlans] = useState<ServicePlan[]>([]);
-    const [loading, setLoading] = useState(true);
+    const plans = useRemote(PLANS_URL, decodePlans);
     const [editing, setEditing] = useState<ServicePlan | null>(null);
-
-    const load = () =>
-        fetch('/api/v1/plans')
-            .then((r) => (r.ok ? r.json() : { plans: [] }))
-            .then((d) => setPlans(d.plans || []))
-            .catch(() => showToast('error', t('common.error')))
-            .finally(() => setLoading(false));
-
-    useEffect(() => {
-        load();
-    }, []);
+    const [saving, setSaving] = useState(false);
+    const load = () => void plans.retry();
+    // A plan is added, edited or removed only on the list as the server last
+    // gave it.
+    // Plan yalnız sunucunun son verdiği liste üzerinde eklenir, düzenlenir ya
+    // da kaldırılır.
+    const plansKnown = plans.remote.state === 'known' && !plans.reading;
+    const send = async (url: string, init: RequestInit): Promise<Response | null> => {
+        setSaving(true);
+        try {
+            return await fetch(url, init);
+        } catch {
+            showToast('error', t('common.resultUnknown'));
+            load();
+            return null;
+        } finally {
+            setSaving(false);
+        }
+    };
 
     const save = async () => {
         if (!editing) return;
         const isNew = editing.id === 0;
-        const res = await fetch(isNew ? '/api/v1/plans' : `/api/v1/plans/${editing.id}`, {
+        const res = await send(isNew ? '/api/v1/plans' : `/api/v1/plans/${editing.id}`, {
             method: isNew ? 'POST' : 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(editing),
         });
+        if (!res) return;
         if (!res.ok) {
             showToast('error', apiErrorText(await readApiError(res), t));
             return;
@@ -346,7 +381,8 @@ function PlansTab() {
 
     const remove = async (p: ServicePlan) => {
         if (!confirm(`${p.name}?`)) return;
-        const res = await fetch(`/api/v1/plans/${p.id}`, { method: 'DELETE' });
+        const res = await send(`/api/v1/plans/${p.id}`, { method: 'DELETE' });
+        if (!res) return;
         if (!res.ok) {
             showToast('error', apiErrorText(await readApiError(res), t));
             return;
@@ -360,8 +396,8 @@ function PlansTab() {
     return (
         <div>
             <div className="mb-3 flex items-center justify-between">
-                <span className="text-xs text-fg-subtle">{t('common.itemsTotal', { n: plans.length })}</span>
-                <Button variant="primary" icon={Plus} onClick={() => setEditing({ ...emptyPlan })}>
+                <span className="text-xs text-fg-subtle">{t('common.itemsTotal', { n: countText(mapRemote(plans.remote, (rows) => rows.length)) })}</span>
+                <Button variant="primary" icon={Plus} disabled={!plansKnown} onClick={() => setEditing({ ...emptyPlan })}>
                     {t('plans.add')}
                 </Button>
             </div>
@@ -381,60 +417,65 @@ function PlansTab() {
                     </div>
                     <div className="mt-3 flex justify-end gap-2">
                         <Button icon={X} onClick={() => setEditing(null)}>{t('users.cancel')}</Button>
-                        <Button variant="primary" icon={Save} onClick={save} disabled={!editing.name.trim()}>
+                        <Button variant="primary" icon={Save} onClick={save} disabled={saving || !plansKnown || !editing.name.trim()}>
                             {t('plans.save')}
                         </Button>
                     </div>
                 </div>
             )}
 
-            {loading ? (
-                <div className="flex items-center justify-center py-16">
-                    <Spinner />
-                </div>
-            ) : plans.length === 0 ? (
-                <EmptyState icon={Layers} title={t('plans.empty')} hint={t('plans.emptyHint')} />
-            ) : (
-                <div className="overflow-x-auto rounded-xl border border-border-strong bg-surface">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
-                                <th className="px-4 py-2.5">{t('plans.col.name')}</th>
-                                <th className="px-4 py-2.5">{t('plans.col.domains')}</th>
-                                <th className="px-4 py-2.5">{t('plans.col.databases')}</th>
-                                <th className="px-4 py-2.5">{t('plans.col.mail')}</th>
-                                <th className="px-4 py-2.5">{t('plans.col.disk')}</th>
-                                <th className="px-4 py-2.5">{t('plans.col.traffic')}</th>
-                                <th className="px-4 py-2.5">{t('plans.col.subscribers')}</th>
-                                <th className="px-4 py-2.5" />
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {plans.map((p) => (
-                                <tr key={p.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-                                    <td className="px-4 py-3 text-base font-medium text-fg">{p.name}</td>
-                                    <td className="px-4 py-3 text-fg-muted">{p.max_domains}</td>
-                                    <td className="px-4 py-3 text-fg-muted">{p.max_databases}</td>
-                                    <td className="px-4 py-3 text-fg-muted">{p.max_email_accounts}</td>
-                                    <td className="px-4 py-3 text-fg-muted">{fmtGB(p.disk_quota_mb)}</td>
-                                    <td className="px-4 py-3 text-fg-muted">{fmtGB(p.bandwidth_quota_mb)}</td>
-                                    <td className="px-4 py-3 text-fg-muted">{p.subscribers ?? 0}</td>
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center justify-end gap-0.5">
-                                            <RowBtn title={t('plans.edit')} onClick={() => setEditing({ ...p })}>
-                                                <Pencil className="h-4 w-4" />
-                                            </RowBtn>
-                                            <RowBtn danger title={t('users.delete')} onClick={() => remove(p)}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </RowBtn>
-                                        </div>
-                                    </td>
+            <RemoteGate
+                remote={plans.remote}
+                checking={t('plans.checking')}
+                failed={t('plans.unknown')}
+                onRetry={() => void plans.retry()}
+                busy={plans.reading}
+                className="py-3"
+            >
+                {(shown) => (shown.value.length === 0 ? (
+                    <KnownEmpty of={shown} icon={Layers} title={t('plans.empty')} hint={t('plans.emptyHint')} />
+                ) : (
+                    <div className="overflow-x-auto rounded-xl border border-border-strong bg-surface">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-border text-left text-xs font-semibold text-fg-muted">
+                                    <th className="px-4 py-2.5">{t('plans.col.name')}</th>
+                                    <th className="px-4 py-2.5">{t('plans.col.domains')}</th>
+                                    <th className="px-4 py-2.5">{t('plans.col.databases')}</th>
+                                    <th className="px-4 py-2.5">{t('plans.col.mail')}</th>
+                                    <th className="px-4 py-2.5">{t('plans.col.disk')}</th>
+                                    <th className="px-4 py-2.5">{t('plans.col.traffic')}</th>
+                                    <th className="px-4 py-2.5">{t('plans.col.subscribers')}</th>
+                                    <th className="px-4 py-2.5" />
                                 </tr>
-                            ))}
+                            </thead>
+                            <tbody>
+                                {shown.value.map((p) => (
+                                    <tr key={p.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                                        <td className="px-4 py-3 text-base font-medium text-fg">{p.name}</td>
+                                        <td className="px-4 py-3 text-fg-muted">{p.max_domains}</td>
+                                        <td className="px-4 py-3 text-fg-muted">{p.max_databases}</td>
+                                        <td className="px-4 py-3 text-fg-muted">{p.max_email_accounts}</td>
+                                        <td className="px-4 py-3 text-fg-muted">{fmtGB(p.disk_quota_mb)}</td>
+                                        <td className="px-4 py-3 text-fg-muted">{fmtGB(p.bandwidth_quota_mb)}</td>
+                                        <td className="px-4 py-3 text-fg-muted">{p.subscribers ?? 0}</td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-end gap-0.5">
+                                                <RowBtn disabled={!plansKnown} title={t('plans.edit')} onClick={() => setEditing({ ...p })}>
+                                                    <Pencil className="h-4 w-4" />
+                                                </RowBtn>
+                                                <RowBtn danger disabled={!plansKnown || saving} title={t('users.delete')} onClick={() => remove(p)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </RowBtn>
+                                            </div>
+                                        </td>
+                                    </tr>
+                ))}
                         </tbody>
                     </table>
                 </div>
-            )}
+            ))}
+            </RemoteGate>
         </div>
     );
 }
@@ -452,12 +493,15 @@ function Tab({ active, onClick, label }: { active: boolean; onClick: () => void;
     );
 }
 
-function RowBtn({ children, title, onClick, danger }: { children: React.ReactNode; title: string; onClick: () => void; danger?: boolean }) {
+function RowBtn({ children, title, onClick, danger, disabled }: { children: React.ReactNode; title: string; onClick: () => void; danger?: boolean; disabled?: boolean }) {
     return (
         <button
+            type="button"
             title={title}
+            aria-label={title}
             onClick={onClick}
-            className={`rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface-2 ${danger ? 'hover:text-danger' : 'hover:text-fg'}`}
+            disabled={disabled}
+            className={`rounded-md p-1.5 text-fg-subtle transition-colors hover:bg-surface-2 disabled:pointer-events-none disabled:opacity-40 ${danger ? 'hover:text-danger' : 'hover:text-fg'}`}
         >
             {children}
         </button>

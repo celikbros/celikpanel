@@ -1,0 +1,10 @@
+2026-10-09T21:56:22.407542+00:00 dns-arch systemd[1]: Stopping PostgreSQL database server...
+2026-10-09T21:56:22.407930+00:00 dns-arch postgres[1894]: 2026-10-09 21:56:22.407 UTC [1894] LOG:  received fast shutdown request
+2026-10-09T21:56:22.414629+00:00 dns-arch postgres[1894]: 2026-10-09 21:56:22.414 UTC [1894] LOG:  aborting any active transactions
+2026-10-09T21:56:22.418341+00:00 dns-arch postgres[1894]: 2026-10-09 21:56:22.418 UTC [1894] LOG:  background worker "logical replication launcher" (PID 1904) exited with exit code 1
+2026-10-09T21:56:22.419805+00:00 dns-arch postgres[1899]: 2026-10-09 21:56:22.419 UTC [1899] LOG:  shutting down
+2026-10-09T21:56:22.425921+00:00 dns-arch postgres[1899]: 2026-10-09 21:56:22.425 UTC [1899] LOG:  checkpoint starting: shutdown immediate
+2026-10-09T21:56:22.528656+00:00 dns-arch postgres[1899]: 2026-10-09 21:56:22.528 UTC [1899] LOG:  checkpoint complete: wrote 46 buffers (0.3%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.003 s, sync=0.072 s, total=0.109 s; sync files=15, longest=0.007 s, average=0.005 s; distance=337 kB, estimate=337 kB; lsn=0/17BA828, redo lsn=0/17BA828
+2026-10-09T21:56:22.553869+00:00 dns-arch postgres[1894]: 2026-10-09 21:56:22.553 UTC [1894] LOG:  database system is shut down
+2026-10-09T21:56:22.556525+00:00 dns-arch systemd[1]: postgresql.service: Deactivated successfully.
+2026-10-09T21:56:22.556992+00:00 dns-arch systemd[1]: Stopped PostgreSQL database server.

@@ -1,0 +1,17 @@
+{
+  "at": "2026-10-09T08:16:35Z",
+  "body": "set3-php-executed:42:8.5.11:fpm-fcgi:set3_php_test\n",
+  "bytes": 51,
+  "headers": {
+    "content-type": "text/plain;charset=UTF-8",
+    "server": "nginx/1.30.5",
+    "x-powered-by": "PHP/8.5.11"
+  },
+  "host": "set3-php.test",
+  "lab_action": false,
+  "mode": "read-http",
+  "owner_action": false,
+  "path": "/set3-probe.php",
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "status": 200
+}

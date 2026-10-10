@@ -1,0 +1,1416 @@
+{
+  "calls": [
+    {
+      "answer": {
+        "code": "SITE_WEB_SERVER_REFUSED",
+        "error": "The site set4-refused.test was not created: the web server (nginx) refused the configuration CelikPanel generated for it, so the site was never put into service. What had been created for it was removed again and the removal was confirmed: its web server configuration, its system account, its files and, for a PHP site, its PHP pool. nginx was reloaded with the configuration it had before. The server owner runs sudo nginx -t on the server. If it reports an error now, a file of the server's own nginx configuration is refused and is corrected first. If it passes, what nginx refused was in the configuration CelikPanel generated for this server; the line nginx printed names it and is shown to administrators. Then create the site again; nothing retries by itself.",
+        "reason": "removed",
+        "vars": {
+          "command": "sudo nginx -t",
+          "domain": "set4-refused.test"
+        }
+      },
+      "at": "2026-10-09T21:55:24Z",
+      "json": {
+        "code": "SITE_WEB_SERVER_REFUSED",
+        "details": [
+          "2026/10/09 21:55:24 [emerg] 3398#3398: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31"
+        ],
+        "error": "The site set4-refused.test was not created: the web server (nginx) refused the configuration CelikPanel generated for it, so the site was never put into service. What had been created for it was removed again and the removal was confirmed: its web server configuration, its system account, its files and, for a PHP site, its PHP pool. nginx was reloaded with the configuration it had before. The server owner runs sudo nginx -t on the server. If it reports an error now, a file of the server's own nginx configuration is refused and is corrected first. If it passes, what nginx refused was in the configuration CelikPanel generated for this server; the line nginx printed names it and is shown to administrators. Then create the site again; nothing retries by itself.",
+        "reason": "removed",
+        "vars": {
+          "command": "sudo nginx -t",
+          "domain": "set4-refused.test"
+        }
+      },
+      "label": "M6 (owner-moved-file) create a PHP site (the owner renamed nginx's own /etc/nginx/fastcgi.conf, which the generated PHP vhost includes)",
+      "request": {
+        "body": {
+          "domain": "set4-refused.test",
+          "project_type": "php",
+          "ssl_type": "none"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/create"
+      },
+      "status": 502,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T21:55:27Z",
+      "json": {
+        "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/4/public_html",
+        "Domain": "set4-refused.test",
+        "DomainID": 4,
+        "FTPPassword": "[REDACTED]",
+        "FTPUser": "set4_refused_test",
+        "PHPVersion": "8.5",
+        "ProjectType": "php",
+        "SiteID": 4,
+        "TempDomain": ""
+      },
+      "label": "M6 (owner-moved-file) create the same site again after the owner's correction",
+      "request": {
+        "body": {
+          "domain": "set4-refused.test",
+          "project_type": "php",
+          "ssl_type": "none"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/create"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T21:55:27Z",
+      "json": {
+        "domain": "set4-refused.test",
+        "status": "deleted"
+      },
+      "label": "refused-again: delete the site (Domains page)",
+      "request": {
+        "body": null,
+        "method": "DELETE",
+        "path": "/api/v1/domains/4"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SITE_WEB_SERVER_REFUSED",
+        "error": "The site set4-a-long-site-name-an-owner-could-plausibly-choose.test was not created: the web server (nginx) refused the configuration CelikPanel generated for it, so the site was never put into service. What had been created for it was removed again and the removal was confirmed: its web server configuration, its system account, its files and, for a PHP site, its PHP pool. nginx was reloaded with the configuration it had before. The server owner runs sudo nginx -t on the server. If it reports an error now, a file of the server's own nginx configuration is refused and is corrected first. If it passes, what nginx refused was in the configuration CelikPanel generated for this server; the line nginx printed names it and is shown to administrators. Then create the site again; nothing retries by itself.",
+        "reason": "removed",
+        "vars": {
+          "command": "sudo nginx -t",
+          "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test"
+        }
+      },
+      "at": "2026-10-09T21:55:36Z",
+      "json": {
+        "code": "SITE_WEB_SERVER_REFUSED",
+        "details": [
+          "2026/10/09 21:55:37 [emerg] 3739#3739: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64"
+        ],
+        "error": "The site set4-a-long-site-name-an-owner-could-plausibly-choose.test was not created: the web server (nginx) refused the configuration CelikPanel generated for it, so the site was never put into service. What had been created for it was removed again and the removal was confirmed: its web server configuration, its system account, its files and, for a PHP site, its PHP pool. nginx was reloaded with the configuration it had before. The server owner runs sudo nginx -t on the server. If it reports an error now, a file of the server's own nginx configuration is refused and is corrected first. If it passes, what nginx refused was in the configuration CelikPanel generated for this server; the line nginx printed names it and is shown to administrators. Then create the site again; nothing retries by itself.",
+        "reason": "removed",
+        "vars": {
+          "command": "sudo nginx -t",
+          "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test"
+        }
+      },
+      "label": "M6 (long-site-name) create a PHP site (no owner action; the site name has 58 characters)",
+      "request": {
+        "body": {
+          "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test",
+          "project_type": "php",
+          "ssl_type": "none"
+        },
+        "method": "POST",
+        "path": "/api/v1/domains/create"
+      },
+      "status": 502,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "moved_to": "/etc/nginx/fastcgi.conf.set4-owner-moved",
+        "nginx_test_after_the_move": {
+          "at": "2026-10-09T21:55:20Z",
+          "output": "2026/10/09 21:55:20 [warn] 3331#3331: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+          "returncode": 0,
+          "status": "ok"
+        },
+        "nginx_test_before": {
+          "at": "2026-10-09T21:55:20Z",
+          "output": "2026/10/09 21:55:20 [warn] 3330#3330: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+          "returncode": 0,
+          "status": "ok"
+        },
+        "path": "/etc/nginx/fastcgi.conf"
+      },
+      "name": "item 6 (owner-moved-file): after the owner moved /etc/nginx/fastcgi.conf away, `nginx -t` still passes (the refusal can only come with a new vhost)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SITE_WEB_SERVER_REFUSED",
+        "details": [
+          "2026/10/09 21:55:24 [emerg] 3398#3398: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31"
+        ],
+        "reason": "removed",
+        "status": 502,
+        "vars": {
+          "command": "sudo nginx -t",
+          "domain": "set4-refused.test"
+        }
+      },
+      "name": "item 6 (owner-moved-file): the answer is 502 SITE_WEB_SERVER_REFUSED with a reason",
+      "ok": true
+    },
+    {
+      "detail": {
+        "details": [
+          "2026/10/09 21:55:24 [emerg] 3398#3398: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31"
+        ],
+        "error": "The site set4-refused.test was not created: the web server (nginx) refused the configuration CelikPanel generated for it, so the site was never put into service. What had been created for it was removed again and the removal was confirmed: its web server configuration, its system account, its files and, for a PHP site, its PHP pool. nginx was reloaded with the configuration it had before. The server owner runs sudo nginx -t on the server. If it reports an error now, a file of the server's own nginx configuration is refused and is corrected first. If it passes, what nginx refused was in the configuration CelikPanel generated for this server; the line nginx printed names it and is shown to administrators. Then create the site again; nothing retries by itself.",
+        "error_equals_the_documented_sentence": true,
+        "vars": {
+          "command": "sudo nginx -t",
+          "domain": "set4-refused.test"
+        }
+      },
+      "name": "item 6 (owner-moved-file): `vars` are the domain and `sudo nginx -t`, `details` is one line of nginx's own, and the sentence is the documented one for the reason",
+      "ok": true
+    },
+    {
+      "detail": {
+        "claims": {
+          "its PHP pool": true,
+          "its files": true,
+          "its system account": true,
+          "its web server configuration": true,
+          "the domain and site rows": true
+        },
+        "native": {
+          "autoincrement": [
+            {
+              "domains": 2,
+              "sites": 2
+            },
+            {
+              "domains": 3,
+              "sites": 3
+            }
+          ],
+          "domain_rows": [],
+          "home_named_by_useradd_in_the_journal": [
+            "/var/www/celikpanel/subscriptions/2/sites/3"
+          ],
+          "listed_in_domains": false,
+          "new_acme_challenge_directories": [
+            "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/3"
+          ],
+          "new_site_directories": [],
+          "new_sockets": [],
+          "nginx_dump_lines_naming_the_domain": [],
+          "nginx_journal_since": [
+            "2026-10-09T21:55:24.940872+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+            "2026-10-09T21:55:24.966419+00:00 dns-arch nginx[3407]: 2026/10/09 21:55:24 [warn] 3407#3407: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+            "2026-10-09T21:55:24.970965+00:00 dns-arch nginx[3407]: 2026/10/09 21:55:24 [notice] 3407#3407: signal process started",
+            "2026-10-09T21:55:24.974166+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+            "2026-10-09T21:55:25.241604+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+            "2026-10-09T21:55:25.271585+00:00 dns-arch nginx[3420]: 2026/10/09 21:55:25 [warn] 3420#3420: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+            "2026-10-09T21:55:25.276254+00:00 dns-arch nginx[3420]: 2026/10/09 21:55:25 [notice] 3420#3420: signal process started",
+            "2026-10-09T21:55:25.278596+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+          ],
+          "nginx_test_after": {
+            "at": "2026-10-09T21:55:25Z",
+            "output": "2026/10/09 21:55:25 [warn] 3435#3435: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+            "returncode": 0,
+            "status": "ok"
+          },
+          "nginx_unit": {
+            "ActiveState": [
+              "active",
+              "active"
+            ],
+            "ExecReload": [
+              "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 21:55:14 UTC] ; stop_time=[Fri 2026-10-09 21:55:14 UTC] ; pid=3170 ; code=exited ; status=0 }",
+              "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 21:55:25 UTC] ; stop_time=[Fri 2026-10-09 21:55:25 UTC] ; pid=3420 ; code=exited ; status=0 }"
+            ],
+            "InvocationID": [
+              "a7ad8b30e1b542b0ae54947f56d6f44f",
+              "a7ad8b30e1b542b0ae54947f56d6f44f"
+            ],
+            "MainPID": [
+              "1248",
+              "1248"
+            ]
+          },
+          "pool_files_of_the_account": [],
+          "processes_of_the_account": [],
+          "product_journal_since": [
+            "2026-10-09T21:55:23.307715+00:00 dns-arch panel[418]: 2026/10/09 21:55:23 http: TLS handshake error from 127.0.0.1:44994: EOF",
+            "2026-10-09T21:55:24.651499+00:00 dns-arch useradd[3385]: new group: name=set4_refused_test, GID=1003",
+            "2026-10-09T21:55:24.651624+00:00 dns-arch useradd[3385]: new user: name=set4_refused_test, UID=1003, GID=1003, home=/var/www/celikpanel/subscriptions/2/sites/3, shell=/bin/bash, from=none",
+            "2026-10-09T21:55:24.760014+00:00 dns-arch chpasswd[3386]: pam_unix(chpasswd:chauthtok): password changed for set4_refused_test",
+            "2026-10-09T21:55:24.818796+00:00 dns-arch php-fpm[3391]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful",
+            "2026-10-09T21:55:25.020745+00:00 dns-arch php-fpm[3410]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful",
+            "2026-10-09T21:55:25.130996+00:00 dns-arch userdel[3415]: delete user 'set4_refused_test'",
+            "2026-10-09T21:55:25.133217+00:00 dns-arch userdel[3415]: removed group 'set4_refused_test' owned by 'set4_refused_test'",
+            "2026-10-09T21:55:25.133515+00:00 dns-arch userdel[3415]: removed shadow group 'set4_refused_test' owned by 'set4_refused_test'",
+            "2026-10-09T21:55:25.219588+00:00 dns-arch agent[407]: 2026/10/09 21:55:25 CreateSite set4-refused.test: nginx vhost activation: nginx validation failed: nginx validation failed: 2026/10/09 21:55:24 [emerg] 3398#3398: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31",
+            "2026-10-09T21:55:25.219588+00:00 dns-arch agent[407]: nginx: configuration file /etc/nginx/nginx.conf test failed: exit status 1; rollback restored and reloaded the previous vhost",
+            "2026-10-09T21:55:25.299949+00:00 dns-arch panel[418]: 2026/10/09 21:55:25 [502][domain] set4-refused.test: SITE_WEB_SERVER_REFUSED removed: 2026/10/09 21:55:24 [emerg] 3398#3398: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31"
+          ],
+          "row_counts": [
+            {
+              "databases_v2": 0,
+              "domains": 1,
+              "email_accounts": 0,
+              "sites": 1,
+              "subscriptions": 1
+            },
+            {
+              "databases_v2": 0,
+              "domains": 1,
+              "email_accounts": 0,
+              "sites": 1,
+              "subscriptions": 1
+            }
+          ],
+          "site_directories": [
+            [
+              "/var/www/celikpanel/subscriptions/2/sites/1"
+            ],
+            [
+              "/var/www/celikpanel/subscriptions/2/sites/1"
+            ]
+          ],
+          "site_rows": [],
+          "subscription_directories_after": {
+            "/var/www/celikpanel/subscriptions/2": [
+              "sites"
+            ]
+          },
+          "system_account": null,
+          "system_group": null,
+          "tables_naming_the_domain": {},
+          "that_home_is_listed_after": [],
+          "vhost_files_naming_the_domain": []
+        }
+      },
+      "name": "item 6 (owner-moved-file): what the answer says was removed is gone on the guest (vhost, system account, files, PHP pool) and no domain or site row is left; it claims no more than is true",
+      "ok": true
+    },
+    {
+      "detail": {
+        "nginx_test_after": {
+          "at": "2026-10-09T21:55:25Z",
+          "output": "2026/10/09 21:55:25 [warn] 3435#3435: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+          "returncode": 0,
+          "status": "ok"
+        },
+        "nginx_unit": {
+          "ActiveState": [
+            "active",
+            "active"
+          ],
+          "ExecReload": [
+            "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 21:55:14 UTC] ; stop_time=[Fri 2026-10-09 21:55:14 UTC] ; pid=3170 ; code=exited ; status=0 }",
+            "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 21:55:25 UTC] ; stop_time=[Fri 2026-10-09 21:55:25 UTC] ; pid=3420 ; code=exited ; status=0 }"
+          ],
+          "InvocationID": [
+            "a7ad8b30e1b542b0ae54947f56d6f44f",
+            "a7ad8b30e1b542b0ae54947f56d6f44f"
+          ],
+          "MainPID": [
+            "1248",
+            "1248"
+          ]
+        }
+      },
+      "name": "item 6 (owner-moved-file): nginx still runs as the same process after the refusal (reloaded, not restarted) and `nginx -t` passes",
+      "ok": true
+    },
+    {
+      "detail": {
+        "file": {
+          "exists": true,
+          "group": "root",
+          "kind": "file",
+          "mode": "0644",
+          "owner": "root",
+          "path": "/etc/nginx/fastcgi.conf"
+        },
+        "moved": {
+          "error": "FileNotFoundError",
+          "exists": false,
+          "path": "/etc/nginx/fastcgi.conf.set4-owner-moved"
+        },
+        "nginx_test": {
+          "at": "2026-10-09T21:55:26Z",
+          "output": "2026/10/09 21:55:26 [warn] 3463#3463: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+          "returncode": 0,
+          "status": "ok"
+        }
+      },
+      "name": "item 6 (owner-moved-file): the owner put the file back and `nginx -t` passes",
+      "ok": true
+    },
+    {
+      "detail": {
+        "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/4/public_html",
+        "Domain": "set4-refused.test",
+        "DomainID": 4,
+        "FTPPassword": "[REDACTED]",
+        "FTPUser": "set4_refused_test",
+        "PHPVersion": "8.5",
+        "ProjectType": "php",
+        "SiteID": 4,
+        "TempDomain": ""
+      },
+      "name": "item 6 (owner-moved-file): after the correction the same site is created (200), as the sentence says",
+      "ok": true
+    },
+    {
+      "detail": {
+        "account": null,
+        "acme_challenge_root": "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/4",
+        "acme_challenge_root_left": true,
+        "answers_after": {
+          "dotfile": {
+            "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "d036873a4d861772ecad038fcfa1e8ceda867bc430d9f142eed2b54c71c62909",
+            "bytes": 153,
+            "error": null,
+            "headers": {
+              "content-length": "153",
+              "content-type": "text/html",
+              "server": "nginx/1.30.5"
+            },
+            "status": 403
+          },
+          "missing_script": {
+            "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "d036873a4d861772ecad038fcfa1e8ceda867bc430d9f142eed2b54c71c62909",
+            "bytes": 153,
+            "error": null,
+            "headers": {
+              "content-length": "153",
+              "content-type": "text/html",
+              "server": "nginx/1.30.5"
+            },
+            "status": 403
+          },
+          "missing_static": {
+            "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "3248b01d461ed11b7d34871bee9879ba2536c0ae5c47f16638e9aaae0ec5a481",
+            "bytes": 153,
+            "error": null,
+            "headers": {
+              "content-length": "153",
+              "content-type": "text/html",
+              "server": "nginx/1.30.5"
+            },
+            "status": 404
+          },
+          "path_info_deep_tail_php": {
+            "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "d036873a4d861772ecad038fcfa1e8ceda867bc430d9f142eed2b54c71c62909",
+            "bytes": 153,
+            "error": null,
+            "headers": {
+              "content-length": "153",
+              "content-type": "text/html",
+              "server": "nginx/1.30.5"
+            },
+            "status": 403
+          },
+          "path_info_plain": {
+            "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "3248b01d461ed11b7d34871bee9879ba2536c0ae5c47f16638e9aaae0ec5a481",
+            "bytes": 153,
+            "error": null,
+            "headers": {
+              "content-length": "153",
+              "content-type": "text/html",
+              "server": "nginx/1.30.5"
+            },
+            "status": 404
+          },
+          "path_info_tail_php": {
+            "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "d036873a4d861772ecad038fcfa1e8ceda867bc430d9f142eed2b54c71c62909",
+            "bytes": 153,
+            "error": null,
+            "headers": {
+              "content-length": "153",
+              "content-type": "text/html",
+              "server": "nginx/1.30.5"
+            },
+            "status": 403
+          },
+          "probe": {
+            "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "d036873a4d861772ecad038fcfa1e8ceda867bc430d9f142eed2b54c71c62909",
+            "bytes": 153,
+            "error": null,
+            "headers": {
+              "content-length": "153",
+              "content-type": "text/html",
+              "server": "nginx/1.30.5"
+            },
+            "status": 403
+          },
+          "probe_query": {
+            "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "d036873a4d861772ecad038fcfa1e8ceda867bc430d9f142eed2b54c71c62909",
+            "bytes": 153,
+            "error": null,
+            "headers": {
+              "content-length": "153",
+              "content-type": "text/html",
+              "server": "nginx/1.30.5"
+            },
+            "status": 403
+          },
+          "root": {
+            "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set1-owner.test</title>\n<style>\n  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}\n  main{text-align:center;padding:2rem}\n  h1{font-weight:600}\n  p{color:#94a3b8}\n</style>\n</head>\n<body>\n<main>\n  <h1>set1-owner.test</h1>\n  <p>Bu site hazırlanıyor. / This site is being prepared.</p>\n  <p>CelikPanel</p>\n</main>\n</body>\n</html>\n",
+            "body_sha256": "5e73997ab0a61d5f562724e8aa99f7cd56bdd7986bedd4eec3bdcf6e61e6078c",
+            "bytes": 549,
+            "error": null,
+            "headers": {
+              "content-length": "549",
+              "content-type": "text/html",
+              "server": "nginx/1.30.5"
+            },
+            "status": 200
+          },
+          "static": {
+            "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+            "body_sha256": "3248b01d461ed11b7d34871bee9879ba2536c0ae5c47f16638e9aaae0ec5a481",
+            "bytes": 153,
+            "error": null,
+            "headers": {
+              "content-length": "153",
+              "content-type": "text/html",
+              "server": "nginx/1.30.5"
+            },
+            "status": 404
+          }
+        },
+        "delete_answer": {
+          "domain": "set4-refused.test",
+          "status": "deleted"
+        },
+        "delete_status": 200,
+        "domain_rows": [],
+        "group": null,
+        "listed_after_seconds": 0.0,
+        "nginx_dump_lines_naming_the_domain": [],
+        "nginx_files_naming_the_domain": [],
+        "nginx_test": {
+          "at": "2026-10-09T21:55:32Z",
+          "output": "2026/10/09 21:55:32 [warn] 3657#3657: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+          "returncode": 0,
+          "status": "ok"
+        },
+        "no_longer_listed": true,
+        "php_fpm_units_after": {
+          "php-fpm.service": "active"
+        },
+        "pool_files_left": [],
+        "probe_executed_after": false,
+        "site_directories_after": [
+          "/var/www/celikpanel/subscriptions/2/sites/1"
+        ],
+        "site_home": "/var/www/celikpanel/subscriptions/2/sites/4",
+        "site_home_existed_with_the_site": true,
+        "site_home_left": false,
+        "site_rows": [],
+        "socket_left": false,
+        "sockets_after": [
+          "/run/php-fpm/php-fpm.sock"
+        ],
+        "static_served_after": false,
+        "tables_still_naming_the_domain": {
+          "audit_logs": {
+            "action": 2
+          }
+        }
+      },
+      "name": "refused-again: the site is deleted through the Panel and nothing of it is left serving (not listed, no domain or site row, no account, no home, no vhost in nginx, no pool file, no socket, the page and the static file no longer served, `nginx -t` passes)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "php-fpm.service": "active"
+      },
+      "name": "refused-again: PHP-FPM is still active after the delete",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SITE_WEB_SERVER_REFUSED",
+        "details": [
+          "2026/10/09 21:55:37 [emerg] 3739#3739: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64"
+        ],
+        "reason": "removed",
+        "status": 502,
+        "vars": {
+          "command": "sudo nginx -t",
+          "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test"
+        }
+      },
+      "name": "item 6 (long-site-name): the answer is 502 SITE_WEB_SERVER_REFUSED with a reason",
+      "ok": true
+    },
+    {
+      "detail": {
+        "details": [
+          "2026/10/09 21:55:37 [emerg] 3739#3739: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64"
+        ],
+        "error": "The site set4-a-long-site-name-an-owner-could-plausibly-choose.test was not created: the web server (nginx) refused the configuration CelikPanel generated for it, so the site was never put into service. What had been created for it was removed again and the removal was confirmed: its web server configuration, its system account, its files and, for a PHP site, its PHP pool. nginx was reloaded with the configuration it had before. The server owner runs sudo nginx -t on the server. If it reports an error now, a file of the server's own nginx configuration is refused and is corrected first. If it passes, what nginx refused was in the configuration CelikPanel generated for this server; the line nginx printed names it and is shown to administrators. Then create the site again; nothing retries by itself.",
+        "error_equals_the_documented_sentence": true,
+        "vars": {
+          "command": "sudo nginx -t",
+          "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test"
+        }
+      },
+      "name": "item 6 (long-site-name): `vars` are the domain and `sudo nginx -t`, `details` is one line of nginx's own, and the sentence is the documented one for the reason",
+      "ok": true
+    },
+    {
+      "detail": {
+        "claims": {
+          "its PHP pool": true,
+          "its files": true,
+          "its system account": true,
+          "its web server configuration": true,
+          "the domain and site rows": true
+        },
+        "native": {
+          "autoincrement": [
+            {
+              "domains": 4,
+              "sites": 4
+            },
+            {
+              "domains": 5,
+              "sites": 5
+            }
+          ],
+          "domain_rows": [],
+          "home_named_by_useradd_in_the_journal": [
+            "/var/www/celikpanel/subscriptions/2/sites/5"
+          ],
+          "listed_in_domains": false,
+          "new_acme_challenge_directories": [
+            "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/5"
+          ],
+          "new_site_directories": [],
+          "new_sockets": [],
+          "nginx_dump_lines_naming_the_domain": [],
+          "nginx_journal_since": [
+            "2026-10-09T21:55:37.083435+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+            "2026-10-09T21:55:37.111212+00:00 dns-arch nginx[3749]: 2026/10/09 21:55:37 [warn] 3749#3749: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+            "2026-10-09T21:55:37.115682+00:00 dns-arch nginx[3749]: 2026/10/09 21:55:37 [notice] 3749#3749: signal process started",
+            "2026-10-09T21:55:37.118363+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+            "2026-10-09T21:55:37.346774+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+            "2026-10-09T21:55:37.371858+00:00 dns-arch nginx[3762]: 2026/10/09 21:55:37 [warn] 3762#3762: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+            "2026-10-09T21:55:37.375769+00:00 dns-arch nginx[3762]: 2026/10/09 21:55:37 [notice] 3762#3762: signal process started",
+            "2026-10-09T21:55:37.378263+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+          ],
+          "nginx_test_after": {
+            "at": "2026-10-09T21:55:37Z",
+            "output": "2026/10/09 21:55:37 [warn] 3777#3777: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+            "returncode": 0,
+            "status": "ok"
+          },
+          "nginx_unit": {
+            "ActiveState": [
+              "active",
+              "active"
+            ],
+            "ExecReload": [
+              "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 21:55:28 UTC] ; stop_time=[Fri 2026-10-09 21:55:28 UTC] ; pid=3522 ; code=exited ; status=0 }",
+              "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 21:55:37 UTC] ; stop_time=[Fri 2026-10-09 21:55:37 UTC] ; pid=3762 ; code=exited ; status=0 }"
+            ],
+            "InvocationID": [
+              "a7ad8b30e1b542b0ae54947f56d6f44f",
+              "a7ad8b30e1b542b0ae54947f56d6f44f"
+            ],
+            "MainPID": [
+              "1248",
+              "1248"
+            ]
+          },
+          "pool_files_of_the_account": [],
+          "processes_of_the_account": [],
+          "product_journal_since": [
+            "2026-10-09T21:55:35.475035+00:00 dns-arch panel[418]: 2026/10/09 21:55:35 http: TLS handshake error from 127.0.0.1:51538: EOF",
+            "2026-10-09T21:55:36.793424+00:00 dns-arch useradd[3725]: new group: name=set4_a_long_site_name_an_owner_c, GID=1003",
+            "2026-10-09T21:55:36.793538+00:00 dns-arch useradd[3725]: new user: name=set4_a_long_site_name_an_owner_c, UID=1003, GID=1003, home=/var/www/celikpanel/subscriptions/2/sites/5, shell=/bin/bash, from=none",
+            "2026-10-09T21:55:36.894806+00:00 dns-arch chpasswd[3726]: pam_unix(chpasswd:chauthtok): password changed for set4_a_long_site_name_an_owner_c",
+            "2026-10-09T21:55:36.956283+00:00 dns-arch php-fpm[3731]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful",
+            "2026-10-09T21:55:37.165360+00:00 dns-arch php-fpm[3752]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful",
+            "2026-10-09T21:55:37.261506+00:00 dns-arch userdel[3757]: delete user 'set4_a_long_site_name_an_owner_c'",
+            "2026-10-09T21:55:37.263075+00:00 dns-arch userdel[3757]: removed group 'set4_a_long_site_name_an_owner_c' owned by 'set4_a_long_site_name_an_owner_c'",
+            "2026-10-09T21:55:37.263096+00:00 dns-arch userdel[3757]: removed shadow group 'set4_a_long_site_name_an_owner_c' owned by 'set4_a_long_site_name_an_owner_c'",
+            "2026-10-09T21:55:37.327075+00:00 dns-arch agent[407]: 2026/10/09 21:55:37 CreateSite set4-a-long-site-name-an-owner-could-plausibly-choose.test: nginx vhost activation: nginx validation failed: nginx validation failed: 2026/10/09 21:55:37 [warn] 3739#3739: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+            "2026-10-09T21:55:37.327075+00:00 dns-arch agent[407]: 2026/10/09 21:55:37 [emerg] 3739#3739: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64",
+            "2026-10-09T21:55:37.327075+00:00 dns-arch agent[407]: nginx: configuration file /etc/nginx/nginx.conf test failed: exit status 1; rollback restored and reloaded the previous vhost",
+            "2026-10-09T21:55:37.397897+00:00 dns-arch panel[418]: 2026/10/09 21:55:37 [502][domain] set4-a-long-site-name-an-owner-could-plausibly-choose.test: SITE_WEB_SERVER_REFUSED removed: 2026/10/09 21:55:37 [emerg] 3739#3739: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64"
+          ],
+          "row_counts": [
+            {
+              "databases_v2": 0,
+              "domains": 1,
+              "email_accounts": 0,
+              "sites": 1,
+              "subscriptions": 1
+            },
+            {
+              "databases_v2": 0,
+              "domains": 1,
+              "email_accounts": 0,
+              "sites": 1,
+              "subscriptions": 1
+            }
+          ],
+          "site_directories": [
+            [
+              "/var/www/celikpanel/subscriptions/2/sites/1"
+            ],
+            [
+              "/var/www/celikpanel/subscriptions/2/sites/1"
+            ]
+          ],
+          "site_rows": [],
+          "subscription_directories_after": {
+            "/var/www/celikpanel/subscriptions/2": [
+              "sites"
+            ]
+          },
+          "system_account": null,
+          "system_group": null,
+          "tables_naming_the_domain": {},
+          "that_home_is_listed_after": [],
+          "vhost_files_naming_the_domain": []
+        }
+      },
+      "name": "item 6 (long-site-name): what the answer says was removed is gone on the guest (vhost, system account, files, PHP pool) and no domain or site row is left; it claims no more than is true",
+      "ok": true
+    },
+    {
+      "detail": {
+        "nginx_test_after": {
+          "at": "2026-10-09T21:55:37Z",
+          "output": "2026/10/09 21:55:37 [warn] 3777#3777: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+          "returncode": 0,
+          "status": "ok"
+        },
+        "nginx_unit": {
+          "ActiveState": [
+            "active",
+            "active"
+          ],
+          "ExecReload": [
+            "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 21:55:28 UTC] ; stop_time=[Fri 2026-10-09 21:55:28 UTC] ; pid=3522 ; code=exited ; status=0 }",
+            "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 21:55:37 UTC] ; stop_time=[Fri 2026-10-09 21:55:37 UTC] ; pid=3762 ; code=exited ; status=0 }"
+          ],
+          "InvocationID": [
+            "a7ad8b30e1b542b0ae54947f56d6f44f",
+            "a7ad8b30e1b542b0ae54947f56d6f44f"
+          ],
+          "MainPID": [
+            "1248",
+            "1248"
+          ]
+        }
+      },
+      "name": "item 6 (long-site-name): nginx still runs as the same process after the refusal (reloaded, not restarted) and `nginx -t` passes",
+      "ok": true
+    }
+  ],
+  "deleted": {
+    "refused-again": {
+      "account": null,
+      "acme_challenge_root": "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/4",
+      "acme_challenge_root_left": true,
+      "answers_after": {
+        "dotfile": {
+          "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "d036873a4d861772ecad038fcfa1e8ceda867bc430d9f142eed2b54c71c62909",
+          "bytes": 153,
+          "error": null,
+          "headers": {
+            "content-length": "153",
+            "content-type": "text/html",
+            "server": "nginx/1.30.5"
+          },
+          "status": 403
+        },
+        "missing_script": {
+          "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "d036873a4d861772ecad038fcfa1e8ceda867bc430d9f142eed2b54c71c62909",
+          "bytes": 153,
+          "error": null,
+          "headers": {
+            "content-length": "153",
+            "content-type": "text/html",
+            "server": "nginx/1.30.5"
+          },
+          "status": 403
+        },
+        "missing_static": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "3248b01d461ed11b7d34871bee9879ba2536c0ae5c47f16638e9aaae0ec5a481",
+          "bytes": 153,
+          "error": null,
+          "headers": {
+            "content-length": "153",
+            "content-type": "text/html",
+            "server": "nginx/1.30.5"
+          },
+          "status": 404
+        },
+        "path_info_deep_tail_php": {
+          "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "d036873a4d861772ecad038fcfa1e8ceda867bc430d9f142eed2b54c71c62909",
+          "bytes": 153,
+          "error": null,
+          "headers": {
+            "content-length": "153",
+            "content-type": "text/html",
+            "server": "nginx/1.30.5"
+          },
+          "status": 403
+        },
+        "path_info_plain": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "3248b01d461ed11b7d34871bee9879ba2536c0ae5c47f16638e9aaae0ec5a481",
+          "bytes": 153,
+          "error": null,
+          "headers": {
+            "content-length": "153",
+            "content-type": "text/html",
+            "server": "nginx/1.30.5"
+          },
+          "status": 404
+        },
+        "path_info_tail_php": {
+          "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "d036873a4d861772ecad038fcfa1e8ceda867bc430d9f142eed2b54c71c62909",
+          "bytes": 153,
+          "error": null,
+          "headers": {
+            "content-length": "153",
+            "content-type": "text/html",
+            "server": "nginx/1.30.5"
+          },
+          "status": 403
+        },
+        "probe": {
+          "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "d036873a4d861772ecad038fcfa1e8ceda867bc430d9f142eed2b54c71c62909",
+          "bytes": 153,
+          "error": null,
+          "headers": {
+            "content-length": "153",
+            "content-type": "text/html",
+            "server": "nginx/1.30.5"
+          },
+          "status": 403
+        },
+        "probe_query": {
+          "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "d036873a4d861772ecad038fcfa1e8ceda867bc430d9f142eed2b54c71c62909",
+          "bytes": 153,
+          "error": null,
+          "headers": {
+            "content-length": "153",
+            "content-type": "text/html",
+            "server": "nginx/1.30.5"
+          },
+          "status": 403
+        },
+        "root": {
+          "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set1-owner.test</title>\n<style>\n  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}\n  main{text-align:center;padding:2rem}\n  h1{font-weight:600}\n  p{color:#94a3b8}\n</style>\n</head>\n<body>\n<main>\n  <h1>set1-owner.test</h1>\n  <p>Bu site hazırlanıyor. / This site is being prepared.</p>\n  <p>CelikPanel</p>\n</main>\n</body>\n</html>\n",
+          "body_sha256": "5e73997ab0a61d5f562724e8aa99f7cd56bdd7986bedd4eec3bdcf6e61e6078c",
+          "bytes": 549,
+          "error": null,
+          "headers": {
+            "content-length": "549",
+            "content-type": "text/html",
+            "server": "nginx/1.30.5"
+          },
+          "status": 200
+        },
+        "static": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "3248b01d461ed11b7d34871bee9879ba2536c0ae5c47f16638e9aaae0ec5a481",
+          "bytes": 153,
+          "error": null,
+          "headers": {
+            "content-length": "153",
+            "content-type": "text/html",
+            "server": "nginx/1.30.5"
+          },
+          "status": 404
+        }
+      },
+      "delete_answer": {
+        "domain": "set4-refused.test",
+        "status": "deleted"
+      },
+      "delete_status": 200,
+      "domain_rows": [],
+      "group": null,
+      "listed_after_seconds": 0.0,
+      "nginx_dump_lines_naming_the_domain": [],
+      "nginx_files_naming_the_domain": [],
+      "nginx_test": {
+        "at": "2026-10-09T21:55:32Z",
+        "output": "2026/10/09 21:55:32 [warn] 3657#3657: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+        "returncode": 0,
+        "status": "ok"
+      },
+      "no_longer_listed": true,
+      "php_fpm_units_after": {
+        "php-fpm.service": "active"
+      },
+      "pool_files_left": [],
+      "probe_executed_after": false,
+      "site_directories_after": [
+        "/var/www/celikpanel/subscriptions/2/sites/1"
+      ],
+      "site_home": "/var/www/celikpanel/subscriptions/2/sites/4",
+      "site_home_existed_with_the_site": true,
+      "site_home_left": false,
+      "site_rows": [],
+      "socket_left": false,
+      "sockets_after": [
+        "/run/php-fpm/php-fpm.sock"
+      ],
+      "static_served_after": false,
+      "tables_still_naming_the_domain": {
+        "audit_logs": {
+          "action": 2
+        }
+      }
+    }
+  },
+  "finished_at": "2026-10-09T21:55:37Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/038-owner-nginx-fastcgi-conf-moved-away.json",
+      "label": "owner-nginx-fastcgi-conf-moved-away",
+      "mode": "owner-nginx-file",
+      "owner_action": true
+    },
+    {
+      "file": "native/039-owner-moved-file-leftovers-before.json",
+      "label": "owner-moved-file-leftovers-before",
+      "mode": "read-leftovers",
+      "owner_action": false
+    },
+    {
+      "file": "native/040-owner-moved-file-nginx-unit-before.json",
+      "label": "owner-moved-file-nginx-unit-before",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/041-owner-moved-file-leftovers-after.json",
+      "label": "owner-moved-file-leftovers-after",
+      "mode": "read-leftovers",
+      "owner_action": false
+    },
+    {
+      "file": "native/042-owner-moved-file-nginx-unit-after.json",
+      "label": "owner-moved-file-nginx-unit-after",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/043-owner-nginx-fastcgi-conf-restored.json",
+      "label": "owner-nginx-fastcgi-conf-restored",
+      "mode": "owner-nginx-file",
+      "owner_action": true
+    },
+    {
+      "file": "native/044-refused-again-leftovers-with-site.json",
+      "label": "refused-again-leftovers-with-site",
+      "mode": "read-leftovers",
+      "owner_action": false
+    },
+    {
+      "file": "native/045-refused-again-leftovers-after-delete.json",
+      "label": "refused-again-leftovers-after-delete",
+      "mode": "read-leftovers",
+      "owner_action": false
+    },
+    {
+      "file": "native/046-http-refused-again-after-delete-probe.json",
+      "label": "http-refused-again-after-delete-probe",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/047-http-refused-again-after-delete-probe-query.json",
+      "label": "http-refused-again-after-delete-probe-query",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/048-http-refused-again-after-delete-missing-script.json",
+      "label": "http-refused-again-after-delete-missing-script",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/049-http-refused-again-after-delete-path-info-tail-php.json",
+      "label": "http-refused-again-after-delete-path-info-tail-php",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/050-http-refused-again-after-delete-path-info-deep-tail-php.json",
+      "label": "http-refused-again-after-delete-path-info-deep-tail-php",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/051-http-refused-again-after-delete-path-info-plain.json",
+      "label": "http-refused-again-after-delete-path-info-plain",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/052-http-refused-again-after-delete-static.json",
+      "label": "http-refused-again-after-delete-static",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/053-http-refused-again-after-delete-missing-static.json",
+      "label": "http-refused-again-after-delete-missing-static",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/054-http-refused-again-after-delete-root.json",
+      "label": "http-refused-again-after-delete-root",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/055-http-refused-again-after-delete-dotfile.json",
+      "label": "http-refused-again-after-delete-dotfile",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/056-refused-again-nginx-after-delete.json",
+      "label": "refused-again-nginx-after-delete",
+      "mode": "read-nginx",
+      "owner_action": false
+    },
+    {
+      "file": "native/057-refused-again-php-after-delete.json",
+      "lab_action": false,
+      "label": "refused-again-php-after-delete",
+      "mode": "read-php",
+      "owner_action": false
+    },
+    {
+      "file": "native/058-long-site-name-leftovers-before.json",
+      "label": "long-site-name-leftovers-before",
+      "mode": "read-leftovers",
+      "owner_action": false
+    },
+    {
+      "file": "native/059-long-site-name-nginx-unit-before.json",
+      "label": "long-site-name-nginx-unit-before",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/060-long-site-name-leftovers-after.json",
+      "label": "long-site-name-leftovers-after",
+      "mode": "read-leftovers",
+      "owner_action": false
+    },
+    {
+      "file": "native/061-long-site-name-nginx-unit-after.json",
+      "label": "long-site-name-nginx-unit-after",
+      "mode": "read-units",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [
+    {
+      "detail": {
+        "the certificate-validation directory": [
+          "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/3"
+        ]
+      },
+      "note": "item 6 (owner-moved-file): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it"
+    },
+    {
+      "detail": {
+        "left": true,
+        "path": "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/4",
+        "tables_still_naming_the_domain": {
+          "audit_logs": {
+            "action": 2
+          }
+        }
+      },
+      "note": "refused-again: the certificate-validation directory of the deleted site is still there"
+    },
+    {
+      "detail": {
+        "the certificate-validation directory": [
+          "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/5"
+        ]
+      },
+      "note": "item 6 (long-site-name): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T21:55:20Z",
+      "label": "nginx-fastcgi-conf-moved-away",
+      "mode": "owner-nginx-file"
+    },
+    {
+      "at": "2026-10-09T21:55:26Z",
+      "label": "nginx-fastcgi-conf-restored",
+      "mode": "owner-nginx-file"
+    }
+  ],
+  "owner_moved_fastcgi_conf": {
+    "moved_to": "/etc/nginx/fastcgi.conf.set4-owner-moved",
+    "nginx_test_after_the_move": {
+      "at": "2026-10-09T21:55:20Z",
+      "output": "2026/10/09 21:55:20 [warn] 3331#3331: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "nginx_test_before": {
+      "at": "2026-10-09T21:55:20Z",
+      "output": "2026/10/09 21:55:20 [warn] 3330#3330: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "path": "/etc/nginx/fastcgi.conf"
+  },
+  "refused": {
+    "long-site-name": {
+      "answer_keys": [
+        "code",
+        "details",
+        "error",
+        "reason",
+        "vars"
+      ],
+      "catalogue_texts": {
+        "domains.add.webServerRefused.removed": {
+          "en": "set4-a-long-site-name-an-owner-could-plausibly-choose.test was not created: the web server (nginx) refused the configuration CelikPanel generated for it. What had been created for the site was removed again, and the removal was confirmed: its web server configuration, system account, files and, for a PHP site, PHP pool. nginx was reloaded with the configuration it had before. On the server, run sudo nginx -t. If it reports an error, a file of the server’s own nginx configuration is refused; correct that first. If it passes, the refusal came from the configuration CelikPanel generated, and the line nginx printed names it (administrators see it below). Then create the site again; nothing retries by itself.",
+          "tr": "set4-a-long-site-name-an-owner-could-plausibly-choose.test oluşturulmadı: web sunucusu (nginx), CelikPanel’in bu site için ürettiği yapılandırmayı reddetti. Site için oluşturulanlar yeniden kaldırıldı ve bu kaldırma doğrulandı: web sunucusu yapılandırması, sistem hesabı, dosyaları ve PHP sitesiyse PHP havuzu. nginx, önceki yapılandırmasıyla yeniden yüklendi. Sunucuda sudo nginx -t komutunu çalıştırın. Bir hata bildiriyorsa sunucunun kendi nginx yapılandırmasındaki bir dosya reddediliyordur; önce onu düzeltin. Geçiyorsa ret CelikPanel’in ürettiği yapılandırmadan gelmiştir ve nginx’in yazdığı satır onu adlandırır (yöneticiler aşağıda görür). Ardından siteyi yeniden oluşturun; hiçbir şey kendiliğinden yeniden denemez."
+        },
+        "domains.add.webServerRefused.unconfirmed": {
+          "en": "set4-a-long-site-name-an-owner-could-plausibly-choose.test was not created: the web server (nginx) refused the configuration CelikPanel generated for it. nginx was reloaded with the configuration it had before. Removing what had been created for the site was not confirmed, so parts of it may remain on the server: open Domains and, if set4-a-long-site-name-an-owner-could-plausibly-choose.test is listed there, delete it, which removes its parts. On the server, run sudo nginx -t. If it reports an error, a file of the server’s own nginx configuration is refused; correct that first. If it passes, the refusal came from the configuration CelikPanel generated, and the line nginx printed names it (administrators see it below). Then create the site again; nothing retries by itself.",
+          "tr": "set4-a-long-site-name-an-owner-could-plausibly-choose.test oluşturulmadı: web sunucusu (nginx), CelikPanel’in bu site için ürettiği yapılandırmayı reddetti. nginx, önceki yapılandırmasıyla yeniden yüklendi. Site için oluşturulanların kaldırıldığı doğrulanamadı; bu yüzden bir bölümü sunucuda kalmış olabilir: Alan Adları sayfasını açın ve set4-a-long-site-name-an-owner-could-plausibly-choose.test orada listeleniyorsa silin; silme, parçalarını da kaldırır. Sunucuda sudo nginx -t komutunu çalıştırın. Bir hata bildiriyorsa sunucunun kendi nginx yapılandırmasındaki bir dosya reddediliyordur; önce onu düzeltin. Geçiyorsa ret CelikPanel’in ürettiği yapılandırmadan gelmiştir ve nginx’in yazdığı satır onu adlandırır (yöneticiler aşağıda görür). Ardından siteyi yeniden oluşturun; hiçbir şey kendiliğinden yeniden denemez."
+        }
+      },
+      "code": "SITE_WEB_SERVER_REFUSED",
+      "details": [
+        "2026/10/09 21:55:37 [emerg] 3739#3739: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64"
+      ],
+      "documented_sentence_for_the_reason": "The site set4-a-long-site-name-an-owner-could-plausibly-choose.test was not created: the web server (nginx) refused the configuration CelikPanel generated for it, so the site was never put into service. What had been created for it was removed again and the removal was confirmed: its web server configuration, its system account, its files and, for a PHP site, its PHP pool. nginx was reloaded with the configuration it had before. The server owner runs sudo nginx -t on the server. If it reports an error now, a file of the server's own nginx configuration is refused and is corrected first. If it passes, what nginx refused was in the configuration CelikPanel generated for this server; the line nginx printed names it and is shown to administrators. Then create the site again; nothing retries by itself.",
+      "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test",
+      "error": "The site set4-a-long-site-name-an-owner-could-plausibly-choose.test was not created: the web server (nginx) refused the configuration CelikPanel generated for it, so the site was never put into service. What had been created for it was removed again and the removal was confirmed: its web server configuration, its system account, its files and, for a PHP site, its PHP pool. nginx was reloaded with the configuration it had before. The server owner runs sudo nginx -t on the server. If it reports an error now, a file of the server's own nginx configuration is refused and is corrected first. If it passes, what nginx refused was in the configuration CelikPanel generated for this server; the line nginx printed names it and is shown to administrators. Then create the site again; nothing retries by itself.",
+      "error_equals_the_documented_sentence": true,
+      "native": {
+        "autoincrement": [
+          {
+            "domains": 4,
+            "sites": 4
+          },
+          {
+            "domains": 5,
+            "sites": 5
+          }
+        ],
+        "domain_rows": [],
+        "home_named_by_useradd_in_the_journal": [
+          "/var/www/celikpanel/subscriptions/2/sites/5"
+        ],
+        "listed_in_domains": false,
+        "new_acme_challenge_directories": [
+          "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/5"
+        ],
+        "new_site_directories": [],
+        "new_sockets": [],
+        "nginx_dump_lines_naming_the_domain": [],
+        "nginx_journal_since": [
+          "2026-10-09T21:55:37.083435+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+          "2026-10-09T21:55:37.111212+00:00 dns-arch nginx[3749]: 2026/10/09 21:55:37 [warn] 3749#3749: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+          "2026-10-09T21:55:37.115682+00:00 dns-arch nginx[3749]: 2026/10/09 21:55:37 [notice] 3749#3749: signal process started",
+          "2026-10-09T21:55:37.118363+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+          "2026-10-09T21:55:37.346774+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+          "2026-10-09T21:55:37.371858+00:00 dns-arch nginx[3762]: 2026/10/09 21:55:37 [warn] 3762#3762: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+          "2026-10-09T21:55:37.375769+00:00 dns-arch nginx[3762]: 2026/10/09 21:55:37 [notice] 3762#3762: signal process started",
+          "2026-10-09T21:55:37.378263+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+        ],
+        "nginx_test_after": {
+          "at": "2026-10-09T21:55:37Z",
+          "output": "2026/10/09 21:55:37 [warn] 3777#3777: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+          "returncode": 0,
+          "status": "ok"
+        },
+        "nginx_unit": {
+          "ActiveState": [
+            "active",
+            "active"
+          ],
+          "ExecReload": [
+            "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 21:55:28 UTC] ; stop_time=[Fri 2026-10-09 21:55:28 UTC] ; pid=3522 ; code=exited ; status=0 }",
+            "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 21:55:37 UTC] ; stop_time=[Fri 2026-10-09 21:55:37 UTC] ; pid=3762 ; code=exited ; status=0 }"
+          ],
+          "InvocationID": [
+            "a7ad8b30e1b542b0ae54947f56d6f44f",
+            "a7ad8b30e1b542b0ae54947f56d6f44f"
+          ],
+          "MainPID": [
+            "1248",
+            "1248"
+          ]
+        },
+        "pool_files_of_the_account": [],
+        "processes_of_the_account": [],
+        "product_journal_since": [
+          "2026-10-09T21:55:35.475035+00:00 dns-arch panel[418]: 2026/10/09 21:55:35 http: TLS handshake error from 127.0.0.1:51538: EOF",
+          "2026-10-09T21:55:36.793424+00:00 dns-arch useradd[3725]: new group: name=set4_a_long_site_name_an_owner_c, GID=1003",
+          "2026-10-09T21:55:36.793538+00:00 dns-arch useradd[3725]: new user: name=set4_a_long_site_name_an_owner_c, UID=1003, GID=1003, home=/var/www/celikpanel/subscriptions/2/sites/5, shell=/bin/bash, from=none",
+          "2026-10-09T21:55:36.894806+00:00 dns-arch chpasswd[3726]: pam_unix(chpasswd:chauthtok): password changed for set4_a_long_site_name_an_owner_c",
+          "2026-10-09T21:55:36.956283+00:00 dns-arch php-fpm[3731]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful",
+          "2026-10-09T21:55:37.165360+00:00 dns-arch php-fpm[3752]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful",
+          "2026-10-09T21:55:37.261506+00:00 dns-arch userdel[3757]: delete user 'set4_a_long_site_name_an_owner_c'",
+          "2026-10-09T21:55:37.263075+00:00 dns-arch userdel[3757]: removed group 'set4_a_long_site_name_an_owner_c' owned by 'set4_a_long_site_name_an_owner_c'",
+          "2026-10-09T21:55:37.263096+00:00 dns-arch userdel[3757]: removed shadow group 'set4_a_long_site_name_an_owner_c' owned by 'set4_a_long_site_name_an_owner_c'",
+          "2026-10-09T21:55:37.327075+00:00 dns-arch agent[407]: 2026/10/09 21:55:37 CreateSite set4-a-long-site-name-an-owner-could-plausibly-choose.test: nginx vhost activation: nginx validation failed: nginx validation failed: 2026/10/09 21:55:37 [warn] 3739#3739: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+          "2026-10-09T21:55:37.327075+00:00 dns-arch agent[407]: 2026/10/09 21:55:37 [emerg] 3739#3739: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64",
+          "2026-10-09T21:55:37.327075+00:00 dns-arch agent[407]: nginx: configuration file /etc/nginx/nginx.conf test failed: exit status 1; rollback restored and reloaded the previous vhost",
+          "2026-10-09T21:55:37.397897+00:00 dns-arch panel[418]: 2026/10/09 21:55:37 [502][domain] set4-a-long-site-name-an-owner-could-plausibly-choose.test: SITE_WEB_SERVER_REFUSED removed: 2026/10/09 21:55:37 [emerg] 3739#3739: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64"
+        ],
+        "row_counts": [
+          {
+            "databases_v2": 0,
+            "domains": 1,
+            "email_accounts": 0,
+            "sites": 1,
+            "subscriptions": 1
+          },
+          {
+            "databases_v2": 0,
+            "domains": 1,
+            "email_accounts": 0,
+            "sites": 1,
+            "subscriptions": 1
+          }
+        ],
+        "site_directories": [
+          [
+            "/var/www/celikpanel/subscriptions/2/sites/1"
+          ],
+          [
+            "/var/www/celikpanel/subscriptions/2/sites/1"
+          ]
+        ],
+        "site_rows": [],
+        "subscription_directories_after": {
+          "/var/www/celikpanel/subscriptions/2": [
+            "sites"
+          ]
+        },
+        "system_account": null,
+        "system_group": null,
+        "tables_naming_the_domain": {},
+        "that_home_is_listed_after": [],
+        "vhost_files_naming_the_domain": []
+      },
+      "not_claimed_by_the_answer": {
+        "the certificate-validation directory": [
+          "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/5"
+        ]
+      },
+      "reason": "removed",
+      "status": 502,
+      "vars": {
+        "command": "sudo nginx -t",
+        "domain": "set4-a-long-site-name-an-owner-could-plausibly-choose.test"
+      },
+      "what_made_nginx_refuse": "no owner action; the site name has 58 characters",
+      "what_the_removed_answer_claims_and_whether_it_is_true": {
+        "its PHP pool": true,
+        "its files": true,
+        "its system account": true,
+        "its web server configuration": true,
+        "the domain and site rows": true
+      }
+    },
+    "owner-moved-file": {
+      "answer_keys": [
+        "code",
+        "details",
+        "error",
+        "reason",
+        "vars"
+      ],
+      "catalogue_texts": {
+        "domains.add.webServerRefused.removed": {
+          "en": "set4-refused.test was not created: the web server (nginx) refused the configuration CelikPanel generated for it. What had been created for the site was removed again, and the removal was confirmed: its web server configuration, system account, files and, for a PHP site, PHP pool. nginx was reloaded with the configuration it had before. On the server, run sudo nginx -t. If it reports an error, a file of the server’s own nginx configuration is refused; correct that first. If it passes, the refusal came from the configuration CelikPanel generated, and the line nginx printed names it (administrators see it below). Then create the site again; nothing retries by itself.",
+          "tr": "set4-refused.test oluşturulmadı: web sunucusu (nginx), CelikPanel’in bu site için ürettiği yapılandırmayı reddetti. Site için oluşturulanlar yeniden kaldırıldı ve bu kaldırma doğrulandı: web sunucusu yapılandırması, sistem hesabı, dosyaları ve PHP sitesiyse PHP havuzu. nginx, önceki yapılandırmasıyla yeniden yüklendi. Sunucuda sudo nginx -t komutunu çalıştırın. Bir hata bildiriyorsa sunucunun kendi nginx yapılandırmasındaki bir dosya reddediliyordur; önce onu düzeltin. Geçiyorsa ret CelikPanel’in ürettiği yapılandırmadan gelmiştir ve nginx’in yazdığı satır onu adlandırır (yöneticiler aşağıda görür). Ardından siteyi yeniden oluşturun; hiçbir şey kendiliğinden yeniden denemez."
+        },
+        "domains.add.webServerRefused.unconfirmed": {
+          "en": "set4-refused.test was not created: the web server (nginx) refused the configuration CelikPanel generated for it. nginx was reloaded with the configuration it had before. Removing what had been created for the site was not confirmed, so parts of it may remain on the server: open Domains and, if set4-refused.test is listed there, delete it, which removes its parts. On the server, run sudo nginx -t. If it reports an error, a file of the server’s own nginx configuration is refused; correct that first. If it passes, the refusal came from the configuration CelikPanel generated, and the line nginx printed names it (administrators see it below). Then create the site again; nothing retries by itself.",
+          "tr": "set4-refused.test oluşturulmadı: web sunucusu (nginx), CelikPanel’in bu site için ürettiği yapılandırmayı reddetti. nginx, önceki yapılandırmasıyla yeniden yüklendi. Site için oluşturulanların kaldırıldığı doğrulanamadı; bu yüzden bir bölümü sunucuda kalmış olabilir: Alan Adları sayfasını açın ve set4-refused.test orada listeleniyorsa silin; silme, parçalarını da kaldırır. Sunucuda sudo nginx -t komutunu çalıştırın. Bir hata bildiriyorsa sunucunun kendi nginx yapılandırmasındaki bir dosya reddediliyordur; önce onu düzeltin. Geçiyorsa ret CelikPanel’in ürettiği yapılandırmadan gelmiştir ve nginx’in yazdığı satır onu adlandırır (yöneticiler aşağıda görür). Ardından siteyi yeniden oluşturun; hiçbir şey kendiliğinden yeniden denemez."
+        }
+      },
+      "code": "SITE_WEB_SERVER_REFUSED",
+      "details": [
+        "2026/10/09 21:55:24 [emerg] 3398#3398: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31"
+      ],
+      "documented_sentence_for_the_reason": "The site set4-refused.test was not created: the web server (nginx) refused the configuration CelikPanel generated for it, so the site was never put into service. What had been created for it was removed again and the removal was confirmed: its web server configuration, its system account, its files and, for a PHP site, its PHP pool. nginx was reloaded with the configuration it had before. The server owner runs sudo nginx -t on the server. If it reports an error now, a file of the server's own nginx configuration is refused and is corrected first. If it passes, what nginx refused was in the configuration CelikPanel generated for this server; the line nginx printed names it and is shown to administrators. Then create the site again; nothing retries by itself.",
+      "domain": "set4-refused.test",
+      "error": "The site set4-refused.test was not created: the web server (nginx) refused the configuration CelikPanel generated for it, so the site was never put into service. What had been created for it was removed again and the removal was confirmed: its web server configuration, its system account, its files and, for a PHP site, its PHP pool. nginx was reloaded with the configuration it had before. The server owner runs sudo nginx -t on the server. If it reports an error now, a file of the server's own nginx configuration is refused and is corrected first. If it passes, what nginx refused was in the configuration CelikPanel generated for this server; the line nginx printed names it and is shown to administrators. Then create the site again; nothing retries by itself.",
+      "error_equals_the_documented_sentence": true,
+      "native": {
+        "autoincrement": [
+          {
+            "domains": 2,
+            "sites": 2
+          },
+          {
+            "domains": 3,
+            "sites": 3
+          }
+        ],
+        "domain_rows": [],
+        "home_named_by_useradd_in_the_journal": [
+          "/var/www/celikpanel/subscriptions/2/sites/3"
+        ],
+        "listed_in_domains": false,
+        "new_acme_challenge_directories": [
+          "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/3"
+        ],
+        "new_site_directories": [],
+        "new_sockets": [],
+        "nginx_dump_lines_naming_the_domain": [],
+        "nginx_journal_since": [
+          "2026-10-09T21:55:24.940872+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+          "2026-10-09T21:55:24.966419+00:00 dns-arch nginx[3407]: 2026/10/09 21:55:24 [warn] 3407#3407: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+          "2026-10-09T21:55:24.970965+00:00 dns-arch nginx[3407]: 2026/10/09 21:55:24 [notice] 3407#3407: signal process started",
+          "2026-10-09T21:55:24.974166+00:00 dns-arch systemd[1]: Reloaded nginx web server.",
+          "2026-10-09T21:55:25.241604+00:00 dns-arch systemd[1]: Reloading nginx web server...",
+          "2026-10-09T21:55:25.271585+00:00 dns-arch nginx[3420]: 2026/10/09 21:55:25 [warn] 3420#3420: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+          "2026-10-09T21:55:25.276254+00:00 dns-arch nginx[3420]: 2026/10/09 21:55:25 [notice] 3420#3420: signal process started",
+          "2026-10-09T21:55:25.278596+00:00 dns-arch systemd[1]: Reloaded nginx web server."
+        ],
+        "nginx_test_after": {
+          "at": "2026-10-09T21:55:25Z",
+          "output": "2026/10/09 21:55:25 [warn] 3435#3435: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+          "returncode": 0,
+          "status": "ok"
+        },
+        "nginx_unit": {
+          "ActiveState": [
+            "active",
+            "active"
+          ],
+          "ExecReload": [
+            "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 21:55:14 UTC] ; stop_time=[Fri 2026-10-09 21:55:14 UTC] ; pid=3170 ; code=exited ; status=0 }",
+            "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 21:55:25 UTC] ; stop_time=[Fri 2026-10-09 21:55:25 UTC] ; pid=3420 ; code=exited ; status=0 }"
+          ],
+          "InvocationID": [
+            "a7ad8b30e1b542b0ae54947f56d6f44f",
+            "a7ad8b30e1b542b0ae54947f56d6f44f"
+          ],
+          "MainPID": [
+            "1248",
+            "1248"
+          ]
+        },
+        "pool_files_of_the_account": [],
+        "processes_of_the_account": [],
+        "product_journal_since": [
+          "2026-10-09T21:55:23.307715+00:00 dns-arch panel[418]: 2026/10/09 21:55:23 http: TLS handshake error from 127.0.0.1:44994: EOF",
+          "2026-10-09T21:55:24.651499+00:00 dns-arch useradd[3385]: new group: name=set4_refused_test, GID=1003",
+          "2026-10-09T21:55:24.651624+00:00 dns-arch useradd[3385]: new user: name=set4_refused_test, UID=1003, GID=1003, home=/var/www/celikpanel/subscriptions/2/sites/3, shell=/bin/bash, from=none",
+          "2026-10-09T21:55:24.760014+00:00 dns-arch chpasswd[3386]: pam_unix(chpasswd:chauthtok): password changed for set4_refused_test",
+          "2026-10-09T21:55:24.818796+00:00 dns-arch php-fpm[3391]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful",
+          "2026-10-09T21:55:25.020745+00:00 dns-arch php-fpm[3410]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful",
+          "2026-10-09T21:55:25.130996+00:00 dns-arch userdel[3415]: delete user 'set4_refused_test'",
+          "2026-10-09T21:55:25.133217+00:00 dns-arch userdel[3415]: removed group 'set4_refused_test' owned by 'set4_refused_test'",
+          "2026-10-09T21:55:25.133515+00:00 dns-arch userdel[3415]: removed shadow group 'set4_refused_test' owned by 'set4_refused_test'",
+          "2026-10-09T21:55:25.219588+00:00 dns-arch agent[407]: 2026/10/09 21:55:25 CreateSite set4-refused.test: nginx vhost activation: nginx validation failed: nginx validation failed: 2026/10/09 21:55:24 [emerg] 3398#3398: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31",
+          "2026-10-09T21:55:25.219588+00:00 dns-arch agent[407]: nginx: configuration file /etc/nginx/nginx.conf test failed: exit status 1; rollback restored and reloaded the previous vhost",
+          "2026-10-09T21:55:25.299949+00:00 dns-arch panel[418]: 2026/10/09 21:55:25 [502][domain] set4-refused.test: SITE_WEB_SERVER_REFUSED removed: 2026/10/09 21:55:24 [emerg] 3398#3398: open() \"/etc/nginx/fastcgi.conf\" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31"
+        ],
+        "row_counts": [
+          {
+            "databases_v2": 0,
+            "domains": 1,
+            "email_accounts": 0,
+            "sites": 1,
+            "subscriptions": 1
+          },
+          {
+            "databases_v2": 0,
+            "domains": 1,
+            "email_accounts": 0,
+            "sites": 1,
+            "subscriptions": 1
+          }
+        ],
+        "site_directories": [
+          [
+            "/var/www/celikpanel/subscriptions/2/sites/1"
+          ],
+          [
+            "/var/www/celikpanel/subscriptions/2/sites/1"
+          ]
+        ],
+        "site_rows": [],
+        "subscription_directories_after": {
+          "/var/www/celikpanel/subscriptions/2": [
+            "sites"
+          ]
+        },
+        "system_account": null,
+        "system_group": null,
+        "tables_naming_the_domain": {},
+        "that_home_is_listed_after": [],
+        "vhost_files_naming_the_domain": []
+      },
+      "not_claimed_by_the_answer": {
+        "the certificate-validation directory": [
+          "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/3"
+        ]
+      },
+      "reason": "removed",
+      "status": 502,
+      "vars": {
+        "command": "sudo nginx -t",
+        "domain": "set4-refused.test"
+      },
+      "what_made_nginx_refuse": "the owner renamed nginx's own /etc/nginx/fastcgi.conf, which the generated PHP vhost includes",
+      "what_the_removed_answer_claims_and_whether_it_is_true": {
+        "its PHP pool": true,
+        "its files": true,
+        "its system account": true,
+        "its web server configuration": true,
+        "the domain and site rows": true
+      }
+    }
+  },
+  "section": "M6-site-refused",
+  "started_at": "2026-10-09T21:55:19Z",
+  "substeps": {
+    "item 6": "passed",
+    "refused-again": "passed"
+  },
+  "title": "a new site whose configuration the web server refuses",
+  "verdict": "passed"
+}

@@ -1,0 +1,38 @@
+{
+  "at": "2026-10-09T03:41:27Z",
+  "epoch": 1791517287.300311,
+  "mode": "read-service",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "nginx.service": {
+      "is_active": "active",
+      "properties": {
+        "ActiveEnterTimestamp": "Fri 2026-10-09 03:33:43 UTC",
+        "ActiveState": "active",
+        "ConsistsOf": "",
+        "DropInPaths": "",
+        "ExecMainPID": "7039",
+        "ExecMainStartTimestamp": "Fri 2026-10-09 03:33:43 UTC",
+        "ExecReload": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; master_process on; -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 03:41:25 UTC] ; stop_time=[Fri 2026-10-09 03:41:25 UTC] ; pid=37971 ; code=exited ; status=0 }",
+        "ExecStart": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; master_process on; ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+        "InactiveEnterTimestamp": "",
+        "LoadState": "loaded",
+        "MainPID": "7039",
+        "NRestarts": "0",
+        "PartOf": "",
+        "PropagatesReloadTo": "",
+        "ReloadPropagatedFrom": "",
+        "ReloadResult": "success",
+        "RemainAfterExit": "no",
+        "Result": "success",
+        "SubState": "running",
+        "Type": "forking",
+        "WantedBy": "multi-user.target",
+        "Wants": "network-online.target"
+      },
+      "returncode": 0
+    }
+  }
+}

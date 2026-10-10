@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-s5-d13-sc-a
+upd1-debian13-startcheck-20261009t184514z

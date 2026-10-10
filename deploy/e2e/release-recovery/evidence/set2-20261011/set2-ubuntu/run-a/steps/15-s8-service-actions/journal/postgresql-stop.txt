@@ -1,0 +1,5 @@
+2026-10-09T03:47:35.622291+00:00 dns-ubuntu systemd[1]: postgresql.service: Deactivated successfully.
+2026-10-09T03:47:35.622558+00:00 dns-ubuntu systemd[1]: Stopped postgresql.service - PostgreSQL RDBMS.
+2026-10-09T03:47:35.627419+00:00 dns-ubuntu systemd[1]: Stopping postgresql@16-main.service - PostgreSQL Cluster 16-main...
+2026-10-09T03:47:35.765254+00:00 dns-ubuntu systemd[1]: postgresql@16-main.service: Deactivated successfully.
+2026-10-09T03:47:35.765515+00:00 dns-ubuntu systemd[1]: Stopped postgresql@16-main.service - PostgreSQL Cluster 16-main.

@@ -193,11 +193,16 @@ func TestMailMutationsRejectDomainDeletionPending(t *testing.T) {
 			handler: panel.handleDeleteEmailForwarding,
 		},
 		{
+			// A catch-all write carries the version of the catch-all it
+			// replaces (9 Oct 2026); with it, the pending deletion is what
+			// refuses the write.
 			name: "put catch all", method: http.MethodPut, target: "/mail/catch-all",
-			body: `{"destination":"newcatch@other.test"}`, handler: panel.handleMailCatchAll,
+			body:    `{"destination":"newcatch@other.test","version":"` + mailCatchAllState{exists: true, destination: "catch@other.test"}.version() + `"}`,
+			handler: panel.handleMailCatchAll,
 		},
 		{
-			name: "delete catch all", method: http.MethodDelete, target: "/mail/catch-all",
+			name: "delete catch all", method: http.MethodDelete,
+			target:  "/mail/catch-all?version=" + mailCatchAllState{exists: true, destination: "catch@other.test"}.version(),
 			handler: panel.handleMailCatchAll,
 		},
 	}

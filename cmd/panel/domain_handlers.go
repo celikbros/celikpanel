@@ -162,8 +162,11 @@ func (p *Panel) handleDomains(w http.ResponseWriter, r *http.Request) {
 			err := p.db.GetDB().QueryRowContext(context.Background(), query, domain.ID).
 				Scan(&phpVersion, &sslEnabled, &projectType, &diskUsage, &bandwidth)
 			if err != nil {
-				// Preserve the legacy full-account defaults when no site exists.
-				phpVersion = "8.3"
+				// A domain without a site: the legacy full-account defaults, and
+				// no PHP version, because nothing is known to run one (it used
+				// to answer the literal 8.3).
+				// Sitesi olmayan alan adı: bilinen bir PHP sürümü yoktur.
+				phpVersion = ""
 				sslEnabled = false
 				projectType = "php"
 			}
@@ -406,16 +409,27 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Default PHP version: whatever is actually installed on this host — each
-	// distro ships a different one (Ubuntu 24.04 → 8.3, Debian 13 → 8.4), so a
-	// constant here pointed pool files at a non-existent /etc/php/<ver> tree.
-	// Varsayılan PHP sürümü: bu makinede gerçekten kurulu olan — her dağıtım
-	// farklısını taşır (Ubuntu 24.04 → 8.3, Debian 13 → 8.4); buradaki sabit,
-	// havuz dosyalarını var olmayan /etc/php/<ver> ağacına yöneltiyordu.
-	if req.ProjectType == "php" && req.PHPVersion == "" {
-		if req.PHPVersion = services.DetectInstalledPHPVersion(); req.PHPVersion == "" {
-			req.PHPVersion = "8.3"
+	// The PHP version of a new site is one this server runs, as the Agent
+	// reports it (caps.PHPVersions, newest first; never empty here: a PHP site
+	// without one was refused above). It used to be read from the Panel's own
+	// disk as /etc/php/<version>/fpm, with the literal 8.3 when nothing was
+	// found: on a host with one unversioned PHP-FPM (Arch) nothing is found,
+	// so a site on PHP 8.5 was recorded as 8.3 and its socket was named
+	// php8.3-fpm-site<N>.sock (measured, 12 Oct 2026). A version the request
+	// names must be one of them too: a pool cannot be written for a PHP that
+	// is not installed, and on such a host the name would be the only place
+	// the wrong version lived.
+	// Yeni bir sitenin PHP sürümü, Agent'ın bildirdiği ve bu sunucunun
+	// çalıştırdığı sürümlerden biridir. Eskiden Panel'in kendi diskinden
+	// okunuyor, bir şey bulunamazsa 8.3 yazılıyordu: tek ve sürümsüz PHP-FPM
+	// olan bir sunucuda (Arch) PHP 8.5 çalıştıran site 8.3 diye kaydediliyordu.
+	if req.ProjectType == "php" {
+		version, installed := newSitePHPVersion(req.PHPVersion, caps.PHPVersions)
+		if !installed {
+			writePHPVersionNotInstalled(w, req.PHPVersion, caps.PHPVersions)
+			return
 		}
+		req.PHPVersion = version
 	}
 	if req.ProjectType != "php" {
 		req.PHPVersion = ""
@@ -493,6 +507,10 @@ func (p *Panel) handleCreateDomain(w http.ResponseWriter, r *http.Request) {
 		}
 		if refusal, ok := hostingRootNotTraversable(err); ok {
 			writeHostingRootNotTraversable(w, refusal)
+			return
+		}
+		if refusal, confirmed, ok := webServerRefusedConfig(err); ok {
+			writeSiteWebServerRefused(w, caller, req.Domain, refusal, confirmed, false)
 			return
 		}
 		writeServerError(w, err)

@@ -1,0 +1,2 @@
+2026-10-09T22:48:22Z before upd1-debian13-good run-a (lab prepare) free_GiB=167.97 free_bytes=180352274432 (Get-PSDrive C reading of 2026-10-09T22:48:00Z, 22s old) allowed=yes
+2026-10-09T22:48:24Z before upd1-debian13-good run-a (guest start) free_GiB=167.97 free_bytes=180352274432 (Get-PSDrive C reading of 2026-10-09T22:48:00Z, 24s old) allowed=yes

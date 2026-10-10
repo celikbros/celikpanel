@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -106,13 +105,12 @@ func (s *ServiceScanner) getSearchPaths(serviceName string) []string {
 			paths = append(paths, matches...)
 		}
 	} else if strings.Contains(serviceName, "php") && strings.Contains(serviceName, "fpm") {
-		// Extract version
-		version := s.extractPHPVersion(serviceName)
-		paths = []string{
-			fmt.Sprintf("/etc/php/%s/fpm/php-fpm.conf", version),
-			fmt.Sprintf("/etc/php/%s/fpm/pool.d/www.conf", version),
-			fmt.Sprintf("/usr/local/etc/php-fpm.d/www.conf"),
-		}
+		// The files of the PHP-FPM this host has (php_layout.go): a version
+		// with its own tree, or the one unversioned PHP-FPM (Arch). No version
+		// is assumed: it used to be the literal "8.3" when the unit's name
+		// carried none, which named files of a PHP that is not installed.
+		// Bu sunucudaki PHP-FPM'in dosyaları. Sürüm varsayılmaz.
+		paths = phpFPMConfigFiles(s.extractPHPVersion(serviceName))
 	} else if strings.Contains(serviceName, "mariadb") || strings.Contains(serviceName, "mysql") {
 		paths = []string{
 			"/etc/mysql/my.cnf",
@@ -264,8 +262,28 @@ func (s *ServiceScanner) extractPHPVersion(serviceName string) string {
 	if len(parts) > 0 && strings.HasPrefix(parts[0], "php") && parts[0] != "php" {
 		return strings.TrimPrefix(parts[0], "php")
 	}
-	if v := DetectInstalledPHPVersion(); v != "" {
-		return v
+	// Empty when no versioned tree exists: the caller reads the host's layout
+	// instead of a version nobody observed.
+	return DetectInstalledPHPVersion()
+}
+
+// phpFPMConfigFiles lists the main and the stock pool file of the PHP-FPM that
+// is installed: the versioned tree when `version` has one, the single
+// unversioned PHP-FPM when the host has that layout, and nothing under
+// /etc/php otherwise.
+func phpFPMConfigFiles(version string) []string {
+	var paths []string
+	switch {
+	case version != "" && ValidatePHPVersion(version) == nil && phpIsDir(filepath.Join(phpEtcDir, version)):
+		paths = []string{
+			filepath.Join(phpEtcDir, version, "fpm", "php-fpm.conf"),
+			filepath.Join(phpEtcDir, version, "fpm", "pool.d", "www.conf"),
+		}
+	case phpIsDir(filepath.Join(phpEtcDir, "php-fpm.d")):
+		paths = []string{
+			filepath.Join(phpEtcDir, "php-fpm.conf"),
+			filepath.Join(phpEtcDir, "php-fpm.d", "www.conf"),
+		}
 	}
-	return "8.3" // default
+	return append(paths, "/usr/local/etc/php-fpm.d/www.conf")
 }

@@ -1,0 +1,16 @@
+{
+  "acme_isolated": true,
+  "at": "2026-10-09T07:09:28Z",
+  "certbot": "/usr/bin/certbot",
+  "certbot_log_count": 0,
+  "certbot_logs": [],
+  "epoch": 1791529768.2957435,
+  "lab_action": false,
+  "mode": "read-acme",
+  "owner_action": false,
+  "resolves": {
+    "acme-staging-v02.api.letsencrypt.org": "::1             acme-staging-v02.api.letsencrypt.org",
+    "acme-v02.api.letsencrypt.org": "::1             acme-v02.api.letsencrypt.org"
+  },
+  "schema": "celikpanel/set2-request-identity-native/v1"
+}

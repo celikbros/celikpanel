@@ -1,0 +1,36 @@
+{
+  "action": "owner-seed-site",
+  "at": "2026-10-09T04:16:10Z",
+  "docroot": {
+    "bytes": 201330137,
+    "exists": true,
+    "files": 9,
+    "mode": "2750",
+    "names": [
+      "index.html",
+      "data/blob-00.bin",
+      "data/blob-01.bin",
+      "data/blob-02.bin",
+      "pages/page-1.html",
+      "pages/page-2.html",
+      "pages/page-3.html",
+      "pages/page-4.html",
+      "pages/page-5.html"
+    ],
+    "newest_mtime": 1791519370,
+    "owner_uid": 5001,
+    "root": "/var/www/celikpanel/subscriptions/2/sites/1/public_html",
+    "sha256": "abc26fba636a50249ed33a78f2c6cd0b37bf91ce9fe0b5105e3dd2caa1a6a522"
+  },
+  "domain": {
+    "id": 1,
+    "name": "set1-owner.test",
+    "status": "active",
+    "subscription_id": 2
+  },
+  "lab_action": false,
+  "megabytes": 192,
+  "mode": "owner-seed-site",
+  "owner_action": true,
+  "schema": "celikpanel/set2-request-identity-native/v1"
+}

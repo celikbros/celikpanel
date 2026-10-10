@@ -1,0 +1,67 @@
+{
+  "at": "2026-10-09T08:31:09Z",
+  "databases_v2": [
+    {
+      "name": "s2impseq_app",
+      "server_id": 1
+    }
+  ],
+  "docroot": {
+    "bytes": 100,
+    "exists": true,
+    "file_list": {
+      "assets/site.css": [
+        34,
+        "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+      ],
+      "index.html": [
+        66,
+        "62962c4807e785f9e83250d95d52c889e439f32d36227d284e1e865d6a2f6ed7"
+      ]
+    },
+    "files": 2,
+    "mode": "0750",
+    "names": [
+      "index.html",
+      "assets/site.css"
+    ],
+    "newest_mtime": 1791534667,
+    "non_regular": [],
+    "owner_uid": 5003,
+    "root": "/var/www/celikpanel/subscriptions/2/sites/4/public_html",
+    "sha256": "176539e6461df9b0922899ab1677602569e851d66b4758021a9b420a335b71b5"
+  },
+  "domain": "set2-import-seq.test",
+  "email_accounts": [
+    {
+      "address": "info@set2-import-seq.test",
+      "quota_mb": 256
+    }
+  ],
+  "email_forwardings": [
+    {
+      "destination": "info@set2-import-seq.test",
+      "source": "sales@set2-import-seq.test"
+    }
+  ],
+  "escapes": [],
+  "lab_action": false,
+  "mode": "read-imported",
+  "owner_action": false,
+  "rows": [
+    {
+      "id": 4,
+      "name": "set2-import-seq.test",
+      "status": "active",
+      "subscription_id": 2
+    }
+  ],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "site_account": {
+    "home": "/var/www/celikpanel/subscriptions/2/sites/4",
+    "uid": 5003
+  },
+  "site_home_entries": [
+    "public_html"
+  ]
+}

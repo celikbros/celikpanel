@@ -23,6 +23,13 @@ export interface ApiError {
     // reason, code'u inceltir. O gerekçe için sözü olan ekran onu kullanır;
     // olmayan, kodun cümlesine döner.
     reason?: string;
+    // detail refines reason with one reviewed machine token: for a crontab that
+    // could not be read, the cause the server verified itself (`cron_allow`,
+    // `cron_deny`). A screen uses it only for the tokens it has words for.
+    // The server's own printed line is not this; it travels in `vars.detail`.
+    // detail, reason'ı gözden geçirilmiş tek bir makine belirteciyle inceltir.
+    // Sunucunun kendi yazdığı satır bu değildir; o `vars.detail` içindedir.
+    detail?: string;
     // These flags are proof-bearing outcome fields, not synonyms. In
     // particular, partial_success alone must never be treated as proof that a
     // host mutation happened; only mutation_applied === true carries that
@@ -70,6 +77,7 @@ export async function readApiError(res: Response): Promise<ApiError> {
                     code: d.code,
                     action: d.action,
                     reason: typeof d.reason === 'string' && d.reason ? d.reason : undefined,
+                    detail: typeof d.detail === 'string' && d.detail ? d.detail : undefined,
                     partialSuccess: d.partial_success === true ? true : undefined,
                     mutationApplied: d.mutation_applied === true ? true : undefined,
                     details: Array.isArray(d.details)

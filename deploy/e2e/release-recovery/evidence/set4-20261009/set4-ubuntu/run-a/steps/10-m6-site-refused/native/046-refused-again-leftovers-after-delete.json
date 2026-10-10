@@ -1,0 +1,99 @@
+{
+  "account": null,
+  "account_name": "set4_refused_test",
+  "acme_challenge_directories": [
+    "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/1",
+    "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/2",
+    "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/3",
+    "/var/lib/celikpanel-agent/acme-http-01/subscriptions/2/domains/4"
+  ],
+  "acme_root": {
+    "exists": true,
+    "group": "root",
+    "kind": "directory",
+    "mode": "0755",
+    "owner": "root",
+    "path": "/var/lib/celikpanel-agent/acme-http-01"
+  },
+  "at": "2026-10-09T11:26:02Z",
+  "crontab_spool": [],
+  "domain": "set4-refused.test",
+  "group": null,
+  "mode": "read-leftovers",
+  "nginx_dump_lines_naming_the_domain": [],
+  "nginx_dump_returncode": 0,
+  "nginx_files_naming_the_domain": [],
+  "nginx_test": {
+    "at": "2026-10-09T11:26:02Z",
+    "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": false,
+  "panel": {
+    "autoincrement": {
+      "domains": 4,
+      "sites": 4
+    },
+    "domains": [],
+    "row_counts": {
+      "databases_v2": 0,
+      "domains": 1,
+      "email_accounts": 1,
+      "sites": 1,
+      "subscriptions": 1
+    },
+    "sites": [],
+    "tables_naming_the_domain": {
+      "audit_logs": {
+        "action": 1
+      }
+    }
+  },
+  "pool_files": [
+    {
+      "names_the_account": false,
+      "names_the_domain": false,
+      "path": "/etc/php/8.3/fpm/pool.d/www.conf",
+      "settings": {
+        "group": "www-data",
+        "listen": "/run/php/php8.3-fpm.sock",
+        "listen.group": "www-data",
+        "listen.owner": "www-data",
+        "pool": "www",
+        "user": "www-data"
+      }
+    }
+  ],
+  "pool_files_of_the_account": [],
+  "processes_of_the_account": [],
+  "schema": "celikpanel/set4-native/v1",
+  "site_directories": [],
+  "sockets": [
+    {
+      "exists": true,
+      "group": "root",
+      "kind": "symlink",
+      "mode": "0777",
+      "owner": "root",
+      "path": "/run/php/php-fpm.sock"
+    },
+    {
+      "exists": true,
+      "group": "root",
+      "kind": "file",
+      "mode": "0644",
+      "owner": "root",
+      "path": "/run/php/php8.3-fpm.pid"
+    },
+    {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/run/php/php8.3-fpm.sock"
+    }
+  ],
+  "this_domain": {}
+}

@@ -4,6 +4,19 @@ P0.4/P0.5, constitution invariants 1 (owner authority), 2 (evidence meaning),
 and 4 (mutation preconditions). This closes a pre-publication observation gap;
 it does not establish independent renewal or complete owner-safe recovery.
 
+> **Erratum on dates (recorded 2026-10-09).** The section "The listeners are asked which
+> certificate they present (2026-10-10)" and its reference to the "entries of 2026-10-10"
+> use a round label, not a calendar date. That text was committed on 2026-10-09 at 04:07
+> (`874d12e43`, local time, UTC+3). Work rounds were labelled 2026-10-10, 2026-10-11 and
+> 2026-10-12 by raising the label once per round instead of reading the clock; all of them
+> were committed on 2026-10-09 (2026-10-10: 00:45-05:57; 2026-10-11: 08:05-09:12;
+> 2026-10-12: 09:12-13:06). The labels stay, because entries cite each other by them. The
+> mapping, the commits and the three evidence directories named with the same labels
+> (`set1-20261010`, `set2-20261011`, `set3-20261012`, run on 2026-10-08 and 2026-10-09)
+> are in the erratum at the top of [OPERATION-GUIDANCE.md](OPERATION-GUIDANCE.md). This
+> file has one affected section, the one named above. Entries written after this note use
+> the clock date; any other section dated 10, 11 or 12 October 2026 is genuine.
+
 The committed mail TLS v1 plan is historical accepted intent. Previously the
 host certificate preflight compared only its hostname, so a later native owner
 edit could be overwritten by configuration convergence during renewal. Initial
@@ -196,3 +209,21 @@ publication and generic startup recovery. Same-leaf unknown work and the ledger
 remain byte-identical; only exact recovered completion clears the queue. Full
 Agent race and vet passed. Independent renewal and power-loss acceptance remain
 open.
+
+## The listeners are asked which certificate they present (2026-10-10)
+
+P0.4/P0.5, invariants 1, 2 and 4. Reload-only activation above judged each
+reload by `systemctl`'s exit status and `systemctl is-active`. On Ubuntu 24.04
+`postfix.service` is a wrapper unit and both answer for it, not for Postfix
+(measured for the reload; see the [resilience contract](RESILIENCE-CONTRACT.md),
+entries of 2026-10-10). The command list is unchanged and `postfix check` stays
+excluded. What is added needs no command: after each service's reload and
+re-observation, a TLS handshake with that service's own listeners on this host,
+compared with the selected certificate (`cmd/agent/mail_served_certificate.go`).
+The selected certificate seen is the outcome; another certificate is a verified
+"not complete"; no listener answering is "not confirmed". Neither of the last
+two is recorded as activated, and both keep the same operation, selection and
+evidence, as a failed reload did. The check before publication is unchanged. No
+v1 record, kit manifest or unit template changes. Component tests only; the
+helper an already enrolled server has is not changed by this, and no native
+measurement has been made.

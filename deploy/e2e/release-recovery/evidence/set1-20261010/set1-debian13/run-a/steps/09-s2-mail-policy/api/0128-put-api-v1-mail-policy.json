@@ -1,0 +1,83 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S2b save with the old version",
+  "request": {
+    "body": {
+      "dnsbl_zones": [
+        "dnsbl.set1-lab.test"
+      ],
+      "message_size_mb": 9,
+      "outbound_rate_limit": 30,
+      "version": "mp1-d66482b5c93bee71398427c4cd13255aa7a00375dcd7942d90e3a015bd30f0cc"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "PUT",
+    "path": "/api/v1/mail/policy"
+  },
+  "response": {
+    "elapsed_seconds": 0.031,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 08 Oct 2026 21:26:49 GMT"
+      ],
+      [
+        "Content-Length",
+        "217"
+      ]
+    ],
+    "json": {
+      "code": "SETTINGS_CHANGED",
+      "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+      "reason": "mail_policy"
+    },
+    "status": 409,
+    "text": null
+  }
+}

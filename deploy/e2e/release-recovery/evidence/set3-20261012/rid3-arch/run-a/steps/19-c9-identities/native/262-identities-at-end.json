@@ -1,0 +1,1013 @@
+{
+  "at": "2026-10-09T07:33:18Z",
+  "columns": [
+    "id",
+    "actor_user_id",
+    "method",
+    "route",
+    "request_sha256",
+    "status",
+    "response_status",
+    "response_retained",
+    "response_content_type",
+    "response_body",
+    "created_at",
+    "finished_at",
+    "expires_at"
+  ],
+  "count": 35,
+  "lab_action": false,
+  "mode": "read-identities",
+  "needles_compared": 23,
+  "now_epoch": 1791531198,
+  "owner_action": false,
+  "rows": [
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 106,
+        "code": null,
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "0ac72e87cdb0b7b1642725f0f32b174d498ae4f990c147cdc50b8c024128b0f2",
+        "stored": true
+      },
+      "created_at": 1791530949,
+      "expires_at": 1791617349,
+      "finished_at": 1791530949,
+      "id": "7e6c631794f895f9c394b806ee81046e",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "a3e73c50e2455ce89ca0bfa8170ff23af9c4cb05d7e983b8f17cb1f95065809a",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 106,
+        "code": null,
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "e04935f12b92271fd107047b039a81ff70d3e6345a527cbc28e16f1b48bc4714",
+        "stored": true
+      },
+      "created_at": 1791530951,
+      "expires_at": 1791617351,
+      "finished_at": 1791530951,
+      "id": "82904533781a46eb96bdb7cbb691c0ac",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "42254825e492b54e8911dc26796e0ddaf66e6548dd5f8e466532b61fadeb7aca",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 111,
+        "code": null,
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "4e06e491c0f205b550bb5c89b06cf6a3c1aba182288323ba9948736e173f4d5b",
+        "stored": true
+      },
+      "created_at": 1791530954,
+      "expires_at": 1791617354,
+      "finished_at": 1791530954,
+      "id": "36dcfe6f6516632cc49d0a1dc2a29ac0",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "e54f5016837631e026aaac6df7e3b99da8685f408c1b0ec44ec8fe6949fb6aab",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 111,
+        "code": null,
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "405e19ffd581ddb2c555b3d91ed9bc9fbde035572f55baf4d917d014748409c7",
+        "stored": true
+      },
+      "created_at": 1791530956,
+      "expires_at": 1791617356,
+      "finished_at": 1791530956,
+      "id": "1b1c5e7a0c8492095842e552d71ba9bc",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "2eed27c58dfe183225ac5f907ec675b65fd9d37a0c305c6539cb71fc2cb58c6a",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791530960,
+      "expires_at": 1791617360,
+      "finished_at": 1791530960,
+      "id": "c4d7c6548abcd15bb89e8cfc98bf40fc",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "b3e477dcd06479b90e29c08b1c40035748b3863fe093b90369556ac14811d43d",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/admin-account",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791530961,
+      "expires_at": 1791617361,
+      "finished_at": 1791530962,
+      "id": "7ca6d9eea615beb06176bb6cfade1570",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "b3e477dcd06479b90e29c08b1c40035748b3863fe093b90369556ac14811d43d",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/admin-account",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791530964,
+      "expires_at": 1791617364,
+      "finished_at": 1791530964,
+      "id": "b696bd23da9f2ac8368a9985bc1ecb3a",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "597605c8d90d6dd972e1ea1de4b5e441262af0a539e3a03058cf6f29e82ef062",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/admin-account",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791530966,
+      "expires_at": 1791617366,
+      "finished_at": 1791530966,
+      "id": "fb779dca1d010f53700060d179dcfca7",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "597605c8d90d6dd972e1ea1de4b5e441262af0a539e3a03058cf6f29e82ef062",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/admin-account",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791530969,
+      "expires_at": 1791617369,
+      "finished_at": 1791530969,
+      "id": "05ac0129c5eeb60147c0f6ee219d7a69",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "c6db5a16aa29310ce0afb35f3d0ec1bb95bde9424be35cdb1a1526c744680b63",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791530971,
+      "expires_at": 1791617371,
+      "finished_at": 1791530971,
+      "id": "c31ce39d578593247019cb5b86b93b20",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "65cd3f2c8522b341dd8d88cb27e6b5b83276c681ced52cb9de172e21bd5c9903",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 106,
+        "code": null,
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "created_at",
+          "id",
+          "name",
+          "password_set",
+          "user"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "b878d7a966f23ac379f4edd739d09e487848e369930045e10f90a0d8c184d1e8",
+        "stored": true
+      },
+      "created_at": 1791530972,
+      "expires_at": 1791617372,
+      "finished_at": 1791530972,
+      "id": "0bcee464f17da02dd5e936cc20d45736",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "bc6b1068016230015cba5f24a6fd9b28a4e9d1efe87373da551ece5fab6a83da",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 98,
+        "code": null,
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "created_at",
+          "id",
+          "name",
+          "user"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "1b81b82ed2f2148e8662c0f8db0dd3a83ba2116916a1cdd811499eea596a6880",
+        "stored": true
+      },
+      "created_at": 1791530975,
+      "expires_at": 1791617375,
+      "finished_at": 1791530975,
+      "id": "ffe74142cc0abd5d998837d31d807eaa",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "4ab4326b94064e0bdef07a60e6e32592eba2948a61bf60948d01b44db356e9b7",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 98,
+        "code": null,
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "created_at",
+          "id",
+          "name",
+          "user"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "57c1bca970ad530aaa3fcfcb27b2c894a9dd3ed81bfc61d74542695d49a1e074",
+        "stored": true
+      },
+      "created_at": 1791530977,
+      "expires_at": 1791617377,
+      "finished_at": 1791530977,
+      "id": "cb46c43ab2846649e3c71eea944fb4f8",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "ef032a8aa37dfc915a200fa1ebda9a4ce5a387f57ade9e18129d1168eaf8062b",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 107,
+        "code": null,
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "created_at",
+          "id",
+          "name",
+          "password_set",
+          "user"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "aedc9fa22070702bc234bfc37c847944164eb73763617dfd09e3789b2b1dba44",
+        "stored": true
+      },
+      "created_at": 1791530978,
+      "expires_at": 1791617378,
+      "finished_at": 1791530978,
+      "id": "27a58a20b6b12872d1dd8ec234541deb",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "b4dc6a59097ca5c5836832c5860636b749f41438cf46fdea5620f6e3c17a50cf",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 205,
+        "code": null,
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "backup",
+          "success"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "c7f244b65a3a685e81fddfa54495df4d8ca0c572ec7bfe63661ba6c5d34bee99",
+        "stored": true
+      },
+      "created_at": 1791530980,
+      "expires_at": 1791617380,
+      "finished_at": 1791530991,
+      "id": "207bf5572f5805c1e84fd4d1af59d025",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "45743cc03fbe5f46eebf21fdc77c641acb8b5235a179a609c50b1cff89c5ea76",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/backups",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 205,
+        "code": null,
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "backup",
+          "success"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "8260afc9f6cd393bad617177756d0b75a9c9362c6ee19b9dd36336126c445716",
+        "stored": true
+      },
+      "created_at": 1791530991,
+      "expires_at": 1791617391,
+      "finished_at": 1791531003,
+      "id": "8449f9c45be3d30c0f8d2e986dce8de8",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "45743cc03fbe5f46eebf21fdc77c641acb8b5235a179a609c50b1cff89c5ea76",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/backups",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 847,
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "code",
+          "error",
+          "reason",
+          "vars"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "5833cf9549f627d0ce536b48991cb1d23edc6064d171ad426ef95e82fcb58f02",
+        "stored": true
+      },
+      "created_at": 1791531005,
+      "expires_at": 1791617405,
+      "finished_at": 1791531006,
+      "id": "81756cf4fde119fd9dd01178dcb345c1",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "04ec7df2421ec83a68d2e41a7d1afaadadf7138b0fa6ca5271d57706baa030cd",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 502,
+      "route": "/api/v1/domains/{id}/ssl/letsencrypt",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 847,
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "code",
+          "error",
+          "reason",
+          "vars"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "5833cf9549f627d0ce536b48991cb1d23edc6064d171ad426ef95e82fcb58f02",
+        "stored": true
+      },
+      "created_at": 1791531010,
+      "expires_at": 1791617410,
+      "finished_at": 1791531010,
+      "id": "1fb2868c4036c87335dbc0c029582114",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "04ec7df2421ec83a68d2e41a7d1afaadadf7138b0fa6ca5271d57706baa030cd",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 502,
+      "route": "/api/v1/domains/{id}/ssl/letsencrypt",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 847,
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "code",
+          "error",
+          "reason",
+          "vars"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "5833cf9549f627d0ce536b48991cb1d23edc6064d171ad426ef95e82fcb58f02",
+        "stored": true
+      },
+      "created_at": 1791531013,
+      "expires_at": 1791617413,
+      "finished_at": 1791531013,
+      "id": "a30380c9b6fd56d86a5d24fa51d51a75",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "04ec7df2421ec83a68d2e41a7d1afaadadf7138b0fa6ca5271d57706baa030cd",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 502,
+      "route": "/api/v1/domains/{id}/ssl/letsencrypt",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791531027,
+      "expires_at": 1791617427,
+      "finished_at": 1791531028,
+      "id": "bb346e0ed49df9bf4212701c8dda27b8",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "655785f35344e04f25fbc1cfdb972f95b103451772628dd241947c2c4fa1670d",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/vpn/peers",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791531029,
+      "expires_at": 1791617429,
+      "finished_at": 1791531029,
+      "id": "a5e861ab821971eb63b79baa5ed03ca6",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "136866f828c25170240e28e1c3a848d413aac87d758b68bdb977d4e45bbf8b9e",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/vpn/peers",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 522,
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "53460af9ac942c6321651e6d8a40cd469eff31bf7e8cee274b8902bf60e51c8a",
+        "stored": true
+      },
+      "created_at": 1791531034,
+      "expires_at": 1791617434,
+      "finished_at": 1791531036,
+      "id": "6c96884369f8dacd1ecc5616bc615b5e",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "68099b07ca0c655b8000006f74436c5b4b2f036aedd80ba9bc243bdc7a115281",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 502,
+      "route": "/api/v1/import/cpanel/apply",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 522,
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "53460af9ac942c6321651e6d8a40cd469eff31bf7e8cee274b8902bf60e51c8a",
+        "stored": true
+      },
+      "created_at": 1791531040,
+      "expires_at": 1791617440,
+      "finished_at": 1791531042,
+      "id": "d9571099da53697b78436e55c582df73",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "cc9b099b926bb6cd8a8df40351b3b7c89f3f3cd8580f13cbae305cbfbd08ed7e",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 502,
+      "route": "/api/v1/import/cpanel/apply",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 522,
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "53460af9ac942c6321651e6d8a40cd469eff31bf7e8cee274b8902bf60e51c8a",
+        "stored": true
+      },
+      "created_at": 1791531045,
+      "expires_at": 1791617445,
+      "finished_at": 1791531047,
+      "id": "775ff60ba3bba96ea134604bd0768c45",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "6599a3f8fdedb52c4ab1d8d8c15e5ebbb85e7e270b407d153f395ab417954419",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 502,
+      "route": "/api/v1/import/cpanel/apply",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 522,
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "53460af9ac942c6321651e6d8a40cd469eff31bf7e8cee274b8902bf60e51c8a",
+        "stored": true
+      },
+      "created_at": 1791531050,
+      "expires_at": 1791617450,
+      "finished_at": 1791531052,
+      "id": "02bbd995c0972019d539876a28a9036d",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "5115145a73d8e1ca8e2c8bb0b00cb407f8490ee85adbc762db67daa9c83a4b2f",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 502,
+      "route": "/api/v1/import/cpanel/apply",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 522,
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "53460af9ac942c6321651e6d8a40cd469eff31bf7e8cee274b8902bf60e51c8a",
+        "stored": true
+      },
+      "created_at": 1791531056,
+      "expires_at": 1791617456,
+      "finished_at": 1791531058,
+      "id": "c6874f1e1f01d2985822ffdf738b02c4",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "8de3579d51d3396a9414cb5f5b50d8b17711d5fb4efd7034320300521d8406a6",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 502,
+      "route": "/api/v1/import/cpanel/apply",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 522,
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "53460af9ac942c6321651e6d8a40cd469eff31bf7e8cee274b8902bf60e51c8a",
+        "stored": true
+      },
+      "created_at": 1791531061,
+      "expires_at": 1791617461,
+      "finished_at": 1791531063,
+      "id": "c5d8b3c2a572d7badb1e67cbe5318bd1",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "c2fe6b162883e7f357817e100708c3d765651fce9674f3e393465c139bc7e7a1",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 502,
+      "route": "/api/v1/import/cpanel/apply",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 522,
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "53460af9ac942c6321651e6d8a40cd469eff31bf7e8cee274b8902bf60e51c8a",
+        "stored": true
+      },
+      "created_at": 1791531065,
+      "expires_at": 1791617465,
+      "finished_at": 1791531067,
+      "id": "b5a3a9812e3deef9e0f0a2a588559c2a",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "88bc90de9297d6d4c43c0367583d1d717b6bb7422a5f4baf705e7dc324edcc17",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 502,
+      "route": "/api/v1/import/cpanel/apply",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 216,
+        "code": null,
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "safety_backup",
+          "success"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "98b15dc8e930ad067870e125f332922c717124fe68f19af867dd350e10fe0d16",
+        "stored": true
+      },
+      "created_at": 1791531073,
+      "expires_at": 1791617473,
+      "finished_at": 1791531087,
+      "id": "359cd2e2814d3c1e7047e82f50a23539",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "24812d4e8a72d4b372c0bf26c571c9b13f439d4088dc0a5577fc53b6ceca4396",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/backups/restore",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 217,
+        "code": null,
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "safety_backup",
+          "success"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "633330281cafc40ec356f73d8cb2122c3bbba0d10c6ec91b7ebc34b19aa726ac",
+        "stored": true
+      },
+      "created_at": 1791531093,
+      "expires_at": 1791617493,
+      "finished_at": 1791531107,
+      "id": "27d2ea65eacbbad8fee26fd995e32e27",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "24812d4e8a72d4b372c0bf26c571c9b13f439d4088dc0a5577fc53b6ceca4396",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/backups/restore",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 230,
+        "code": "BACKUP_RESTORE_IN_PROGRESS",
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "ccd4d7ba96837600b028b7fd68edd25448c6b95d4a72053036817ad750c3e788",
+        "stored": true
+      },
+      "created_at": 1791531110,
+      "expires_at": 1791617510,
+      "finished_at": 1791531110,
+      "id": "16385badfb35ef4231d7a077ef0ed3f3",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "24812d4e8a72d4b372c0bf26c571c9b13f439d4088dc0a5577fc53b6ceca4396",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 409,
+      "route": "/api/v1/domains/{id}/backups/restore",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 217,
+        "code": null,
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "safety_backup",
+          "success"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "bb66af36ca37074fa5472b054b9629b00aaf7ae5f54133b1ebc11e731f7ca33b",
+        "stored": true
+      },
+      "created_at": 1791531110,
+      "expires_at": 1791617510,
+      "finished_at": 1791531122,
+      "id": "b5688b61a30b3a9fdcdd0c2cde1de9ea",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "24812d4e8a72d4b372c0bf26c571c9b13f439d4088dc0a5577fc53b6ceca4396",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/backups/restore",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 217,
+        "code": null,
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "safety_backup",
+          "success"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "85170300017718a5bb212f2011e9fa17e73f8df04a0afb77179adb5777107f53",
+        "stored": true
+      },
+      "created_at": 1791531126,
+      "expires_at": 1791617526,
+      "finished_at": 1791531138,
+      "id": "9f2c29ded987684c4f2fb103fc610440",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "24812d4e8a72d4b372c0bf26c571c9b13f439d4088dc0a5577fc53b6ceca4396",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/backups/restore",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 217,
+        "code": null,
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "json_keys": [
+          "safety_backup",
+          "success"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "2bdd2e848b145f7dc3f4fd06585b556bf14023bd380c4a6a8382ae56172e5b4b",
+        "stored": true
+      },
+      "created_at": 1791531145,
+      "expires_at": 1791617545,
+      "finished_at": 1791531158,
+      "id": "eca7aba6d6e7ea15eaad16634ae2eed8",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "24812d4e8a72d4b372c0bf26c571c9b13f439d4088dc0a5577fc53b6ceca4396",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/backups/restore",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "hash_shaped_values_found": 0,
+        "hash_shaped_values_in_other_columns": 0,
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791531173,
+      "expires_at": 1791617573,
+      "finished_at": 1791531178,
+      "id": "260bd535320d68aac9e440c3a7e6057b",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "24812d4e8a72d4b372c0bf26c571c9b13f439d4088dc0a5577fc53b6ceca4396",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 0,
+      "route": "/api/v1/domains/{id}/backups/restore",
+      "status": "interrupted"
+    }
+  ],
+  "rows_holding_a_hash_shaped_value": [],
+  "rows_holding_a_sensitive_value_of_this_run": [],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "states": {
+    "done": 34,
+    "interrupted": 1
+  }
+}

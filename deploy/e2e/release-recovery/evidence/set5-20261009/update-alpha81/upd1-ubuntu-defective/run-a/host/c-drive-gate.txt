@@ -1,0 +1,2 @@
+2026-10-09T18:12:34Z before upd1-ubuntu-defective run-a (lab prepare) free_GiB=41.78 free_bytes=44864196608 (Get-PSDrive C reading of 2026-10-09T18:12:31Z, 3s old) allowed=yes
+2026-10-09T18:12:36Z before upd1-ubuntu-defective run-a (guest start) free_GiB=41.78 free_bytes=44864196608 (Get-PSDrive C reading of 2026-10-09T18:12:31Z, 5s old) allowed=yes

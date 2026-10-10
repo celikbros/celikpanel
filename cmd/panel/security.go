@@ -31,7 +31,19 @@ func securityHeaders(secure bool, next http.Handler) http.Handler {
 				"img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; "+
 				"base-uri 'self'; form-action 'self'")
 		if secure {
-			h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+			// The Panel speaks for its own host name only (D-030). With
+			// includeSubDomains a browser that had opened the Panel at
+			// example.com refused plain HTTP on every name under it for a
+			// year, names the Panel does not serve and their owner may run
+			// elsewhere. A browser replaces the policy it holds for this
+			// host with the one it reads here, so the wider one ends at the
+			// owner's next visit after the update.
+			// Panel yalnız kendi ana makine adı için konuşur (D-030).
+			// includeSubDomains ile, Paneli example.com'da açmış bir
+			// tarayıcı onun altındaki her adda bir yıl boyunca düz HTTP'yi
+			// reddediyordu; tarayıcı bu ana makine için tuttuğu kuralı
+			// burada okuduğuyla değiştirir.
+			h.Set("Strict-Transport-Security", "max-age=31536000")
 		}
 		next.ServeHTTP(w, r)
 	})

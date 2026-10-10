@@ -1,0 +1,45 @@
+{
+  "at": "2026-10-09T03:45:51Z",
+  "master_pid": 51317,
+  "mode": "read-queue",
+  "owner_action": false,
+  "postqueue": {
+    "argv": [
+      "postqueue",
+      "-j"
+    ],
+    "at": "2026-10-09T03:45:51Z",
+    "returncode": 0,
+    "seconds": 0.011,
+    "status": "ok",
+    "stderr": "postqueue: warning: Mail system is down -- accessing queue directly (Connect to the Postfix showq service: Connection refused)\n",
+    "stdout": ""
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "postfix.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 03:45:17 UTC",
+      "ActiveState": "inactive",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 03:45:17 UTC",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "dead"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 03:45:17 UTC",
+      "ActiveState": "inactive",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "dead"
+    }
+  }
+}

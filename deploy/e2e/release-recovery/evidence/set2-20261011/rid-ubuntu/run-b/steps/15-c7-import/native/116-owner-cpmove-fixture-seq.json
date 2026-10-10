@@ -1,0 +1,53 @@
+{
+  "action": "owner-cpmove-fixture",
+  "at": "2026-10-09T04:29:16Z",
+  "bytes": 2376,
+  "database": "s2impseq_app",
+  "directory": {
+    "mode": "0700",
+    "uid": 0
+  },
+  "domain": "set2-import-seq.test",
+  "lab_action": false,
+  "members": [
+    {
+      "bytes": 57,
+      "name": "cpmove-s2impseq/cp/s2impseq"
+    },
+    {
+      "bytes": 66,
+      "name": "cpmove-s2impseq/homedir/public_html/index.html"
+    },
+    {
+      "bytes": 34,
+      "name": "cpmove-s2impseq/homedir/public_html/assets/site.css"
+    },
+    {
+      "bytes": 119,
+      "name": "cpmove-s2impseq/homedir/etc/set2-import-seq.test/shadow"
+    },
+    {
+      "bytes": 15,
+      "name": "cpmove-s2impseq/homedir/etc/set2-import-seq.test/quota"
+    },
+    {
+      "bytes": 54,
+      "name": "cpmove-s2impseq/va/set2-import-seq.test"
+    },
+    {
+      "bytes": 32,
+      "name": "cpmove-s2impseq/mysql/s2impseq_app.create"
+    },
+    {
+      "bytes": 7388,
+      "name": "cpmove-s2impseq/mysql/s2impseq_app.sql"
+    }
+  ],
+  "mode": "owner-cpmove-fixture",
+  "owner_action": true,
+  "path": "/var/lib/celikpanel-imports/cpmove-s2impseq.tar.gz",
+  "public_html_directory_member": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "sha256": "bb63271c6433dc1460ecaad25ed475cd36aad13eb519531ae632c37e782e9bd6",
+  "user": "s2impseq"
+}

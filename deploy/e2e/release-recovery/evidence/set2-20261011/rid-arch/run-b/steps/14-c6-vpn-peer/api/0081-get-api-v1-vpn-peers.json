@@ -1,0 +1,107 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "C6 the devices list (VPNPage)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18459"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/vpn/peers"
+  },
+  "response": {
+    "elapsed_seconds": 0.006,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store, max-age=0"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Expires",
+        "0"
+      ],
+      [
+        "Pragma",
+        "no-cache"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 04:33:19 GMT"
+      ],
+      [
+        "Content-Length",
+        "593"
+      ]
+    ],
+    "json": {
+      "peers": [
+        {
+          "created_at": "2026-10-09T04:33:16Z",
+          "desired_state": "active",
+          "id": 1,
+          "ip": "10.8.0.2",
+          "last_handshake": 0,
+          "name": "set2 laptop",
+          "public_key": "P7vBfUwk7KETdtni5EXGvjnlh9QP3ZKQjKwQMCiG9kM=",
+          "rx_bytes": 0,
+          "subscription": "Admin Subscription",
+          "subscription_id": 2,
+          "sync_state": "applied",
+          "tx_bytes": 0
+        },
+        {
+          "created_at": "2026-10-09T04:33:18Z",
+          "desired_state": "active",
+          "id": 2,
+          "ip": "10.8.0.3",
+          "last_handshake": 0,
+          "name": "set2 phone",
+          "public_key": "L4kpettDYRY2zZfwMkwGyt19tlPrYSllKCujiqbu0AU=",
+          "rx_bytes": 0,
+          "subscription": "Admin Subscription",
+          "subscription_id": 2,
+          "sync_state": "applied",
+          "tx_bytes": 0
+        }
+      ]
+    },
+    "status": 200,
+    "text": null
+  }
+}

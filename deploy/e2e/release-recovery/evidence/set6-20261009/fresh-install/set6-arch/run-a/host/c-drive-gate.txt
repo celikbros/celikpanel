@@ -1,0 +1,2 @@
+2026-10-09T21:46:23Z before set6-arch run-a (lab prepare) free_GiB=170.11 free_bytes=182651613184 (Get-PSDrive C reading of 2026-10-09T21:46:21Z, 2s old) allowed=yes
+2026-10-09T21:46:26Z before set6-arch run-a (guest start) free_GiB=170.11 free_bytes=182651613184 (Get-PSDrive C reading of 2026-10-09T21:46:21Z, 5s old) allowed=yes

@@ -1,0 +1,119 @@
+{
+ "20261009t101529z:baseline": {
+  "archive_sha256": "d2fcf5c98c194c36bec9dd0fe2442eecb6390ba3824842f879a77f9b5debebc5",
+  "commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+  "files_containing": {
+   "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 1,
+   "Starting it again runs the same update.": 1,
+   "The server recorded no more specific cause for that attempt.": 1,
+   "This version already failed on this server": 1,
+   "This version was already tried on this server and rolled back": 1
+  },
+  "version": "v0.1.0-alpha.81",
+  "web_dist_files_read": 111
+ },
+ "20261009t101529z:defective": {
+  "archive_sha256": "ea8f81c844c6bf0e08ffb6c628448bac2da56d1060b2f5cd32f19f6947eecf01",
+  "commit": "52208d415f61041dd9ec27bdb9cbe0b2d5c7eac4",
+  "files_containing": {
+   "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 1,
+   "Starting it again runs the same update.": 1,
+   "The server recorded no more specific cause for that attempt.": 1,
+   "This version already failed on this server": 1,
+   "This version was already tried on this server and rolled back": 1
+  },
+  "version": "v0.1.0-alpha.82",
+  "web_dist_files_read": 111
+ },
+ "20261009t101529z:good": {
+  "archive_sha256": "fa3f2e0f26fe669f6d364a4c82419424cb36459606942b8891d157951891c039",
+  "commit": "dc0841af9eb9023ead02393a70bf59968a74ae2f",
+  "files_containing": {
+   "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 1,
+   "Starting it again runs the same update.": 1,
+   "The server recorded no more specific cause for that attempt.": 1,
+   "This version already failed on this server": 1,
+   "This version was already tried on this server and rolled back": 1
+  },
+  "version": "v0.1.0-alpha.82",
+  "web_dist_files_read": 111
+ },
+ "20261009t101529z:realstart": {
+  "archive_sha256": "6860e4323e03bca55744a7c9af955b3830e92364d7ea4a34568294bb3e107b03",
+  "commit": "a574cecdbec1c58e2a21bb838d49afbe3c0af37e",
+  "files_containing": {
+   "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 1,
+   "Starting it again runs the same update.": 1,
+   "The server recorded no more specific cause for that attempt.": 1,
+   "This version already failed on this server": 1,
+   "This version was already tried on this server and rolled back": 1
+  },
+  "version": "v0.1.0-alpha.82",
+  "web_dist_files_read": 111
+ },
+ "20261009t101529z:startcheck": {
+  "archive_sha256": "bd43df24166d03ffab159173ac5a429dbabefe9edaa4541ea157e5c7df041a1d",
+  "commit": "b640eaeda3806f9f61b9de39cb9045e77dc8253a",
+  "files_containing": {
+   "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 1,
+   "Starting it again runs the same update.": 1,
+   "The server recorded no more specific cause for that attempt.": 1,
+   "This version already failed on this server": 1,
+   "This version was already tried on this server and rolled back": 1
+  },
+  "version": "v0.1.0-alpha.82",
+  "web_dist_files_read": 111
+ },
+ "20261009t102025z:baseline": {
+  "archive_sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+  "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+  "files_containing": {
+   "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 0,
+   "Starting it again runs the same update.": 0,
+   "The server recorded no more specific cause for that attempt.": 0,
+   "This version already failed on this server": 1,
+   "This version was already tried on this server and rolled back": 0
+  },
+  "version": "v0.1.0-alpha.81",
+  "web_dist_files_read": 97
+ },
+ "20261009t102025z:defective": {
+  "archive_sha256": "99a00422844f0ec376494cd17686e397373318a971d968ad2de06f5877761b29",
+  "commit": "c911b3083cb53aa539e6c25b720b7b86c2e08644",
+  "files_containing": {
+   "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 1,
+   "Starting it again runs the same update.": 1,
+   "The server recorded no more specific cause for that attempt.": 1,
+   "This version already failed on this server": 1,
+   "This version was already tried on this server and rolled back": 1
+  },
+  "version": "v0.1.0-alpha.82",
+  "web_dist_files_read": 111
+ },
+ "20261009t102025z:good": {
+  "archive_sha256": "219de1b848a7eccc6caca1a8946051e89a3da1a56a2feac828cfa2cdf2c2bcb7",
+  "commit": "a8bd6124a99390246c978281992e6eaf48fbb377",
+  "files_containing": {
+   "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 1,
+   "Starting it again runs the same update.": 1,
+   "The server recorded no more specific cause for that attempt.": 1,
+   "This version already failed on this server": 1,
+   "This version was already tried on this server and rolled back": 1
+  },
+  "version": "v0.1.0-alpha.82",
+  "web_dist_files_read": 111
+ },
+ "20261009t102025z:startcheck": {
+  "archive_sha256": "ef562ff58aaa9f4eaf276adeec82b02e4891b07c15a165abb38f02be740cee63",
+  "commit": "75f0b8a487b8ae1d7fbaec63a739a364d661ac31",
+  "files_containing": {
+   "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 1,
+   "Starting it again runs the same update.": 1,
+   "The server recorded no more specific cause for that attempt.": 1,
+   "This version already failed on this server": 1,
+   "This version was already tried on this server and rolled back": 1
+  },
+  "version": "v0.1.0-alpha.82",
+  "web_dist_files_read": 111
+ }
+}

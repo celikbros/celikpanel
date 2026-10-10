@@ -1,0 +1,5 @@
+2026-10-09T04:10:23.492501+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T04:10:23.504631+00:00 dns-ubuntu dovecot[62550]: master: Warning: Killed with signal 15 (by pid=62828 uid=0 code=kill)
+2026-10-09T04:10:24.710327+00:00 dns-ubuntu dovecot[62552]: log(62552): Warning: Killed with signal 15 (by pid=1 uid=0 code=kill)
+2026-10-09T04:10:24.711957+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T04:10:24.712327+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.

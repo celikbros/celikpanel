@@ -1,0 +1,13 @@
+2026-10-09T11:26:56.908187+00:00 dns-ubuntu systemd[1]: Starting postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T11:26:57.597677+00:00 dns-ubuntu postmulti[50397]: postfix/postlog: starting the Postfix mail system
+2026-10-09T11:26:57.597641+00:00 dns-ubuntu postfix/postfix-script[50397]: starting the Postfix mail system
+2026-10-09T11:26:57.606526+00:00 dns-ubuntu postfix/master[50399]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-09T11:26:57.609187+00:00 dns-ubuntu systemd[1]: Started postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T11:26:57.620493+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-09T11:26:57.624415+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-09T11:26:56.777278+00:00 dns-ubuntu postfix/postfix-script[50076]: warning: /var/spool/postfix/etc/hosts and /etc/hosts differ
+2026-10-09T11:26:56.869261+00:00 dns-ubuntu postfix/postfix-script[50108]: the Postfix mail system is not running
+2026-10-09T11:26:57.597641+00:00 dns-ubuntu postfix/postfix-script[50397]: starting the Postfix mail system
+2026-10-09T11:26:57.606526+00:00 dns-ubuntu postfix/master[50399]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-09T11:26:57.700347+00:00 dns-ubuntu postfix/postfix-script[50417]: the Postfix mail system is running: PID: 50399
+2026-10-09T11:27:00.043590+00:00 dns-ubuntu postfix/postfix-script[50524]: the Postfix mail system is running: PID: 50399

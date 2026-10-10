@@ -1,0 +1,1185 @@
+{
+  "calls": [
+    {
+      "answer": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "at": "2026-10-09T03:44:34Z",
+      "body_bytes": 354,
+      "body_sha256": "7493044ee0ab05fdc18ae1bd147cae25a5bf4de689629b9df545994dd58da413",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REQUIRED": {
+          "en": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again.",
+          "tr": "Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json"
+      },
+      "json": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "label": "domain-database-mariadb (iii) without the header",
+      "n": 1,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "seq",
+          "password": "[REDACTED]",
+          "type": "mysql"
+        },
+        "header_sent": false,
+        "identity": null,
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.004,
+      "status": 428,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:35Z",
+      "body_bytes": 106,
+      "body_sha256": "0ac72e87cdb0b7b1642725f0f32b174d498ae4f990c147cdc50b8c024128b0f2",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "c5ba5a967db8d0d07f226cfc5be4f94f"
+      },
+      "json": {
+        "id": 1,
+        "name": "set1_owner_test_seq",
+        "status": "success",
+        "type": "mysql",
+        "user": "set1_owner_test_seq_user"
+      },
+      "label": "domain-database-mariadb (i) sequential arrival 1 of 3",
+      "n": 2,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "seq",
+          "password": "[REDACTED]",
+          "type": "mysql"
+        },
+        "header_sent": true,
+        "identity": "c5ba5a967db8d0d07f226cfc5be4f94f",
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.176,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:35Z",
+      "body_bytes": 106,
+      "body_sha256": "0ac72e87cdb0b7b1642725f0f32b174d498ae4f990c147cdc50b8c024128b0f2",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "c5ba5a967db8d0d07f226cfc5be4f94f",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "id": 1,
+        "name": "set1_owner_test_seq",
+        "status": "success",
+        "type": "mysql",
+        "user": "set1_owner_test_seq_user"
+      },
+      "label": "domain-database-mariadb (i) sequential arrival 2 of 3",
+      "n": 3,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "name": "seq",
+          "password": "[REDACTED]",
+          "type": "mysql"
+        },
+        "header_sent": true,
+        "identity": "c5ba5a967db8d0d07f226cfc5be4f94f",
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.004,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:35Z",
+      "body_bytes": 106,
+      "body_sha256": "0ac72e87cdb0b7b1642725f0f32b174d498ae4f990c147cdc50b8c024128b0f2",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "c5ba5a967db8d0d07f226cfc5be4f94f",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "id": 1,
+        "name": "set1_owner_test_seq",
+        "status": "success",
+        "type": "mysql",
+        "user": "set1_owner_test_seq_user"
+      },
+      "label": "domain-database-mariadb (i) sequential arrival 3 of 3",
+      "n": 4,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "name": "seq",
+          "password": "[REDACTED]",
+          "type": "mysql"
+        },
+        "header_sent": true,
+        "identity": "c5ba5a967db8d0d07f226cfc5be4f94f",
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.004,
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "c5ba5a967db8d0d07f226cfc5be4f94f"
+        }
+      },
+      "at": "2026-10-09T03:44:36Z",
+      "body_bytes": 256,
+      "body_sha256": "3d67849f334e23be55a008f21ea0a8327db8fbc3e63baa17a7ed0eba38b62a8a",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REUSED": {
+          "en": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+          "tr": "Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "c5ba5a967db8d0d07f226cfc5be4f94f"
+      },
+      "json": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "c5ba5a967db8d0d07f226cfc5be4f94f"
+        }
+      },
+      "label": "domain-database-mariadb (iv) the same identity with a different body",
+      "n": 5,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "oth",
+          "password": "[REDACTED]",
+          "type": "mysql"
+        },
+        "header_sent": true,
+        "identity": "c5ba5a967db8d0d07f226cfc5be4f94f",
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.004,
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:36Z",
+      "body_bytes": 106,
+      "body_sha256": "e04935f12b92271fd107047b039a81ff70d3e6345a527cbc28e16f1b48bc4714",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "77c0ef8c9e31367116f4fcf8f6b4ac5b"
+      },
+      "json": {
+        "id": 2,
+        "name": "set1_owner_test_con",
+        "status": "success",
+        "type": "mysql",
+        "user": "set1_owner_test_con_user"
+      },
+      "label": "domain-database-mariadb (ii) concurrent arrival 1 of 3",
+      "n": 6,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "con",
+          "password": "[REDACTED]",
+          "type": "mysql"
+        },
+        "header_sent": true,
+        "identity": "77c0ef8c9e31367116f4fcf8f6b4ac5b",
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.184,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:36Z",
+      "body_bytes": 106,
+      "body_sha256": "e04935f12b92271fd107047b039a81ff70d3e6345a527cbc28e16f1b48bc4714",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "77c0ef8c9e31367116f4fcf8f6b4ac5b",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "id": 2,
+        "name": "set1_owner_test_con",
+        "status": "success",
+        "type": "mysql",
+        "user": "set1_owner_test_con_user"
+      },
+      "label": "domain-database-mariadb (ii) concurrent arrival 2 of 3",
+      "n": 7,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "name": "con",
+          "password": "[REDACTED]",
+          "type": "mysql"
+        },
+        "header_sent": true,
+        "identity": "77c0ef8c9e31367116f4fcf8f6b4ac5b",
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.186,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:36Z",
+      "body_bytes": 106,
+      "body_sha256": "e04935f12b92271fd107047b039a81ff70d3e6345a527cbc28e16f1b48bc4714",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "77c0ef8c9e31367116f4fcf8f6b4ac5b",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "id": 2,
+        "name": "set1_owner_test_con",
+        "status": "success",
+        "type": "mysql",
+        "user": "set1_owner_test_con_user"
+      },
+      "label": "domain-database-mariadb (ii) concurrent arrival 3 of 3",
+      "n": 8,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "name": "con",
+          "password": "[REDACTED]",
+          "type": "mysql"
+        },
+        "header_sent": true,
+        "identity": "77c0ef8c9e31367116f4fcf8f6b4ac5b",
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.184,
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "at": "2026-10-09T03:44:38Z",
+      "body_bytes": 354,
+      "body_sha256": "7493044ee0ab05fdc18ae1bd147cae25a5bf4de689629b9df545994dd58da413",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REQUIRED": {
+          "en": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again.",
+          "tr": "Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json"
+      },
+      "json": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "label": "domain-database-postgresql (iii) without the header",
+      "n": 9,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "seq",
+          "password": "[REDACTED]",
+          "type": "postgresql"
+        },
+        "header_sent": false,
+        "identity": null,
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.005,
+      "status": 428,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:38Z",
+      "body_bytes": 111,
+      "body_sha256": "4e06e491c0f205b550bb5c89b06cf6a3c1aba182288323ba9948736e173f4d5b",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "1ea577c83013762003d7eba70d3b6a64"
+      },
+      "json": {
+        "id": 3,
+        "name": "set1_owner_test_seq",
+        "status": "success",
+        "type": "postgresql",
+        "user": "set1_owner_test_seq_user"
+      },
+      "label": "domain-database-postgresql (i) sequential arrival 1 of 3",
+      "n": 10,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "seq",
+          "password": "[REDACTED]",
+          "type": "postgresql"
+        },
+        "header_sent": true,
+        "identity": "1ea577c83013762003d7eba70d3b6a64",
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.308,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:39Z",
+      "body_bytes": 111,
+      "body_sha256": "4e06e491c0f205b550bb5c89b06cf6a3c1aba182288323ba9948736e173f4d5b",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "1ea577c83013762003d7eba70d3b6a64",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "id": 3,
+        "name": "set1_owner_test_seq",
+        "status": "success",
+        "type": "postgresql",
+        "user": "set1_owner_test_seq_user"
+      },
+      "label": "domain-database-postgresql (i) sequential arrival 2 of 3",
+      "n": 11,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "name": "seq",
+          "password": "[REDACTED]",
+          "type": "postgresql"
+        },
+        "header_sent": true,
+        "identity": "1ea577c83013762003d7eba70d3b6a64",
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.004,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:39Z",
+      "body_bytes": 111,
+      "body_sha256": "4e06e491c0f205b550bb5c89b06cf6a3c1aba182288323ba9948736e173f4d5b",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "1ea577c83013762003d7eba70d3b6a64",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "id": 3,
+        "name": "set1_owner_test_seq",
+        "status": "success",
+        "type": "postgresql",
+        "user": "set1_owner_test_seq_user"
+      },
+      "label": "domain-database-postgresql (i) sequential arrival 3 of 3",
+      "n": 12,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "name": "seq",
+          "password": "[REDACTED]",
+          "type": "postgresql"
+        },
+        "header_sent": true,
+        "identity": "1ea577c83013762003d7eba70d3b6a64",
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.004,
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "1ea577c83013762003d7eba70d3b6a64"
+        }
+      },
+      "at": "2026-10-09T03:44:39Z",
+      "body_bytes": 256,
+      "body_sha256": "7f054a4dfc05d7a156de6ed4ccb1bf8c7ec4f8f6da1c2543979b9da91ef211b5",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REUSED": {
+          "en": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+          "tr": "Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "1ea577c83013762003d7eba70d3b6a64"
+      },
+      "json": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "1ea577c83013762003d7eba70d3b6a64"
+        }
+      },
+      "label": "domain-database-postgresql (iv) the same identity with a different body",
+      "n": 13,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "oth",
+          "password": "[REDACTED]",
+          "type": "postgresql"
+        },
+        "header_sent": true,
+        "identity": "1ea577c83013762003d7eba70d3b6a64",
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.004,
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:40Z",
+      "body_bytes": 111,
+      "body_sha256": "405e19ffd581ddb2c555b3d91ed9bc9fbde035572f55baf4d917d014748409c7",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "e845c6a47b3c2d52be018e2f11001a57",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "id": 4,
+        "name": "set1_owner_test_con",
+        "status": "success",
+        "type": "postgresql",
+        "user": "set1_owner_test_con_user"
+      },
+      "label": "domain-database-postgresql (ii) concurrent arrival 1 of 3",
+      "n": 14,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "name": "con",
+          "password": "[REDACTED]",
+          "type": "postgresql"
+        },
+        "header_sent": true,
+        "identity": "e845c6a47b3c2d52be018e2f11001a57",
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.302,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:40Z",
+      "body_bytes": 111,
+      "body_sha256": "405e19ffd581ddb2c555b3d91ed9bc9fbde035572f55baf4d917d014748409c7",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "e845c6a47b3c2d52be018e2f11001a57"
+      },
+      "json": {
+        "id": 4,
+        "name": "set1_owner_test_con",
+        "status": "success",
+        "type": "postgresql",
+        "user": "set1_owner_test_con_user"
+      },
+      "label": "domain-database-postgresql (ii) concurrent arrival 2 of 3",
+      "n": 15,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "con",
+          "password": "[REDACTED]",
+          "type": "postgresql"
+        },
+        "header_sent": true,
+        "identity": "e845c6a47b3c2d52be018e2f11001a57",
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.302,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:40Z",
+      "body_bytes": 111,
+      "body_sha256": "405e19ffd581ddb2c555b3d91ed9bc9fbde035572f55baf4d917d014748409c7",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "e845c6a47b3c2d52be018e2f11001a57",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "id": 4,
+        "name": "set1_owner_test_con",
+        "status": "success",
+        "type": "postgresql",
+        "user": "set1_owner_test_con_user"
+      },
+      "label": "domain-database-postgresql (ii) concurrent arrival 3 of 3",
+      "n": 16,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "name": "con",
+          "password": "[REDACTED]",
+          "type": "postgresql"
+        },
+        "header_sent": true,
+        "identity": "e845c6a47b3c2d52be018e2f11001a57",
+        "method": "POST",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "seconds": 0.303,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T03:44:41Z",
+      "json": {
+        "available_types": [
+          "mysql",
+          "postgresql"
+        ],
+        "databases": [
+          {
+            "created_at": "2026-10-09 03:44:41",
+            "id": 4,
+            "name": "set1_owner_test_con",
+            "type": "postgresql",
+            "user": "set1_owner_test_con_user"
+          },
+          {
+            "created_at": "2026-10-09 03:44:39",
+            "id": 3,
+            "name": "set1_owner_test_seq",
+            "type": "postgresql",
+            "user": "set1_owner_test_seq_user"
+          },
+          {
+            "created_at": "2026-10-09 03:44:37",
+            "id": 2,
+            "name": "set1_owner_test_con",
+            "type": "mysql",
+            "user": "set1_owner_test_con_user"
+          },
+          {
+            "created_at": "2026-10-09 03:44:35",
+            "id": 1,
+            "name": "set1_owner_test_seq",
+            "type": "mysql",
+            "user": "set1_owner_test_seq_user"
+          }
+        ],
+        "domain_id": 1,
+        "domain_name": "set1-owner.test"
+      },
+      "label": "C1 the domain's databases (DomainDatabaseManager)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/databases"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.004,
+        "status": 428
+      },
+      "name": "domain-database-mariadb (iii): without the header the answer is 428 REQUEST_ID_REQUIRED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "on_engine": [],
+          "panel_rows": []
+        },
+        "before": {
+          "on_engine": [],
+          "panel_rows": []
+        }
+      },
+      "name": "domain-database-mariadb (iii): and nothing changed on the server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.176,
+          "status": 200
+        },
+        "answer_names": "set1_owner_test_seq",
+        "new_on_engine": [
+          "set1_owner_test_seq"
+        ],
+        "new_panel_rows": [
+          "set1_owner_test_seq"
+        ]
+      },
+      "name": "domain-database-mariadb (i): three arrivals in a row of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "replays_marked": true,
+        "same_bytes": true,
+        "statuses": [
+          200,
+          200,
+          200
+        ]
+      },
+      "name": "domain-database-mariadb (i): the three answers are the same bytes, the later two marked as replays",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REUSED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.004,
+        "status": 409
+      },
+      "name": "domain-database-mariadb (iv): the same identity with a different body is refused 409 REQUEST_ID_REUSED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "on_engine": [
+            "set1_owner_test_seq"
+          ],
+          "panel_rows": [
+            "set1_owner_test_seq"
+          ]
+        },
+        "before": {
+          "on_engine": [
+            "set1_owner_test_seq"
+          ],
+          "panel_rows": [
+            "set1_owner_test_seq"
+          ]
+        }
+      },
+      "name": "domain-database-mariadb (iv): and there is no second effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.184,
+          "status": 200
+        },
+        "answer_names": "set1_owner_test_con",
+        "new_on_engine": [
+          "set1_owner_test_con"
+        ],
+        "new_panel_rows": [
+          "set1_owner_test_con"
+        ]
+      },
+      "name": "domain-database-mariadb (ii): three arrivals at once of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answers": [
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.184,
+            "status": 200
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 0.186,
+            "status": 200
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 0.184,
+            "status": 200
+          }
+        ],
+        "in_progress": 0
+      },
+      "name": "domain-database-mariadb (ii): the answers are the same bytes, or REQUEST_IN_PROGRESS for a waiter",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.005,
+        "status": 428
+      },
+      "name": "domain-database-postgresql (iii): without the header the answer is 428 REQUEST_ID_REQUIRED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "on_engine": [],
+          "panel_rows": [
+            "set1_owner_test_con",
+            "set1_owner_test_seq"
+          ]
+        },
+        "before": {
+          "on_engine": [],
+          "panel_rows": [
+            "set1_owner_test_con",
+            "set1_owner_test_seq"
+          ]
+        }
+      },
+      "name": "domain-database-postgresql (iii): and nothing changed on the server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.308,
+          "status": 200
+        },
+        "answer_names": "set1_owner_test_seq",
+        "new_on_engine": [
+          "set1_owner_test_seq"
+        ],
+        "new_panel_rows": []
+      },
+      "name": "domain-database-postgresql (i): three arrivals in a row of one identity left one native effect",
+      "ok": false
+    },
+    {
+      "detail": {
+        "replays_marked": true,
+        "same_bytes": true,
+        "statuses": [
+          200,
+          200,
+          200
+        ]
+      },
+      "name": "domain-database-postgresql (i): the three answers are the same bytes, the later two marked as replays",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REUSED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.004,
+        "status": 409
+      },
+      "name": "domain-database-postgresql (iv): the same identity with a different body is refused 409 REQUEST_ID_REUSED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "on_engine": [
+            "set1_owner_test_seq"
+          ],
+          "panel_rows": [
+            "set1_owner_test_con",
+            "set1_owner_test_seq",
+            "set1_owner_test_seq"
+          ]
+        },
+        "before": {
+          "on_engine": [
+            "set1_owner_test_seq"
+          ],
+          "panel_rows": [
+            "set1_owner_test_con",
+            "set1_owner_test_seq",
+            "set1_owner_test_seq"
+          ]
+        }
+      },
+      "name": "domain-database-postgresql (iv): and there is no second effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": "1",
+          "seconds": 0.302,
+          "status": 200
+        },
+        "answer_names": "set1_owner_test_con",
+        "new_on_engine": [
+          "set1_owner_test_con"
+        ],
+        "new_panel_rows": []
+      },
+      "name": "domain-database-postgresql (ii): three arrivals at once of one identity left one native effect",
+      "ok": false
+    },
+    {
+      "detail": {
+        "answers": [
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 0.302,
+            "status": 200
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.302,
+            "status": 200
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 0.303,
+            "status": 200
+          }
+        ],
+        "in_progress": 0
+      },
+      "name": "domain-database-postgresql (ii): the answers are the same bytes, or REQUEST_IN_PROGRESS for a waiter",
+      "ok": true
+    },
+    {
+      "detail": [
+        "set1_owner_test_con",
+        "set1_owner_test_seq",
+        "set1_owner_test_con",
+        "set1_owner_test_seq"
+      ],
+      "name": "the domain's page lists exactly the four databases that were created (two per engine)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "action": "owner-seed-rows",
+        "at": "2026-10-09T03:44:42Z",
+        "database": "set1_owner_test_seq",
+        "kind": "seed",
+        "lab_action": false,
+        "mode": "owner-seed-rows",
+        "owner_action": true,
+        "returncode": 0,
+        "rows_and_sum": [
+          "20000",
+          "200010000"
+        ],
+        "schema": "celikpanel/set2-request-identity-native/v1",
+        "stderr": ""
+      },
+      "name": "the owner's application rows are in the site's MariaDB database",
+      "ok": true
+    }
+  ],
+  "domain_databases_listed": [
+    "set1_owner_test_con",
+    "set1_owner_test_seq",
+    "set1_owner_test_con",
+    "set1_owner_test_seq"
+  ],
+  "finished_at": "2026-10-09T03:44:42Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/011-domain-database-mariadb-before.json",
+      "lab_action": false,
+      "label": "domain-database-mariadb-before",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/012-domain-database-mariadb-before-rows.json",
+      "lab_action": false,
+      "label": "domain-database-mariadb-before-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/013-domain-database-mariadb-after-iii.json",
+      "lab_action": false,
+      "label": "domain-database-mariadb-after-iii",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/014-domain-database-mariadb-after-iii-rows.json",
+      "lab_action": false,
+      "label": "domain-database-mariadb-after-iii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/015-domain-database-mariadb-after-i.json",
+      "lab_action": false,
+      "label": "domain-database-mariadb-after-i",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/016-domain-database-mariadb-after-i-rows.json",
+      "lab_action": false,
+      "label": "domain-database-mariadb-after-i-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/017-domain-database-mariadb-after-iv.json",
+      "lab_action": false,
+      "label": "domain-database-mariadb-after-iv",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/018-domain-database-mariadb-after-iv-rows.json",
+      "lab_action": false,
+      "label": "domain-database-mariadb-after-iv-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/019-domain-database-mariadb-after-ii.json",
+      "lab_action": false,
+      "label": "domain-database-mariadb-after-ii",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/020-domain-database-mariadb-after-ii-rows.json",
+      "lab_action": false,
+      "label": "domain-database-mariadb-after-ii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/021-domain-database-postgresql-before.json",
+      "lab_action": false,
+      "label": "domain-database-postgresql-before",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/022-domain-database-postgresql-before-rows.json",
+      "lab_action": false,
+      "label": "domain-database-postgresql-before-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/023-domain-database-postgresql-after-iii.json",
+      "lab_action": false,
+      "label": "domain-database-postgresql-after-iii",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/024-domain-database-postgresql-after-iii-rows.json",
+      "lab_action": false,
+      "label": "domain-database-postgresql-after-iii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/025-domain-database-postgresql-after-i.json",
+      "lab_action": false,
+      "label": "domain-database-postgresql-after-i",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/026-domain-database-postgresql-after-i-rows.json",
+      "lab_action": false,
+      "label": "domain-database-postgresql-after-i-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/027-domain-database-postgresql-after-iv.json",
+      "lab_action": false,
+      "label": "domain-database-postgresql-after-iv",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/028-domain-database-postgresql-after-iv-rows.json",
+      "lab_action": false,
+      "label": "domain-database-postgresql-after-iv-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/029-domain-database-postgresql-after-ii.json",
+      "lab_action": false,
+      "label": "domain-database-postgresql-after-ii",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/030-domain-database-postgresql-after-ii-rows.json",
+      "lab_action": false,
+      "label": "domain-database-postgresql-after-ii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/031-owner-seed-rows.json",
+      "lab_action": false,
+      "label": "owner-seed-rows",
+      "mode": "owner-seed-rows",
+      "owner_action": true
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T03:44:42Z",
+      "label": "seed-rows",
+      "mode": "owner-seed-rows"
+    }
+  ],
+  "owner_waited_for_idle": {
+    "at": "2026-10-09T03:44:33Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.2
+  },
+  "section": "C1-domain-databases",
+  "started_at": "2026-10-09T03:44:33Z",
+  "substeps": {
+    "domain-database-mariadb": "passed",
+    "domain-database-postgresql": "failed",
+    "section": "passed"
+  },
+  "title": "a domain's database (MariaDB and PostgreSQL)",
+  "verdict": "failed"
+}

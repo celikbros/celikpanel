@@ -1,0 +1,77 @@
+{
+  "at": "2026-10-09T21:55:07Z",
+  "lab_action": false,
+  "mode": "read-php",
+  "nginx_php_snippet": {
+    "error": "FileNotFoundError",
+    "exists": false,
+    "path": "/etc/nginx/snippets/fastcgi-php.conf"
+  },
+  "owner_action": false,
+  "pool_directories": [
+    "/etc/php/php-fpm.d"
+  ],
+  "pools": [
+    {
+      "directory": "/etc/php/php-fpm.d",
+      "exists": true,
+      "group": "root",
+      "kind": "file",
+      "mode": "0644",
+      "owner": "root",
+      "path": "/etc/php/php-fpm.d/www.conf",
+      "settings": {
+        "group": "http",
+        "listen": "/run/php-fpm/php-fpm.sock",
+        "listen.group": "http",
+        "listen.owner": "http",
+        "pool": "www",
+        "user": "http"
+      }
+    }
+  ],
+  "program": "/usr/sbin/php-fpm",
+  "program_version": [
+    "PHP 8.5.11 (fpm-fcgi) (built: Sep 23 2026 17:41:29) (NTS)"
+  ],
+  "run_directories": [
+    {
+      "exists": true,
+      "group": "root",
+      "kind": "directory",
+      "mode": "0755",
+      "owner": "root",
+      "path": "/run/php-fpm"
+    }
+  ],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "sockets": {
+    "/run/php-fpm/php-fpm.sock": {
+      "exists": true,
+      "group": "http",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "http",
+      "path": "/run/php-fpm/php-fpm.sock"
+    }
+  },
+  "units": {
+    "php-fpm.service": {
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecStart": "{ path=/usr/bin/php-fpm ; argv[]=/usr/bin/php-fpm --nodaemonize --fpm-config /etc/php/php-fpm.conf ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/php-fpm.service",
+      "LoadState": "loaded",
+      "MainPID": "1558",
+      "NoNewPrivileges": "no",
+      "PrivateTmp": "[REDACTED]",
+      "ProtectHome": "no",
+      "ProtectSystem": "full",
+      "ReadWritePaths": "",
+      "SubState": "running"
+    }
+  },
+  "web_server_accounts": [
+    "http"
+  ]
+}

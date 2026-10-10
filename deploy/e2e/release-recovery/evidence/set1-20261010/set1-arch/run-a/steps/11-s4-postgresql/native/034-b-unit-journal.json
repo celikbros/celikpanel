@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-08T21:57:49Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791496666",
+      "-n",
+      "400",
+      "-u",
+      "postgresql.service"
+    ],
+    "at": "2026-10-08T21:57:49Z",
+    "returncode": 0,
+    "seconds": 0.004,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-08T21:57:47.615156+00:00 dns-arch systemd[1]: Reloading PostgreSQL database server...\n2026-10-08T21:57:47.698968+00:00 dns-arch postgres[1874]: 2026-10-08 21:57:47.698 UTC [1874] LOG:  received SIGHUP, reloading configuration files\n2026-10-08T21:57:47.699600+00:00 dns-arch postgres[1874]: 2026-10-08 21:57:47.699 UTC [1874] LOG:  parameter \"work_mem\" changed to \"8MB\"\n2026-10-08T21:57:47.704351+00:00 dns-arch systemd[1]: Reloaded PostgreSQL database server.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791496666,
+  "units": [
+    "postgresql.service"
+  ]
+}

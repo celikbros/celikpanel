@@ -1,0 +1,112 @@
+{
+  "at": "2026-10-09T07:23:44Z",
+  "lab_action": false,
+  "mode": "read-php",
+  "owner_action": false,
+  "pool_directories": [
+    "/etc/php/8.3/fpm/pool.d"
+  ],
+  "pools": [
+    {
+      "directory": "/etc/php/8.3/fpm/pool.d",
+      "exists": true,
+      "group": "celikpanel",
+      "kind": "file",
+      "mode": "0644",
+      "owner": "root",
+      "path": "/etc/php/8.3/fpm/pool.d/site2.conf",
+      "settings": {
+        "group": "set3_php_test",
+        "listen": "/var/run/php/php8.3-fpm-site2.sock",
+        "listen.group": "www-data",
+        "listen.mode": "0660",
+        "listen.owner": "www-data",
+        "pool": "site2",
+        "user": "set3_php_test"
+      }
+    },
+    {
+      "directory": "/etc/php/8.3/fpm/pool.d",
+      "exists": true,
+      "group": "root",
+      "kind": "file",
+      "mode": "0644",
+      "owner": "root",
+      "path": "/etc/php/8.3/fpm/pool.d/www.conf",
+      "settings": {
+        "group": "www-data",
+        "listen": "/run/php/php8.3-fpm.sock",
+        "listen.group": "www-data",
+        "listen.owner": "www-data",
+        "pool": "www",
+        "user": "www-data"
+      }
+    }
+  ],
+  "program": "/usr/sbin/php-fpm8.3",
+  "program_version": [
+    "PHP 8.3.6 (fpm-fcgi) (built: Sep  2 2026 12:56:02)"
+  ],
+  "run_directories": [
+    {
+      "exists": true,
+      "group": "www-data",
+      "kind": "directory",
+      "mode": "0755",
+      "owner": "www-data",
+      "path": "/run/php"
+    }
+  ],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "sockets": {
+    "/run/php/php8.3-fpm.sock": {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/run/php/php8.3-fpm.sock"
+    },
+    "/var/run/php/php8.3-fpm-site2.sock": {
+      "exists": true,
+      "group": "www-data",
+      "kind": "socket",
+      "mode": "0660",
+      "owner": "www-data",
+      "path": "/var/run/php/php8.3-fpm-site2.sock"
+    }
+  },
+  "units": {
+    "php8.3-fpm.service": {
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecStart": "{ path=/usr/sbin/php-fpm8.3 ; argv[]=/usr/sbin/php-fpm8.3 --nodaemonize --fpm-config /etc/php/8.3/fpm/php-fpm.conf ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/php8.3-fpm.service",
+      "LoadState": "loaded",
+      "MainPID": "32435",
+      "NoNewPrivileges": "no",
+      "PrivateTmp": "[REDACTED]",
+      "ProtectHome": "no",
+      "ProtectSystem": "no",
+      "ReadWritePaths": "",
+      "SubState": "running"
+    },
+    "phpsessionclean.service": {
+      "ActiveState": "inactive",
+      "DropInPaths": "",
+      "ExecStart": "{ path=/usr/lib/php/sessionclean ; argv[]=/usr/lib/php/sessionclean ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/phpsessionclean.service",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NoNewPrivileges": "no",
+      "PrivateTmp": "[REDACTED]",
+      "ProtectHome": "yes",
+      "ProtectSystem": "yes",
+      "ReadWritePaths": "",
+      "SubState": "dead"
+    }
+  },
+  "web_server_accounts": [
+    "www-data"
+  ]
+}

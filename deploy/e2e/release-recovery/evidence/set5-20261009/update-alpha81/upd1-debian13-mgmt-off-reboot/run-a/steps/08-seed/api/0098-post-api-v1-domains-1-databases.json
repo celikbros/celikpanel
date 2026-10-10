@@ -1,0 +1,86 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "DomainDatabaseManager create database",
+  "request": {
+    "body": {
+      "name": "upd1db",
+      "password": "[REDACTED]",
+      "type": "mysql"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18701"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18701"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "3a3a54cb7e9e5cc9ebcd536365f35a4c"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/1/databases"
+  },
+  "response": {
+    "elapsed_seconds": 0.31,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 19:54:48 GMT"
+      ],
+      [
+        "Content-Length",
+        "112"
+      ]
+    ],
+    "json": {
+      "id": 1,
+      "name": "upd1_owner_test_upd1db",
+      "status": "success",
+      "type": "mysql",
+      "user": "upd1_owner_test_upd1db_user"
+    },
+    "status": 200,
+    "text": null
+  }
+}

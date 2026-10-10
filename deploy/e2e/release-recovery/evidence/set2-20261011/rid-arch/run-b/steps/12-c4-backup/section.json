@@ -1,0 +1,595 @@
+{
+  "backups_for_restore": {
+    "other": "full-20261009T043248.811039870Z-0946c7a49396c561.cpbak",
+    "reference": "full-20261009T043240.333160147Z-f84f426cb89b3f0c.cpbak"
+  },
+  "calls": [
+    {
+      "answer": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "at": "2026-10-09T04:32:35Z",
+      "body_bytes": 354,
+      "body_sha256": "7493044ee0ab05fdc18ae1bd147cae25a5bf4de689629b9df545994dd58da413",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REQUIRED": {
+          "en": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again.",
+          "tr": "Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json"
+      },
+      "json": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "label": "backup (iii) without the header",
+      "n": 51,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "type": "full"
+        },
+        "header_sent": false,
+        "identity": null,
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups"
+      },
+      "seconds": 0.003,
+      "status": 428,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:32:36Z",
+      "body_bytes": 205,
+      "body_sha256": "15c0c8489cfbb8e736006922ceede2a522490fcfff483490424afac835d90673",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "37dc37851d9dca7f1fdca14825931b71"
+      },
+      "json": {
+        "backup": {
+          "created_at": "2026-10-09T04:32:36.357736549Z",
+          "name": "full-20261009T043240.333160147Z-f84f426cb89b3f0c.cpbak",
+          "origin": "manual",
+          "restorable": true,
+          "size": 201463305,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "backup (i) sequential arrival 1 of 3",
+      "n": 52,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "type": "full"
+        },
+        "header_sent": true,
+        "identity": "37dc37851d9dca7f1fdca14825931b71",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups"
+      },
+      "seconds": 7.903,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:32:44Z",
+      "body_bytes": 205,
+      "body_sha256": "15c0c8489cfbb8e736006922ceede2a522490fcfff483490424afac835d90673",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "37dc37851d9dca7f1fdca14825931b71",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "backup": {
+          "created_at": "2026-10-09T04:32:36.357736549Z",
+          "name": "full-20261009T043240.333160147Z-f84f426cb89b3f0c.cpbak",
+          "origin": "manual",
+          "restorable": true,
+          "size": 201463305,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "backup (i) sequential arrival 2 of 3",
+      "n": 53,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "type": "full"
+        },
+        "header_sent": true,
+        "identity": "37dc37851d9dca7f1fdca14825931b71",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups"
+      },
+      "seconds": 0.003,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:32:44Z",
+      "body_bytes": 205,
+      "body_sha256": "15c0c8489cfbb8e736006922ceede2a522490fcfff483490424afac835d90673",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "37dc37851d9dca7f1fdca14825931b71",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "backup": {
+          "created_at": "2026-10-09T04:32:36.357736549Z",
+          "name": "full-20261009T043240.333160147Z-f84f426cb89b3f0c.cpbak",
+          "origin": "manual",
+          "restorable": true,
+          "size": 201463305,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "backup (i) sequential arrival 3 of 3",
+      "n": 54,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "type": "full"
+        },
+        "header_sent": true,
+        "identity": "37dc37851d9dca7f1fdca14825931b71",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups"
+      },
+      "seconds": 0.003,
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "37dc37851d9dca7f1fdca14825931b71"
+        }
+      },
+      "at": "2026-10-09T04:32:44Z",
+      "body_bytes": 256,
+      "body_sha256": "caad6c2b505e0265a4100f1e7b52bacec8a5013952e1a42306afbcbab9c4dc32",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REUSED": {
+          "en": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+          "tr": "Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "37dc37851d9dca7f1fdca14825931b71"
+      },
+      "json": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "37dc37851d9dca7f1fdca14825931b71"
+        }
+      },
+      "label": "backup (iv) the same identity with a different body",
+      "n": 55,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "type": "files"
+        },
+        "header_sent": true,
+        "identity": "37dc37851d9dca7f1fdca14825931b71",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups"
+      },
+      "seconds": 0.003,
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:32:44Z",
+      "body_bytes": 205,
+      "body_sha256": "1b37a5443a47858d9c7191d08b0b578acfa7fdaeabd8ad0ee48d02ac2492af8d",
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "823ba954dfcec3430604d990fb5c1a5f"
+      },
+      "json": {
+        "backup": {
+          "created_at": "2026-10-09T04:32:44.918921845Z",
+          "name": "full-20261009T043248.811039870Z-0946c7a49396c561.cpbak",
+          "origin": "manual",
+          "restorable": true,
+          "size": 201463289,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "backup (ii) concurrent arrival 1 of 3",
+      "n": 56,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "type": "full"
+        },
+        "header_sent": true,
+        "identity": "823ba954dfcec3430604d990fb5c1a5f",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups"
+      },
+      "seconds": 7.744,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:32:44Z",
+      "body_bytes": 205,
+      "body_sha256": "1b37a5443a47858d9c7191d08b0b578acfa7fdaeabd8ad0ee48d02ac2492af8d",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "823ba954dfcec3430604d990fb5c1a5f",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "backup": {
+          "created_at": "2026-10-09T04:32:44.918921845Z",
+          "name": "full-20261009T043248.811039870Z-0946c7a49396c561.cpbak",
+          "origin": "manual",
+          "restorable": true,
+          "size": 201463289,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "backup (ii) concurrent arrival 2 of 3",
+      "n": 57,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "type": "full"
+        },
+        "header_sent": true,
+        "identity": "823ba954dfcec3430604d990fb5c1a5f",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups"
+      },
+      "seconds": 7.744,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:32:44Z",
+      "body_bytes": 205,
+      "body_sha256": "1b37a5443a47858d9c7191d08b0b578acfa7fdaeabd8ad0ee48d02ac2492af8d",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "823ba954dfcec3430604d990fb5c1a5f",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "backup": {
+          "created_at": "2026-10-09T04:32:44.918921845Z",
+          "name": "full-20261009T043248.811039870Z-0946c7a49396c561.cpbak",
+          "origin": "manual",
+          "restorable": true,
+          "size": 201463289,
+          "type": "full"
+        },
+        "success": true
+      },
+      "label": "backup (ii) concurrent arrival 3 of 3",
+      "n": 58,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "type": "full"
+        },
+        "header_sent": true,
+        "identity": "823ba954dfcec3430604d990fb5c1a5f",
+        "method": "POST",
+        "path": "/api/v1/domains/1/backups"
+      },
+      "seconds": 7.745,
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T04:32:52Z",
+      "json": {
+        "backups": [
+          {
+            "created_at": "2026-10-09T04:32:44.918921845Z",
+            "name": "full-20261009T043248.811039870Z-0946c7a49396c561.cpbak",
+            "origin": "manual",
+            "restorable": true,
+            "size": 201463289,
+            "type": "full"
+          },
+          {
+            "created_at": "2026-10-09T04:32:36.357736549Z",
+            "name": "full-20261009T043240.333160147Z-f84f426cb89b3f0c.cpbak",
+            "origin": "manual",
+            "restorable": true,
+            "size": 201463305,
+            "type": "full"
+          }
+        ]
+      },
+      "label": "C4 the domain's backups (DomainBackupManager)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/domains/1/backups"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.003,
+        "status": 428
+      },
+      "name": "backup (iii): without the header the answer is 428 REQUEST_ID_REQUIRED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "archives": [],
+          "manifests_read": 0,
+          "origins": {},
+          "partial_files": []
+        },
+        "before": {
+          "archives": [],
+          "manifests_read": 0,
+          "origins": {},
+          "partial_files": []
+        }
+      },
+      "name": "backup (iii): and nothing changed on the server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer_names": "full-20261009T043240.333160147Z-f84f426cb89b3f0c.cpbak",
+        "bytes": 201463305,
+        "expected_job_key": "request:37dc37851d9dca7f1fdca14825931b71",
+        "manifest": {
+          "created_at": "2026-10-09T04:32:36.357736549Z",
+          "databases": 4,
+          "domain_id": 1,
+          "job_key": "request:37dc37851d9dca7f1fdca14825931b71",
+          "keys": [
+            "created_at",
+            "databases",
+            "domain_id",
+            "files",
+            "job_key",
+            "origin",
+            "subscription_id",
+            "type",
+            "version"
+          ],
+          "origin": "manual",
+          "subscription_id": 2,
+          "type": "full",
+          "version": 2
+        },
+        "new_archives": [
+          "full-20261009T043240.333160147Z-f84f426cb89b3f0c.cpbak"
+        ],
+        "partial_files": []
+      },
+      "name": "backup (i): three arrivals in a row of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "replays_marked": true,
+        "same_bytes": true,
+        "statuses": [
+          200,
+          200,
+          200
+        ]
+      },
+      "name": "backup (i): the three answers are the same bytes, the later two marked as replays",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REUSED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.003,
+        "status": 409
+      },
+      "name": "backup (iv): the same identity with a different body is refused 409 REQUEST_ID_REUSED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "archives": [
+            "full-20261009T043240.333160147Z-f84f426cb89b3f0c.cpbak"
+          ],
+          "manifests_read": 1,
+          "origins": {
+            "manual": 1
+          },
+          "partial_files": []
+        },
+        "before": {
+          "archives": [
+            "full-20261009T043240.333160147Z-f84f426cb89b3f0c.cpbak"
+          ],
+          "manifests_read": 1,
+          "origins": {
+            "manual": 1
+          },
+          "partial_files": []
+        }
+      },
+      "name": "backup (iv): and there is no second effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer_names": "full-20261009T043248.811039870Z-0946c7a49396c561.cpbak",
+        "bytes": 201463289,
+        "expected_job_key": "request:823ba954dfcec3430604d990fb5c1a5f",
+        "manifest": {
+          "created_at": "2026-10-09T04:32:44.918921845Z",
+          "databases": 4,
+          "domain_id": 1,
+          "job_key": "request:823ba954dfcec3430604d990fb5c1a5f",
+          "keys": [
+            "created_at",
+            "databases",
+            "domain_id",
+            "files",
+            "job_key",
+            "origin",
+            "subscription_id",
+            "type",
+            "version"
+          ],
+          "origin": "manual",
+          "subscription_id": 2,
+          "type": "full",
+          "version": 2
+        },
+        "new_archives": [
+          "full-20261009T043248.811039870Z-0946c7a49396c561.cpbak"
+        ],
+        "partial_files": []
+      },
+      "name": "backup (ii): three arrivals at once of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answers": [
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 7.744,
+            "status": 200
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 7.744,
+            "status": 200
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 7.745,
+            "status": 200
+          }
+        ],
+        "in_progress": 0
+      },
+      "name": "backup (ii): the answers are the same bytes, or REQUEST_IN_PROGRESS for a waiter",
+      "ok": true
+    },
+    {
+      "detail": [
+        "full-20261009T043248.811039870Z-0946c7a49396c561.cpbak",
+        "full-20261009T043240.333160147Z-f84f426cb89b3f0c.cpbak"
+      ],
+      "name": "the Backups panel lists exactly the two archives (one per identity)",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T04:32:52Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/072-backup-before.json",
+      "lab_action": false,
+      "label": "backup-before",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/073-backup-after-iii.json",
+      "lab_action": false,
+      "label": "backup-after-iii",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/074-backup-after-i.json",
+      "lab_action": false,
+      "label": "backup-after-i",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/075-backup-after-iv.json",
+      "lab_action": false,
+      "label": "backup-after-iv",
+      "mode": "read-backups",
+      "owner_action": false
+    },
+    {
+      "file": "native/076-backup-after-ii.json",
+      "lab_action": false,
+      "label": "backup-after-ii",
+      "mode": "read-backups",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [],
+  "owner_actions": [],
+  "section": "C4-backup",
+  "started_at": "2026-10-09T04:32:35Z",
+  "substeps": {
+    "backup": "passed",
+    "section": "passed"
+  },
+  "title": "manual backup",
+  "verdict": "passed"
+}

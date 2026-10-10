@@ -1,0 +1,185 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": null,
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18458"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/setup/operation?request_id=3b605e0e849c7f693bfafd2133570ad5"
+  },
+  "response": {
+    "elapsed_seconds": 0.003,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 04:21:37 GMT"
+      ],
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ]
+    ],
+    "json": {
+      "context": {
+        "access_dns_ip": "192.0.2.11",
+        "dns_engine": "",
+        "dns_hosting_management": "",
+        "dns_mode": "external",
+        "dns_role": "",
+        "local_ip": "",
+        "local_nameserver": "",
+        "mail_hostname": "",
+        "panel_domain": "panel-arch.upd1-infra.test",
+        "peer_ip": "",
+        "peer_nameserver": ""
+      },
+      "error": {
+        "code": "server_setup_access_dns_required",
+        "message": "Public DNS must resolve panel-arch.upd1-infra.test to 192.0.2.11 before a certificate is requested. Check this hostname's A/AAAA records and its zone delegation. For DNS managed here, review the infrastructure DNS records in this wizard; otherwise correct them at the primary DNS server or provider. This check resumes automatically when DNS is verified."
+      },
+      "id": "3b605e0e849c7f693bfafd2133570ad5",
+      "panel_url": "https://panel-arch.upd1-infra.test:2083/",
+      "phase": "access_dns",
+      "plan_id": "8569108fd487b6a34d64c29c4e36a583",
+      "request_id": "3b605e0e849c7f693bfafd2133570ad5",
+      "status": "waiting",
+      "steps": [
+        {
+          "id": "01-dns",
+          "kind": "dns",
+          "owner_id": "58c845bc5d821d6935d388053f9de996",
+          "request_id": "ea13b7c3fda07ee1109f62d6a070ea88",
+          "status": "succeeded",
+          "target": "external"
+        },
+        {
+          "id": "02-service",
+          "kind": "service",
+          "operation_id": "3cd00055b5bac427f08248316f83074d",
+          "owner_id": "d2b1f096aa3ddb2e0921327fff36983e",
+          "request_id": "208dc891fba0ab76b4ca9f176be3d2d1",
+          "status": "succeeded",
+          "target": "mariadb"
+        },
+        {
+          "id": "03-service",
+          "kind": "service",
+          "operation_id": "d482e58a40b5d2004ddb574e3913dda4",
+          "owner_id": "d0d7759ced16dc6fa1481c64ebc8c3d7",
+          "request_id": "93e87b77c06627909c68410dc8b2deee",
+          "status": "succeeded",
+          "target": "nginx"
+        },
+        {
+          "id": "04-service",
+          "kind": "service",
+          "operation_id": "0c25498af3f42371cf16e909004fbfbb",
+          "owner_id": "8561bd6fdee84d228ab06bc54d276424",
+          "request_id": "6bf4019c3a875e34586c2604974f1ae4",
+          "status": "succeeded",
+          "target": "php-fpm"
+        },
+        {
+          "id": "05-service",
+          "kind": "service",
+          "operation_id": "8c9a5a266bfb1a3f113bad51aa637139",
+          "owner_id": "5e73e9f1112b2263aad1ec33788b4e7b",
+          "request_id": "2fb33b829312b98cef014a52664a2fae",
+          "status": "succeeded",
+          "target": "postgresql"
+        },
+        {
+          "id": "06-service",
+          "kind": "service",
+          "operation_id": "0d135721bc30f5c558a4083af4379669",
+          "owner_id": "8e40a58b2972d0d253428826206dfa61",
+          "request_id": "0ff82285e9c6ebbef17dc307170ab24b",
+          "status": "succeeded",
+          "target": "cron"
+        },
+        {
+          "id": "07-service",
+          "kind": "service",
+          "operation_id": "5cd40e05cb70dc7caca5a4b2c81f635c",
+          "owner_id": "1f0de9eb4f398e4ed4094e36dd3a3610",
+          "request_id": "a9beeeaf36c50609868e963e7c21e6b0",
+          "status": "succeeded",
+          "target": "certbot"
+        },
+        {
+          "id": "08-firewall",
+          "kind": "firewall",
+          "owner_id": "38c7df7c76b760ee12eda83f0de5ac79",
+          "request_id": "8a7aca2a46b8bb2b4661822e3efea70f",
+          "status": "succeeded",
+          "target": "enable_and_persist"
+        },
+        {
+          "id": "09-access_dns",
+          "kind": "access_dns",
+          "owner_id": "2cdd98b8b2b2e1f8e0df05d03e3394dd",
+          "qualifier": "192.0.2.11",
+          "request_id": "cd8e9513c603483565a3ad83814aa034",
+          "status": "running",
+          "target": "panel-arch.upd1-infra.test"
+        },
+        {
+          "id": "10-panel_certificate",
+          "kind": "panel_certificate",
+          "owner_id": "dbc5bec72cd127afa6f72d6c1e198ea7",
+          "request_id": "f65030e8b0bfe3503cafd9a972b4d631",
+          "status": "pending",
+          "target": "panel-arch.upd1-infra.test"
+        },
+        {
+          "id": "11-verify",
+          "kind": "verify",
+          "owner_id": "9e8b6dc18b4e8a3b6ca8fb27bdb5d44b",
+          "request_id": "51df7aa63ea089155cc51c8b64062063",
+          "status": "pending",
+          "target": "web"
+        }
+      ]
+    },
+    "status": 200,
+    "text": null
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S1e disable",
+  "request": {
+    "body": {
+      "command": "/usr/bin/true set1-panel-job",
+      "enabled": false,
+      "id": "5141b578186f8e81",
+      "schedule": "*/15 * * * *",
+      "version": "ct1-6d43ffa496928c8ebe42625b691d7e13fb5292a77f2c3b21308251e974a279a3"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18455"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18455"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "24b71d88adff5094f79721022e7234aa"
+      ]
+    ],
+    "method": "PUT",
+    "path": "/api/v1/domains/1/cron"
+  },
+  "response": {
+    "elapsed_seconds": 0.027,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 04:01:23 GMT"
+      ],
+      [
+        "Content-Length",
+        "17"
+      ]
+    ],
+    "json": {
+      "success": true
+    },
+    "status": 200,
+    "text": null
+  }
+}

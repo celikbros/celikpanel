@@ -1,0 +1,5 @@
+-- No entries --
+2026-10-09T04:03:44.432657+00:00 dns-debian13 postfix/postfix-script[40907]: the Postfix mail system is running: PID: 38020
+2026-10-09T04:03:44.952814+00:00 dns-debian13 postfix/postfix-script[41018]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T04:03:45.020582+00:00 dns-debian13 postfix/postfix-script[41048]: the Postfix mail system is running: PID: 38020
+2026-10-09T04:03:46.522615+00:00 dns-debian13 postfix/postfix-script[41124]: the Postfix mail system is running: PID: 38020

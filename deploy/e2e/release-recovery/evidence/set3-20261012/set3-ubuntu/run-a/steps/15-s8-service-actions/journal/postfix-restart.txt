@@ -1,0 +1,24 @@
+2026-10-09T07:20:10.206044+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-09T07:20:10.206329+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-09T07:20:10.206380+00:00 dns-ubuntu systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent...
+2026-10-09T07:20:10.217392+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T07:20:10.259282+00:00 dns-ubuntu postmulti[65468]: postfix/postlog: stopping the Postfix mail system
+2026-10-09T07:20:10.258820+00:00 dns-ubuntu postfix/postfix-script[65468]: stopping the Postfix mail system
+2026-10-09T07:20:10.261653+00:00 dns-ubuntu postfix/master[57587]: terminating on signal 15
+2026-10-09T07:20:10.266905+00:00 dns-ubuntu systemd[1]: postfix@-.service: Deactivated successfully.
+2026-10-09T07:20:10.267458+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T07:20:10.275498+00:00 dns-ubuntu systemd[1]: Starting postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T07:20:10.829166+00:00 dns-ubuntu postmulti[65754]: postfix/postlog: starting the Postfix mail system
+2026-10-09T07:20:10.829211+00:00 dns-ubuntu postfix/postfix-script[65754]: starting the Postfix mail system
+2026-10-09T07:20:10.837679+00:00 dns-ubuntu postfix/master[65756]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-09T07:20:10.840949+00:00 dns-ubuntu systemd[1]: Started postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T07:20:10.851636+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-09T07:20:10.857490+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-09T07:20:09.398333+00:00 dns-ubuntu postfix/postfix-script[65161]: the Postfix mail system is running: PID: 57587
+2026-10-09T07:20:10.143550+00:00 dns-ubuntu postfix/postfix-script[65448]: the Postfix mail system is running: PID: 57587
+2026-10-09T07:20:10.258820+00:00 dns-ubuntu postfix/postfix-script[65468]: stopping the Postfix mail system
+2026-10-09T07:20:10.261653+00:00 dns-ubuntu postfix/master[57587]: terminating on signal 15
+2026-10-09T07:20:10.829211+00:00 dns-ubuntu postfix/postfix-script[65754]: starting the Postfix mail system
+2026-10-09T07:20:10.837679+00:00 dns-ubuntu postfix/master[65756]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-09T07:20:10.940723+00:00 dns-ubuntu postfix/postfix-script[65774]: the Postfix mail system is running: PID: 65756
+2026-10-09T07:20:13.209958+00:00 dns-ubuntu postfix/postfix-script[65882]: the Postfix mail system is running: PID: 65756

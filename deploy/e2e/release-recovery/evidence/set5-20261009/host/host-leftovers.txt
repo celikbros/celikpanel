@@ -1,0 +1,63 @@
+2026-10-09T20:16:04Z
+--- created by this run and left on the WSL host (du -sh)
+368M	/var/tmp/cp-set5-run
+66M	/var/tmp/cp-release-drill-s5-arch-def-a
+66M	/var/tmp/cp-release-drill-s5-arch-good-a
+66M	/var/tmp/cp-release-drill-s5-d13-def-a
+66M	/var/tmp/cp-release-drill-s5-d13-good-a
+66M	/var/tmp/cp-release-drill-s5-d13-mr-a
+66M	/var/tmp/cp-release-drill-s5-d13-oc-a
+66M	/var/tmp/cp-release-drill-s5-d13-sc-a
+66M	/var/tmp/cp-release-drill-s5-ub-def-a
+66M	/var/tmp/cp-release-drill-s5-ub-good-a
+66M	/var/tmp/cp-release-drill-s5-ub-oc-a
+1.1G	/var/tmp/cp-upd1-build/20261009t170058z
+--- parts of the run directory
+52M	/var/tmp/cp-set5-run/harness-a
+60M	/var/tmp/cp-set5-run/harness-b
+60M	/var/tmp/cp-set5-run/harness-c
+60M	/var/tmp/cp-set5-run/harness-d
+60M	/var/tmp/cp-set5-run/harness-e
+452K	/var/tmp/cp-set5-run/overlay-a
+13M	/var/tmp/cp-set5-run/overlay-b
+13M	/var/tmp/cp-set5-run/overlay-c
+13M	/var/tmp/cp-set5-run/overlay-d
+13M	/var/tmp/cp-set5-run/overlay-e
+12M	/var/tmp/cp-set5-run/logs
+240K	/var/tmp/cp-set5-run/build
+15M	/var/tmp/cp-set5-run/ramstage
+--- dist directories of this run's build (the reused one is marked)
+67M /var/tmp/cp-pair-accept/dist/49143bd1c108ecc7d84b7c861358312db6f15063-acceptance-license (built by this run; its src directory was removed after the proof)
+67M /var/tmp/cp-pair-accept/dist/8c2250b05132fa91291a33bd23924d0aefd72617-acceptance-license (built by this run; its src directory was removed after the proof)
+839M /var/tmp/cp-pair-accept/dist/a0beb7263d1f4ca72258f6b306f9111ba4e2a334-acceptance-license (built by set3, reused read-only, not of this run)
+67M /var/tmp/cp-pair-accept/dist/ecccd8d7b3f3e8106b9d7d21bfb8d0ef1e1ad8ef-acceptance-license (built by this run; its src directory was removed after the proof)
+--- overlay disks still present in this run's labs
+none
+--- base images still present in this run's labs
+none
+--- tmpfs mounts of this run's labs
+none
+--- image cache (not of this run; link counts)
+5 links 556609024 bytes /var/tmp/cp-v3n28/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+5 links 340262912 bytes /var/tmp/cp-v3n28/images/debian-13-genericcloud-amd64-20260826-2582.qcow2
+2 links 624829952 bytes /var/tmp/cp-v3n28/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img
+--- dry-run labs
+no dry-run lab
+--- processes
+no qemu process
+no job process of this run
+--- listening ports of the labs (46xx / 186xx)
+none
+--- repository
+git local config key list fingerprint: b6f8491de6f4969250c85cd1d20d8607  -
+HEAD 2ab7bf20c3070ec44e3231c470be47f3f9dd0c37 branch fix/setup-handover-guidance
+__pycache__ under the run directory: 2
+--- WSL disk
+/dev/sdd       1007G  227G  729G  24% /
+--- memory
+               total        used        free      shared  buff/cache   available
+Mem:           15697         727       14418           3         795       14969
+Swap:           4096           0        4096
+--- directories of earlier runs (not touched; listed only)
+/var/tmp/cp-set1-run /var/tmp/cp-set2-run /var/tmp/cp-set3-run /var/tmp/cp-set4b-run /var/tmp/cp-set4-run 
+labs under /var/tmp: 142 (of this run: 10); entries in /var/tmp: 573

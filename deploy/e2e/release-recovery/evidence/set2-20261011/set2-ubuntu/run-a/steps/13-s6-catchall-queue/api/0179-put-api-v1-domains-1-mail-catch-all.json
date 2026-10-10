@@ -1,0 +1,83 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S6 catch-all stale set (the version from before)",
+  "request": {
+    "body": {
+      "destination": "postmaster@set1-owner.test",
+      "version": "ca1-98151954f217a510702d236de168cc35d0ab2f99c4479cc9b07eeede7ef73a66"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18451"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18451"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "79a122e814179e22ff9ecf3ecebeb970"
+      ]
+    ],
+    "method": "PUT",
+    "path": "/api/v1/domains/1/mail/catch-all"
+  },
+  "response": {
+    "elapsed_seconds": 0.003,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 03:45:49 GMT"
+      ],
+      [
+        "Content-Length",
+        "220"
+      ]
+    ],
+    "json": {
+      "code": "SETTINGS_CHANGED",
+      "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+      "reason": "mail_catch_all"
+    },
+    "status": 409,
+    "text": null
+  }
+}

@@ -1,0 +1,204 @@
+{
+  "checks": {
+    "check": {
+      "body": {
+        "available": true,
+        "current_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+        "current_version": "v0.1.0-alpha.81",
+        "supported": true,
+        "target": {
+          "arch": "amd64",
+          "archive_sha256": "d2063f1e7af932ed41bae6defbcb8abe42b0ac6f2cd659c16c4be4aa0f60c989",
+          "archive_size": "65870281",
+          "commit": "c309f79e64d144f374d9b98fe5c67a34f9bc885c",
+          "os": "linux",
+          "published_at": "2026-10-09T08:10:37Z",
+          "sequence": "82",
+          "version": "v0.1.0-alpha.82"
+        }
+      },
+      "http": 200
+    },
+    "observer_intent": {
+      "baseline": {
+        "agent_sha256": "31787741b8ec65daed3d6eed86bb447e615f24b3f2943c4e0cc8e8c453676955",
+        "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+        "panel_sha256": "475b316fdd9c43479357ed491a1b42fbd7113307057972f97db59c133f656832",
+        "version": "v0.1.0-alpha.81"
+      },
+      "identity": {
+        "cell_id": "release-recovery__dec837991bb516d0",
+        "node": "ubuntu",
+        "nonce": "dec837991bb516d06ac03e7be67dbc2b0b7e8b9fb67b01eb035f9d62ce2750f7",
+        "vm_uuid": "79ac6c89-7b52-52ca-b7d5-aac12fd1b396"
+      },
+      "mode": "watch",
+      "operation_id": "024e7eb5f15c054107473bc4f55d8f8e",
+      "recovery_fault": null,
+      "schema": "celikpanel/owner-update-observer-intent/v1",
+      "target": {
+        "agent_sha256": "9802ae01b47bdfec311670b67b257d5f0efde2ebccffe9baee9044973416bb28",
+        "commit": "c309f79e64d144f374d9b98fe5c67a34f9bc885c",
+        "panel_sha256": "a15ad5f1843b783b7a2514153b2aa3801604c6cfa5ae4809f1623b4136d125b1",
+        "version": "v0.1.0-alpha.82"
+      }
+    },
+    "observer_unit": "celikpanel-lab-owner-update-observer-024e7eb5f15c054107473bc4f55d8f8e.service",
+    "origin_check": {
+      "addresses": [
+        "127.0.0.1"
+      ],
+      "boot_id": "3fb5522a-d50e-4519-94ab-bf8528d408f4",
+      "getent_outcome": "found",
+      "getent_returncode": 0,
+      "getent_status": "ok",
+      "getent_stdout": "127.0.0.1       celikpanel.net\n",
+      "http": "200",
+      "loopback_only": true,
+      "ok": true,
+      "unit": {
+        "ActiveState": "active",
+        "NRestarts": "0",
+        "UnitFileState": "enabled"
+      }
+    },
+    "owner_waited_for_idle": {
+      "at": "2026-10-09T08:28:06Z",
+      "busy_seen": [],
+      "idle": true,
+      "polls": 1,
+      "waited_s": 0.2
+    },
+    "packagekit_at_arm": {
+      "after": {
+        "at": "2026-10-09T08:28:06.832155Z",
+        "context_processes": [
+          {
+            "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+            "comm": "unattended-upgr",
+            "pid": 883,
+            "ppid": "1"
+          }
+        ],
+        "general_lock_lines": [],
+        "lock_lines": [],
+        "other_package_processes": [],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=",
+          "ActiveState=inactive",
+          "SubState=dead"
+        ],
+        "packagekitd": [],
+        "rule": "idle",
+        "unparsed_lock_lines": []
+      },
+      "before": {
+        "at": "2026-10-09T08:28:06.551744Z",
+        "context_processes": [
+          {
+            "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+            "comm": "unattended-upgr",
+            "pid": 883,
+            "ppid": "1"
+          }
+        ],
+        "general_lock_lines": [],
+        "lock_lines": [],
+        "other_package_processes": [],
+        "packagekit_unit": [
+          "ExecMainStartTimestamp=",
+          "ActiveState=inactive",
+          "SubState=dead"
+        ],
+        "packagekitd": [],
+        "rule": "idle",
+        "unparsed_lock_lines": []
+      },
+      "host_utc": "2026-10-09T08:28:06Z",
+      "label": "arm-before-check",
+      "readiness": {
+        "answered_by": "agent",
+        "body": {
+          "ready": true
+        },
+        "http": 200,
+        "utc": "2026-10-09T08:28:06Z"
+      }
+    },
+    "port_hold": {
+      "armed_at": "2026-10-09T08:28:09.369232+00:00",
+      "bound": {
+        "allowances": {
+          "attempt_work_s": 60,
+          "owner_detection_s": 120,
+          "owner_step_s": 300,
+          "start_work_s": 120
+        },
+        "constants": {
+          "panel_start_wait_s": 60,
+          "retry_budget": 3,
+          "timer_accuracy_s": 1.0,
+          "timer_inactive_s": 30.0
+        },
+        "formula": "hold = start_work + wait + budget*(wait + attempt_work + OnUnitInactiveSec + AccuracySec) + owner_detection + owner_step, rounded up to a minute; RuntimeMaxSec = hold + 60",
+        "hold_seconds": 1080,
+        "margin_over_measured_s": 689,
+        "measured_pause_s": {
+          "arch": 383,
+          "debian13": 391
+        },
+        "pause_worst_s": 633.0,
+        "per_attempt_s": 151.0,
+        "runtime_max_seconds": 1140,
+        "source": {
+          "commit": "c309f79e64d144f374d9b98fe5c67a34f9bc885c",
+          "files": {
+            "runner": "deploy/release-recovery-runner.sh",
+            "timer": "deploy/systemd/celikpanel-release-recovery.timer",
+            "update": "update.sh"
+          },
+          "role": "good"
+        }
+      },
+      "unit": "celikpanel-lab-owner-port-hold-024e7eb5f15c054107473bc4f55d8f8e.service"
+    },
+    "port_hold_bound": {
+      "allowances": {
+        "attempt_work_s": 60,
+        "owner_detection_s": 120,
+        "owner_step_s": 300,
+        "start_work_s": 120
+      },
+      "constants": {
+        "panel_start_wait_s": 60,
+        "retry_budget": 3,
+        "timer_accuracy_s": 1.0,
+        "timer_inactive_s": 30.0
+      },
+      "formula": "hold = start_work + wait + budget*(wait + attempt_work + OnUnitInactiveSec + AccuracySec) + owner_detection + owner_step, rounded up to a minute; RuntimeMaxSec = hold + 60",
+      "hold_seconds": 1080,
+      "margin_over_measured_s": 689,
+      "measured_pause_s": {
+        "arch": 383,
+        "debian13": 391
+      },
+      "pause_worst_s": 633.0,
+      "per_attempt_s": 151.0,
+      "runtime_max_seconds": 1140,
+      "source": {
+        "commit": "c309f79e64d144f374d9b98fe5c67a34f9bc885c",
+        "files": {
+          "runner": "deploy/release-recovery-runner.sh",
+          "timer": "deploy/systemd/celikpanel-release-recovery.timer",
+          "update": "update.sh"
+        },
+        "role": "good"
+      }
+    },
+    "request_id": "024e7eb5f15c054107473bc4f55d8f8e"
+  },
+  "finished_at": "2026-10-09T08:28:09Z",
+  "name": "arm",
+  "started_at": "2026-10-09T08:28:05Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T04:10:17Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791519014",
+      "-n",
+      "400",
+      "-u",
+      "dovecot.service"
+    ],
+    "at": "2026-10-09T04:10:17Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T04:10:14.309428+00:00 dns-ubuntu systemd[1]: Reloading dovecot.service - Dovecot IMAP/POP3 email server...\n2026-10-09T04:10:14.319249+00:00 dns-ubuntu dovecot[38510]: master: Warning: SIGHUP received - reloading configuration\n2026-10-09T04:10:14.329393+00:00 dns-ubuntu systemd[1]: Reloaded dovecot.service - Dovecot IMAP/POP3 email server.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791519014,
+  "units": [
+    "dovecot.service"
+  ]
+}

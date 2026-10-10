@@ -1,0 +1,84 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "backup schedule: the change with the version",
+  "request": {
+    "body": {
+      "backup_type": "full",
+      "frequency": "weekly",
+      "retention": 30,
+      "version": "bs1-a451686b962008db0e385f50feb14a1922948fda32d1f34fccc0688d7752a682"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18621"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18621"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "041358567df4e017c0f0fbb3771e440d"
+      ]
+    ],
+    "method": "PUT",
+    "path": "/api/v1/domains/1/backups/schedule"
+  },
+  "response": {
+    "elapsed_seconds": 0.006,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 17:46:40 GMT"
+      ],
+      [
+        "Content-Length",
+        "98"
+      ]
+    ],
+    "json": {
+      "success": true,
+      "version": "bs1-4f75b6db4a759e7a59f7dd36b346af84183b80ba887d440bf303357b5b217f89"
+    },
+    "status": 200,
+    "text": null
+  }
+}

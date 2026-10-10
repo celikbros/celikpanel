@@ -1,0 +1,91 @@
+##### systemctl cat postfix.service
+# /usr/lib/systemd/system/postfix.service
+[Unit]
+Description=Postfix Mail Transport Agent
+Documentation=man:postfix(1)
+Conflicts=sendmail.service exim4.service
+ConditionPathExists=/etc/postfix/main.cf
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecReload=/bin/true
+
+[Install]
+WantedBy=multi-user.target
+
+##### systemctl show postfix.service
+{
+ "ActiveEnterTimestamp": "Fri 2026-10-09 07:18:47 UTC",
+ "ActiveState": "active",
+ "ConsistsOf": "postfix@-.service",
+ "DropInPaths": "",
+ "ExecMainPID": "57591",
+ "ExecMainStartTimestamp": "Fri 2026-10-09 07:18:47 UTC",
+ "ExecReload": "{ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+ "ExecStart": "{ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[Fri 2026-10-09 07:18:47 UTC] ; stop_time=[Fri 2026-10-09 07:18:47 UTC] ; pid=57591 ; code=exited ; status=0 }",
+ "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+ "InactiveEnterTimestamp": "Fri 2026-10-09 07:18:46 UTC",
+ "LoadState": "loaded",
+ "MainPID": "0",
+ "NRestarts": "0",
+ "PartOf": "",
+ "PropagatesReloadTo": "postfix@-.service",
+ "ReloadPropagatedFrom": "",
+ "ReloadResult": "success",
+ "RemainAfterExit": "yes",
+ "Result": "success",
+ "SubState": "exited",
+ "Type": "oneshot",
+ "WantedBy": "multi-user.target",
+ "Wants": "postfix@-.service"
+}
+##### systemctl cat postfix@-.service
+# /usr/lib/systemd/system/postfix@.service
+[Unit]
+Description=Postfix Mail Transport Agent (instance %i)
+Documentation=man:postfix(1)
+PartOf=postfix.service
+Before=postfix.service
+ReloadPropagatedFrom=postfix.service
+After=network-online.target nss-lookup.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+GuessMainPID=no
+ExecStartPre=/usr/lib/postfix/configure-instance.sh %i
+ExecStart=/usr/sbin/postmulti -i %i -p start
+ExecStop=/usr/sbin/postmulti -i %i -p stop
+ExecReload=/usr/sbin/postmulti -i %i -p reload
+
+[Install]
+WantedBy=multi-user.target
+
+##### systemctl show postfix@-.service
+{
+ "ActiveEnterTimestamp": "Fri 2026-10-09 07:18:47 UTC",
+ "ActiveState": "active",
+ "ConsistsOf": "",
+ "DropInPaths": "",
+ "ExecMainPID": "0",
+ "ExecMainStartTimestamp": "",
+ "ExecReload": "{ path=/usr/sbin/postmulti ; argv[]=/usr/sbin/postmulti -i - -p reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+ "ExecStart": "{ path=/usr/sbin/postmulti ; argv[]=/usr/sbin/postmulti -i - -p start ; ignore_errors=no ; start_time=[Fri 2026-10-09 07:18:47 UTC] ; stop_time=[Fri 2026-10-09 07:18:47 UTC] ; pid=57368 ; code=exited ; status=0 }",
+ "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+ "InactiveEnterTimestamp": "Fri 2026-10-09 07:18:46 UTC",
+ "LoadState": "loaded",
+ "MainPID": "0",
+ "NRestarts": "0",
+ "PartOf": "postfix.service",
+ "PropagatesReloadTo": "",
+ "ReloadPropagatedFrom": "postfix.service",
+ "ReloadResult": "success",
+ "RemainAfterExit": "no",
+ "Result": "success",
+ "SubState": "running",
+ "Type": "forking",
+ "WantedBy": "postfix.service",
+ "Wants": "network-online.target"
+}

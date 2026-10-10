@@ -19,6 +19,21 @@ import (
 
 const maxBackupRequestBody = 64 << 10
 
+// manualBackupJobKeyPrefix keeps the job key of a backup started from the
+// screen apart from a scheduled one ("schedule:").
+// manualBackupJobKeyPrefix, ekrandan başlatılan yedeğin iş anahtarını
+// zamanlanmış olandan ("schedule:") ayırır.
+const manualBackupJobKeyPrefix = "request:"
+
+// BACKUP_RESTORE_IN_PROGRESS: the Agent is still restoring this domain for an
+// earlier request, so this one was refused before any change (D-029).
+// BACKUP_RESTORE_IN_PROGRESS: Agent bu alan adını önceki bir istek için hâlâ
+// geri yüklüyor; bu istek herhangi bir değişiklikten önce reddedildi.
+const errCodeBackupRestoreInProgress = "BACKUP_RESTORE_IN_PROGRESS"
+
+const backupRestoreInProgressMessage = "Another restore of this domain is still running, so this one was not started and changed nothing. " +
+	"Wait for it to finish and check the site; restore again only if it is still needed."
+
 type backupDomain struct {
 	ID, SubscriptionID int
 	Name, DocumentRoot string
@@ -171,6 +186,15 @@ func (p *Panel) handleCreateBackup(w http.ResponseWriter, r *http.Request, d bac
 		DomainID: d.ID, DomainName: d.Name, Type: body.Type,
 		Origin: backupspec.OriginManual, SourceDir: d.DocumentRoot,
 	}
+	// The request's identity is the Agent's job key (D-029): without one the
+	// Agent takes no job lock and looks for no backup this job already
+	// published, so the same request arriving twice built two archives side by
+	// side. With it the second arrival is given the first one's archive.
+	// İsteğin kimliği Agent'ın iş anahtarıdır (D-029): anahtar olmadan Agent iş
+	// kilidi almaz ve aynı işin yayımladığı yedeği aramaz.
+	if id := requestIdentityFromContext(r.Context()); id != "" {
+		req.JobKey = manualBackupJobKeyPrefix + id
+	}
 	switch body.Type {
 	case backupspec.TypeFiles:
 	case backupspec.TypeDatabase:
@@ -317,6 +341,15 @@ func (p *Panel) handleRestoreBackup(w http.ResponseWriter, r *http.Request) {
 	if err := p.callAgentContext(r.Context(), "Agent.RestoreBackup", &restoreReq, &resp); err != nil {
 		p.auditBackupFailure(r, "restore", inspection.Backup.Type, d.ID, err.Error())
 		writeServerError(w, err)
+		return
+	}
+	if resp.Error == backupspec.RestoreInProgress {
+		// The Agent refused before reading or writing anything: another
+		// restore of this domain is still running there (D-029).
+		// Agent hiçbir şey okumadan ve yazmadan reddetti: bu alan adının başka
+		// bir geri yüklemesi hâlâ sürüyor (D-029).
+		p.auditBackupFailure(r, "restore", inspection.Backup.Type, d.ID, resp.Error)
+		writeCodedError(w, http.StatusConflict, errCodeBackupRestoreInProgress, backupRestoreInProgressMessage, "")
 		return
 	}
 	if !resp.Success || resp.Error != "" {

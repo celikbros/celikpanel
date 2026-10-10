@@ -1,0 +1,44 @@
+{
+  "at": "2026-10-09T22:37:11Z",
+  "epoch": 1791585431.7453513,
+  "mariadb": {
+    "answers": true,
+    "server_alive": true,
+    "server_pid": 11185,
+    "stderr": "",
+    "version": "10.11.14-MariaDB-0ubuntu0.24.04.1"
+  },
+  "mode": "read-service",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "mariadb.service": {
+      "is_active": "active",
+      "properties": {
+        "ActiveEnterTimestamp": "Fri 2026-10-09 22:26:17 UTC",
+        "ActiveState": "active",
+        "ConsistsOf": "",
+        "DropInPaths": "",
+        "ExecMainPID": "11185",
+        "ExecMainStartTimestamp": "Fri 2026-10-09 22:26:17 UTC",
+        "ExecStart": "{ path=/usr/sbin/mariadbd ; argv[]=/usr/sbin/mariadbd $MYSQLD_OPTS $_WSREP_NEW_CLUSTER $_WSREP_START_POSITION ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "FragmentPath": "/usr/lib/systemd/system/mariadb.service",
+        "InactiveEnterTimestamp": "",
+        "LoadState": "loaded",
+        "MainPID": "11185",
+        "NRestarts": "0",
+        "PartOf": "",
+        "PropagatesReloadTo": "",
+        "ReloadPropagatedFrom": "",
+        "ReloadResult": "success",
+        "RemainAfterExit": "no",
+        "Result": "success",
+        "SubState": "running",
+        "Type": "notify",
+        "WantedBy": "multi-user.target",
+        "Wants": ""
+      },
+      "returncode": 0
+    }
+  }
+}

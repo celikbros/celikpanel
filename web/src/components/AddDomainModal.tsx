@@ -1,33 +1,33 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from '../router';
 import { Globe, Lock, Server, Network } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { Button, Dialog, ErrorBanner } from './ui';
+import { Button, Checking, CouldNotCheck, Dialog, ErrorBanner } from './ui';
 import { readApiError, apiErrorText, type ApiError } from '../lib/apiError';
+import { isSiteWebServerRefused, siteWebServerRefusedIn } from '../lib/siteWebServerRefused';
+import { gateOn } from '../lib/remote';
+import {
+    dnsBlocker,
+    hostingDNSReady,
+    localDNSReady,
+    useHostingCapabilities,
+    type DomainPurpose,
+} from '../lib/hostingCapabilities';
 
 interface AddDomainModalProps {
     onClose: () => void;
     onSuccess: () => void;
 }
 
-// What this server can host right now — drives which choices the dialog
-// offers. A php site needs a web server + PHP-FPM, a static site needs a web
-// server, a DNS-only domain needs nothing. The requirement follows the ROLE
+// What this server can host right now drives which choices the dialog offers
+// (lib/hostingCapabilities.ts). A website needs a web server, a DNS-only
+// domain needs a local authoritative service. The requirement follows the ROLE
 // the domain will play, not a fixed service list.
-// Bu sunucunun şu anda neyi barındırabildiği — pencerenin hangi seçenekleri
-// sunacağını belirler. php sitesi web sunucusu + PHP-FPM ister, statik site
-// web sunucusu ister, yalnız-DNS domain hiçbir şey istemez. Gereksinim,
-// domain'in üstleneceği ROLÜ izler; sabit bir servis listesini değil.
-interface HostingCapabilities {
-    web_server: string;
-    php_versions: string[];
-    dns_server: string;
-    dns_identity_ready: boolean;
-    dns_management_mode?: 'local' | 'external' | 'existing';
-    dns_management_ready?: boolean;
-    mail_server: boolean;
-}
+// Bu sunucunun şu anda neyi barındırabildiği, pencerenin hangi seçenekleri
+// sunacağını belirler (lib/hostingCapabilities.ts). Web sitesi web sunucusu,
+// yalnız-DNS alan adı yerel bir yetkili hizmet ister. Gereksinim, alan adının
+// üstleneceği ROLÜ izler; sabit bir servis listesini değil.
 
 // What the domain is FOR — the only question this screen asks (D-013).
 // Runtime (PHP on/off, version, Node…) is a SITE SETTING chosen afterwards on
@@ -42,7 +42,7 @@ interface HostingCapabilities {
 // değil. "website" panelin sunduğu bir site oluşturur; "dnsonly" yalnız zone.
 // `static` ile `php` aynı şeyin PHP anahtarı kapalı/açık hâlidir; bu yüzden
 // burada ayrı seçenek olmaktan çıktılar.
-type Purpose = 'website' | 'dnsonly';
+type Purpose = DomainPurpose;
 
 const API_BASE = '/api/v1';
 
@@ -92,8 +92,22 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
     const { t } = useI18n();
     const navigate = useNavigate();
     const [domainName, setDomainName] = useState('');
-    const [caps, setCaps] = useState<HostingCapabilities | null>(null);
-    const [purpose, setPurpose] = useState<Purpose>('website');
+    // The page under this dialog reads the same capabilities; the dialog uses
+    // that answer and that request (lib/remote.ts) instead of asking again.
+    // Bu pencerenin altındaki sayfa aynı yetenekleri okur; pencere yeniden
+    // sormak yerine o yanıtı ve o isteği kullanır.
+    const capabilities = useHostingCapabilities();
+    const caps = capabilities.remote.state === 'known' ? capabilities.remote.value : null;
+    // What the person chose, or nothing yet. Until they choose, the default is
+    // what can actually work here: a website, unless the server is KNOWN to
+    // have no web server, where only the DNS zone is possible. A choice made
+    // while the answer was still on its way is theirs and is kept.
+    // Kişinin seçtiği, ya da henüz hiçbir şey. Seçene kadar varsayılan burada
+    // gerçekten çalışabilecek olandır: web sitesi; sunucuda web sunucusu
+    // olmadığı BİLİNİYORSA yalnız DNS bölgesi. Yanıt gelmeden yapılan seçim
+    // kişinindir ve korunur.
+    const [chosenPurpose, setPurpose] = useState<Purpose | null>(null);
+    const purpose: Purpose = chosenPurpose ?? (caps && caps.web_server === '' ? 'dnsonly' : 'website');
     const [sslEnabled, setSSLEnabled] = useState(false);
     const [loading, setLoading] = useState(false);
     // The full contract object, not just text: a coded refusal may carry an
@@ -102,58 +116,30 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
     // çevirdiği panel-içi çözüm yolu taşıyabilir.
     const [error, setError] = useState<ApiError | null>(null);
 
-    // Load capabilities once, then default to the best type that can actually
-    // work here: php if possible, else static, else DNS-only.
-    //
-    // Defensive against a null list field (php_versions etc): the backend now
-    // always sends [], but trusting that from the frontend is how this broke
-    // once already — a null[0] access threw inside this .then(), which the
-    // trailing .catch() silently turned into "reset caps to null", making
-    // every requirement check read as "unknown" and the DNS-only type fail
-    // open. `?? []` here means a bad payload degrades to "nothing available"
-    // (safe default) instead of a crash that erases the whole capability read.
-    //
-    // Yetenekleri bir kez yükle, sonra burada gerçekten çalışabilecek en iyi
-    // tipe varsayılan yap: mümkünse php, değilse statik, değilse yalnız-DNS.
-    //
-    // Null bir liste alanına (php_versions vb.) karşı savunmacı: backend artık
-    // her zaman [] gönderiyor, ama bunu frontend'den varsaymak bir kez tam
-    // buradan bozulmasına yol açtı — bu .then() içinde bir null[0] erişimi
-    // fırlattı, ardındaki .catch() bunu sessizce "caps'i null'a sıfırla"ya
-    // çevirdi; bu da her gereksinim denetimini "bilinmiyor" yaptı ve
-    // yalnız-DNS tipini açık bıraktı (fail open). Buradaki `?? []`, bozuk bir
-    // yükün tüm yetenek okumasını silen bir çökme yerine "hiçbir şey uygun
-    // değil"e (güvenli varsayılan) düşmesini sağlar.
-    useEffect(() => {
-        fetch(`${API_BASE}/hosting/capabilities`)
-            .then((r) => (r.ok ? r.json() : null))
-            .then((raw: HostingCapabilities | null) => {
-                if (!raw) return;
-                const c: HostingCapabilities = { ...raw, php_versions: raw.php_versions ?? [] };
-                setCaps(c);
-                // Default to what can actually work here: a website needs a web
-                // server; without one only the DNS zone is possible.
-                // Burada gerçekten çalışabilecek olana varsayılan yap: web sitesi
-                // web sunucusu ister; o yoksa yalnız DNS zone'u mümkündür.
-                setPurpose(c.web_server ? 'website' : 'dnsonly');
-            })
-            .catch(() => setCaps(null));
-    }, []);
-
-    // Explicit external DNS permits websites without a local publisher. A
-    // DNS-only domain still requires a proven local authoritative service.
-    const localDNSReady = !!caps && caps.dns_server !== '' && caps.dns_identity_ready === true;
-    const externalDNSReady = caps?.dns_management_mode === 'external' && caps.dns_management_ready === true;
-    const remoteDNSReady = caps?.dns_management_mode === 'existing' && caps.dns_management_ready === true;
-    const hostingDNSReady = localDNSReady || externalDNSReady || remoteDNSReady;
-    const dnsMissing = purpose === 'dnsonly' ? !localDNSReady : !hostingDNSReady;
+    // Whether a domain of this purpose can be created, as one of four answers:
+    // checking, could not check, open, or blocked with the half that is
+    // missing. `blocked` exists only for a known answer (gateOn), so the
+    // "choose a DNS engine" blocker cannot be drawn while the read is still
+    // running or after it failed - which is what an owner saw for seconds on a
+    // server that had DNS (reported 8 Oct 2026). Explicit external or remote
+    // DNS permits websites without a local publisher; a DNS-only domain still
+    // requires a proven local authoritative service (dnsBlocker).
+    // Bu amaçla alan adı oluşturulabilir mi: kontrol ediliyor, kontrol
+    // edilemedi, açık ya da eksik yarısıyla engelli. `blocked` yalnız bilinen
+    // yanıt için vardır; bu yüzden "DNS motoru seç" engeli okuma sürerken ya
+    // da başarısız olduktan sonra çizilemez. DNS'i olan bir sunucuda sahibin
+    // saniyelerce gördüğü buydu (8 Eki 2026).
+    const dns = gateOn(capabilities.remote, (value) => dnsBlocker(value, purpose));
     // A website needs a web server — and ONLY a web server. PHP is no longer a
     // precondition here (D-013): a site is created first, its PHP switch is a
     // setting afterwards, so a server without PHP can still host websites.
+    // An option is shown as unavailable only once the answer is known.
     // Web sitesi bir web sunucusu ister — ve YALNIZ onu. PHP artık burada ön
     // koşul değildir (D-013): önce site oluşturulur, PHP anahtarı sonradan bir
-    // ayardır; yani PHP'siz bir sunucu da web sitesi barındırabilir.
-    const websiteAvailable = !!caps && hostingDNSReady && caps.web_server !== '';
+    // ayardır; yani PHP'siz bir sunucu da web sitesi barındırabilir. Seçenek
+    // ancak yanıt bilindiğinde kullanılamaz gösterilir.
+    const websiteAvailable = caps ? hostingDNSReady(caps) && caps.web_server !== '' : true;
+    const dnsOnlyAvailable = caps ? localDNSReady(caps) : true;
 
     const purposeOptions: {
         id: Purpose;
@@ -161,13 +147,15 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
         available: boolean;
         requirement: string | null;
     }[] = [
-        { id: 'website', icon: Server, available: websiteAvailable, requirement: !caps || dnsMissing || websiteAvailable ? null : t('domains.add.needsWebServer') },
-        { id: 'dnsonly', icon: Network, available: localDNSReady, requirement: null },
+        { id: 'website', icon: Server, available: websiteAvailable, requirement: !caps || dns.state === 'blocked' || websiteAvailable ? null : t('domains.add.needsWebServer') },
+        { id: 'dnsonly', icon: Network, available: dnsOnlyAvailable, requirement: null },
     ];
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (dnsMissing) return;
+        // Nothing is sent unless this server is known to be able to publish it.
+        // Sunucunun bunu yayımlayabildiği bilinmeden hiçbir şey gönderilmez.
+        if (dns.state !== 'open') return;
         setLoading(true);
         setError(null);
 
@@ -207,6 +195,14 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                     return;
                 }
                 const apiErr = await readApiError(res);
+                if (isSiteWebServerRefused(apiErr)) {
+                    // The web server refused the site: a sentence with a
+                    // command to run stays in the dialog, in the page's
+                    // language, with nginx's own line under it; it is not
+                    // a toast that leaves after five seconds.
+                    setError(siteWebServerRefusedIn(apiErr, t));
+                    return;
+                }
                 if (!apiErr.message && !apiErr.code) apiErr.message = t('domains.add.failed');
                 setError(apiErr);
                 showToast('error', apiErrorText(apiErr, t, 'domains.add.failed'));
@@ -239,7 +235,7 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                     <Button type="button" variant="secondary" onClick={onClose}>
                         {t('common.cancel')}
                     </Button>
-                    <Button type="submit" variant="primary" disabled={loading || dnsMissing}>
+                    <Button type="submit" variant="primary" disabled={loading || dns.state !== 'open'}>
                         {loading ? t('domains.add.creating') : t('domains.add.create')}
                     </Button>
                 </>
@@ -248,7 +244,18 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
             <div className="space-y-4">
                 <ErrorBanner error={error} />
 
-                {dnsMissing && (
+                {/* The read failed: say that, keep what was typed, offer the
+                    read again. Not the blocker - nothing is known to be missing.
+                    Okuma başarısız: bunu söyle, yazılanı koru, okumayı yeniden
+                    sun. Engel değil - eksik olduğu bilinen bir şey yok. */}
+                {dns.state === 'unknown' && (
+                    <CouldNotCheck
+                        text={t('domains.add.dnsUnknown')}
+                        onRetry={() => void capabilities.retry()}
+                        busy={capabilities.reading}
+                    />
+                )}
+                {dns.state === 'blocked' && (
                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-4 text-sm text-fg">
                         {/*
                           Say which half is missing. An engine that is active but
@@ -258,7 +265,7 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                           bir motora "BIND ya da PowerDNS'i etkinleştir" denmemeli;
                           düğme ile cümle aynı tek düzeltmeyi adlandırır.
                         */}
-                        <span>{caps?.dns_server ? t('err.DNS_SETTINGS_REQUIRED') : t('domains.add.needsDns')}</span>
+                        <span>{dns.reason === 'identity' ? t('err.DNS_SETTINGS_REQUIRED') : t('domains.add.needsDns')}</span>
                         {/*
                           Both halves of "DNS is missing" are fixed in the same
                           place: the DNS infrastructure section installs and
@@ -277,7 +284,7 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                             onClick={() => navigate('/settings?section=dns')}
                             className='rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg'
                         >
-                            {caps?.dns_server
+                            {dns.reason === 'identity'
                                 ? t('err.DNS_SETTINGS_REQUIRED.action')
                                 : t('err.DNS_SERVER_REQUIRED.action')}
                         </button>
@@ -362,11 +369,20 @@ export function AddDomainModal({ onClose, onSuccess }: AddDomainModalProps) {
                     </div>
                 )}
 
-                {caps && caps.dns_server !== '' && (
-                    <p className="text-xs text-fg-subtle">
-                        {t('domains.add.dnsServed', { server: caps.dns_server })}
-                    </p>
-                )}
+                {/* One status line with a height of its own: the checking line
+                    while the answer is on its way, then what is known. The
+                    form above it does not move when the answer arrives.
+                    Kendi yüksekliği olan tek durum satırı: yanıt yoldayken
+                    kontrol satırı, sonra bilinen. Yanıt gelince üstündeki form
+                    yerinden oynamaz. */}
+                <div className="min-h-5">
+                    {dns.state === 'checking' && <Checking label={t('dns.checkingServer')} />}
+                    {caps && caps.dns_server !== '' && (
+                        <p className="text-xs leading-5 text-fg-subtle">
+                            {t('domains.add.dnsServed', { server: caps.dns_server })}
+                        </p>
+                    )}
+                </div>
             </div>
         </Dialog>
     );

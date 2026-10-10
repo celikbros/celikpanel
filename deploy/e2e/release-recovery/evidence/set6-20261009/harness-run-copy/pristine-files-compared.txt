@@ -1,0 +1,3 @@
+overlay-a: pristine file list equal to overlay-a's
+overlay-b: pristine file list equal to overlay-a's
+overlay-c: pristine file list equal to overlay-a's

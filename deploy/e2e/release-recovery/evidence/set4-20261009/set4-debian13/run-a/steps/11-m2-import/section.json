@@ -1,0 +1,1082 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-09T10:47:55Z",
+      "body_bytes": 1171,
+      "body_sha256": "3c8055e9ae6f72fa1c7ebdd361a09ed2a63655bdbbdffd1e4d096e25732121ba",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "f739d7174d375b589f689a6b75c672b4"
+      },
+      "json": {
+        "domain": "set4-import.test",
+        "domain_id": 6,
+        "domain_status": "active",
+        "imported": [
+          "domain",
+          "files",
+          "mail",
+          "forwarders",
+          "dns",
+          "database:s4imp_app"
+        ],
+        "not_imported": [],
+        "site_id": 6,
+        "status": "active",
+        "steps": [
+          {
+            "detail": "set4-import.test (id 6, site 6) → /var/www/celikpanel/subscriptions/2/sites/6/public_html",
+            "ok": true,
+            "step": "domain"
+          },
+          {
+            "detail": "2 files, 96 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+            "ok": true,
+            "step": "files"
+          },
+          {
+            "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+            "ok": true,
+            "step": "mail"
+          },
+          {
+            "detail": "1 forwarders",
+            "ok": true,
+            "step": "forwarders"
+          },
+          {
+            "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+            "ok": true,
+            "step": "dns"
+          },
+          {
+            "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+            "ok": true,
+            "step": "database:s4imp_app"
+          }
+        ]
+      },
+      "label": "import: the archive of set3's fixture (POST /api/v1/import/cpanel/apply)",
+      "n": 1,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": true,
+          "domain": "set4-import.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s4imp.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "f739d7174d375b589f689a6b75c672b4",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 2.742,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "archive": "set4",
+        "at": "2026-10-09T10:47:55Z",
+        "databases": [
+          "s4imp_app"
+        ],
+        "domains": [
+          "set4-import.test"
+        ],
+        "hash_shaped_values_in_the_raw_answer": 0,
+        "keys": [
+          "databases",
+          "dns_zones",
+          "domains",
+          "forwarders",
+          "mail_accounts",
+          "main_domain",
+          "public_html",
+          "site_bytes",
+          "username"
+        ],
+        "label": "inspect the archive of set4-import.test (ImportPage preview)",
+        "mail_accounts": [
+          {
+            "domain": "set4-import.test",
+            "has_password": true,
+            "quota_mb": 256,
+            "user": "info"
+          }
+        ],
+        "mailbox_keys": [
+          "domain",
+          "has_password",
+          "quota_mb",
+          "user"
+        ],
+        "public_html": true,
+        "raw_bytes": 374,
+        "status": 200
+      },
+      "name": "the preview of the set4 archive names its domain, its mailbox and its database",
+      "ok": true
+    },
+    {
+      "detail": {
+        "archive": "set4",
+        "at": "2026-10-09T10:47:55Z",
+        "databases": [
+          "s4imp_app"
+        ],
+        "domains": [
+          "set4-import.test"
+        ],
+        "hash_shaped_values_in_the_raw_answer": 0,
+        "keys": [
+          "databases",
+          "dns_zones",
+          "domains",
+          "forwarders",
+          "mail_accounts",
+          "main_domain",
+          "public_html",
+          "site_bytes",
+          "username"
+        ],
+        "label": "inspect the archive of set4-import.test (ImportPage preview)",
+        "mail_accounts": [
+          {
+            "domain": "set4-import.test",
+            "has_password": true,
+            "quota_mb": 256,
+            "user": "info"
+          }
+        ],
+        "mailbox_keys": [
+          "domain",
+          "has_password",
+          "quota_mb",
+          "user"
+        ],
+        "public_html": true,
+        "raw_bytes": 374,
+        "status": 200
+      },
+      "name": "S1: the preview of the set4 archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer_status": 200,
+        "answered_200_active": true,
+        "docroot_files_equal_the_archives": true,
+        "expected_files": 2,
+        "expected_rows": "300",
+        "import_status": "active",
+        "native": {
+          "database_on_engine": true,
+          "database_row": [
+            "s4imp_app"
+          ],
+          "docroot_sha256": "06dab7783561d5877c217cf27341d8c73d5c5febe35cc2ec1a5e5e604d92c8f8",
+          "domain_row": true,
+          "files": 2,
+          "forwardings": 1,
+          "mailboxes": [
+            "info@set4-import.test"
+          ],
+          "rows": "300",
+          "status": "active"
+        },
+        "steps": [
+          {
+            "code": null,
+            "ok": true,
+            "step": "domain"
+          },
+          {
+            "code": null,
+            "ok": true,
+            "step": "files"
+          },
+          {
+            "code": null,
+            "ok": true,
+            "step": "mail"
+          },
+          {
+            "code": null,
+            "ok": true,
+            "step": "forwarders"
+          },
+          {
+            "code": null,
+            "ok": true,
+            "step": "dns"
+          },
+          {
+            "code": null,
+            "ok": true,
+            "step": "database:s4imp_app"
+          }
+        ]
+      },
+      "name": "item 2: the import of set3's fixture completes (200, active; the document root's files equal the archive's; the database is on the engine with its rows)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "files_step": {
+          "detail": "2 files, 96 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+          "ok": true,
+          "step": "files"
+        },
+        "import_status": "active"
+      },
+      "name": "item 5 (declared deviation): entries of the archive outside the site folder are counted in the files step's line and do not make the import partial",
+      "ok": true
+    },
+    {
+      "detail": {
+        "archive_index": [
+          62,
+          "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe"
+        ],
+        "index": {
+          "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+          "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+          "bytes": 62,
+          "error": null,
+          "headers": {
+            "content-length": "62",
+            "content-type": "text/html",
+            "server": "nginx"
+          },
+          "status": 200
+        },
+        "root": {
+          "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+          "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+          "bytes": 62,
+          "error": null,
+          "headers": {
+            "content-length": "62",
+            "content-type": "text/html",
+            "server": "nginx"
+          },
+          "status": 200
+        }
+      },
+      "name": "item 2: the imported site serves the archive's own index page through the web server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "at": "2026-10-09T10:48:00Z",
+        "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+        "returncode": 0,
+        "status": "ok"
+      },
+      "name": "imported-site: `nginx -t` passes with the site's vhost",
+      "ok": true
+    },
+    {
+      "detail": {
+        "includes": [
+          "fastcgi.conf",
+          "fastcgi_params"
+        ],
+        "path": "/etc/nginx/sites-available/set4-import.test.conf",
+        "php_location_lines": [
+          "fastcgi_split_path_info ^(.+?\\.php)(/.*)$;",
+          "try_files $fastcgi_script_name =404;",
+          "set $path_info $fastcgi_path_info;",
+          "fastcgi_param PATH_INFO $path_info;",
+          "fastcgi_index index.php;",
+          "include fastcgi.conf;",
+          "fastcgi_pass unix:/var/run/php/php8.4-fpm-site6.sock;",
+          "fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;",
+          "include fastcgi_params;"
+        ]
+      },
+      "name": "imported-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "body": "set4-php-executed:42:8.4.26:fpm-fcgi:set4_import_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/6/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/6/public_html]\nREQUEST_URI=[/set4-probe.php]\nQUERY_STRING=[]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+          "body_sha256": "86f232695e5b63c93363f50f2170eddf1911a328e5a9d19c5d6c9c925044bcd2",
+          "bytes": 361,
+          "error": null,
+          "headers": {
+            "content-type": "text/plain;charset=UTF-8",
+            "server": "nginx"
+          },
+          "status": 200
+        },
+        "probe": {
+          "executed": true,
+          "php_version": "8.4.26",
+          "runs_as": "set4_import_test",
+          "server_api": "fpm-fcgi",
+          "values": {
+            "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/6/public_html",
+            "DOCUMENT_URI": "/set4-probe.php",
+            "PATH_INFO": "",
+            "PATH_TRANSLATED": "(unset)",
+            "QUERY_STRING": "",
+            "REQUEST_URI": "/set4-probe.php",
+            "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/6/public_html/set4-probe.php",
+            "SCRIPT_NAME": "/set4-probe.php"
+          }
+        }
+      },
+      "name": "imported-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "runs_as": "set4_import_test",
+        "site_account": "set4_import_test"
+      },
+      "name": "imported-site: the page runs as the site's own account",
+      "ok": true
+    },
+    {
+      "detail": {
+        "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n",
+        "body_sha256": "55f7d9e99b8e2d4e0e193b2f0275501e6d9c1ebd29cadbea6a0da48a8587e3e0",
+        "bytes": 146,
+        "error": null,
+        "headers": {
+          "content-length": "146",
+          "content-type": "text/html",
+          "server": "nginx"
+        },
+        "status": 404
+      },
+      "name": "imported-site: a PHP script that does not exist answers 404",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "body": "set4-php-executed:42:8.4.26:fpm-fcgi:set4_import_test\nPATH_INFO=[/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/6/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/6/public_html]\nREQUEST_URI=[/set4-probe.php/tail.php]\nQUERY_STRING=[]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+          "body_sha256": "57332f2b6d6ab1292b39cdfb71f4429839d05378d64747f901769961e6e50e76",
+          "bytes": 379,
+          "error": null,
+          "headers": {
+            "content-type": "text/plain;charset=UTF-8",
+            "server": "nginx"
+          },
+          "status": 200
+        },
+        "deep": {
+          "executed": true,
+          "php_version": "8.4.26",
+          "runs_as": "set4_import_test",
+          "server_api": "fpm-fcgi",
+          "values": {
+            "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/6/public_html",
+            "DOCUMENT_URI": "/set4-probe.php",
+            "PATH_INFO": "/a/b/tail.php",
+            "PATH_TRANSLATED": "(unset)",
+            "QUERY_STRING": "q=1",
+            "REQUEST_URI": "/set4-probe.php/a/b/tail.php?q=1",
+            "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/6/public_html/set4-probe.php",
+            "SCRIPT_NAME": "/set4-probe.php"
+          }
+        },
+        "tail": {
+          "executed": true,
+          "php_version": "8.4.26",
+          "runs_as": "set4_import_test",
+          "server_api": "fpm-fcgi",
+          "values": {
+            "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/6/public_html",
+            "DOCUMENT_URI": "/set4-probe.php",
+            "PATH_INFO": "/tail.php",
+            "PATH_TRANSLATED": "(unset)",
+            "QUERY_STRING": "",
+            "REQUEST_URI": "/set4-probe.php/tail.php",
+            "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/6/public_html/set4-probe.php",
+            "SCRIPT_NAME": "/set4-probe.php"
+          }
+        }
+      },
+      "name": "imported-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "body": "set4 static file served by the web server\n",
+        "body_sha256": "027f7a0fc431eed3894f237433bd0db7888d8959469abe66602efa29d4bda904",
+        "bytes": 42,
+        "error": null,
+        "headers": {
+          "content-length": "42",
+          "content-type": "text/plain",
+          "server": "nginx"
+        },
+        "status": 200
+      },
+      "name": "imported-site: a static file of the site is served as it is (200)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "domains_list_php_fields": {
+          "php_version": "8.4"
+        },
+        "installed_php_versions": [
+          "8.4"
+        ],
+        "php_fpm_programs": {
+          "php-fpm8.4": [
+            "PHP 8.4.26 (fpm-fcgi) (built: Sep 24 2026 17:16:18) (NTS)"
+          ]
+        },
+        "php_version_of_the_page": "8.4.26",
+        "pool_file": "/etc/php/8.4/fpm/pool.d/site6.conf",
+        "pool_listen": "/var/run/php/php8.4-fpm-site6.sock",
+        "recorded_php_fpm_socket": "/var/run/php/php8.4-fpm-site6.sock",
+        "recorded_php_version": "8.4",
+        "socket": {
+          "exists": true,
+          "group": "www-data",
+          "kind": "socket",
+          "mode": "0660",
+          "owner": "www-data",
+          "path": "/run/php/php8.4-fpm-site6.sock"
+        },
+        "vhost_fastcgi_pass": "unix:/var/run/php/php8.4-fpm-site6.sock"
+      },
+      "name": "imported-site (item 3): the PHP version recorded for the site is the installed one that runs the page",
+      "ok": true
+    },
+    {
+      "detail": {
+        "domains_list_php_fields": {
+          "php_version": "8.4"
+        },
+        "installed_php_versions": [
+          "8.4"
+        ],
+        "php_fpm_programs": {
+          "php-fpm8.4": [
+            "PHP 8.4.26 (fpm-fcgi) (built: Sep 24 2026 17:16:18) (NTS)"
+          ]
+        },
+        "php_version_of_the_page": "8.4.26",
+        "pool_file": "/etc/php/8.4/fpm/pool.d/site6.conf",
+        "pool_listen": "/var/run/php/php8.4-fpm-site6.sock",
+        "recorded_php_fpm_socket": "/var/run/php/php8.4-fpm-site6.sock",
+        "recorded_php_version": "8.4",
+        "socket": {
+          "exists": true,
+          "group": "www-data",
+          "kind": "socket",
+          "mode": "0660",
+          "owner": "www-data",
+          "path": "/run/php/php8.4-fpm-site6.sock"
+        },
+        "vhost_fastcgi_pass": "unix:/var/run/php/php8.4-fpm-site6.sock"
+      },
+      "name": "imported-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T10:48:04Z",
+  "fixture": {
+    "bytes": 2507,
+    "database": "s4imp_app",
+    "docroot_expected": {
+      "assets/site.css": [
+        34,
+        "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+      ],
+      "index.html": [
+        62,
+        "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe"
+      ]
+    },
+    "domain": "set4-import.test",
+    "hostile": null,
+    "hostile_members": [],
+    "mailbox_shadow": "the sha512-crypt hash (openssl passwd -6) of a password the lab chose; neither is recorded",
+    "megabytes": 0,
+    "members": [
+      {
+        "bytes": 50,
+        "name": "cpmove-s4imp/cp/s4imp"
+      },
+      {
+        "bytes": 62,
+        "name": "cpmove-s4imp/homedir/public_html/index.html"
+      },
+      {
+        "bytes": 34,
+        "name": "cpmove-s4imp/homedir/public_html/assets/site.css"
+      },
+      {
+        "bytes": 124,
+        "name": "cpmove-s4imp/homedir/etc/set4-import.test/shadow"
+      },
+      {
+        "bytes": 15,
+        "name": "cpmove-s4imp/homedir/etc/set4-import.test/quota"
+      },
+      {
+        "bytes": 46,
+        "name": "cpmove-s4imp/va/set4-import.test"
+      },
+      {
+        "bytes": 29,
+        "name": "cpmove-s4imp/mysql/s4imp_app.create"
+      },
+      {
+        "bytes": 7388,
+        "name": "cpmove-s4imp/mysql/s4imp_app.sql"
+      }
+    ],
+    "path": "/var/lib/celikpanel-imports/cpmove-s4imp.tar.gz",
+    "public_html_directory_member": true,
+    "sha256": "518e2330fa182c88cff789755d7da26960a12b199c38c330e3b03d5bdcb5d33b",
+    "sleep_seconds": 0,
+    "user": "s4imp"
+  },
+  "import": {
+    "answer": null,
+    "code": null,
+    "domain_status": "active",
+    "import_status": "active",
+    "imported": [
+      "domain",
+      "files",
+      "mail",
+      "forwarders",
+      "dns",
+      "database:s4imp_app"
+    ],
+    "message": null,
+    "native": {
+      "database_on_engine": true,
+      "database_row": [
+        "s4imp_app"
+      ],
+      "docroot_sha256": "06dab7783561d5877c217cf27341d8c73d5c5febe35cc2ec1a5e5e604d92c8f8",
+      "domain_row": true,
+      "files": 2,
+      "forwardings": 1,
+      "mailboxes": [
+        "info@set4-import.test"
+      ],
+      "rows": "300",
+      "status": "active"
+    },
+    "not_imported": [],
+    "status": 200,
+    "steps": [
+      {
+        "detail": "set4-import.test (id 6, site 6) → /var/www/celikpanel/subscriptions/2/sites/6/public_html",
+        "ok": true,
+        "step": "domain"
+      },
+      {
+        "detail": "2 files, 96 bytes. 6 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/etc (2), mysql (2), cp (1), va (1). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+        "ok": true,
+        "step": "files"
+      },
+      {
+        "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+        "ok": true,
+        "step": "mail"
+      },
+      {
+        "detail": "1 forwarders",
+        "ok": true,
+        "step": "forwarders"
+      },
+      {
+        "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+        "ok": true,
+        "step": "dns"
+      },
+      {
+        "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+        "ok": true,
+        "step": "database:s4imp_app"
+      }
+    ]
+  },
+  "import_served": {
+    "archive_index": [
+      62,
+      "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe"
+    ],
+    "index": {
+      "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+      "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+      "bytes": 62,
+      "error": null,
+      "headers": {
+        "content-length": "62",
+        "content-type": "text/html",
+        "server": "nginx"
+      },
+      "status": 200
+    },
+    "root": {
+      "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+      "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+      "bytes": 62,
+      "error": null,
+      "headers": {
+        "content-length": "62",
+        "content-type": "text/html",
+        "server": "nginx"
+      },
+      "status": 200
+    }
+  },
+  "import_site": {
+    "domain_id": 6,
+    "php_fpm_socket": "/var/run/php/php8.4-fpm-site6.sock",
+    "php_version": "8.4",
+    "project_type": "php"
+  },
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/063-owner-cpmove-fixture-s4imp.json",
+      "lab_action": false,
+      "label": "owner-cpmove-fixture-s4imp",
+      "mode": "owner-cpmove-fixture",
+      "owner_action": true
+    },
+    {
+      "file": "native/064-import-after.json",
+      "lab_action": false,
+      "label": "import-after",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/065-import-after-engines.json",
+      "lab_action": false,
+      "label": "import-after-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/066-import-http-root.json",
+      "label": "import-http-root",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/067-import-http-index.json",
+      "label": "import-http-index",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/068-import-site-record.json",
+      "label": "import-site-record",
+      "mode": "read-leftovers",
+      "owner_action": false
+    },
+    {
+      "file": "native/069-imported-site-nginx.json",
+      "label": "imported-site-nginx",
+      "mode": "read-nginx",
+      "owner_action": false
+    },
+    {
+      "file": "native/070-owner-imported-site-php-probe.json",
+      "label": "owner-imported-site-php-probe",
+      "mode": "owner-php-probe",
+      "owner_action": true
+    },
+    {
+      "file": "native/071-http-imported-site-probe.json",
+      "label": "http-imported-site-probe",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/072-http-imported-site-probe-query.json",
+      "label": "http-imported-site-probe-query",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/073-http-imported-site-missing-script.json",
+      "label": "http-imported-site-missing-script",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/074-http-imported-site-path-info-tail-php.json",
+      "label": "http-imported-site-path-info-tail-php",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/075-http-imported-site-path-info-deep-tail-php.json",
+      "label": "http-imported-site-path-info-deep-tail-php",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/076-http-imported-site-path-info-plain.json",
+      "label": "http-imported-site-path-info-plain",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/077-http-imported-site-static.json",
+      "label": "http-imported-site-static",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/078-http-imported-site-missing-static.json",
+      "label": "http-imported-site-missing-static",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/079-http-imported-site-root.json",
+      "label": "http-imported-site-root",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/080-http-imported-site-dotfile.json",
+      "label": "http-imported-site-dotfile",
+      "mode": "read-http",
+      "owner_action": false
+    },
+    {
+      "file": "native/081-imported-site-site-record.json",
+      "label": "imported-site-site-record",
+      "mode": "read-leftovers",
+      "owner_action": false
+    }
+  ],
+  "node": "debian13",
+  "notes": [
+    {
+      "detail": {
+        "answer": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "55f7d9e99b8e2d4e0e193b2f0275501e6d9c1ebd29cadbea6a0da48a8587e3e0",
+          "bytes": 146,
+          "error": null,
+          "headers": {
+            "content-length": "146",
+            "content-type": "text/html",
+            "server": "nginx"
+          },
+          "status": 404
+        },
+        "parsed": {
+          "executed": false,
+          "php_version": null,
+          "runs_as": null,
+          "server_api": null,
+          "values": {}
+        }
+      },
+      "note": "imported-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 404"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T10:47:55Z",
+      "label": "cpmove-fixture-s4imp",
+      "mode": "owner-cpmove-fixture"
+    },
+    {
+      "at": "2026-10-09T10:48:01Z",
+      "label": "imported-site-php-probe",
+      "mode": "owner-php-probe"
+    }
+  ],
+  "php": {
+    "imported-site": {
+      "answers": {
+        "dotfile": {
+          "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "32f2fa940d4b4fe19aca1e53a24e5aac29c57b7c5ee78588325b87f1b649c864",
+          "bytes": 146,
+          "error": null,
+          "headers": {
+            "content-length": "146",
+            "content-type": "text/html",
+            "server": "nginx"
+          },
+          "status": 403
+        },
+        "missing_script": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "55f7d9e99b8e2d4e0e193b2f0275501e6d9c1ebd29cadbea6a0da48a8587e3e0",
+          "bytes": 146,
+          "error": null,
+          "headers": {
+            "content-length": "146",
+            "content-type": "text/html",
+            "server": "nginx"
+          },
+          "status": 404
+        },
+        "missing_static": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "55f7d9e99b8e2d4e0e193b2f0275501e6d9c1ebd29cadbea6a0da48a8587e3e0",
+          "bytes": 146,
+          "error": null,
+          "headers": {
+            "content-length": "146",
+            "content-type": "text/html",
+            "server": "nginx"
+          },
+          "status": 404
+        },
+        "path_info_deep_tail_php": {
+          "body": "set4-php-executed:42:8.4.26:fpm-fcgi:set4_import_test\nPATH_INFO=[/a/b/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/6/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/6/public_html]\nREQUEST_URI=[/set4-probe.php/a/b/tail.php?q=1]\nQUERY_STRING=[q=1]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+          "body_sha256": "0352503603b96054f89a99dfbef945f4ab403ad8a16b21698ab19848c4f7986f",
+          "bytes": 394,
+          "error": null,
+          "headers": {
+            "content-type": "text/plain;charset=UTF-8",
+            "server": "nginx"
+          },
+          "status": 200
+        },
+        "path_info_plain": {
+          "body": "<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not Found</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n",
+          "body_sha256": "55f7d9e99b8e2d4e0e193b2f0275501e6d9c1ebd29cadbea6a0da48a8587e3e0",
+          "bytes": 146,
+          "error": null,
+          "headers": {
+            "content-length": "146",
+            "content-type": "text/html",
+            "server": "nginx"
+          },
+          "status": 404
+        },
+        "path_info_tail_php": {
+          "body": "set4-php-executed:42:8.4.26:fpm-fcgi:set4_import_test\nPATH_INFO=[/tail.php]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/6/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/6/public_html]\nREQUEST_URI=[/set4-probe.php/tail.php]\nQUERY_STRING=[]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+          "body_sha256": "57332f2b6d6ab1292b39cdfb71f4429839d05378d64747f901769961e6e50e76",
+          "bytes": 379,
+          "error": null,
+          "headers": {
+            "content-type": "text/plain;charset=UTF-8",
+            "server": "nginx"
+          },
+          "status": 200
+        },
+        "probe": {
+          "body": "set4-php-executed:42:8.4.26:fpm-fcgi:set4_import_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/6/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/6/public_html]\nREQUEST_URI=[/set4-probe.php]\nQUERY_STRING=[]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+          "body_sha256": "86f232695e5b63c93363f50f2170eddf1911a328e5a9d19c5d6c9c925044bcd2",
+          "bytes": 361,
+          "error": null,
+          "headers": {
+            "content-type": "text/plain;charset=UTF-8",
+            "server": "nginx"
+          },
+          "status": 200
+        },
+        "probe_query": {
+          "body": "set4-php-executed:42:8.4.26:fpm-fcgi:set4_import_test\nPATH_INFO=[]\nSCRIPT_NAME=[/set4-probe.php]\nSCRIPT_FILENAME=[/var/www/celikpanel/subscriptions/2/sites/6/public_html/set4-probe.php]\nDOCUMENT_ROOT=[/var/www/celikpanel/subscriptions/2/sites/6/public_html]\nREQUEST_URI=[/set4-probe.php?x=1&y=two]\nQUERY_STRING=[x=1&y=two]\nDOCUMENT_URI=[/set4-probe.php]\nPATH_TRANSLATED=[(unset)]\n",
+          "body_sha256": "210a526f856192e87192bb1644b0a6ed05cd8b532cb5d5a3ed72cda2e8b0e6af",
+          "bytes": 380,
+          "error": null,
+          "headers": {
+            "content-type": "text/plain;charset=UTF-8",
+            "server": "nginx"
+          },
+          "status": 200
+        },
+        "root": {
+          "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+          "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+          "bytes": 62,
+          "error": null,
+          "headers": {
+            "content-length": "62",
+            "content-type": "text/html",
+            "server": "nginx"
+          },
+          "status": 200
+        },
+        "static": {
+          "body": "set4 static file served by the web server\n",
+          "body_sha256": "027f7a0fc431eed3894f237433bd0db7888d8959469abe66602efa29d4bda904",
+          "bytes": 42,
+          "error": null,
+          "headers": {
+            "content-length": "42",
+            "content-type": "text/plain",
+            "server": "nginx"
+          },
+          "status": 200
+        }
+      },
+      "docroot_entries": [
+        "assets",
+        "index.html",
+        "set4-probe.php",
+        "set4-static.txt"
+      ],
+      "path_info": {
+        "/set4-probe.php/a/b/tail.php?q=1": {
+          "executed": true,
+          "php_version": "8.4.26",
+          "runs_as": "set4_import_test",
+          "server_api": "fpm-fcgi",
+          "values": {
+            "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/6/public_html",
+            "DOCUMENT_URI": "/set4-probe.php",
+            "PATH_INFO": "/a/b/tail.php",
+            "PATH_TRANSLATED": "(unset)",
+            "QUERY_STRING": "q=1",
+            "REQUEST_URI": "/set4-probe.php/a/b/tail.php?q=1",
+            "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/6/public_html/set4-probe.php",
+            "SCRIPT_NAME": "/set4-probe.php"
+          }
+        },
+        "/set4-probe.php/extra/info": {
+          "executed": false,
+          "php_version": null,
+          "runs_as": null,
+          "server_api": null,
+          "values": {}
+        },
+        "/set4-probe.php/tail.php": {
+          "executed": true,
+          "php_version": "8.4.26",
+          "runs_as": "set4_import_test",
+          "server_api": "fpm-fcgi",
+          "values": {
+            "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/6/public_html",
+            "DOCUMENT_URI": "/set4-probe.php",
+            "PATH_INFO": "/tail.php",
+            "PATH_TRANSLATED": "(unset)",
+            "QUERY_STRING": "",
+            "REQUEST_URI": "/set4-probe.php/tail.php",
+            "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/6/public_html/set4-probe.php",
+            "SCRIPT_NAME": "/set4-probe.php"
+          }
+        }
+      },
+      "probe": {
+        "executed": true,
+        "php_version": "8.4.26",
+        "runs_as": "set4_import_test",
+        "server_api": "fpm-fcgi",
+        "values": {
+          "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/6/public_html",
+          "DOCUMENT_URI": "/set4-probe.php",
+          "PATH_INFO": "",
+          "PATH_TRANSLATED": "(unset)",
+          "QUERY_STRING": "",
+          "REQUEST_URI": "/set4-probe.php",
+          "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/6/public_html/set4-probe.php",
+          "SCRIPT_NAME": "/set4-probe.php"
+        }
+      },
+      "site_account": "set4_import_test"
+    }
+  },
+  "php_version": {
+    "imported-site": {
+      "domains_list_php_fields": {
+        "php_version": "8.4"
+      },
+      "installed_php_versions": [
+        "8.4"
+      ],
+      "php_fpm_programs": {
+        "php-fpm8.4": [
+          "PHP 8.4.26 (fpm-fcgi) (built: Sep 24 2026 17:16:18) (NTS)"
+        ]
+      },
+      "php_version_of_the_page": "8.4.26",
+      "pool_file": "/etc/php/8.4/fpm/pool.d/site6.conf",
+      "pool_listen": "/var/run/php/php8.4-fpm-site6.sock",
+      "recorded_php_fpm_socket": "/var/run/php/php8.4-fpm-site6.sock",
+      "recorded_php_version": "8.4",
+      "socket": {
+        "exists": true,
+        "group": "www-data",
+        "kind": "socket",
+        "mode": "0660",
+        "owner": "www-data",
+        "path": "/run/php/php8.4-fpm-site6.sock"
+      },
+      "vhost_fastcgi_pass": "unix:/var/run/php/php8.4-fpm-site6.sock"
+    }
+  },
+  "previews": [
+    {
+      "archive": "set4",
+      "at": "2026-10-09T10:47:55Z",
+      "databases": [
+        "s4imp_app"
+      ],
+      "domains": [
+        "set4-import.test"
+      ],
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "keys": [
+        "databases",
+        "dns_zones",
+        "domains",
+        "forwarders",
+        "mail_accounts",
+        "main_domain",
+        "public_html",
+        "site_bytes",
+        "username"
+      ],
+      "label": "inspect the archive of set4-import.test (ImportPage preview)",
+      "mail_accounts": [
+        {
+          "domain": "set4-import.test",
+          "has_password": true,
+          "quota_mb": 256,
+          "user": "info"
+        }
+      ],
+      "mailbox_keys": [
+        "domain",
+        "has_password",
+        "quota_mb",
+        "user"
+      ],
+      "public_html": true,
+      "raw_bytes": 374,
+      "status": 200
+    }
+  ],
+  "section": "M2-import",
+  "started_at": "2026-10-09T10:47:55Z",
+  "substeps": {
+    "S1": "passed",
+    "imported-site": "passed",
+    "item 2": "passed",
+    "item 5": "passed",
+    "section": "passed"
+  },
+  "title": "the cPanel-archive import of set3's fixture; the imported site served (items 2, 3)",
+  "verdict": "passed"
+}

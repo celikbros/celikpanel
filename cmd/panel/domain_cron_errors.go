@@ -40,6 +40,17 @@ const cronNotInstalledReadMessage = "Scheduled tasks cannot be shown because thi
 	"or on the server run sudo apt-get install cron (Debian/Ubuntu), or sudo pacman -S cronie and then sudo systemctl enable --now cronie (Arch). " +
 	"Then open this page again."
 
+const cronJobDuplicateMessage = "A scheduled task with the same schedule and command already exists, so nothing was added. " +
+	"Change the existing task instead, or enable it if it is disabled."
+
+// The same task stands on two lines of the crontab (written there by hand: the
+// Panel refuses to add a copy). A change or a delete cannot say which of the
+// two it means, so nothing is changed (9 Oct 2026).
+// Aynı görev crontab'da iki satırda duruyor. Bir değişiklik hangisini
+// kastettiğini söyleyemez; hiçbir şey değiştirilmez.
+const cronJobAmbiguousMessage = "This task stands twice in the crontab, so CelikPanel cannot tell which line to change and changed nothing. " +
+	"The server owner removes one of the two lines on the server (sudo crontab -u <site user> -e), then reloads this list."
+
 // agentReportedCronNotInstalled matches the Agent's exact answer. Older Agents
 // returned the same text from AddCronJob, so they are classified too.
 // agentReportedCronNotInstalled, Agent'ın tam yanıtını eşler.
@@ -60,6 +71,19 @@ func agentAnsweredExactly(err error, text string) bool {
 	return strings.TrimSpace(string(serverErr)) == text
 }
 
+// agentUnreadableEvidence reports whether err is the Agent's own "could not be
+// read" answer for this sentence, alone or with the evidence lines the contract
+// defines (transport.UnreadableEvidence), and returns that evidence.
+// agentUnreadableEvidence, err'in Agent'ın bu cümleyle verdiği "okunamadı"
+// yanıtı olup olmadığını bildirir ve varsa kanıtı döndürür.
+func agentUnreadableEvidence(err error, sentence string) (known bool, cause, detail string) {
+	var serverErr rpc.ServerError
+	if !errors.As(err, &serverErr) {
+		return false, "", ""
+	}
+	return transport.UnreadableEvidence(string(serverErr), sentence)
+}
+
 // agentMutationBusy is the classified answer for an Agent lock held by another
 // CelikPanel change: 409 HOST_MUTATION_BUSY, "wait for it to finish, then try
 // again", in both languages already.
@@ -75,6 +99,31 @@ func agentMutationBusy() error {
 // path.
 // writeCronAgentError, başarısız bir cron RPC'sini yanıtlar.
 func writeCronAgentError(w http.ResponseWriter, err error, reason string) {
+	// The Agent's refusals that protect the owner's crontab (8 Oct 2026): an
+	// unreadable crontab is unknown, not empty; a change must say which
+	// crontab it was built from and that must still be the one on the server;
+	// the same task is not added twice.
+	// Sahibin crontab'ını koruyan Agent retleri.
+	if known, cause, said := agentUnreadableEvidence(err, transport.CronStateUnreadable); known {
+		writeScheduledTasksUnreadable(w, cause, said)
+		return
+	}
+	switch {
+	case agentAnsweredExactly(err, transport.CronVersionRequired):
+		writeSettingsVersionRequired(w, settingsResourceScheduledTasks)
+		return
+	case agentAnsweredExactly(err, transport.CronStateChanged):
+		writeSettingsChanged(w, settingsResourceScheduledTasks)
+		return
+	case agentAnsweredExactly(err, transport.CronJobDuplicate):
+		log.Printf("[409][cron] duplicate task refused")
+		writeCodedError(w, http.StatusConflict, errCodeCronJobDuplicate, cronJobDuplicateMessage, "")
+		return
+	case agentAnsweredExactly(err, transport.CronJobAmbiguous):
+		log.Printf("[409][cron] a task that stands twice in the crontab was not changed")
+		writeCodedError(w, http.StatusConflict, errCodeCronJobAmbiguous, cronJobAmbiguousMessage, "")
+		return
+	}
 	if !agentReportedCronNotInstalled(err) {
 		writeServerError(w, err)
 		return

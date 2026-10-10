@@ -1,0 +1,31 @@
+{
+  "checks": {
+    "checks": 8,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T03:44:42Z",
+    "notes": [],
+    "started_at": "2026-10-09T03:44:42Z",
+    "substeps": {
+      "server-database-mariadb": "inconclusive",
+      "server-database-postgresql": "inconclusive"
+    },
+    "title": "a database on a database server (MariaDB and PostgreSQL)",
+    "unknown": [
+      "server-database-mariadb (i): reached",
+      "server-database-mariadb (ii): reached",
+      "server-database-mariadb (iii): reached",
+      "server-database-mariadb (iv): reached",
+      "server-database-postgresql (i): reached",
+      "server-database-postgresql (ii): reached",
+      "server-database-postgresql (iii): reached",
+      "server-database-postgresql (iv): reached"
+    ],
+    "verdict": "inconclusive"
+  },
+  "finished_at": "2026-10-09T03:44:42Z",
+  "name": "C3-server-databases",
+  "reason": "not established: server-database-mariadb (i): reached; server-database-mariadb (ii): reached; server-database-mariadb (iii): reached; server-database-mariadb (iv): reached; server-database-postgresql (i): reached; server-database-postgresql (ii): reached; server-database-postgresql (iii): reached; server-database-postgresql (iv): reached",
+  "started_at": "2026-10-09T03:44:42Z",
+  "verdict": "inconclusive"
+}

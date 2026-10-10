@@ -95,6 +95,9 @@ LABEL_REF: str | None = None
 # The real Alpha80 release commit named as the baseline policy's predecessor
 # (the same value the unpublished Alpha81 fixture 45dfc265 used).
 ALPHA80_COMMIT = "bd14d97efc5cfd19acd70ddf0edb9c6343317e2b"
+# set3: the published v0.1.0-alpha.81 tag. It already carries the D-027 acceptance-license seam and its guard, so a
+# baseline built from it is the tag's own commit, unchanged (no fixture commit, no patched file).
+ALPHA81_COMMIT = "a0beb7263d1f4ca72258f6b306f9111ba4e2a334"
 ACCEPTANCE_NOTICE = "ACCEPTANCE-LICENSE-BUILD.txt"
 ACCEPTANCE_NOTICE_PREFIX = b"This archive is NOT a CelikPanel release."
 # Same value as dns-pair-acceptance/pair_acceptance.py ACCEPTANCE_FIXTURE_KEY
@@ -386,6 +389,13 @@ def busy_op_command(package: str, limit_kib: int) -> str:
 
 
 ORIGIN_NAME = "celikpanel.net"
+# set3: read-only helpers uploaded by the steps that need them (the facts after an update from the published release).
+SCHEMA_LEDGER_HELPER = "guest_schema_ledger.py"
+BACKUP_READER_HELPER = "guest_request_identity_native.py"
+REQUEST_ID_HEADER = "X-CelikPanel-Request-Id"
+RELOAD_SENTENCE = "Reload the page"
+LEDGER_AFTER_UPDATE, LEDGER_AFTER_RETURN = 43, 42
+GUARDED_TABLE = "request_identities"
 GUEST_HELPERS = ("guest_probe.py", "guest_port_fault.py", "guest_update_kill.py", "guest_bound_worker.py",
                  "guest_recovery_fault.py", "guest_recovery_handoff.py", "guest_owner_update_observer.py",
                  "guest_upd1_workload.py", "guest_owner_port_hold.py")
@@ -486,12 +496,88 @@ def baseline_status_read_failure(exc: subprocess.CalledProcessError) -> dict:
     return {"at": utc_now(), "returncode": exc.returncode, "stderr_tail": lines[-3:]}
 
 
+# set3: collection-time shape rules beside the pair redactor's own (structural keys, registered values, PEM blocks).
+# No retained file may hold a hash-shaped credential value (crypt, Dovecot scheme, SCRAM verifier, MariaDB native
+# hash) or a WireGuard private or preshared key; set2 had to be redacted after collection for the first.
+HASH_SHAPED = re.compile(
+    r"(?:\{[A-Z][A-Z0-9.-]{1,24}\})?\$(?:1|2[abxy]?|5|6|7|y|gy|sha1|argon2(?:id|i|d)|scrypt|pbkdf2(?:-sha(?:1|256|512))?)"
+    r"\$[./A-Za-z0-9$=,+-]{8,}"
+    r"|\{(?:SSHA(?:256|512)?|SHA(?:256|512)?|SMD5|PLAIN|CRYPT|CRAM-MD5|[A-Z0-9]+-CRYPT|ARGON2ID?|PBKDF2)\}[^\s\"'<>\\]{4,}"
+    r"|SCRAM-SHA-256\$\d+:[A-Za-z0-9+/=]+\$[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+"
+    r"|(?<![0-9A-Za-z])\*[0-9A-F]{40}(?![0-9A-Fa-f])")
+HASH_SHAPED_MARK = "[REDACTED hash-shaped value]"
+WIREGUARD_SECRET = re.compile(r"(?i)\b(Private_?Key|Preshared_?Key)(\\?\"?\s*[:=]\s*\\?\"?)([A-Za-z0-9+/]{43}=)")
+
+
+def hash_shaped_count(text: str | bytes | None) -> int:
+    """How many hash-shaped credential values a text holds (the count only; the driver asserts on it)."""
+    if text is None:
+        return 0
+    if isinstance(text, bytes):
+        text = text.decode("utf-8", "replace")
+    return len(HASH_SHAPED.findall(text))
+
+
+def shape_text(text: str) -> str:
+    text = HASH_SHAPED.sub(HASH_SHAPED_MARK, text)
+    return WIREGUARD_SECRET.sub(lambda match: match.group(1) + match.group(2) + "[REDACTED]", text)
+
+
+def shape_redactor(redactor: Any) -> Any:
+    """The pair redactor with the set3 shape rules added to every text it handles (JSON strings, journals, logs)."""
+    plain = redactor.text
+    redactor.text = lambda value: shape_text(plain(value))
+    return redactor
+
+
+def ledger_verdict(reading: dict | None, version: int, pins: dict) -> dict:
+    """set3: one reading of guest_schema_ledger.py against the released ledger and schema that populated_database.py
+    pins for ``version`` (the same canonical digests). ``request_identities`` exists exactly from 43 on."""
+    if not isinstance(reading, dict) or reading.get("schema_version") is None:
+        return {"verdict": "inconclusive", "reason": "the ledger could not be read", "expected_version": version}
+    guarded = reading.get(GUARDED_TABLE) or {}
+    schema_equal = pins["schemas"].get(version) in (reading.get("schema_sha256"), reading.get("schema_sha256_without_statistics"))
+    facts = {"version": reading["schema_version"] == version and reading.get("ledger_rows") == version
+             and reading.get("ledger_contiguous") is True,
+             "ledger_is_the_released_one": reading.get("ledger_sha256") == pins["migrations"].get(version),
+             "schema_is_the_released_one": schema_equal,
+             "request_identities": bool(guarded.get("exists")) is (version >= LEDGER_AFTER_UPDATE),
+             "integrity": reading.get("integrity_check") == ["ok"] and reading.get("foreign_key_check_clean") is True}
+    return {"verdict": "as-expected" if all(facts.values()) else "different", "expected_version": version, "facts": facts,
+            "schema_version": reading["schema_version"], "ledger_rows": reading.get("ledger_rows"),
+            "ledger_sha256": reading.get("ledger_sha256"), "pinned_ledger_sha256": pins["migrations"].get(version),
+            "schema_sha256": reading.get("schema_sha256"),
+            "schema_sha256_without_statistics": reading.get("schema_sha256_without_statistics"),
+            "pinned_schema_sha256": pins["schemas"].get(version), "statistics_tables": reading.get("statistics_tables"),
+            "request_identities": guarded, "table_count": reading.get("table_count"), "ledger_last": reading.get("ledger_last")}
+
+
+def ledger_pins() -> dict:
+    module = _load("set3_populated_database", HERE / "populated_database.py")
+    return {"migrations": dict(module.MIGRATIONS), "schemas": dict(module.SCHEMAS)}
+
+
+def site_account_name(domain: str) -> str:
+    """internal/services.SiteUsername: '.' and '-' become '_', cut at 32."""
+    return domain.replace(".", "_").replace("-", "_")[:32]
+
+
 def provenance_for(variant: str) -> dict:
     """The good and migrate-only cells keep their provenance unchanged; the start kinds name their own defect."""
     if LABEL_REF is None and variant not in KIND_PROVENANCE:
         return PROVENANCE
     base = dict(PROVENANCE)
-    if LABEL_REF is not None:
+    if LABEL_REF is not None and BASELINE_REFS[LABEL_REF].get("unpatched"):
+        # set3: the baseline is the published tag's own commit; nothing is patched.
+        base["baseline"] = (f"published-tag-{LABEL_REF}-commit-unchanged (the tag carries the D-027 acceptance-license "
+                            "seam; bin/panel is built from the tag's source with the acceptance_license build tag); its "
+                            "release policy, installer, update/rollback/recovery/bootstrap scripts, get.sh, web and Agent "
+                            "are the tag's; installed by the real installer; fixture trust root enrolled; "
+                            "not-production-release-admission; not the signed release archive")
+        base["candidate"] = (f"unpublished-local-fixture-commit-over-the-source-labelled-{CANDIDATE_VERSION}; signed "
+                             "with the disposable fixture key; served by the guest-loopback celikpanel.net fixture "
+                             "origin; not a release")
+    elif LABEL_REF is not None:
         # upd7: the baseline is the published tag's tree with only the acceptance-license seam added.
         base["baseline"] = (f"published-tag-{LABEL_REF}-tree-plus-the-D-027-acceptance-license-seam-only (Panel license "
                             f"code: {', '.join(BASELINE_REF_PATCHED)}); its release policy, installer, update/rollback/"
@@ -676,7 +762,18 @@ BASELINE_REFS = {
                         "candidate": ("v0.1.0-alpha.81", 81),
                         "baseline_policy": {"version": "v0.1.0-alpha.80", "current": 80, "previous": 79,
                                             "previous_version": "v0.1.0-alpha.79"}},
+    # set3: the baseline IS the tag commit (unpatched: the tag carries the seam); the candidates are the source
+    # labelled as the release after it.
+    "v0.1.0-alpha.81": {"commit": ALPHA81_COMMIT, "baseline": ("v0.1.0-alpha.81", 81),
+                        "candidate": ("v0.1.0-alpha.82", 82), "unpatched": True,
+                        "baseline_policy": {"version": "v0.1.0-alpha.81", "current": 81, "previous": 80,
+                                            "previous_version": "v0.1.0-alpha.80"}},
 }
+
+
+def baseline_ref_patched(ref: str) -> tuple:
+    """The files the baseline fixture changes over the published tag: the seam files, or none (set3)."""
+    return () if BASELINE_REFS[ref].get("unpatched") else BASELINE_REF_PATCHED
 SEAM_COPIED = ("internal/licensing/acceptance_off.go", "internal/licensing/acceptance_owner_linux.go",
                "internal/licensing/acceptance_owner_other.go")
 SEAM_ADAPTED = "internal/licensing/acceptance_fixture.go"
@@ -758,6 +855,8 @@ def adapt_seam_fixture(text: str) -> str:
 def seam_baseline_source(repo: Path, source_commit: str, ref: str) -> dict:
     """Apply the acceptance-license seam to a checkout of the published tag (Panel license code only)."""
     profile = baseline_ref_profile(ref)
+    if profile.get("unpatched"):
+        raise ValueError(f"{ref} carries the acceptance-license seam; its baseline is the tag commit itself")
     head = subprocess.run(["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True, text=True,
                           check=True).stdout.strip()
     if head != profile["commit"]:
@@ -914,7 +1013,13 @@ def validate_artifacts(document: dict, *, check_files: bool = True, require: Ite
         # upd7: the baseline is one fixture commit over the published tag, patching only the seam files.
         ref = document["baseline_ref"]
         profile = baseline_ref_profile(ref.get("ref"))
-        if (ref.get("tag_commit") != profile["commit"] or document["baseline"].get("parent") != profile["commit"]
+        if profile.get("unpatched"):
+            # set3: the baseline is the tag's own commit; no file is patched.
+            if (ref.get("tag_commit") != profile["commit"] or document["baseline"]["commit"] != profile["commit"]
+                    or ref.get("patched_files") != [] or (BASELINE_VERSION, BASELINE_SEQUENCE) != profile["baseline"]):
+                raise ValueError("the published-baseline artifact is not the tag's own commit "
+                                 "(or configure_labels was not applied)")
+        elif (ref.get("tag_commit") != profile["commit"] or document["baseline"].get("parent") != profile["commit"]
                 or ref.get("patched_files") != list(BASELINE_REF_PATCHED)
                 or (BASELINE_VERSION, BASELINE_SEQUENCE) != profile["baseline"]):
             raise ValueError("the published-baseline fixture is not the seam-only commit over the tag "
@@ -1139,17 +1244,29 @@ def parse_screen_source(screen_tsx: str) -> dict:
     Nothing of the layout is copied here. A source whose component or region
     cannot be found exactly once, or that the evaluator cannot read, gives
     ``unavailable`` (the screen is then unknown, never a finding).
+
+    The component may show its tree plainly or closed under one wrapper (the
+    ``<details>`` of the planned handover, 2026-10-08). Every rendering the
+    source has is read (``renderings``: their root tags, the plain one first)
+    and each must hold exactly one status region, the same element in all of
+    them; that one region is what ``recovery_guidance`` evaluates, so its keys
+    and texts are the ones shown in the plain and in the disclosed case.
     """
     evaluator = web_eval()
     try:
-        tree = evaluator.component_return_jsx(screen_tsx, SCREEN_COMPONENT)
-        regions = evaluator.find_elements(tree, *SCREEN_REGION)
-        if len(regions) != 1:
-            raise evaluator.Unsupported(f"{len(regions)} elements with {SCREEN_REGION[0]}=\"{SCREEN_REGION[1]}\"")
+        renderings = evaluator.component_renderings(screen_tsx, SCREEN_COMPONENT)
+        regions = []
+        for tree in renderings:
+            found = evaluator.find_elements(tree, *SCREEN_REGION)
+            if len(found) != 1:
+                raise evaluator.Unsupported(f"{len(found)} elements with {SCREEN_REGION[0]}=\"{SCREEN_REGION[1]}\"")
+            regions.append(found[0])
+        if any(region is not regions[0] for region in regions):
+            raise evaluator.Unsupported("its renderings show different status regions")
     except (evaluator.Unsupported, IndexError, KeyError) as exc:
         return {"component": SCREEN_COMPONENT,
                 "unavailable": f"the build's RecoveryAccess.tsx {SCREEN_COMPONENT} cannot be read: {exc}"}
-    return {"component": SCREEN_COMPONENT, "region": regions[0]}
+    return {"component": SCREEN_COMPONENT, "region": regions[0], "renderings": [tree["tag"] for tree in renderings]}
 
 
 def parse_card_rules(sources: dict) -> dict:
@@ -3357,7 +3474,7 @@ class Trial:
         self.setup_draft_override = setup_draft_choice(dns_mode, setup_draft)
         self.role = candidate_role(cell)
         self.candidate = artifacts[self.role]
-        self.redactor = self.p["redaction"].Redactor()
+        self.redactor = shape_redactor(self.p["redaction"].Redactor())
         evidence_root = self.root / "evidence" / cell.node / "upd1"
         evidence_root.mkdir(parents=True, mode=0o700, exist_ok=True)
         run_id = self.p["evidence"].make_run_id(cell.name, dt.datetime.now(dt.timezone.utc))
@@ -4101,8 +4218,15 @@ class Trial:
             self.finding(f"{self.node_name}: cron: {CRON_NOT_AVAILABLE} (crontab absent before seeding); the owner "
                          "cron job was not created and cron continuity is not measured")
         else:
-            cron = self.api("POST", f"/api/v1/domains/{domain_id}/cron",
-                            {"schedule": "* * * * *", "command": command, "comment": "upd1 owner cron"},
+            # As the screen does: read the list first and send the version it answered. A release that
+            # requires it refuses a cron change without one (409 SETTINGS_VERSION_REQUIRED); an earlier
+            # release answers no version and ignores the field.
+            job = {"schedule": "* * * * *", "command": command, "comment": "upd1 owner cron"}
+            before = self.api("GET", f"/api/v1/domains/{domain_id}/cron", purpose="DomainCronManager list before create")
+            current = before.json() if before.status == 200 else None
+            if isinstance(current, dict) and current.get("version"):
+                job["version"] = current["version"]
+            cron = self.api("POST", f"/api/v1/domains/{domain_id}/cron", job,
                             purpose="DomainCronManager create")
             listed = self.api("GET", f"/api/v1/domains/{domain_id}/cron", purpose="DomainCronManager list")
             seeded["cron"] = dict(availability, seeded=True, create_http=cron.status, command=command,
@@ -5126,6 +5250,241 @@ class Trial:
             raise StepFailed("; ".join(failures))
         return "passed"
 
+    # -- set3: what an owner meets after the update from the published release ----------------------------------------
+
+    def set3_helper(self, name: str) -> None:
+        if name not in self.state.setdefault("set3_helpers", []):
+            self.lab.put_file(self.root, self.record, self.plan, self.node_name, HERE / name, name)
+            self.state["set3_helpers"].append(name)
+
+    def schema_ledger(self, label: str, version: int) -> dict:
+        self.set3_helper(SCHEMA_LEDGER_HELPER)
+        reading = self.helper(SCHEMA_LEDGER_HELPER, "read", timeout=120)
+        self.record_json(f"ledger-{label}.json", reading)
+        return ledger_verdict(reading, version, ledger_pins())
+
+    def status_views(self, label: str) -> dict:
+        """One reading of the three owner views of this operation (update status, recovery reader, root CLI) with the
+        card and the screen the served build renders."""
+        sample = self.status_sample(None, 9000 + len(self.state.setdefault("set3_views", [])))
+        self.state["set3_views"].append(label)
+        self.record_json(f"views-{label}.json", sample)
+        cli_raw = sample.get("cli") or {}
+        cli = None
+        try:
+            cli = json.loads((cli_raw.get("json") or {}).get("stdout") or "null")
+        except (ValueError, AttributeError):
+            cli = None
+        recovery = (sample.get("recovery_api") or {}).get("body")
+        return {"update_status": sample.get("update_status"), "recovery_api": sample.get("recovery_api"),
+                "cli": {"observation": (cli or {}).get("observation"), "phase": (cli or {}).get("phase"),
+                        "terminal_proof": (cli or {}).get("terminal_proof"), "previous_failure": (cli or {}).get("previous_failure"),
+                        "text": {lang: (cli_raw.get(lang) or {}).get("stdout") for lang in ("en", "tr")}},
+                "api_pair": [recovery.get("phase"), recovery.get("terminal_proof")] if isinstance(recovery, dict) else None,
+                "cli_pair": [cli.get("phase"), cli.get("terminal_proof")] if isinstance(cli, dict) else None,
+                "agreement": sample.get("agreement"), "update_card": sample.get("update_card"),
+                "recovery_screen": sample.get("guidance_api"), "cli_error": sample.get("cli_error"),
+                "panel_error": sample.get("panel_error")}
+
+    def bare_post(self, path: str, body: Any, identity: str | None, timeout: float = 900) -> Any:
+        """A POST as a page opened before the update sends it: the session's own headers and no request identity
+        (the Panel client adds one to every change, as the updated page does); with ``identity`` the header is sent."""
+        payload = json.dumps(body, separators=(",", ":")).encode()
+        headers = dict(self.panel_client()._headers("POST", payload))
+        if identity:
+            headers[REQUEST_ID_HEADER] = identity
+        return self.transport("POST", path, headers, payload, timeout)
+
+    def versioned_write(self, name: str, read_path: str, method: str, write_path: str, body: dict, record: dict) -> bool:
+        """Read the current version as the screen does, send the change with it, read again."""
+        before = self.api("GET", read_path, purpose=f"{name}: read before the change")
+        seen = before.json() if before.status == 200 else None
+        version = seen.get("version") if isinstance(seen, dict) else None
+        without = self.api(method, write_path, dict(body), purpose=f"{name}: the change without a version (an old page)", timeout=180)
+        refused = without.json()
+        sent = self.api(method, write_path, dict(body, version=version), purpose=f"{name}: the change with the version", timeout=180)
+        after = self.api("GET", read_path, purpose=f"{name}: read after the change")
+        seen_after = after.json() if after.status == 200 else None
+        record.update(read_http=before.status, version_before=version,
+                      without_a_version={"http": without.status, "code": refused.get("code") if isinstance(refused, dict) else None,
+                                         "reason": refused.get("reason") if isinstance(refused, dict) else None,
+                                         "error": refused.get("error") if isinstance(refused, dict) else None},
+                      with_the_version={"http": sent.status, "body": sent.json()},
+                      version_after=seen_after.get("version") if isinstance(seen_after, dict) else None,
+                      read_after=seen_after)
+        return (before.status == 200 and bool(version) and sent.status == 200
+                and record["version_after"] not in (None, version))
+
+    def post_update_facts(self, checks: dict) -> str:
+        """set3: after the verified update from the published release. (a) the ledger; (b) a guarded route without
+        and with the request identity; (c) the writes that carry a version; (d) the deferred mail work; (e) the root
+        CLI and the update card on the same terminal state."""
+        failures, unknown = [], []
+        seed = self.state["seed"]
+        domain_id, domain = seed["domain_id"], seed.get("domain") or ""
+        # (a)
+        ledger = self.schema_ledger("after-update", LEDGER_AFTER_UPDATE)
+        checks["a_ledger"] = ledger
+        if ledger["verdict"] != "as-expected":
+            (unknown if ledger["verdict"] == "inconclusive" else failures).append(f"(a) the ledger is not the released {LEDGER_AFTER_UPDATE}")
+        # (b)
+        self.set3_helper(BACKUP_READER_HELPER)
+
+        def native(mode: str, **arguments: Any) -> dict:
+            payload = base64.b64encode(json.dumps(arguments).encode()).decode()
+            return self.helper(BACKUP_READER_HELPER, mode, "--args-b64", payload, timeout=300)
+
+        def archives() -> list:
+            listed = native("read-backups", domain_id=domain_id)
+            return sorted(e["name"] for e in listed["entries"] if e["name"].endswith(".cpbak") and not e["name"].startswith("."))
+        path = f"/api/v1/domains/{domain_id}/backups"
+        guard: dict[str, Any] = {"route": "POST " + path, "body": {"type": "full"}}
+        try:
+            before, rows_before = archives(), native("read-identities").get("count")
+            bare = self.bare_post(path, {"type": "full"}, None, 120)
+            refused = bare.json() if isinstance(bare.json(), dict) else {}
+            after_bare, rows_bare = archives(), native("read-identities").get("count")
+            identity = secrets.token_hex(16)
+            sent = self.bare_post(path, {"type": "full"}, identity, 2400)
+            answered = sent.json() if isinstance(sent.json(), dict) else {}
+            after_sent = archives()
+            row = (native("read-identities", ids=[identity]).get("rows") or [None])[0]
+            translator = self.candidate_translator()
+            key = "err.REQUEST_ID_REQUIRED"
+            guard.update(
+                without_the_header={"http": bare.status, "code": refused.get("code"), "error": refused.get("error"),
+                                    "screen_text": {lang: translator.text(key, {}, language=lang) for lang in ("en", "tr")}
+                                    if key in translator.catalog["en"] else None},
+                archives=[len(before), len(after_bare), len(after_sent)], identity_rows=[rows_before, rows_bare],
+                with_the_header={"http": sent.status, "backup": (answered.get("backup") or {}).get("name"),
+                                 "code": answered.get("code"), "error": answered.get("error")},
+                new_archives=sorted(set(after_sent) - set(after_bare)),
+                row={k: (row or {}).get(k) for k in ("route", "status", "response_status", "response_retained")})
+            ok_refusal = (bare.status == 428 and refused.get("code") == "REQUEST_ID_REQUIRED"
+                          and RELOAD_SENTENCE in str(refused.get("error")) and after_bare == before and rows_bare == rows_before)
+            ok_works = (sent.status == 200 and len(guard["new_archives"]) == 1
+                        and guard["with_the_header"]["backup"] == guard["new_archives"][0] and (row or {}).get("status") == "done")
+            guard.update(refused_and_nothing_changed=ok_refusal, works_with_the_header=ok_works)
+            if not ok_refusal:
+                failures.append("(b) a guarded route without the request identity was not refused 428 with nothing changed")
+            if not ok_works:
+                failures.append("(b) the same route with the request identity did not make exactly one backup")
+        except Exception as exc:  # noqa: BLE001 - recorded; the other facts are still measured
+            guard["error"] = self.redactor.text(f"{type(exc).__name__}: {exc}")[:400]
+            unknown.append("(b) the guard could not be measured")
+        checks["b_guard"] = guard
+        # (c)
+        tokens: dict[str, Any] = {}
+        try:
+            if (seed.get("cron") or {}).get("seeded"):
+                cron: dict[str, Any] = {}
+                command = "/usr/bin/true set3-after-update"
+                ok = self.versioned_write("cron add", f"/api/v1/domains/{domain_id}/cron", "POST", f"/api/v1/domains/{domain_id}/cron",
+                                          {"schedule": "*/30 * * * *", "command": command}, cron)
+                try:
+                    listed = self.guest("sudo crontab -u " + shlex.quote(site_account_name(domain)) + " -l", timeout=40).stdout
+                    cron["native_crontab_lines_with_the_command"] = sum(1 for line in listed.splitlines() if command in line)
+                except Exception as exc:  # noqa: BLE001
+                    cron["native_crontab_error"] = type(exc).__name__
+                lines = cron.get("native_crontab_lines_with_the_command")
+                cron["ok"] = ok and (lines == 1 if lines is not None else command in json.dumps(cron.get("read_after")))
+                tokens["cron"] = cron
+            else:
+                tokens["cron"] = {"measured": False, "reason": "cron was not seeded on this baseline"}
+            if self.cell.mail_required and (seed.get("mail") or {}).get("listed"):
+                policy: dict[str, Any] = {}
+                current = self.api("GET", "/api/v1/mail/policy", purpose="mail policy: values to keep").json() or {}
+                wanted = {"message_size_mb": current.get("message_size_mb"), "dnsbl_zones": current.get("dnsbl_zones") or [],
+                          "outbound_rate_limit": 37}
+                ok = self.versioned_write("mail policy save", "/api/v1/mail/policy", "PUT", "/api/v1/mail/policy", wanted, policy)
+                try:
+                    policy["native_postconf"] = self.guest("sudo postconf -h smtpd_client_message_rate_limit", timeout=40).stdout.strip()
+                except Exception as exc:  # noqa: BLE001
+                    policy["native_postconf_error"] = type(exc).__name__
+                policy["ok"] = ok and isinstance(policy.get("read_after"), dict) and policy["read_after"].get("outbound_rate_limit") == 37
+                tokens["mail_policy"] = policy
+            else:
+                tokens["mail_policy"] = {"measured": False, "reason": "mail is not part of this cell's platform"}
+            schedule: dict[str, Any] = {}
+            url = f"/api/v1/domains/{domain_id}/backups/schedule"
+            ok = self.versioned_write("backup schedule", url, "PUT", url, {"frequency": "weekly", "backup_type": "full", "retention": 30}, schedule)
+            schedule["ok"] = ok and isinstance(schedule.get("read_after"), dict) and schedule["read_after"].get("enabled") is True
+            tokens["backup_schedule"] = schedule
+            for name, item in tokens.items():
+                if item.get("measured") is False:
+                    continue
+                if not item.get("ok"):
+                    failures.append(f"(c) {name}: the write with the version did not take effect")
+                if (item.get("without_a_version") or {}).get("code") != "SETTINGS_VERSION_REQUIRED":
+                    self.finding(f"post-update {name}: a write without a version answered "
+                                 f"{(item.get('without_a_version') or {}).get('http')} {(item.get('without_a_version') or {}).get('code')}")
+        except Exception as exc:  # noqa: BLE001
+            tokens["error"] = self.redactor.text(f"{type(exc).__name__}: {exc}")[:400]
+            unknown.append("(c) the versioned writes could not be measured")
+        checks["c_version_tokens"] = tokens
+        # (d)
+        if deferred_mail_watched(self.cell):
+            deferred = self.state.get("deferred_mail")
+            last = (deferred or {}).get("last") or {}
+            checks["d_deferred_mail"] = {"measured": True, "last": last, "completed": bool(last.get("finished")),
+                                         "source": "the deferred-mail-watch step of this cell"}
+            if not last.get("finished"):
+                unknown.append("(d) the deferred mail work was not seen completed")
+        else:
+            checks["d_deferred_mail"] = {"measured": False, "reason": "no mail stack on this platform"}
+        # (e)
+        views = self.status_views("after-update")
+        expected = ["succeeded", "update_verified"]
+        card = views.get("update_card") or {}
+        checks["e_agreement"] = {"cli_pair": views["cli_pair"], "api_pair": views["api_pair"], "expected": expected,
+                                 "agreement": views.get("agreement"), "card_state": card.get("state") or card.get("kind"),
+                                 "card": card, "cli_text": views["cli"]["text"], "recovery_screen": views.get("recovery_screen"),
+                                 "update_status": views.get("update_status")}
+        if views["cli_pair"] != expected or views["api_pair"] != expected:
+            failures.append(f"(e) the root CLI ({views['cli_pair']}) and the recovery reader ({views['api_pair']}) are not both {expected}")
+        judged = judge_update_card(views.get("update_card"), ("succeeded",))
+        checks["e_agreement"]["card_judged"] = judged
+        if judged.get("findings"):
+            failures.append("(e) the update card does not show the verified update: " + "; ".join(judged["findings"])[:300])
+        if failures:
+            raise StepFailed("; ".join(failures))
+        if unknown:
+            raise StepInconclusive("; ".join(unknown))
+        return "passed"
+
+    def post_return_facts(self, checks: dict) -> str:
+        """set3: after the automatic return to the published release. Its ledger is the released 42 again (the
+        pre-update snapshot: no ``request_identities``), and what its update card and the root CLI say is recorded."""
+        ledger = self.schema_ledger("after-return", LEDGER_AFTER_RETURN)
+        checks["ledger"] = ledger
+        views = self.status_views("after-return")
+        expected = ["recovered", "rollback_verified"]
+        checks["views"] = {"cli_pair": views["cli_pair"], "api_pair": views["api_pair"], "expected": expected,
+                           "recovery_api_http": (views.get("recovery_api") or {}).get("http"),
+                           "update_status": views.get("update_status"), "agreement": views.get("agreement"),
+                           "update_card": views.get("update_card"), "recovery_screen": views.get("recovery_screen"),
+                           "cli_text": views["cli"]["text"], "cli_previous_failure": views["cli"].get("previous_failure")}
+        check = self.api("GET", "/api/v1/panel/update/check", purpose="update check after the return")
+        version = self.api("GET", "/api/v1/panel/version", purpose="version after the return")
+        checks["offered_again"] = {"http": check.status, "body": check.json()}
+        checks["version"] = {"http": version.status, "body": version.json()}
+        database = (self.state.get("terminal") or {}).get("database")
+        checks["database_against_the_pre_update_digest"] = database
+        failures = []
+        if ledger["verdict"] == "inconclusive":
+            raise StepInconclusive("the ledger could not be read after the return")
+        if ledger["verdict"] != "as-expected":
+            failures.append(f"the ledger after the return is not the released {LEDGER_AFTER_RETURN}")
+        if views["cli_pair"] != expected:
+            failures.append(f"the root CLI does not read {expected}: {views['cli_pair']}")
+        if (views.get("recovery_api") or {}).get("http") == 200 and views["api_pair"] != expected:
+            failures.append(f"the returned Panel's recovery reader does not read {expected}: {views['api_pair']}")
+        if database not in ("equal", "equal-except-volatile"):
+            failures.append(f"the database is not the pre-update one: {database}")
+        if failures:
+            raise StepFailed("; ".join(failures))
+        return "passed"
+
     def terminal_real_start(self, checks: dict) -> str:
         """real-start: the paused state is the terminal observation. The candidate is installed and its
         Panel is down; the owner's workloads must still be served. Nothing is repaired or retried."""
@@ -5753,6 +6112,13 @@ class Trial:
         self.step("terminal", self.terminal, needs=("owner-start",))
         if deferred_mail_watched(self.cell):
             self.step("deferred-mail-watch", self.deferred_mail_watch, needs=("owner-start",))
+        # set3: with a published baseline, the facts an owner meets after the update (good cells) or after the
+        # automatic return (rollback cells). Read after the deferred mail watch, so that nothing races it.
+        if LABEL_REF is not None and BASELINE_REFS[LABEL_REF].get("unpatched") and self.scenario() is None:
+            if self.cell.variant == "good":
+                self.step("post-update-facts", self.post_update_facts, needs=("terminal",))
+            elif self.cell.variant in ROLLBACK_VARIANTS:
+                self.step("post-return-facts", self.post_return_facts, needs=("terminal",))
         if self.cell.variant == "mgmt-off-reboot":
             # upd4: only after the verified good update (terminal passed); management returns even when the
             # measurement found something, as long as it was switched off.

@@ -1,0 +1,155 @@
+{
+  "check": {
+    "argv": [
+      "postfix",
+      "check"
+    ],
+    "at": "2026-10-09T07:17:44Z",
+    "returncode": 1,
+    "seconds": 1.011,
+    "status": "ok",
+    "stderr": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n",
+    "stdout": ""
+  },
+  "mail_version": "3.8.6",
+  "main_cf": {
+    "exists": true,
+    "gid": 988,
+    "group": "celikpanel",
+    "inode": 532993,
+    "mode": "0644",
+    "mtime_ns": 1791530261580769642,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/postfix/main.cf",
+    "sha256": "9e5f219bd92eed4cfb32865784ab0fa12edf61abe7f55e6dd9817770df5dcce7",
+    "size": 2219,
+    "text": "# See /usr/share/postfix/main.cf.dist for a commented, more complete version\n\n\n# Debian specific:  Specifying a file name will cause the first\n# line of that file to be used as the name.  The Debian default\n# is /etc/mailname.\n#myorigin = /etc/mailname\n\nsmtpd_banner = $myhostname ESMTP $mail_name (Ubuntu)\nbiff = no\n\n# appending .domain is the MUA's job.\nappend_dot_mydomain = no\n\n# Uncomment the next line to generate \"delayed mail\" warnings\n#delay_warning_time = 4h\n\nreadme_directory = no\n\n# See http://www.postfix.org/COMPATIBILITY_README.html -- default to 3.6 on\n# fresh installs.\ncompatibility_level = 3.6\n\n\n\n# TLS parameters\nsmtpd_tls_cert_file = /etc/ssl/celikpanel/_mail/default-cert.pem\nsmtpd_tls_key_file = /etc/ssl/celikpanel/_mail/default-key.pem\nsmtpd_tls_security_level = may\n\nsmtp_tls_CApath=/etc/ssl/certs\nsmtp_tls_security_level = may\nsmtp_tls_session_cache_database = btree:${data_directory}/smtp_scache\n\n\nsmtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination\nmyhostname = mail-ubuntu.upd1-infra.test\nalias_maps = hash:/etc/aliases\nalias_database = hash:/etc/aliases\nmydestination = $myhostname, dns-ubuntu, localhost.localdomain, , localhost\nrelayhost = \nmynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128\nmailbox_size_limit = 0\nrecipient_delimiter = +\ninet_interfaces = all\ninet_protocols = all\nvirtual_mailbox_base = /var/mail/vhosts\nvirtual_mailbox_domains = hash:/etc/postfix/vmailbox_domains\nvirtual_mailbox_maps = hash:/etc/postfix/vmailbox\nvirtual_alias_maps = hash:/etc/postfix/virtual\nvirtual_transport = virtual\nvirtual_uid_maps = static:5000\nvirtual_gid_maps = static:5000\nvirtual_minimum_uid = 100\nsmtpd_milters = inet:localhost:11332\nnon_smtpd_milters = \nmilter_default_action = accept\nmilter_protocol = 6\nsmtpd_tls_protocols = >=TLSv1.2\nsmtp_tls_protocols = >=TLSv1.2\nsmtpd_tls_loglevel = 1\ntls_server_sni_maps = \nsmtpd_recipient_restrictions =\n    permit_mynetworks,\n    permit_sasl_authenticated,\n    reject_unauth_destination,\n    reject_unknown_sender_domain,\n    check_policy_service unix:private/policyd-spf\nsmtpd_client_message_rate_limit = 45\nmessage_size_limit = 31457280\ndefault_process_limit = 200 # raised for the campaign\n",
+    "type": "regular",
+    "uid": 0
+  },
+  "master_alive": true,
+  "master_cf": {
+    "exists": true,
+    "gid": 988,
+    "group": "celikpanel",
+    "inode": 527150,
+    "mode": "0644",
+    "mtime_ns": 1791529888094293662,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/postfix/master.cf",
+    "sha256": "f5ad69a0abfd22c0fc6032c6292b5c8843dd14230edd126a9d7939f4578e35ad",
+    "size": 8064,
+    "type": "regular",
+    "uid": 0
+  },
+  "master_pid": 39433,
+  "mode": "read-postfix",
+  "owner_action": false,
+  "postconf_n": {
+    "argv": [
+      "postconf",
+      "-n"
+    ],
+    "at": "2026-10-09T07:17:43Z",
+    "returncode": 0,
+    "seconds": 0.007,
+    "status": "ok",
+    "stderr": "postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\n",
+    "stdout": "alias_database = hash:/etc/aliases\nalias_maps = hash:/etc/aliases\nappend_dot_mydomain = no\nbiff = no\ncompatibility_level = 3.6\ndefault_process_limit = 200 # raised for the campaign\ninet_interfaces = all\ninet_protocols = all\nmailbox_size_limit = 0\nmessage_size_limit = 31457280\nmilter_default_action = accept\nmilter_protocol = 6\nmydestination = $myhostname, dns-ubuntu, localhost.localdomain, , localhost\nmyhostname = mail-ubuntu.upd1-infra.test\nmynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128\nnon_smtpd_milters =\nreadme_directory = no\nrecipient_delimiter = +\nrelayhost =\nsmtp_tls_CApath = /etc/ssl/certs\nsmtp_tls_protocols = >=TLSv1.2\nsmtp_tls_security_level = may\nsmtp_tls_session_cache_database = btree:${data_directory}/smtp_scache\nsmtpd_banner = $myhostname ESMTP $mail_name (Ubuntu)\nsmtpd_client_message_rate_limit = 45\nsmtpd_milters = inet:localhost:11332\nsmtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf\nsmtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination\nsmtpd_tls_cert_file = /etc/ssl/celikpanel/_mail/default-cert.pem\nsmtpd_tls_key_file = /etc/ssl/celikpanel/_mail/default-key.pem\nsmtpd_tls_loglevel = 1\nsmtpd_tls_protocols = >=TLSv1.2\nsmtpd_tls_security_level = may\ntls_server_sni_maps =\nvirtual_alias_maps = hash:/etc/postfix/virtual\nvirtual_gid_maps = static:5000\nvirtual_mailbox_base = /var/mail/vhosts\nvirtual_mailbox_domains = hash:/etc/postfix/vmailbox_domains\nvirtual_mailbox_maps = hash:/etc/postfix/vmailbox\nvirtual_minimum_uid = 100\nvirtual_transport = virtual\nvirtual_uid_maps = static:5000\n"
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "status": {
+    "argv": [
+      "postfix",
+      "status"
+    ],
+    "at": "2026-10-09T07:17:45Z",
+    "returncode": 1,
+    "seconds": 1.034,
+    "status": "ok",
+    "stderr": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n",
+    "stdout": ""
+  },
+  "units": {
+    "postfix.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 07:11:31 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 07:11:31 UTC",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "exited"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 07:11:31 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "running"
+    }
+  },
+  "values": {
+    "anvil_rate_time_unit": {
+      "argv": [
+        "postconf",
+        "-h",
+        "anvil_rate_time_unit"
+      ],
+      "at": "2026-10-09T07:17:43Z",
+      "returncode": 0,
+      "seconds": 0.006,
+      "status": "ok",
+      "stderr": "postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\n",
+      "stdout": "60s\n"
+    },
+    "message_size_limit": {
+      "argv": [
+        "postconf",
+        "-h",
+        "message_size_limit"
+      ],
+      "at": "2026-10-09T07:17:43Z",
+      "returncode": 0,
+      "seconds": 1.52,
+      "status": "ok",
+      "stderr": "postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\n",
+      "stdout": "31457280\n"
+    },
+    "smtpd_client_message_rate_limit": {
+      "argv": [
+        "postconf",
+        "-h",
+        "smtpd_client_message_rate_limit"
+      ],
+      "at": "2026-10-09T07:17:43Z",
+      "returncode": 0,
+      "seconds": 0.007,
+      "status": "ok",
+      "stderr": "postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\n",
+      "stdout": "45\n"
+    },
+    "smtpd_recipient_restrictions": {
+      "argv": [
+        "postconf",
+        "-h",
+        "smtpd_recipient_restrictions"
+      ],
+      "at": "2026-10-09T07:17:43Z",
+      "returncode": 0,
+      "seconds": 0.009,
+      "status": "ok",
+      "stderr": "postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\n",
+      "stdout": "permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf\n"
+    }
+  }
+}

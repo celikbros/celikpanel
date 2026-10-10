@@ -1,0 +1,13 @@
+2026-10-09T03:47:12.841803+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-09T03:47:12.842251+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-09T03:47:12.848284+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T03:47:12.879347+00:00 dns-ubuntu postmulti[65846]: postfix/postlog: stopping the Postfix mail system
+2026-10-09T03:47:12.879027+00:00 dns-ubuntu postfix/postfix-script[65846]: stopping the Postfix mail system
+2026-10-09T03:47:12.881282+00:00 dns-ubuntu postfix/master[65257]: terminating on signal 15
+2026-10-09T03:47:12.888407+00:00 dns-ubuntu systemd[1]: postfix@-.service: Deactivated successfully.
+2026-10-09T03:47:12.888614+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T03:47:12.190327+00:00 dns-ubuntu postfix/postfix-script[65553]: the Postfix mail system is running: PID: 65257
+2026-10-09T03:47:12.879027+00:00 dns-ubuntu postfix/postfix-script[65846]: stopping the Postfix mail system
+2026-10-09T03:47:12.881282+00:00 dns-ubuntu postfix/master[65257]: terminating on signal 15
+2026-10-09T03:47:12.901212+00:00 dns-ubuntu postfix/postfix-script[65855]: the Postfix mail system is not running
+2026-10-09T03:47:14.920743+00:00 dns-ubuntu postfix/postfix-script[65956]: the Postfix mail system is not running

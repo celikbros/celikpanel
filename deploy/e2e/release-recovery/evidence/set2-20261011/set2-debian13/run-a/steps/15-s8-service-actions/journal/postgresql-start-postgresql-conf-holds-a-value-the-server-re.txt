@@ -1,0 +1,9 @@
+2026-10-09T03:43:36.742396+00:00 dns-debian13 systemd[1]: Starting postgresql@17-main.service - PostgreSQL Cluster 17-main...
+2026-10-09T03:43:36.912731+00:00 dns-debian13 postgresql@17-main[45311]: Error: /usr/lib/postgresql/17/bin/pg_ctl /usr/lib/postgresql/17/bin/pg_ctl start -D /var/lib/postgresql/17/main -l /var/log/postgresql/postgresql-17-main.log -s -o  -c config_file="/etc/postgresql/17/main/postgresql.conf"  exited with status 1:
+2026-10-09T03:43:36.912731+00:00 dns-debian13 postgresql@17-main[45311]: 2026-10-09 03:43:36.820 GMT [45316] LOG:  invalid value for parameter "work_mem": "eight-megabytes"
+2026-10-09T03:43:36.912731+00:00 dns-debian13 postgresql@17-main[45311]: 2026-10-09 03:43:36.821 UTC [45316] FATAL:  configuration file "/etc/postgresql/17/main/postgresql.conf" contains errors
+2026-10-09T03:43:36.912731+00:00 dns-debian13 postgresql@17-main[45311]: pg_ctl: could not start server
+2026-10-09T03:43:36.912731+00:00 dns-debian13 postgresql@17-main[45311]: Examine the log output.
+2026-10-09T03:43:36.914527+00:00 dns-debian13 systemd[1]: postgresql@17-main.service: Can't open PID file '/run/postgresql/17-main.pid' (yet?) after start: No such file or directory
+2026-10-09T03:43:36.914861+00:00 dns-debian13 systemd[1]: postgresql@17-main.service: Failed with result 'protocol'.
+2026-10-09T03:43:36.915595+00:00 dns-debian13 systemd[1]: Failed to start postgresql@17-main.service - PostgreSQL Cluster 17-main.

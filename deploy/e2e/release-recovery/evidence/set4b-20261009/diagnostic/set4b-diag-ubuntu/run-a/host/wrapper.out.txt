@@ -1,0 +1,17 @@
+Formatting '/var/tmp/cp-release-drill-s4b-diag-ub/cells/d56105bfc57184889ce845cd/ubuntu/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-s4b-diag-ub/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-s4b-diag-ub", "cell_id": "release-recovery__94892b315f860c89", "ssh_ports": [4711, 4712]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s4b-diag-ub", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s4b-diag-ub", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "site", "verdict": "passed", "reason": null}
+{"step": "M0-prepare", "verdict": "passed", "reason": null}
+{"step": "D10-what-the-agent-reads", "verdict": "inconclusive", "reason": "TypeError: Set4bTrial.snap4b() got multiple values for argument 'label'"}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"cell_kind": "set4b-postfix-stop", "overall": "inconclusive", "sections": {"D10-what-the-agent-reads": "inconclusive", "M0-prepare": "passed"}}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-s4b-diag-ub", "evidence_retained": true}
+SET4B cell=set4b-diag-ubuntu lab=/var/tmp/cp-release-drill-s4b-diag-ub driver_exit=0 evidence=/var/tmp/cp-release-drill-s4b-diag-ub/evidence/*/upd1

@@ -1,0 +1,150 @@
+2026-10-09T10:32:53.721551+00:00 dns-arch systemd[1]: Starting MariaDB 13.0.2 database server...
+2026-10-09T10:32:53.827411+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] Starting MariaDB 13.0.2-MariaDB source revision 620a4b5624222048fece7fe1789978ae0675cae2 server_uid 84n076SGZKCVkhomPv3Lk5nb1PQ= as process 914
+2026-10-09T10:32:53.845276+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: Compressed tables use zlib 1.3.2
+2026-10-09T10:32:53.846905+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-09T10:32:53.846905+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-09T10:32:53.846905+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: Using io_uring
+2026-10-09T10:32:53.846905+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: innodb_buffer_pool_size_max=8388614m, innodb_buffer_pool_size=128m
+2026-10-09T10:32:53.850586+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: Initialized memory pressure event listener
+2026-10-09T10:32:53.850721+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-09T10:32:53.851083+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: Buffered log writes (block size=512 bytes)
+2026-10-09T10:32:53.875429+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: End of log at LSN=45418
+2026-10-09T10:32:53.949443+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: Opened 3 undo tablespaces
+2026-10-09T10:32:53.949443+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+2026-10-09T10:32:53.949721+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-09T10:32:53.949756+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-09T10:32:53.950488+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: log sequence number 45418; transaction id 14
+2026-10-09T10:32:53.950488+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] Plugin 'wsrep-provider' is disabled.
+2026-10-09T10:32:53.950974+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+2026-10-09T10:32:53.960340+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:53 0 [Note] InnoDB: Buffer pool(s) load completed at 261009 10:32:53
+2026-10-09T10:32:54.654940+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:54 0 [Note] Server socket created on IP: '0.0.0.0', port: '3306'.
+2026-10-09T10:32:54.654940+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:54 0 [Note] Server socket created on IP: '::', port: '3306'.
+2026-10-09T10:32:54.730240+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:54 0 [Note] mariadbd: Event Scheduler: Loaded 0 events
+2026-10-09T10:32:54.739836+00:00 dns-arch mariadbd[914]: 2026-10-09 10:32:54 0 [Note] /usr/bin/mariadbd: ready for connections.
+2026-10-09T10:32:54.739836+00:00 dns-arch mariadbd[914]: Version: '13.0.2-MariaDB'  socket: '/run/mysqld/mysqld.sock'  port: 3306  Arch Linux
+2026-10-09T10:32:54.740083+00:00 dns-arch systemd[1]: Started MariaDB 13.0.2 database server.
+2026-10-09T10:33:01.586247+00:00 dns-arch systemd[1]: Starting nginx web server...
+2026-10-09T10:33:01.607421+00:00 dns-arch nginx[1199]: 2026/10/09 10:33:01 [warn] 1199#1199: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T10:33:01.612022+00:00 dns-arch systemd[1]: Started nginx web server.
+2026-10-09T10:33:01.758595+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T10:33:01.784194+00:00 dns-arch nginx[1215]: 2026/10/09 10:33:01 [warn] 1215#1215: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T10:33:01.787149+00:00 dns-arch nginx[1215]: 2026/10/09 10:33:01 [notice] 1215#1215: signal process started
+2026-10-09T10:33:01.788302+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T10:33:29.688066+00:00 dns-arch systemd[1]: Starting PostgreSQL database server...
+2026-10-09T10:33:29.824331+00:00 dns-arch postgres[1778]: 2026-10-09 10:33:29.824 UTC [1778] LOG:  starting PostgreSQL 18.6 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 16.2.1 20260810, 64-bit
+2026-10-09T10:33:29.825603+00:00 dns-arch postgres[1778]: 2026-10-09 10:33:29.825 UTC [1778] LOG:  listening on IPv6 address "::1", port 5432
+2026-10-09T10:33:29.825603+00:00 dns-arch postgres[1778]: 2026-10-09 10:33:29.825 UTC [1778] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-10-09T10:33:29.836766+00:00 dns-arch postgres[1778]: 2026-10-09 10:33:29.836 UTC [1778] LOG:  listening on Unix socket "/run/postgresql/.s.PGSQL.5432"
+2026-10-09T10:33:29.862942+00:00 dns-arch postgres[1786]: 2026-10-09 10:33:29.862 UTC [1786] LOG:  database system was shut down at 2026-10-09 10:33:20 UTC
+2026-10-09T10:33:29.876828+00:00 dns-arch postgres[1778]: 2026-10-09 10:33:29.876 UTC [1778] LOG:  database system is ready to accept connections
+2026-10-09T10:33:29.888265+00:00 dns-arch systemd[1]: Started PostgreSQL database server.
+2026-10-09T10:33:35.593823+00:00 dns-arch systemd[1]: Started Command Scheduler.
+2026-10-09T10:33:35.604504+00:00 dns-arch crond[2066]: (CRON) STARTUP (1.7.2)
+2026-10-09T10:33:35.604946+00:00 dns-arch crond[2066]: (CRON) INFO (Syslog will be used instead of sendmail.)
+2026-10-09T10:33:35.604993+00:00 dns-arch crond[2066]: (CRON) INFO (RANDOM_DELAY will be scaled with factor 31% if used.)
+2026-10-09T10:33:35.605070+00:00 dns-arch crond[2066]: (CRON) INFO (running with inotify support)
+2026-10-09T10:35:51.282943+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T10:35:51.305192+00:00 dns-arch nginx[2716]: 2026/10/09 10:35:51 [warn] 2716#2716: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T10:35:51.308711+00:00 dns-arch nginx[2716]: 2026/10/09 10:35:51 [notice] 2716#2716: signal process started
+2026-10-09T10:35:51.311838+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T10:35:56.909723+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T10:35:56.938964+00:00 dns-arch nginx[2898]: 2026/10/09 10:35:56 [warn] 2898#2898: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T10:35:56.942669+00:00 dns-arch nginx[2898]: 2026/10/09 10:35:56 [notice] 2898#2898: signal process started
+2026-10-09T10:35:56.944195+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T10:36:01.353769+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T10:36:01.378251+00:00 dns-arch nginx[3043]: 2026/10/09 10:36:01 [warn] 3043#3043: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T10:36:01.383310+00:00 dns-arch nginx[3043]: 2026/10/09 10:36:01 [notice] 3043#3043: signal process started
+2026-10-09T10:36:01.385249+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T10:36:10.512355+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T10:36:10.541930+00:00 dns-arch nginx[3313]: 2026/10/09 10:36:10 [warn] 3313#3313: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T10:36:10.545507+00:00 dns-arch nginx[3313]: 2026/10/09 10:36:10 [notice] 3313#3313: signal process started
+2026-10-09T10:36:10.549734+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T10:36:10.879603+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T10:36:10.910484+00:00 dns-arch nginx[3326]: 2026/10/09 10:36:10 [warn] 3326#3326: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T10:36:10.914364+00:00 dns-arch nginx[3326]: 2026/10/09 10:36:10 [notice] 3326#3326: signal process started
+2026-10-09T10:36:10.917072+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T10:36:13.736309+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T10:36:13.761584+00:00 dns-arch nginx[3406]: 2026/10/09 10:36:13 [warn] 3406#3406: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T10:36:13.766964+00:00 dns-arch nginx[3406]: 2026/10/09 10:36:13 [notice] 3406#3406: signal process started
+2026-10-09T10:36:13.768141+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T10:36:14.248049+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T10:36:14.274131+00:00 dns-arch nginx[3426]: 2026/10/09 10:36:14 [warn] 3426#3426: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T10:36:14.277695+00:00 dns-arch nginx[3426]: 2026/10/09 10:36:14 [notice] 3426#3426: signal process started
+2026-10-09T10:36:14.279535+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T10:36:23.202061+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T10:36:23.224171+00:00 dns-arch nginx[3649]: 2026/10/09 10:36:23 [warn] 3649#3649: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T10:36:23.229132+00:00 dns-arch nginx[3649]: 2026/10/09 10:36:23 [notice] 3649#3649: signal process started
+2026-10-09T10:36:23.232674+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T10:36:23.570744+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T10:36:23.597803+00:00 dns-arch nginx[3665]: 2026/10/09 10:36:23 [warn] 3665#3665: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T10:36:23.602413+00:00 dns-arch nginx[3665]: 2026/10/09 10:36:23 [notice] 3665#3665: signal process started
+2026-10-09T10:36:23.605870+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T10:36:26.416870+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T10:36:26.440280+00:00 dns-arch nginx[3744]: 2026/10/09 10:36:26 [warn] 3744#3744: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T10:36:26.444455+00:00 dns-arch nginx[3744]: 2026/10/09 10:36:26 [notice] 3744#3744: signal process started
+2026-10-09T10:36:26.446176+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T10:36:36.089627+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T10:36:36.112585+00:00 dns-arch nginx[4063]: 2026/10/09 10:36:36 [warn] 4063#4063: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T10:36:36.118018+00:00 dns-arch nginx[4063]: 2026/10/09 10:36:36 [notice] 4063#4063: signal process started
+2026-10-09T10:36:36.119662+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T10:36:38.850554+00:00 dns-arch systemd[1]: Stopping nginx web server...
+2026-10-09T10:36:38.864925+00:00 dns-arch systemd[1]: nginx.service: Deactivated successfully.
+2026-10-09T10:36:38.865313+00:00 dns-arch systemd[1]: Stopped nginx web server.
+2026-10-09T10:36:50.751989+00:00 dns-arch systemd[1]: Starting nginx web server...
+2026-10-09T10:36:50.778071+00:00 dns-arch nginx[4426]: 2026/10/09 10:36:50 [warn] 4426#4426: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T10:36:50.784589+00:00 dns-arch systemd[1]: Started nginx web server.
+2026-10-09T10:36:53.923305+00:00 dns-arch systemd[1]: Stopping MariaDB 13.0.2 database server...
+2026-10-09T10:36:53.923458+00:00 dns-arch mariadbd[914]: 2026-10-09 10:36:53 0 [Note] /usr/bin/mariadbd (initiated by: unknown): Normal shutdown
+2026-10-09T10:36:53.924620+00:00 dns-arch mariadbd[914]: 2026-10-09 10:36:53 0 [Note] InnoDB: FTS optimize thread exiting.
+2026-10-09T10:36:53.958020+00:00 dns-arch mariadbd[914]: 2026-10-09 10:36:53 0 [Note] InnoDB: Starting shutdown...
+2026-10-09T10:36:53.967059+00:00 dns-arch mariadbd[914]: 2026-10-09 10:36:53 0 [Note] InnoDB: Dumping buffer pool(s) to /var/lib/mysql/ib_buffer_pool
+2026-10-09T10:36:53.967059+00:00 dns-arch mariadbd[914]: 2026-10-09 10:36:53 0 [Note] InnoDB: Buffer pool(s) dump completed at 261009 10:36:53
+2026-10-09T10:36:54.108780+00:00 dns-arch mariadbd[914]: 2026-10-09 10:36:54 0 [Note] InnoDB: Removed temporary tablespace data file: "./ibtmp1"
+2026-10-09T10:36:54.108780+00:00 dns-arch mariadbd[914]: 2026-10-09 10:36:54 0 [Note] Shutdown completed; log sequence number 90494; transaction id 31
+2026-10-09T10:36:54.153070+00:00 dns-arch mariadbd[914]: 2026-10-09 10:36:54 0 [Note] /usr/bin/mariadbd: Shutdown complete
+2026-10-09T10:36:54.157270+00:00 dns-arch systemd[1]: mariadb.service: Deactivated successfully.
+2026-10-09T10:36:54.157575+00:00 dns-arch systemd[1]: Stopped MariaDB 13.0.2 database server.
+2026-10-09T10:36:54.158165+00:00 dns-arch systemd[1]: mariadb.service: Consumed 1.063s CPU time over 4min 435ms wall clock time, 187.5M memory peak.
+2026-10-09T10:37:05.975278+00:00 dns-arch systemd[1]: Starting MariaDB 13.0.2 database server...
+2026-10-09T10:37:06.089073+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] Starting MariaDB 13.0.2-MariaDB source revision 620a4b5624222048fece7fe1789978ae0675cae2 server_uid 84n076SGZKCVkhomPv3Lk5nb1PQ= as process 4756
+2026-10-09T10:37:06.121245+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: Compressed tables use zlib 1.3.2
+2026-10-09T10:37:06.123551+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-09T10:37:06.123612+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-09T10:37:06.123935+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: Using io_uring
+2026-10-09T10:37:06.124182+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: innodb_buffer_pool_size_max=8388612m, innodb_buffer_pool_size=128m
+2026-10-09T10:37:06.133181+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: Initialized memory pressure event listener
+2026-10-09T10:37:06.133181+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-09T10:37:06.133181+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: Buffered log writes (block size=512 bytes)
+2026-10-09T10:37:06.150584+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: End of log at LSN=90494
+2026-10-09T10:37:06.223736+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: Opened 3 undo tablespaces
+2026-10-09T10:37:06.223736+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+2026-10-09T10:37:06.225126+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-09T10:37:06.225126+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-09T10:37:06.225708+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: log sequence number 90494; transaction id 32
+2026-10-09T10:37:06.225829+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] Plugin 'wsrep-provider' is disabled.
+2026-10-09T10:37:06.226505+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+2026-10-09T10:37:06.231246+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] InnoDB: Buffer pool(s) load completed at 261009 10:37:06
+2026-10-09T10:37:06.968701+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] Server socket created on IP: '0.0.0.0', port: '3306'.
+2026-10-09T10:37:06.968701+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] Server socket created on IP: '::', port: '3306'.
+2026-10-09T10:37:06.973178+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] mariadbd: Event Scheduler: Loaded 0 events
+2026-10-09T10:37:06.974449+00:00 dns-arch mariadbd[4756]: 2026-10-09 10:37:06 0 [Note] /usr/bin/mariadbd: ready for connections.
+2026-10-09T10:37:06.974449+00:00 dns-arch mariadbd[4756]: Version: '13.0.2-MariaDB'  socket: '/run/mysqld/mysqld.sock'  port: 3306  Arch Linux
+2026-10-09T10:37:06.974688+00:00 dns-arch systemd[1]: Started MariaDB 13.0.2 database server.
+2026-10-09T10:37:10.226515+00:00 dns-arch postgres[1778]: 2026-10-09 10:37:10.226 UTC [1778] LOG:  received fast shutdown request
+2026-10-09T10:37:10.226661+00:00 dns-arch systemd[1]: Stopping PostgreSQL database server...
+2026-10-09T10:37:10.240232+00:00 dns-arch postgres[1778]: 2026-10-09 10:37:10.239 UTC [1778] LOG:  aborting any active transactions
+2026-10-09T10:37:10.242648+00:00 dns-arch postgres[1778]: 2026-10-09 10:37:10.242 UTC [1778] LOG:  background worker "logical replication launcher" (PID 1789) exited with exit code 1
+2026-10-09T10:37:10.243941+00:00 dns-arch postgres[1784]: 2026-10-09 10:37:10.243 UTC [1784] LOG:  shutting down
+2026-10-09T10:37:10.254847+00:00 dns-arch postgres[1784]: 2026-10-09 10:37:10.254 UTC [1784] LOG:  checkpoint starting: shutdown immediate
+2026-10-09T10:37:10.451159+00:00 dns-arch postgres[1784]: 2026-10-09 10:37:10.451 UTC [1784] LOG:  checkpoint complete: wrote 46 buffers (0.3%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.003 s, sync=0.147 s, total=0.208 s; sync files=15, longest=0.013 s, average=0.010 s; distance=337 kB, estimate=337 kB; lsn=0/17BA860, redo lsn=0/17BA860
+2026-10-09T10:37:10.490640+00:00 dns-arch postgres[1778]: 2026-10-09 10:37:10.490 UTC [1778] LOG:  database system is shut down
+2026-10-09T10:37:10.493685+00:00 dns-arch systemd[1]: postgresql.service: Deactivated successfully.
+2026-10-09T10:37:10.494101+00:00 dns-arch systemd[1]: Stopped PostgreSQL database server.
+2026-10-09T10:37:22.418521+00:00 dns-arch systemd[1]: Starting PostgreSQL database server...
+2026-10-09T10:37:22.539789+00:00 dns-arch postgres[5171]: 2026-10-09 10:37:22.539 UTC [5171] LOG:  starting PostgreSQL 18.6 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 16.2.1 20260810, 64-bit
+2026-10-09T10:37:22.540933+00:00 dns-arch postgres[5171]: 2026-10-09 10:37:22.540 UTC [5171] LOG:  listening on IPv6 address "::1", port 5432
+2026-10-09T10:37:22.540973+00:00 dns-arch postgres[5171]: 2026-10-09 10:37:22.540 UTC [5171] LOG:  listening on IPv4 address "127.0.0.1", port 5432
+2026-10-09T10:37:22.553107+00:00 dns-arch postgres[5171]: 2026-10-09 10:37:22.553 UTC [5171] LOG:  listening on Unix socket "/run/postgresql/.s.PGSQL.5432"
+2026-10-09T10:37:22.576089+00:00 dns-arch postgres[5178]: 2026-10-09 10:37:22.576 UTC [5178] LOG:  database system was shut down at 2026-10-09 10:37:10 UTC
+2026-10-09T10:37:22.592550+00:00 dns-arch postgres[5171]: 2026-10-09 10:37:22.592 UTC [5171] LOG:  database system is ready to accept connections
+2026-10-09T10:37:22.603577+00:00 dns-arch systemd[1]: Started PostgreSQL database server.

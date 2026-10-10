@@ -1,0 +1,30 @@
+{
+  "at": "2026-10-09T07:09:36Z",
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791529767",
+      "-n",
+      "2000",
+      "-u",
+      "nginx.service"
+    ],
+    "at": "2026-10-09T07:09:36Z",
+    "returncode": 0,
+    "seconds": 0.006,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T07:09:29.359341+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...\n2026-10-09T07:09:29.391120+00:00 dns-debian13 nginx[32786]: 2026/10/09 07:09:29 [notice] 32786#32786: signal process started\n2026-10-09T07:09:29.399452+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.\n2026-10-09T07:09:30.867033+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...\n2026-10-09T07:09:30.888139+00:00 dns-debian13 nginx[32794]: 2026/10/09 07:09:30 [notice] 32794#32794: signal process started\n2026-10-09T07:09:30.891997+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.\n2026-10-09T07:09:34.210153+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...\n2026-10-09T07:09:34.231841+00:00 dns-debian13 nginx[32995]: 2026/10/09 07:09:34 [notice] 32995#32995: signal process started\n2026-10-09T07:09:34.233935+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.\n2026-10-09T07:09:34.588039+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...\n2026-10-09T07:09:34.611999+00:00 dns-debian13 nginx[33002]: 2026/10/09 07:09:34 [notice] 33002#33002: signal process started\n2026-10-09T07:09:34.615313+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.\n"
+  },
+  "lab_action": false,
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "units": [
+    "nginx.service"
+  ]
+}

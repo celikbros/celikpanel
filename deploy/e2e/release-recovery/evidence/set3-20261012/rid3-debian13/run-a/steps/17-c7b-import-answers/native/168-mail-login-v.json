@@ -1,0 +1,50 @@
+{
+  "address": "info@set2-import-drop.test",
+  "at": "2026-10-09T07:11:16Z",
+  "doveadm_user": {
+    "fields": [
+      "gid",
+      "home",
+      "mail_path",
+      "quota_rule",
+      "uid"
+    ],
+    "returncode": 0
+  },
+  "dovecot_version": "2.4.1-4 (7d8c0e5759)",
+  "lab_action": false,
+  "mode": "read-mail-login",
+  "owner_action": false,
+  "readings": {
+    "a_wrong_password": {
+      "doveadm_auth_test": {
+        "returncode": 77,
+        "status": "ok",
+        "stderr": "",
+        "stdout": "passdb: info@set2-import-drop.test auth failed\nextra fields:\n  user=info@set2-import-drop.test\n"
+      },
+      "imap": {
+        "answer": "b'[AUTHENTICATIONFAILED] Authentication failed.'",
+        "connected": true,
+        "logged_in": false,
+        "transport": "imaps 127.0.0.1:993"
+      }
+    },
+    "the_original_password": {
+      "doveadm_auth_test": {
+        "returncode": 0,
+        "status": "ok",
+        "stderr": "",
+        "stdout": "passdb: info@set2-import-drop.test auth succeeded\nextra fields:\n  user=info@set2-import-drop.test\n"
+      },
+      "imap": {
+        "answer": "OK",
+        "connected": true,
+        "inbox_selected": false,
+        "logged_in": true,
+        "transport": "imaps 127.0.0.1:993"
+      }
+    }
+  },
+  "schema": "celikpanel/set2-request-identity-native/v1"
+}

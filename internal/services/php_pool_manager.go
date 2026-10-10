@@ -16,12 +16,14 @@ import (
 
 var phpEtcDir = "/etc/php"
 
+// The pool directory is the host's own (php_layout.go): Debian and Sury keep
+// one per PHP version, Arch one for its single PHP-FPM.
 func poolFilePath(phpVersion, poolName string) string {
-	return filepath.Join(phpEtcDir, phpVersion, "fpm", "pool.d", poolName+".conf")
+	return filepath.Join(phpLayoutFor(phpVersion).poolDir(), poolName+".conf")
 }
 
 func poolDirPath(phpVersion string) string {
-	return filepath.Join(phpEtcDir, phpVersion, "fpm", "pool.d")
+	return phpLayoutFor(phpVersion).poolDir()
 }
 
 type PHPPoolManager struct{}
@@ -113,7 +115,7 @@ func (pm *PHPPoolManager) GetPoolConfig(phpVersion, poolName string) (*core.PHPP
 			return nil, err
 		}
 	}
-	expectedListen := fmt.Sprintf("/var/run/php/php%s-fpm-%s.sock", phpVersion, poolName)
+	expectedListen := PHPFPMSocketPath(phpVersion, poolName)
 	if config.Listen != expectedListen {
 		return nil, fmt.Errorf("pool listen path %q does not match managed socket %q", config.Listen, expectedListen)
 	}
@@ -262,7 +264,7 @@ func (pm *PHPPoolManager) MigratePool(oldVersion, newVersion, poolName string) e
 	maxSpare := clamp(oldConfig.PMMaxSpareServers, minSpare, maxChildren, 3)
 	maxRequests := clamp(oldConfig.PMMaxRequests, 1, 100000, 500)
 	content := renderPool(poolName, oldConfig.User, oldConfig.Group,
-		fmt.Sprintf("/var/run/php/php%s-fpm-%s.sock", newVersion, poolName),
+		PHPFPMSocketPath(newVersion, poolName),
 		oldConfig.ListenOwner, oldConfig.ListenGroup, oldConfig.ListenMode,
 		pmMode, maxChildren, startServers, minSpare, maxSpare, maxRequests)
 	if err := createManagedConfigLocked(newPath, []byte(content), 0o644,

@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-s6-d13-fresh-a
+set6-debian13-20261009t220918z

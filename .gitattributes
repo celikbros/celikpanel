@@ -41,3 +41,5 @@ internal/mailtlsconfig/testdata/*.map text eol=lf
 
 # Retained native-trial evidence must keep its recorded byte hashes.
 deploy/e2e/dns-kill-matrix/evidence/** -text -whitespace
+deploy/e2e/release-recovery/evidence/** -text -whitespace
+deploy/e2e/dns-pair-acceptance/evidence/** -text -whitespace

@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n';
 import { navItemsForRole, navGroups, type NavAccessContext, type NavItem } from '../nav';
 import { publishComponentCensus, useComponentCensus } from '../lib/componentCensus';
+import { decodeList, lastKnown, useRemote } from '../lib/remote';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { SkinSwitcher } from './SkinSwitcher';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -77,7 +78,18 @@ export function Layout({ children, currentPage = '', onPageChange, mode = 'panel
         accountType: typeof user?.account_type === 'string' ? user.account_type : undefined,
         teamMembers: user?.features?.team_members === true,
     };
-    const [counts, setCounts] = useState<Counts>({});
+    // The domain badge reads the address the Domains page and a domain's own
+    // page read, so the rail adds no request of its own and follows theirs: a
+    // domain added or removed there moves the badge. It is a number only for
+    // an answer the server gave. While that is read, and when it could not be
+    // read, there is no badge; a refresh that failed keeps the earlier number
+    // rather than dropping to none and back.
+    // Alan adı rozeti, Alan Adları sayfasının ve bir alan adının kendi
+    // sayfasının okuduğu adresi okur; ray kendi isteğini eklemez. Yalnız
+    // sunucunun verdiği yanıt için sayıdır. Okunurken ve okunamadığında rozet
+    // yoktur; başarısız yenileme önceki sayıyı korur.
+    const domainList = useRemote(setupMode ? null : '/api/v1/domains', decodeList<unknown>);
+    const domainCount = setupMode ? undefined : lastKnown(domainList.remote)?.value.length;
     const [panelRuntime, setPanelRuntime] = useState<PanelRuntime | null>(null);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [desktopPageHeaderTarget, setDesktopPageHeaderTarget] = useState<HTMLDivElement | null>(null);
@@ -98,10 +110,6 @@ export function Layout({ children, currentPage = '', onPageChange, mode = 'panel
     // eksik bir rozet, bozuk bir kabuktan iyidir.
     useEffect(() => {
         if (setupMode) return;
-        fetch('/api/v1/domains')
-            .then((r) => (r.ok ? r.json() : []))
-            .then((d) => setCounts((c) => ({ ...c, domains: Array.isArray(d) ? d.length : 0 })))
-            .catch(() => {});
         // Services are an admin-only view; only the admin sidebar shows the badge.
         // Servisler yalnızca yönetici görünümüdür; rozeti yalnızca yönetici çubuğu gösterir.
         if (role === 'admin') {
@@ -137,8 +145,8 @@ export function Layout({ children, currentPage = '', onPageChange, mode = 'panel
     // Tek sayı, her ekranın yayınladığı yerden okunur.
     const serviceCensus = useComponentCensus();
     const sidebarCounts = useMemo<Counts>(
-        () => (role === 'admin' ? { ...counts, services: serviceCensus } : counts),
-        [counts, role, serviceCensus],
+        () => (role === 'admin' ? { domains: domainCount, services: serviceCensus } : { domains: domainCount }),
+        [domainCount, role, serviceCensus],
     );
 
     // The existing admin-only version request now carries the bounded machine

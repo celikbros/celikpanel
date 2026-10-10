@@ -1,0 +1,47 @@
+{
+  "at": "2026-10-09T21:56:31Z",
+  "epoch": 1791582991.0736992,
+  "mode": "read-service",
+  "owner_action": false,
+  "postgres": {
+    "answers": false,
+    "conf_load_time": "",
+    "postmaster_alive": false,
+    "postmaster_pid": null,
+    "postmaster_start_time": "",
+    "server_version": "",
+    "stderr": "psql: error: connection to server on socket \"/run/postgresql/.s.PGSQL.5432\" failed: No such file or directory\n\tIs the server running locally and accepting connections on that socket?\n"
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "postgresql.service": {
+      "is_active": "inactive",
+      "properties": {
+        "ActiveEnterTimestamp": "Fri 2026-10-09 21:52:37 UTC",
+        "ActiveState": "inactive",
+        "ConsistsOf": "",
+        "DropInPaths": "",
+        "ExecMainPID": "1894",
+        "ExecMainStartTimestamp": "Fri 2026-10-09 21:52:37 UTC",
+        "ExecReload": "{ path=/bin/kill ; argv[]=/bin/kill -HUP ${MAINPID} ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "ExecStart": "{ path=/usr/bin/postgres ; argv[]=/usr/bin/postgres -D ${PGROOT}/data ; ignore_errors=no ; start_time=[Fri 2026-10-09 21:52:37 UTC] ; stop_time=[Fri 2026-10-09 21:56:22 UTC] ; pid=1894 ; code=exited ; status=0 }",
+        "FragmentPath": "/usr/lib/systemd/system/postgresql.service",
+        "InactiveEnterTimestamp": "Fri 2026-10-09 21:56:22 UTC",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "NRestarts": "0",
+        "PartOf": "",
+        "PropagatesReloadTo": "",
+        "ReloadPropagatedFrom": "",
+        "ReloadResult": "success",
+        "RemainAfterExit": "no",
+        "Result": "success",
+        "SubState": "dead",
+        "Type": "notify",
+        "WantedBy": "multi-user.target",
+        "Wants": "network-online.target tmp.mount"
+      },
+      "returncode": 0
+    }
+  }
+}

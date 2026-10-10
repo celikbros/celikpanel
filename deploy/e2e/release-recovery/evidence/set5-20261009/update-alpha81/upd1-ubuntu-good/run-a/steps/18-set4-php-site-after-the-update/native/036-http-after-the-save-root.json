@@ -1,0 +1,17 @@
+{
+  "at": "2026-10-09T17:46:52Z",
+  "body": "<!doctype html>\n<html lang=\"tr\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>set4-upd-php.test</title>\n<style>\n  body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#0f172a;color:#e2e8f0}\n  main{text-align:center;padding:2rem}\n  h1{font-weight:600}\n  p{color:#94a3b8}\n</style>\n</head>\n<body>\n<main>\n  <h1>set4-upd-php.test</h1>\n  <p>Bu site hazırlanıyor. / This site is being prepared.</p>\n  <p>CelikPanel · PHP 8.3.6 · 2026</p>\n</main>\n</body>\n</html>\n",
+  "body_sha256": "d6907a660824ae1aa39949c4bfaf284ba593d1856f749a3879c79e7465690c52",
+  "bytes": 574,
+  "headers": {
+    "content-type": "text/html; charset=UTF-8",
+    "server": "nginx/1.24.0 (Ubuntu)"
+  },
+  "host": "set4-upd-php.test",
+  "mode": "read-http",
+  "owner_action": false,
+  "path": "/",
+  "schema": "celikpanel/set4-native/v1",
+  "status": 200,
+  "status_line": "HTTP/1.1 200 OK"
+}

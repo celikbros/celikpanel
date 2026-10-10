@@ -1,0 +1,85 @@
+{
+  "at": "2026-10-09T03:41:22Z",
+  "epoch": 1791517282.7239776,
+  "mode": "read-service",
+  "owner_action": false,
+  "postfix": {
+    "master_alive": true,
+    "master_pid": 37525,
+    "status": {
+      "argv": [
+        "postfix",
+        "status"
+      ],
+      "at": "2026-10-09T03:41:22Z",
+      "returncode": 0,
+      "seconds": 0.035,
+      "status": "ok",
+      "stderr": "postfix/postlog: the Postfix mail system is running: PID: 37525\n",
+      "stdout": ""
+    }
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "postfix.service": {
+      "cat": "# /usr/lib/systemd/system/postfix.service\n[Unit]\nDescription=Postfix Mail Transport Agent (main/default instance)\nDocumentation=man:postfix(1)\nAfter=network.target nss-lookup.target\n# network-online.target is a semi-working work-around for specific\n# network_interfaces, https://bugs.debian.org/854475#126\n# Please add local override wanting network-online.target or\n# systemd-networkd-wait-online@INTERFACE:no-carrier.service\n#After=network-online.target\n#Wants=network-online.target\nConditionPathExists=/etc/postfix/main.cf\n# pre-3.9.1-7 multi-instance setup:\nConflicts=postfix@-.service\n\n[Service]\nType=forking\n# Force operations on single default instance, do not run postmulti wrapper\nEnvironment=MAIL_CONFIG=/etc/postfix\n# perform 2-stage startup\nExecStartPre=+postfix check\nExecStart=postfix debian-systemd-start\nExecStop=postfix stop\nExecReload=postfix reload\n\n# Postfix consists of multiple processes run by a master(8) orchestrator,\n# each of them having different requirements.  From the whole set, local(8)\n# (the Postfix local delivery agent) is the most demanding one, because it\n# runs things as user, and a user needs to be able to run suid/sgid programs\n# (if not only to be able to deliver mail to /var/spool/postfix/postdrop).\n# Individual Postfix daemons are started as root, optionally perform chroot\n# into the queue directory, and drop privileges voluntarily.\n\n# listen(2) on privileged ports (smtp)\nCapabilityBoundingSet=CAP_NET_BIND_SERVICE\n# chroot into queue dir\nCapabilityBoundingSet=CAP_SYS_CHROOT\n# drop root privs, run as user when delivering local mail\nCapabilityBoundingSet=CAP_SETGID CAP_SETUID\n# processes access protected files in non-root-owned dirs (acl root:rwx);\nCapabilityBoundingSet=CAP_DAC_OVERRIDE\n# https://bugs.debian.org/1099891 :\nCapabilityBoundingSet=CAP_DAC_READ_SEARCH\n# chown(2) is needed for procmail &Co to create /var/mail/$USER\nCapabilityBoundingSet=CAP_CHOWN\n\n# users might run suid/sgid programs from ~/.forward:\nRestrictSUIDSGID=no\n# for the same reason, NoNewPrivileges can not be set to yes\nNoNewPrivileges=no\n\n# if you don't use procmail for delivery to /var/mail/$USER,\n# CAP_CHOWN can be removed.\n# if you don't use local(8) at all, only doing local delivery over LMTP\n# or using virtual(8), you can also set\n#RestrictSUIDSGID=yes\n#NoNewPrivileges=yes\n# Also, CAP_DAC_OVERRIDE can be eliminated by adding root user to ACLs of\n# postfix-owned dirs in spool: public, private; and whatever maps in protected\n# subdirs you use, relying on cap_dac_override\n\nLockPersonality=yes\nMemoryDenyWriteExecute=yes\nProtectControlGroups=yes\nProtectClock=yes\nPrivateDevices=yes\nProtectHostname=yes\nProtectKernelLogs=yes\nProtectKernelModules=yes\nProtectKernelTunables=yes\n# ProtectProc is not usable with User=root:\n#ProtectProc=noaccess\nProcSubset=pid\n# ProtectSystem can be \"yes\" if rw maps are in /etc, or \"full\"\n# Alternative would be \"strict\" +ReadWritePaths=/var\nProtectSystem=full\n# Need to write to ~/Maildir/ etc:\nProtectHome=no\nRestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6\nRestrictNamespaces=yes\nRestrictRealtime=yes\n\nSystemCallFilter=@system-service @setuid chroot\n\n[Install]\nWantedBy=multi-user.target\n",
+      "is_active": "active",
+      "properties": {
+        "ActiveEnterTimestamp": "Fri 2026-10-09 03:41:16 UTC",
+        "ActiveState": "active",
+        "ConsistsOf": "postfix@-.service",
+        "DropInPaths": "",
+        "ExecMainPID": "37525",
+        "ExecMainStartTimestamp": "Fri 2026-10-09 03:41:16 UTC",
+        "ExecReload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "ExecStart": "{ path=postfix ; argv[]=postfix debian-systemd-start ; ignore_errors=no ; start_time=[Fri 2026-10-09 03:41:16 UTC] ; stop_time=[Fri 2026-10-09 03:41:16 UTC] ; pid=37517 ; code=exited ; status=0 }",
+        "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+        "InactiveEnterTimestamp": "Fri 2026-10-09 03:41:15 UTC",
+        "LoadState": "loaded",
+        "MainPID": "37525",
+        "NRestarts": "0",
+        "PartOf": "",
+        "PropagatesReloadTo": "postfix@-.service",
+        "ReloadPropagatedFrom": "",
+        "ReloadResult": "success",
+        "RemainAfterExit": "no",
+        "Result": "success",
+        "SubState": "running",
+        "Type": "forking",
+        "WantedBy": "multi-user.target",
+        "Wants": ""
+      },
+      "returncode": 0
+    },
+    "postfix@-.service": {
+      "cat": "# /usr/lib/systemd/system/postfix@.service\n[Unit]\nDescription=Postfix Mail Transport Agent (instance %i, /etc/postfix-%I)\nDocumentation=man:postfix(1)\nAfter=network.target nss-lookup.target\n# network-online.target is a semi-working work-around for specific\n# network_interfaces, https://bugs.debian.org/854475#126\n# Please add local override wanting network-online.target or\n# systemd-networkd-wait-online@INTERFACE:no-carrier.service\n#After=network-online.target\n#Wants=network-online.target\nPartOf=postfix.service\nBefore=postfix.service\nReloadPropagatedFrom=postfix.service\nAssertPathExists=/etc/postfix-%I/main.cf\n\n[Service]\nType=forking\n# Force operations on single non-default instance\nEnvironment=MAIL_CONFIG=/etc/postfix-%I\n# perform 2-stage startup\nExecStartPre=+postfix check\nExecStart=postfix debian-systemd-start\nExecStop=postfix stop\nExecReload=postfix reload\n\n# Postfix consists of multiple processes run by a master(8) orchestrator,\n# each of them having different requirements.  From the whole set, local(8)\n# (the Postfix local delivery agent) is the most demanding one, because it\n# runs things as user, and a user needs to be able to run suid/sgid programs\n# (if not only to be able to deliver mail to /var/spool/postfix/postdrop).\n# Individual Postfix daemons are started as root, optionally perform chroot\n# into the queue directory, and drop privileges voluntarily.\n\n# listen(2) on privileged ports (smtp)\nCapabilityBoundingSet=CAP_NET_BIND_SERVICE\n# chroot into queue dir\nCapabilityBoundingSet=CAP_SYS_CHROOT\n# drop root privs, run as user when delivering local mail\nCapabilityBoundingSet=CAP_SETGID CAP_SETUID\n# processes access protected files in non-root-owned dirs (acl root:rwx);\nCapabilityBoundingSet=CAP_DAC_OVERRIDE\n# https://bugs.debian.org/1099891 :\nCapabilityBoundingSet=CAP_DAC_READ_SEARCH\n# chown(2) is needed for procmail &Co to create /var/mail/$USER\nCapabilityBoundingSet=CAP_CHOWN\n\n# users might run suid/sgid programs from ~/.forward:\nRestrictSUIDSGID=no\n# for the same reason, NoNewPrivileges can not be set to yes\nNoNewPrivileges=no\n\n# if you don't use procmail for delivery to /var/mail/$USER,\n# CAP_CHOWN can be removed.\n# if you don't use local(8) at all, only doing local delivery over LMTP\n# or using virtual(8), you can also set\n#RestrictSUIDSGID=yes\n#NoNewPrivileges=yes\n# Also, CAP_DAC_OVERRIDE can be eliminated by adding root user to ACLs of\n# postfix-owned dirs in spool: public, private; and whatever maps in protected\n# subdirs you use, relying on cap_dac_override\n\nLockPersonality=yes\nMemoryDenyWriteExecute=yes\nProtectControlGroups=yes\nProtectClock=yes\nPrivateDevices=yes\nProtectHostname=yes\nProtectKernelLogs=yes\nProtectKernelModules=yes\nProtectKernelTunables=yes\n# ProtectProc is not usable with User=root:\n#ProtectProc=noaccess\nProcSubset=pid\n# ProtectSystem can be \"yes\" if rw maps are in /etc, or \"full\"\n# Alternative would be \"strict\" +ReadWritePaths=/var\nProtectSystem=full\n# Need to write to ~/Maildir/ etc:\nProtectHome=no\nRestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6\nRestrictNamespaces=yes\nRestrictRealtime=yes\n\nSystemCallFilter=@system-service @setuid chroot\n\n[Install]\nWantedBy=multi-user.target\n",
+      "is_active": "inactive",
+      "properties": {
+        "ActiveEnterTimestamp": "",
+        "ActiveState": "inactive",
+        "ConsistsOf": "",
+        "DropInPaths": "",
+        "ExecMainPID": "0",
+        "ExecMainStartTimestamp": "",
+        "ExecReload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "ExecStart": "{ path=postfix ; argv[]=postfix debian-systemd-start ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+        "InactiveEnterTimestamp": "",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "NRestarts": "0",
+        "PartOf": "postfix.service",
+        "PropagatesReloadTo": "",
+        "ReloadPropagatedFrom": "postfix.service",
+        "ReloadResult": "success",
+        "RemainAfterExit": "no",
+        "Result": "success",
+        "SubState": "dead",
+        "Type": "forking",
+        "WantedBy": "",
+        "Wants": ""
+      },
+      "returncode": 0
+    }
+  }
+}

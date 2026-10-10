@@ -1,0 +1,80 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "set6: is the owner's session still accepted",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18661"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/panel/version"
+  },
+  "response": {
+    "elapsed_seconds": 0.004,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Pragma",
+        "no-cache"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 23:20:38 GMT"
+      ],
+      [
+        "Content-Length",
+        "225"
+      ]
+    ],
+    "json": {
+      "agent_commit": "9cb2339f10a0445f26ad7ddcc6058a4c359133f3",
+      "agent_matches": true,
+      "commit": "9cb2339f10a0445f26ad7ddcc6058a4c359133f3",
+      "hostname": "dns-ubuntu",
+      "ipv4": "192.0.2.12",
+      "schema_version": 43,
+      "version": "v0.1.0-alpha.82"
+    },
+    "status": 200,
+    "text": null
+  }
+}

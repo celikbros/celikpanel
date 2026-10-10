@@ -1,0 +1,1186 @@
+{
+  "agent_pid": 7396,
+  "agent_pid_at_collect": 7396,
+  "armed": {
+    "monotonic_ns": 1150819635434,
+    "realtime_ns": 1791560467721295563,
+    "utc": "2026-10-09T15:41:07Z"
+  },
+  "at": "2026-10-09T15:41:24Z",
+  "collected": {
+    "monotonic_ns": 1167773813859,
+    "realtime_ns": 1791560484675474349,
+    "utc": "2026-10-09T15:41:24Z"
+  },
+  "label": "r3",
+  "master_at_arm": {
+    "comm": "master\n",
+    "pid": 48985,
+    "pid_file": {
+      "path": "/var/spool/postfix/pid/master.pid",
+      "text": "                           48985\n"
+    },
+    "postconf": {
+      "argv": [
+        "postconf",
+        "-h",
+        "queue_directory"
+      ],
+      "returncode": 0,
+      "seconds": 1.81,
+      "stderr": "postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\n",
+      "stdout": "/var/spool/postfix\n"
+    }
+  },
+  "master_at_collect": {
+    "comm_error": "FileNotFoundError",
+    "pid": 48985,
+    "pid_file": {
+      "path": "/var/spool/postfix/pid/master.pid",
+      "text": "                           48985\n"
+    },
+    "postconf": {
+      "argv": [
+        "postconf",
+        "-h",
+        "queue_directory"
+      ],
+      "returncode": 0,
+      "seconds": 0.008,
+      "stderr": "postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\n",
+      "stdout": "/var/spool/postfix\n"
+    }
+  },
+  "mode": "diag-collect",
+  "owner_action": false,
+  "samples": {},
+  "schema": "celikpanel/set4b-native/v1",
+  "strace": {},
+  "trace": {
+    "buffer_notes": [
+      "# entries-in-buffer/entries-written: 1455/1455   #P:2"
+    ],
+    "events": [
+      {
+        "event": "exec",
+        "mono": 1153.31928,
+        "pid": 49392,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1153.324671,
+        "pid": 49392,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1153.32543,
+        "pid": 49393,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1153.332518,
+        "pid": 49393,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1153.333222,
+        "pid": 49394,
+        "program": "postconf",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1153.339312,
+        "pid": 49394,
+        "program": "postconf",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1153.340132,
+        "pid": 49395,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1153.34628,
+        "pid": 49395,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1153.347057,
+        "pid": 49396,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1153.352735,
+        "pid": 49396,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1153.636573,
+        "pid": 49450,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1153.642205,
+        "pid": 49450,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1153.64349,
+        "pid": 49451,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1153.648729,
+        "pid": 49451,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1153.649527,
+        "pid": 49452,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1153.65541,
+        "pid": 49452,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1153.656099,
+        "pid": 49453,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1153.660744,
+        "pid": 49453,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1153.661484,
+        "pid": 49454,
+        "program": "postfix",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1154.665299,
+        "pid": 49454,
+        "program": "postfix",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1155.008395,
+        "pid": 49508,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1155.014148,
+        "pid": 49508,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1155.01488,
+        "pid": 49509,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1155.026324,
+        "pid": 49514,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1155.033053,
+        "pid": 49514,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1155.033189,
+        "pid": 49509,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1155.052975,
+        "pid": 49515,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1155.061103,
+        "pid": 49520,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1155.068702,
+        "pid": 49520,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1155.069649,
+        "pid": 49515,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1155.088824,
+        "pid": 49521,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1155.097998,
+        "pid": 49526,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1155.106159,
+        "pid": 49527,
+        "program": "9",
+        "started_by": "systemd"
+      },
+      {
+        "event": "exit",
+        "mono": 1155.114949,
+        "pid": 49526,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1155.115643,
+        "pid": 49521,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1155.123916,
+        "pid": 49527,
+        "program": "postmulti",
+        "started_by": "systemd"
+      },
+      {
+        "event": "exec",
+        "mono": 1155.147816,
+        "pid": 49528,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1155.159337,
+        "pid": 49533,
+        "program": "postconf",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1155.167896,
+        "pid": 49533,
+        "program": "postconf",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1155.169225,
+        "pid": 49528,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1155.693512,
+        "pid": 49534,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1155.70746,
+        "pid": 49540,
+        "program": "postconf",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1155.716734,
+        "pid": 49540,
+        "program": "postconf",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1155.717111,
+        "pid": 49534,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1156.134196,
+        "pid": 49527,
+        "program": "postmulti",
+        "started_by": "systemd"
+      },
+      {
+        "event": "exit",
+        "mono": 1156.135372,
+        "pid": 49541,
+        "program": "(sd-close)",
+        "started_by": "systemd"
+      },
+      {
+        "event": "exit",
+        "mono": 1156.138307,
+        "pid": 48985,
+        "program": "master",
+        "started_by": "master"
+      },
+      {
+        "event": "exec",
+        "mono": 1156.238991,
+        "pid": 49542,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1156.246932,
+        "pid": 49547,
+        "program": "postconf",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1156.253139,
+        "pid": 49547,
+        "program": "postconf",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1156.253294,
+        "pid": 49542,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1156.279434,
+        "pid": 49548,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1156.286931,
+        "pid": 49553,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1156.292954,
+        "pid": 49553,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1156.293176,
+        "pid": 49548,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1156.312494,
+        "pid": 49554,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1156.320506,
+        "pid": 49559,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1156.326217,
+        "pid": 49559,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1156.32724,
+        "pid": 49554,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1156.345748,
+        "pid": 49560,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1156.353258,
+        "pid": 49565,
+        "program": "postfix",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.357751,
+        "pid": 49565,
+        "program": "postfix",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.359293,
+        "pid": 49560,
+        "program": "agent",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.412078,
+        "pid": 49566,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.417278,
+        "pid": 49566,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.417977,
+        "pid": 49567,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.419195,
+        "pid": 49567,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.419675,
+        "pid": 49568,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.420727,
+        "pid": 49568,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.42118,
+        "pid": 49569,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.422262,
+        "pid": 49569,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.422665,
+        "pid": 49570,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.424262,
+        "pid": 49570,
+        "program": "cron",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.424996,
+        "pid": 49571,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.43094,
+        "pid": 49571,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.431719,
+        "pid": 49572,
+        "program": "dovecot",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.433931,
+        "pid": 49572,
+        "program": "dovecot",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.434547,
+        "pid": 49573,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.440558,
+        "pid": 49573,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.441236,
+        "pid": 49574,
+        "program": "mariadbd",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.462353,
+        "pid": 49574,
+        "program": "mariadbd",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.462986,
+        "pid": 49575,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.469694,
+        "pid": 49575,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.470316,
+        "pid": 49576,
+        "program": "nginx",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.472255,
+        "pid": 49576,
+        "program": "nginx",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.472804,
+        "pid": 49577,
+        "program": "nginx",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.47459,
+        "pid": 49577,
+        "program": "nginx",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.475161,
+        "pid": 49578,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.481958,
+        "pid": 49578,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.482631,
+        "pid": 49579,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.489457,
+        "pid": 49579,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.490368,
+        "pid": 49580,
+        "program": "postconf",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.496178,
+        "pid": 49580,
+        "program": "postconf",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.496817,
+        "pid": 49581,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.502882,
+        "pid": 49581,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.503812,
+        "pid": 49582,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.509616,
+        "pid": 49582,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.510547,
+        "pid": 49583,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.516892,
+        "pid": 49583,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.517718,
+        "pid": 49584,
+        "program": "rspamd",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.529957,
+        "pid": 49584,
+        "program": "rspamd",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.530694,
+        "pid": 49585,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.536718,
+        "pid": 49585,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.538474,
+        "pid": 49586,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1157.54505,
+        "pid": 49586,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1157.54619,
+        "pid": 49587,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1158.328577,
+        "pid": 49587,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1158.329591,
+        "pid": 49588,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1158.335346,
+        "pid": 49588,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1158.335926,
+        "pid": 49589,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1158.341419,
+        "pid": 49589,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1158.341953,
+        "pid": 49590,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1158.348311,
+        "pid": 49590,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1158.348863,
+        "pid": 49591,
+        "program": "dpkg-query",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1158.356981,
+        "pid": 49591,
+        "program": "dpkg-query",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1158.357785,
+        "pid": 49592,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1158.363525,
+        "pid": 49592,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1158.364268,
+        "pid": 49593,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1158.370604,
+        "pid": 49593,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1158.371151,
+        "pid": 49594,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1158.377175,
+        "pid": 49594,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1158.377783,
+        "pid": 49595,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1158.383928,
+        "pid": 49595,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1158.385514,
+        "pid": 49596,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1158.390299,
+        "pid": 49596,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1158.390965,
+        "pid": 49597,
+        "program": "dpkg-query",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1158.399409,
+        "pid": 49597,
+        "program": "dpkg-query",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1158.401602,
+        "pid": 49598,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1158.406166,
+        "pid": 49598,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1158.406779,
+        "pid": 49599,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1159.122853,
+        "pid": 49599,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1159.123648,
+        "pid": 49600,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1159.129913,
+        "pid": 49600,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1159.132221,
+        "pid": 49601,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1159.137487,
+        "pid": 49601,
+        "program": "systemctl",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1159.13841,
+        "pid": 49602,
+        "program": "dpkg-query",
+        "started_by": "agent"
+      },
+      {
+        "event": "exit",
+        "mono": 1159.147367,
+        "pid": 49602,
+        "program": "dpkg-query",
+        "started_by": "agent"
+      },
+      {
+        "event": "exec",
+        "mono": 1159.466318,
+        "pid": 49656,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1159.471821,
+        "pid": 49656,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1159.472652,
+        "pid": 49657,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1159.477957,
+        "pid": 49657,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1159.478953,
+        "pid": 49658,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1159.484728,
+        "pid": 49658,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1159.485554,
+        "pid": 49659,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1159.490167,
+        "pid": 49659,
+        "program": "systemctl",
+        "started_by": "other"
+      },
+      {
+        "event": "exec",
+        "mono": 1159.492073,
+        "pid": 49660,
+        "program": "postfix",
+        "started_by": "other"
+      },
+      {
+        "event": "exit",
+        "mono": 1160.496373,
+        "pid": 49660,
+        "program": "postfix",
+        "started_by": "other"
+      }
+    ],
+    "events_total": 962
+  },
+  "units_at_arm": {
+    "postfix.service": {
+      "ActiveEnterTimestampMonotonic": "1147156202",
+      "ActiveExitTimestampMonotonic": "1130039903",
+      "ActiveState": "active",
+      "After": "basic.target systemd-journald.socket sysinit.target system.slice postfix@-.service",
+      "Before": "multi-user.target shutdown.target",
+      "ConsistsOf": "postfix@-.service",
+      "ControlPID": "0",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "GuessMainPID": "yes",
+      "InactiveEnterTimestampMonotonic": "1130039903",
+      "InactiveExitTimestampMonotonic": "1147151842",
+      "KillMode": "control-group",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "PartOf": "",
+      "Result": "success",
+      "StateChangeTimestampMonotonic": "1147156202",
+      "SubState": "exited",
+      "Type": "oneshot"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestampMonotonic": "1147140221",
+      "ActiveExitTimestampMonotonic": "1130046498",
+      "ActiveState": "active",
+      "After": "sysinit.target nss-lookup.target basic.target system-postfix.slice systemd-journald.socket network-online.target",
+      "Before": "shutdown.target postfix.service",
+      "ConsistsOf": "",
+      "ControlPID": "0",
+      "ExecStop": "{ path=/usr/sbin/postmulti ; argv[]=/usr/sbin/postmulti -i - -p stop ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "GuessMainPID": "no",
+      "InactiveEnterTimestampMonotonic": "1131062845",
+      "InactiveExitTimestampMonotonic": "1146499463",
+      "KillMode": "control-group",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "PartOf": "postfix.service",
+      "Result": "success",
+      "StateChangeTimestampMonotonic": "1147140221",
+      "SubState": "running",
+      "Type": "forking"
+    }
+  },
+  "units_at_collect": {
+    "postfix.service": {
+      "ActiveEnterTimestampMonotonic": "1147156202",
+      "ActiveExitTimestampMonotonic": "1155104866",
+      "ActiveState": "inactive",
+      "After": "basic.target systemd-journald.socket sysinit.target system.slice postfix@-.service",
+      "Before": "multi-user.target shutdown.target",
+      "ConsistsOf": "postfix@-.service",
+      "ControlPID": "0",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "GuessMainPID": "yes",
+      "InactiveEnterTimestampMonotonic": "1155104866",
+      "InactiveExitTimestampMonotonic": "1147151842",
+      "KillMode": "control-group",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "PartOf": "",
+      "Result": "success",
+      "StateChangeTimestampMonotonic": "1155104866",
+      "SubState": "dead",
+      "Type": "oneshot"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestampMonotonic": "1147140221",
+      "ActiveExitTimestampMonotonic": "1155113422",
+      "ActiveState": "failed",
+      "After": "sysinit.target nss-lookup.target basic.target system-postfix.slice systemd-journald.socket network-online.target",
+      "Before": "shutdown.target postfix.service",
+      "ConsistsOf": "",
+      "ControlPID": "0",
+      "ExecStop": "{ path=/usr/sbin/postmulti ; argv[]=/usr/sbin/postmulti -i - -p stop ; ignore_errors=no ; start_time=[Fri 2026-10-09 15:41:12 UTC] ; stop_time=[Fri 2026-10-09 15:41:13 UTC] ; pid=49527 ; code=exited ; status=1 }",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "GuessMainPID": "no",
+      "InactiveEnterTimestampMonotonic": "1156139539",
+      "InactiveExitTimestampMonotonic": "1146499463",
+      "KillMode": "control-group",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "PartOf": "postfix.service",
+      "Result": "exit-code",
+      "StateChangeTimestampMonotonic": "1156139539",
+      "SubState": "failed",
+      "Type": "forking"
+    }
+  }
+}

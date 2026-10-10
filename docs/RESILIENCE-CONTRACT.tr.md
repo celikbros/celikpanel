@@ -9,6 +9,36 @@ düzeltir; bu sözleşmeyi bütünüyle hayata geçirmez. Bu belge hiçbir kurul
 değiştirmez. Kurulu panel güncellemelerini kullanıcı CelikPanel içinden başlatmaya
 devam eder.
 
+> **Tarihler üzerine düzeltme notu (9 Ekim 2026'da kaydedildi).** Aşağıdaki başlıklar ve bazı
+> kod yorumları 2026-10-10, 2026-10-11 ve 2026-10-12 etiketlerini (ayrıca "10 Ekim 2026"
+> gibi yazımları) taşır. Bunlar takvim tarihi değildir. Metin 2026-10-08 ve 2026-10-09
+> günlerinde (yerel saat, UTC+3) işlendi; etiket saatten okunmadı, her iş turunda bir
+> artırıldı. Kayıtlar birbirine bu etiketlerle atıf yaptığı için ("2026-10-10 birleştirmesi")
+> etiketler olduğu gibi kalır. Her birini bir turun adı olarak okuyun:
+>
+> - 2026-10-10: ayar yazılarının ilk gerçek sistem ölçümü ve sonrasındaki iş (posta
+>   yenilemesi, hizmet eylemleri, istek kimliği). 2026-10-09, 00:45-05:57 arasında
+>   işlendi: `6746142ae`, `15818740a`, `874d12e43`, `faa5ef085`.
+> - 2026-10-11: ikinci gerçek sistem ölçümü ve düzeltmeleri. 2026-10-09, 08:05-09:12
+>   arasında işlendi: `76bef04b8`, `c523bbfd2`, `cfa329676`.
+> - 2026-10-12: son gerçek sistem turu. 2026-10-09, 09:12-13:06 arasında işlendi:
+>   `cfa329676`, `47a28dad0`, `dd1710256`, `557b554eb`.
+> - 2026-10-09 etiketi daha önce aynı biçimde kullanıldı: "Veritabanı ve posta
+>   yapılandırması: okunamayan dosya asla düzenleyici olmaz..." bölümü 2026-10-08'de
+>   işlendi (`545b26337`).
+>
+> `set1-20261010`, `set2-20261011` ve `set3-20261012` kanıt dizinlerinin adları aynı
+> etiketleri taşır. Gerçekte 2026-10-08 21:18-22:15 UTC, 2026-10-09 03:29-04:49 UTC ve
+> 2026-10-09 07:00-08:46 UTC aralıklarında çalıştılar. Sağlama toplamı listeleri mühürlü
+> olduğu için adları değişmez.
+>
+> Bu nottan sonra yazılan kayıtlar saat tarihini kullanır. 10, 11 veya 12 Ekim 2026
+> tarihli olup burada listelenmeyen bir bölüm gerçektir. Bu belgede tur etiketi taşıyan
+> bölümler: "Ayar yazılarının ilk gerçek sistem ölçümünden çıkan düzeltmeler", "Posta
+> sertifikası yenilemesi ve Hizmetler sayfası", "Durum değiştiren istek tek bir kimlik
+> taşır", "İkinci gerçek sistem ölçümünden çıkan düzeltmeler", "Son gerçek sistem turunun
+> düzeltmeleri".
+
 ## Bulgu
 
 Root yetkisi olmayan panel ile root yetkili agent arasındaki yetki ayrımı yararlılığını koruyor.
@@ -1587,3 +1617,2123 @@ kusuru yok.
   Ubuntu'da gerçek başlatma; güvenli posta sertifikaları; imzalı alpha.80
   arşivi; üretim imzalaması, gerçek sürüm kaynağı, lisans hizmeti, DNS,
   yenilemenin kendisi, bir tarayıcı, güç kaybı; panel kaldırma.
+
+### Açık sayfayı yalnızca bilinen olumsuz erişim sonucu değiştirir (P0.2, 2026-10-08)
+
+D-025 ilkeleri 2, 3 ve 6; D-024. P0.2 kısmi kalır, hiçbir kabul işi kapanmaz.
+Kaynak durumu, bileşen testleriyle; 8 Ekim 2026'da tek bir gerçek tarayıcıda,
+yerel bir taklit sunucuya karşı incelendi ve düzeltildi (aşağıdaki "Tarayıcı
+incelemesinden sonra düzeltilenler"); gerçek
+sistem koşusu yok, kurulu panele dokunulmadı, lisans hizmetine bağlanılmadı.
+
+**Bildirilen.** v0.1.0-alpha.81 çalışan kurulu bir sunucunun sahibi: bir sayfadan
+bir süre ayrılınca ekranın tamamı "Lisans durumu kontrol edilemedi" oldu, eylem
+"Panel erişimini kontrol et" idi; dönünce panel geri geldi, ama bırakıldığı
+yerde değildi. Açık pencere, yazılanlar ve seçili sekme gitmişti. Aynı ekran,
+günler önce bitmiş bir güncelleme için "Güncelleme ve kurtarma durumu:
+Güncelleme doğrulandı" gösteriyordu. Lisans baştan sona geçerliydi.
+
+**Mekanizma (`0f9e1067` kaynağından okundu, o sunucuda gözlenmedi).** Sunucunun
+erişim kararı en çok 60 sn geçerlidir (`internal/licensing/license.go:28,197`,
+`cmd/panel/license.go:225`). `web/src/components/LicenseOnboarding.tsx` içinde
+hem 60 sn'lik aralık (`:55`) hem de süre dolmadan 15 sn önceki yenileme
+(`:81-83`) gizli sekmeyi atlıyordu; süre zamanlayıcısı (`:84-88`) ardından
+`allowed: null, failed: true` yazıyor, `:115` uygulamanın yerine tam kurtarma
+sayfasını döndürüyor ve bütün sayfalar kaldırılıyordu. Odak (`:56,65`) yeniden
+okuyor ve uygulama sıfırdan kuruluyordu. Okumaları süre dolduktan sonra yavaş
+kalan ya da başarısız olan görünür bir sekme de aynı yola giriyordu.
+`web/src/App.tsx` içindeki ilgili yollar: `PANEL_STARTING` ya da
+`AUTH_STATUS_UNAVAILABLE` taşıyan her API yanıtı açık uygulamanın yerini
+alıyordu (`:492-501`, `:509-513`); girişten sonraki ya da yüklemedeki hazır olma
+okuması henüz sürerken "Panelin hazır olma durumu kontrol edilemedi" olarak
+çiziliyordu (`:509-513`, `RecoveryAccess.tsx:106-107`); 401, giriş formunu
+nedensiz gösteriyordu (`:486-491`, `:508`); `main.tsx:19-27`, arayüzün bir
+parçası yüklenemediğinde tek söz etmeden yeniden yüklüyordu. Kurtarma sayfası,
+kayıtlı güncelleme kaydını sonucu ne olursa olsun her yöneticiye çiziyordu.
+
+**Değişen (yalnızca tarayıcı).** Bir kapı ekranı yalnızca BİLİNEN olumsuz sonuçta
+değiştirir: eksik, süresi dolmuş ya da geçersiz olduğu bildirilen lisans,
+doğrulanmış 401 ya da çıkış. Bilinmeyen ya da yalnızca henüz yenilenmemiş durum
+açık sayfaları yerinde bırakır.
+
+- `AccessHold` (yeni), erişim doğrulanmamışken sayfaları bağlı tutar ve
+  erişilmez yapar: alt ağaç `inert` olur ve yardımcı teknolojiden gizlenir, ona
+  yönelen olaylar yakalama aşamasında durdurulur, içine düşen odak dışarı
+  alınır. Sunucu erişimi doğrulayana kadar içindeki hiçbir şey kullanılamaz;
+  sunucu, güncel karar olmadan yönetim isteklerini eskisi gibi kendisi reddeder.
+  Bırakıldığında odak, bulunduğu alana döner.
+- 1,5 sn içinde yanıtlanan okuma hiçbir şey çizmez. Daha yavaş olan, erişimin
+  kontrol edildiğini söyleyen kipli bir katman çizer. Erişimi doğrulamadan
+  yanıtlanan okuma nedeni, kimsenin işlem yapması gerekmediğini ve sayfanın
+  kaldığı yerden devam edeceğini çizer. Katman, kapatma yolu olmayan ortak
+  diyalogdur; etkisiz alt ağacın dışında ve işlem katmanının üstündedir.
+- Gizli sekme: süre dolduğunda karar kullanılmaz olur; bu başarısız okuma olarak
+  kaydedilmez ve hiçbir şey okunmaz. Dönüş (görünürlük ya da odak) süreyi saate
+  göre uygular; böylece geciktirilmiş bir zamanlayıcı süresi dolmuş kararı
+  kullanımda bırakamaz. Dönüş tek bir okuma başlatır.
+- Bilinmeyen durumda lisans yanıtı görünür sekmede 5 sn'de bir okunur (önce: 60
+  sn'de bir ve odakta); oturum ve hazır olma 10 sn'de bir, artık okunamayan
+  oturum için de (önce: yalnızca odakta). 30 sn sonra katman, bedeliyle birlikte
+  "CelikPanel’i yeniden yükle" eylemini ekler.
+- Açık bir sayfanın isteğinden gelen `PANEL_STARTING` ve
+  `AUTH_STATUS_UNAVAILABLE` aynı bekletmeyi kullanır. Oturum durumunu yalnızca
+  ilk bildirim değiştirir ve tek bir okuma başlatır; reddedilmeyi sürdüren
+  sayfalar onu yeniden başlatamaz. Yinelenen lisans retleri için de aynısı
+  geçerlidir.
+- İlk yükleme ve giriş: süren oturum ve hazır olma okumaları "kontrol ediliyor"
+  durumudur. "Kontrol edilemedi" için başarısız olmuş ya da zaman aşımına
+  uğramış bir okuma gerekir. Tam kurtarma sayfası, henüz hiçbir şeyin bağlı
+  olmadığı yükleme için kalır.
+- Kayıtlı güncelleme kaydı, erişim ya da hazır olma kapısında yalnızca süren,
+  başarısız olan, başarısızlıktan sonra geri alınan ya da sonucu okunamayan
+  işlem için çizilir. Doğrulanmış güncelleme ya da kayıtlı işlem yokluğu hiçbir
+  şey çizmez ve okunmaz. Yüklenemeyen arayüzün sayfası tam okuyucuyu korur.
+- Açık sayfanın altında doğrulanan 401, giriş formunu nedeniyle gösterir. Adres
+  korunur; giriş yapmak aynı sayfayı açar.
+- Güncellemeden sonra yüklenemeyen arayüz parçası: neden gösterilir, sonra sayfa
+  yeniden yüklenir; eskisi gibi 30 sn'de bir kez (önce 4 sn boyunca tek satır;
+  tarayıcı incelemesinden beri 7 sn boyunca ortak pencere, aşağıya bakın). Hiçbir
+  şey çizilmeden önce eskisi gibi hemen yeniden yüklenir.
+
+**Değişmeyen.** Sunucu tarafındaki karar, 60 sn'lik geçerliliği, sunucunun karar
+olmadan reddettikleri ve bilinen olumsuz sonucun ekranda yaptığı (etkinleştirme
+sayfası, `/activate` yönlendirmesi, kiracı iletisi). Karar süresinden sonra
+kullanılmaz ve uzatılmaz. Güncelleme izleyicisi, bekletme açıklanırken tam
+olarak kurtarma sayfası gösterilirken olduğu gibi duraklatılır.
+
+**Katmanın altındaki istekler duraklatılmaz.** Sunucu, güncel kararı yokken her
+yönetim isteğini reddeder; bu yüzden katmanın altındaki bir sorgu hiçbir şeyi
+değiştiremez. İstekleri tarayıcıda bekletmek, sunucuyla eşgüdümlü tutulan muaf
+kurtarma ve güncelleme yolları listesi gerektirirdi; bekletilen istek de daha
+sonra, kimsenin seçmediği bir anda çalışırdı. Sorgu yapan altı ekran için
+kaynaktan okunan: pano değerleri ve uygulama durumu reddedilen sorguyu yok
+sayar; panodaki ve bileşenler sayfasındaki sunucu değişikliği hazırlığı bir
+sonraki okumaya kadar "doğrulanmadı" olur; izleme, grafiğini bir sonraki okumaya
+kadar boşaltır; otomatik yenilemesi açık alan adı günlük görüntüleyicisi,
+reddedilen her sorguda genel hata bildirimini katmanın arkasında gösterir;
+kurulum kendi yeniden bağlanma yönlendirmesini gösterir. Hiçbiri yazılanı silmez.
+
+**Şema veya sürüm geçişi.** Yok. Sunucu kodu, API alanı, saklanan kayıt ya da
+tarayıcı depolama biçimi değişmez. Ekran kataloğuna on bir metin eklenir (EN ve
+TR); `recovery.startingHelp` metninden bir cümle çıkarılır. Önceki arayüzü
+çalıştıran sekme, yeniden yüklenene kadar önceki davranışı sürdürür.
+
+**Kurtarma davranışı.** Erişim yeniden doğrulandı: bekletme biter, aynı sayfa
+devam eder. Bekletme sırasında bilinen olumsuz sonuç: sayfalar kaldırılır ve
+mevcut kapı gösterilir. Oturum sona erdi: nedeniyle giriş formu, aynı adres,
+yazılanlar olmadan. Hâlâ bilinmiyor: katman kalır, okumalar sürer; sahip kontrol
+edebilir ya da belirtilen bedelle yeniden yükleyebilir. Metin parçası gelmemişse
+katman yine engeller ve yalnızca erişimin kontrol edildiğini söyler.
+
+**Kanıt.** Yalnızca bileşen testleri: `web/tests/access-hold-runtime.test.mjs`
+(yeni) ile `license-onboarding-runtime`, `recovery-access-runtime` ve
+`panel-handover` içindeki güncellenen durumlar. Kapsanan: gizli sekmede süresi
+dolan karar (sayfa kaldırılmaz, gizliyken okuma yok, dönüşte tek okuma, hiçbir
+şey çizilmez), geciktirilmiş zamanlayıcı, yazılanı, seçili sekmeyi ve açık
+pencereyi koruyan sayfanın üzerinde açıklanan bekletme, durdurulan olaylar ve
+odak, bekletmeden her bilinen olumsuz sonuç, ilk yüklemede ve girişten sonra
+kontrol durumu, gerçek fetch yakalaması üzerinden reddedilen arka plan
+istekleri, kapıda bitmiş güncelleme, adresi değişmeyen sona ermiş oturum ve
+yeniden yükleme satırı. 576 web testi geçer. Üretim derlemesi: kritik açılış
+302,29 KiB ham / 93,46 KiB gzip (sınırlar 361 / 110), Ayarlar sayfası 272,99 /
+79,77 KiB (sınırlar 280 / 80); hiçbir sınır yükseltilmedi. Tasarım denetleyicisi
+değişen dosyalarda bulgu bildirmiyor.
+
+**Tarayıcı incelemesinden sonra düzeltilenler (8 Ekim 2026).** İlkeler 2, 3 ve 6;
+D-024. P0.2 kısmi kalır ve hiçbir kabul işi kapanmaz. `8a65d4ca` üzerinde,
+gerçek bir tarayıcıda ve yerel bir taklit sunucuya karşı yapılan ilk geçiş,
+bileşen testlerinin göstermediği kusurları gösterdi; bunlar aynı değişiklikte
+düzeltildi ve geçiş yinelendi. Neyin kapsandığı ve kapsanmadığı
+[işlem yönlendirmesinde](OPERATION-GUIDANCE.tr.md#erişim-ve-hazır-olma-kontrolleri-sayfayı-korur-açıklanan-bekletme-kontrol-durumu-sona-eren-oturum-2026-10-08)
+kayıtlıdır.
+
+- Katman, bileşen işlemi katmanının ve güncelleme kilidinin üstünde çizilir
+  (100 ve 110'un üstünde 120) ve klavye odağını ikisine karşı da tutar. Önce
+  güncelleme kilidi (110) katmanın (105) üstündeydi. Bekletme başladığında
+  güncelleme kilidi yine bırakılır; çünkü izleyici duraklar.
+- Katman ya da yeniden yükleme penceresi çizilirken sayfadaki tek karartma odur:
+  altındaki her karartma kaldırılır (`web/src/index.css`, `:has()`). Üst üste
+  iki karartma, katmanın korunduğunu söylediği sayfayı okunmaz kılıyordu.
+  `:has()` desteklemeyen tarayıcı eskisi gibi iki karartmayı da çizer.
+- Katmanın başlığı, odak halkası çizmeden programla odak alır; "kontrol
+  ediliyor" katmanında boş gövde yoktur; güvenli adres bir adres gibi bölünür.
+- Etkinleştirme sayfası kayıtlı güncelleme kaydını, diğer kapılar gibi yalnızca
+  bitmemiş bir işlem için çizer. Lisans kararının yanında "Bu tarayıcıda kayıtlı
+  güncelleme işlem kimliği yok…" gösteriyordu.
+- Yüklenemeyen parçadan sonraki yeniden yükleme, her şeyin üstündeki ortak
+  penceredir: neden, kaydedilmemiş girdinin kaybolacağı ve yeniden yüklemeyi öne
+  almak için "CelikPanel’i yeniden yükle". 7 sn sonra kendiliğinden yeniden
+  yüklenir. Altındaki sayfa örtülür.
+- Erişim yolunun kendi verdiği kodlu ret artık ret olayını başlatmaz; erişim
+  bilinmezken reddedilen bir istek en çok 5 sn'lik yeniden kontrol sıklığında
+  okuma başlatır. Erişim yolu 200 ve tipli bir gövdeyle yanıt veren bugünkü
+  sunucuyla ulaşılamaz; 28,7 sn'de 10.581 okuma üreten yapay bir 503 ile bulundu.
+- Bekletme metni artık bir aralık söylemez ("birkaç saniyede bir"); ilk yükleme
+  sayfaları kendiliğinden yeniden okuduklarını söyler.
+
+Şema veya sürüm geçişi: yok. Sunucu kodu, API alanı, saklanan kayıt ya da
+tarayıcı depolama biçimi değişmez; ekran kataloğuna bir metin eklenir ve beş
+metin değişir (EN ve TR). Kurtarma davranışı yukarıdaki gibidir; tek fark,
+yüklenemeyen parçadan sonraki yeniden yüklemenin artık öne alınabilmesidir.
+Kanıt: güncellenen `access-hold-runtime`, `recovery-access-runtime`,
+`dialog-shape-contract` ve `boot-copy-contract` testleri ile yeni `address-link`
+testi; 616 web testi geçer. Üretim derlemesi: kritik açılış
+303,73 KiB ham / 93,97 KiB gzip (sınırlar 361 / 110), Ayarlar sayfası
+272,99 / 79,76 KiB (sınırlar 280 / 80); hiçbir sınır yükseltilmedi. Tasarım
+denetleyicisi değişen dosyalarda bulgu bildirmiyor. Tarayıcı geçişi, taklit
+sunucuya karşı tek bir Chrome'dur: gerçek sistem koşusu değildir ve hiçbir şeyi
+kapatmaz.
+
+**Açık.**
+
+- Yalnızca tek bir Chrome'da, taklit sunucuya karşı görüldü (8 Ekim 2026): gizli
+  sekmede zamanlayıcı geciktirmesi, görünürlük ve odak olaylarının sırası,
+  `display: contents` öğesinde `inert`, odak döndükten sonra imleç, işlem
+  katmanına ve güncelleme kilidine göre katman sırası, masaüstü ve telefon
+  genişliğinde EN ve TR. Doğrulanmadı: ekran okuyucu duyurusu, başka herhangi
+  bir tarayıcı, gerçek sunucu.
+- Her sayfanın, katmanın altında kendi isteği reddedildiğinde ne yaptığı yalnızca
+  sorgu yapan altı ekran için okundu; sayfa sayfa incelenmedi ve gözlenmedi.
+  Günlük görüntüleyicisinin yinelenen hata bildirimi ve boşalan izleme grafiği
+  olduğu gibi bırakıldı. Yanıtı kaybolan işlem, eskisi gibi kendi sözleşmesiyle
+  uzlaştırılır.
+- Gönderilmemiş girdi gerçek bir yeniden girişte korunmaz.
+- Her sekme kendi başına bekletir; sekmeler arasında hiçbir şey paylaşılmaz.
+- Sahibin sunucusunda neden saptanmadı; mekanizma koddan okundu.
+
+### Başarısız bir okuma artık üç ayar ekranının sahibin durumunu ezmesine yol açmaz (ilkeler 1-4 ve 6, 2026-10-08)
+
+D-025 ilkeleri 1 (sahibin değişikliklerini algıla; onları tercih edilen bir
+yapılandırmayla asla değiştirme), 2 (bilinmeyen, yok demek değildir), 3 (güvensiz
+yazıyı kendi sınırında durdur), 4 (bir değişiklik önce ön görüntüsünü okur) ve 6
+(ekran varsayılanı değil, yetkili durumu gösterir); D-022, D-024. Hiçbir P0 işi
+kapanmadı ya da ilerlemedi. `v0.1.0-alpha.81` kaynağının salt okunur
+doğrulamasında bulundu; kurulu bir sunucuda gözlenmedi.
+
+- **alpha.81'de doğrulanan.** Bunun dışında sağlıklı bir sunucuda tek bir
+  başarısız okuma üç yerde yeterliydi.
+  - *Sunucu posta politikası.* Başarısız bir `GET /mail/policy`, formu 25 MB,
+    DNSBL kapalı ve hız sınırı yok hâlinde, Kaydet etkin olarak bırakıyordu.
+    Kaydet, `smtpd_recipient_restrictions` değerini üç sabit girdi ve bölgelerle
+    yeniden yazıyor, `message_size_limit` ile `smtpd_client_message_rate_limit`
+    değerlerini ayarlıyor ve Postfix'i yeniden yüklüyordu. Agent ayrıca başarısız
+    bir `postconf` okumasını başarıyla birlikte sıfır olarak yanıtlıyordu ve her
+    kayıt, iyi bir okumadan sonra bile, sahibin eklediği kısıtları düşürüyordu;
+    çünkü okuma onları hiç döndürmüyordu.
+  - *Otomatik yedek zamanlaması.* Başarısız bir zamanlama okuması "kapalı /
+    günlük / dosyalar / 7" formunu düzenlenebilir bırakıyordu. Aç, bunu gerçek
+    zamanlamanın üstüne yazıyordu: tam yedek yalnız dosya yedeğine dönüyor ve
+    sonraki çalışma 7'yi aşan zamanlanmış kopyaları buduyordu.
+  - *Zamanlanmış görevler.* `crontab -l` komutunun herhangi bir nedenle başarısız
+    olması boş crontab diye okunuyordu. Liste "Zamanlanmış görev yok" diyor ve
+    eklenen tek görev bütün crontab'ın yerine geçiyordu.
+- **Değişen.**
+  - *Bilinmeyen bir hatadır.* Posta politikası okuması, crontab okuması ve cron
+    listesi, geçerli durum okunamadığında hata yanıtlar; onun yerine sıfır,
+    varsayılan ya da boş liste konmaz. `crontab -l` yalnız çıkış durumu 1, çıktı
+    yok ve standart hatada tam olarak `no crontab for <kullanıcı>` olduğunda
+    (komut `LC_ALL=C` ile çalışır) "crontab yok" sayılır; diğer her başarısızlık
+    bilinmeyendir. Bir `postconf` değeri, yalnız komut başarılı olup bir değer
+    satırı yazdığında bilinir.
+  - *Sürümlü yazılar.* Her okuma yerel durumun bir sürümünü döndürür: dört
+    Postfix değerinin (`message_size_limit`, `smtpd_recipient_restrictions`,
+    `smtpd_client_message_rate_limit`, `anvil_rate_time_unit`), crontab
+    baytlarının ya da zamanlama ayarlarının özeti (çalışma durumu dışarıda kalır;
+    böylece bir arka plan çalışması bir kaydı eskitmez). Her yazı onu taşımak
+    zorundadır. Sürüm yoksa: `409 SETTINGS_VERSION_REQUIRED`. Geçerli durum
+    farklıysa: `409 SETTINGS_CHANGED`. Ön görüntü okunamıyorsa:
+    `502 CURRENT_SETTINGS_UNREADABLE`. Üçünde de hiçbir şey yazılmaz. Posta ve
+    cron için kararı Agent, kaynak başına tek kilit altında verir (Panel de eksik
+    sürümü Agent'ı çağırmadan reddeder); zamanlama yazısı, satır hâlâ okunan
+    ayarları tutuyorsa geçerli olan tek bir deyimdir.
+  - *Alıcı kısıtları korunur.* Yazıcı listeyi artık baştan kurmaz. Postfix
+    listeyi virgül ve boşlukta aynı biçimde böler ve bir argümanı sonraki öge
+    olarak okur; bu yüzden her ögeyi sırasıyla korumak sahibin anlamını korur.
+    Panel yalnız `reject_rbl_client <düz bölge>` girdilerini çıkarır ya da ekler
+    (var olanların yanına, yoksa sona), sahibin ayraç biçimini korur ve istenen
+    bölgeler zaten oradaysa hiçbir şey yazmaz. Boş bir değer yine `permit_mynetworks,
+    permit_sasl_authenticated, reject_unauth_destination` tabanını alır. Yanıt
+    süzgeçli ya da `warn_if_reject` arkasındaki bir DNSBL girdisi sahibindir ve
+    ona dokunulmaz.
+  - *Tahmin yerine ret.* Değer başka bir ayara başvuruyorsa (`variable`),
+    kapanmamış bir süslü ayraç ya da bölgesiz bir `reject_rbl_client` içeriyorsa
+    (`malformed`), iki permit girdisini birden içermeyen elle yazılmış bir
+    listeyse (`no_baseline`) ya da `permit`, `reject` veya `defer` ile bitiyor ve
+    yenisinin yanına konacağı bir DNSBL girdisi taşımıyorsa (`terminal`), DNSBL
+    değişikliği `409 MAIL_POLICY_RESTRICTIONS_UNMANAGED` ile reddedilir. İleti
+    boyutu ve hız yine kaydedilir. Okuma aynı gerekçeyi bildirir ve ekran o
+    durumda DNSBL denetimi sunmaz.
+  - *Yalnız değişen yazılır*, tek bir `postconf -e` ile; Postfix de yalnız o
+    zaman yeniden yüklenir. 9 MB olarak gösterilen 10240000 baytlık bir sınır,
+    ona dokunmayan bir kayıtla yuvarlanmaz. Panel'in aralığı dışındaki bir değer
+    25 MB ile değiştirilmek yerine `400 MAIL_POLICY_INVALID` ile reddedilir; düz
+    alan adı olmayan bir bölge de sessizce düşürülmek yerine reddedilir.
+  - *Yinelenen cron görevleri.* Aynı zamanlama ve komutun yeniden eklenmesi
+    `409 CRON_JOB_DUPLICATE` ile reddedilir (devre dışı bir kopya da sayılır; iki
+    satır tek kimliği paylaşırdı). Yazılan crontab her zaman satır sonuyla biter.
+  - *Ekranlar.* Üç ekran `loading | known | unknown` durumunu tutar. Yüklenirken
+    bir okuma satırı, bilinmeyende Tekrar dene ile "yüklenemedi" gösterilir;
+    ikisinde de form, "kapalı" durumu ya da boş liste gösterilmez. Eskimiş bir
+    kayıt yazılanı korur, Kaydet'i devre dışı bırakır ve yeniden yüklemeyi sunar.
+- **Şema veya sürüm geçişi.** Kalıcı şema ve geçiş yok: `main.cf`, crontab'lar ve
+  `backup_schedules` biçimlerini korur. Eklemeli iletişim alanları: posta
+  politikasında `version` ve `dnsbl_locked`, cron listesinde ve üç cron isteğinde
+  `version`, Agent'ın posta politikası yanıtında `code` ve `reason`, zamanlama
+  okuma ve yazma yanıtlarında `version`. **Artık zorunlu:**
+  `PUT /api/v1/mail/policy`, `PUT …/backups/schedule`, `POST` ve `PUT …/cron`
+  gövdesinde, `DELETE …/backups/schedule` ve `DELETE …/cron` isteklerinde sorgu
+  değeri olarak `version`. Yeni ret kodları: `CURRENT_SETTINGS_UNREADABLE`,
+  `SETTINGS_VERSION_REQUIRED`, `SETTINGS_CHANGED`, `CRON_JOB_DUPLICATE`,
+  `MAIL_POLICY_RESTRICTIONS_UNMANAGED`, `MAIL_POLICY_INVALID`. Farklı sürümlerdeki
+  Panel ve Agent bu üçünü yazamaz: yeni Panel, eski Agent'ın sürümsüz listesini
+  reddeder; yeni Agent de eski Panel'i reddeder.
+- **Kurtarma davranışı.** Her ret herhangi bir yazıdan önce gelir; telafi edilecek
+  bir şey yoktur. Sahip sayfayı yeniden yükler ve geçerli duruma göre yeniden
+  karar verir; hiçbir okuma bir yazıya dönüşecek biçimde yeniden denenmez.
+  Reddedilen bir DNSBL değişikliği için sahip `/etc/postfix/main.cf` içindeki
+  `smtpd_recipient_restrictions` değerini düzenler ve Postfix'i yeniden yükler.
+  Postfix, cron ve zamanlanmış yedekler Panel olmadan eskisi gibi çalışmayı
+  sürdürür.
+- **Kanıt.** Yalnız bileşen testleri; gerçek sistem denemesi yok. Agent:
+  `TestPlanRecipientRestrictionsPreservesWhatThePanelDoesNotManage`,
+  `TestPlanRecipientRestrictionsRefusesWhatItCannotPlaceWithCertainty`,
+  `TestGetMailPolicyReportsAFailedReadAsAnErrorNotAsZeros`,
+  `TestSetMailPolicyRefusesWithoutACurrentVersion`,
+  `TestSetMailPolicyWritesOnlyTheValuesThatChanged`,
+  `TestSetMailPolicyKeepsOwnerAddedRestrictions`,
+  `TestSetMailPolicyRefusesToRewriteRestrictionsItCannotPlace`,
+  `TestSetMailPolicyRefusesInvalidValuesInsteadOfSubstitutingDefaults`,
+  `TestReadCrontabTellsNoCrontabFromAFailedRead`,
+  `TestListCronJobsReportsAFailedReadAsAnError`,
+  `TestCronChangesNeverInstallACrontabBuiltFromAFailedRead`,
+  `TestCronChangesRequireTheVersionOfTheCrontabTheyWereBuiltFrom`,
+  `TestAddCronJobRefusesAnExactDuplicate`. Panel:
+  `TestCronChangesWithoutAVersionAreRefusedBeforeTheAgent`,
+  `TestCronHandlersAnswerCrontabProtectionRefusals`,
+  `TestMailPolicyGetReportsAnUnreadablePolicyAndCarriesTheVersion`,
+  `TestMailPolicyPutWithoutAVersionIsRefusedBeforeTheAgent`,
+  `TestMailPolicyPutAnswersEachAgentRefusalWithItsTypedGuidance`,
+  `TestBackupSchedulePutFromAFormThatNeverLoadedIsRefused`,
+  `TestBackupScheduleWritesNeedTheVersionOfTheScheduleTheyReplace`. Web:
+  `web/tests/current-settings-runtime.test.mjs`. Bir Debian geliştirme konuğunda
+  salt okunur gözlem (Postfix 3.10): crontab'ı olmayan kullanıcı için
+  `crontab -u <kullanıcı> -l`, çıkış durumu 1 ile ve çıktı vermeden
+  `no crontab for <kullanıcı>` yazar; `postconf -h` her değer için bir satır,
+  boş değer için boş bir satır yazar ve çok satırlı bir değeri tek satıra katlar.
+
+Açık: gerçek bir sunucuda hiçbir şey koşulmadı. cronie'nin Arch'taki "crontab
+yok" yanıtı kaynağından alındı, gözlenmedi; bunu farklı sözcüklerle söyleyen
+başka bir cron uygulaması artık boş değil bilinmeyen olarak okunur. Posta
+politikası yazısından sonra başarısız olan bir Postfix yeniden yüklemesi günlüğe
+yazılır, bildirilmez. Agent'ın sürüm denetimi ile yazısı arasındaki bir sahip
+düzenlemesi dışlanmış değildir (Panel'in kendi istekleri dışlanmıştır). Elle
+yazılmış bir kısıt listesi, sahip onu değiştirene dek DNSBL'i Panel'in dışında
+tutar. Yedek zamanlaması okuması Panel'in kendi veritabanıdır; tek bilinmeyen
+durumu başarısız bir sorgudur. Bunun yanında bulunan ve değiştirilmeyen: devre
+dışı bir zamanlanmış görev etkinleştirilemez, düzenlenemez ya da silinemez
+(yazıcılar yorum satırlarını atlar); bir görevi silmek, üstündeki satırda duran
+yorumu ya da devre dışı görevi de kaldırır; posta kuyruğu listesi başarısız bir
+okumadan sonra "kuyruk boş" gösterir. Uygulama geneli `loading | known | unknown`
+katmanı sonraki bir iştir; diğer ekranlar incelenmedi.
+
+### Veritabanı ve posta yapılandırması: okunamayan dosya asla düzenleyici olmaz, kayıt neyin yerine geçtiğini söyler (ilkeler 1-4 ve 6, 2026-10-09)
+
+D-025 ilkeleri 1 (sahibin yerel yapılandırması saptanır, yerine başkası konmaz),
+2 (bilinmeyen; yok ya da boş değildir), 3 (güvensiz yazı kendi sınırında
+durdurulur), 4 (bir değişiklik ön görüntüsünü okur, doğrular, yerine geçtiğini
+saklar ve sınanmış bir tersi vardır) ve 6 (ekran yetkili durumu çizer); D-022,
+D-024. Hiçbir P0 işi kapanmadı ya da ilerlemedi. `v0.1.0-alpha.81` kaynağının
+salt-okur doğrulamasıyla bulundu; kurulu bir sunucuda gözlenmedi.
+
+- **alpha.81'de doğrulanan.**
+  - *PostgreSQL ve MariaDB yapılandırma düzenleyicileri çalışmıyordu ve dosyayı
+    yok etmeye tek bir onarım uzaklığındaydı.* `saveConfig` dosyayı `text/plain`
+    olarak gönderiyordu; `POST /api/v1/config` JSON okur, bu yüzden her Kaydet
+    400 yanıtı alıyordu. Bu tesadüfün arkasında: başarısız bir okumadan sonra üç
+    düzenleyici Kaydet açıkken hiç ayar (ya da "No access rules") gösteriyordu ve
+    erişim kuralı düzenleyicisi `pg_hba.conf` dosyasını her zaman yorumları
+    olmadan baştan yazıyordu. Tek bir başarısız okumadan sonra onarılmış bir
+    Kaydet, yalnız yorumdan oluşan bir `pg_hba.conf` (PostgreSQL o zaman Panel'in
+    kendi bağlantısı dahil her bağlantıyı reddeder) ya da boş bir
+    `postgresql.conf` ya da seçenek dosyası yazardı. Agent'ın bu yollar için hiç
+    denetimi yoktu: doğrulayıcı yok, boş içerik reddi yok, okunan dosyayla
+    karşılaştırma yok; üstelik dosyanın sahibini ve kipini değiştirirdi. Ayar
+    düzenleyicileri ayrıca ayrıştırabildikleri her satırı, yorum satırı hâlindeki
+    bütün varsayılanlar dahil, yeniden yazıyor ve aynı adlı iki satıra tek değer
+    veriyordu.
+  - *Kurulu bir sunucuda "postgresql.conf bulunamadı"*: bileşen taraması sürdüğü
+    sürece, tarama başarısız olunca da kalıcı olarak.
+  - *Catch-all alanına adres okunmadan yazılabiliyordu* ve yazılan, görülmemiş
+    adresin yerine upsert ile geçiyordu; başarısız bir okumadan sonra "Kapat"
+    gizleniyordu.
+  - *Başarısız bir okuma üç yerde daha olgu diye gösteriliyordu:* tek söz
+    etmeyen boş bir posta kutusu listesi, "Web posta bu sunucuda kullanılamıyor",
+    "Mail kuyruğu boş". Agent'ın kendisi `postqueue -j` komutunun her hatasını
+    "kurulu değil, ileti yok" diye yanıtlıyordu ve bir kuyruk işlemi, sunucu ne
+    yanıt verirse versin yapıldı diye duyuruluyordu.
+  - *Zamanlanmış görevler.* Panel'in devre dışı bıraktığı bir görev
+    etkinleştirilemiyor, değiştirilemiyor ya da silinemiyordu: yazıcılar `#` ile
+    başlayan her satırı atlıyordu. Bir görevi silmek, üstündeki satır `#` ile
+    başlıyorsa onu da (sahibin başlığını ya da devre dışı bir görevi) ve
+    crontab'ın bütün boş satırlarını kaldırıyordu. Görev kimliği, `…/Aa.sh` ile
+    `…/BB.sh` için aynı çıkan 32 bitlik bir dize toplamıydı.
+  - *Politika yazıldıktan sonra başarısız olan bir Postfix yeniden yüklemesi*
+    günlüğe yazılıyor ve başarılı bir kayıt diye yanıtlanıyordu.
+- **Değişen.**
+  - *Bilinmeyen bir hatadır.* `GET /api/v1/config`, dosyanın metnini okunan
+    baytların sürümüyle ya da `502 CURRENT_SETTINGS_UNREADABLE` ile yanıtlar; boş
+    bir dosya sürümü olan bilinen bir yanıttır, okunamayan dosya asla öyle
+    değildir. Posta kuyruğu okuması, `postqueue -j` başarısız olduğunda, kuyruk
+    girdisi olmayan bir satır yazdığında ya da sonuna dek okunamadığında `502
+    MAIL_QUEUE_UNREADABLE` yanıtı verir; "Postfix bu sunucuda yok" bilinen bir
+    yanıt olarak kalır.
+  - *Sürümlü yazılar.* `POST /api/v1/config` `version` taşımak zorundadır.
+    Herhangi bir şey yazılmadan önce Agent dosyayı sahibi ve kipiyle okur
+    (okunamazsa hiçbir şey yazılmaz), sürümü karşılaştırır (`409
+    SETTINGS_VERSION_REQUIRED`, `409 SETTINGS_CHANGED`), boş içeriği, NUL baytını
+    ve 1 MiB'tan fazlasını reddeder (`422 CONFIG_INVALID`, gerekçeler `empty`,
+    `shape`) ve aynı içeriği dosyaya ya da hizmete dokunmadan yanıtlar. Yerine
+    koymanın kendisi okunan baytlara koşulludur; böylece doğrulama sırasında
+    yapılmış bir sahip düzenlemesi de ezilmez. Catch-all `PUT` ve `DELETE`
+    istekleri `version` taşır ve okunan satıra koşullu bir ifadeyle yazılır.
+  - *Canlı dosyanın yerine geçmeden önce doğrulanır.*
+    - `postgresql.conf`: kurulu `postgres`, dosyanın yanına konan bir kopyayı
+      okur: `postgres -C config_file -D <dizin> -c config_file=<kopya> -c
+      lc_messages=C`. Dosyayı ve içerdiği her dosyayı sunucunun kendi
+      ayrıştırıcısı ve değer denetimleriyle okur, tek bir ayarı yazdırır ve
+      çıkar; hiçbir şey başlatmaz ve kilit almaz. `-C` seçeneğinin başta olması,
+      PostgreSQL'in root'a izin verdiği biçimdir. Debian ve Ubuntu'da kümenin
+      kendi ikilisi (`/usr/lib/postgresql/<ana sürüm>/bin/postgres`), aksi hâlde
+      `PATH` üzerindeki kullanılır.
+    - MariaDB seçenek dosyası: kurulu `mariadbd` kopyayı okur: `mariadbd
+      --defaults-file=<kopya> --datadir=<özel boş dizin> --help --verbose`.
+      Bilinmeyen bir değişkeni, kullanılamayan bir değeri, bozuk bir grup
+      başlığını ve herhangi bir gruptan önce gelen seçeneği reddeder. Dosyadan
+      sonra verilen özel veri dizini, onu gerçek dizinden uzak tutar.
+    - `pg_hba.conf`, kurulmadan önce PostgreSQL'e gösterilemez (sunucu yalnız
+      `hba_file` ayarının adlandırdığı dosyayı okur). Bu yüzden Agent,
+      PostgreSQL'in ayrıştırıcısının kabul etmediği değişmiş ya da eklenmiş bir
+      satırı kendisi reddeder (`parse_hba_line` kuralları; değişmeden taşınan
+      satırlar sahibindir ve yargılanmaz) ve yerel yönetici erişimini kaldıran
+      bir dosyayı reddeder: geçerli dosya işletim sistemi hesabı `postgres`'in
+      yerel soket üzerinden `peer` ya da `trust` ile `postgres` olarak
+      bağlanmasına izin veriyorsa, yenisi de buna, dosyadan kesin olarak
+      okunabilecek biçimde izin vermelidir (`422 CONFIG_INVALID`, gerekçe
+      `lockout`). Dosya kurulduktan sonra ve yeniden yüklemeden önce çalışan
+      sunucuya onun hakkında sorulur (`pg_hba_file_rules`, sorgu anında diskteki
+      dosyayı ayrıştırır); sunucunun reddettiği dosya, hiç yüklenmeden geri
+      konur.
+    - Doğrulayan program çalıştırılamıyorsa hiçbir şey kurulmaz (`422
+      CONFIG_INVALID`, gerekçe `no_validator`).
+  - *Tersiyle birlikte kurulur.* Önceki dosya, dosyanın yanında
+    `<ad>.celikpanel-backup-<UTC zamanı>` adıyla, sahibi ve kipiyle saklanır
+    (hiçbir `include_dir` ya da `!includedir` yönergesinin okumadığı bir ad; en
+    yeni on tanesi tutulur). Yeni dosya aynı sahip ve kiple atomik olarak yerine
+    geçer. PostgreSQL yeniden yüklenir, asla yeniden başlatılmaz; birimin durmuş
+    olduğu biliniyorsa hiçbir şey yeniden yüklenmez. Yeniden yükleme başarısız
+    olursa önceki dosya geri konur (yalnız dosya hâlâ bu yazının kurduğu dosya
+    iken), yeniden yüklenir ve yanıt, birimin günlüğünde bir hatayı adlandıran
+    ilk satırı (parola atamaları silinmiş, en çok 300 karakter) taşıyan `502
+    CONFIG_RELOAD_FAILED` olur (`restored`, ya da saklanan kopyanın adıyla
+    `not_restored`). Yeniden yüklemeden sonra sunucuya hangi ayarları alamadığı
+    ve hangilerinin yeniden başlatmayı beklediği sorulur. MariaDB seçenek
+    dosyalarını yalnız başlarken okur ve onları yeniden okutan bir yeniden
+    yüklemesi yoktur; bu yüzden ona dokunulmaz ve yanıt, değişikliğin sahibin
+    kararı olan bir sonraki yeniden başlatmayı beklediğini söyler.
+  - *Yalnız değişen satırlar.* Üç düzenleyici, okunan dosyayı yalnız değişen
+    satırları değiştirilmiş olarak gönderir: bir ayar girintisini, boşluklarını,
+    tırnaklamasını ve sondaki yorumunu korur; açılıp olduğu gibi bırakılan bir
+    kural yeniden biçimlendirilmez; seçenekli, tırnaklı adlı, ağ maskeli, devam
+    satırlı ya da sonunda yorum olan kurallar ile include yönergeleri yazıldığı
+    gibi gösterilir ve asla yeniden yazılmaz ya da kaldırılmaz; yeni kurallar
+    sona eklenir.
+  - *Zamanlanmış görevler.* Görev, kendi metni kimliği olan tek satırdır; etkin
+    ya da devre dışı. Bir değişiklik o satırı değiştirir, bir silme o satırı
+    kaldırır ve başka hiçbir şeyi kaldırmaz. Kimlik bütün metinden türetilir.
+    İki satırda duran aynı görev reddedilir (`409 CRON_JOB_AMBIGUOUS`); bir
+    görevi bir başkasının kopyasına çevirmek reddedilir (`409
+    CRON_JOB_DUPLICATE`).
+  - *Posta politikası.* `postconf -e` başarılı olduktan sonra başarısız olan bir
+    yeniden yükleme `mutation_applied: true` ile `502 MAIL_POLICY_NOT_RELOADED`
+    olarak yanıtlanır; hiçbir şey geri alınmaz ve ekran, bildirimin altında
+    kaydedilen değerleri gösterir.
+  - *Ekranlar.* PostgreSQL ve MariaDB sayfaları, üç düzenleyici, ham dosya
+    düzenleyicisi, bir alan adının posta sekmeleri, web posta kartı, catch-all,
+    teslim edilebilirlik kartı ve posta kuyruğu, `lib/remote.ts` üzerinden
+    `loading | known | unknown` tutar. Bilinmeyen, Tekrar dene ile "okunamadı"
+    gösterir ve düzenleyici göstermez; Kaydet yalnız bilinen bir dosya için
+    vardır; eskimiş bir kayıt yazılanı tutar, Kaydet'i kapatır ve yeniden
+    yüklemeyi sunar; hizmetin kendi satırı, adlandırdığı alanın ya da kuralın
+    yanında gösterilir.
+- **Şema ya da sürüm geçişi.** Kalıcı şema ve geçiş yok: `postgresql.conf`,
+  `pg_hba.conf`, seçenek dosyaları, crontab'lar ve `mail_catch_all` biçimlerini
+  korur. Zamanlanmış görevin kimliği biçim değiştirir (8 yerine 16 onaltılık
+  karakter); hiçbir zaman saklanmadı ve her listeyle yeniden okunur. **Artık
+  zorunlu:** `POST /api/v1/config` ve `PUT …/mail/catch-all` gövdesinde, ayrıca
+  `DELETE …/mail/catch-all` isteğinde sorgu değeri olarak `version`. Eklenen tel
+  alanları: yapılandırma okumasında `Version`; yapılandırma yazısında `version`,
+  `unchanged`, `backup`, `applied`, `daemon_check`, `restart_required`; catch-all
+  yanıtlarında `version`; Agent'ın `UpdateConfig` yanıtında `Version` ve sonuç
+  alanları, tipli hatasında `Reason`, `Detail`, `Line`, `Name`. Yeni ret kodları:
+  `CONFIG_RELOAD_FAILED`, `MAIL_QUEUE_UNREADABLE`, `MAIL_POLICY_NOT_RELOADED`,
+  `CRON_JOB_AMBIGUOUS`; `CONFIG_INVALID`, `reason` ve `vars` (`detail`, `line`,
+  `name`) kazanır. Farklı sürümlerdeki bir Panel ile Agent yapılandırma dosyası
+  yazamaz: yeni Panel eski Agent'ın sürümsüz okumasını, yeni Agent eski Panel'in
+  sürümsüz yazısını reddeder.
+- **Kurtarma davranışı.** İkisi dışında her ret canlı dosyaya dokunulmadan önce
+  gelir; telafi edilecek bir şey yoktur. Bir değişikliği izleyen ikisi: çalışan
+  sunucunun reddettiği bir `pg_hba.conf` ve başarısız bir yeniden yükleme, dosya
+  hâlâ bu yazının kurduğu dosya ise önceki dosyayı geri koyar; bu yapılamadığında
+  önceki sürüm adı verilen yedekte kalır ve sahip dosyayı sunucuda denetleyip
+  hizmeti orada yeniden yükler. Yazılmış ve yeniden yüklenmemiş bir posta
+  politikası geri alınmaz; sahip `sudo postfix check` çalıştırır, adlandırılanı
+  düzeltir ve `sudo systemctl reload postfix` çalıştırır. PostgreSQL, MariaDB,
+  Postfix ve cron, Panel olmadan tam olarak eskisi gibi çalışmayı sürdürür;
+  yedekler, sahibin geri kopyalayabileceği sıradan dosyalardır.
+- **Kanıt.** Bileşen testleri ve gerçekten çalıştırılan doğrulama programları.
+  - Agent: `TestGetConfigAnswersAnUnreadableFileAsAnErrorNotAsEmpty`,
+    `TestUpdateConfigRequiresTheVersionOfTheFileItReplaces`,
+    `TestUpdateConfigRefusesEmptyAndMalformedContent`,
+    `TestUpdateConfigWithTheSameContentWritesNothing`,
+    `TestDatabaseConfigTargets`,
+    `TestPostgreSQLConfIsValidatedInstalledBackedUpAndReloaded`,
+    `TestPostgreSQLConfRefusedByPostgresChangesNothing`,
+    `TestDatabaseConfigIsNotInstalledWithoutItsValidator`,
+    `TestFailedReloadPutsThePreviousFileBack`,
+    `TestFailedReloadThatCannotBeUndoneSaysSoAndKeepsTheOtherVersion`,
+    `TestStoppedServiceIsNotReloaded`,
+    `TestPostgresReportingAnErrorAfterTheReloadPutsTheFileBack`,
+    `TestDatabaseConfigIsNotInstalledOverAFileThatChangedMeanwhile`,
+    `TestMariaDBOptionFileIsValidatedInstalledAndNotReloaded`,
+    `TestMariaDBOptionFileRefusedByMariaDBChangesNothing`,
+    `TestHBAIsRefusedBeforeAnythingIsWritten`,
+    `TestHBAIsShownToTheRunningServerBeforeItIsLoaded`,
+    `TestOnlyTheNewestBackupsOfAFileAreKept`,
+    `TestHBALineVerdictsAgreeWithPostgreSQL`,
+    `TestValidateHBAJudgesOnlyTheLinesTheWriteChanges`,
+    `TestHBALocalAdminAccess`, `TestHBALockoutRefusal`,
+    `TestADisabledCronJobCanBeEnabledChangedAndDeleted`,
+    `TestDeletingACronJobRemovesOnlyItsOwnLine`,
+    `TestUpdatingACronJobRewritesOnlyItsOwnLine`,
+    `TestCronJobsAreIdentifiedByTheirWholeText`,
+    `TestACronJobThatStandsTwiceIsNotChanged`,
+    `TestChangingACronJobIntoACopyOfAnotherIsRefused`,
+    `TestPostfixQueueTellsAFailedReadFromAnEmptyQueue`,
+    `TestSetMailPolicyReportsAFailedReloadAsWrittenNotReloaded`.
+  - Panel: `TestConfigReadCarriesTheVersionAndAnUnreadableFileIsAnError`,
+    `TestConfigWriteWithoutAVersionIsRefusedBeforeTheAgent`,
+    `TestConfigWriteAnswersEachAgentRefusalWithItsTypedGuidance`,
+    `TestConfigWriteAnswersWhatHappenedToTheService`,
+    `TestCatchAllWritesNeedTheVersionOfTheCatchAllTheyReplace`,
+    `TestMailQueueThatCouldNotBeReadIsNotAnEmptyQueue`,
+    `TestMailPolicyWrittenButNotReloadedIsAVerifiedFailureAfterAChange`,
+    `TestCronJobThatStandsTwiceIsATypedRefusal`.
+  - Web: `web/tests/remote-state-mounted-batch2b.test.mjs`,
+    `web/tests/db-config-text.test.mjs`, yeniden yazılan
+    `web/tests/webmail-cta-ui-contract.test.mjs`.
+  - Gerçek programlarla, bir Debian 13 geliştirme konuğunda, dağıtımın özel bir
+    dizine açılmış (kurulmamış) paketlerinden: PostgreSQL 17.11'e karşı
+    `TestRealPostgresValidatesACandidateFile` ve MariaDB 11.8.6'ya karşı
+    `TestRealMariaDBValidatesACandidateFile` (program yoksa ikisi de atlanır).
+    Aynı konukta, `/tmp` altında TCP dinleyicisi olmayan, sonra kaldırılan özel
+    ve geçici bir PostgreSQL kümesi ve MariaDB veri diziniyle elle gözlenen:
+    `postgres -C` root olarak yalnız `-C` başta iken, çalışan bir sunucunun
+    yanında ve onu değiştirmeden çalışır, arkasında dosya bırakmaz; boş bir
+    `postgresql.conf` ondan geçer (bunu durduran, Agent'ın kendi boş içerik
+    reddidir); sunucunun reddettiği bir `pg_hba.conf`, `pg_ctl reload` çıkış
+    durumunu 0 ve eski kuralları yürürlükte bırakır, `pg_hba_file_rules` satırı
+    adlandırır; `TestHBALineVerdictsAgreeWithPostgreSQL` testinin 44 satırı o
+    sunucunun verdiği yanıtlardır; yeniden yüklemeden sonra `pg_file_settings`
+    ve `pending_restart`, `shared_buffers` ayarını adlandırır; özel veri diziniyle
+    `mariadbd --help --verbose`, sunucu durmuşken de çalışırken de gerçek
+    dizinin hiçbir dosyasına dokunmaz, yapılandırılmış `log_error` dosyasına bir
+    şey yazmaz, bilinmeyen bir değişken için 7, kullanılamayan bir değer için 9,
+    bozuk bir grup için 1 ile; eksik bir `!include`, düzelttiği aralık dışı bir
+    değer ve sunucunun okumadığı bir gruptaki her şey için 0 ile çıkar; SIGHUP,
+    MariaDB'ye dosyayı yeniden okutmaz.
+
+Açık: gerçek bir sunucuda hiçbir şey çalıştırılmadı ve paketlenmiş bir PostgreSQL
+biriminin gerçek `systemctl reload` işlemi denenmedi: birim adları (Debian ve
+Ubuntu'da `postgresql@<ana sürüm>-<küme>`, başka yerde `postgresql`), başarısız
+bir yeniden yüklemeden sonra seçilen günlük satırı ve `sudo -u postgres psql`
+komutunun düzenlenen kümeye ulaşması kaynaktan ve bileşen testlerinden gelir.
+PostgreSQL 15 ve 16 ile MariaDB 10.11 çalıştırılmadı; `postgres -C` ve `mariadbd
+--help --verbose` uzun süredir vardır, ancak farklı bir ileti sözü yalnız alanın
+yanında gösterilen satırı ve ayarı etkiler, reddi değil. Oracle MySQL (`mysqld
+--validate-config`) ele alınmadı: `mysqld` MariaDB gibi çalıştırılır. Hiçbir
+programın doğrulamadığı: `postgres -C` komutunun denetlemedikleri (makinenin
+sağlayamadığı bir `shared_buffers`, yüklenemeyen bir sertifika dosyası) ancak
+yeniden yüklemeden sonra ya da bir sonraki başlatmada yakalanır; sunucunun
+okumadığı seçenek dosyası grupları; eksik bir `!include`. Ulaşılabilir bir
+sunucu olmadan (durmuş, ya da `psql` komutunun ulaştığından başka bir küme)
+`pg_hba.conf` denetimi yalnız Agent'ın satır kurallarıdır; bunlar herhangi bir
+PostgreSQL sürümünün sahip olduğu her yöntem ve seçenek adını kabul eder.
+Agent'ın okuması ile koşullu yerine koyması arasındaki bir sahip düzenlemesi
+reddedilir; yerine koyma ile bir geri koyma arasındaki anda yapılanın üstüne
+yazılmaz ve geri koyma yapılmamış kalır. Zamanlanmış bir görevi silmek artık
+üstündeki yorumu kaldırmaz; bu yüzden Panel'in bir görev için yazdığı açıklama,
+görev silindikten sonra crontab'da kalır ve altındaki görevle birlikte
+listelenir; Panel kendi açıklamalarını sahibin yorumlarından ayırt edemez. Zaman
+aşımına uğrayan bir web posta yoklaması sunucu tarafından hâlâ "kullanılamıyor"
+diye yanıtlanır. Taşınmayan: uzak-durum izin listesinin diğer 47 dosyası (bu
+partinin ilk parçası aynı ağaçta durmadan önce 56).
+
+### Ayar yazılarının ilk gerçek sistem ölçümünden çıkan düzeltmeler (ilkeler 1-4 ve 6, 2026-10-10)
+
+D-025 ilkeleri 1 (sahibin yerel yapılandırması algılanır, değiştirilmez), 2
+(bilinmeyen; yok, boş ya da başarı değildir), 3 (güvensiz yazı kendi sınırında
+durdurulur), 4 (bir değişiklik ön görüntüsünü okur, doğrular, yerine geçtiğini
+saklar ve sınanmış bir geri alması vardır) ve 6 (ekran yetkili durumu gösterir);
+D-022, D-024. Hiçbir P0 işi kapanmadı ya da ilerlemedi. Kaynak: 2026-10-08
+tarihli `set1` koşusu; yukarıdaki iki kaydın ayar yazıları ilk kez paketlenmiş
+hizmetlerle karşılaştı (tek kullanımlık QEMU/KVM konukları: Debian 13, Ubuntu
+24.04, Arch; kanıt `deploy/e2e/release-recovery/evidence/set1-20261010/`).
+Buradaki hiçbir şey kurulu bir sunucuda gözlenmedi. O koşu iki aday hata (P1,
+P2) ve beş gözlem (O1-O5) ölçtü; bu kayıt onları kaynakta düzeltir.
+
+- **Ölçülen.**
+  - *P1, Ubuntu 24.04: Postfix yeniden yüklenmediği hâlde posta politikası
+    kaydı `200 success` yanıtladı.* Sahip `main.cf` içinde
+    `default_process_limit = 200 # raised for the campaign` satırını yeniden
+    yüklemeden bırakmıştı. Agent `systemctl reload-or-restart postfix`
+    çalıştırdı. Ubuntu'da `postfix.service` tek atımlık bir sarmalayıcıdır
+    (`ExecStart=/bin/true`, `ExecReload=/bin/true`) ve hizmetin kendisi
+    `postfix@-.service` birimine aittir; günlük `Reload failed for
+    postfix@-.service` dedi, `systemctl` 0 ile çıktı, `main.cf` 46 hızını
+    tutuyordu ve Postfix 45 ile çalışıyordu. `postfix.service` birimi gerçek
+    birim olan Debian 13 aynı sıra için `502 MAIL_POLICY_NOT_RELOADED`
+    yanıtladı.
+  - *P2, üç platformun üçü: iki kez başarısız olan yeniden yüklemeden sonra
+    yanıt, önceki `postgresql.conf` dosyasının geri konamadığını söyledi; oysa
+    konmuştu.* Kullanılan neden, `ExecReload` komutu PostgreSQL'e sinyal
+    gönderip sonra başarısız olan, sahibe ait bir birim ekiydi. İlk yeniden
+    yükleme başarısız oldu, önceki dosya geri kondu (bayt bayt aynı; sahip, grup
+    ve kip aynı), onunla yapılan yeniden yükleme de başarısız oldu ve yanıt
+    `CONFIG_RELOAD_FAILED` / `not_restored` oldu; aynı dosyanın bir kopyasını
+    "diğer sürüm" diye adlandırdı. Aynı koşu, "sunucu hâlâ eski ayarlarla
+    çalışıyor" demenin de varsayılamayacağını gösterdi: ilk, "başarısız"
+    yeniden yükleme sunucuya YENİ dosyayı çoktan okutmuştu.
+  - *O1.* `max_connections = plenty`, "MariaDB dosyayı denetledi ve kabul
+    ediyor" diye kaydedildi: `mariadbd --help --verbose` 0 ile çıkar ve
+    `[Warning] ... option 'max_connections': unsigned value 0 adjusted to 10`
+    yazar.
+  - *O2.* Her satırda bir kısıt olacak biçimde yazılmış bir
+    `smtpd_recipient_restrictions`, bir DNSBL kaydından sonra tek satır olarak
+    geri geldi (ögeler, sıra ve ayraçlar korundu).
+  - *O3.* Yönlendirme, neden olmayan bir nedeni adlandırdı. Okunamayan
+    zamanlanmış görevler: "bu sayfanın arkasındaki hizmetin çalıştığını
+    denetler" (nedenler, site kullanıcısını içermeyen `/etc/cron.allow` ve yeri
+    değiştirilmiş bir kuyruk diziniydi). Okunamayan posta kuyruğu: "Postfix'in
+    çalıştığını denetler" (neden yukarıdaki `main.cf` satırıydı; Postfix
+    durmuşken `postqueue -j` kuyruğu doğrudan okur ve başarılı olur).
+  - *O4.* `502 MAIL_POLICY_NOT_RELOADED` gövdesi, cümlesi "gösterilen değerler
+    kaydedilen değerlerdir" dediği hâlde politika taşımıyordu.
+  - *O5.* Bileşen taraması Debian ve Ubuntu'da `postgresql.conf` ve
+    `pg_hba.conf` dosyalarını ikişer kez listeledi.
+- **Değişen.**
+  - *P1: Postfix ya da Dovecot'un yeniden yüklenmesi, başlatılması ve yeniden
+    başlatılması doğrulanır; asla `systemctl` çıkış durumundan çıkarılmaz*
+    (`cmd/agent/mail_service_verify.go`). Postfix: önce `postfix check` (reddi,
+    kendi satırıyla doğrulanmış hatadır ve hiçbir şey yeniden yüklenmez); çalışan
+    ana süreç `postfix reload` ile yeniden yüklenir; bu, her paketlemenin birimin
+    yeniden yüklemesi olarak çalıştırdığı komuttur (Debian 13 ve Arch
+    `ExecReload=postfix reload`; Ubuntu'nun örneği `postmulti -i - -p reload`,
+    yani varsayılan örnek için `postfix reload`), dolayısıyla çıkış durumu
+    örneğindir; sonrasında `postfix status` hâlâ çalışan bir ana süreç
+    bildirmelidir. Başlatma ya da yeniden başlatma yine systemd üzerinden
+    yapılır; böylece hizmetin sahibi birim kalır ve sonuç `postfix status` ile
+    ana sürecin kimliğine (`<queue_directory>/pid/master.pid`) göre, en çok 15
+    saniye içinde değerlendirilir. Dovecot: önce `doveconf -n`; `systemctl
+    restart` sonrasında `dovecot.service` etkin ve çalışır olmalı, iki okumada
+    aynı ana süreci göstermeli ve yeniden başlatmadan sonra bu süreç yeni bir
+    süreç olmalıdır. Üç sonuç vardır: doğrulandı, doğrulanmış hata (adım
+    `check`, `reload`, `start` ya da `verify`) ve bilinmiyor (bir komut
+    çalıştırılamadı ya da yanıt vermedi). Kullanıldığı yerler: posta politikası
+    kaydı; posta yığını kurulumu; posta süzgeci bağlama ve DKIM (milter
+    zincirinden sonraki yeniden yükleme, sonucu atılan bir `reload-or-restart`
+    idi); posta gönderim kurulumu ve Dovecot kurtarması; posta TLS uzlaştırması
+    ve geri alması; ham dosya düzenleyicisinin `/etc/postfix` dosyasından
+    sonraki yeniden yüklemesi.
+  - *P1, onunla birlikte değişen davranış.* Durmuş bir Postfix artık posta
+    politikası kaydıyla, süzgeç bağlamayla ya da ham dosya kaydıyla
+    başlatılmaz: durmuş bırakılır ve yanıt bunu söyler (`applied:
+    not_running`). Onu yalnız kurulum (posta yığını, TLS) başlatır. Süzgeç
+    bağlama ve DKIM, Postfix'in zinciri almadığı doğrulandığında artık başarı
+    bildirmek yerine başarısız olur.
+  - *P1, yanıtlar.* `502 MAIL_POLICY_NOT_RELOADED`, her biri için bir cümleyle
+    `check`, `reload` ya da `verify` gerekçesini ve `vars.detail` içinde
+    Postfix'in kendi satırını taşır. Belirlenemeyen sonuç, yeni `502
+    MAIL_POLICY_RELOAD_UNKNOWN` yanıtıdır. Her cümledeki kurtarma komutu `sudo
+    postfix reload` komutudur; Postfix'in neye itiraz ettiğini yazar ve her
+    platformda aynıdır; Ubuntu'da `sudo systemctl reload postfix`
+    sarmalayıcıdır. `200`, `applied` taşır: `reloaded`, `not_running`,
+    `unchanged` ya da, aşağıdaki ek düzeltmeden beri, `unchanged_reloaded`.
+  - *P2: yanıt, doğrulanana göre sınıflandırılır* (`cmd/agent/db_config.go`).
+    (a) önceki dosya yerinde ve birim onu yeniden yükledi: eskisi gibi
+    `restored`. (b) önceki dosya yerinde ve birimin yeniden yüklemesi yine
+    başarısız: sunucuya doğrudan söylenir (`postgres` hesabıyla yerel soket
+    üzerinden `SELECT pg_reload_conf()`) ve ne yaptığı sorulur. Değişiklikten
+    önceki ayarlarla çalıştığı, yalnız şu üçü birlikte sağlandığında söylenir:
+    yanıt bu dosya hakkındadır (`config_file` / `hba_file`);
+    `pg_conf_load_time()`, sinyalin gönderildiği andan sonradır (PostgreSQL onu
+    yalnız yeniden okuma sözdizimi ya da değer hatası olmadan sona vardığında
+    ayarlar; böyle bir hatada hiçbir şey uygulamaz); ve `pg_file_settings` (ya
+    da `pg_hba_file_rules`) diskteki dosyalarda hata bildirmez. O zaman
+    `restored_unit_reload_failed`. Bundan azı `restored_running_unknown`
+    yanıtıdır. (c) önceki dosya geri konamadı (diskteki dosya artık bu yazının
+    kurduğu dosya değil ya da yazı başarısız oldu): `not_restored`; yalnız bu
+    yanıt bir kopya adlandırır ve o kopya önceki dosyadır. (a) ve (b)
+    durumlarında kopya kaldırılır, çünkü diskteki dosya o dosyadır; var olmayan
+    bir "diğer sürüm" adlandırılmaz. Aynı sınıflandırma, PostgreSQL başarılı bir
+    yeniden yüklemeden sonra hata bildirdiğinde ve geri konan dosyanın yeniden
+    yüklemesi başarısız olduğunda da uygulanır. Yanıt, yeniden yüklemesi
+    başarısız olan birimi taşır (`vars.unit`).
+  - *O1.* `mariadbd --help --verbose` çıktısında bir değerin yazıldığı gibi
+    kullanılmayacağını söyleyen bir `[Warning]` (`option '<ad>': ... adjusted
+    to ...`, `option '<ad>': boolean value ... wasn't recognized`), kaydı
+    MariaDB'nin satırı ve seçeneğin adıyla `CONFIG_INVALID` / `daemon` olarak
+    reddeder. Diğer uyarılar reddetmez (boş özel veri dizininde `mysql.plugin`
+    tablosu yoktur; stok bir Debian ya da Ubuntu dosyası ikili günlük olmadan
+    `expire_logs_days` ayarlar; kaldırılmış bir seçenek). Sunucudaki dosyanın
+    zaten ürettiği bir uyarı bu değişikliğin değildir: yalnız o durumda geçerli
+    dosya da aynı yolla okunur ve zaten söylediği dışarıda bırakılır.
+  - *O3.* Hiçbir cümle doğrulanmamış bir nedeni adlandırmaz. Agent'ın
+    "okunamadı" yanıtları sabit ilk satırını korur ve iki satır daha taşıyabilir:
+    Agent'ın kendisinin doğruladığı bir neden ve sunucunun kendi programının
+    yazdığı ilk satır (300 karakterle sınırlı, parola atamaları silinmiş).
+    `cron_allow`: `crontab` kullanıcıyı reddettiğini söyledi VE
+    `/etc/cron.allow` o kullanıcı olmadan var. `cron_deny`: aynı satır,
+    `cron.allow` yok ve `/etc/cron.deny` kullanıcıyı içeriyor.
+    `postfix_config`: `postqueue`, `fatal: bad ... configuration: ...` ya da
+    `main.cf` ya da `master.cf` ile bir satır adlandıran bir fatal yazdı. Geri
+    kalan her şey, satırıyla birlikte "okunamadı"dır. Ayar ekranlarının ortak
+    cümlesi artık hizmetin çalıştığını denetlemeyi söylemez.
+  - *O4.* Yazılmış bir politikadan sonraki `502` gövdesi, yeni sürümüyle
+    `policy` taşır; ekran onu ikinci bir okuma yapmadan gösterir.
+  - *O5.* Neden: bileşenin Debian ve Ubuntu'da iki birimi vardır
+    (`postgresql.service`, bir sarmalayıcı, ve `postgresql@<sürüm>-<küme>`) ve
+    her birimin taraması bileşenin dosyalarını döndürür. Panel'in birleştirmesi
+    her dosyayı, çözüldüğü yola göre karşılaştırarak bir kez listeler; tek bir
+    dosyanın iki adından dosyanın kendisi olan ad tutulur, çünkü Agent sembolik
+    bağ üzerinden yazmayı reddeder (Debian'da `/etc/mysql/my.cnf`,
+    `mariadb.cnf` dosyasına çözülür).
+- **Değişmeyen ve nedeni.**
+  - *O2.* Geliştirme konuğunda özel, geçici bir yapılandırma dizininde ölçüldü
+    (Postfix 3.10): satırlara yayılan bir değerle `postconf -e` 1 ile çıkar,
+    `postconf: fatal: -e, -X, or -# accepts no multi-line input`. Sahibin
+    düzenini korumak bu yüzden `main.cf` dosyasını yerinde düzenleyen ikinci bir
+    yazıcı gerektirir (son mantıksal atama, devam satırları, aralarındaki
+    yorumlar, sahibi ve kipi koruyan atomik bir yer değiştirme ve Postfix'in
+    aynı değeri okuduğunun denetimi). Bu, Postfix'in yaptığını değiştirmeyen bir
+    fark için, arkasında gerçek sistem ölçümü olmayan, sahibin dosyasına yeni
+    bir yazı yoludur. Olduğu gibi bırakıldı.
+- **Yönlendirmede belirtilen platform sınırı.** `/etc/cron.allow` dosyası bir
+  site kullanıcısını içermeyen bir sunucuda Panel o kullanıcının crontab'ını ne
+  okuyabilir ne yazabilir: Debian ve Ubuntu'nun `crontab -u <kullanıcı>` komutu
+  kullanıcıyı root için bile reddeder. Panel bunu söyler ve hiçbir şeyi
+  değiştirmez; `cron.allow` dosyasını düzenlemez.
+- **Şema ya da sürüm geçişi.** Veritabanı şeması ve kalıcı durum yok. Agent
+  RPC, eklemeli: `MailPolicyResponse.Stage` ve `.Applied`,
+  `mail_policy_reload_unknown` kodu; `ConfigRPCError.Unit`,
+  `restored_unit_reload_failed` ve `restored_running_unknown` gerekçeleri; iki
+  "okunamadı" yanıtını `cause=` ve `detail=` satırları izleyebilir. HTTP,
+  eklemeli: `MAIL_POLICY_RELOAD_UNKNOWN`; `MAIL_POLICY_NOT_RELOADED` üzerinde
+  `reason` ve `policy`; başarılı politika kaydında `applied`; iki
+  `CONFIG_RELOAD_FAILED` gerekçesi ve `vars.unit`; `CURRENT_SETTINGS_UNREADABLE`
+  / `scheduled_tasks` üzerinde `detail` (neden belirteci) ve `vars.detail`;
+  `MAIL_QUEUE_UNREADABLE` üzerinde `reason` ve `vars.detail`. Panel ve Agent tek
+  bir sürümle birlikte kurulur. Bu kayıttan eski bir Panel, daha yeni bir
+  Agent'ın kanıt satırlı "okunamadı" yanıtını tanımaz ve genel iç hatasını
+  yanıtlar, asla boş liste değil; eski bir Panel iki yeni gerekçe için, daha
+  önce olduğu gibi `not_restored` gösterir.
+- **Kurtarma davranışı.** Hiçbir şey kendiliğinden yeniden denenmez ve daha
+  önce geri alınmayan hiçbir şey geri alınmaz. Postfix'in almadığı yazılmış bir
+  politika yazılı kalır; sahip, Postfix'in adlandırdığı satırı düzeltir ve `sudo
+  postfix reload` çalıştırır. Tutulmayan bir yapılandırma değişikliği önceki
+  dosyayı yerinde bırakır; birimin yeniden yüklemesi onunla da başarısız
+  olduğunda sahibe hangi birim olduğu ve nedenin yalnız bu değişiklik olmadığı
+  söylenir.
+- **Kanıt.** Yalnız bileşen testleri; gerçek sistemde yeniden koşu bekliyor.
+  Agent: `mail_service_verify_test.go` (hizmet yeniden yüklenmediği hâlde 0 ile
+  çıkan sarmalayıcı, `postfix check` tarafından reddedilen yeniden yükleme,
+  başarı, duran ana süreç, bilinmeyen sonuç, durmuş Postfix, yeniden
+  başlatmadan sonra çıkan Dovecot); `mail_policy_reload_test.go`;
+  `db_config_set1_linux_test.go` (her P2 dalı, yetersiz kalan her okuma,
+  `pg_hba.conf` ve kanıt klasöründe kayıtlı MariaDB satırları fikstür olarak);
+  `unreadable_evidence_test.go`. Panel: `set1_corrections_test.go`. Ekranlar:
+  `web/tests/remote-state-mounted-batch2b.test.mjs` içinde dört bağlanmış
+  durum. Geliştirme konuğunda elle, salt okunur ya da özel geçici bir dizinde:
+  yukarıdaki `postconf -e` reddi ve `postfix` komutunun `fatal:` satırını uçbirim
+  olmayan standart hataya yazması.
+- **Açık.**
+  - Buradaki hiçbir düzeltme gerçek hizmetlerde ölçülmedi. Gerçek sistemdeki
+    yeniden koşu, platform başına şunu göstermelidir: P1 Ubuntu sırasının
+    gövdesinde `policy` ile `502 MAIL_POLICY_NOT_RELOADED` / `check`
+    yanıtlaması ve sağlıklı bir kaydın `postfix/master ... reload` günlük
+    satırı ve aynı ana süreçle `200` / `reloaded` yanıtlaması; P2 birim eki
+    sırasının hiçbir kopya adlandırmadan ve bırakmadan
+    `restored_unit_reload_failed` yanıtlaması, `SHOW work_mem` önceki değerde;
+    O1 `plenty` değerinin MariaDB'nin satırıyla reddi ve stok dosyaların hâlâ
+    kabulü; O3 ölçülen üç neden; O5 dosya başına tek girdi.
+  - Değişmedi: sertifika yenileme yolu (`mail_host_certificate_reload.go`) hâlâ
+    `systemctl reload postfix.service` çalıştırır ve `systemctl is-active` ile
+    değerlendirir; Ubuntu'da bunlar sarmalayıcınındır; o yolun komut kapsamı
+    kapalıdır ve `postfix check` çalıştırmamalıdır. Hizmetler sayfasının genel
+    hizmet eylemleri, sarmalayıcı birimler `postfix` (Ubuntu) ve `postgresql`
+    (Debian, Ubuntu) için de hâlâ `systemctl` çıkış durumunu bildirir.
+  - Ek düzeltme, aynı tarih, yalnız bileşen testleri
+    (`cmd/agent/mail_policy_rpc.go`, `mail_policy_reload_test.go`,
+    `cmd/panel/set1_corrections_test.go`): hiçbir şeyi değiştirmeyen bir kayıt
+    hiçbir şeyi yeniden yüklemiyordu; bu yüzden "yeniden yüklenmedi" yanıtından
+    sonraki ikinci, değişmemiş kayıt, Postfix hâlâ önceki değerlerle çalışırken
+    `200` / `unchanged` yanıtlıyordu. Kabul edilen her kayıt artık aynı
+    doğrulanmış yeniden yüklemeyle biter. Hiçbir şey yazılmaz, bunun için hiçbir
+    durum kaydedilmez (Postfix çalışan ana sürecin ne tuttuğunu bildiremez ve
+    Agent önceki sonucu hatırlamaz), durmuş Postfix durmuş bırakılır; şema,
+    kalıcı kayıt ya da sürüm değişmez. `200` o zaman `unchanged_reloaded`
+    (çalışıyor, yeniden yüklendi) ya da `unchanged` (durmuş) taşır; hâlâ
+    başarısız olan yeniden yükleme, `mutation_applied` taşımayan aynı `502`
+    yanıtıdır, çünkü o istek hiçbir şeyi değiştirmedi. Hâlâ açık: bu, gerçek bir
+    hizmette ölçülmedi ve yeniden yükleme, Postfix dosyayı zaten çalıştırıyorken
+    de, böyle her kayıtta istenir.
+  - `postfix check` eksik kuyruk dizinlerini de oluşturur; Debian 13 biriminin
+    her başlatmadan önce çalıştırdığı komuttur. Postfix'in, çalışan bir ana
+    sürecin tuttuğu değerleri bildiren bir arayüzü yoktur; bu yüzden "ayarları
+    aldı", kendi denetimi, kendi yeniden yükleme komutu ve hâlâ çalışan bir ana
+    süreçtir.
+  - PostgreSQL okuması, `psql` komutunun varsayılan olarak ulaştığı kümeye
+    ulaşır; başka bir küme için yanıt `restored_running_unknown` olur.
+    `pg_conf_load_time()` değerinin yalnız hatasız bir yeniden okumada
+    ilerlediği PostgreSQL'in kaynak davranışındandır, burada ölçülmedi. Okuma
+    bir saniye bekler.
+  - MariaDB: yalnız yukarıdaki iki uyarı biçimi rettir; Oracle MySQL ele
+    alınmaz.
+  - Ek düzeltme, aynı tarih: zamanlanmış görevler ekranı doğrulanmış nedeni
+    (`cron.unknown.cron_allow`, `cron.unknown.cron_deny`) sunucu sahibinin
+    kuralı olarak, crontab'ın satırını da (`cron.unknown.said`) diğer her
+    yanıtta yansız cümlenin altında gösterir; bağlanan durumlar
+    `web/tests/remote-state-mounted-batch4.test.mjs` içindedir. Hâlâ açık:
+    reddedilen bir zamanlanmış görev yazımı genel cümleyi gösterir.
+    `postfix.queue.unknown` ve `mailpolicy.unknown` katalog girdileri artık
+    kullanılmıyor.
+
+### Posta sertifikası yenilemesi ve Hizmetler sayfası: sonuç, sarmalayıcı birimin çıkış durumu değil, hizmetin gösterdiğidir (ilkeler 1, 2 ve 4; P0.4/P0.5; 2026-10-10)
+
+D-025 ilkeleri 1 (sahip yetkisini ve çalışan hizmetlerini korur), 2 (bilinmeyen
+başarı değildir; kanıtın bir anlamı vardır) ve 4 (bir değişiklik kurtarma
+sözleşmesini taşır); D-022 (yenileme Panel ve Agent olmadan çalışır), D-024.
+P0.4 (posta TLS sözleşmesinin etkinleştirme adımı) ve P0.5 (bağımsız yenileme).
+Hiçbir P0 işi kapanmadı ya da ilerlemedi. Kaynak: yukarıdaki kaydın `set1`
+ölçümünden (P1) sonra açık bıraktığı iki iş. Buradaki hiçbir şey kurulu bir
+sunucuda gözlenmedi ve hiçbiri gerçek hizmetlerde ölçülmedi.
+
+- **Saptanan: bir sertifika değiştikten sonra Postfix ya da Dovecot'u yeniden
+  yükleyen ya da yeniden başlatan her yol.**
+  1. *Sunucu sertifikasının ilk alınması* (Agent RPC
+     `IssueMailHostCertificateV1`): `applyMailHostCertificateSelection`
+     (`cmd/agent/mail_host_certificate_rpc.go`) posta TLS uzlaştırmasını
+     çalıştırır; onun `reloadMailTLSService` işlevi
+     (`cmd/agent/mail_tls_rpc.go`) yukarıdaki kayıttan beri doğrulanmış
+     yardımcıları kullanır (`postfix check`, `postfix status`, `postfix
+     reload`, `postfix status`; Dovecot için `doveconf -n` ve yerinde kalan bir
+     ana süreç). Sarmalayıcı birimde doğrudur. Posta adları için müşteri
+     sertifikaları (SNI) aynı yolu izler ve yalnız Panel istediğinde
+     (`resyncMailTLS`); onlar için yerel bir kanca yoktur.
+  2. *Sunucu sertifikasının yenilenmesi.* Certbot'un dağıtım kancası yalnız
+     kuyruğa yazar: kit kancası `<nesil>/renew --queue`, önceki Agent kancası
+     `agent --deploy-mail-host-certificate` çalıştırır
+     (`internal/mailrenewalkit/deploy-hook`, `legacy-deploy-hook`). Kuyruğu
+     her dakika Agent'ın işçisi (`runMailHostCertificateRenewalWorker`) ve
+     kayıtlı bir sunucuda `celikpanel-mail-renewal.service` (`renew
+     --process-pending`, beş dakikada bir zamanlayıcı) tüketir; ortak
+     kilitleri önce alan işi yapar. İkisi de aynı kodu çalıştırır:
+     `publishMailHostCertificateSource` -> `reloadMailHostCertificateSelection`
+     -> `observeOrReloadMailHostTLS`
+     (`cmd/agent/mail_host_certificate_reload.go`): `systemctl reload
+     postfix.service`, sonra `systemctl reload dovecot.service`; her biri o
+     komutun çıkış durumuyla ve aynı iki birimin `systemctl is-active --quiet`
+     yanıtıyla değerlendirilir; kabul edilmiş yapılandırma öncesinde, arasında
+     ve sonrasında yeniden okunur.
+  3. *Zaten seçilmiş bir sertifikanın kurtarılması* (Agent başlangıcı,
+     yardımcının otomatik yeniden denemesi, `--retry-selected`):
+     `reconcilePersistedMailHostCertificateHostAt`
+     (`cmd/agent/mail_host_certificate_files_linux.go`) aynı
+     `reloadMailHostCertificateSelection` işlevini çağırır.
+  4. *Geri alma.* Posta TLS uzlaştırmasının geri alması doğrulanmış
+     yardımcıları kullanır (yol 1). Yenilemenin hizmet geri alması yoktur:
+     seçilen sertifika seçili kalır ve işlem açık kalır.
+  5. *Panel sertifikası* yalnız nginx'i yeniden yükler.
+- **Ubuntu 24.04'te yol 2 ve 3.** `postfix.service`; `Type=oneshot`,
+  `RemainAfterExit=yes`, `ExecStart=/bin/true`, `ExecReload=/bin/true`
+  değerleriyle gelir; hizmetin kendisi `ReloadPropagatedFrom=postfix.service`
+  taşıyan `postfix@-.service` birimidir (birim metinleri:
+  `evidence/set1-20261010/set1-ubuntu/run-a/steps/09-s2-mail-policy/native-text/postfix-unit.txt`).
+  `systemctl reload postfix.service`, örneğin yeniden yüklemesi ne yaparsa
+  yapsın 0 ile çıkar (ölçüldü, P1); `systemctl is-active postfix.service`, ana
+  süreç durmuşken sarmalayıcı adına "active" der (birim metninden; ölçülmedi).
+  Böylece bir yenileme, Postfix'in yeniden yüklendiğine ya da çalıştığına dair
+  kanıt olmadan etkinleştirildi diye kaydediliyordu. Debian 13'ün
+  `postfix.service` birimi gerçek birimdir (`ExecReload=postfix reload`; aynı
+  kanıt klasörü), Arch'ınki de öyle; orada iki komut hizmetin kendisine aittir.
+  Dovecot: kanıtta birim metni yok. Yukarı akış paketlemesine göre
+  `dovecot.service` üç platformda tek gerçek birimdir ve `ExecReload=doveadm
+  reload` taşır; o komut yalnız bir sinyal iletir, bu yüzden 0 çıkışı Dovecot'un
+  yapılandırmasını yeniden okuduğunu söylemez. Posta kurulumu Arch'ta
+  reddedilir; yenileme yolu Debian ve Ubuntu'da çalışır.
+- **Yenileme yolunun komut kapsamı neden "kapalı".** Kit bildiriminin bir alanı
+  ya da bir protokol sürümü değildir. Yardımcının içine derlenmiş bir listedir:
+  `validateIndependentMailCommand` (`cmd/agent/mail_renewal_entry.go`):
+  `dovecot --version`, `doveconf -n`, dokuz sabit ayar için `postconf -h`, iki
+  sabit birim için `systemctl reload` ve `systemctl is-active --quiet`; her biri
+  dört sistem dizininden birindeki kurallı yoluyla. Yardımcı bunu her
+  başlatmadan önce (`runMailHostCertificateCommand`) ve yeniden çalıştırılan
+  gözetmende (`service_mutation_supervisor_linux.go`) bir kez daha denetler.
+  `TestIndependentMailSupervisorCommandScope` koruma testi listeyi sabitler ve
+  reddedilenler arasında `/usr/sbin/postfix check` komutunu adıyla sayar.
+  `MAIL-RENEWAL-EXECUTOR.md` ve `MAIL-RENEWAL-OBSERVATION.md` bunu yardımcının
+  sözleşmesi olarak belirtir; yardımcının ve korumalı alanının gerçek sistem
+  kabulü (BB, BD, BE) tam olarak bu listeyi ölçmüştür. `postfix check`
+  komutunun dışarıda tutulmasının kendi nedeni vardır: eksik kuyruk dizinlerini
+  oluşturur; yenileme ise sahibin elindekini gözleyebilir ve yeniden
+  yükleyebilir ama değiştiremez. Kit bildirimi
+  (`celikpanel-mail-renewal-runtime/v1`) yardımcının baytlarını bağlar; farklı
+  bir liste farklı bir yardımcıdır, dolayısıyla farklı bir nesildir; her sürüm
+  derlemesi de zaten budur. Biçim değişikliği sayılacak olan birim şablonudur
+  (`ProtectSystem=full`, `NoNewPrivileges`, `PrivateTmp`): okuyucu yalnız tam
+  v1 şablonunu tanır.
+- **Değişen, yenileme (yol 2 ve 3).** Bir hizmete gönderilen tek şey
+  `systemctl reload` olarak kalır: birimin kendi yeniden yüklemesidir, sahibinin
+  ona eklediği her şeyle birlikte; komut listesi de değişmedi. Çıkış durumu ve
+  `is-active` artık sonuç değildir. Her hizmetin yeniden yüklenmesinden ve
+  yeniden gözlenmesinden sonra yardımcı, o hizmetin bu sunucudaki kendi
+  dinleyicileriyle TLS el sıkışması yapar ve sunulan sertifikayı seçili olanla
+  karşılaştırır (`cmd/agent/mail_served_certificate.go`): Postfix için 465,
+  sonra STARTTLS ile 587 ve 25; Dovecot için 993, 995, sonra STARTTLS/STLS ile
+  143 ve 110; `127.0.0.1` ve `::1` üzerinde, yalnız geri döngüde hiçbir şey
+  yanıt vermezse bu sunucunun öteki adreslerinde. Sunucu adı gönderilmez; bu
+  yüzden hizmet varsayılan sertifikasını, yani sunucu sertifikasını sunar. Ad
+  çözülmez ve başka bir sunucuya bağlanılmaz. Sınırlıdır: bağlanmak için bir
+  saniye, bir alışveriş için üç, hizmet başına dokuz. Üç yanıt vardır: bir
+  dinleyici seçili sertifikayı sunar (doğrulandı); dinleyiciler yanıt verir ve
+  bekleme süresinde hiçbiri onu sunmaz (doğrulandı: etkin değil); hiçbir
+  dinleyici TLS ile yanıt vermez (bilinmiyor). Bilinmeyen ve "etkin değil"
+  yanıtlarının ikisi de işlemi, daha önce başarısız bir yeniden yüklemenin
+  yaptığı gibi açık bırakır; hiçbiri etkinleştirildi diye kaydedilmez. Bunun
+  için komut gerekmez; bu yüzden yardımcının mevcut korumalı alanında çalışır
+  (v1 birimi ağı kısıtlamaz).
+- **Değişen, Hizmetler sayfası (`POST /api/v1/service/action`).** Agent artık
+  yalnız `systemctl` çıkış durumuyla yanıt vermez
+  (`cmd/agent/service_action_verify.go`).
+  - *Postfix ve Dovecot* doğrulanmış yardımcıları kullanır. Postfix: başlatma,
+    yeniden başlatma ve yeniden yükleme için önce `postfix check`; reddi
+    yanıtın kendisidir. Yeniden yükleme `postfix reload` ve sonrasında çalışan
+    bir ana süreçtir; başlatma ve yeniden başlatma systemd üzerinden gider ve
+    `postfix status` ile ana sürecin süreç kimliğine göre değerlendirilir;
+    durdurma, `postfix status` ana sürecin çalışmadığını söylediğinde
+    doğrulanır. Dovecot: önce `doveconf -n`; `systemctl reload` (artık durmuş
+    bir Dovecot'u başlatamaz), başlatma, yeniden başlatma; her birinin ardından
+    iki okuma boyunca yerinde kalan bir ana süreç aranır; durdurma, birimin ana
+    sürecinin kalmamasıyla doğrulanır. Çalışan bir hizmette "Başlat" hiçbir
+    şeyi değiştirmez ve bunu söyler; durmuş bir hizmette "Yeniden yükle"
+    başarısız olur ve onu başlatmaz.
+  - *Başka her birime* önce ne olduğu sorulur (`systemctl show`: `Type`,
+    `ExecStart`, `Wants`, `ConsistsOf`, `PropagatesReloadTo`). Tek başlatma
+    komutu `/bin/true` olan bir oneshot birim sarmalayıcıdır: Debian ve
+    Ubuntu'nun `postgresql.service` birimi; arkasında
+    `postgresql@<sürüm>-<küme>.service` vardır. Eylemi, systemd'nin adını
+    verdiği örnek birimlerle değerlendirilir: başlatmada istediği birimler
+    etkindir; yeniden başlatmada onlar ve çalışmakta olanlar yeni bir ana
+    süreçle etkindir; durdurmada hiçbiri etkin değildir; yeniden yüklemede
+    çalışan her biri, o andan sonra çalışmış bir yeniden yükleme komutu
+    (`ExecReload`) ile `ReloadResult=success` gösterir ve hâlâ etkindir. Eylem
+    için arkasında hiçbir şey olmayan bir sarmalayıcı ya da okunamayan durum
+    bilinmeyendir; durum eylemden önce okunamıyorsa hiçbir şey gönderilmez.
+  - *Kendi hizmetini çalıştıran bir birim* iş sonucunu ve sözlerini korur
+    (nginx, Arch'ın `postgresql.service` birimi, doğrudan adı verilen bir örnek
+    birim, `wg-quick@`).
+  - *Katalogda yalnız iki birim sarmalayıcıdır:* `postfix` (Ubuntu 24.04; 13
+    öncesi Debian) ve `postgresql` (Debian, Ubuntu). Öteki birim adları üç
+    platformda gerçek birimler ya da onların takma adlarıdır.
+  - *Yanıtlar.* `reason` değeri `check`, `reload`, `start`, `stop`, `verify`
+    ya da `command` olan `502 SERVICE_ACTION_FAILED` ve `502
+    SERVICE_ACTION_UNKNOWN`; ikisi de `vars.unit`, `vars.action`,
+    `vars.command` (sahibin hizmetin kendi yanıtını okumak için çalıştırdığı
+    komut), `vars.detail` (sınırlı tek satır) ve hizmetin sahibi başka bir
+    birimse `vars.owner_unit` taşır. Başarısız bir eylem eskiden `500`
+    "internal server error" yanıtlıyordu. Denetim kaydı, bilinmeyen bir sonuç
+    için `failed` yerine `unknown` der.
+- **Değişmeyen ve nedeni.**
+  - *Yardımcının komut kapsamı.* `postfix reload`, `postfix status`, `doveadm
+    reload` ve `systemctl show` kapsamın dışında kalır. Postfix'in kendi
+    komutlarını yardımcının korumalı alanından çalıştırmak hiç ölçülmedi ve
+    birimin yeniden yüklemesini atlamak olurdu. El sıkışması, yenilemenin
+    sorduğu soruyu yanıtlar.
+  - *Yayımdan önceki denetim* hâlâ `is-active` kullanır. Yayımı reddedebilen bir
+    el sıkışması, dinleyicilerine ulaşamadığı bir sunucudan yenilenmiş
+    sertifikayı esirgerdi; Postfix durmuşken yayımlanan bir sertifika hiçbir
+    şeye zarar vermez, çünkü Postfix başladığında onu okur.
+  - *Mevcut bir sunucunun kayıtlı yardımcısı.* Aşağıdaki geçişe bakın.
+- **Şema ya da sürüm geçişi.**
+  - Kalıcı durumda yok: defter v1, kabul edilmiş plan v1, makbuz v1, kit
+    bildirimi şeması ve üç yerel şablon bayt bayt aynıdır; veritabanı şeması
+    değişmez.
+  - Yardımcının baytları her sürümde olduğu gibi değişir; bu yüzden bu kaydı
+    içeren bir sürümün kit nesli farklıdır. Kayıtlı bir sunucu, kaydolduğu
+    nesli korur: kancası ve birimi o neslin `renew` dosyasını adlandırır, bir
+    Panel güncellemesi yeni nesli yalnız onun yanına yayımlar
+    (`prepare-mail-renewal-runtime`) ve "mevcut bağımsız zamanlamalar,
+    geçerli kitleriyle birlikte korunur" (`MAIL-ENROLLMENT-RESERVATION.md`).
+    Dolayısıyla: önceki Agent kancasını taşıyan bir sunucu denetimi, sahibi
+    Paneli güncellediğinde alır; böyle bir sürümden itibaren kaydolan bir
+    sunucu onu yardımcısında taşır; zaten kayıtlı bir sunucu onu yalnız
+    güncellenmiş Agent'ın işçisi kuyruğu yardımcının zamanlayıcısından önce
+    aldığında görür, Agent yokken hiç görmez. Kayıtlı bir sunucuyu daha yeni
+    bir nesle taşımak aşağıda tasarlandı, uygulanmadı.
+  - Agent RPC, eklemeli: `ServiceActionResult.Outcome`, `.Stage`, `.Applied`,
+    `.Detail`, `.Unit`. Daha eski bir Panel bunları yok sayar ve başarı olmayan
+    her yanıtta yine `Error` görür. HTTP, eklemeli: yukarıdaki iki kod;
+    başarılı bir yanıt `outcome`, `applied` ve `unit` kazanır. Panel ve Agent
+    tek sürümle birlikte kurulur.
+- **Kurtarma davranışı.**
+  - *Yenileme.* Seçili sertifika seçili kalır; ayarlara, deftere, kuyruğa ve
+    sertifika kanıtına dokunulmaz. İşlem açık kalır ve aynı istek tarafından
+    mevcut sınır içinde yeniden denenir (üç yürütme, sonra sahibin açık
+    `--retry-selected` ya da `--retry-failed` komutu); başarısız bir yeniden
+    yüklemeden sonra olduğu gibi. Yardımcının günlük satırı ve Agent'ın kayıt
+    satırı artık hangi hizmet olduğunu, "tamamlanmadı" mı "doğrulanamadı" mı
+    olduğunu, komutu (`postfix reload`, `doveadm reload`, `postfix status`) ve
+    aynı işlemin süreceğini söyler. Bir işlem açıkken sonraki bir yenileme
+    kabul edilmez; bu zaten böyleydi.
+  - *Hizmetler sayfası.* Hiçbir şey yeniden denenmez ve hiçbir şey geri
+    alınmaz. Reddedilen bir yapılandırma başlatmayı, yeniden başlatmayı ve
+    yeniden yüklemeyi, bir şey gönderilmeden önce durdurur; durdurma her zaman
+    gönderilir. Önbellekteki hizmet taraması, başarısız ya da bilinmeyen bir
+    yanıttan sonra da tazelenir.
+- **Kanıt.** Yalnız bileşen testleri; gerçek sistem ölçümü bekliyor.
+  `cmd/agent/mail_served_certificate_test.go` (Postfix önceki sertifikayı
+  sunarken 0 ile çıkan bir sarmalayıcı; yeniden yüklemesinden sonra onu koruyan
+  Dovecot; önce eski, sonra yeni bir süreç; dinleyici yok; TLS sunmayan bir
+  dinleyici; tek bir sunucu adresine bağlanmış bir hizmet; her STARTTLS; iptal
+  edilmiş bir işlem; cümleler; komut kapsamının genişlememesi);
+  `mail_host_certificate_reload_test.go` (yeniden yükle, gözle, sor sırası;
+  denetimsiz bir yeniden yükleme reddedilir); `service_action_verify_test.go`
+  (hizmet izlemezken 0 ile çıkan bir sarmalayıcıda Postfix ve Dovecot
+  eylemleri; her eylem için arkasındaki birimlerle değerlendirilen bir
+  sarmalayıcı, kanıt klasöründeki `ExecReload` metni örnek veri olarak;
+  bilinmeyen; iş sonucunu koruyan gerçek birimler);
+  `cmd/panel/service_action_outcome_test.go`. Hiçbir test posta sunucusu
+  gerektirmez; dinleyiciler bellektedir. Ayrıcalıklı komut korumasına girdi
+  eklenmedi: her komut mevcut başlatıcılardan geçer ve el sıkışması bir süreç
+  değil, bir bağlantıdır.
+- **Açık.**
+  - *Gerçek hizmetlerde ölçülmedi.* Bir gerçek sistem hücresi, Ubuntu 24.04 ve
+    Debian 13'te, Panel ve Agent durmuşken ve işi kayıtlı yardımcı yaparken
+    şunları göstermelidir: (a) sağlıklı bir yenileme: 465, 587, 993 üzerinde
+    sunulan parmak izi öncesinde önceki, sonrasında seçili sertifikaya eşittir,
+    işlem tamamlanır, günlük Postfix ve Dovecot'un yeniden yüklemesini
+    gösterir; (b) örneğin yeniden yüklemesi başarısızken Ubuntu (P1'deki gibi
+    `main.cf` içinde Postfix'in reddettiği bir satır): `systemctl reload
+    postfix.service` 0 ile çıkar ve işlem açık kalır ya da tamamlanır;
+    dinleyicilerin ne sunduğu her iki durumda da kaydedilir; (c) `postfix@-`
+    durmuş ve sarmalayıcı etkinken Ubuntu: "doğrulanamadı", hiçbir şey
+    etkinleştirildi diye kaydedilmez, sahip Postfix'i başlattıktan sonra
+    tamamlanır; (d) `local.conf` içinde reddettiği bir satırla Dovecot:
+    `doveadm reload` 0 ile çıkar, önceki sertifika kalır, "tamamlanmadı"; (e)
+    el sıkışmaları yardımcının korumalı alanında başarılı olur; (f) örnek
+    durmuşken Ubuntu'da `systemctl is-active postfix.service` ne der.
+    Hizmetler sayfası için: reddedilen bir `main.cf` ile Ubuntu'da `postfix`
+    için Yeniden yükle ve Yeniden başlat; Debian ve Ubuntu'da `postgresql`,
+    her eylem, başlamayan bir kümeyle ve sahibin başarısız yeniden yükleme
+    kancasıyla; gerçek `ConsistsOf`, `Wants`, `PropagatesReloadTo`,
+    `ReloadResult` ve `ExecReload` değerleri; üç platformda Dovecot'un birim
+    metni.
+  - *Postfix için "doğrulandı" neyi kanıtlar.* Yayımdan sonra başlayan bir
+    Postfix sunucu süreci, ana süreç yeniden yüklenmemiş olsa bile seçili
+    sertifikayı okur; boşta bekleyen bir süreç `max_idle` içinde çıkar. Denetim
+    bir dinleyicinin seçili sertifikayı sunduğunu kanıtlar; zaten çalışmakta
+    olan her sürecin değiştirildiğini kanıtlamaz.
+  - *Posta dinleyicilerine bu sunucudan ulaşılamayan bir sunucu* (kendi
+    adreslerinin hiçbirinde 25, 465, 587 ya da 110, 143, 993, 995 üzerinde TLS
+    yok) ya da sahibi `master.cf` içinde her dinleyiciye başka bir sertifika
+    vermiş bir sunucu: yenileme sertifikayı yayımlar, yeniden yükler, sonra
+    sahip sürdürene kadar "doğrulanamadı" ya da "tamamlanmadı" olarak açık
+    kalır ve sonraki bir yenileme onun arkasında bekler. Bu kayıttan önce böyle
+    bir sunucu kanıt olmadan etkinleştirildi diye kaydediliyordu. CelikPanel'in
+    kurduğu yığın bu kapıları açar.
+  - *Tasarlandı, uygulanmadı: kayıtlı bir sunucuyu daha yeni bir yardımcı
+    nesline taşımak.* Dosya, yüklü birim ve ters işlem yapı taşları vardır ve
+    gerçek sistem kanıtları bulunur (tam önceki kitle
+    `celikpanel-mail-renewal-transition/v1`, ön görüntü v1, dosyalar v1, yüklü
+    v1; `MAIL-RENEWAL-KIT.md`). Eksik olanlar: kaydınkinin yanında bir
+    "yükseltme" işlemi için, yalnız sahibin gözden geçirdiği adımla kabul
+    edilen kalıcı bir ayırma ve dağıtıcı; çalışan bir yenilemenin birimini
+    değiştirmek yerine onu beklemek; uygulama geri alma kuralı (kabul edildiği
+    Agent bildirimi geri yüklendiğinde önceki nesle ters işlem); ve sahibin
+    göreceği ekran. Üç şablon değişmedikçe bildirim şeması v1 kalır; `v2`
+    yalnız bir şablon ya da bildirim alanı değişirse gerekir ve o zaman okuyucu
+    ikisini de tanımalıdır. Sahip, posta sertifikası durumunda yenileme
+    yardımcısının hangi sürümden olduğunu görür (yardımcı zaten
+    `--inspect-build-identity` yanıtlar); bu kayıttan önceyse, hizmetleri
+    sundukları sertifikayı doğrulamadan yeniden yüklediğini, onu taşıyan tek
+    bir gözden geçirilmiş eylemle ve Panel olmayan bir sunucu için aynı eylemin
+    yeni değişmez yardımcının root komutu olarak verilmiş biçimiyle birlikte
+    görür. O zamana kadar kayıtlı bir Ubuntu sunucusunun sahibi bir yenilemeden
+    sonra şunu karşılaştırır: `openssl s_client -connect localhost:465
+    </dev/null 2>/dev/null | openssl x509 -noout -fingerprint -sha256` ile
+    `openssl x509 -noout -fingerprint -sha256 -in
+    /etc/ssl/celikpanel/_mail/host/current/fullchain.pem`; farklıysa `sudo
+    postfix reload` çalıştırır.
+  - *Ekran metni (2026-10-10 birleştirmesi).* Katalogda
+    `err.SERVICE_ACTION_FAILED.*` ve `err.SERVICE_ACTION_UNKNOWN` girdileri
+    İngilizce ve Türkçe vardır; Hizmetler ekranları onları hizmetin satırı,
+    komut ve hizmeti çalıştıran birimle birlikte yerinde gösterir (bu tarihli
+    işlem yönlendirmesi kaydı). Doğrulanmış hata hata yüzeyinde, bilinmeyen
+    sonuç dikkat yüzeyinde durur. Sahte sunucuya karşı tarayıcıda incelendi;
+    gerçek bir hizmette değil.
+  - *Sarmalayıcı yalnız olumlu kanıtla tanınır.* `systemctl show` eylemden önce
+    okunamıyorsa birim kendi iş sonucunu korur.
+  - `StartServiceMutation` RPC'si (Postfix ve Dovecot; bir posta hizmeti
+    kurulduğunda kullanılır) artık aynı doğrulanmış yoldan başlatır.
+
+### Durum değiştiren istek tek bir kimlik taşır; yineleme yanıtlanır, bir daha çalıştırılmaz (ilkeler 2, 4 ve 6, 2026-10-10)
+
+D-025 ilkeleri 2 (zaman aşımı; başarısızlığın, başarının ya da yeniden başlatma
+izninin kanıtı değildir; bilinmeyen ayrı bir durumdur), 4 (tarayıcı gözlemcidir;
+yeniden deneme sınırlı, yinelenebilir ve tek bir işleme bağlıdır) ve 6 (bir
+işlemin kimliği yeniden yükleme ya da yeniden bağlanmadan sonra erişilebilir
+kalır); anayasanın 3. kuralı ("yenileme, yeniden bağlanma ve zaman aşımı asla
+yinelenen işe yetki vermez"); D-024, D-029. Hiçbir P0 işi kapanmadı ya da
+ilerlemedi. Gerçek tarayıcı incelemesiyle ve `7a64bda91` kaynağının salt-okur
+dökümüyle bulundu; kurulu bir sunucuda gözlenmedi.
+
+- **`7a64bda91` kaynağında doğrulandı.**
+  - *Tarayıcı isteği kendiliğinden yineler.* Bir POST gönderilirken bağlantı
+    sıfırlanırsa Chrome onu yeniden gönderir: tek tıklama Panel'e üç kez
+    ulaştı. Durum değiştiren yaklaşık 115 rotadan 12'si iki kez çalıştığında
+    zararlıdır.
+  - *Sıfırlama ilk denemeyi yarıda bırakıyordu.* İşleyiciler bağlantının
+    bağlamını Agent çağrısına ve sonrasındaki veritabanı yazımlarına veriyordu.
+    İptal edilen Panel dönerken Agent sürdürüyor, yineleme de bu duruma karşı
+    çalışıyordu.
+  - *Bu kaydın sekiz rotası; her biri kodda okundu ve
+    `TestRequestIdentityEightRoutesRepeatTheirEffectWithoutTheGuard` ile
+    yeniden üretildi:*
+    - alan adı yedeğinin geri yüklenmesi: Agent'ta kilit yoktu; her geliş bir
+      güvenlik yedeği yazıyor, belge kökünü değiştiriyor ve veritabanlarını
+      yan yana içe aktarıyordu;
+    - cPanel içe aktarımı: iki Agent çağrısı arasında, site yarı aktarılmış
+      hâlde duruyordu
+      (`TestImportApplyWithoutTheGuardStopsWhenTheConnectionGoesAway`);
+      yineleme sonra "alan adı zaten var" diye reddediliyordu;
+    - Let's Encrypt yeniden düzenleme: her geliş bir düzenleme daha zorluyordu
+      (üç geliş, üç düzenleme);
+    - elle yedek: iş anahtarı yoktu; iş kilidi alınmıyor ve her geliş için bir
+      arşiv üretiliyordu;
+    - Panel'in veritabanı motorundaki kendi hesabı: her gelişte yeni parola;
+      iki gelişi ayıran bir şey yoktu ve kayıt bağlantının bağlamında
+      yazılıyordu;
+    - VPN eşi: her gelişte yeni anahtarlar ve yeni adres (üç eş);
+    - veritabanı sunucusunda veritabanı: MariaDB ikinci `CREATE DATABASE IF NOT
+      EXISTS` komutunu kabul eder, yineleme mevcut kayıtta başarısız olur ve
+      telafisi ilk isteğin oluşturup kaydettiği veritabanını siler;
+    - alan adının veritabanı: motorda oluşturuluyor, Panel'de kaydedilmiyordu.
+- **Değişen.**
+  - *Koruma* (`cmd/panel/request_identity.go`), kimlik doğrulamanın içinde ve
+    yönlendiricinin önünde. Sekiz rotadan birine gelen istek
+    `X-CelikPanel-Request-Id` (32 küçük harfli onaltılık karakter) taşımalıdır;
+    taşımıyorsa yanıt `428 REQUEST_ID_REQUIRED` olur ve işleyiciye ulaşılmaz.
+    İlk geliş bir `running` satırı yazar ve işleyiciyi, bağlantının iptal
+    edemeyeceği, rotanın süre sınırıyla sınırlı bir bağlamda çalıştırır (geri
+    yükleme 40 dk, içe aktarım 2 sa, sertifika 25 dk, yedek 35 dk,
+    veritabanları 15 dk, motor hesabı 12 dk, VPN eşi 10 dk). Yanıt önce
+    saklanır, sonra gönderilir. Satırı yazılamayan işleyici hiç başlamaz.
+  - *Yineleme* (aynı kimlik, kullanıcı ve yöntem + yol + sorgu + gövdenin
+    SHA-256'sı) satırdan yanıtlanır. İlki sürerken en çok 20 saniye bekler,
+    sonra aynı kimlikle `409 REQUEST_IN_PROGRESS` alır. Aynı kimlik başka bir
+    şey için gelirse `409 REQUEST_ID_REUSED`.
+  - *Bilinmeyen bilinmeyen kalır.* Önceki sürecin ya da beklenmedik biçimde
+    duran bir işleyicinin `running` bıraktığı satır `interrupted` olur;
+    yinelemesi `409 REQUEST_OUTCOME_UNKNOWN` alır ve istek o kimlikle bir daha
+    asla çalıştırılmaz.
+  - *Gizli bilgiler saklanmaz.* Motor hesabı ve VPN eşi rotaları, o isteğin
+    ürettiği parolayı taşıyan veritabanı yanıtı ve 64 KiB'ı aşan her yanıt
+    yalnızca durum kodunu saklar; yineleme `409
+    REQUEST_COMPLETED_RESULT_NOT_RETAINED` alır (ilk deneme hatayla bittiyse
+    `failed` gerekçesiyle). İstek gövdesi hiçbir zaman saklanmaz.
+  - *Agent'ta.* Bir alan adının geri yüklemesi sürerken ikincisi, hiçbir şey
+    okunmadan ve yazılmadan reddedilir (Panel'de `409
+    BACKUP_RESTORE_IN_PROGRESS`). Elle alınan yedek istek kimliğini iş anahtarı
+    olarak gönderir (`request:<kimlik>`); böylece Agent'ın iş kilidi ve bu işin
+    daha önce yayımladığı arşivi araması geçerli olur.
+  - *Panel'de.* Bir veritabanı sunucusunun kendi hesabının açılması, yeniden
+    anahtarlanması ve kaldırılması sırayla çalışır; her biri satırı kilit
+    altında yeniden okur.
+  - *Tarayıcıda.* Tek fetch yakalayıcısı başlığı, gövdesinde `request_id`
+    taşımayan, GET olmayan her `/api/` çağrısına ekler; eylem başına tek
+    kimlik, başka kökene asla. Sekiz rotada kaybolan yanıt (bağlantı hatası ya
+    da JSON olmayan bir 408, 429, 502, 503, 504; Panel'in bu durum kodlarından
+    biriyle gelen kendi reddi yanıtın kendisidir ve gösterilir) 1,5 saniye
+    sonra aynı kimlikle bir kez daha istenir ve o yanıt kullanılır. O da yanıt
+    getirmezse, ya da Panel `REQUEST_OUTCOME_UNKNOWN` ya da
+    `REQUEST_IN_PROGRESS` yanıtlarsa, sekiz ekranın her biri sonucu, uzak durum
+    kuralının dördüncü partisinin kimliksiz bir değişiklik için yaptığı gibi
+    bilinmiyor diye gösterir: hangisinin olduğunu söyleyen, yerinde duran bir
+    bildirim, salt-okur bir yeniden okuma ve o okuma yanıtlanana dek kapalı
+    kalan değiştiren ya da kaldıran denetimler. Tek seferlik sonucu kimseye
+    ulaşmadan yapılmış değişiklik, neyin yapıldığını ve ne yapılacağını
+    söyler. İçe aktarım sayfası isteğinin kimliğini ve
+    tam gövdesini tutar: salt-okur kontrolden sonra yeniden başlatmak aynı
+    istektir; sunucu onu ilk çalışmadan yanıtlar ve iki kez içe aktaramaz.
+  - Diğer her rota, başlık olsun olmasın, eskisi gibi davranır.
+- **Şema ya da sürüm geçişi.** Göç 43 (`043_request_identities.sql`),
+  `request_identities` tablosunu ve bitiş dizinini olağan defter üzerinden
+  oluşturur; mevcut hiçbir tablo değişmez. Eski bir Panel, 43. girdiyi taşıyan
+  defterde açılmayı reddeder
+  (`TestOlderReleaseRefusesALedgerWithTheRequestIdentitiesEntry`); geri dönüş,
+  önceki her göçte olduğu gibi güncelleme öncesi anlık görüntünün geri
+  yüklenmesidir. Tablo sahibin verisini tutmaz: onu kaybeden bir geri
+  yüklemeden sonra yineleme bir ilk geliştir; bu değişiklikten önce de öyleydi.
+  **Artık zorunlu:** sekiz rotada başlık. Eklemeli: durum değiştiren diğer her
+  çağrıdaki başlık (yok sayılır), korunan yanıtlardaki
+  `X-CelikPanel-Request-Id` ve `X-CelikPanel-Request-Replayed`, korumanın
+  retlerindeki `vars.request_id`, elle yedeklerde `CreateRequest.JobKey` (eski
+  Agent'ın zaten okuduğu bir alan), Agent yanıtı `RESTORE_IN_PROGRESS`. Yeni ret
+  kodları: `REQUEST_ID_REQUIRED`, `REQUEST_ID_REUSED`, `REQUEST_IN_PROGRESS`,
+  `REQUEST_OUTCOME_UNKNOWN`, `REQUEST_COMPLETED_RESULT_NOT_RETAINED`,
+  `BACKUP_RESTORE_IN_PROGRESS`. Güncellemeden önce açılmış sayfa, yeniden
+  yüklenene dek sekiz rotada reddedilir.
+- **Kurtarma davranışı.** Hiçbir şey kendiliğinden yeniden denenmez ya da
+  onarılmaz. Panel açılışta, herhangi bir uygulama isteğine hizmet vermeden
+  önce her `running` satırını `interrupted` yapar; bu sürecin çalıştırmadığı
+  bir `running` satırı, yinelemesi geldiğinde de aynı biçimde ele alınır;
+  böylece başarısız bir açılış geçişi ya da sonucun yazılamaması, kimsenin
+  yürütmediği bir işi beklemeye dönüşemez. Yarıda kalan isteğin sonucu
+  bilinmez: sahip sayfadaki mevcut durumu kontrol eder ve değişikliği yalnızca
+  eksikse yeniden yapar. Agent'ın işi, Panel'in süre sınırıyla ya da Panel'in
+  yeniden başlamasıyla iptal edilmez; yerel hizmetler Panel olmadan eskisi
+  gibi çalışmayı sürdürür ve satırlar 24 saat sonra silinir.
+- **Kanıt.** Bileşen testleri; gerçek sistem denemesi yok.
+  - Panel, koruma: `TestRequestIdentityFirstArrivalRunsAndReplayIsAnsweredFromTheRow`,
+    `TestRequestIdentityNeverStoresTheRequestBody`,
+    `TestRequestIdentityIsRequiredOnProtectedRoutesAndIgnoredElsewhere`,
+    `TestRequestIdentityReusedForADifferentRequestIsRefused`,
+    `TestRequestIdentityReplayWhileRunningWaitsThenSaysInProgress`,
+    `TestRequestIdentityRunningRowsAreInterruptedAtStartAndNeverReExecuted`,
+    `TestRequestIdentityOversizeAnswerKeepsOnlyItsStatus`,
+    `TestRequestIdentitySecretAnswersAreNeverStored`,
+    `TestRequestIdentityExpirySweep`,
+    `TestRequestIdentityHandlerPanicLeavesATruthfulRow`,
+    `TestRequestIdentityHandlerOutlivesTheConnection`,
+    `TestRequestIdentityConcurrentArrivalsRunOnce`,
+    `TestRequestIdentityHandlerDoesNotRunWithoutItsRow`,
+    `TestKeyedLocksSerialisePerKeyAndForgetIdleKeys`.
+  - Panel, sekiz rota; ürünün yönlendiricisi üzerinden, sahte bir Agent ya da
+    veritabanı sürücüsüyle: `TestRequestIdentityEightRoutesSentThreeTimesInARow`,
+    `TestRequestIdentityEightRoutesSentThreeTimesAtOnce` (tek etki, aynı yanıt;
+    tek seferlik yanıtı tam olarak bir geliş alır),
+    `TestRequestIdentityEightRoutesRepeatTheirEffectWithoutTheGuard`,
+    `TestRequestIdentityRoutesMuxMirrorsMain`,
+    `TestImportApplyIsNotCutWhenTheConnectionGoesAway`,
+    `TestImportApplyWithoutTheGuardStopsWhenTheConnectionGoesAway`,
+    `TestDatabaseAdminAccountChangesAreSerialisedPerServer`,
+    `TestRestoreRefusedByTheAgentWhileAnotherRunsIsANamedRefusal`. İçe aktarım
+    durumu, içe aktarımın ikinci Agent çağrısında biter; bütün bir içe aktarım
+    çalıştırılmadı.
+  - Agent: `TestOnlyOneRestoreOfADomainHoldsTheLock`,
+    `TestConcurrentRestoreClaimsNeverOverlap`,
+    `TestRestoreBackupIsRefusedWhileAnotherRestoreOfTheDomainRuns`,
+    `TestSecondRestoreOfADomainIsRefusedWhileTheFirstRuns`,
+    `TestManualBackupWithTheRequestJobKeyPublishesOnce`.
+  - Göç: `TestRequestIdentitiesMigrationContracts`,
+    `TestRequestIdentitiesMigrationAppliesToAnExistingDatabase`,
+    `TestOlderReleaseRefusesALedgerWithTheRequestIdentitiesEntry`.
+  - Web: `web/tests/request-identity-runtime.test.mjs` (ayrıca: Panel'in kendi
+    reddi asla yeniden sorulmaz; sekiz ekran için sonucu bilinmeyen değişikliğin
+    tek tanımı); `web/tests/remote-state-mounted-batch4.test.mjs` içindeki yedek
+    durumları; `web/tests/service-action-outcome.test.mjs` (yalnız-durum
+    yanıtları); `web/tests/remote-state-mounted.test.mjs` içindeki içe aktarım
+    durumu. Düzenek: `deploy/e2e/dns-pair-acceptance/test_panel_api.py` (sürücü,
+    güvenli olmayan isteklerini web arayüzünün yaptığı gibi adlandırır);
+    `test_populated_database.py`, `test_database_exchange_rows.py` ve
+    `test_guest_populated_baseline.py` (43 şeması sabiti).
+
+Açık: gerçek, kurulu bir Chrome, bu korumanın sözleşmesini tutan yerel bir
+sahte sunucuya karşı çalıştırıldı (`web/tools/browser-inspect`; `idbackup`,
+`idrestore`, `idcertificate`, `iddomaindb`, `idserverdb`, `idaccount`,
+`idpeer`, `idimport`, `idrefusal`, `serviceaction` senaryoları; sekiz
+yapılandırmanın her birinde 53 durum: 1440x900 ve 390x844, İngilizce ve Türkçe,
+açık ve koyu). Bağlantı gerçekten sıfırlandığında tek tıklama sahte sunucuya en
+çok 10 kez ulaştı (Chrome'un kendiliğinden yinelediği istekler ve sayfanın tek
+ikinci sorusu), her varış tek kimlikle; sekiz değişikliğin her biri bir kez
+yapıldı. Bu, tarayıcının bu korumaya değil, bir sahte sunucuya karşı ölçümüdür.
+Sekizden birinin ortasında hiçbir Panel yeniden başlatılmadı; gerçek bir geri
+yükleme, içe aktarım, sertifika düzenleme, yedek ya da veritabanı motoru
+çalıştırılmadı. Rota süre sınırları ve
+20 saniyelik bekleme seçilmiştir, ölçülmemiştir. Süre sınırı Panel'in
+işleyicisini sınırlar; Agent RPC'sinin iptal edemediği Agent işini sınırlamaz.
+Korunan bir istek sürerken duran Panel, Agent'ın işini uzlaştırılmamış bırakır:
+satır "bilinmiyor" der ve sahip kontrol eder. Sahibin başlattığı panel
+güncellemesi, Panel'i durdurmadan önce henüz `running` istek kimliklerine
+bakmıyor. Koruma aynı isteğin yinelemesini yanıtlar; iki ayrı tıklama iki
+istektir ve ikisi de çalışır; yalnızca rotanın kendi kilidinin reddettiği ya da
+sıraya koyduğu yerler ayrıdır (geri yükleme, motor hesabı, sertifika). Motor
+hesabı yanıtı parola taşımaz, yine de yalnızca durum kodu olarak saklanır;
+ekran bu yinelemeyi olduğu gibi, başarı olarak ele alır. Elle alınan yedek
+artık, zamanlanmış yedeğin zaten yaptığı gibi, alan adının yedek dizinindeki
+okunamayan bir `.cpbak` dosyasında durur. Güncelleme düzeneğinin dolu
+veritabanı kanıtı (`deploy/e2e/release-recovery/populated_database.py`),
+2026-10-10 birleştirmesinden beri 38 ve 42'nin yanında 43 şemasını da sabitler:
+göç defteri özeti `a0b5c4247f83...` ve şema özeti `48cbd3b47573...`; 43 göç
+dosyasından, çevrimdışı testlerinin girdisini kurduğu yolla hesaplandı (aynı
+hesap mevcut iki sabiti de üretir); 66 tablo: 42 şemasının 65 tablosu ve
+`request_identities`. `verify_copy` ve `guest_populated_baseline.py verify
+--expected-version` 43'ü kabul eder; `database_exchange_rows.verify_pair`
+adayın hangi sabitlenmiş şemaya ulaştığını kendi defterinden okur, onu o sabite
+bağlar ve yalnız göç içeren bir değişimden sonra `request_identities`
+tablosunun boş olmasını ister. Bu adayı doğrulayan bir deneme, 42 verdiği yerde
+43 verir. Onunla hiçbir deneme çalıştırılmadı. Panel'de bir veritabanı
+kullanıcısının parolasını belirleyen bir denetim yoktur; bu yüzden "üretilmiş
+veritabanı parolası yeniden belirlenir" (D-029) motorda yapılır; ekran bunu
+söyler. Kapsanmayan: dökümün diğer zararlı rotaları (hizmet ve uygulama yeniden
+başlatma, planlar, kayıtlar), yinelemeden sonra yanlış bildiren yaklaşık 38
+rota, sınıflandırılamayan 7 rota ve sürüm belirteci taşıyan rotalar.
+
+### İkinci gerçek sistem ölçümünden çıkan düzeltmeler (ilkeler 1-4 ve 6, 2026-10-11)
+
+D-025 ilkeleri 1 (sahibin yerel yapılandırması algılanır, değiştirilmez), 2
+(bilinmeyen; yok, boş ya da başarı değildir), 3 (güvensiz yazı kendi sınırında
+durdurulur), 4 (bir değişiklik ön görüntüsünü okur, doğrular ve sınanmış bir
+geri alması vardır) ve 6 (ekran yetkili durumu gösterir); D-022, D-024, D-029.
+Hiçbir P0 işi kapanmadı ya da ilerlemedi. Kaynak: tek kullanımlık QEMU/KVM
+konuklarında (Debian 13, Ubuntu 24.04, Arch; kanıt
+`deploy/e2e/release-recovery/evidence/set2-20261011/`) 2026-10-09 (UTC) tarihli
+`set2` koşusu. O koşu bundan önceki kaydın düzeltmelerini doğruladı ve üç aday
+hata (P3, P4, P5) ile O6-O15 gözlemlerini ölçtü. Buradaki hiçbir şey kurulu bir
+sunucuda gözlenmedi. Bu kayıt onları kaynakta düzeltir; düzeltmelerin hiçbiri
+gerçek hizmetlerde ölçülmedi.
+
+- **Ölçülen.**
+  - *O15, tarayıcıya yanıtlanan bir gizli bilgi.* `POST
+    /api/v1/import/cpanel/inspect` her posta kutusunun parola özetini
+    yanıtlıyordu (`mail_accounts[].crypt_hash`): işleyici Agent'ın yanıtını
+    geldiği gibi kodluyordu. Uygulama rotası arşivi zaten sunucuda yeniden
+    okuyordu; sayfa arşivin yolunu ve sahibin seçimlerini gönderiyordu,
+    özetleri asla göndermiyordu.
+  - *P3, başarısız bir Yeniden yükle, kimsenin okumadığı "önceki ayarlarıyla
+    çalışmayı sürdürüyor" sözüyle yanıtlandı.* (a) Sahibin, `ExecReload` komutu
+    sunucuya sinyal gönderip sonra başarısız olan bir ek dosyasıyla PostgreSQL:
+    örneğin `ReloadResult` değeri `exit-code` idi ve `pg_conf_load_time()`
+    ilerlemişti; sunucu dosyalarını yeniden okumuştu. (b) Durmuş bir Postfix ya
+    da Dovecot için Yeniden yükle aynı cümleyi aldı.
+  - *O8, `main.cf` reddedilirken Postfix'i Durdur, ana süreç gitmiş olduğu
+    hâlde `502 SERVICE_ACTION_UNKNOWN` ile yanıtlandı.* `postfix status` yanıt
+    vermeden önce `main.cf` dosyasını okur; bu durumda yanıt veremez.
+  - *P4, bir içe aktarımın dosya adımı, `homedir/public_html/` dizin üyesini
+    taşıyan arşivi reddetti* ("unsafe cpmove member path"), rota `202` ve
+    `status: pending` ile yanıtladı; alan adı, posta kutusu ve veritabanı içe
+    aktarıldı, site dosyaları aktarılmadı. Bekleyen bir şey yoktu: her adım
+    bitmişti.
+  - *P5, Arch: PHP sitesi oluşturulamadı, bu yüzden her içe aktarım `500`
+    yanıtladı.* Havuz dosyası Debian düzeni olan `/etc/php/8.5/fpm/pool.d/`
+    altına yazılıyordu ve yeniden yükleme `php8.5-fpm` adlı bir birimi
+    adlandırıyordu.
+  - *O9.* Sertifika çıkarmayan bir certbot çalışması `500 INTERNAL` "internal
+    server error" ile yanıtlandı.
+  - *O10.* `database-servers/{id}/databases`, yeni kullanıcının parolasını
+    çağıran göndermiş olsa da yanıtlıyordu; bu yüzden yanıt saklanmıyor ve
+    yineleme yalnız-durum reddini alıyordu.
+  - *O11.* Kurulum yalnızca genel bir DNS kaydını beklerken, yürütücüsünün
+    çözümleyicilere yeniden sorduğu anlarda bir hizmet işlemi `409
+    server_setup_busy` ile reddedildi.
+  - *O14.* Veritabanları sayfası bir MariaDB 10.11.14 için `15.1` (Ubuntu
+    24.04: istemcinin sürümü), Arch'ta ise `VERSION()` yazısının kendisini
+    gösterdi.
+- **Değişen.**
+  - *İçe aktarım önizlemesi ve özetler*
+    (`internal/transport/cpmove_contracts.go`, `cmd/agent/cpmove_rpc.go`,
+    `cmd/panel/import_handlers.go`). Tarayıcıya, her alanı adıyla yazılmış
+    kendi türü yanıtlanır: bir posta kutusu adresi, kotası ve `has_password`
+    değeridir. `CpmoveMailAccount.CryptHash` hiçbir zaman JSON olarak kodlanmaz
+    (`json:"-"`); Agent'tan Panel'e yerel RPC üzerinden ve yalnızca Panel
+    istediğinde (`CpmoveInspectRequest.IncludeMailHashes`) gider; bunu yalnızca
+    postalı bir içe aktarımın uygulanması ister. Uygulama, eskisi gibi, arşivi
+    sunucuda yeniden okur. Parola alanı bir crypt özeti olmayan (askıya
+    alınmış) posta kutusu artık atlanmak yerine `has_password: false` ile
+    listelenir ve uygulama onu sessizce geçmek yerine içe aktarılmamış bir adım
+    olarak bildirir.
+  - *Başarısız bir yeniden yükleme yalnızca doğrulananı söyler*
+    (`cmd/agent/service_action_verify.go`,
+    `cmd/panel/service_action_outcome.go`, `internal/transport/rpc.go`). Üç
+    yeni aşama. `not_running`: durmuş bir Postfix ya da Dovecot'un, ya da
+    arkasında çalışan birim olmayan bir sarmalayıcının yeniden yüklenmesi;
+    `409` ile yanıtlanır, hizmete hiçbir şey gönderilmemiştir. `reload_reread`
+    ve `reload_not_reread`: yalnız PostgreSQL. Agent, yeniden yüklemeden önce
+    yerel soket üzerinden ve sinyal göndermeden postmaster'ın süreç kimliğini
+    (`postmaster.pid`), `pg_postmaster_start_time()` ve `pg_conf_load_time()`
+    değerlerini okur; birimin başarısız diye bildirdiği bir yeniden yüklemeden
+    sonra onları yeniden okur. Yalnızca iki okuma da aynı sunucu sürecine ve o
+    süreç birimin ana sürecine aitse, daha geç bir yükleme zamanı "dosyalarını
+    yeniden okudu", iki kez okunan değişmemiş bir zaman "okumadı" demektir.
+    Başka her durumda ve sorulamayan her hizmette aşama yalın `reload` olur;
+    cümlesi iki durumdan hiçbirini ileri sürmez.
+  - *Postfix'i Durdur, ana sürece bakılarak değerlendirilir*
+    (`cmd/agent/mail_service_verify.go`). Agent `systemctl stop postfix`
+    komutundan sonra `<queue_directory>/pid/master.pid` içindeki süreç
+    kimliğini ve `/proc/<pid>/comm` dosyasını okur: o kayıt yoksa ya da başka
+    bir programa aitse ana süreç gitmiştir. Durdurma için artık `postfix check`
+    sorulmaz. Yalnızca sürece bakılamıyorsa, eskisi gibi, Postfix'in kendisine
+    sorulur ve yalnızca o zaman reddedilen bir yapılandırma sonucu bilinmez
+    kılabilir.
+  - *Bir arşivin dizin üyeleri* (`cmd/agent/cpmove_extract_linux.go`). Dizin
+    olan bir üyenin adından, tar'ın onu sakladığı biçimdeki tek sondaki eğik
+    çizgi atılır. Dayanak: tar biçimi (POSIX ustar tür bayrağı `5`; GNU tar,
+    Python'un `tarfile` modülü ve Go'nun `tar.FileInfoHeader` işlevi çizgiyi
+    yazar) ve içe aktarımın adı zaten temizleyen kendi incelemesi; depoda
+    gerçek bir cPanel arşivi yok ve koşuda da yoktu. Diğer her ret yerinde ve
+    sınanıyor: herhangi bir yerdeki `..` bileşeni, ters eğik çizgi, NUL,
+    sondaki çift eğik çizgi, hiçbir şeye temizlenen yük yolu, sonda eğik
+    çizgili dosya adı, sembolik bağlar, sabit bağlar, aygıtlar.
+  - *İçe aktarım neye vardığını yanıtlar* (`cmd/panel/import_handlers.go`).
+    Seçilen her parça aktarıldığında `200` ve `status: "active"`; yoksa
+    `status: "partial"`, `code: IMPORT_PARTIAL`, `imported` ve `not_imported`
+    listeleri, `domain_status` ve bir `message` (D-024). Hiçbir zaman `202` ya
+    da `status: "pending"` yanıtlamaz. Oluşturulamayan bir site, çıplak bir
+    `500` yerine `502 IMPORT_SITE_NOT_CREATED` olur.
+  - *Tek birimli bir sunucuda PHP-FPM* (`internal/services/php_layout.go` ve
+    Debian yollarını kuran beş dosya; `cmd/agent/site_rpc.go`,
+    `cmd/agent/vhost_rpc.go`). Karar: Arch'ta PHP siteleri desteklenmek üzere
+    tasarlanmıştır. Kaynaktaki dayanak: katalog `php-fpm` paketini pacman için
+    eşler ve Arch'ın tek birimini adlandırır, kopya listesi o düzende sürümü
+    programa sorar ve yetenek okuması, Alan adı ekle orada PHP sunsun diye
+    değiştirilmiştir (B3b). Düzen, kopya listesinin okuduğu gibi sunucudan
+    okunur: `/etc/php` altında kendi ağacı olan bir sürüm sürümlü düzendir; o
+    ağacı olmayan ama `/etc/php/php-fpm.d` dizini olan sunucu tek birimli
+    düzendir (havuzlar `/etc/php/php-fpm.d/` altında, birim `php-fpm`, program
+    `php-fpm`, `/etc/php/php.ini`, soketler `/run/php-fpm/` altında). Soketin
+    sahibi, var olan web sunucusu hesabıdır (`www-data`, `nginx`, `http`).
+  - *certbot hatası türlenir* (`cmd/agent/certbot_failure.go`,
+    `cmd/panel/certificate_issue_failure.go`). Agent, certbot'un kendi
+    çıktısını üç tür için okur (otoriteye ulaşılamadı, otorite bir doğrulamayı
+    reddetti, otoritenin bir sınırına ulaşıldı), `timeout` ve `tool` türlerini
+    ve sınırlı tek bir satırı ekler. Yanıt, türü `reason` olarak taşıyan `502
+    CERTIFICATE_ISSUE_FAILED` olur; certbot'un satırı yalnızca yöneticiye
+    gider.
+  - *Bekleyen bir kurulum hizmet işlemlerini reddetmez*
+    (`cmd/panel/server_setup_operations.go`). Kural: satırı `running` iken bir
+    yürütme değişiklik yapıyor sayılır; bulunduğu adım yalnızca genel
+    çözümleyicilere soran genel adres denetimi (`access_dns`) ise sayılmaz.
+    Yürütme olarak okunamayan satır değişiklik yapıyor sayılır.
+  - *Çağıranın gönderdiği parola geri gönderilmez*
+    (`cmd/panel/database_v2_handlers.go`). Veritabanı ve veritabanı kullanıcısı
+    rotaları `password_set: true` yanıtlar; `password` yalnızca isteğin kendisi
+    ürettiğinde gelir. Böylece ilk yanıt saklanır ve diğerleri gibi yinelenir.
+    Gönderilen bir parolayı geri yansıtan başka bir rota bulunmadı.
+  - *MariaDB sürümü sunucunundur* (`internal/services/mariadb_driver.go`,
+    `version_detector.go`, `cmd/panel/database_admin_account_handlers.go`).
+    Panel'in üzerinde hesabı olduğu her durumda çalışan motora, kendi yanıtını
+    işaretleyen bir ifadeyle (`version=...`) sorulur; hizmet taraması istemciye
+    değil sunucu programına sorar (`mariadbd --version`).
+- **API değişiklikleri (sürüm notları için).**
+  - `POST /api/v1/import/cpanel/inspect`: `mail_accounts[].crypt_hash` kalktı;
+    `mail_accounts[].has_password` (mantıksal) yeni. Arşivde parolası olmayan
+    posta kutusu artık listelenir.
+  - `POST /api/v1/import/cpanel/apply`: bir parçası aktarılmadan biten içe
+    aktarım için `202` yerine `200`; `status` değeri `active` ya da `partial`
+    (eskiden `active` ya da `pending`); yeni alanlar `domain`, `domain_status`,
+    `code`, `message`, `imported`, `not_imported`. Yeni ret `502
+    IMPORT_SITE_NOT_CREATED`.
+  - `POST /api/v1/service/action`: yeni gerekçeler `not_running` (`409` ile
+    yanıtlanır), `reload_reread`, `reload_not_reread`; `main.cf` reddedilirken
+    Postfix'i Durdur, ana süreç gittiyse `200` yanıtlar.
+  - `POST /api/v1/domains/{id}/ssl/letsencrypt`: sertifika çıkarmayan bir
+    certbot çalışması için `500 INTERNAL` yerine `reason` taşıyan `502
+    CERTIFICATE_ISSUE_FAILED`.
+  - `POST /api/v1/database-servers/{id}/databases` ve `.../users`: `password`
+    yalnızca istek onu ürettiğinde; `password_set` yeni.
+- **Değişmeyen ve nedeni.**
+  - O6 ve O7 (yeniden başlatılan Panel süren bir geri yüklemeyi kesmez;
+    öldürülen bir Panel'den sonra Agent onu bitirmişken satır sonucun
+    bilinmediğini söyler) D-029'un tarif ettiği şeydir; satırı Agent ile
+    uzlaştırmak bu kaydın parçası değildir.
+  - O12: MariaDB için Yeniden yükle, systemd'nin kendi satırıyla yanıtlanır.
+    Hizmetler ekranları yalnızca Başlat, Durdur ve Yeniden başlat gönderir; bu
+    yüzden hiçbir ekran o Yeniden yükle'yi sunmaz, ona API üzerinden ulaşılır.
+    O13 ve O2 değişmedi.
+  - Bir kurulumun diğer DNS beklemeleri (`primary_dns`, `infrastructure_dns`)
+    yeniden denetlenirken hizmet işlemlerini reddetmeyi sürdürür: yeniden
+    denetimleri yerel DNS kayıtları yayımlayabilir. Son doğrulamanın (ters DNS
+    denetimini de taşıyan) beklemesi satırı hiçbir zaman `running` yapmaz; bu
+    yüzden hiç reddetmedi.
+  - Tek birimli bir sunucuda eklenti dizinleri (`mods-available`, `conf.d`)
+    hâlâ Debian'ınkilerdir ve PHP sürüm değişimi soket yolunu hâlâ Panel'de
+    kurar; böyle bir sunucuda geçilecek tek bir sürüm vardır.
+  - Bir motor için kaydedilmiş sürüm, Panel'in o motordaki hesabı yeniden
+    oluşturulana dek kalır.
+  - Alan Adları sayfası, bir alan adının `pending` durumunu bekliyor olabilecek
+    bir silme sayar ve işaretini sorar; kısmi bir içe aktarımın bıraktığı alan
+    adının işareti yoktur ve sıradan bir satır olarak çizilir.
+- **Şema ya da sürüm geçişi.** Veritabanı şeması ve kalıcı durum yok. Agent'ın
+  RPC'si adla aktarılan alanlar kazanır: `CpmoveMailAccount.HasPassword`,
+  `CpmoveInspectRequest.IncludeMailHashes`, `IssueLetsEncryptResponse.Failure`
+  ve `FailureDetail`, ve üç `ServiceActionResult.Stage` değeri. Arşiv çağrıları
+  Panel ile Agent'ın aynı derleme olmasını zaten şart koşar. Yeni alanları
+  olmayan bir Agent ile karşılaşan Panel, bir özet geldiyse posta kutusunu
+  parolalı gösterir, certbot hatasını eskisi gibi yanıtlar ve kendisine
+  gönderilmeyen bir aşama için seçecek cümlesi olmaz. Güncellemeden önce
+  yazılmış bir `request_identities` satırı, süresi dolana dek sakladığı yanıtı
+  eski biçimiyle yineler.
+- **Kurtarma davranışı.** Hiçbir şey kendiliğinden yeniden denenmez. Kısmi bir
+  içe aktarım alan adını ve aktarılanları yerinde bırakır; sahip eksik
+  parçaları elle ekler ya da alan adını kaldırıp arşivi yeniden içe aktarır;
+  var olan bir alan adına içe aktarım reddedilir. Başarısız bir sertifika
+  isteği hiçbir şey eklememiştir: certbot'un ondan bıraktığı, yanıttan önce
+  kaldırılır ve sitenin sahip olduğu sertifika hizmet vermeyi sürdürür.
+  Başarısız diye bildirilen bir yeniden yüklemeyi Panel yinelemez ve
+  PostgreSQL'e ne yaptığını öğrenmek için sinyal gönderilmez.
+- **Kanıt.** Yalnız bileşen testleri; gerçek sistemde yeniden koşu bekliyor.
+  Agent: `cpmove_set2_linux_test.go` (tar'ın yazdığı biçimde bir arşiv, her
+  ret, özetlerin yalnızca uygulamaya verilmesi),
+  `service_action_verify_test.go` ve `mail_service_verify_test.go` (her
+  PostgreSQL okuması, durmuş bir hizmet, ana sürece bakılarak değerlendirilen
+  Durdur), `certbot_failure_test.go`. Panel: `set2_corrections_test.go` (hiçbir
+  yanıt, saklanan yanıt ya da günlük satırı özet biçimli bir değer taşımaz;
+  kısmi yanıt; sertifika yanıtı; gönderilen parola yansıtılmaz ve yanıtı
+  yinelenir; motora sürümü sorulur), `server_setup_busy_rule_test.go`,
+  `service_action_outcome_test.go`. Hizmetler: `php_layout_test.go`. Ekranlar:
+  `web/tests/set2-corrections.test.mjs` ve yerel döngü taklidine karşı gerçek
+  bir Chrome (`web/tools/browser-inspect`, `importpreview`, `importresult`,
+  `reloadwording`, `certfailure` senaryoları; masaüstü ve telefon, İngilizce ve
+  Türkçe, açık ve koyu). Gerçek bir cPanel arşivi, bir sertifika otoritesi ya
+  da bir Arch sunucusu kullanılmadı.
+- **Açık.**
+  - Buradaki hiçbir düzeltme gerçek hizmetlerde ölçülmedi. Gerçek sistemdeki
+    yeniden koşu şunları göstermelidir: önizleme ve saklanan her yanıt özetsiz,
+    posta kutusu parolasıyla içe aktarılmış; dizin üyeli bir arşiv tümüyle içe
+    aktarılmış ve başarısız bir dosya adımı `200` / `partial` ile yanıtlanmış;
+    PostgreSQL kanca dizisi `reload_reread`, durmuş bir Postfix ve Dovecot
+    `409` / `not_running`, `main.cf` reddedilirken Postfix'i Durdur `200` /
+    `stopped` ile yanıtlanmış; Arch'ta bir PHP sitesi oluşturulmuş, sunulmuş ve
+    silinmiş, bir içe aktarım tamamlanmış; bir certbot hatası `502
+    CERTIFICATE_ISSUE_FAILED` ile yanıtlanmış; kurulum `access_dns` adımında
+    beklerken hiç `server_setup_busy` yok; gönderilen veritabanı parolası
+    yansıtılmamış ve yinelemesi satırdan yanıtlanmış; üç platformda da
+    sunucunun MariaDB sürümü.
+  - Arch'ta paketlenmiş birimin sıkılaştırması altında bir PHP sayfasının
+    çalışıp çalışmadığı ve bir sitenin soketinin orada `/run/php-fpm` altında
+    durup duramayacağı yalnızca o koşuyla saptanır.
+  - Gerçek cPanel arşivleri (iç içe `homedir.tar` olarak ev dizini, askıya
+    alınmış posta kutuları, büyük siteler) içe aktarılmadı.
+
+### Son gerçek sistem turunun düzeltmeleri (ilke 1-4 ve 6, 2026-10-12)
+
+D-025 ilke 1 (sahibin yerel yapılandırması algılanır, değiştirilmez), 2
+(bilinmeyen; yok, boş ya da başarı değildir), 3 (güvensiz yazma kendi sınırında
+durdurulur), 4 (bir değişiklik ön görüntüsünü okur, doğrular ve sınanmış bir
+tersine sahiptir) ve 6 (ekran yetkili durumu çizer); D-022, D-024, D-029.
+Hiçbir P0 işi kapanmadı ya da ilerlemedi. Kaynak: 2026-10-09 (UTC) tarihli
+`set3` koşusu; tek kullanımlık QEMU/KVM konuklarında (Debian 13, Ubuntu 24.04,
+Arch; kanıt `deploy/e2e/release-recovery/evidence/set3-20261012/`). Koşu, bir
+önceki kaydın düzelttiği her işi Debian 13 ve Ubuntu 24.04 üzerinde ve
+yayımlanmış v0.1.0-alpha.81 sürümünden başlayan güncelleme matrisinin tümünü
+geçti; Arch üzerinde bir aday kusur (P5b) ve O16-O21 gözlemlerini ölçtü.
+Buradaki hiçbir şey kurulu bir sunucuda gözlenmedi. Bu kayıt onları kaynakta
+düzeltir; düzeltmelerin hiçbiri gerçek hizmetlerde ölçülmedi.
+
+- **Ölçülen.**
+  - *P5b, Arch: PHP sitesi yine oluşturulamadı.* Havuz yazıldı ve PHP-FPM onu
+    kabul etti; ardından nginx sanal konağı reddetti (`open()
+    "/etc/nginx/snippets/fastcgi-php.conf" failed`). PHP sanal konağı
+    `snippets/fastcgi-php.conf` dosyasını içeriyordu; bu dosyayı Debian ve
+    Ubuntu'nun nginx paketleri (nginx-common) getirir, Arch'ınki getirmez.
+    Arch, `/etc/nginx` içinde `fastcgi.conf` ve `fastcgi_params` dosyalarını
+    getirir ve `snippets` dizini yoktur. Agent sanal konağı eski haline getirdi
+    ve hesabı kaldırdı; Panel `500 INTERNAL`, içe aktarım `502
+    IMPORT_SITE_NOT_CREATED` yanıtını verdi. O tek dosya elle
+    yerleştirildiğinde (ikinci okuma, bir sahip işlemi) site oluşturuldu,
+    paketin kendi birimi altında kendi hesabıyla PHP çalıştırdı, temiz silindi
+    ve her içe aktarım tamamlandı.
+  - *O21.* O konukta sitenin soketi `/run/php-fpm/php8.3-fpm-site2.sock` idi;
+    oysa tek PHP 8.5.11'dir. Oluşturma işleyicisi Panel'in kendi diskinde
+    `/etc/php/<sürüm>/fpm` okuyor, bir şey bulamayınca sabit `8.3` değerini
+    alıyordu.
+  - *O16.* Durmuş bir nginx'in ve durmuş PostgreSQL sarmalayıcısının yeniden
+    yüklenmesi, systemd'nin satırıyla ("postgresql.service is not active,
+    cannot reload.") `502` / `command` yanıtını aldı: systemd yeniden
+    yüklemeyi, Agent'ın kendi okuması uygulanmadan reddetti. Yalnızca Postfix
+    ve Dovecot `409` / `not_running` yanıtı alıyordu.
+  - *O17.* Mutlak yolla adlandırılmış bir arşiv üyesi içe aktarımın dışında
+    bırakıldı ve yanıt bundan tek söz etmeden `200` / `active` oldu. Onun için
+    hiçbir şey yazılmamıştı.
+  - *O19.* Reddettiği bir main.cf ile Postfix durdurulduktan sonra yanıt doğru
+    bir başarıydı (ana süreç gitmişti) ve systemd birimi `failed`,
+    `Result=exit-code` gösteriyordu (Debian 13'te `postfix.service`, Ubuntu
+    24.04'te `postfix@-.service`). Günlük nedenini gösterir: birimin kendi
+    durdurma komutu (`postfix stop`) önce main.cf dosyasını okur ve 1 ile çıkar
+    ("fatal: bad numerical configuration"); systemd de süreçleri kendisi
+    sonlandırır.
+  - *O18.* Kusurlu bir adaydan otomatik geri dönüşten sonra güncelleme denetimi
+    aynı sürümü, `previous_attempt: {phase: recovered}` ile yine sunar. İçinde
+    tipli bir neden yalnızca kurtarma kaydı bir neden tutuyorsa bulunur
+    (başlangıç denetimi adayı); geçişi başarısız olan adayda bulunmaz.
+- **Değişen.**
+  - *PHP devri sanal konakta açık yazılır*
+    (`internal/services/templates/nginx/vhost.conf.tmpl`). Debian'ın
+    `snippets/fastcgi-php.conf` dosyasının altı yönergesi onun yerine, onun
+    sırasıyla üretilir: `fastcgi_split_path_info`, `try_files
+    $fastcgi_script_name =404` koruması, `set $path_info`, `fastcgi_param
+    PATH_INFO`, `fastcgi_index index.php`, `include fastcgi.conf`. İçermeden
+    sonraki satırlar değişmedi. Bir sanal konak artık yalnızca nginx'in kendi
+    dosyaları olan ve her paketin kurduğu `fastcgi.conf` ile `fastcgi_params`
+    dosyalarını içerir. Sunucuya dosya eklenmez ve sahibin hiçbir dosyasına
+    dokunulmaz. İçermeyle üretilmiş bir sitenin yeniden üretimi, içermenin
+    açılmış haliyle aynı yapılandırmadır: nginx bir içermeyi, içerilen dosyanın
+    metni onun yerindeymiş gibi okur.
+  - *Web sunucusunun reddettiği site öyle yanıtlanır*
+    (`internal/services/nginx_generator.go`, `cmd/agent/site_rpc.go`,
+    `internal/services/site_orchestrator.go`,
+    `cmd/panel/domain_web_server_refused.go`). Kendi durumuyla çıkan `nginx -t`
+    tiplidir (`NginxConfigRefusedError`); tersi sonuna kadar uygulanmış bir
+    sanal konak değişikliği de öyledir (`VhostRestoredError`: dosya ve bağlantı
+    eski halindedir, nginx önceki yapılandırmayı kabul etmiş ve yeniden
+    yüklenmiştir). Agent yalnızca ikisi birden geçerliyse, nginx'in ilk
+    `[emerg]` satırıyla `WebServerRefusedConfig` yanıtını verir. Panel `502
+    SITE_WEB_SERVER_REFUSED` yanıtını verir; `reason`, sitenin Agent üzerindeki
+    silinmesinin (düzenleyicinin telafisi; yalnızca sanal konak, havuz, hesap
+    ve site dizini gittiğinde başarı yanıtlar) doğrulanıp doğrulanmadığını
+    söyler. nginx'in satırı yalnızca yöneticiye gösterilir.
+  - *Yeni bir sitenin PHP sürümü, sunucunun çalıştırdığı bir sürümdür*
+    (`cmd/panel/domain_handlers.go`, `domain_php_handlers.go`,
+    `internal/services/service_scanner.go`). Oluşturma işleyicisi Agent'ın
+    bildirdiği en yeni sürümü alır (tek ve sürümsüz PHP-FPM'li bir sunucuda
+    programın kendi yanıtı) ve adı verilen ama sunucunun çalıştırmadığı bir
+    sürümü hiçbir şey oluşturulmadan reddeder (`409
+    PHP_VERSION_NOT_INSTALLED`). Sürüm değişikliği, Debian'ın yolunu kurmak
+    yerine Agent'ın havuzu yazdığı soketi kaydeder
+    (`services.PHPFPMSocketPath`). Liste, sitesi olmayan bir alan adı için PHP
+    sürümü yanıtlamaz (`8.3` yanıtlıyordu). PHP-FPM için listelenen
+    yapılandırma dosyaları kurulu düzenin dosyalarıdır; sürüm varsayılmaz.
+  - *Uygulama birimi, sunucunun web sunucusu hesabıyla çalışır*
+    (`cmd/agent/app_rpc.go`). Panel `www-data` ister; bu hesabın olmadığı yerde
+    birim, ürünün geri kalanının okuduğu sırayla `nginx` ya da `http` ile
+    yazılır.
+  - *Çalışmayan her şeyin yeniden yüklenmesi `not_running` olur*
+    (`cmd/agent/service_action_verify.go`). Hiçbir şey gönderilmeden önce
+    okunur: bir sarmalayıcı, yeniden yüklemesinin ulaştığı her birim `inactive`
+    ya da `failed` ise; başka her birim, yüklüyse ve kendisi `inactive` ya da
+    `failed` ise. Arada bir durum, yüklü olmayan bir birim ve okunamayan bir
+    durum, hizmet yöneticisinin kendi yanıtını korur.
+  - *Birimi `failed` işaretli bırakan Durdur bunu söyler ve işareti bırakır*
+    (`cmd/agent/service_action_verify.go`,
+    `cmd/panel/service_action_outcome.go`). Karar: Agent `systemctl
+    reset-failed` çalıştırmaz. İşaret, systemd'nin birimin durdurma komutunun
+    ne yaptığına dair kendi kaydıdır ve sahibin o sunucudaki kendi `systemctl
+    stop postfix` komutunun bıraktığı kayıtla aynıdır; yani Panel kendi yerel
+    durumunu eklemez. İşareti silmek, yapılandırmanın reddedildiğini ve
+    hizmetin bu haliyle başlatılamayacağını gösteren tek yerel belirtiyi
+    `systemctl --failed` çıktısından ve izlemeden kaldırır, ayrıca birimin
+    başlatma sınırı sayaçlarını sıfırlardı; bir Durdur'dan bu istenmedi.
+    Agent'ın gönderebileceği hiçbir şey işareti önlemez: systemd, birimi
+    durdurmanın her yolunda birimin durdurma komutunu çalıştırır. Birim
+    durdurmadan önce ve doğrulanmış bir durdurmadan sonra okunur; önce `failed`
+    olmayan ve sonra `failed` olan birim, başarının içinde (`note`),
+    systemd'nin sonucuyla ve Postfix için kendi denetiminin şu an yazdığı
+    satırla bildirilir.
+  - *İçe aktarımın dosya adımının dışarıda bıraktıkları sayılır ve
+    adlandırılır* (`cmd/agent/cpmove_left_out.go`, `cpmove_extract_linux.go`,
+    `cmd/panel/import_handlers.go`). Her üye şunlardan tam birinde biter: içe
+    aktarıldı; adımın tümü eskisi gibi reddedildi, artık üyeyi ve ne olduğunu
+    adlandırarak (sembolik bağ, katı bağ, aygıt düğümü, adlandırılmış boru,
+    `..`, ters eğik çizgi ya da NUL içeren ad, boyut ya da sayı sınırını aşan
+    içerik); adı yüzünden reddedilip dışarıda bırakıldı (mutlak yol), bu da
+    `member:<ad>` adımı olarak, en çok 20 tane ve ardından bir sayıyla
+    listelenir ve içe aktarımı `partial` yapar; ya da `homedir/public_html`
+    dışındadır, bu da arşivde bulunduğu klasöre göre sayılır ve dosya adımının
+    kendi satırında söylenir. Tek eksiği reddedilen üyeler olan bir içe aktarım
+    `domain_status: active` ile `partial` olur: seçilen her parça yerindedir ve
+    aynı arşivin aynı girdileri yine reddedilirdi.
+  - *Güncelleme kartı Başlat'tan önce daha önce ne olduğunu söyler*
+    (`web/src/components/PanelUpdateCard.tsx`). Burada denenmiş ve geri
+    döndürülmüş bir sürümün kendi başlığı vardır; sunucunun şu an neyi
+    çalıştırdığını, kaydedilen nedeni ya da neden kaydedilmediğini ve yeniden
+    başlatmanın ne yaptığını söyler. Sürüm gizlenmez ve Başlat kapatılmaz.
+  - *H42* (`deploy/e2e/release-recovery/build-upd1-artifacts.sh`): başarısız
+    olan ya da reddedilen bir dist derlemesi, ardından önceki bir derlemenin
+    aynı adla bıraktığı arşivle devam edilmek yerine derleyiciyi durdurur.
+- **Debian düzenine dair aranan diğer varsayımlar.**
+  - Burada düzeltilenler: snippet dosyası; sabit `8.3`; sürüm değişikliğinin
+    soket yolu; uygulama biriminin hesabı olarak `www-data`; yapılandırma
+    taramasının PHP-FPM dosya listesi.
+  - Zaten sunucudan okunanlar ve ikinci Arch okumasında çalıştığı görülenler:
+    sanal konak dizinleri (`sites-available`, `sites-enabled`; web sunucusunun
+    kurulum adımı bunları Arch'ın `nginx.conf` dosyasına ekler), web sunucusu
+    hesabı, PHP-FPM'in havuz dizini, birimi ve soket dizini, `/var/log/nginx`.
+  - Düzeltilmeyenler: tek birimli bir sunucuda PHP eklenti dizinleri hâlâ
+    Debian'ınkilerdir; MariaDB'nin ayar dosyası
+    `/etc/mysql/mariadb.conf.d/50-server.cnf` yoludur;
+    `DetectInstalledPHPVersion` hâlâ yalnızca sürümlü ağaçları okur (web
+    postası kurulumu onu yalnızca Debian'da var olan paket adları için
+    kullanır); statik oluşturulmuş bir site PHP'yi barındırma türü
+    değişikliğiyle alır ve bu Arch üzerinde denenmedi.
+- **API değişiklikleri (sürüm notları için).**
+  - `POST /api/v1/domains/create`: nginx siteyi reddettiğinde `500 INTERNAL`
+    yerine, `reason` `removed` ya da `cleanup_unconfirmed`, `vars` ve yönetici
+    için `details` ile `502 SITE_WEB_SERVER_REFUSED`; adı verilen ama sunucunun
+    çalıştırmadığı bir PHP sürümü için `409 PHP_VERSION_NOT_INSTALLED`.
+  - `POST /api/v1/import/cpanel/apply`: bu neden için `502
+    IMPORT_SITE_NOT_CREATED` yerine `502 SITE_WEB_SERVER_REFUSED`
+    (`import_removed`, `import_cleanup_unconfirmed`); `member:<ad>` ve
+    `members:<n>` adımları; yalnızca böyle girdiler eksikse `domain_status:
+    active` ile `status: partial`; dosya adımının `detail` alanı daha uzundur.
+  - `POST /api/v1/service/action`: durmuş her birimin yeniden yüklenmesi için
+    `409` / `not_running` (`502` / `command` idi); başarılı bir Durdur `note`
+    taşıyabilir.
+  - `GET /api/v1/domains`: sitesi olmayan bir alan adı için `php_version`
+    boştur.
+- **Değişmeyen ve nedeni.**
+  - Paketin `/etc/nginx/snippets/fastcgi-php.conf` dosyasını düzenlemiş bir
+    sahip: bir sitenin sanal konağı, bir sonraki yeniden üretiminden sonra o
+    dosyayı artık okumaz. Dosya yerinde bırakılır ve paketteki halinden farklı
+    olduğunu hiçbir şey algılamaz.
+  - Barındırma türü, sertifika ya da site ayarı değişikliği sırasında nginx'in
+    aynı reddi hâlâ önceki hatasını yanıtlar; yeni yanıtı yalnızca site
+    oluşturma ve içe aktarım taşır.
+  - Site klasörünün altındaki bir `..` bileşeni, bağ ya da aygıt hâlâ dosya
+    adımının tümünü reddeder; yalnızca mutlak bir ad tek başına dışarıda
+    bırakılır.
+  - O18: denetim sürümü yine sunar ve sürüm taban dosyası geri dönüşten sonra
+    adayın sıra numarasında kalır. Güncellemenin kendi satırını ("offline panel
+    database migration failed ...") geri dönüşten sonraki sonuç bildirimi
+    gösterir; Başlat'tan önceki kart tipli nedeni ya da neden kaydedilmediğini
+    gösterir.
+  - O20 (yayımlanmış alpha.81'in Arch üzerindeki `web_mail` planı) bu kaynağın
+    değil, başlangıç sürümünün koşum sınırıdır.
+- **Şema ya da sürüm geçişi.**
+  - Veritabanı şeması ve kalıcı durum yok. Agent'ın RPC'si adıyla aktarılan
+    alanlar kazanır: `CreateSiteResponse.ErrorDetail` ve
+    `web_server_refused_config` hata kodu; `ServiceActionResult.Notice`,
+    `NoticeUnit`, `NoticeResult`, `NoticeDetail`;
+    `CpmoveExtractResponse.Refused`, `RefusedCount`, `OutsideCount`,
+    `OutsideGroups`. Bunlar olmayan bir Agent ile karşılaşan Panel eskisi gibi
+    yanıtlar. (Dördüncü gerçek sistem koşusuna göre 2026-10-09'da düzeltildi;
+    bu cümlenin önceki hali, diskteki sanal konak dosyalarının bir
+    güncellemeyle yeniden yazılmadığını söylüyordu. Yazılıyor: Debian 13 ve
+    Ubuntu 24.04'te ölçüldü, güncellenen Panel kendi açılışında barındırılan
+    siteleri yeniden üretiyor — günlük satırı "certificate startup reconcile:
+    restored 2 hosted vhosts with one nginx validation and reload" — bu yüzden
+    v0.1.0-alpha.81'in oluşturduğu bir site, sahibin hiçbir işlemi olmadan,
+    snippet içermeyen yeni metni almıştı; on istek güncellemeden önce, sonra
+    ve daha sonraki bir kayıttan sonra aynı yanıtlandı. Önceki sürümlerin Panel
+    açılışı da aynı üretimi yapar; sahibin üretilmiş bir sanal konak dosyasında
+    kendi yaptığı düzenlemenin o açılışta neyle karşılaştığı ölçülmedi.)
+    Sonraki bir üretim (sertifika, ayar, barındırma değişikliği) aynı
+    yapılandırmadır. Bir sürümle zaten kaydedilmiş siteler ve soketler onu
+    korur.
+- **Kurtarma davranışı.**
+  - Hiçbir şey kendiliğinden yeniden denemez. nginx'in reddettiği site,
+    Agent'ın kendi tersi ve Panel'in telafisiyle yeniden kaldırılır; bu
+    doğrulanmadığında alan adı satırı, Alan Adları sayfasından silinebilsin
+    diye tutulur. Durmuş bir birimin yeniden yüklenmesi hiçbir şey göndermez.
+    Bir Durdur'un ardından hiçbir zaman `reset-failed` gelmez. Reddedilen
+    üyeleri olan bir içe aktarım, içe aktardığı her şeyi korur ve alan adını
+    bitmiş diye işaretler.
+- **Kanıt.**
+  - Yalnızca bileşen testleri; Arch üzerindeki gerçek sistem denetimi bekliyor.
+    Services: `nginx_php_handoff_test.go` (üretilen PHP konumu, yönerge
+    yönerge, içermenin yerine Debian'ın dosyası konmuş eski konumdur; dosyanın
+    metni set3 koşusunun kaydettiği SHA-256 ile sabitlenmiştir; hiçbir proje
+    türünün sanal konağı `snippets/` altında bir dosya adlandırmaz ve nginx'in
+    iki dosyasından başkasını içermez), `set3_corrections_test.go`. Agent:
+    `set3_corrections_test.go`, `cpmove_set3_linux_test.go`. Panel:
+    `set3_corrections_test.go`. Ekranlar:
+    `web/tests/set3-corrections.test.mjs`, `panel-update-card-mounted.test.mjs`
+    ve yerel taklit sunucuya karşı gerçek bir Chrome
+    (`web/tools/browser-inspect`, `siterefused`, `importentries`, `stopnote`,
+    `updaterolledback` senaryoları; masaüstü ve telefon, İngilizce ve Türkçe,
+    açık ve koyu).
+  - Debian 13'ün kendi nginx'iyle yerel bir denetim (`nginx` ve `nginx-common`
+    1.26.3-3+deb13u7; geliştirme konuğunun özel bir dizinine indirilip açıldı,
+    kurulmadı; yalnızca yerel döngü adresi): paketin
+    `snippets/fastcgi-php.conf` dosyası sabitlenen SHA-256 değerine sahiptir
+    (`a9dd98bf...411f2`); `nginx -t`, önceki kaynağın ürettiği sanal konağı
+    snippet bulunan bir düzende kabul eder ve onsuz, Arch'ta ölçülen satırla
+    reddeder; `nginx -t`, bu kaynağın ürettiği sanal konağı `snippets` dizini
+    olmayan bir düzende kabul eder; ve 17 istek için (bir betik, bir sorgu
+    dizgisi, `PATH_INFO`, eksik bir betik, ön denetleyici, statik bir dosya,
+    noktalı bir dosya, ACME konumu) durum kodu ve her FastCGI parametresi,
+    sırasıyla, ikisinde de aynıdır. Denetlenmeyen: Ubuntu'nun paketi, Arch'ın
+    nginx'i, PHP-FPM'in kendisi.
+- **Açık.**
+  - Gerçek sistem denetimi Arch üzerinde şunları göstermelidir: stok bir
+    sunucuda oluşturulan PHP sitesi, sitenin hesabıyla çalışan bir PHP sayfası,
+    silinen site, tamamlanan içe aktarım; kurulu PHP'nin sürümünü taşıyan soket
+    ve kayıtlı sürüm. Sanal konak şablonu değiştiği için Debian 13 ve Ubuntu
+    24.04 üzerinde: `/etc/nginx/snippets/fastcgi-php.conf` dosyasının
+    sabitlenen SHA-256 değerine sahip olduğu; oluşturulan PHP sitesi, çalışan
+    PHP sayfası, `PATH_INFO` ve eksik bir betiğin eskisi gibi yanıtlandığı;
+    yayımlanmış alpha.81'in oluşturduğu bir sitenin bu kaynakla yeniden
+    üretildiği, `nginx -t` komutunun geçtiği ve sayfanın hâlâ sunulduğu.
+  - Ayrıca ölçülecekler: reddedilen sitenin, ondan hiçbir şey kalmadan `502
+    SITE_WEB_SERVER_REFUSED` yanıtını alması; durmuş nginx, MariaDB ve
+    PostgreSQL sarmalayıcısının yeniden yüklenmesinin `409` yanıtını alması;
+    reddedilen main.cf ile Postfix'in durdurulmasının not ile `200` yanıtını
+    alması ve birimin hâlâ `failed` olması; mutlak üyenin listelenmesi ve alan
+    adının `active` olması.
+  - Gerçek cPanel arşivleri içe aktarılmadı; site klasörü dışındaki girdilerin
+    sayımı yalnızca deneme arşivlerinde görüldü.
+
+### set4 gerçek sistem ölçümünden sonraki düzeltmeler (ilke 2, 3 ve 6, 2026-10-09)
+
+D-025 ilke 2 (bilinmeyen; yok, boş ya da başarı değildir), 3 (güvensiz işlem
+kendi sınırında durdurulur) ve 6 (ekran yetkili durumu çizer); D-022, D-024.
+Hiçbir P0 işi kapanmadı ya da ilerlemedi. Kaynak: tek kullanımlık QEMU/KVM
+konuklarında 2026-10-09 (UTC) tarihli `set4` koşusu (kanıt
+`deploy/e2e/release-recovery/evidence/set4-20261009/`); bir ürün hatası (Ubuntu
+24.04 üzerinde 10. işi) ve iki yanlış ifade (5. ve 6. gözlemleri) buldu. Ayrıca
+aynı günün `set4b` ölçümü (kanıt
+`deploy/e2e/release-recovery/evidence/set4b-20261009/`); önce o Durdur
+sırasında Agent'ın ne okuduğunu, sonra düzeltmeyi ölçtü. Buradaki hiçbir şey
+kurulu bir sunucuda gözlenmedi. 2026-10-09 takvim tarihidir; üstteki kayıtların
+2026-10-10 ile 2026-10-12 arasındaki tarihleri tur etiketleridir.
+
+- **Ölçülen.**
+  - *10. iş, Ubuntu 24.04: Durdur, Postfix durmadan yanıtlandı ve birim,
+    systemd onu hâlâ durdururken okundu.* Ürünün set4'ün ölçtüğü haliyle kurulu
+    olduğu bir konukta, `postfix check` denetiminin reddettiği bir main.cf ile
+    Panel üzerinden yapılan beş Durdur'un beşi de `note` olmadan `200
+    {"applied":"stopped","outcome":"verified","success":true}` yanıtını verdi;
+    `postfix@-.service` her seferinde `failed` (`Result=exit-code`) olarak
+    bitti. Agent üzerindeki `strace` (beşin ikisi) onun ne okuduğunu gösterir.
+    Durdurmadan önce iki birim de `LoadState=loaded`, `ActiveState=active`,
+    `Result=success` yanıtını verdi; yani örnek birim "failed değil" diye
+    sayıldı. `systemctl stop postfix` komutundan sonra `postconf -h
+    queue_directory` 0 ile çıktı; hata akışına "/usr/sbin/postconf: warning:
+    /etc/postfix/main.cf: #comment after other text is not allowed: # raised
+    for the campa..." satırını, ardından çıktısına `/var/spool/postfix` yazdı.
+    Agent iki akışı tek arabellek olarak okur ve arabelleğin tümünü dizin
+    saydı: uyarı satırı, bir satır sonu ve `/var/spool/postfix/pid/master.pid`
+    parçalarından oluşan bir yolu açtı, çekirdek "böyle bir dosya yok" dedi ve
+    bu "burada hiç ana süreç başlamadı" diye okundu. Ana sürece bir kez bakıldı
+    ve durdurma komutu döndükten 29 ile 82 ms sonra gitmiş sayıldı. Agent
+    ardından iki birimi birer kez okudu: `postfix.service` `inactive`,
+    `postfix@-.service` `ActiveState=deactivating`, `Result=success`. Failed
+    değil; dolayısıyla not yok.
+  - *Anlar, tek bir saat üzerinde.* Agent'ın başlattığı programların çekirdek
+    izi ve systemd'nin kendi durum zaman damgaları (`strace` olmadan üç
+    Durdur): `systemctl stop postfix`, `postfix@-.service` `active` durumundan
+    çıktıktan 1 ile 3 ms sonra döndü; Agent'ın o birimi okuması, birim `active`
+    durumundan çıktıktan 82 ile 102 ms sonra başladı; ana süreç 1008 ile 1057
+    ms sonra bitti ve birim, ana süreç bittikten 2 ile 4 ms sonra `failed`
+    oldu. Yani Agent birimi, Postfix durmadan yaklaşık 0,9 saniye önce okudu
+    ve durdurmayı doğrulanmış saydı. (Kanıtın giriş denetiminden sonra
+    düzeltildi, 2026-10-09: bu cümlenin önceki hali yanıtın o anda
+    "verildiğini" söylüyordu. HTTP yanıtının kendisi 1,9 ile 3,3 saniye sürdü;
+    yani çağırana Postfix durduktan sonra ulaştı. Erken olan, yanıtın
+    dayandığı okumaydı.) Aynı
+    konukta sahibin kendi `systemctl stop postfix` komutu, 10 ms'de bir
+    örneklenerek: komut 24 ms sonra döndü; birim, durdurma komutu (`postmulti
+    -i - -p stop`; main.cf'i reddeder ve Postfix'in kendi bir saniyelik
+    beklemesinden sonra 1 ile çıkar) komutun gönderilmesinden 1028 ms sonra
+    bitene dek `deactivating (stop)`, `Result=success` gösterdi; ana süreç 3 ms
+    sonra bitti ve birim ondan 3 ms sonra `failed (failed)`, `Result=exit-code`
+    oldu.
+  - *set4 kaydının çıkarımı ve onun yerine ölçülen.* set4'ün README dosyası
+    günlüğün zaman damgalarını "birim, systemd onu failed olarak işaretlemeden
+    önce bir kez okundu (işaret, ana süreç bittikten 4 ms sonra gelir)" diye
+    okumuş ve bunun bir çıkarım olduğunu söylemişti. Tek okuma doğrudur; neden
+    ise 4 ms'lik bir aralık değildir. Birim işaretten yaklaşık 0,9 saniye önce
+    okundu, çünkü ana süreç ilk bakışta gitmiş sayılmıştı.
+  - *Debian 13.* Aynı Durdur set4'te notu iki kez verdi. Orada
+    `postfix.service` hizmeti kendisi çalıştırır ve `systemctl stop postfix` o
+    birimin bütün durdurulması bittikten sonra döner; bu yüzden tek okuma
+    `failed` gördü. Ana süreç aramasının postconf yanıtını orada da yanlış
+    okuyup okumadığı düzeltmeden önce ölçülmedi; kod ve uyarı aynıdır.
+  - *set4'ün 5. gözlemi.* Otomatik geri dönüşten sonra güncelleme denetimi tek
+    bir zaman taşır: `previous_attempt.finished_at`. Kart onu "{time} tarihinde
+    başlatıldı" diyen bir cümleye koyuyordu. İkisinin de bilindiği hücrede
+    sahibin başlatması 12:06:13Z, `finished_at` ise 12:07:43Z idi.
+  - *set4'ün 6. gözlemi.* Dış DNS kipindeki bir sunucuda `do_dns: false` ile
+    yapılan içe aktarım üç platformda da `imported: [domain, files, dns, ...]`
+    yanıtını verdi: `dns` adımı "external DNS ownership preserved; ..." ile
+    `ok` bitmişti ve her `ok` adım içe aktarılmış diye listeleniyordu.
+- **Değişen.**
+  - *Kuyruk dizini, postconf yanıtının tek bir satırıdır*
+    (`cmd/agent/mail_service_verify.go`, `postfixQueueDirectory`,
+    `postconfOnePath`). postconf'un başlatıldığı adla, ardından `: ` ve
+    `warning`, `error`, `fatal` ya da `panic` ile başlayan satır postconf'un
+    kendi iletisidir ve dışarıda bırakılır; geriye tam olarak bir satır kalmalı
+    ve o satır temiz bir mutlak yol olmalıdır. Başka her şey (satır yok, iki
+    satır, göreli yol) bir dizin değildir ve hiçbir şey ileri sürülmez. Ana
+    süreci okuyan iki işlev de bunu kullanır (`postfixMaster`,
+    `postfixMasterProcess`).
+  - *"master.pid yok", ancak dizini varsa bir şey söyler*
+    (`postfixMasterProcess`). Eksik dosya eskiden her yol için "bu kuyruk
+    diziniyle hiç ana süreç başlamadı" demekti. Artık yalnızca
+    `<queue_directory>/pid` var olan bir dizinse bunu söyler; değilse ana
+    sürece bakılamamıştır ve reddedilen bir main.cf ile Durdur, süreç
+    aranamadığında zaten olduğu gibi, bilinmeyen sonuçtur.
+  - *Birim, durulduğunda okunur* (`cmd/agent/service_action_verify.go`,
+    `noteStopLeftUnitFailed`). systemd izlenen bir birimi `activating`,
+    `deactivating` ya da `reloading` gösterdiği sürece birim yeniden okunur:
+    bir durdurmanın bütün birimleri için toplam en çok 30 okuma, 500 ms arayla;
+    o dosyadaki diğer bütün doğrulamaların kullandığı aralık ve sınır. Bu
+    sırada yalnızca `systemctl show` gönderilir. `failed` olarak biten birim
+    eskisi gibi bildirilir (`unit_marked_failed`); Postfix'in denetimi bir
+    satır yazıyorsa o satırla birlikte.
+  - *Durulmayan birim öyle söylenir*
+    (`transport.ServiceActionNoticeUnitNotSettled`,
+    `cmd/panel/service_action_outcome.go`, `ServiceActionNotice.tsx`). Sınır,
+    birim hâlâ iki durum arasındayken dolarsa ya da birim durdurmadan önce
+    okunduğu halde sonra okunamazsa başarı, `reason` değeri `unit_not_settled`
+    (ve `vars.state`) ya da `unit_state_not_read` olan bir `note` taşır. Susmak
+    "birime bakıldı ve temiz" diye okunurdu. Not, bir işaret olduğunu da
+    olmadığını da ileri sürmez; komutu hiçbir şeyi değiştirmeyen `systemctl
+    status <unit>` komutudur. Durdur'un kendisi `verified` kalır: hizmetin
+    kendi sürecinin gittiği görülmüştür.
+  - *Güncelleme kartının cümlesi zamanı denemenin bitişi olarak adlandırır*
+    (`web/src/i18n/screens/server/en.ts`, `tr.ts`,
+    `panelUpdate.previousAttempt.recovered`). Yalnızca metin; kart ve cümleye
+    verdiği değer değişmedi.
+  - *Hiçbir şey içe aktarmayan adım ne içe aktarılmıştır ne de başarısızdır*
+    (`cmd/panel/import_handlers.go`, `web/src/components/ImportPage.tsx`).
+    Böyle bir adım `ok: true` kalır ve `state` taşır (`left_to_owner`,
+    `not_chosen`, `none_in_archive`, `none_imported`); yanıt onu `left_out`
+    altında listeler. Arşivin kayıtları içe aktarılmadığında her DNS kipinde
+    `dns` için, hiçbiri aktarılmadığında `mail` ve `forwarders` için, arşivin
+    site klasörü boş olduğunda `files` için geçerlidir. `ok`, onunla birlikte
+    `status` ve `IMPORT_PARTIAL` eskisi gibi belirlenir: içe aktarımı yalnızca
+    başarısız olan bir adım kısmi yapar.
+- **API değişiklikleri (sürüm notları için).**
+  - `POST /api/v1/service/action`: Postfix'in durdurulması, ana süreci
+    bittiğinde yanıtlanır (Ubuntu 24.04 üzerinde reddedilen bir main.cf ile
+    eskisinden yaklaşık bir saniye sonra). Başarılı bir Durdur, `reason` değeri
+    `unit_not_settled` ya da `unit_state_not_read` olan ve `vars` içinde
+    `pending_unit`, `command`, `state` taşıyan bir `note` taşıyabilir; bir
+    birim iki durum arasındayken Durdur yaklaşık 15 saniyeye kadar daha uzun
+    sürebilir.
+  - `POST /api/v1/import/cpanel/apply`: `steps[].state` (isteğe bağlı) ve
+    `left_out` listesi yenidir; `imported`, adımı `state` taşıyan bir parçayı
+    artık adlandırmaz. `status`, `code`, `not_imported` ve her `detail`
+    değişmedi.
+  - `GET /api/v1/panel/update/check`: değişmedi.
+- **Değişmeyen ve nedeni.**
+  - İki akışı birden tutabilen bir arabellekten postconf değeri okuyan diğer
+    yerler (`cmd/agent/mail_tls_rpc.go` `snapshotMailTLSState`,
+    `cmd/agent/mail_tls_sync_commit.go`, `cmd/agent/mail_stack_rpc.go`
+    `postconfExpandedContext`): bu düzeltme yapılırken kaynakta görüldü,
+    ölçülmedi, burada değiştirilmedi. Çalıştırıcılarının iki akışı karıştırıp
+    karıştırmadığı saptanmadı.
+  - Başka bir sarmalayıcının arkasındaki örnek birimler
+    (`postgresql@<version>-<cluster>`), onları zaten durulana dek okuyan
+    `verifyWrapperAction` ile değerlendirilir; notun okuduğu birimler arasında
+    değildirler.
+  - Geri döndürülmeden başarısız olan ya da hiçbir şeyi değiştirmeden duran bir
+    denemenin cümleleri aynı zamanla "{time} tarihinde denendi" der ve olduğu
+    gibi kalır.
+  - İçe aktarım sayfasında dışarıda bırakılan parçaların bir listesi yoktur ve
+    bir adımın `detail` satırı sunucunun İngilizcesi olarak kalır.
+- **Şema ya da sürüm geçişi.**
+  - Veritabanı şeması ve kalıcı durum yok. `ServiceActionResult.Notice`, adıyla
+    aktarılan bir değer daha kazanır; onu bilmeyen bir Panel bu değer için not
+    vermez; bu, daha önce verdiği yanıttır. `steps[].state` ve `left_out`
+    eklemelidir; `state` alanını bilmeyen bir sayfa böyle bir adımı eskisi gibi
+    içe aktarılmış diye listeler.
+- **Kurtarma davranışı.**
+  - Hiçbir şey kendiliğinden yeniden denemez. Bir birim için bekleme sınırlıdır
+    ve birime hiçbir şey göndermez; bir Durdur'un ardından hiçbir zaman
+    `reset-failed` gelmez. Ana süreci aranamayan ve yapılandırmasını Postfix'in
+    reddettiği bir Durdur bilinmeyen sonuç olarak kalır ve yinelenmez.
+- **Kanıt.**
+  - Bileşen testleri. Agent: `set4_corrections_test.go` (postconf'un yazdığı
+    baytlar, `strace` kaydındaki haliyle, dizini verir; ana süreci durdurmadan
+    1009 ms sonrasına dek yaşayan ve birimi 1013 ms'ye dek `deactivating` olan
+    bir sunucuda ölçülen sıra: Durdur ana süreç bittikten sonra, notla
+    yanıtlanır; daha geç durulan bir birim, temiz biten bir birim, sınır içinde
+    hiç durulmayan bir birim (`unit_not_settled` notu, 29 okuma, durdurmadan
+    sonra okumadan başka hiçbir şey), okunamayan bir birim; tek bir yol olmayan
+    postconf yanıtı bilinmeyen sonuç olarak kalır; Debian düzeni notu
+    beklemeden ilk okumada verir). Panel: `set4_corrections_test.go` (iki not,
+    içe aktarımın üç listesi, işleyicinin adımları),
+    `set2_corrections_test.go`, `set3_corrections_test.go`. Ekranlar:
+    `web/tests/set4-corrections.test.mjs`, `set3-corrections.test.mjs` ve yerel
+    taklit sunucuya karşı gerçek bir Chrome (`web/tools/browser-inspect`;
+    `stopnote`, `updaterolledback`, `importentries`, `importleftout`
+    senaryoları; masaüstü ve telefon, İngilizce ve Türkçe).
+  - Gerçek sistem, düzeltmeden önce: `set4b-20261009/diagnostic/` (yukarıdaki
+    kayıt; `run-a` koşusu ilk Durdur'dan önce sürücünün bir kusurunda durdu ve
+    yalnızca ondan önceki okumaları tutar).
+  - Gerçek sistem, düzeltmeden sonra: `set4b-20261009/remeasure/`; aday
+    (çalışma ağacının düzeltmeleri, tek kullanımlık bir kopyanın tek commit'i
+    olarak; set4'ün kendi adayını derlediği gibi derlendi) temiz kuruldu.
+    Ubuntu 24.04: dört Durdur'un dördü notla (`unit_marked_failed_config`,
+    `failed_unit` `postfix@-.service`, `result` `exit-code`) `200` yanıtını
+    verdi; birim sonrasında hâlâ `failed` idi ve `reset-failed` gönderilmedi;
+    main.cf geri yüklendikten sonra Başlat çalıştı. Üçünün çekirdek izi, ana
+    sürece daha önce bir kez bakılırken üç kez bakıldığını, sonuncusunun ana
+    süreç bittikten sonra olduğunu (birim `active` durumundan çıktıktan 1013
+    ile 1025 ms sonra) ve birimlerin okunmasının birim `failed` olduktan 145
+    ile 513 ms sonra başladığını gösterir. Debian 13: dört Durdur'un dördü,
+    set4'te olduğu gibi `postfix.service` için notla `200` yanıtını verdi;
+    `systemctl stop postfix` orada 1066 ile 1083 ms sürdü ve ardından ana
+    sürece bir kez bakıldı. İkisinde de `do_dns: false` ile yapılan içe aktarım
+    `imported: [domain, files, mail, forwarders, database:...]`, `left_out:
+    [dns]`, `status: active` yanıtını verdi. Windows ana makinesi Ubuntu
+    hücresi sırasında, aday kurulmadan önce 43 dakika uyudu; bunun neyi
+    etkileyip neyi etkilemediğini kanıt README dosyası söyler. Gerçek sistemde
+    ölçülmeyenler: iki yeni not, diğer üç içe aktarım durumu, güncelleme kartı,
+    herhangi bir ekran, Arch.
+- **Açık.**
+  - Düzeltmeden önce ana süreç araması Debian 13 üzerinde ölçülmedi; postconf'u
+    uyarı vermeye iten ama `postfix check` denetiminin kabul ettiği bir main.cf
+    ile (örneğin kullanılmayan bir parametre) hiçbir Durdur ölçülmedi: eski
+    arama orada da, geride `failed` bir birim kalmadan, Durdur'u erken
+    yanıtlardı.
+  - Yukarıda adı geçen diğer postconf değeri okumaları, postconf'u uyarı
+    vermeye iten bir main.cf ile ölçülmeli ve uyarıyı değere katıyorlarsa
+    düzeltilmelidir.
+  - Hiçbir konuk bir birimi beklemenin tamamı boyunca iki durum arasında
+    tutmadı; iki yeni notun gerçek sistem kaydı yoktur.
+
+### postconf'tan okunan değer tek bir satırdır: Postfix'in kendi uyarısı asla değer sayılmaz, okunamayan bir ayar da değişikliği başlamadan durdurur (ilke 2 ve 4, 2026-10-09)
+
+D-025 ilke 2 (bilinmeyen; yok, boş ya da başarı değildir) ve 4 (bir değişiklik
+ön görüntüsünü okur ve sınanmış bir tersine sahiptir); D-022, D-024. Yol,
+güvenli posta sertifikası yoludur: anlık görüntüsü ve geri almasıyla posta TLS
+değişikliği (P0.4 alanı: birbirine uyan anlık görüntü ve geri yükleme
+üreticileri) ve yerel yenileme yolunda da bir posta sertifikası yayımının
+önünde duran geri okuma (P0.5 alanı). Hiçbir P0 işi kapanmadı ya da ilerlemedi.
+Kaynak: bu okumaları kaynakta görülmüş ve ölçülmemiş diye adlandıran bir önceki
+kayıt ve gerçek postconf'un bir gerçek sistem okuması (kanıt
+`deploy/e2e/release-recovery/evidence/set4c-20261009/`). Buradaki hiçbir şey
+kurulu bir sunucuda gözlenmedi. Kusur yayımlanmış alpha.81'de de vardır.
+2026-10-09 takvim tarihidir.
+
+- **`1f182a483` kaynağında doğrulanan.**
+  - Agent'ın her posta komutu, iki çıktı akışı tek arabellekte toplanarak
+    çalıştırılır (`cmd/agent/mail_command.go`: `runMailTLSCommand`,
+    `runMailTLSMutationCommand`, `CombinedOutput`).
+  - *Anlık görüntü.* `snapshotMailTLSState` (`cmd/agent/mail_tls_rpc.go`) dokuz
+    Postfix ayarını `postconf -h <ad>` ile okuyor ve her birinin kırpılmış
+    arabelleğini değer olarak tutuyordu. İki posta TLS giriş noktası
+    tarafından, `reconcileMailTLSHost` başında, ilk değişiklikten önce
+    çağrılır. Bundan sonraki herhangi bir hatada `rollback` dosyaları geri
+    yüklüyor, ardından her ayar için `postconf -e <ad>=<tutulan metin>`
+    çalıştırıyordu.
+  - *Geri okuma.* `verifyMailTLSConfiguration`
+    (`cmd/agent/mail_tls_sync_commit.go`) aynı ayarları aynı biçimde okuyor ve
+    kırpılmış arabelleği kabul edilmiş değerle eşitlik için karşılaştırıyordu.
+    Bir posta TLS değişikliğinden sonra ve bir posta sertifikası yayımlanmadan
+    önce, yerel yenileme yolunda da çalışır. Arabellekteki bir uyarı bu yüzden
+    farklı bir ayarı eşleştiremezdi; eşleşen bir ayarı farklı gösterirdi.
+  - *Genişletilmiş okuma.* `postconfExpandedContext`
+    (`cmd/agent/mail_stack_rpc.go`) yalnızca posta kurulumunun alias veritabanı
+    onarımını besler; o da metni virgüllerden ve ilk iki noktadan böler ve
+    dosyayı arar.
+- **Ölçülen** (gerçek postconf, `postconf -c <özel dizin>`, her okumada çıkış
+  durumu 0; `reading/`, `reading-2/`).
+  - Başka bir metinden sonra yorum taşıyan satır: önce uyarı, sonra değer
+    yazılır. Kullanılmayan parametre: önce değer, sonra uyarı. Ayarlanmamış bir
+    ayar: boş bir satır, sonra uyarı. Yoluyla başlatıldığında ileti
+    `/usr/sbin/postconf: warning: ` ile, adıyla başlatıldığında `postconf:
+    warning: ` ile başlar. `postconf -d mail_version` iki satırın hiçbiriyle
+    uyarı yazmadı.
+  - Eski anlık görüntünün tuttuğu metin, geri almanın kendi komutuna özel bir
+    main.cf üzerinde verildi. Ayarlanmış bir ayar (iki satır): postconf "fatal:
+    -e, -X, or -# accepts no multi-line input" ile 1 döndürür ve main.cf
+    değişmez; yani o ayar geri yüklenmezdi. Ayarlanmamış bir ayar, main.cf'te
+    kullanılmayan bir parametre varken: tutulan metin yalnızca uyarı satırıdır,
+    postconf 0 döndürür ve main.cf'e `tls_server_sni_maps = /usr/sbin/postconf:
+    warning: ...: unused parameter: campaign_note=raised for the campaign`
+    satırı eklenir. Demek ki "geri alma uyarıyı main.cf'e yazar" ifadesi
+    ayarlanmamış bir ayar için doğrulandı, ayarlanmış bir ayar için çürütüldü.
+  - Ölçülmeyenler: böyle bir main.cf ile bir posta TLS değişikliğinin, bir geri
+    almanın ya da bir sertifika yayımının kendisi (sertifika gerektirir); bu
+    ayarlar için Ubuntu 24.04'ün Postfix 3.8.6 sürümü (`queue_directory` için
+    uyarısı set4b'dedir); Postfix'in yazılan satırla ne yaptığı.
+- **Bu değişiklikten önce bundan ne çıkıyordu** (kaynak ve okumalar birlikte;
+  hiçbiri çalıştırılmadı).
+  - main.cf'te `postfix check` denetiminin kabul ettiği kullanılmayan bir
+    parametre varken: bir posta TLS değişikliği ayarlarını uyguluyor, sonra
+    doğrulanamıyordu (her geri okuma farklı çıkıyordu) ve değişmiş ama
+    doğrulanmamış olarak bitiyordu; bir posta sertifikası yayımı her seferinde
+    "current Postfix/Dovecot TLS settings could not be verified" ile
+    duraklatılıyordu; yarı yolda başarısız olan bir değişiklik de, ayarlanmamış
+    her ayarın değeri uyarı satırı olan bir main.cf'e geri dönüyordu.
+- **Değişen.**
+  - *postconf'tan okunan değer için tek kural* (`cmd/agent/postconf_value.go`,
+    `postconfOneValue`). postconf'un kendi iletisi olan satır (başlatıldığı ad,
+    `: `, ardından `warning`, `error`, `fatal` ya da `panic`) yanıtın parçası
+    değildir. Geriye, satır sonuyla biten tam olarak bir satır kalmalıdır; o
+    satır değerdir ve boş olabilir. Başka her şey bilinmeyendir. Bir önceki
+    kaydın kuyruk dizini de artık aynı işlevi izler.
+  - *Anlık görüntü değerleri alır, aksi halde reddeder*
+    (`snapshotPostfixTLSSettings`). Okunamayan bir ayar işlemi orada
+    `postconfUnreadError` ile bitirir: hiçbir şey değiştirilmemiştir, sonuç
+    "dokunulmadı"dır ve neden ayarın, okumanın ve sahibin çalıştıracağı iki
+    komutun adını verir.
+  - *Geri yükleme yalnızca değer yazar* (`restorePostfixTLSSettings`). Satır
+    sonu ya da postconf iletisi taşıyan metin `postconf -e` komutuna verilmez;
+    ayar geri yüklenmedi diye bildirilir.
+  - *Geri okuma değeri karşılaştırır* (`verifyMailTLSConfiguration`). Tek bir
+    değer olmayan okuma "doğrulanmadı"dır; ne eşleşmedir ne de fark.
+  - *Genişletilmiş okuma değeri ya da bir hata döndürür*
+    (`postconfExpandedContext`).
+  - *Akışlar yine tek arabellek olarak okunur.* Üç çalıştırıcı ve test
+    ikizleri, her posta komutu için tek bir arabellek döndüren aynı imzayı
+    paylaşır; akışları ayrı okumak bu ek yerini bütün çağıranlar için
+    değiştirirdi. Kural bunun yerine okumanın yapıldığı yerdedir; etkilenen
+    testlerin ikizleri de artık postconf gibi yanıt verir (her değer için bir
+    satır, ayarlanmamış bir ayar için boş bir satır).
+- **postconf ya da doveconf çıktısını okuyan diğer yerler.**
+  - Burada düzeltilenler: yukarıdaki üçü ve `postfixQueueDirectory`.
+  - Etkilenmeyenler, yalnızca standart çıktı (`exec.Command(...).Output()`):
+    `postconfValue`, `postconfExpanded` (`mail_stack_rpc.go`), posta sağlık
+    okuması (`mail_health_rpc.go`), posta politikası okuması
+    (`mail_policy_rpc.go`; zaten bir değer satırı ister), `doveconf -h
+    mail_plugins` (`mail_rpc.go`).
+  - Etkilenmeyenler, yalnızca çıkış durumu kullanılır, çıktı ise ancak bir
+    hatanın metni olur: her `doveconf -n` (`dovecot_dialect.go`,
+    `mail_service_verify.go`, `mail_stack_rpc.go`, `mail_submission_rpc.go`,
+    `mail_tls_rpc.go`, `main.go`), `postfix check`, `postfix status` ve
+    `postconf -e`, `-M`, `-P` yazmaları.
+  - İki akışı birden okuyan, değiştirilmeyenler:
+    `internal/services/version_detector.go` içindeki `postconf -d mail_version`
+    (hizmet için gösterilen sürüm; ölçüldü: `-d` ile iki satır için uyarı
+    yazılmaz; başka bir iletiyle sürüm bilinmiyor diye gösterilirdi, ondan
+    hiçbir şey yazılmaz) ve `dovecot --version` (`dovecotIs24WithRunner`: ilk
+    alan bir sürüm olmalıdır, yoksa lehçe bilinmeyendir ve işlem durur;
+    Dovecot'un orada hata akışına yazıp yazamayacağı ölçülmedi).
+  - `cmd/agent` ya da `internal/` içinde hiçbir yer `postconf -n` ya da
+    `postconf -M` çıktısını ayrıştırmaz.
+- **API değişiklikleri (sürüm notları için).** Biçimde yok. main.cf'i
+  postconf'u uyarı vermeye iten bir sunucuda posta TLS değişikliği ve posta
+  sertifikası yayımı artık başka her sunucudaki gibi çalışır. Okunamayan bir
+  ayar için yeni bir neden metni vardır (işlem yönlendirmesi, aynı tarih).
+- **Şema ya da sürüm geçişi.** Yok: veritabanı şeması yok, kalıcı durum yok,
+  RPC alanı yok. Anlık görüntü tek bir işlem boyunca bellekte yaşar.
+- **Kurtarma davranışı.** Önce: postconf'tan bir uyarı varken geri alma,
+  ayarlanmamış her ayarın değeri olarak uyarı satırını yazıyor ve ayarlanmış
+  hiçbir ayarı geri yükleyemiyordu; bunu "rollback incomplete" diye
+  bildiriyordu (sonuç "belirsiz"; defteri tutar). Sonra: anlık görüntü
+  değerleri tutar, dolayısıyla aynı geri alma onları geri yükler; okunamayan
+  bir ayar işlemi ilk değişiklikten önce durdurur; geri yükleme değer olarak
+  okunmamış bir metni asla yazmaz. Önceki gibi hiçbir şey kendiliğinden yeniden
+  denemez.
+- **Kanıt.**
+  - Yalnızca bileşen testleri, ölçülen baytlarla
+    (`cmd/agent/set4c_postconf_value_test.go`): kural, ölçülen her biçimde ve
+    tek bir değer olmayan biçimlerde; anlık görüntü, uyarı önce, sonra ya da
+    boş bir satırdan sonra geldiğinde değerleri tutar; işlem, okumadan başka
+    hiçbir şey gönderilmeden anlık görüntüde durur; geri yükleme dört değerin
+    ikisini yazar ve asla bir uyarı satırı yazmaz; geri okuma, bir uyarının
+    ardındaki kabul edilmiş ayarları doğrular, uyarı kabul edilmiş değeri
+    taşısa da farklı bir ayarı reddeder ve tek bir değer olmayan okuma için
+    "doğrulanmadı" der; genişletilmiş okuma; ve bir postconf bulunan yerde özel
+    bir yapılandırma diziniyle gerçek postconf'a karşı kural (geliştirme
+    konuğunda çalıştı, Postfix 3.10.13).
+  - Gerçek sistem: `set4c-20261009/` altındaki iki okuma. Bunlar Agent'ın
+    değil, postconf'un okumalarıdır.
+- **Açık.**
+  - main.cf'i postconf'u uyarı vermeye iten bir konukta, ilk değişikliğinden
+    sonra başarısız olan bir posta TLS değişikliği ve bir posta sertifikası
+    yayımı: geri almanın her ayarı geri yüklediği ve yayımın geçtiği ölçülmedi.
+  - Bu ayarlar için Postfix 3.8.6 (Ubuntu 24.04) ve Arch'ın Postfix'i.

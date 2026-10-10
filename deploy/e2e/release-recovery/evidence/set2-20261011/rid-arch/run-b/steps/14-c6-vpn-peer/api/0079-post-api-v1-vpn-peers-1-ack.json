@@ -1,0 +1,92 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "C6 the page confirms it received the configuration of peer 1",
+  "request": {
+    "body": {
+      "delivery_token": "[REDACTED]"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18459"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18459"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "52850a97430217f6132e528a5a66f638"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/vpn/peers/1/ack"
+  },
+  "response": {
+    "elapsed_seconds": 0.024,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store, max-age=0"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Expires",
+        "0"
+      ],
+      [
+        "Pragma",
+        "no-cache"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 04:33:17 GMT"
+      ],
+      [
+        "Content-Length",
+        "17"
+      ]
+    ],
+    "json": {
+      "success": true
+    },
+    "status": 200,
+    "text": null
+  }
+}

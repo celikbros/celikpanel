@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 import React from 'react';
 import Renderer, { act } from 'react-test-renderer';
-import ts from 'typescript';
+import { sharedLayer } from './fixtures/shared-layer.mjs';
 
 const require=createRequire(import.meta.url);
 const reactURL=pathToFileURL(require.resolve('react')).href;
@@ -26,7 +26,13 @@ export const Globe=()=>null, Plus=()=>null, Trash2=()=>null, ShieldCheck=()=>nul
 export const inputClass='';
 export const readApiError=async r=>({message:'failed'}),apiErrorText=error=>error.message;
 `);
-async function component(name){const code=ts.transpileModule(readFileSync(new URL('../src/components/'+name+'.tsx',import.meta.url),'utf8'),{compilerOptions:{jsx:ts.JsxEmit.React,module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2020}}).outputText.replace(/from ['"]([^'"]+)['"]/g,(_,path)=>`from '${path==='react'?reactURL:stub}'`);return(await import(url(`import React from '${reactURL}';\n${code}`)))[name];}
+// These screens read the server's capabilities through the shared remote-state
+// layer (lib/remote.ts, lib/hostingCapabilities.ts), so they are mounted with
+// the real one. The dialogue shape stays a stand-in here: the real one listens
+// on `document`, which this test does not have.
+const shared=sharedLayer(stub);
+const ui=url(`import React from '${reactURL}';export * from '${shared.uiURL}';export const Dialog=props=>React.createElement('section',null,props.title,props.children,props.footer);`);
+async function component(name){return(await import(shared.compile('components/'+name+'.tsx',{'/ui':ui,'/apiError':stub})))[name];}
 const DNS=await component('DomainDNSManager');
 const Connection=await component('DomainConnection');
 const MailAuth=await component('MailAuthPanel');
@@ -41,7 +47,7 @@ function init(){tree=null;calls=[];globalThis.fetch=async(path,options)=>{
     if(path.endsWith('/dns/records'))return Response.json({records:[record],management:'external',published:false});
     if(path.endsWith('/connection'))return Response.json({domain:'example.com',server_ip:'192.0.2.4',nameservers:[],live_nameservers:['ns.provider.example'],live_ips:[],status:'elsewhere',ssl_ready:false,glue_needed:false,nameservers_usable:false,checked_at:'2026-09-10T00:00:00Z',dns_management_mode:'external',required_records:[record]});
     if(path.endsWith('/mail/auth'))return Response.json({domain:'example.com',zone_exists:false,dns_management_mode:'external',spf:authRecord,dkim:authRecord,dmarc:authRecord,dkim_selector:'default',signing_installed:true,required_records:[{...record,name:'mail.example.com'},{...record,name:'example.com',type:'MX',content:'mail.example.com',prio:10}]});
-    return Response.json({web_server:'nginx',php_versions:[],dns_server:'',dns_identity_ready:false,dns_management_mode:'external',dns_management_ready:true,mail_server:false});
+    return Response.json({web_server:'nginx',php_versions:[],dns_server:'',dns_identity_ready:false,dns_management_mode:'external',dns_management_ready:true,mail_server:false,database_servers:[],db_tools:[]});
 };}
 async function mount(Component,props={}){await act(async()=>{tree=Renderer.create(React.createElement(Component,{domainId:1,domainName:'example.com',...props}));});}
 async function cleanup(){if(tree)await act(async()=>tree.unmount());globalThis.fetch=originalFetch;}

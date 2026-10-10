@@ -1,0 +1,4 @@
+go version go1.26.5 linux/amd64
+=== build de34e44859d49039972ae2e1f9f42ba12d9e1595 2026-10-09T14:32:02Z
+rc=0 /var/tmp/cp-upd1-build/20261009t143202z/upd1-artifacts.json UPD1-ARTIFACTS-OK 
+=== end 2026-10-09T14:36:59Z

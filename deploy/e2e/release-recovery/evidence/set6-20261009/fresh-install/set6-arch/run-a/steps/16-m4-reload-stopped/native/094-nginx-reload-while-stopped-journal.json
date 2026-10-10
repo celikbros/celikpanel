@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T21:56:00Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791582958",
+      "-n",
+      "400",
+      "-u",
+      "nginx.service"
+    ],
+    "at": "2026-10-09T21:56:00Z",
+    "returncode": 0,
+    "seconds": 0.004,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "-- No entries --\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791582958,
+  "units": [
+    "nginx.service"
+  ]
+}

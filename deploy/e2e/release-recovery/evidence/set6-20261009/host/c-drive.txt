@@ -1,0 +1,3 @@
+2026-10-09T21:26:41Z before any work (read by the session with Get-PSDrive C in its first command; this line was written at the end of the run, not at that moment) free_bytes=178711588864 free_GiB=166.44
+2026-10-09T22:48:41Z while the fifth cell runs free_bytes=180349648896 free_GiB=167.96
+2026-10-09T23:28:24Z after the last cell was staged and the watchers were stopped free_bytes=180193656832 free_GiB=167.82

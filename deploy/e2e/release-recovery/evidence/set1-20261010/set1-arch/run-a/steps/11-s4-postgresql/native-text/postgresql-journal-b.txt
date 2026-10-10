@@ -1,0 +1,4 @@
+2026-10-08T21:57:47.615156+00:00 dns-arch systemd[1]: Reloading PostgreSQL database server...
+2026-10-08T21:57:47.698968+00:00 dns-arch postgres[1874]: 2026-10-08 21:57:47.698 UTC [1874] LOG:  received SIGHUP, reloading configuration files
+2026-10-08T21:57:47.699600+00:00 dns-arch postgres[1874]: 2026-10-08 21:57:47.699 UTC [1874] LOG:  parameter "work_mem" changed to "8MB"
+2026-10-08T21:57:47.704351+00:00 dns-arch systemd[1]: Reloaded PostgreSQL database server.

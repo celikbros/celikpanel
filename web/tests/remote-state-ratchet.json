@@ -1,0 +1,133 @@
+{
+  "//": "Remote-state ratchet allow-list (tests/remote-state-ratchet.test.mjs). Per file: how many times each old pattern of reading the server still occurs. These numbers may only go DOWN. Never raise one and never add a file: read through src/lib/remote.ts instead. After migrating a screen run: node tests/remote-state-ratchet.mjs --tighten",
+  "patterns": {
+    "valueFromFailure": "a failed read becomes a value: x.ok ? … : null | [] | {}",
+    "swallowedFailure": "a failed read is swallowed: empty catch {} around a read, or .catch(() => {})",
+    "ignoredFailure": "a failed read is ignored: if (res.ok) {…} with no else, or if (!res.ok) return;",
+    "rawRead": "a read fetch( outside src/lib (not yet on lib/remote.ts)",
+    "unprovenEmptyState": "<EmptyState> without the answer that proves it (use KnownEmpty of={…})"
+  },
+  "files": {
+    "src/App.tsx": {
+      "swallowedFailure": 1
+    },
+    "src/auth/usePanelSession.ts": {
+      "rawRead": 1
+    },
+    "src/components/AddDatabaseModalV2.tsx": {
+      "rawRead": 1
+    },
+    "src/components/AddonsPage.tsx": {
+      "rawRead": 2,
+      "unprovenEmptyState": 3
+    },
+    "src/components/AuditLogPage.tsx": {
+      "swallowedFailure": 1,
+      "rawRead": 1,
+      "unprovenEmptyState": 1
+    },
+    "src/components/ComponentOperation.tsx": {
+      "rawRead": 6
+    },
+    "src/components/DNSEngineCard.tsx": {
+      "rawRead": 1
+    },
+    "src/components/Dashboard.tsx": {
+      "valueFromFailure": 1,
+      "swallowedFailure": 3,
+      "rawRead": 4
+    },
+    "src/components/DatabaseAccountStrip.tsx": {
+      "rawRead": 1
+    },
+    "src/components/DomainLogsViewer.tsx": {
+      "rawRead": 1
+    },
+    "src/components/Layout.tsx": {
+      "valueFromFailure": 1,
+      "swallowedFailure": 2,
+      "rawRead": 1
+    },
+    "src/components/LicenseOnboarding.tsx": {
+      "rawRead": 1
+    },
+    "src/components/Login.tsx": {
+      "swallowedFailure": 1
+    },
+    "src/components/PanelAddressHint.tsx": {
+      "swallowedFailure": 1,
+      "ignoredFailure": 1,
+      "rawRead": 1
+    },
+    "src/components/PanelUpdateCard.tsx": {
+      "valueFromFailure": 1,
+      "swallowedFailure": 1,
+      "rawRead": 2
+    },
+    "src/components/RecoveryAccess.tsx": {
+      "valueFromFailure": 1,
+      "swallowedFailure": 1,
+      "rawRead": 2
+    },
+    "src/components/SecurityAuditCard.tsx": {
+      "rawRead": 1
+    },
+    "src/components/ServerSetup.tsx": {
+      "valueFromFailure": 3,
+      "swallowedFailure": 2,
+      "ignoredFailure": 1,
+      "rawRead": 1
+    },
+    "src/components/ServerSetupChoice.tsx": {
+      "swallowedFailure": 2
+    },
+    "src/components/ServerSetupComponents.tsx": {
+      "rawRead": 1
+    },
+    "src/components/ServerSetupGate.tsx": {
+      "swallowedFailure": 2,
+      "rawRead": 1
+    },
+    "src/components/ServiceList.tsx": {
+      "valueFromFailure": 1,
+      "swallowedFailure": 1,
+      "rawRead": 6,
+      "unprovenEmptyState": 1
+    },
+    "src/components/ServiceShell.tsx": {
+      "swallowedFailure": 2,
+      "ignoredFailure": 2,
+      "rawRead": 2,
+      "unprovenEmptyState": 2
+    },
+    "src/components/StoreCatalogAdmin.tsx": {
+      "rawRead": 1,
+      "unprovenEmptyState": 2
+    },
+    "src/components/SystemSQLiteManager.tsx": {
+      "swallowedFailure": 2,
+      "rawRead": 1,
+      "unprovenEmptyState": 1
+    },
+    "src/components/SystemUpdateOperation.tsx": {
+      "swallowedFailure": 1,
+      "ignoredFailure": 1,
+      "rawRead": 2
+    },
+    "src/components/TeamMembersPage.tsx": {
+      "unprovenEmptyState": 1
+    },
+    "src/components/VPNPage.tsx": {
+      "unprovenEmptyState": 1
+    },
+    "src/lib/api.ts": {
+      "ignoredFailure": 1
+    },
+    "src/lib/recoveryShell.ts": {
+      "swallowedFailure": 1
+    },
+    "src/offline/page.ts": {
+      "rawRead": 1
+    }
+  }
+}

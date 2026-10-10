@@ -1,0 +1,11 @@
+{
+  "action": "owner-cron-fault",
+  "applied": {
+    "created": "/etc/cron.allow",
+    "kind": "cron-allow"
+  },
+  "at": "2026-10-09T07:17:14Z",
+  "mode": "owner-cron-fault",
+  "owner_action": true,
+  "schema": "celikpanel/set1-native/v1"
+}

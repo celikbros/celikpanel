@@ -1,0 +1,4 @@
+driver SHA256SUMS verified on the staged copy (282 files)
+2026-10-09T08:37:49Z removed /var/tmp/cp-release-drill-u14-ub-oc-a/cells/a6d7cdc36dc3bc3140e5f30d/ubuntu/overlay.qcow2 bytes=1786118144 (evidence staged at set3-20261012/part2-alpha81/upd1-ubuntu-owner-continuation/run-a, checksums verified)
+296
+overall: complete-for-review | native_evidence: False | outcome: recovered-after-owner-continuation

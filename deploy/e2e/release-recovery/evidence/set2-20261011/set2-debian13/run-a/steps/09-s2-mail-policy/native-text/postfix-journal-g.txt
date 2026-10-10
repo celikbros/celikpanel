@@ -1,0 +1,9 @@
+2026-10-09T03:40:34.594682+00:00 dns-debian13 postfix/postfix-script[33188]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T03:40:34.640624+00:00 dns-debian13 postfix/postfix-script[33213]: the Postfix mail system is running: PID: 28419
+2026-10-09T03:40:35.204417+00:00 dns-debian13 postfix/postfix-script[33329]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T03:40:35.249392+00:00 dns-debian13 postfix/postfix-script[33354]: the Postfix mail system is running: PID: 28419
+2026-10-09T03:40:35.284095+00:00 dns-debian13 postfix/postfix-script[33363]: refreshing the Postfix mail system
+2026-10-09T03:40:35.289967+00:00 dns-debian13 postfix/master[28419]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-09T03:40:35.728369+00:00 dns-debian13 postfix/postfix-script[33377]: the Postfix mail system is running: PID: 28419
+2026-10-09T03:40:36.248381+00:00 dns-debian13 postfix/postfix-script[33490]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T03:40:36.293513+00:00 dns-debian13 postfix/postfix-script[33515]: the Postfix mail system is running: PID: 28419

@@ -48,15 +48,40 @@ func observeOrReloadMailHostCertificate(ctx context.Context, domain string, relo
 	if err != nil {
 		return &mailHostReloadUnverified{cause: err}
 	}
-	if err := observeOrReloadMailHostTLS(ctx, journal, cert, key, commands.run, secureReadConfig, reload); err != nil {
+	// What each service must be seen presenting afterwards: the certificate
+	// that is selected now. Read from the selection, not from the request.
+	var served mailServedCheck
+	if reload {
+		selectedDomain, selectedLeaf, identityErr := currentMailHostCertificateIdentity()
+		if identityErr != nil {
+			return &mailHostReloadUnverified{cause: identityErr}
+		}
+		if selectedDomain != domain {
+			return &mailHostReloadUnverified{cause: errors.New("selected mail certificate belongs to another mail identity")}
+		}
+		served = func(ctx context.Context, unit string) error {
+			return verifyMailServiceServes(ctx, unit, selectedLeaf)
+		}
+	}
+	if err := observeOrReloadMailHostTLS(ctx, journal, cert, key, commands.run, secureReadConfig, reload, served); err != nil {
 		return &mailHostReloadUnverified{cause: err}
 	}
 	return nil
 }
 
+// mailServedCheck asks one mail service's own listeners which certificate they
+// present; nil means the selected one was seen.
+type mailServedCheck func(ctx context.Context, unit string) error
+
 type mailHostReloadUnverified struct{ cause error }
 
 func (e *mailHostReloadUnverified) Error() string {
+	// The one cause that has its own sentence: what the service's listeners
+	// presented. It carries no native output.
+	var served *mailServedCertificateError
+	if errors.As(e.cause, &served) {
+		return served.Error()
+	}
 	return "mail certificate activation paused: accepted native settings and running mail services could not be verified or reloaded; the server owner must review Postfix/Dovecot configuration and service status, then retry the same operation; settings and certificate evidence are preserved"
 }
 func (e *mailHostReloadUnverified) Unwrap() error { return e.cause }
@@ -64,7 +89,20 @@ func (e *mailHostReloadUnverified) Unwrap() error { return e.cause }
 // Observation runs before any reload, between reloads, and after both. Never
 // start a stopped service, rewrite owner settings, regenerate fallback material,
 // compile a customer SNI map, or call postfix check (which can create files).
-func observeOrReloadMailHostTLS(ctx context.Context, journal *mailTLSSyncJournal, cert, key string, run mailTLSCommandRunner, read func(string) ([]byte, error), reload bool) error {
+//
+// `systemctl reload` stays the only thing sent to a service: it is the unit's
+// own reload, with whatever its owner added to it, and it is all the
+// independent helper's closed command scope allows. Its exit status and
+// `is-active` are not the outcome, because on Ubuntu both answer for a wrapper
+// unit (mail_served_certificate.go). The outcome is what the service's own
+// listeners present after its reload: served must report the selected
+// certificate, or the activation is not complete.
+//
+// `systemctl reload` bir hizmete gönderilen tek şey olarak kalır. Çıkış durumu
+// ve `is-active` sonuç değildir; Ubuntu'da ikisi de sarmalayıcı unit adına
+// yanıt verir. Sonuç, yeniden yüklemeden sonra hizmetin kendi dinleyicilerinin
+// sunduğu sertifikadır.
+func observeOrReloadMailHostTLS(ctx context.Context, journal *mailTLSSyncJournal, cert, key string, run mailTLSCommandRunner, read func(string) ([]byte, error), reload bool, served mailServedCheck) error {
 	observe := func() error {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -88,11 +126,17 @@ func observeOrReloadMailHostTLS(ctx context.Context, journal *mailTLSSyncJournal
 	if !reload {
 		return nil
 	}
+	if served == nil {
+		return errors.New("mail certificate reload requires the served certificate check")
+	}
 	for _, unit := range []string{"postfix.service", "dovecot.service"} {
 		if _, err := run("systemctl", "reload", unit); err != nil {
 			return err
 		}
 		if err := observe(); err != nil {
+			return err
+		}
+		if err := served(ctx, unit); err != nil {
 			return err
 		}
 	}

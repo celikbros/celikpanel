@@ -1,0 +1,48 @@
+2026-10-09T16:59:14Z set5 run directory created
+2026-10-09T16:59:26Z made run copy a
+2026-10-09T17:00:36Z made run copy b
+2026-10-09T17:00:58Z start build
+2026-10-09T17:05:10Z build a81 rc=0
+2026-10-09T17:05:10Z end build rc=0
+2026-10-09T17:05:59Z made run copy c
+2026-10-09T17:06:06Z start afterbuild
+2026-10-09T17:06:10Z prove a81 rc=0
+2026-10-09T17:07:28Z end afterbuild rc=0
+2026-10-09T17:13:26Z made run copy d
+2026-10-09T17:13:51Z start cell-d13-good-a
+2026-10-09T17:26:10Z end cell-d13-good-a rc=0
+2026-10-09T17:26:38Z staged cell-d13-good-a rc=0 overall: complete-for-review | native_evidence: False | outcome: update-verified | final: None succeeded
+2026-10-09T17:26:38Z queue done
+2026-10-09T17:26:58Z start cell-ub-good-a
+2026-10-09T17:29:52Z made run copy e
+2026-10-09T17:30:03Z job files of the cells not yet started now name run copy e: d13-def arch-good ub-def arch-def d13-sc d13-oc ub-oc d13-mr
+2026-10-09T17:47:26Z end cell-ub-good-a rc=0
+2026-10-09T17:47:59Z staged cell-ub-good-a rc=0 overall: complete-for-review | native_evidence: False | outcome: update-verified | final: None succeeded
+2026-10-09T17:47:59Z start cell-d13-def-a
+2026-10-09T17:51:51Z start memwatch
+2026-10-09T18:02:01Z end cell-d13-def-a rc=0
+2026-10-09T18:02:29Z staged cell-d13-def-a rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-automatically | final: None recovered
+2026-10-09T18:02:29Z start cell-arch-good-a
+2026-10-09T18:12:17Z end cell-arch-good-a rc=0
+2026-10-09T18:12:34Z staged cell-arch-good-a rc=0 overall: complete-for-review | native_evidence: False | outcome: update-verified | final: None succeeded
+2026-10-09T18:12:34Z start cell-ub-def-a
+2026-10-09T18:32:53Z end cell-ub-def-a rc=0
+2026-10-09T18:33:20Z staged cell-ub-def-a rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-automatically | final: None recovered
+2026-10-09T18:33:20Z start cell-arch-def-a
+2026-10-09T18:43:57Z end cell-arch-def-a rc=0
+2026-10-09T18:44:15Z staged cell-arch-def-a rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-automatically | final: None recovered
+2026-10-09T18:44:15Z start cell-d13-sc-a
+2026-10-09T18:58:00Z end cell-d13-sc-a rc=0
+2026-10-09T18:58:26Z staged cell-d13-sc-a rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-automatically | final: None recovered
+2026-10-09T18:58:26Z start cell-d13-oc-a
+2026-10-09T19:17:59Z end cell-d13-oc-a rc=0
+2026-10-09T19:18:26Z staged cell-d13-oc-a rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-after-owner-continuation | final: None succeeded
+2026-10-09T19:18:26Z start cell-ub-oc-a
+2026-10-09T19:46:13Z end cell-ub-oc-a rc=0
+2026-10-09T19:46:42Z staged cell-ub-oc-a rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-after-owner-continuation | final: None succeeded
+2026-10-09T19:46:42Z start cell-d13-mr-a
+2026-10-09T20:01:14Z end cell-d13-mr-a rc=0
+2026-10-09T20:01:38Z staged cell-d13-mr-a rc=0 overall: complete-for-review | native_evidence: False | outcome: update-verified | final: None succeeded
+2026-10-09T20:01:38Z queue done
+2026-10-09T20:02:52Z hold.stop written (the idle session and the memory watcher end within 30 s)
+2026-10-09T20:02:56Z end memwatch rc=0

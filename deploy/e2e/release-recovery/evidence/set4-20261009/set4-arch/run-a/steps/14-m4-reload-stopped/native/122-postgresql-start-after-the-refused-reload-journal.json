@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T10:37:24Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791542242",
+      "-n",
+      "400",
+      "-u",
+      "postgresql.service"
+    ],
+    "at": "2026-10-09T10:37:24Z",
+    "returncode": 0,
+    "seconds": 0.004,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T10:37:22.418521+00:00 dns-arch systemd[1]: Starting PostgreSQL database server...\n2026-10-09T10:37:22.539789+00:00 dns-arch postgres[5171]: 2026-10-09 10:37:22.539 UTC [5171] LOG:  starting PostgreSQL 18.6 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 16.2.1 20260810, 64-bit\n2026-10-09T10:37:22.540933+00:00 dns-arch postgres[5171]: 2026-10-09 10:37:22.540 UTC [5171] LOG:  listening on IPv6 address \"::1\", port 5432\n2026-10-09T10:37:22.540973+00:00 dns-arch postgres[5171]: 2026-10-09 10:37:22.540 UTC [5171] LOG:  listening on IPv4 address \"127.0.0.1\", port 5432\n2026-10-09T10:37:22.553107+00:00 dns-arch postgres[5171]: 2026-10-09 10:37:22.553 UTC [5171] LOG:  listening on Unix socket \"/run/postgresql/.s.PGSQL.5432\"\n2026-10-09T10:37:22.576089+00:00 dns-arch postgres[5178]: 2026-10-09 10:37:22.576 UTC [5178] LOG:  database system was shut down at 2026-10-09 10:37:10 UTC\n2026-10-09T10:37:22.592550+00:00 dns-arch postgres[5171]: 2026-10-09 10:37:22.592 UTC [5171] LOG:  database system is ready to accept connections\n2026-10-09T10:37:22.603577+00:00 dns-arch systemd[1]: Started PostgreSQL database server.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791542242,
+  "units": [
+    "postgresql.service"
+  ]
+}

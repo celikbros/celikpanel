@@ -1,0 +1,17 @@
+-- PostgreSQL 17.11 (Debian 17.11-0+deb13u1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+-- batch (cmd/agent/db_config.go dbConfigPostgreSQLRereadVerified):
+SELECT 'file=' || current_setting('config_file');
+SELECT 'before=' || extract(epoch from clock_timestamp());
+SELECT 'signal=' || pg_reload_conf();
+SELECT 'waited=' || count(*) FROM (SELECT pg_sleep(1)) AS waited;
+SELECT 'loaded=' || extract(epoch from pg_conf_load_time());
+SELECT 'error=' || sourceline || ':' || coalesce(name, '') || ':' || error FROM pg_file_settings WHERE error IS NOT NULL AND coalesce(name, '') NOT IN (SELECT name FROM pg_settings WHERE pending_restart) ORDER BY seqno LIMIT 1;
+
+-- raw stdout:
+file=/etc/postgresql/17/main/postgresql.conf
+before=1791517260.479560
+signal=true
+waited=1
+loaded=1791517261.482604
+
+-- stderr:

@@ -1,0 +1,14 @@
+##### postgresql.service (journalctl -u postgresql.service --since @1791584337)
+(no lines)
+##### postgresql@17-main.service (journalctl -u postgresql@17-main.service --since @1791584337)
+(no lines)
+##### systemd (PID 1) lines naming the unit
+(no lines)
+##### celikpanel-agent.service and celikpanel-panel.service
+2026-10-09T22:18:59.206254+00:00 dns-debian13 panel[5364]: 2026/10/09 22:18:59 http: TLS handshake error from 127.0.0.1:46910: EOF
+2026-10-09T22:18:59.239699+00:00 dns-debian13 sudo[34482]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on --no-align --tuples-only --quiet
+2026-10-09T22:18:59.239991+00:00 dns-debian13 sudo[34482]: pam_unix(sudo:session): session opened for user postgres(uid=104) by (uid=0)
+2026-10-09T22:18:59.266517+00:00 dns-debian13 sudo[34482]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T22:18:59.310781+00:00 dns-debian13 agent[5167]: 2026/10/09 22:18:59 ERROR service reload postgresql: failed not_running: none of the units behind postgresql.service is running (postgresql@17-main.service inactive (dead)); nothing was reloaded
+2026-10-09T22:18:59.334057+00:00 dns-debian13 cron[34501]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 29469: Resource temporarily unavailable)
+2026-10-09T22:19:00.431577+00:00 dns-debian13 panel[5364]: 2026/10/09 22:19:00 [409][service action] reload postgresql: SERVICE_ACTION_FAILED not_running: none of the units behind postgresql.service is running (postgresql@17-main.service inactive (dead)); nothing was reloaded

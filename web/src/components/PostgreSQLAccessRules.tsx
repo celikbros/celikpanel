@@ -1,276 +1,270 @@
-import { useState, useEffect } from 'react';
-import { api } from '../lib/api';
-import { Save, Shield, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
+import { useI18n } from '../i18n';
+import { useConfigFile, type ConfigFile, type ConfigFileHandle } from '../lib/configFile';
+import { applyHba, hbaMethods, hbaRuleComplete, hbaTypes, parseHba, type HbaFields, type HbaRule } from '../lib/dbConfigText';
+import { ConfigFileGate, ConfigSaveBar, ConfigSaveNotices, FieldRefusal, refusalDetail, refusalLine } from './ConfigFileNotices';
+import { Button } from './ui';
 
-interface PostgreSQLAccessRulesProps {
-    configPath: string;
+// The access rules of pg_hba.conf, in the order PostgreSQL reads them.
+//
+// The file is read with its version and shown only once it is known. A save is
+// the file that was read with the changed rules replaced, the removed rules
+// gone and new rules added at the end; comments, includes and every rule this
+// grid cannot hold stay exactly as written (lib/dbConfigText.ts). The server
+// refuses a save that would take away the local administrator access, and its
+// answer is shown here.
+//
+// Before 9 Oct 2026 this screen wrote the file from scratch, without its
+// comments, and after a failed read it showed "No access rules" with Save on:
+// a file of comments only, which refuses every connection.
+//
+// pg_hba.conf erişim kuralları, PostgreSQL'in okuduğu sırayla. Dosya sürümüyle
+// okunur ve yalnız bilindiğinde gösterilir. Kayıt, okunan dosyanın değişen
+// kuralları değiştirilmiş, kaldırılanları çıkarılmış ve yenileri sona eklenmiş
+// hâlidir; yorumlar, include'lar ve bu tablonun tutamadığı her kural yazıldığı
+// gibi kalır.
+export function PostgreSQLAccessRules({ configPath }: { configPath: string }) {
+    const { t } = useI18n();
+    const handle = useConfigFile(configPath);
+    return (
+        <div aria-busy={handle.remote.state === 'loading' || handle.saving}>
+            <h3 className="mb-3 text-sm font-semibold text-fg">{t('dbconf.hba.title')}</h3>
+            <ConfigFileGate handle={handle} file="pg_hba.conf">
+                {(value) => <RulesForm key={value.version} handle={handle} value={value} />}
+            </ConfigFileGate>
+        </div>
+    );
 }
 
-interface AccessRule {
-    id: number;
-    type: string;
-    database: string;
-    user: string;
-    address: string;
-    method: string;
-    originalLine?: string; // To track if it's an edit of an existing line
-    isNew?: boolean;
-}
+const blankRule: HbaFields = { type: 'host', database: '', user: '', address: '', method: 'scram-sha-256' };
 
-export function PostgreSQLAccessRules({ configPath }: PostgreSQLAccessRulesProps) {
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [rules, setRules] = useState<AccessRule[]>([]);
+function RulesForm({ handle, value }: { handle: ConfigFileHandle; value: ConfigFile }) {
+    const { t } = useI18n();
+    const rules = useMemo(() => parseHba(value.content), [value.content]);
+    const [edited, setEdited] = useState<ReadonlyMap<number, HbaFields>>(new Map());
+    const [removed, setRemoved] = useState<ReadonlySet<number>>(new Set());
+    const [added, setAdded] = useState<readonly HbaFields[]>([]);
 
-    useEffect(() => {
-        loadConfig();
-    }, [configPath]);
-
-    const loadConfig = async () => {
-        setLoading(true);
-        try {
-            const res = await api.getConfig(configPath);
-            parseConfig(res.Content);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const parseConfig = (content: string) => {
-        const lines = content.split('\n');
-        const parsedRules: AccessRule[] = [];
-
-        lines.forEach((line, index) => {
-            const trimmed = line.trim();
-            if (!trimmed || trimmed.startsWith('#')) return;
-
-            // Split by whitespace
-            const parts = trimmed.split(/\s+/);
-
-            // Basic validation
-            // local: type, db, user, method (4 parts)
-            // host: type, db, user, address, method (5 parts)
-
-            if (parts.length >= 4) {
-                const type = parts[0];
-                let rule: AccessRule = {
-                    id: index, // Use line index as temporary ID
-                    type: type,
-                    database: parts[1],
-                    user: parts[2],
-                    address: '',
-                    method: '',
-                    originalLine: line
-                };
-
-                if (type === 'local') {
-                    rule.method = parts[3];
-                    rule.address = '-'; // Not applicable
-                } else {
-                    // host, hostssl, etc.
-                    if (parts.length >= 5) {
-                        rule.address = parts[3];
-                        rule.method = parts[4];
-                    } else {
-                        // Invalid host line? Skip or mark partial
-                        return;
-                    }
-                }
-                parsedRules.push(rule);
-            }
+    const fieldsOf = (rule: HbaRule): HbaFields => edited.get(rule.line) ?? rule;
+    const same = (a: HbaFields, b: HbaFields) => a.type === b.type && a.database === b.database && a.user === b.user
+        && (a.type === 'local' || a.address === b.address) && a.method === b.method;
+    const editRule = (rule: HbaRule, next: HbaFields) => {
+        handle.clearRefusal();
+        setEdited((before) => {
+            const after = new Map(before);
+            if (same(next, rule)) after.delete(rule.line);
+            else after.set(rule.line, next);
+            return after;
         });
-        setRules(parsedRules);
+    };
+    const toggleRemoved = (line: number) => {
+        handle.clearRefusal();
+        setRemoved((before) => {
+            const after = new Set(before);
+            if (!after.delete(line)) after.add(line);
+            return after;
+        });
     };
 
-    const handleAddRule = () => {
-        const newRule: AccessRule = {
-            id: Date.now(),
-            type: 'host',
-            database: 'all',
-            user: 'all',
-            address: '0.0.0.0/0',
-            method: 'scram-sha-256',
-            isNew: true
-        };
-        setRules([...rules, newRule]);
+    const changes = edited.size + removed.size + added.length;
+    const incomplete = [...edited.values(), ...added].some((rule) => !hbaRuleComplete(rule));
+    const next = useMemo(() => applyHba(value.content, { edited, removed, added }), [value.content, edited, removed, added]);
+
+    // A refusal that names a line is shown next to the rule on that line of
+    // the file that was sent.
+    // Bir satırı adlandıran ret, gönderilen dosyanın o satırındaki kuralın
+    // yanında gösterilir.
+    const refusal = handle.refusal;
+    const refusedLine = refusal && refusalDetail(refusal) ? refusalLine(refusal) : -1;
+    const sentLineOf = (rule: HbaRule) => rule.line - [...removed].filter((line) => line < rule.line).length;
+    const refusedAdded = next.addedLines.indexOf(refusedLine);
+    const refusedRule = refusedLine < 0 ? undefined : rules.find((rule) => !removed.has(rule.line) && sentLineOf(rule) === refusedLine);
+    const placed = refusedAdded >= 0 || !!refusedRule;
+    const locked = handle.saving || handle.stale;
+
+    const discard = () => {
+        handle.clearRefusal();
+        setEdited(new Map());
+        setRemoved(new Set());
+        setAdded([]);
     };
-
-    const handleDeleteRule = (id: number) => {
-        setRules(rules.filter(r => r.id !== id));
-    };
-
-    const handleUpdateRule = (id: number, field: keyof AccessRule, value: string) => {
-        setRules(rules.map(r => r.id === id ? { ...r, [field]: value } : r));
-    };
-
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            // Strategy: Reconstruct the file.
-            // We want to keep comments?
-            // "rawContent" contains everything.
-            // But if we deleted a rule, we must remove it from rawContent.
-            // This is complex because we didn't track line numbers perfectly against edits.
-
-            // Safer Strategy:
-            // 1. Keep all Comment lines from original file.
-            // 2. Append our Rules at the end? NO, order matters.
-
-            // Hybrid Strategy:
-            // Use specific marker? OR just Rewrite the file cleanly with standard header.
-            // pg_hba.conf order matters significantly.
-
-            // Let's Rewrite the file but try to preserve header comments if they exist at top.
-            // Or just generate a clean file. Users who use Visual Editor expect clean output often.
-
-            let output = `# PostgreSQL Client Authentication Configuration File
-# Managed by CelikPanel
-#
-# TYPE  DATABASE        USER            ADDRESS                 METHOD
-`;
-
-            rules.forEach(rule => {
-                let line = '';
-                if (rule.type === 'local') {
-                    // Align columns
-                    line = `${rule.type.padEnd(7)} ${rule.database.padEnd(15)} ${rule.user.padEnd(15)} ${''.padEnd(23)} ${rule.method}`;
-                } else {
-                    line = `${rule.type.padEnd(7)} ${rule.database.padEnd(15)} ${rule.user.padEnd(15)} ${rule.address.padEnd(23)} ${rule.method}`;
-                }
-                output += line + '\n';
-            });
-
-            await api.saveConfig(configPath, output);
-            alert('Access rules saved! Reload PostgreSQL to apply.');
-            // Re-parse to get fresh IDs
-            parseConfig(output);
-        } catch (err: any) {
-            alert('Error saving rules: ' + err.message);
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    if (loading) return <div className="p-8 text-center text-fg-subtle">Loading access rules...</div>;
 
     return (
-        <div className="bg-surface/50 border border-border rounded-xl p-6">
-            <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-fg flex items-center gap-2">
-                    <Shield className="w-5 h-5 text-success" />
-                    Access Rules (pg_hba.conf)
-                </h3>
-                <button
-                    onClick={handleAddRule}
-                    className="flex items-center gap-2 px-4 py-2 bg-surface-2 hover:bg-surface-3 text-primary rounded-lg text-sm font-bold transition-colors"
-                >
-                    <Plus size={16} /> Add Rule
-                </button>
-            </div>
-
-            <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="text-xs font-bold text-fg-subtle uppercase tracking-wider border-b border-border">
-                            <th className="pb-3 pl-2">Type</th>
-                            <th className="pb-3">Database</th>
-                            <th className="pb-3">User</th>
-                            <th className="pb-3">Address</th>
-                            <th className="pb-3">Method</th>
-                            <th className="pb-3 text-right pr-2">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="text-sm">
-                        {rules.map((rule) => (
-                            <tr key={rule.id} className="border-b border-border/50 hover:bg-surface-2/30 transition-colors group">
-                                <td className="py-2 pl-2">
-                                    <select
-                                        value={rule.type}
-                                        onChange={(e) => handleUpdateRule(rule.id, 'type', e.target.value)}
-                                        className="bg-transparent text-fg focus:text-primary font-mono w-20 cursor-pointer"
-                                    >
-                                        <option value="local" className="bg-surface">local</option>
-                                        <option value="host" className="bg-surface">host</option>
-                                        <option value="hostssl" className="bg-surface">hostssl</option>
-                                    </select>
-                                </td>
-                                <td className="py-2">
-                                    <input
-                                        type="text"
-                                        value={rule.database}
-                                        onChange={(e) => handleUpdateRule(rule.id, 'database', e.target.value)}
-                                        className="bg-transparent text-fg-muted focus:text-primary font-mono w-full"
-                                    />
-                                </td>
-                                <td className="py-2">
-                                    <input
-                                        type="text"
-                                        value={rule.user}
-                                        onChange={(e) => handleUpdateRule(rule.id, 'user', e.target.value)}
-                                        className="bg-transparent text-fg-muted focus:text-primary font-mono w-full"
-                                    />
-                                </td>
-                                <td className="py-2">
-                                    {rule.type !== 'local' ? (
-                                        <input
-                                            type="text"
-                                            value={rule.address}
-                                            onChange={(e) => handleUpdateRule(rule.id, 'address', e.target.value)}
-                                            className="bg-transparent text-fg-muted focus:text-primary font-mono w-32"
-                                        />
-                                    ) : <span className="text-fg-subtle">-</span>}
-                                </td>
-                                <td className="py-2">
-                                    <select
-                                        value={rule.method}
-                                        onChange={(e) => handleUpdateRule(rule.id, 'method', e.target.value)}
-                                        className="bg-transparent text-warning focus:text-warning font-mono w-24 cursor-pointer"
-                                    >
-                                        <option value="md5" className="bg-surface">md5</option>
-                                        <option value="scram-sha-256" className="bg-surface">scram-sha-256</option>
-                                        <option value="peer" className="bg-surface">peer</option>
-                                        <option value="ident" className="bg-surface">ident</option>
-                                        <option value="trust" className="bg-surface text-danger">trust</option>
-                                        <option value="reject" className="bg-surface text-danger">reject</option>
-                                    </select>
-                                </td>
-                                <td className="py-2 text-right pr-2">
+        <>
+            <ConfigSaveNotices handle={handle} file="pg_hba.conf" service="PostgreSQL" placed={placed} />
+            {rules.length === 0 && added.length === 0 ? (
+                // The file was read and holds no rule: a known answer.
+                // Dosya okundu ve hiç kural tutmuyor: bilinen bir yanıt.
+                <p className="py-4 text-sm text-fg-muted">{t('dbconf.hba.none')}</p>
+            ) : (
+                <ol className="border-b border-border">
+                    {rules.map((rule, index) => (
+                        <li key={rule.line} className={`border-t border-border py-2.5 ${edited.has(rule.line) ? 'bg-surface-2/60' : ''}`}>
+                            {rule.editable ? (
+                                <RuleFields
+                                    number={index + 1}
+                                    first={index === 0}
+                                    fields={fieldsOf(rule)}
+                                    onChange={(fields) => editRule(rule, fields)}
+                                    disabled={locked || removed.has(rule.line)}
+                                    note={removed.has(rule.line) ? t('dbconf.hba.willBeRemoved') : edited.has(rule.line) ? t('dbconf.changed') : ''}
+                                    action={
+                                        <button
+                                            type="button"
+                                            disabled={locked}
+                                            onClick={() => toggleRemoved(rule.line)}
+                                            aria-label={t(removed.has(rule.line) ? 'dbconf.hba.keep' : 'dbconf.hba.remove', { n: index + 1 })}
+                                            title={t(removed.has(rule.line) ? 'dbconf.hba.keep' : 'dbconf.hba.remove', { n: index + 1 })}
+                                            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-fg-muted hover:bg-surface-2 hover:text-danger disabled:pointer-events-none disabled:opacity-50"
+                                        >
+                                            {removed.has(rule.line)
+                                                ? <span className="text-xs font-medium text-fg">{t('dbconf.hba.keepShort')}</span>
+                                                : <Trash2 className="h-4 w-4" aria-hidden="true" />}
+                                        </button>
+                                    }
+                                />
+                            ) : (
+                                <div className="grid gap-x-3 gap-y-1 sm:grid-cols-[2rem_minmax(0,1fr)_2.75rem]">
+                                    <span className="pt-0.5 text-xs tabular-nums text-fg-muted">{index + 1}</span>
+                                    <div className="min-w-0">
+                                        <pre className="overflow-x-auto whitespace-pre-wrap break-all font-mono text-sm text-fg">{rule.text}</pre>
+                                        <p className="mt-1 text-xs text-fg-muted">{t('dbconf.hba.asWritten')}</p>
+                                    </div>
+                                </div>
+                            )}
+                            {refusal && refusedRule === rule && <FieldRefusal id={`hba-${rule.line}-refusal`} service="PostgreSQL" refusal={refusal} />}
+                        </li>
+                    ))}
+                    {added.map((rule, index) => (
+                        <li key={`new-${index}`} className="border-t border-border bg-surface-2/60 py-2.5">
+                            <RuleFields
+                                number={rules.length + index + 1}
+                                first={rules.length + index === 0}
+                                fields={rule}
+                                onChange={(fields) => {
+                                    handle.clearRefusal();
+                                    setAdded((before) => before.map((item, at) => (at === index ? fields : item)));
+                                }}
+                                disabled={locked}
+                                note={t('dbconf.hba.new')}
+                                action={
                                     <button
-                                        onClick={() => handleDeleteRule(rule.id)}
-                                        className="p-1.5 text-fg-subtle hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
+                                        type="button"
+                                        disabled={locked}
+                                        onClick={() => { handle.clearRefusal(); setAdded((before) => before.filter((_, at) => at !== index)); }}
+                                        aria-label={t('dbconf.hba.remove', { n: rules.length + index + 1 })}
+                                        title={t('dbconf.hba.remove', { n: rules.length + index + 1 })}
+                                        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-fg-muted hover:bg-surface-2 hover:text-danger disabled:pointer-events-none disabled:opacity-50"
                                     >
-                                        <Trash2 size={16} />
+                                        <Trash2 className="h-4 w-4" aria-hidden="true" />
                                     </button>
-                                </td>
-                            </tr>
-                        ))}
-                        {rules.length === 0 && (
-                            <tr>
-                                <td colSpan={6} className="py-8 text-center text-fg-subtle italic">
-                                    No access rules found. Add one to allow connections.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+                                }
+                            />
+                            {refusal && refusedAdded === index && <FieldRefusal id={`hba-new-${index}-refusal`} service="PostgreSQL" refusal={refusal} />}
+                        </li>
+                    ))}
+                </ol>
+            )}
+            <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+                <p className="max-w-[75ch] text-xs leading-relaxed text-fg-muted">{t('dbconf.hba.order')}</p>
+                <Button type="button" icon={Plus} disabled={locked} onClick={() => { handle.clearRefusal(); setAdded((before) => [...before, blankRule]); }}>
+                    {t('dbconf.hba.add')}
+                </Button>
             </div>
+            <ConfigSaveBar
+                handle={handle}
+                changes={changes}
+                blockedBy={changes > 0 && incomplete ? t('dbconf.hba.incomplete') : undefined}
+                onSave={() => void handle.save(next.content)}
+                onDiscard={discard}
+            />
+        </>
+    );
+}
 
-            <div className="mt-4 flex items-center justify-between">
-                <div className="text-xs text-fg-subtle flex items-center gap-1">
-                    <AlertCircle size={14} />
-                    <span>Order matters! First matching rule is used.</span>
-                </div>
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-6 py-2 bg-primary hover:bg-primary text-white rounded-lg font-bold transition-all disabled:opacity-50"
-                >
-                    <Save size={18} />
-                    {saving ? 'Saving...' : 'Save Rules'}
-                </button>
+const cell = 'w-full rounded-lg border border-border-strong bg-surface px-2.5 py-2 font-mono text-sm text-fg outline-none focus:border-primary disabled:bg-surface-2 disabled:text-fg-muted';
+
+function RuleFields({
+    number,
+    first,
+    fields,
+    onChange,
+    disabled,
+    note,
+    action,
+}: {
+    number: number;
+    /** The first row of the list carries the column names on a wide screen. */
+    first: boolean;
+    fields: HbaFields;
+    onChange: (fields: HbaFields) => void;
+    disabled: boolean;
+    note: string;
+    action: ReactNode;
+}) {
+    const { t } = useI18n();
+    const local = fields.type === 'local';
+    // A method or type the file holds that this list does not offer stays
+    // selectable, so opening a rule never changes it.
+    // Dosyanın tuttuğu, listede olmayan bir yöntem ya da tür seçilebilir kalır.
+    const types = hbaTypes.includes(fields.type) ? hbaTypes : [fields.type, ...hbaTypes];
+    const methods = hbaMethods.includes(fields.method) ? hbaMethods : [fields.method, ...hbaMethods];
+    // On a wide screen the rules read as a table: the first row names the
+    // columns, and the rows under it keep their names for assistive readers.
+    // Geniş ekranda kurallar tablo gibi okunur: sütun adlarını ilk satır taşır.
+    const name = `mb-1 block text-xs text-fg-muted ${first ? '' : 'xl:sr-only'}`;
+    const text = (field: 'database' | 'user' | 'address', label: string) => (
+        <label className="min-w-0">
+            <span className={name}>{label}</span>
+            <input
+                type="text"
+                value={fields[field]}
+                disabled={disabled}
+                onChange={(event) => onChange({ ...fields, [field]: event.target.value })}
+                spellCheck={false}
+                autoComplete="off"
+                className={cell}
+            />
+        </label>
+    );
+    return (
+        <div className="grid grid-cols-[minmax(0,1fr)_2.75rem] items-start gap-x-3 gap-y-1 sm:grid-cols-[2rem_minmax(0,1fr)_2.75rem] sm:gap-y-2">
+            <span className={`self-center text-xs tabular-nums text-fg-muted sm:self-start sm:pt-7 ${first ? '' : 'xl:pt-2.5'}`}>{number}</span>
+            <div className="col-span-2 row-start-2 grid min-w-0 grid-cols-2 gap-2 sm:col-span-1 sm:col-start-2 sm:row-start-1 xl:grid-cols-[8rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_10rem]">
+                <label className="min-w-0">
+                    <span className={name}>{t('dbconf.hba.type')}</span>
+                    <select
+                        value={fields.type}
+                        disabled={disabled}
+                        onChange={(event) => onChange({ ...fields, type: event.target.value, address: event.target.value === 'local' ? '' : fields.address })}
+                        className={cell}
+                    >
+                        {types.map((type) => <option key={type} value={type}>{type}</option>)}
+                    </select>
+                </label>
+                {text('database', t('dbconf.hba.database'))}
+                {text('user', t('dbconf.hba.user'))}
+                {local ? (
+                    <div className="min-w-0">
+                        <span className={name}>{t('dbconf.hba.address')}</span>
+                        <p className="py-2 text-sm text-fg-muted">{t('dbconf.hba.localSocket')}</p>
+                    </div>
+                ) : text('address', t('dbconf.hba.address'))}
+                <label className="col-span-2 min-w-0 xl:col-span-1">
+                    <span className={name}>{t('dbconf.hba.method')}</span>
+                    <select
+                        value={fields.method}
+                        disabled={disabled}
+                        onChange={(event) => onChange({ ...fields, method: event.target.value })}
+                        className={cell}
+                    >
+                        {methods.map((method) => <option key={method} value={method}>{method}</option>)}
+                    </select>
+                </label>
+                {note && <p className="col-span-full text-xs font-medium text-fg">{note}</p>}
             </div>
+            <div className={`col-start-2 row-start-1 flex justify-end sm:col-start-3 sm:pt-5 ${first ? '' : 'xl:pt-0'}`}>{action}</div>
         </div>
     );
 }

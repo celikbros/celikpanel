@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-08T21:58:04Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791496682",
+      "-n",
+      "400",
+      "-u",
+      "postgresql.service"
+    ],
+    "at": "2026-10-08T21:58:04Z",
+    "returncode": 0,
+    "seconds": 0.004,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-08T21:58:03.393814+00:00 dns-arch systemd[1]: Reloading PostgreSQL database server...\n2026-10-08T21:58:03.439437+00:00 dns-arch postgres[1874]: 2026-10-08 21:58:03.439 UTC [1874] LOG:  received SIGHUP, reloading configuration files\n2026-10-08T21:58:03.440035+00:00 dns-arch postgres[1874]: 2026-10-08 21:58:03.439 UTC [1874] LOG:  parameter \"work_mem\" changed to \"16MB\"\n2026-10-08T21:58:03.443942+00:00 dns-arch systemctl[4510]: Failed to reload set1-owner-pooler.service: Access denied\n2026-10-08T21:58:03.443951+00:00 dns-arch systemctl[4510]: See system logs and 'systemctl status set1-owner-pooler.service' for details.\n2026-10-08T21:58:03.445667+00:00 dns-arch systemd[1]: postgresql.service: Control process exited, code=exited, status=4/NOPERMISSION\n2026-10-08T21:58:03.445772+00:00 dns-arch systemd[1]: Reload failed for PostgreSQL database server.\n2026-10-08T21:58:03.482576+00:00 dns-arch systemd[1]: Reloading PostgreSQL database server...\n2026-10-08T21:58:03.530831+00:00 dns-arch postgres[1874]: 2026-10-08 21:58:03.530 UTC [1874] LOG:  received SIGHUP, reloading configuration files\n2026-10-08T21:58:03.530831+00:00 dns-arch postgres[1874]: 2026-10-08 21:58:03.530 UTC [1874] LOG:  parameter \"work_mem\" changed to \"8MB\"\n2026-10-08T21:58:03.535527+00:00 dns-arch systemctl[4515]: Failed to reload set1-owner-pooler.service: Access denied\n2026-10-08T21:58:03.535823+00:00 dns-arch systemctl[4515]: See system logs and 'systemctl status set1-owner-pooler.service' for details.\n2026-10-08T21:58:03.537604+00:00 dns-arch systemd[1]: postgresql.service: Control process exited, code=exited, status=4/NOPERMISSION\n2026-10-08T21:58:03.537652+00:00 dns-arch systemd[1]: Reload failed for PostgreSQL database server.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791496682,
+  "units": [
+    "postgresql.service"
+  ]
+}

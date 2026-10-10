@@ -1,0 +1,84 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S8 postgresql reload (after the hook was removed)",
+  "request": {
+    "body": {
+      "action": "reload",
+      "name": "postgresql"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18461"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18461"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "78933454fb26ff6f1802196cd50656d9"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/service/action"
+  },
+  "response": {
+    "elapsed_seconds": 1.546,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 07:27:17 GMT"
+      ],
+      [
+        "Content-Length",
+        "95"
+      ]
+    ],
+    "json": {
+      "applied": "reloaded",
+      "outcome": "verified",
+      "success": true,
+      "unit": "postgresql@17-main.service"
+    },
+    "status": 200,
+    "text": null
+  }
+}

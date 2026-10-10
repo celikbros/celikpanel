@@ -1,0 +1,258 @@
+2026-10-09T14:00:16.337422+00:00 dns-ubuntu systemd[1]: Started cron.service - Regular background program processing daemon.
+2026-10-09T14:00:16.347558+00:00 dns-ubuntu (cron)[797]: cron.service: Referenced but unset environment variable evaluates to an empty string: EXTRA_OPTS
+2026-10-09T14:00:16.354416+00:00 dns-ubuntu cron[797]: (CRON) INFO (pidfile fd = 3)
+2026-10-09T14:00:16.362003+00:00 dns-ubuntu cron[797]: (CRON) INFO (Running @reboot jobs)
+2026-10-09T14:05:01.357169+00:00 dns-ubuntu CRON[9576]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+2026-10-09T14:05:01.357651+00:00 dns-ubuntu CRON[9577]: (root) CMD (command -v debian-sa1 > /dev/null && debian-sa1 1 1)
+2026-10-09T14:05:01.361392+00:00 dns-ubuntu CRON[9576]: pam_unix(cron:session): session closed for user root
+2026-10-09T14:06:41.038281+00:00 dns-ubuntu systemd[1]: Starting mariadb.service - MariaDB 10.11.14 database server...
+2026-10-09T14:06:41.134430+00:00 dns-ubuntu (mariadbd)[11046]: mariadb.service: Referenced but unset environment variable evaluates to an empty string: MYSQLD_OPTS, _WSREP_NEW_CLUSTER
+2026-10-09T14:06:41.160414+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] Starting MariaDB 10.11.14-MariaDB-0ubuntu0.24.04.1 source revision 053f9bcb5b147bf00edb99e1310bae9125b7f125 server_uid W4SCr1TT1XkuiEEx9TvPKXjj4bk= as process 11046
+2026-10-09T14:06:41.199852+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] InnoDB: Compressed tables use zlib 1.3
+2026-10-09T14:06:41.202190+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-09T14:06:41.202190+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-09T14:06:41.202441+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] InnoDB: Using io_uring
+2026-10-09T14:06:41.202990+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] InnoDB: innodb_buffer_pool_size_max=128m, innodb_buffer_pool_size=128m
+2026-10-09T14:06:41.204105+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] InnoDB: Initialized memory pressure event listener
+2026-10-09T14:06:41.204105+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-09T14:06:41.204925+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] InnoDB: File system buffers for log disabled (block size=512 bytes)
+2026-10-09T14:06:41.224707+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] InnoDB: End of log at LSN=46846
+2026-10-09T14:06:41.296568+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] InnoDB: 128 rollback segments are active.
+2026-10-09T14:06:41.297015+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-09T14:06:41.297095+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-09T14:06:41.299905+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] InnoDB: log sequence number 46846; transaction id 14
+2026-10-09T14:06:41.300593+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] Plugin 'FEEDBACK' is disabled.
+2026-10-09T14:06:41.301081+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+2026-10-09T14:06:41.303902+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Warning] You need to use --log-bin to make --expire-logs-days or --binlog-expire-logs-seconds work.
+2026-10-09T14:06:41.306673+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] Server socket created on IP: '127.0.0.1', port: '3306'.
+2026-10-09T14:06:41.309124+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] InnoDB: Buffer pool(s) load completed at 261009 14:06:41
+2026-10-09T14:06:41.323142+00:00 dns-ubuntu mariadbd[11046]: 2026-10-09 14:06:41 0 [Note] /usr/sbin/mariadbd: ready for connections.
+2026-10-09T14:06:41.323142+00:00 dns-ubuntu mariadbd[11046]: Version: '10.11.14-MariaDB-0ubuntu0.24.04.1'  socket: '/run/mysqld/mysqld.sock'  port: 3306  Ubuntu 24.04
+2026-10-09T14:06:41.377895+00:00 dns-ubuntu systemd[1]: Started mariadb.service - MariaDB 10.11.14 database server.
+2026-10-09T14:06:41.380111+00:00 dns-ubuntu /etc/mysql/debian-start[11063]: Upgrading MariaDB tables if necessary.
+2026-10-09T14:06:41.410763+00:00 dns-ubuntu /etc/mysql/debian-start[11074]: Checking for insecure root accounts.
+2026-10-09T14:06:41.424788+00:00 dns-ubuntu /etc/mysql/debian-start[11078]: Triggering myisam-recover for all MyISAM tables and aria-recover for all Aria tables
+2026-10-09T14:07:00.031268+00:00 dns-ubuntu systemd[1]: Starting nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T14:07:00.058320+00:00 dns-ubuntu systemd[1]: Started nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T14:07:57.968897+00:00 dns-ubuntu systemd[1]: Starting postgresql.service - PostgreSQL RDBMS...
+2026-10-09T14:07:57.971066+00:00 dns-ubuntu systemd[1]: Finished postgresql.service - PostgreSQL RDBMS.
+2026-10-09T14:08:00.965114+00:00 dns-ubuntu systemd[1]: Starting postgresql@16-main.service - PostgreSQL Cluster 16-main...
+2026-10-09T14:08:03.203881+00:00 dns-ubuntu systemd[1]: Started postgresql@16-main.service - PostgreSQL Cluster 16-main.
+2026-10-09T14:08:32.357020+00:00 dns-ubuntu systemd[1]: Starting postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:08:32.964736+00:00 dns-ubuntu postmulti[23132]: postfix/postlog: starting the Postfix mail system
+2026-10-09T14:08:32.964704+00:00 dns-ubuntu postfix/postfix-script[23132]: starting the Postfix mail system
+2026-10-09T14:08:32.971794+00:00 dns-ubuntu postfix/master[23134]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:08:32.974010+00:00 dns-ubuntu systemd[1]: Started postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:08:32.979996+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-09T14:08:32.996143+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:08:44.003227+00:00 dns-ubuntu postfix/master[23134]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:09:01.365761+00:00 dns-ubuntu CRON[25934]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+2026-10-09T14:09:01.366293+00:00 dns-ubuntu CRON[25937]: (root) CMD (  [ -x /usr/lib/php/sessionclean ] && if [ ! -d /run/systemd/system ]; then /usr/lib/php/sessionclean; fi)
+2026-10-09T14:09:01.367991+00:00 dns-ubuntu CRON[25934]: pam_unix(cron:session): session closed for user root
+2026-10-09T14:09:05.578887+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:09:05.605503+00:00 dns-ubuntu dovecot[27546]: master: Dovecot v2.3.21 (47349e2482) starting up without any protocols (core dumps disabled)
+2026-10-09T14:09:05.618720+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:09:08.140135+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:09:08.151620+00:00 dns-ubuntu dovecot[27546]: master: Warning: Killed with signal 15 (by pid=27949 uid=0 code=kill)
+2026-10-09T14:09:09.356631+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T14:09:09.356854+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:09:09.367011+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:09:09.386372+00:00 dns-ubuntu dovecot[27955]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T14:09:09.397308+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:09:16.997243+00:00 dns-ubuntu postfix/master[23134]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:09:17.654970+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:09:17.681291+00:00 dns-ubuntu dovecot[27955]: master: Warning: Killed with signal 15 (by pid=28591 uid=0 code=kill)
+2026-10-09T14:09:18.887267+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T14:09:18.887791+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:09:18.897906+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:09:18.917251+00:00 dns-ubuntu dovecot[28597]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T14:09:18.930648+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:09:50.126917+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T14:09:50.132781+00:00 dns-ubuntu nginx[32446]: 2026/10/09 14:09:50 [notice] 32446#32446: signal process started
+2026-10-09T14:09:50.134865+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T14:09:57.071161+00:00 dns-ubuntu postfix/master[23134]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:09:57.658872+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:09:57.671296+00:00 dns-ubuntu dovecot[28597]: master: Warning: Killed with signal 15 (by pid=32950 uid=0 code=kill)
+2026-10-09T14:09:58.877130+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T14:09:58.877933+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:09:58.887011+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:09:58.908244+00:00 dns-ubuntu dovecot[32956]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T14:09:58.920272+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:10:01.068963+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:10:01.082277+00:00 dns-ubuntu dovecot[32956]: master: Warning: Killed with signal 15 (by pid=33153 uid=0 code=kill)
+2026-10-09T14:10:02.286882+00:00 dns-ubuntu dovecot[32958]: log(32958): Warning: Killed with signal 15 (by pid=1 uid=0 code=kill)
+2026-10-09T14:10:02.288313+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T14:10:02.288591+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:10:02.299933+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:10:02.318898+00:00 dns-ubuntu dovecot[33160]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T14:10:02.332398+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:10:03.991032+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-09T14:10:03.991236+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:10:03.991289+00:00 dns-ubuntu systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent...
+2026-10-09T14:10:03.999330+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:10:04.035731+00:00 dns-ubuntu postmulti[33430]: postfix/postlog: stopping the Postfix mail system
+2026-10-09T14:10:04.034852+00:00 dns-ubuntu postfix/postfix-script[33430]: stopping the Postfix mail system
+2026-10-09T14:10:04.044219+00:00 dns-ubuntu systemd[1]: postfix@-.service: Deactivated successfully.
+2026-10-09T14:10:04.044570+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:10:04.048905+00:00 dns-ubuntu systemd[1]: Starting postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:10:04.754854+00:00 dns-ubuntu postmulti[33715]: postfix/postlog: starting the Postfix mail system
+2026-10-09T14:10:04.754836+00:00 dns-ubuntu postfix/postfix-script[33715]: starting the Postfix mail system
+2026-10-09T14:10:04.766813+00:00 dns-ubuntu postfix/master[33717]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:10:04.771795+00:00 dns-ubuntu systemd[1]: Started postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:10:04.779955+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-09T14:10:04.783471+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:10:10.243504+00:00 dns-ubuntu postfix/master[33717]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:10:10.825785+00:00 dns-ubuntu systemd[1]: Reloading dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:10:10.840340+00:00 dns-ubuntu dovecot[33160]: master: Warning: SIGHUP received - reloading configuration
+2026-10-09T14:10:10.850016+00:00 dns-ubuntu systemd[1]: Reloaded dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:10:24.135315+00:00 dns-ubuntu postfix/master[33717]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:10:24.745767+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:10:24.762083+00:00 dns-ubuntu dovecot[33160]: master: Warning: Killed with signal 15 (by pid=35527 uid=0 code=kill)
+2026-10-09T14:10:25.867775+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T14:10:25.867994+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:10:25.878418+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:10:25.909956+00:00 dns-ubuntu dovecot[35534]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T14:10:25.923753+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:10:38.207883+00:00 dns-ubuntu postfix/master[33717]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:10:38.830221+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:10:38.843930+00:00 dns-ubuntu dovecot[35534]: master: Warning: Killed with signal 15 (by pid=36522 uid=0 code=kill)
+2026-10-09T14:10:40.050005+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T14:10:40.050231+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:10:40.058022+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:10:40.079178+00:00 dns-ubuntu dovecot[36528]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T14:10:40.091645+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:11:07.067416+00:00 dns-ubuntu postfix/master[33717]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:11:14.108580+00:00 dns-ubuntu postfix/master[33717]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:11:14.699848+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:11:14.712685+00:00 dns-ubuntu dovecot[36528]: master: Warning: Killed with signal 15 (by pid=38541 uid=0 code=kill)
+2026-10-09T14:11:15.917435+00:00 dns-ubuntu dovecot[36530]: log(36530): Warning: Killed with signal 15 (by pid=1 uid=0 code=kill)
+2026-10-09T14:11:15.920916+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T14:11:15.921173+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:11:15.932032+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:11:15.953272+00:00 dns-ubuntu dovecot[38547]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T14:11:15.964090+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:11:18.226250+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:11:18.237863+00:00 dns-ubuntu dovecot[38547]: master: Warning: Killed with signal 15 (by pid=38710 uid=0 code=kill)
+2026-10-09T14:11:19.447117+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T14:11:19.447480+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:11:19.459168+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:11:19.484184+00:00 dns-ubuntu dovecot[38716]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T14:11:19.497859+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:11:21.079744+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-09T14:11:21.079889+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:11:21.079972+00:00 dns-ubuntu systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent...
+2026-10-09T14:11:21.091832+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:11:21.123343+00:00 dns-ubuntu postmulti[38984]: postfix/postlog: stopping the Postfix mail system
+2026-10-09T14:11:21.123319+00:00 dns-ubuntu postfix/postfix-script[38984]: stopping the Postfix mail system
+2026-10-09T14:11:21.126157+00:00 dns-ubuntu postfix/master[33717]: terminating on signal 15
+2026-10-09T14:11:21.132265+00:00 dns-ubuntu systemd[1]: postfix@-.service: Deactivated successfully.
+2026-10-09T14:11:21.132606+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:11:21.137970+00:00 dns-ubuntu systemd[1]: Starting postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:11:21.673186+00:00 dns-ubuntu postmulti[39269]: postfix/postlog: starting the Postfix mail system
+2026-10-09T14:11:21.673148+00:00 dns-ubuntu postfix/postfix-script[39269]: starting the Postfix mail system
+2026-10-09T14:11:21.680382+00:00 dns-ubuntu postfix/master[39271]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:11:21.686874+00:00 dns-ubuntu systemd[1]: Started postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:11:21.694955+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-09T14:11:21.697381+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:11:27.396756+00:00 dns-ubuntu postfix/master[39271]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:11:28.035172+00:00 dns-ubuntu systemd[1]: Reloading dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T14:11:28.051086+00:00 dns-ubuntu dovecot[38716]: master: Warning: SIGHUP received - reloading configuration
+2026-10-09T14:11:28.063484+00:00 dns-ubuntu systemd[1]: Reloaded dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T14:15:01.377760+00:00 dns-ubuntu CRON[42136]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+2026-10-09T14:15:01.379344+00:00 dns-ubuntu CRON[42138]: (root) CMD (command -v debian-sa1 > /dev/null && debian-sa1 1 1)
+2026-10-09T14:15:01.383103+00:00 dns-ubuntu CRON[42136]: pam_unix(cron:session): session closed for user root
+2026-10-09T14:16:59.190837+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T14:16:59.197011+00:00 dns-ubuntu nginx[42950]: 2026/10/09 14:16:59 [notice] 42950#42950: signal process started
+2026-10-09T14:16:59.197714+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T14:17:01.428330+00:00 dns-ubuntu CRON[43047]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+2026-10-09T14:17:01.429991+00:00 dns-ubuntu CRON[43048]: (root) CMD (cd / && run-parts --report /etc/cron.hourly)
+2026-10-09T14:17:01.435259+00:00 dns-ubuntu CRON[43047]: pam_unix(cron:session): session closed for user root
+2026-10-09T14:17:12.535253+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-09T14:17:12.535644+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:17:12.543935+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:17:12.554990+00:00 dns-ubuntu postmulti[44140]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T14:17:13.556209+00:00 dns-ubuntu systemd[1]: postfix@-.service: Control process exited, code=exited, status=1/FAILURE
+2026-10-09T14:17:13.561904+00:00 dns-ubuntu systemd[1]: postfix@-.service: Failed with result 'exit-code'.
+2026-10-09T14:17:13.565437+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:17:27.380813+00:00 dns-ubuntu systemd[1]: Starting postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:17:27.912410+00:00 dns-ubuntu postmulti[45855]: postfix/postlog: starting the Postfix mail system
+2026-10-09T14:17:27.912379+00:00 dns-ubuntu postfix/postfix-script[45855]: starting the Postfix mail system
+2026-10-09T14:17:27.918952+00:00 dns-ubuntu postfix/master[45857]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:17:27.922242+00:00 dns-ubuntu systemd[1]: Started postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:17:27.931995+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-09T14:17:27.934551+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:17:34.423417+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-09T14:17:34.423688+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:17:34.437937+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:17:34.444127+00:00 dns-ubuntu postmulti[46383]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T14:17:35.445198+00:00 dns-ubuntu systemd[1]: postfix@-.service: Control process exited, code=exited, status=1/FAILURE
+2026-10-09T14:17:35.446482+00:00 dns-ubuntu postfix/master[45857]: terminating on signal 15
+2026-10-09T14:17:35.451224+00:00 dns-ubuntu systemd[1]: postfix@-.service: Failed with result 'exit-code'.
+2026-10-09T14:17:35.451774+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:17:47.315915+00:00 dns-ubuntu systemd[1]: Starting postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:17:48.060283+00:00 dns-ubuntu postmulti[47436]: postfix/postlog: starting the Postfix mail system
+2026-10-09T14:17:48.060250+00:00 dns-ubuntu postfix/postfix-script[47436]: starting the Postfix mail system
+2026-10-09T14:17:48.069355+00:00 dns-ubuntu postfix/master[47438]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:17:48.073308+00:00 dns-ubuntu systemd[1]: Started postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:17:48.080819+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-09T14:17:48.084323+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:17:55.581977+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-09T14:17:55.582155+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:17:55.587962+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:17:55.591895+00:00 dns-ubuntu postmulti[47963]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T14:17:56.644308+00:00 dns-ubuntu systemd[1]: postfix@-.service: Control process exited, code=exited, status=1/FAILURE
+2026-10-09T14:17:56.644703+00:00 dns-ubuntu postfix/master[47438]: terminating on signal 15
+2026-10-09T14:17:56.648337+00:00 dns-ubuntu systemd[1]: postfix@-.service: Failed with result 'exit-code'.
+2026-10-09T14:17:56.649653+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:18:09.229810+00:00 dns-ubuntu systemd[1]: Starting postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:18:09.736154+00:00 dns-ubuntu postmulti[48994]: postfix/postlog: starting the Postfix mail system
+2026-10-09T14:18:09.736126+00:00 dns-ubuntu postfix/postfix-script[48994]: starting the Postfix mail system
+2026-10-09T14:18:09.743023+00:00 dns-ubuntu postfix/master[48996]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:18:09.745290+00:00 dns-ubuntu systemd[1]: Started postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:18:09.754928+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-09T14:18:09.757957+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:18:16.659028+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-09T14:18:16.659457+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:18:16.664914+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:18:16.670754+00:00 dns-ubuntu postmulti[49555]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T14:18:17.671445+00:00 dns-ubuntu systemd[1]: postfix@-.service: Control process exited, code=exited, status=1/FAILURE
+2026-10-09T14:18:17.672215+00:00 dns-ubuntu postfix/master[48996]: terminating on signal 15
+2026-10-09T14:18:17.674169+00:00 dns-ubuntu systemd[1]: postfix@-.service: Failed with result 'exit-code'.
+2026-10-09T14:18:17.674640+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:18:30.300958+00:00 dns-ubuntu systemd[1]: Starting postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:18:30.866701+00:00 dns-ubuntu postmulti[50575]: postfix/postlog: starting the Postfix mail system
+2026-10-09T14:18:30.866669+00:00 dns-ubuntu postfix/postfix-script[50575]: starting the Postfix mail system
+2026-10-09T14:18:30.873380+00:00 dns-ubuntu postfix/master[50577]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:18:30.877879+00:00 dns-ubuntu systemd[1]: Started postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:18:30.881838+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-09T14:18:30.885917+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:18:39.135158+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-09T14:18:39.135312+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:18:39.140953+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:18:39.146309+00:00 dns-ubuntu postmulti[51276]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T14:18:40.723581+00:00 dns-ubuntu systemd[1]: postfix@-.service: Control process exited, code=exited, status=1/FAILURE
+2026-10-09T14:18:40.724827+00:00 dns-ubuntu postfix/master[50577]: terminating on signal 15
+2026-10-09T14:18:40.732084+00:00 dns-ubuntu systemd[1]: postfix@-.service: Failed with result 'exit-code'.
+2026-10-09T14:18:40.732350+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:18:59.254941+00:00 dns-ubuntu systemd[1]: Starting postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:18:59.766450+00:00 dns-ubuntu postmulti[53357]: postfix/postlog: starting the Postfix mail system
+2026-10-09T14:18:59.766027+00:00 dns-ubuntu postfix/postfix-script[53357]: starting the Postfix mail system
+2026-10-09T14:18:59.774834+00:00 dns-ubuntu postfix/master[53359]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:18:59.777278+00:00 dns-ubuntu systemd[1]: Started postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:18:59.791436+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-09T14:18:59.793824+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:19:07.961416+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-09T14:19:07.961619+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-09T14:19:07.969942+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:19:07.975654+00:00 dns-ubuntu postmulti[53900]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T14:19:09.569480+00:00 dns-ubuntu systemd[1]: postfix@-.service: Control process exited, code=exited, status=1/FAILURE
+2026-10-09T14:19:09.569895+00:00 dns-ubuntu postfix/master[53359]: terminating on signal 15
+2026-10-09T14:19:09.572634+00:00 dns-ubuntu systemd[1]: postfix@-.service: Failed with result 'exit-code'.
+2026-10-09T14:19:09.572876+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:19:23.353992+00:00 dns-ubuntu systemd[1]: Starting postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-09T14:19:23.868443+00:00 dns-ubuntu postmulti[54954]: postfix/postlog: starting the Postfix mail system
+2026-10-09T14:19:23.868343+00:00 dns-ubuntu postfix/postfix-script[54954]: starting the Postfix mail system
+2026-10-09T14:19:23.876075+00:00 dns-ubuntu postfix/master[54956]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-09T14:19:23.880736+00:00 dns-ubuntu systemd[1]: Started postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-09T14:19:23.890021+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-09T14:19:23.892582+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.

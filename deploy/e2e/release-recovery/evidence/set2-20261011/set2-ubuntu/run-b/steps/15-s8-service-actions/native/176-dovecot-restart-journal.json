@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T04:10:22Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791519018",
+      "-n",
+      "400",
+      "-u",
+      "dovecot.service"
+    ],
+    "at": "2026-10-09T04:10:22Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T04:10:18.288503+00:00 dns-ubuntu systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...\n2026-10-09T04:10:18.306657+00:00 dns-ubuntu dovecot[38510]: master: Warning: Killed with signal 15 (by pid=62543 uid=0 code=kill)\n2026-10-09T04:10:19.515406+00:00 dns-ubuntu systemd[1]: dovecot.service: Deactivated successfully.\n2026-10-09T04:10:19.515721+00:00 dns-ubuntu systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.\n2026-10-09T04:10:19.526707+00:00 dns-ubuntu systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...\n2026-10-09T04:10:19.545757+00:00 dns-ubuntu dovecot[62550]: master: Dovecot v2.3.21 (47349e2482) starting up for imap, lmtp, pop3 (core dumps disabled)\n2026-10-09T04:10:19.560051+00:00 dns-ubuntu systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791519018,
+  "units": [
+    "dovecot.service"
+  ]
+}

@@ -1,0 +1,6 @@
+differs:       1 > ./deploy/e2e/release-recovery/run-set6.sh
+differs:       1 > ./deploy/e2e/release-recovery/set6_redact.py
+differs:       1 > ./deploy/e2e/release-recovery/set6_trial.py
+differs:       1 > ./deploy/e2e/release-recovery/test_set6_trial.py
+differs:       1 < ./deploy/e2e/release-recovery/worker_fixture_origin.py
+differs:       1 > ./deploy/e2e/release-recovery/worker_fixture_origin.py

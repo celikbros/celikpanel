@@ -1,0 +1,14 @@
+{
+  "at": "2026-10-09T03:41:08Z",
+  "mode": "read-mariadb-check",
+  "owner_action": false,
+  "path": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+  "program": "/usr/sbin/mariadbd",
+  "resulting_variables": {
+    "max_connections": "10"
+  },
+  "returncode": 0,
+  "schema": "celikpanel/set1-native/v1",
+  "status": "ok",
+  "stderr": "2026-10-09  3:41:08 0 [Warning] Buffered warning: option 'max_connections': unsigned value 0 adjusted to 10\n2026-10-09  3:41:08 0 [Warning] Could not open mysql.plugin table: \"Table 'mysql.plugin' doesn't exist\". Some options may be missing from the help text\n"
+}

@@ -1,0 +1,67 @@
+{
+  "action": "owner-restart-panel",
+  "after": {
+    "celikpanel-agent.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 08:11:11 UTC",
+      "ActiveState": "active",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 08:11:11 UTC",
+      "MainPID": "413",
+      "NRestarts": "0",
+      "SubState": "running"
+    },
+    "celikpanel-panel.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 08:19:07 UTC",
+      "ActiveState": "active",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 08:19:07 UTC",
+      "MainPID": "7837",
+      "NRestarts": "0",
+      "SubState": "running"
+    }
+  },
+  "at": "2026-10-09T08:19:07Z",
+  "before": {
+    "celikpanel-agent.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 08:11:11 UTC",
+      "ActiveState": "active",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 08:11:11 UTC",
+      "MainPID": "413",
+      "NRestarts": "0",
+      "SubState": "running"
+    },
+    "celikpanel-panel.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 08:11:11 UTC",
+      "ActiveState": "active",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 08:11:11 UTC",
+      "MainPID": "423",
+      "NRestarts": "0",
+      "SubState": "running"
+    }
+  },
+  "issued_epoch": 1791533934.988221,
+  "lab_action": false,
+  "mode": "owner-restart-panel",
+  "owner_action": true,
+  "restart_took_seconds": 12.1,
+  "result": {
+    "argv": [
+      "systemctl",
+      "restart",
+      "celikpanel-panel.service"
+    ],
+    "at": "2026-10-09T08:19:07Z",
+    "returncode": 0,
+    "seconds": 12.077,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "returned_epoch": 1791533947.0913777,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "unit_policy": [
+    "Restart=on-failure",
+    "RestartUSec=3s",
+    "TimeoutStopUSec=30s",
+    "NRestarts=0",
+    "KillMode=control-group"
+  ]
+}

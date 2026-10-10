@@ -1,0 +1,313 @@
+{
+  "acme_isolation": {
+    "after_seconds": 2.1,
+    "confirmed": true,
+    "resolves": {
+      "acme-staging-v02.api.letsencrypt.org": "::1             localhost",
+      "acme-v02.api.letsencrypt.org": "::1             localhost"
+    },
+    "what": "lab isolation: the two Let's Encrypt directory names resolve to this guest's own loopback, where nothing answers for them"
+  },
+  "calls": [
+    {
+      "at": "2026-10-09T08:15:08Z",
+      "json": [
+        {
+          "admin_username": "celikpanel_admin",
+          "created_at": "2026-10-09T08:15:08Z",
+          "host": "localhost",
+          "id": 1,
+          "is_default": true,
+          "is_local": true,
+          "name": "MariaDB",
+          "port": 3306,
+          "status": "active",
+          "type_icon": "🦭",
+          "type_id": 2,
+          "type_name": "MariaDB",
+          "version": "13.0.2-MariaDB"
+        },
+        {
+          "admin_username": "celikpanel_admin",
+          "created_at": "2026-10-09T08:15:08Z",
+          "host": "localhost",
+          "id": 2,
+          "is_default": false,
+          "is_local": true,
+          "name": "PostgreSQL",
+          "port": 5432,
+          "status": "active",
+          "type_icon": "🐘",
+          "type_id": 1,
+          "type_name": "PostgreSQL",
+          "version": "18.6"
+        }
+      ],
+      "label": "C0 database servers (the Databases page)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/database-servers"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "id": 1,
+        "name": "set1-owner.test",
+        "status": "active",
+        "subscription_id": 2
+      },
+      "name": "the Panel's database names the site's domain and its subscription",
+      "ok": true
+    },
+    {
+      "detail": {
+        "mariadb": 1,
+        "postgresql": 2
+      },
+      "name": "the Databases page lists a MariaDB and a PostgreSQL server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "mariadb_client_version_line": "/usr/sbin/mariadb from 13.0.2-MariaDB, client 15.2 for Linux (x86_64) using readline 5.1",
+        "mariadb_select_version": "13.0.2-MariaDB",
+        "mariadb_shown_is_exactly_select_version": true,
+        "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 13.0.2-MariaDB for Linux on x86_64 (Arch Linux)",
+        "os": {
+          "ID": "arch",
+          "PRETTY_NAME": "Arch Linux"
+        },
+        "postgresql_show_server_version": "18.6",
+        "shown": {
+          "mariadb": "13.0.2-MariaDB",
+          "postgresql": "18.6"
+        },
+        "when": "C0, as the engines were registered"
+      },
+      "name": "O14 (C0, as the engines were registered): the MariaDB version the Databases page shows is the server's own",
+      "ok": true
+    },
+    {
+      "detail": {
+        "mariadb_client_version_line": "/usr/sbin/mariadb from 13.0.2-MariaDB, client 15.2 for Linux (x86_64) using readline 5.1",
+        "mariadb_select_version": "13.0.2-MariaDB",
+        "mariadb_shown_is_exactly_select_version": true,
+        "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 13.0.2-MariaDB for Linux on x86_64 (Arch Linux)",
+        "os": {
+          "ID": "arch",
+          "PRETTY_NAME": "Arch Linux"
+        },
+        "postgresql_show_server_version": "18.6",
+        "shown": {
+          "mariadb": "13.0.2-MariaDB",
+          "postgresql": "18.6"
+        },
+        "when": "C0, as the engines were registered"
+      },
+      "name": "O14 (C0, as the engines were registered): the PostgreSQL version shown is the server's own",
+      "ok": true
+    },
+    {
+      "detail": {
+        "acme-staging-v02.api.letsencrypt.org": "::1             localhost",
+        "acme-v02.api.letsencrypt.org": "::1             localhost"
+      },
+      "name": "lab isolation: the Let's Encrypt directory names resolve to this guest's loopback only",
+      "ok": true
+    },
+    {
+      "detail": {
+        "bytes": 201330137,
+        "exists": true,
+        "file_list": {
+          "data/blob-00.bin": [
+            67108864,
+            "f0cb697dd38d456664c4fc48ae60d3b799f0be78be498703ee1ac90abb35e6dc"
+          ],
+          "data/blob-01.bin": [
+            67108864,
+            "0bbf35c428fa6c8c1848b645f3fdf949cbdf7e3497c029861b29b6d747781f7d"
+          ],
+          "data/blob-02.bin": [
+            67108864,
+            "a0f85b3ee7834b6ad25bb1425f3e2aabd9721c6d396100d0b086d0573fb243cd"
+          ],
+          "index.html": [
+            45,
+            "dd6201f9b61beaa8737d5e16c85e8e203283746991cdcb92c95c85d8e506a0ef"
+          ],
+          "pages/page-1.html": [
+            700,
+            "a6828c952b0d3efe14055af0ef476998c53047e9b35d7e3a9197cae220b22b7b"
+          ],
+          "pages/page-2.html": [
+            700,
+            "b33768c388e28e3a3345ebdb1fb225eb13a989c470233886a9edcc34e7b66e46"
+          ],
+          "pages/page-3.html": [
+            700,
+            "61f1e5d3a7fe16e9b43fe7cd90ef088d1c442848a1c38ee21e3daf09417d7350"
+          ],
+          "pages/page-4.html": [
+            700,
+            "01aee53780b5920e8cf4a5712f0b4817add2abf205a61f0bab6041b2fc687bfb"
+          ],
+          "pages/page-5.html": [
+            700,
+            "3af3a9969ebcddef290aa2908534b37781363f4ac538d888d57477fe51dacd98"
+          ]
+        },
+        "files": 9,
+        "mode": "2750",
+        "names": [
+          "index.html",
+          "data/blob-00.bin",
+          "data/blob-01.bin",
+          "data/blob-02.bin",
+          "pages/page-1.html",
+          "pages/page-2.html",
+          "pages/page-3.html",
+          "pages/page-4.html",
+          "pages/page-5.html"
+        ],
+        "newest_mtime": 1791533712,
+        "non_regular": [],
+        "owner_uid": 1002,
+        "root": "/var/www/celikpanel/subscriptions/2/sites/1/public_html",
+        "sha256": "37bfb2366ff327908cb26fcb92aa1a13d91c6679271da5a96f8ffe03258010a6"
+      },
+      "name": "the owner's site is in the document root",
+      "ok": true
+    },
+    {
+      "detail": {},
+      "name": "request_identities exists and is empty before the first guarded request",
+      "ok": true
+    }
+  ],
+  "database_servers": [
+    {
+      "host": "localhost",
+      "id": 1,
+      "name": "MariaDB",
+      "port": 3306,
+      "status": "active",
+      "type_name": "MariaDB",
+      "version": "13.0.2-MariaDB"
+    },
+    {
+      "host": "localhost",
+      "id": 2,
+      "name": "PostgreSQL",
+      "port": 5432,
+      "status": "active",
+      "type_name": "PostgreSQL",
+      "version": "18.6"
+    }
+  ],
+  "engine_versions": [
+    {
+      "mariadb_client_version_line": "/usr/sbin/mariadb from 13.0.2-MariaDB, client 15.2 for Linux (x86_64) using readline 5.1",
+      "mariadb_select_version": "13.0.2-MariaDB",
+      "mariadb_shown_is_exactly_select_version": true,
+      "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 13.0.2-MariaDB for Linux on x86_64 (Arch Linux)",
+      "os": {
+        "ID": "arch",
+        "PRETTY_NAME": "Arch Linux"
+      },
+      "postgresql_show_server_version": "18.6",
+      "shown": {
+        "mariadb": "13.0.2-MariaDB",
+        "postgresql": "18.6"
+      },
+      "when": "C0, as the engines were registered"
+    }
+  ],
+  "finished_at": "2026-10-09T08:15:13Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/005-panel-state-before.json",
+      "lab_action": false,
+      "label": "panel-state-before",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/006-engine-versions-c0-as-the-engines-were-registered.json",
+      "lab_action": false,
+      "label": "engine-versions-c0-as-the-engines-were-registered",
+      "mode": "read-engine-versions",
+      "owner_action": false
+    },
+    {
+      "file": "native/007-lab-isolate-acme.json",
+      "lab_action": true,
+      "label": "lab-isolate-acme",
+      "mode": "lab-isolate-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/008-owner-seed-site.json",
+      "lab_action": false,
+      "label": "owner-seed-site",
+      "mode": "owner-seed-site",
+      "owner_action": true
+    },
+    {
+      "file": "native/009-identities-before.json",
+      "lab_action": false,
+      "label": "identities-before",
+      "mode": "read-identities",
+      "owner_action": false
+    },
+    {
+      "file": "native/010-units-before.json",
+      "lab_action": false,
+      "label": "units-before",
+      "mode": "read-units",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T08:15:12Z",
+      "label": "seed-site",
+      "mode": "owner-seed-site"
+    }
+  ],
+  "section": "C0-prepare",
+  "started_at": "2026-10-09T08:15:07Z",
+  "substeps": {
+    "O14": "passed",
+    "lab isolation": "passed",
+    "section": "passed"
+  },
+  "title": "the owner's site, the engines and the lab's isolation",
+  "units_before": {
+    "celikpanel-agent.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 08:11:11 UTC",
+      "ActiveState": "active",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 08:11:11 UTC",
+      "MainPID": "413",
+      "NRestarts": "0",
+      "SubState": "running"
+    },
+    "celikpanel-panel.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 08:11:11 UTC",
+      "ActiveState": "active",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 08:11:11 UTC",
+      "MainPID": "423",
+      "NRestarts": "0",
+      "SubState": "running"
+    }
+  },
+  "verdict": "passed"
+}

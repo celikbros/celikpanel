@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 10,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-08T22:08:50Z",
+    "notes": [
+      "only 0 scheduled copies exist, so no copy would be pruned; the prune itself was not exercised"
+    ],
+    "started_at": "2026-10-08T22:08:49Z",
+    "substeps": {
+      "section": "passed"
+    },
+    "title": "automatic backup schedule",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-08T22:08:50Z",
+  "name": "S3-backup-schedule",
+  "started_at": "2026-10-08T22:08:49Z",
+  "verdict": "passed"
+}

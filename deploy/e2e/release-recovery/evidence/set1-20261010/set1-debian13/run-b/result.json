@@ -1,0 +1,359 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "645b3046f1dec21f5a610ebca287a3139c41434f",
+      "sha256": "6ea60ca5da594aa0507ee9d258a18b4af6ee82195e3017ff6534e724c518b043",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "cell": {
+    "components": [
+      "nginx",
+      "php-fpm",
+      "mariadb",
+      "postfix",
+      "dovecot",
+      "roundcube",
+      "rspamd",
+      "postgresql"
+    ],
+    "mail": true,
+    "name": "set1-debian13",
+    "node": "debian13",
+    "purpose": "web_mail"
+  },
+  "cell_kind": "settings-writes",
+  "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['12-panel_certificate', '13-access_dns', '14-mail_certificate', '15-mail_enrollment', '16-verify']"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__db5cad3b4076aa92",
+    "node": "debian13",
+    "vm_uuid": "c987b71a-1c47-58ac-b5b9-71b8420555fb"
+  },
+  "native_evidence": false,
+  "note": "set1 settings-writes: observations for the owner's review; no update is started and no P0 row is judged.",
+  "outcome": {
+    "classification": "settings-writes-measured",
+    "final_status": null
+  },
+  "overall": "failed",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "sections": {
+    "S1-cron": {
+      "checks": 30,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-08T22:08:16Z",
+      "notes": [],
+      "started_at": "2026-10-08T22:08:13Z",
+      "substeps": {
+        "a": "passed",
+        "b": "passed",
+        "c": "passed",
+        "d": "passed",
+        "e": "passed",
+        "f": "passed"
+      },
+      "title": "scheduled tasks: the owner's crontab",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "S2-mail-policy": {
+      "checks": 25,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-08T22:08:49Z",
+      "notes": [
+        "the owner's one-restriction-per-line layout in main.cf was rewritten as a single line by the save (`postconf -e`); the elements and their order are the owner's"
+      ],
+      "started_at": "2026-10-08T22:08:16Z",
+      "substeps": {
+        "a": "passed",
+        "b": "passed",
+        "c": "passed",
+        "d": "passed",
+        "e": "passed",
+        "f": "passed"
+      },
+      "title": "server mail policy: the owner's main.cf",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "S3-backup-schedule": {
+      "checks": 10,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-08T22:08:50Z",
+      "notes": [
+        "only 0 scheduled copies exist, so no copy would be pruned; the prune itself was not exercised"
+      ],
+      "started_at": "2026-10-08T22:08:49Z",
+      "substeps": {
+        "section": "passed"
+      },
+      "title": "automatic backup schedule",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "S4-postgresql": {
+      "checks": 34,
+      "error": null,
+      "failed": [
+        "g: an answer that says the previous file could not be put back with certainty matches the server (it does not when the previous file is in place and the named copy is that same file)"
+      ],
+      "finished_at": "2026-10-08T22:09:07Z",
+      "notes": [],
+      "started_at": "2026-10-08T22:08:50Z",
+      "substeps": {
+        "a": "passed",
+        "b": "passed",
+        "c": "passed",
+        "d": "passed",
+        "e": "passed",
+        "f": "passed",
+        "g": "failed"
+      },
+      "title": "postgresql.conf and pg_hba.conf",
+      "unknown": [],
+      "verdict": "failed"
+    },
+    "S5-mariadb": {
+      "checks": 20,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-08T22:09:18Z",
+      "notes": [
+        "`max_connections = plenty` was accepted and written: the Panel answered what MariaDB's own program said about the file; MariaDB's reading of it is recorded"
+      ],
+      "started_at": "2026-10-08T22:09:07Z",
+      "substeps": {
+        "a": "passed",
+        "b": "passed",
+        "c": "passed",
+        "d": "passed",
+        "e": "passed",
+        "end": "passed"
+      },
+      "title": "the MariaDB option file",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "S6-catchall-queue": {
+      "checks": 14,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-08T22:09:26Z",
+      "notes": [
+        "with Postfix stopped root's `postqueue -j` still reads the queue directly, so the queue is known; the Panel's answer is judged against that"
+      ],
+      "started_at": "2026-10-08T22:09:18Z",
+      "substeps": {
+        "catch-all": "passed",
+        "end": "passed",
+        "queue": "passed"
+      },
+      "title": "catch-all and mail queue",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "S7-file-metadata": {
+      "checks": 8,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-08T22:09:27Z",
+      "notes": [],
+      "started_at": "2026-10-08T22:09:26Z",
+      "substeps": {
+        "/etc/mysql/mariadb.conf.d/50-server.cnf": "passed",
+        "/etc/postfix/main.cf": "passed",
+        "/etc/postgresql/17/main/pg_hba.conf": "passed",
+        "/etc/postgresql/17/main/postgresql.conf": "passed"
+      },
+      "title": "owner, group and mode of the files the Panel wrote",
+      "unknown": [],
+      "verdict": "passed"
+    }
+  },
+  "setup": {
+    "components": [
+      "dovecot",
+      "mariadb",
+      "nginx",
+      "php-fpm",
+      "postfix",
+      "postgresql",
+      "roundcube",
+      "rspamd"
+    ],
+    "purpose": "web_mail",
+    "waiting": {
+      "code": "server_setup_access_dns_required",
+      "mail_steps_reached": true,
+      "not_run": [
+        "12-panel_certificate",
+        "13-access_dns",
+        "14-mail_certificate",
+        "15-mail_enrollment",
+        "16-verify"
+      ],
+      "phase": "access_dns",
+      "polls": 25,
+      "stable_wait_seconds": 122.2,
+      "steps": {
+        "01-dns": "succeeded",
+        "02-service": "succeeded",
+        "03-service": "succeeded",
+        "04-service": "succeeded",
+        "05-service": "succeeded",
+        "06-mail_profile": "succeeded",
+        "07-mail_profile": "succeeded",
+        "08-service": "succeeded",
+        "09-service": "succeeded",
+        "10-firewall": "succeeded",
+        "11-access_dns": "running",
+        "12-panel_certificate": "pending",
+        "13-access_dns": "pending",
+        "14-mail_certificate": "pending",
+        "15-mail_enrollment": "pending",
+        "16-verify": "pending"
+      }
+    }
+  },
+  "site": {
+    "config_files": {
+      "listed": {
+        "mariadb": [
+          "/etc/mysql/my.cnf",
+          "/etc/mysql/mariadb.cnf",
+          "/etc/mysql/mariadb.conf.d/50-server.cnf"
+        ],
+        "postgresql": [
+          "/etc/postgresql/17/main/postgresql.conf",
+          "/etc/postgresql/17/main/pg_hba.conf",
+          "/etc/postgresql/17/main/postgresql.conf",
+          "/etc/postgresql/17/main/pg_hba.conf"
+        ]
+      },
+      "mariadb_conf": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+      "pg_conf": "/etc/postgresql/17/main/postgresql.conf",
+      "pg_hba": "/etc/postgresql/17/main/pg_hba.conf"
+    },
+    "domain_id": 1,
+    "mailbox": "owner@set1-owner.test",
+    "site_user": "set1_owner_test"
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-08T22:00:00Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-08T21:59:56Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T22:00:10Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-08T22:00:00Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T22:01:15Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-08T22:00:10Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T22:01:16Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-08T22:01:15Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T22:01:16Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-08T22:01:16Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T22:08:10Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-08T22:01:16Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-08T22:08:13Z",
+      "name": "site",
+      "reason": null,
+      "started_at": "2026-10-08T22:08:10Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T22:08:16Z",
+      "name": "S1-cron",
+      "reason": null,
+      "started_at": "2026-10-08T22:08:13Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T22:08:49Z",
+      "name": "S2-mail-policy",
+      "reason": null,
+      "started_at": "2026-10-08T22:08:16Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T22:08:50Z",
+      "name": "S3-backup-schedule",
+      "reason": null,
+      "started_at": "2026-10-08T22:08:49Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T22:09:07Z",
+      "name": "S4-postgresql",
+      "reason": "g: an answer that says the previous file could not be put back with certainty matches the server (it does not when the previous file is in place and the named copy is that same file)",
+      "started_at": "2026-10-08T22:08:50Z",
+      "verdict": "failed"
+    },
+    {
+      "finished_at": "2026-10-08T22:09:18Z",
+      "name": "S5-mariadb",
+      "reason": null,
+      "started_at": "2026-10-08T22:09:07Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T22:09:26Z",
+      "name": "S6-catchall-queue",
+      "reason": null,
+      "started_at": "2026-10-08T22:09:18Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T22:09:27Z",
+      "name": "S7-file-metadata",
+      "reason": null,
+      "started_at": "2026-10-08T22:09:26Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-08T22:09:28Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-08T22:09:27Z",
+      "verdict": "passed"
+    }
+  ]
+}

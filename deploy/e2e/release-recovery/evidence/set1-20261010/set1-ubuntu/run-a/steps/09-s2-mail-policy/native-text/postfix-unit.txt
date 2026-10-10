@@ -1,0 +1,4 @@
+{
+ "postfix.service": "# /usr/lib/systemd/system/postfix.service\n[Unit]\nDescription=Postfix Mail Transport Agent\nDocumentation=man:postfix(1)\nConflicts=sendmail.service exim4.service\nConditionPathExists=/etc/postfix/main.cf\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/bin/true\nExecReload=/bin/true\n\n[Install]\nWantedBy=multi-user.target\n",
+ "postfix@-.service": "# /usr/lib/systemd/system/postfix@.service\n[Unit]\nDescription=Postfix Mail Transport Agent (instance %i)\nDocumentation=man:postfix(1)\nPartOf=postfix.service\nBefore=postfix.service\nReloadPropagatedFrom=postfix.service\nAfter=network-online.target nss-lookup.target\nWants=network-online.target\n\n[Service]\nType=forking\nGuessMainPID=no\nExecStartPre=/usr/lib/postfix/configure-instance.sh %i\nExecStart=/usr/sbin/postmulti -i %i -p start\nExecStop=/usr/sbin/postmulti -i %i -p stop\nExecReload=/usr/sbin/postmulti -i %i -p reload\n\n[Install]\nWantedBy=multi-user.target\n"
+}

@@ -1,0 +1,104 @@
+{
+  "checks": {
+    "collected": {
+      "artifacts": {
+        "current-worker-baseline-result.json": {
+          "bytes": 2148,
+          "path": "/var/tmp/cp-release-drill-s4-ub-b/current-worker-baseline-ubuntu-current-worker-baseline-result.json",
+          "sha256": "800e83667a045822873f568e07f14f5c1c7b62aa808cdc98bc92f806003090b0"
+        },
+        "current-worker-baseline.log": {
+          "bytes": 5635,
+          "path": "/var/tmp/cp-release-drill-s4-ub-b/current-worker-baseline-ubuntu-current-worker-baseline.log",
+          "sha256": "10da936050e9d9993178f0967f0963108e976ba6bb2c7c517d49ed9d956ea7a1"
+        }
+      },
+      "node": "ubuntu"
+    },
+    "installer_restart_notice": {
+      "banner": "",
+      "state": "none",
+      "text": ""
+    },
+    "start": {
+      "action": "started",
+      "archive_sha256": "d2fcf5c98c194c36bec9dd0fe2442eecb6390ba3824842f879a77f9b5debebc5",
+      "credentials": "[REDACTED]",
+      "node": "ubuntu",
+      "source_commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+      "unit": "celikpanel-lab-current-worker-baseline.service",
+      "version": "v0.1.0-alpha.81"
+    },
+    "status": {
+      "installation": {
+        "archive_sha256": "d2fcf5c98c194c36bec9dd0fe2442eecb6390ba3824842f879a77f9b5debebc5",
+        "credentials": "[REDACTED]",
+        "enrollment_exit": 0,
+        "error_type": null,
+        "finished_at": "2026-10-09T12:55:12.694819+00:00",
+        "foundation": {
+          "commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+          "sequence": 81,
+          "sha256": "7a4322d43aedfb250ea980264a3afd6eec403fdf84be8057df27aea8b8b1a909",
+          "version": "v0.1.0-alpha.81"
+        },
+        "https_curl_exit": 0,
+        "https_http_code": "200",
+        "https_trust_validation": "not-claimed-self-signed-bootstrap",
+        "identity": {
+          "cell_id": "release-recovery__e1d65fabae1843a0",
+          "node": "ubuntu",
+          "nonce": "e1d65fabae1843a0b7a7c7ddf7a7f043884e8b40127220fa194a0d3578c77684",
+          "schema": "celikpanel-release-recovery-lab/v1",
+          "vm_uuid": "e90b4972-722a-5188-8ea2-08b686278d1e"
+        },
+        "install_exit": 0,
+        "installed_artifacts": {
+          "agent": "bf3176c668ab851c2829cb40be42c9e1a444e1828d67dcc979d24b2abb90afdb",
+          "panel": "b8c5557a306c49569ca415d05a19f7964ff6c417c9cf66f3516dbc1f429b92e6"
+        },
+        "installer_log_bytes": 5635,
+        "installer_log_sha256": "10da936050e9d9993178f0967f0963108e976ba6bb2c7c517d49ed9d956ea7a1",
+        "intent_sha256": "b130f2977ca3815bff9258a07dc13152f51496b57aafd40ea9f2425c9b2dcb27",
+        "provenance": "unpublished-local-build-with-isolated-fixture-trust-not-production-release-admission",
+        "public_key_sha256": "f49d57bd3abd71eb83e1c1f02031630aa411f45202de0942dacfd3bba21514d3",
+        "running_artifacts": {
+          "agent": "bf3176c668ab851c2829cb40be42c9e1a444e1828d67dcc979d24b2abb90afdb",
+          "panel": "b8c5557a306c49569ca415d05a19f7964ff6c417c9cf66f3516dbc1f429b92e6"
+        },
+        "schema": "celikpanel/current-worker-baseline-result/v1",
+        "sequence": 81,
+        "sequence_floor_sha256": "6903b4d1c3570faee8afdb177bd9bb33572803b0c5de6aceb913675b183f8b66",
+        "services": {
+          "agent": {
+            "ActiveState": "active",
+            "InvocationID": "0954372da5d845e7af9748036599f7b5",
+            "MainPID": "7295",
+            "SubState": "running"
+          },
+          "panel": {
+            "ActiveState": "active",
+            "InvocationID": "3ce48992e44d43a98cc25a53da5103cc",
+            "MainPID": "7494",
+            "SubState": "running"
+          }
+        },
+        "source_commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+        "started_at": "2026-10-09T12:54:33.070320+00:00",
+        "verified": true,
+        "version": "v0.1.0-alpha.81"
+      },
+      "node": "ubuntu",
+      "unit": {
+        "ActiveState": "inactive",
+        "ExecMainStatus": "0",
+        "Result": "success",
+        "SubState": "dead"
+      }
+    }
+  },
+  "finished_at": "2026-10-09T12:55:21Z",
+  "name": "baseline-install",
+  "started_at": "2026-10-09T12:54:30Z",
+  "verdict": "passed"
+}

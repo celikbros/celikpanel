@@ -1,0 +1,233 @@
+{
+  "checks": {
+    "cli_text_source": {
+      "commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+      "path": "cmd/recovery/main.go",
+      "role": "good",
+      "sha256": "689e2f1066c9fac77bade6d3844903412987420fc59dd73f4c1edd0de91a766d"
+    },
+    "judged": {
+      "expected": [
+        "update-verified",
+        "management-off",
+        "new-boot",
+        "measured-window",
+        "cron-served-without-management",
+        "db-served-without-management",
+        "smtp-served-without-management",
+        "web-served-without-management",
+        "renewal-timer-kept",
+        "firewall-present",
+        "management-returned"
+      ],
+      "findings": [],
+      "kind": "mgmt-off-reboot",
+      "native_evidence": false,
+      "unknown": [],
+      "verdict": "as-expected"
+    },
+    "observations": {
+      "attempts": {
+        "automatic": [],
+        "automatic_count": 0,
+        "journal_admissions": [],
+        "owner": [],
+        "owner_count": 0
+      },
+      "check_reasons": [],
+      "cli": {
+        "by_key": {},
+        "mismatches": [],
+        "panel_log_command": "sudo journalctl -u celikpanel-panel -n 50",
+        "panel_log_command_seen": {
+          "en": false,
+          "tr": false
+        },
+        "recorded_cause_lines": {
+          "en": 0,
+          "tr": 0
+        }
+      },
+      "completion_marker_seen": true,
+      "database": "different",
+      "final": {
+        "observation": "known",
+        "observed_at": "2026-10-09T19:57:03Z",
+        "phase": "succeeded",
+        "reason": "update_verified",
+        "request_id": "1b61180adddcdae7721c2088d3c02081",
+        "schema": "celikpanel-recovery-status/v1",
+        "terminal_proof": "update_verified"
+      },
+      "firewall": {
+        "equal_to_before": true,
+        "present": true,
+        "tables": [
+          "table inet celikpanel_fw"
+        ]
+      },
+      "installed": "candidate",
+      "management_after_reboot": {
+        "disabled_and_stopped": true,
+        "enabled_and_active": false,
+        "units": {
+          "celikpanel-agent.service": {
+            "ActiveState": "inactive",
+            "UnitFileState": "disabled"
+          },
+          "celikpanel-panel.service": {
+            "ActiveState": "inactive",
+            "UnitFileState": "disabled"
+          }
+        }
+      },
+      "management_return": {
+        "differences": [],
+        "login_ok": true,
+        "management": {
+          "disabled_and_stopped": false,
+          "enabled_and_active": true,
+          "units": {
+            "celikpanel-agent.service": {
+              "ActiveState": "active",
+              "UnitFileState": "enabled"
+            },
+            "celikpanel-panel.service": {
+              "ActiveState": "active",
+              "UnitFileState": "enabled"
+            }
+          }
+        },
+        "readiness_wait": {
+          "bound_seconds": 180.0,
+          "first": {
+            "at": "2026-10-09T20:00:51Z",
+            "http": 200,
+            "panel_state": "starting"
+          },
+          "last": {
+            "at": "2026-10-09T20:01:06Z",
+            "http": 200,
+            "panel_state": "ready"
+          },
+          "reads": 6,
+          "ready": true
+        },
+        "tls_leaf": "68d7b5d4ec495f374a0cfa580d3ffab13b8a1a486672c2f958c85ad8bd86f9a3"
+      },
+      "needed_panel": [],
+      "new_boot": true,
+      "outcome": "update-verified",
+      "owner_retry_run": false,
+      "panel_verdict": "down-only-during-transaction",
+      "printed_retry_command": null,
+      "receipt_dispatches": null,
+      "receipt_phases": null,
+      "renewal_sidecar": {
+        "present": true,
+        "valid": true,
+        "value": "on"
+      },
+      "renewal_timer": {
+        "enabled_and_active": true,
+        "timers": {
+          "certbot.timer": {
+            "after": {
+              "ActiveState": "active",
+              "UnitFileState": "enabled"
+            },
+            "before": {
+              "ActiveState": "active",
+              "UnitFileState": "enabled"
+            },
+            "kept": true
+          }
+        },
+        "verdict": "as-before"
+      },
+      "served": {
+        "cron": {
+          "stalls": [],
+          "stamps_in_boot": 3,
+          "verdict": "served"
+        },
+        "db": {
+          "failing_after_first_ok": 0,
+          "failing_before_first_ok": 0,
+          "first_ok_seconds_after_boot": 7.753753372,
+          "samples": 38,
+          "verdict": "served"
+        },
+        "smtp": {
+          "failing_after_first_ok": 0,
+          "failing_before_first_ok": 0,
+          "first_ok_seconds_after_boot": 7.753753372,
+          "samples": 38,
+          "verdict": "served"
+        },
+        "web": {
+          "failing_after_first_ok": 0,
+          "failing_before_first_ok": 1,
+          "first_ok_seconds_after_boot": 12.753845188,
+          "samples": 38,
+          "verdict": "served"
+        }
+      },
+      "sidecar": {
+        "code": null,
+        "present": false,
+        "valid": false
+      },
+      "track_stop": null,
+      "update_card": {
+        "findings": [],
+        "server_message_line": null,
+        "verdict": "as-expected"
+      },
+      "update_failure_codes": [],
+      "update_failure_lines": [],
+      "views": {
+        "last": {
+          "offline_page_served": "panel-reachable",
+          "panel_recovery_status": true,
+          "panel_update_status": true,
+          "root_cli": true
+        },
+        "ssh_owner_view": "not attempted (recovery view needs an interactive SSH terminal and a one-time code)",
+        "summary": {
+          "panel_recovery_status": {
+            "reachable": 8,
+            "samples": 13
+          },
+          "panel_update_status": {
+            "reachable": 8,
+            "samples": 13
+          },
+          "root_cli": {
+            "reachable": 13,
+            "samples": 13
+          }
+        }
+      },
+      "web_keys": [
+        "recovery.next.running",
+        "recovery.next.succeeded",
+        "recovery.phase.running",
+        "recovery.phase.succeeded"
+      ],
+      "web_keys_missing": [],
+      "web_screen_unavailable": null,
+      "window_seconds": 185.0,
+      "workloads": {
+        "cron": "never-interrupted",
+        "dns": "not-provided-external-dns",
+        "smtp": "never-interrupted",
+        "web": "never-interrupted"
+      }
+    }
+  },
+  "finished_at": "2026-10-09T20:01:13Z",
+  "name": "kind-expectation",
+  "started_at": "2026-10-09T20:01:13Z",
+  "verdict": "passed"
+}

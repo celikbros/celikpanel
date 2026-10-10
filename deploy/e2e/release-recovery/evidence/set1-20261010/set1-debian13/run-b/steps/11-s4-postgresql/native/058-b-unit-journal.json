@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-08T22:08:54Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791497332",
+      "-n",
+      "400",
+      "-u",
+      "postgresql@17-main.service"
+    ],
+    "at": "2026-10-08T22:08:54Z",
+    "returncode": 0,
+    "seconds": 0.006,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-08T22:08:53.244370+00:00 dns-debian13 systemd[1]: Reloading postgresql@17-main.service - PostgreSQL Cluster 17-main...\n2026-10-08T22:08:53.298781+00:00 dns-debian13 systemd[1]: Reloaded postgresql@17-main.service - PostgreSQL Cluster 17-main.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791497332,
+  "units": [
+    "postgresql@17-main.service"
+  ]
+}

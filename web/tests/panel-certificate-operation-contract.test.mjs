@@ -8,7 +8,7 @@ const settingsSource = readFileSync(
 );
 
 function panelCertificatePanelSource() {
-  const start = settingsSource.indexOf('function PanelCertificatePanel()');
+  const start = settingsSource.indexOf('function PanelCertificatePanel(');
   const end = settingsSource.indexOf('function TwoFactorPanel()', start);
   assert.ok(start >= 0 && end > start);
   return settingsSource.slice(start, end);
@@ -19,7 +19,7 @@ test('panel certificate POST persists an exact recovery identity before submissi
   assert.match(settingsSource, /crypto\.getRandomValues\(bytes\)/);
   assert.match(settingsSource, /\^\[a-f0-9\]\{32\}\$/);
   assert.match(source, /issueInFlightRef\.current \|\| pendingOperation !== null \|\| restarting \|\| !domain/);
-  assert.match(source, /disabled=\{busy \|\| pendingOperation !== null \|\| restarting \|\| !domain\}/);
+  assert.match(source, /disabled=\{!certificateKnown \|\| busy \|\| pendingOperation !== null \|\| restarting \|\| !domain\}/);
   const store = source.indexOf('storePanelCertificateMarker(marker)');
   const submit = source.indexOf("fetch('/api/v1/panel/certificate'", store);
   assert.ok(store >= 0 && submit > store, 'marker must be durable before POST');

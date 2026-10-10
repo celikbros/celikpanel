@@ -1,0 +1,72 @@
+{
+  "at": "2026-10-09T07:10:42Z",
+  "databases_v2": [
+    {
+      "name": "s2impdrop_app",
+      "server_id": 1
+    }
+  ],
+  "docroot": {
+    "bytes": 16777317,
+    "exists": true,
+    "file_list": {
+      "assets/blob.bin": [
+        16777216,
+        "e6a10e680fa8c432e7b68516fbde301d2deefc01d7764b22d1659e76f85fb70a"
+      ],
+      "assets/site.css": [
+        34,
+        "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+      ],
+      "index.html": [
+        67,
+        "69634f91c87df2962caa99003392257fdaa60d5dd0aca530ff2ec8c69cab94e3"
+      ]
+    },
+    "files": 3,
+    "mode": "0750",
+    "names": [
+      "index.html",
+      "assets/blob.bin",
+      "assets/site.css"
+    ],
+    "newest_mtime": 1791529815,
+    "non_regular": [],
+    "owner_uid": 5005,
+    "root": "/var/www/celikpanel/subscriptions/2/sites/6/public_html",
+    "sha256": "73114dc25e2c15254ae20daeda914e783bbdd244ea6398daa6e115ca34c0501b"
+  },
+  "domain": "set2-import-drop.test",
+  "email_accounts": [
+    {
+      "address": "info@set2-import-drop.test",
+      "quota_mb": 256
+    }
+  ],
+  "email_forwardings": [
+    {
+      "destination": "info@set2-import-drop.test",
+      "source": "sales@set2-import-drop.test"
+    }
+  ],
+  "escapes": [],
+  "lab_action": false,
+  "mode": "read-imported",
+  "owner_action": false,
+  "rows": [
+    {
+      "id": 6,
+      "name": "set2-import-drop.test",
+      "status": "active",
+      "subscription_id": 2
+    }
+  ],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "site_account": {
+    "home": "/var/www/celikpanel/subscriptions/2/sites/6",
+    "uid": 5005
+  },
+  "site_home_entries": [
+    "public_html"
+  ]
+}

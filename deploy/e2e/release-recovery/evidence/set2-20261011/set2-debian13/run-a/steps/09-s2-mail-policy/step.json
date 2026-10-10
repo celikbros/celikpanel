@@ -1,0 +1,32 @@
+{
+  "checks": {
+    "checks": 38,
+    "error": null,
+    "failed": [
+      "f: the value is written in main.cf (46) and Postfix keeps running with its previous process"
+    ],
+    "finished_at": "2026-10-09T03:40:42Z",
+    "notes": [
+      "the owner's one-restriction-per-line layout in main.cf was rewritten as a single line by the save (`postconf -e`); the elements and their order are the owner's"
+    ],
+    "started_at": "2026-10-09T03:39:59Z",
+    "substeps": {
+      "a": "passed",
+      "b": "passed",
+      "c": "passed",
+      "d": "passed",
+      "e": "passed",
+      "f": "failed",
+      "g": "passed",
+      "h": "passed"
+    },
+    "title": "server mail policy: the owner's main.cf",
+    "unknown": [],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-09T03:40:42Z",
+  "name": "S2-mail-policy",
+  "reason": "f: the value is written in main.cf (46) and Postfix keeps running with its previous process",
+  "started_at": "2026-10-09T03:39:59Z",
+  "verdict": "failed"
+}

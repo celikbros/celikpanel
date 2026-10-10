@@ -1,0 +1,64 @@
+{
+  "checks": {
+    "origin_check": {
+      "addresses": [
+        "127.0.0.1"
+      ],
+      "boot_id": "4f2d42ba-f4fa-4943-8c63-67a3d477d1e3",
+      "getent_outcome": "found",
+      "getent_returncode": 0,
+      "getent_status": "ok",
+      "getent_stdout": "127.0.0.1       celikpanel.net\n",
+      "http": "200",
+      "loopback_only": true,
+      "ok": true,
+      "unit": {
+        "ActiveState": "active",
+        "NRestarts": "0",
+        "UnitFileState": "enabled"
+      }
+    },
+    "origin_unit": {
+      "path": "/etc/systemd/system/cp-lab-upd1-origin.service",
+      "results": [
+        {
+          "returncode": 0,
+          "status": "ok"
+        },
+        {
+          "returncode": 0,
+          "status": "ok"
+        }
+      ],
+      "unit": "cp-lab-upd1-origin.service",
+      "unit_sha256": "d9013f44bc7c422e44de0b8c816bcf30b83806f65afe6718fa932d84b6a7c28b"
+    },
+    "provenance": "unpublished-local-artifact-with-disposable-fixture-trust",
+    "provision": {
+      "bind": "127.0.0.1:443",
+      "origin": "https://celikpanel.net",
+      "provenance": "unpublished-local-artifact-with-disposable-fixture-trust",
+      "release_key_enrolled": false
+    },
+    "staged": {
+      "helper": "/root/celikpanel-release-recovery-lab/worker-fixture-origin.py",
+      "intent": "/root/celikpanel-release-recovery-lab/worker-origin-intent.json"
+    },
+    "target": {
+      "arch": "amd64",
+      "archive": "celikpanel-v0.1.0-alpha.82-linux-amd64.tar.gz",
+      "archive_sha256": "fa3f2e0f26fe669f6d364a4c82419424cb36459606942b8891d157951891c039",
+      "archive_size": "65897621",
+      "commit": "dc0841af9eb9023ead02393a70bf59968a74ae2f",
+      "format": "celikpanel-release-manifest-v2",
+      "os": "linux",
+      "published_at": "2026-10-09T13:35:35Z",
+      "sequence": "82",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "finished_at": "2026-10-09T13:35:53Z",
+  "name": "origin",
+  "started_at": "2026-10-09T13:35:34Z",
+  "verdict": "passed"
+}

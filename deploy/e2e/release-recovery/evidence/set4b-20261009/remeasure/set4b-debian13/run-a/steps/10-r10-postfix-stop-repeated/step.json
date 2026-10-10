@@ -1,0 +1,24 @@
+{
+  "checks": {
+    "checks": 12,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T15:54:54Z",
+    "notes": [],
+    "started_at": "2026-10-09T15:53:42Z",
+    "substeps": {
+      "S8 postfix start": "passed",
+      "S8 postfix stop": "passed",
+      "r1": "passed",
+      "r2": "passed",
+      "r3": "passed"
+    },
+    "title": "the same Stop three more times, each beside when the unit settled",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T15:54:54Z",
+  "name": "R10-postfix-stop-repeated",
+  "started_at": "2026-10-09T15:53:42Z",
+  "verdict": "passed"
+}

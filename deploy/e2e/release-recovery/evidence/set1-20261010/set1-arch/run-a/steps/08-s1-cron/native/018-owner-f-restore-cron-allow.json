@@ -1,0 +1,37 @@
+{
+  "action": "owner-cron-fault",
+  "at": "2026-10-08T21:57:40Z",
+  "cron_allow": {
+    "error": "FileNotFoundError",
+    "exists": false,
+    "path": "/etc/cron.allow"
+  },
+  "mode": "owner-cron-fault",
+  "owner_action": true,
+  "restored": {
+    "created": "/etc/cron.allow",
+    "kind": "cron-allow"
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "spool_directories": [
+    {
+      "error": "FileNotFoundError",
+      "exists": false,
+      "path": "/var/spool/cron/crontabs"
+    },
+    {
+      "exists": true,
+      "gid": 0,
+      "group": "root",
+      "inode": 87017,
+      "mode": "0755",
+      "mtime_ns": 1791496658659193055,
+      "nlink": 1,
+      "owner": "root",
+      "path": "/var/spool/cron",
+      "size": 30,
+      "type": "directory",
+      "uid": 0
+    }
+  ]
+}

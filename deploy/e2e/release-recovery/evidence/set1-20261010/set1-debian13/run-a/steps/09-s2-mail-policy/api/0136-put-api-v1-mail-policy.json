@@ -1,0 +1,85 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S2f save while Postfix cannot reload",
+  "request": {
+    "body": {
+      "dnsbl_zones": [],
+      "message_size_mb": 30,
+      "outbound_rate_limit": 46,
+      "version": "mp1-96d5c35c7c8de3358a96aea4965b2e47688e02447ff17617ebc3fb86e8902f34"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "PUT",
+    "path": "/api/v1/mail/policy"
+  },
+  "response": {
+    "elapsed_seconds": 2.928,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 08 Oct 2026 21:27:10 GMT"
+      ],
+      [
+        "Content-Length",
+        "618"
+      ]
+    ],
+    "json": {
+      "code": "MAIL_POLICY_NOT_RELOADED",
+      "error": "The mail policy was saved to /etc/postfix/main.cf, but Postfix could not be reloaded, so Postfix is still running with the previous settings. Nothing was rolled back. The server owner runs sudo postfix check to see what Postfix objects to, corrects it, and then runs sudo systemctl reload postfix. Reload this page afterwards; the saved values are the ones shown.",
+      "mutation_applied": true,
+      "partial_success": true,
+      "vars": {
+        "detail": "Job for postfix.service failed. See \"systemctl status postfix.service\" and \"journalctl -xeu postfix.service\" for details.; exit status 1"
+      }
+    },
+    "status": 502,
+    "text": null
+  }
+}

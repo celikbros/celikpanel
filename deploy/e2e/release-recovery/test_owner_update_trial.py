@@ -1464,6 +1464,41 @@ class Upd3CellTests(unittest.TestCase):
         self.assertEqual(t.classify_outcome("real-start", succeeded, False), "real-start-candidate-reported-success")
 
 
+class Set3PublishedBaselineTests(unittest.TestCase):
+    def test_the_ledger_is_judged_against_the_pinned_released_digests(self):
+        pins = t.ledger_pins()
+        self.assertEqual(sorted(pins["migrations"]), [38, 42, 43])
+
+        def reading(version, guarded):
+            return {"schema_version": version, "ledger_rows": version, "ledger_contiguous": True,
+                    "ledger_sha256": pins["migrations"][version], "schema_sha256": "x" * 64,
+                    "schema_sha256_without_statistics": pins["schemas"][version], "statistics_tables": ["sqlite_stat1"],
+                    "request_identities": {"exists": guarded}, "integrity_check": ["ok"], "foreign_key_check_clean": True}
+        self.assertEqual(t.ledger_verdict(reading(43, True), 43, pins)["verdict"], "as-expected")
+        self.assertEqual(t.ledger_verdict(reading(42, False), 42, pins)["verdict"], "as-expected")
+        for wrong in (reading(43, True), reading(42, True)):
+            self.assertEqual(t.ledger_verdict(wrong, 42, pins)["verdict"], "different")
+        self.assertEqual(t.ledger_verdict(reading(42, False), 43, pins)["verdict"], "different")
+        self.assertFalse(t.ledger_verdict(dict(reading(43, True), ledger_sha256="0" * 64), 43, pins)["facts"]["ledger_is_the_released_one"])
+        self.assertEqual(t.ledger_verdict(None, 42, pins)["verdict"], "inconclusive")
+        helper = (HERE / t.SCHEMA_LEDGER_HELPER).read_text(encoding="utf-8")
+        self.assertIn("mode=ro", helper)
+        self.assertIn("query_only=ON", helper)
+        self.assertNotIn("INSERT", helper.upper().replace("INSERTS", ""))
+        self.assertEqual(t.site_account_name("upd1-owner.test"), "upd1_owner_test")
+
+    def test_the_guard_and_the_published_baseline(self):
+        middleware = "".join(path.read_text(encoding="utf-8") for path in (REPO / "cmd" / "panel").glob("request_identity*.go"))
+        self.assertIn(t.REQUEST_ID_HEADER, middleware)
+        self.assertIn("REQUEST_ID_REQUIRED", middleware)
+        self.assertIn(t.RELOAD_SENTENCE, middleware)
+        self.assertTrue((REPO / "internal" / "db" / "migrations").glob("043_*"))
+        self.assertEqual(len(list((REPO / "internal" / "db" / "migrations").glob("043_*.sql"))), 1)
+        profile = t.BASELINE_REFS["v0.1.0-alpha.81"]
+        self.assertEqual((profile["baseline"], profile["candidate"]), (("v0.1.0-alpha.81", 81), ("v0.1.0-alpha.82", 82)))
+        self.assertTrue(profile["unpatched"])
+
+
 class Upd3FixturePatchTests(unittest.TestCase):
     def test_start_check_patch_sits_in_the_function_the_check_and_the_real_start_share(self):
         source = (REPO / t.START_CHECK_FILE).read_text(encoding="utf-8")
@@ -1514,7 +1549,7 @@ class Upd3FixturePatchTests(unittest.TestCase):
         text = (HERE / "build-upd1-artifacts.sh").read_text()
         self.assertIn('startcheck=$(commit_fixture start-check', text)
         self.assertIn('realstart=$(commit_fixture real-start', text)
-        self.assertEqual(text.count('git -C "$clone" checkout --quiet --detach "$good"'), 2)
+        self.assertEqual(text.count('git -C "$clone" checkout --quiet --detach "$good"'), 3)   # set3: once more in the published-alpha.81 mode
         self.assertIn('update-ref "refs/upd1/$kind"', text)
         self.assertIn('s_json=$(build "$startcheck" v0.1.0-alpha.82)', text)
         self.assertIn('r_json=$(build "$realstart" v0.1.0-alpha.82)', text)
@@ -1524,7 +1559,15 @@ class Upd3FixturePatchTests(unittest.TestCase):
         # upd7: the published-baseline mode builds B from the tag (seam only), then G and D over the source.
         self.assertIn("--kind baseline-ref --baseline-ref", text)
         self.assertIn('b_json=$(build "$baseline" "$BASELINE_REF")', text)
-        self.assertIn('g_json=$(build "$good" v0.1.0-alpha.81)', text)
+        self.assertIn('g_json=$(build "$good" "$c_version")', text)
+        self.assertIn("c_version=v0.1.0-alpha.81 b_seq=80 c_seq=81", text)
+        # set3: the published v0.1.0-alpha.81 is built unpatched (the tag commit itself); candidates are alpha.82.
+        self.assertIn("c_version=v0.1.0-alpha.82 b_seq=81 c_seq=82 b_parent=", text)
+        self.assertIn('baseline=$tag_commit', text)
+        self.assertIn('startcheck=$(commit_fixture start-check "test(fixture): set3 start-check candidate', text)
+        self.assertIn('[[ -z $startcheck ]] || s_json=$(build "$startcheck" "$c_version")', text)
+        self.assertEqual(t.baseline_ref_patched("v0.1.0-alpha.81"), ())
+        self.assertEqual(t.baseline_ref_patched("v0.1.0-alpha.80"), t.BASELINE_REF_PATCHED)
         self.assertIn("b_seq=80 c_seq=81 b_parent=$tag_commit", text)
         self.assertIn("grep -q DIFFERENT", text)
         wrapper = (HERE / "run-upd1.sh").read_text().splitlines()
@@ -2299,6 +2342,71 @@ class WebSourceEvalTests(unittest.TestCase):
             e.component_return_jsx(source, "Missing")
         with self.assertRaises(e.Unsupported):
             e.component_return_jsx(source.replace("</pre>", "</div>", 1), "Shown")      # unbalanced JSX
+        self.assertEqual(e.component_renderings(source, "Shown"), [tree])              # one return: one rendering
+
+    def test_a_constant_tree_shown_plainly_or_inside_one_wrapper(self):
+        # RecoveryStatus since 2026-10-08: the tree is kept in a constant and closed under <details> when disclosed.
+        e = t.web_eval()
+        returned = ("    return closed ? <details className=\"d\"><summary>{t('title')}</summary>{shown}</details>"
+                    " : shown;\n")
+        source = (
+            "export function Shown({ a, closed = false }: { a: string; closed?: boolean }) {\n"
+            "    const [x] = useState(() => { try { return read(a); } catch { return null; } });\n"
+            "    if (!a) return null;\n"
+            "    const shown = <section className={closed ? 'in' : 'out'}>\n"
+            "        <div role=\"status\"><p>{t(a)}</p></div>\n"
+            "    </section>;\n" + returned + "}\n"
+            "export function Page() { return <main><p role=\"status\">{t('page')}</p><Shown a=\"k\" /></main>; }\n")
+        module = e.Module({"x": "export const unused = 'x';"})
+        plain, disclosed = e.component_renderings(source, "Shown")
+        self.assertEqual((plain["tag"], disclosed["tag"]), ("section", "details"))
+        self.assertEqual([kind for kind, _ in disclosed["children"]], ["element", "element"])    # summary, {shown}
+        self.assertIs(disclosed["children"][1][1], plain)
+        [region] = e.find_elements(plain, "role", "status")
+        [inside] = e.find_elements(disclosed, "role", "status")
+        self.assertIs(inside, region)                                   # one region, shown in both renderings
+        called = []
+        variables = {"t": lambda k: called.append(k) or k.upper(), "a": "key.a"}
+        self.assertEqual(e.render_region(region, variables, module), ["KEY.A"])
+        self.assertEqual(called, ["key.a"])
+        mirrored = source.replace(returned, "    return !closed ? shown : <details>{shown}</details>;\n")
+        self.assertEqual([tree["tag"] for tree in e.component_renderings(mirrored, "Shown")], ["section", "details"])
+        # The strict single-return reader is unchanged: this shape has no ``return <...>``.
+        with self.assertRaisesRegex(e.Unsupported, "returns JSX 0 times"):
+            e.component_return_jsx(source, "Shown")
+        unread = {
+            "the wrapper does not show the constant": returned.replace("{shown}</details>", "</details>"),
+            "the wrapper shows it twice": returned.replace("{shown}", "{shown}{shown}"),
+            "the constant is nested deeper": returned.replace("{shown}", "<div>{shown}</div>"),
+            "the constant is decorated": returned.replace("{shown}", "{closed && shown}"),
+            "two wrappers": returned.replace(": shown;", ": <div>{shown}</div>;"),
+            "another name": returned.replace(": shown;", ": other;"),
+            "a nested choice": returned.replace("closed ?", "closed ? a ? null :"),
+            "a call result": returned.replace(": shown;", ": wrap(shown);"),
+        }
+        for name, line in unread.items():
+            with self.subTest(change=name):
+                self.assertNotEqual(line, returned)
+                with self.assertRaisesRegex(e.Unsupported, "returns JSX 0 times"):
+                    e.component_renderings(source.replace(returned, line), "Shown")
+        for name, changed in {
+            "a plain return beside the wrapped constant": source.replace(
+                "    if (!a) return null;\n", "    if (!a) return <p>none</p>;\n"),
+            "two wrapped returns": source.replace(returned, "    if (x) " + returned.strip() + "\n" + returned),
+        }.items():
+            with self.subTest(change=name):
+                with self.assertRaisesRegex(e.Unsupported, "and a wrapped constant"):
+                    e.component_renderings(changed, "Shown")
+        # A constant that is not a JSX tree, or one declared inside a block, is not followed.
+        for name, changed in {
+            "not JSX": source.replace("const shown = <section", "const shown = cond && <section"),
+            "inside a block": source.replace("    const shown = <section", "    { const shown = <section")
+                                    .replace("    </section>;\n", "    </section>; }\n"),
+        }.items():
+            with self.subTest(change=name):
+                self.assertNotEqual(changed, source)
+                with self.assertRaisesRegex(e.Unsupported, "returns JSX 0 times"):
+                    e.component_renderings(changed, "Shown")
 
 
 H11_TEXTS = HERE / "evidence" / "upd4-20261001" / "h11-product-screen-texts.txt"
@@ -2393,6 +2501,80 @@ class H11RecoveryScreenTests(unittest.TestCase):
         rules = t.parse_card_rules(dict(self.sources, screen=swapped))
         keys = t.recovery_guidance(self.translator, paused_on_port(), rules)["keys"]
         self.assertLess(keys.index("recovery.automatic.resume"), keys.index("recovery.automatic.inspect"))
+
+    # 2026-10-08: RecoveryStatus keeps its tree in ``status`` and, during the planned certificate handover, shows it
+    # closed under <details> (``disclosed``). Both renderings are the build's own and both are read.
+    PLAIN_CONSTANT = "const status = <section"
+    DISCLOSED_RETURN = "{status}</details> : status;"
+    DISCLOSED_LINE = re.compile(r"\n[ \t]*return disclosed \? <details[^\n]*\{status\}</details> : status;")
+
+    def disclosed_source(self):
+        screen_tsx = self.sources["screen"]
+        if self.PLAIN_CONSTANT not in screen_tsx or len(self.DISCLOSED_LINE.findall(screen_tsx)) != 1:
+            self.skipTest("the build's RecoveryStatus no longer closes its status under <details>")
+        return screen_tsx
+
+    def test_the_disclosed_screen_is_read_like_the_plain_one(self):
+        screen_tsx, e = self.disclosed_source(), t.web_eval()
+        self.assertEqual(self.rules["screen"]["renderings"], ["section", "details"])
+        plain, disclosed = e.component_renderings(screen_tsx, t.SCREEN_COMPONENT)
+        # The disclosed rendering is the build's own wrapper: its title, then the very same section.
+        self.assertEqual([child[1]["tag"] for child in disclosed["children"] if child[0] == "element"],
+                         ["summary", "section"])
+        self.assertIs(disclosed["children"][-1][1], plain)
+        regions = []
+        for tree in (plain, disclosed):
+            [region] = e.find_elements(tree, *t.SCREEN_REGION)
+            self.assertTrue(region == self.rules["screen"]["region"])       # the region the loaded rules evaluate
+            regions.append(region)
+        self.assertIs(regions[1], regions[0])                               # one element, shown in both renderings
+        # Evaluated from each rendering on its own: the real keys and lines, the same in both, for every status.
+        for name, status, keys in (("retry", retry_scheduled_status(), self.RETRY_KEYS),
+                                   ("paused", paused_on_port(), self.PAUSED_KEYS),
+                                   ("unread", None, ["recovery.observationUnavailable"])):
+            with self.subTest(status=name):
+                plainly, closed = (t.recovery_guidance(self.translator, status, dict(self.rules, screen={
+                    "component": t.SCREEN_COMPONENT, "region": region})) for region in regions)
+                self.assertEqual((plainly["keys"], plainly["missing_keys"]), (keys, []))
+                self.assertEqual((closed["keys"], closed["texts"], closed["missing_keys"]),
+                                 (plainly["keys"], plainly["texts"], []))
+                self.assertEqual(t.recovery_guidance(self.translator, status, self.rules)["texts"], closed["texts"])
+        self.assertIn(t.RECOVERY_LOG_COMMAND, t.recovery_guidance(self.translator, paused_on_port(),
+                                                                   self.rules)["texts"]["tr"])
+
+    def test_a_build_with_the_single_return_is_read_as_before(self):
+        # The baseline of an update trial predates the wrapper: ``return <section ...>`` and nothing else.
+        screen_tsx = self.disclosed_source()
+        older = self.DISCLOSED_LINE.sub("", screen_tsx).replace(self.PLAIN_CONSTANT, "return <section", 1)
+        self.assertNotIn("<details", older)
+        rules = t.parse_card_rules(dict(self.sources, screen=older))
+        self.assertEqual(rules["screen"]["renderings"], ["section"])
+        for status, keys in ((retry_scheduled_status(), self.RETRY_KEYS), (paused_on_port(), self.PAUSED_KEYS)):
+            older_screen = t.recovery_guidance(self.translator, status, rules)
+            self.assertEqual(older_screen["keys"], keys)
+            self.assertEqual(older_screen["texts"], t.recovery_guidance(self.translator, status, self.rules)["texts"])
+
+    def test_a_disclosed_screen_the_reader_cannot_follow_is_unknown_never_a_finding(self):
+        screen_tsx = self.disclosed_source()
+        changes = {
+            "the wrapper does not show the status": screen_tsx.replace(self.DISCLOSED_RETURN, "</details> : status;"),
+            "the wrapper has a status region of its own": screen_tsx.replace(
+                self.DISCLOSED_RETURN, "<p role=\"status\">x</p>" + self.DISCLOSED_RETURN),
+            "the wrapper is chosen by a helper": screen_tsx.replace(
+                self.DISCLOSED_RETURN, "{status}</details> : wrap(status);"),
+            "a second plain return": screen_tsx.replace(
+                self.PLAIN_CONSTANT, "if (embedded) return <p role=\"status\">x</p>;\n    " + self.PLAIN_CONSTANT),
+        }
+        for name, source in changes.items():
+            with self.subTest(change=name):
+                self.assertNotEqual(source, screen_tsx)
+                rules = t.parse_card_rules(dict(self.sources, screen=source))
+                self.assertNotIn("region", rules["screen"])
+                self.assertIn("cannot be read", rules["screen"]["unavailable"])
+                screen = t.recovery_guidance(self.translator, paused_on_port(), rules)
+                self.assertTrue(screen["unavailable"], screen)
+                self.assertEqual((screen["keys"], screen["actionable"], screen["no_actor_or_action"]),
+                                 ([], None, False))
 
     def test_a_changed_or_unreadable_screen_is_unknown_never_a_finding(self):
         changes = {

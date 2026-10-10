@@ -1,0 +1,234 @@
+Thu Oct  8 08:55:51 PM UTC 2026
+--- memory
+               total        used        free      shared  buff/cache   available
+Mem:           15697         677       14681           3         533       15020
+Swap:           4096           0        4096
+--- qemu
+--- kvm
+crw-rw-rw- 1 root kvm 10, 232 Oct  8 23:55 /dev/kvm
+--- go
+go version go1.26.5 linux/amd64
+--- node
+v26.8.1
+12.0.2
+--- python
+Python 3.14.7
+--- images
+total 1486060
+drwx------ 2 root root      4096 Oct  1 15:57 .
+drwx------ 5 root root      4096 Sep 28 21:06 ..
+-r--r--r-- 5 root root 556609024 Sep 27 02:09 Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2
+-r--r--r-- 5 root root 340262912 Sep 27 02:09 debian-13-genericcloud-amd64-20260826-2582.qcow2
+-r--r--r-- 2 root root 624829952 Sep  8 20:39 ubuntu-24.04-server-cloudimg-amd64-20260826.img
+--- existing cp-set1*
+none
+--- other jobs
+--- repo head
+c4cf7fd9d49677b16a60bd05bbe90f08be73cde6
+--- c4cf7fd9
+c4cf7fd9d49677b16a60bd05bbe90f08be73cde6
+--- builds
+20261002t203047z
+20261002t203514z
+--- git local config key list
+b6f8491de6f4969250c85cd1d20d8607  -
+--- var/tmp listing
+celikpanel-alpha27-portal-prep-native-01e16e90
+celikpanel-alpha65-agent-nonroot.test
+celikpanel-alpha74-preflight-20260913
+celikpanel-authority-v3-tests.9eiMhHt8
+celikpanel-authority-v3-tests.tcvUYiJ0
+celikpanel-authority-v3-tests.YQiUah4a
+celikpanel-authority-v3-tests.zcgg2JSH
+celikpanel-completion-db-tests.EIu1oYl8
+celikpanel-completion-db-tests.KaR6iriY
+celikpanel-completion-db-tests.RGXOEvTH
+celikpanel-db-committed-check.opjHuMHM
+celikpanel-db-core-283vgfmb
+celikpanel-db-core-83nyf7e7
+celikpanel-db-core-race-q5o70jmy
+celikpanel-db-legacy-l1k1cq2v
+celikpanel-db-legacy-race-jzrr8iwx
+celikpanel-db-privileged-guard.U6mONlYL
+celikpanel-db-shell-contracts.asMsohTq
+celikpanel-db-shell-contracts.R355AbmB
+celikpanel-db-shell-contracts.t0BLwc2F
+celikpanel-dns-review.lsbAar7X
+celikpanel-exchange-offline.2x4i2O.log
+celikpanel-exchange-offline.5qV0tI.log
+celikpanel-exchange-offline.c9zzk3.log
+celikpanel-exchange-offline.MfNhL0.log
+celikpanel-exchange-offline.PG41EH.log
+celikpanel-exchange-offline.rdVdZj.log
+celikpanel-exchange-offline.SJeVra.log
+celikpanel-exchange-offline.U91Ws3.log
+celikpanel-exchange-offline.vdK3a3.log
+celikpanel-exchange-trace-48ze055p
+celikpanel-exchange-trace-final-gab3kv8i
+celikpanel-exchange-tracer.1Rd4rE.log
+celikpanel-exchange-tracer.Bw0Arl.log
+celikpanel-exchange-tracer.GSCTXa.log
+celikpanel-exchange-tracer-user.9GOvme.log
+celikpanel-exchange-tracer-user.9xSUKe.log
+celikpanel-exchange-tracer-user.Q3V81X.log
+celikpanel-exchange-tracer.zNkrc4.log
+celikpanel-exit-before.tDhmIWNF
+celikpanel-exit-diagnostic.lohqqlgt
+celikpanel-exit-stop-diagnostic.px_w2qqi
+celikpanel-exit-trace.bIVuSpkR
+celikpanel-exit-trace.BSsii90t
+celikpanel-exit-wait-diagnostic.ip1mp5_0
+celikpanel-go1.26.5
+celikpanel-go1265-audit.RqrD4DGc
+celikpanel-go-cache
+celikpanel-go-mod-cache
+celikpanel-go-test
+celikpanel-isolated-db-integration.DjNJNdmB
+celikpanel-isolated-db-integration.k6InLt36
+celikpanel-isolated-db-integration.or70WON9
+celikpanel-isolated-db-shell.MmuwES5r
+celikpanel-isolated-db-shell.NW4NkSfZ
+celikpanel-key-save-review.LEVC5rKU
+celikpanel-key-save-review.liMIpbNS
+celikpanel-key-save-review.rfBiBxXo
+celikpanel-license-entry60-panel
+celikpanel-mail-schema-agent-checker
+celikpanel-native-trace-tests.m_kp6wjc
+celikpanel-native-trace-tests.xy0hxefx
+celikpanel-native-trace-tests.yo70bd0o
+celikpanel-native-wal-ci.wrc26qb_
+celikpanel-nativewal-offline.2xxlQD.log
+celikpanel-nativewal-offline.dQ2Sw7.log
+celikpanel-nativewal-offline.jMXp25.log
+celikpanel-nativewal-offline.MWC7EZ.log
+celikpanel-nativewal-offline.q5bvkK.log
+celikpanel-nativewal-offline.QtGgDh.log
+celikpanel-native-wal-reader-ci.xekgehso
+celikpanel-recovery-kit-gq476f3m
+celikpanel-release-alpha65-20260911
+celikpanel-release-alpha66-20260911
+celikpanel-release-alpha67-20260911
+celikpanel-release-alpha68-20260911
+celikpanel-release-alpha69-20260912
+celikpanel-release-alpha70-20260912
+celikpanel-release-alpha71-20260912
+celikpanel-release-alpha72-20260912
+celikpanel-release-alpha73-20260913
+celikpanel-release-alpha74-20260913
+celikpanel-release-alpha75-20260913
+celikpanel-release-alpha76-20260913
+celikpanel-release-alpha77-20260913
+celikpanel-release-alpha78-20260914
+celikpanel-release-alpha79-20260914
+celikpanel-release-alpha80-20260914
+celikpanel-remote-build.2JETSTO6
+celikpanel-remote-build.nAQZrCzj
+celikpanel-remote-dns.6VeTEUMM
+celikpanel-remote-dns.cIUuARIw
+celikpanel-remote-dns.FxaJWS8Z
+celikpanel-remote-dns.fy02pEEk
+celikpanel-remote-dns.reuRzgmp
+celikpanel-remote-final.aajHEQf4
+celikpanel-remote-followup.t056OpNf
+celikpanel-setup-bind-build.GAH9eySV
+celikpanel-setup-bind.ssuoKpK2
+celikpanel-setup-check.Fv2U2CCJ
+celikpanel-setup-check.nZZN8PFp
+celikpanel-setup-dns-82dckma4
+celikpanel-setup-lifecycle.7moVy8B7
+celikpanel-setup-recovery.6sxtAnSJ
+celikpanel-tls-tree.1Lc6jD8Z
+celikpanel-tls-tree.1Pv1u1AI
+celikpanel-tls-tree.6AN5ynfb
+celikpanel-tls-tree.8hFj8PKA
+celikpanel-tls-tree.AO4yfZ88
+celikpanel-tls-tree.CMASPpEY
+celikpanel-tls-tree.Ix6cxeGu
+celikpanel-tls-tree.m3sKoRvz
+celikpanel-tls-tree.mkvPqjJi
+celikpanel-tls-tree.R4CyKDvu
+celikpanel-tls-tree.Sk990lZN
+celikpanel-tls-tree.tuxeAN3w
+celikpanel-tls-tree.UkxGejNP
+celikpanel-tls-tree.xR6mMfbt
+celikpanel-unit-transition-bd77acd0cd55
+celikpanel-wal-offline.742wHRKf.log
+celikpanel-wal-offline.FxRpzokU.log
+celikpanel-waltrace.4lXhA4pe
+celikpanel-waltrace.AGkdkTpF
+celikpanel-waltrace.fFjXhrAR
+celikpanel-waltrace-go-check.5s80sbyr
+celikpanel-waltrace.hAo6dQga
+celikpanel-waltrace.SUOYxS4f
+celikpanel-waltrace-unprivileged.dkfc_xhi
+celikpanel-waltrace-unprivileged.e0lfopkk
+celikpanel-waltrace.VYKN71pl
+cp-av-fixture-avyrvo7s
+cp-av-fixture-sd1wfmiz
+cp-b10-build.log
+cp-b10-setup.log
+cp-b10-triggertest.log
+cp-b10-webbuild.log
+cp-b10-webdist.sha256
+cp-b11-build.log
+cp-b11-setup.log
+cp-b11-tcount.log
+cp-b11-triggertest.log
+cp-b11-webbuild.log
+cp-b11-webdist.sha256
+cp-b12-build.log
+cp-b12-setup.log
+cp-b12-tcount.log
+cp-b12-triggertest.log
+cp-b12-webdist.sha256
+cp-b4-build.log
+cp-b4-setup.log
+cp-b4-webdist.sha256
+cp-b5-build.log
+cp-b5-setup.log
+cp-b5-webdist.sha256
+cp-b6a-build.log
+cp-b6a-setup.log
+cp-b6a-webdist.sha256
+cp-b6b-build.log
+cp-b6b-setup.log
+cp-b6b-webdist.sha256
+cp-b7-build.log
+cp-b7-setup.log
+cp-b7-webdist.sha256
+cp-b8-build.log
+cp-b8r-build.log
+cp-b8r-setup.log
+cp-b8r-webbuild.log
+cp-b8r-webdist.sha256
+cp-b8-setup.log
+cp-b8-webbuild.log
+cp-b8-webdist.sha256
+cp-b9-build.log
+cp-b9-setup.log
+cp-b9-triggertest.log
+cp-b9-webbuild.log
+cp-b9-webdist.sha256
+cp-baseline-fixture-uid.q1ngnbs2
+cp-baseline-fixture-uid.u_nxx47h
+cp-bind-adoption-inverse-20260927
+cp-bind-delete26-evidence.tar.gz
+cp-bind-inverse-fixture-20260927
+cp-bind-late26-evidence.tar.gz
+cp-bind-source-inverse-20260927
+cp-boot-wait-go-36pn180o
+cp-bound-baseline-ii7qz7j2
+cp-bound-baseline-z547hojy
+cp-bound-offline-tests-aj.log
+cp-bound-policy-8j6rzf7p
+cp-bound-policy-hy847huu
+cp-bound-target-3auom2n6
+cp-bound-target-57h3jjp2
+cp-bound-target-b19t7en1
+cp-bound-target-ixykkao3
+cp-bound-target-mgi_1c1w
+cp-bound-target-pxkarvox
+cp-bound-worker-dba4z5f1
+cp-budget-source-84ve5240
+cp-completion-fixtures-final.log
+cp-completion-

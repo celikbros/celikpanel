@@ -1,0 +1,35 @@
+{
+  "at": "2026-10-09T22:35:57Z",
+  "domain": "set4-php.test",
+  "files": [],
+  "mode": "read-nginx",
+  "nginx_test": {
+    "at": "2026-10-09T22:35:57Z",
+    "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "unit": {
+    "ActiveEnterTimestamp": "Fri 2026-10-09 22:26:31 UTC",
+    "ActiveExitTimestamp": "",
+    "ActiveState": "active",
+    "ExecMainPID": "12032",
+    "ExecMainStartTimestamp": "Fri 2026-10-09 22:26:32 UTC",
+    "ExecMainStatus": "0",
+    "ExecReload": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; master_process on; -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 22:35:54 UTC] ; stop_time=[Fri 2026-10-09 22:35:54 UTC] ; pid=44528 ; code=exited ; status=0 }",
+    "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+    "InactiveEnterTimestamp": "",
+    "InactiveExitTimestamp": "Fri 2026-10-09 22:26:31 UTC",
+    "InvocationID": "842d3d98d1e84e7abd037eaa699518cb",
+    "LoadState": "loaded",
+    "MainPID": "12032",
+    "NRestarts": "0",
+    "ReloadResult": "success",
+    "Result": "success",
+    "StateChangeTimestamp": "Fri 2026-10-09 22:35:54 UTC",
+    "SubState": "running",
+    "Type": "forking"
+  }
+}

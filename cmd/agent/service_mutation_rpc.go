@@ -2125,6 +2125,14 @@ func setHostMutationBusyResponse(response *ServiceMutationResponse, err error) b
 	// Bosluk denetimi hangisi oldugunu ekledi; disari tasi.
 	if reason, ok := serviceMutationReadinessReason(err); ok {
 		response.Reason = reason
+	} else if errors.Is(err, errServiceMutationBusy) {
+		// errServiceMutationBusy has one meaning: another Agent job owns the
+		// lease (the Panel's own startup work, a renewal, a certificate
+		// activation). Say so; a held lock whose owner is not known keeps no
+		// reason and the generic sentence.
+		// Bu hata yalnız başka bir Agent işinin kirayı tuttuğunu söyler; sahibi
+		// bilinmeyen kilit nedensiz ve genel cümleyle kalır.
+		response.Reason = transport.HostMutationReasonAgentMutation
 	}
 	return true
 }

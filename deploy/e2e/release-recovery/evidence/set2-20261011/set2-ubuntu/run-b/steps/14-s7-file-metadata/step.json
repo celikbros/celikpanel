@@ -1,0 +1,24 @@
+{
+  "checks": {
+    "checks": 9,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T04:09:31Z",
+    "notes": [],
+    "started_at": "2026-10-09T04:09:30Z",
+    "substeps": {
+      "/etc/mysql/mariadb.conf.d/50-server.cnf": "passed",
+      "/etc/postfix/main.cf": "passed",
+      "/etc/postgresql/16/main/pg_hba.conf": "passed",
+      "/etc/postgresql/16/main/postgresql.conf": "passed",
+      "O5": "passed"
+    },
+    "title": "owner, group and mode of the files the Panel wrote",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T04:09:31Z",
+  "name": "S7-file-metadata",
+  "started_at": "2026-10-09T04:09:30Z",
+  "verdict": "passed"
+}

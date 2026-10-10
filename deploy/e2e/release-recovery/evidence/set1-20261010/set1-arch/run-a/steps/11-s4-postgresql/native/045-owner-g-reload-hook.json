@@ -1,0 +1,25 @@
+{
+  "action": "owner-reload-hook",
+  "applied": {
+    "dropin": "/etc/systemd/system/postgresql.service.d/set1-owner-reload-hook.conf",
+    "script": "/usr/local/sbin/set1-owner-reload-hook",
+    "unit": "postgresql.service"
+  },
+  "at": "2026-10-08T21:58:02Z",
+  "daemon_reload": {
+    "argv": [
+      "systemctl",
+      "daemon-reload"
+    ],
+    "at": "2026-10-08T21:58:02Z",
+    "returncode": 0,
+    "seconds": 0.497,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "exec_reload": "ExecReload={ path=/usr/local/sbin/set1-owner-reload-hook ; argv[]=/usr/local/sbin/set1-owner-reload-hook ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n",
+  "mode": "owner-reload-hook",
+  "owner_action": true,
+  "schema": "celikpanel/set1-native/v1"
+}

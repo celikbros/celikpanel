@@ -3,7 +3,8 @@ import { Mail, Plus, Trash2, ArrowRight, AtSign, Pencil, Info, KeyRound } from '
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { apiErrorText, readApiError } from '../lib/apiError';
-import { Button, Dialog, EmptyState, Spinner, UsageBar, inputClass } from './ui';
+import { useRemote, type Remote } from '../lib/remote';
+import { Button, Checking, CouldNotCheck, Dialog, KnownEmpty, RemoteGate, UsageBar, inputClass } from './ui';
 import { MailAuthPanel } from './MailAuthPanel';
 import { MailSettingsPanel } from './MailSettingsPanel';
 
@@ -38,14 +39,44 @@ interface DomainMailManagerProps {
 }
 
 const mailPasswordByteLength = (value: string) => new TextEncoder().encode(value).byteLength;
+
+// The decoders of the three reads of this screen. An answer that does not hold
+// its list is not the contract and is unknown; it is never an empty list.
+// Bu ekranın üç okumasının çözücüleri. Listesini taşımayan yanıt bilinmeyendir;
+// asla boş liste değildir.
+function decodeAccounts(raw: unknown): EmailAccount[] {
+    const accounts = (raw as { accounts?: unknown } | null)?.accounts;
+    if (!Array.isArray(accounts)) throw new Error('accounts');
+    return accounts as EmailAccount[];
+}
+function decodeForwardings(raw: unknown): Forwarding[] {
+    const forwardings = (raw as { forwardings?: unknown } | null)?.forwardings;
+    if (!Array.isArray(forwardings)) throw new Error('forwardings');
+    return forwardings as Forwarding[];
+}
+function decodeQuota(raw: unknown): QuotaStatus {
+    const status = raw as Partial<QuotaStatus> | null;
+    if (!status || typeof status.plugin_enabled !== 'boolean') throw new Error('quota');
+    return { plugin_enabled: status.plugin_enabled, usages: Array.isArray(status.usages) ? status.usages : [] };
+}
+
+// The number beside a tab: the count once the list is known, "…" while it is
+// read and "–" when it could not be read. Never a zero nobody counted.
+// Sekmenin yanındaki sayı: liste bilinince sayı, okunurken "…", okunamayınca "–".
+const countOf = (remote: Remote<unknown[]>) => (remote.state === 'known' ? remote.value.length : remote.state === 'loading' ? '…' : '–');
 const WebmailAccess = lazy(() => import('./WebmailAccess'));
 
 export function DomainMailManager({ domainId, domainName, readOnly = false }: DomainMailManagerProps) {
     const { t } = useI18n();
-    const [accounts, setAccounts] = useState<EmailAccount[]>([]);
-    const [forwardings, setForwardings] = useState<Forwarding[]>([]);
-    const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'accounts' | 'forwarding' | 'auth' | 'settings'>('accounts');
+    // The two lists are read once for the screen, so the number beside each
+    // tab is the server's and not a zero for a tab nobody opened yet. Each is
+    // being read, could not be read, or known (9 Oct 2026): a failed read used
+    // to leave an empty list with no message.
+    // İki liste ekran için bir kez okunur. Her biri okunuyor, okunamadı ya da
+    // biliniyor durumundadır.
+    const accountsRead = useRemote(`/api/v1/domains/${domainId}/mail/accounts`, decodeAccounts);
+    const forwardingsRead = useRemote(`/api/v1/domains/${domainId}/mail/forwardings`, decodeForwardings);
     const [showForm, setShowForm] = useState(false);
 
     const [user, setUser] = useState('');
@@ -58,7 +89,8 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
     // doveadm calls behind it can be slow with many mailboxes.
     // Canlı kota kullanımı (hızlı) hesap listesinden ayrı gelir; arkasındaki
     // doveadm çağrıları çok kutuda yavaş olabilir.
-    const [quotaStatus, setQuotaStatus] = useState<QuotaStatus | null>(null);
+    const quotaRead = useRemote(activeTab === 'accounts' ? `/api/v1/domains/${domainId}/mail/quota` : null, decodeQuota);
+    const quotaStatus = quotaRead.remote.state === 'known' ? quotaRead.remote.value : null;
     const [editingQuota, setEditingQuota] = useState<number | null>(null);
     const [quotaDraft, setQuotaDraft] = useState(1024);
     const [passwordAccount, setPasswordAccount] = useState<EmailAccount | null>(null);
@@ -67,7 +99,6 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
     const [passwordSaving, setPasswordSaving] = useState(false);
     const passwordRequestRef = useRef<AbortController | null>(null);
     useEffect(() => {
-        loadData();
         setShowForm(false);
         setEditingQuota(null);
     }, [domainId, activeTab, readOnly]);
@@ -88,32 +119,14 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
         };
     }, [domainId, readOnly, activeTab]);
 
-    const loadData = async () => {
-        // The auth tab owns its own data loading (MailAuthPanel).
-        // Auth sekmesi kendi veri yüklemesine sahiptir (MailAuthPanel).
-        if (activeTab === 'auth' || activeTab === 'settings') {
-            setLoading(false);
-            return;
-        }
-        setLoading(true);
-        try {
-            if (activeTab === 'accounts') {
-                const res = await fetch(`/api/v1/domains/${domainId}/mail/accounts`);
-                if (res.ok) setAccounts((await res.json()).accounts || []);
-                fetch(`/api/v1/domains/${domainId}/mail/quota`)
-                    .then((r) => (r.ok ? r.json() : null))
-                    .then(setQuotaStatus)
-                    .catch(() => {});
-            } else {
-                const res = await fetch(`/api/v1/domains/${domainId}/mail/forwardings`);
-                if (res.ok) setForwardings((await res.json()).forwardings || []);
-            }
-        } catch {
-            showToast('error', t('mail.loadFailed'));
-        } finally {
-            setLoading(false);
-        }
+    // After a change of this screen the list it changed is read again, and
+    // with the mailboxes their usage.
+    // Bu ekranın bir değişikliğinden sonra değiştirdiği liste yeniden okunur.
+    const reloadAccounts = () => {
+        void accountsRead.retry();
+        void quotaRead.retry();
     };
+    const reloadForwardings = () => void forwardingsRead.retry();
 
     const createAccount = async () => {
         if (readOnly || !user || !pass) return;
@@ -129,7 +142,7 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
             setShowForm(false);
             setUser('');
             setPass('');
-            loadData();
+            reloadAccounts();
         } catch {
             showToast('error', t('mail.createFailed'));
         }
@@ -146,7 +159,7 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
             if (!res.ok) throw new Error();
             showToast('success', t('mail.quotaUpdated'));
             setEditingQuota(null);
-            loadData();
+            reloadAccounts();
         } catch {
             showToast('error', t('common.error'));
         }
@@ -159,7 +172,7 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
             const res = await fetch(`/api/v1/domains/${domainId}/mail/accounts?id=${id}`, { method: 'DELETE' });
             if (!res.ok) throw new Error();
             showToast('success', t('mail.accountDeleted'));
-            loadData();
+            reloadAccounts();
         } catch {
             showToast('error', t('common.error'));
         }
@@ -236,7 +249,7 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
             setShowForm(false);
             setFwdSource('');
             setFwdDest('');
-            loadData();
+            reloadForwardings();
         } catch {
             showToast('error', t('mail.forwarderFailed'));
         }
@@ -249,13 +262,13 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
             const res = await fetch(`/api/v1/domains/${domainId}/mail/forwardings?id=${id}`, { method: 'DELETE' });
             if (!res.ok) throw new Error();
             showToast('success', t('mail.forwarderDeleted'));
-            loadData();
+            reloadForwardings();
         } catch {
             showToast('error', t('common.error'));
         }
     };
 
-    const count = activeTab === 'accounts' ? accounts.length : forwardings.length;
+    const listed = activeTab === 'accounts' ? accountsRead.remote : forwardingsRead.remote;
     const passwordBytes = mailPasswordByteLength(newPassword);
     const passwordInRange = passwordBytes >= 8 && passwordBytes <= 1024;
     const passwordMatches = passwordConfirmation.length > 0 && newPassword === passwordConfirmation;
@@ -263,9 +276,12 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
     return (
         <div>
             <WebmailAccess domainId={domainId} />
-            <div className="mb-4 flex items-center gap-1 border-b border-border">
-                <Tab active={activeTab === 'accounts'} onClick={() => setActiveTab('accounts')} label={t('mail.tab.accounts')} count={accounts.length} />
-                <Tab active={activeTab === 'forwarding'} onClick={() => setActiveTab('forwarding')} label={t('mail.tab.forwarding')} count={forwardings.length} />
+            {/* The four tabs wrap on a narrow screen: a tab that runs off the
+                edge cannot be reached on a phone.
+                Dört sekme dar ekranda alt satıra geçer. */}
+            <div className="mb-4 flex flex-wrap items-center gap-x-1 border-b border-border">
+                <Tab active={activeTab === 'accounts'} onClick={() => setActiveTab('accounts')} label={t('mail.tab.accounts')} count={countOf(accountsRead.remote)} />
+                <Tab active={activeTab === 'forwarding'} onClick={() => setActiveTab('forwarding')} label={t('mail.tab.forwarding')} count={countOf(forwardingsRead.remote)} />
                 <Tab active={activeTab === 'auth'} onClick={() => setActiveTab('auth')} label={t('mailauth.tab')} />
                 <Tab active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} label={t('mail.tab.settings')} />
             </div>
@@ -279,16 +295,19 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
                 <MailSettingsPanel domainId={domainId} domainName={domainName} readOnly={readOnly} />
             ) : (
                 <>
-            <div className="mb-3 flex items-center justify-between">
-                <span className="text-xs text-fg-subtle">{t('common.itemsTotal', { n: count })}</span>
+            <div className="mb-3 flex min-h-[2.25rem] items-center justify-between gap-3">
+                {/* The total is the server's; while the list is not known
+                    there is no total to state.
+                    Toplam sunucunundur; liste bilinmezken toplam yoktur. */}
+                <span className="text-xs text-fg-muted">{listed.state === 'known' ? t('common.itemsTotal', { n: listed.value.length }) : ''}</span>
                 {!readOnly && (
-                    <Button variant="primary" icon={Plus} onClick={() => setShowForm((s) => !s)}>
+                    <Button variant="primary" icon={Plus} disabled={listed.state !== 'known'} onClick={() => setShowForm((s) => !s)}>
                         {activeTab === 'accounts' ? t('mail.addAccount') : t('mail.addForwarder')}
                     </Button>
                 )}
             </div>
 
-            {!readOnly && showForm && (
+            {!readOnly && showForm && listed.state === 'known' && (
                 <div className="mb-4 rounded-lg border border-border bg-surface-2/50 p-4">
                     {activeTab === 'accounts' ? (
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -331,21 +350,28 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
                 </div>
             )}
 
-            {loading ? (
-                <div className="flex items-center justify-center py-12">
-                    <Spinner size="sm" />
-                </div>
-            ) : activeTab === 'accounts' ? (
-                accounts.length === 0 ? (
-                    <EmptyState icon={Mail} title={t('mail.emptyAccounts')} />
-                ) : (
-                    <>
-                        {quotaStatus && !quotaStatus.plugin_enabled && (
-                            <p className="mb-3 flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 px-3 py-2 text-xs text-fg-muted">
-                                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
-                                {t('mail.quotaNotEnforced')}
-                            </p>
-                        )}
+            {activeTab === 'accounts' ? (
+                <RemoteGate
+                    remote={accountsRead.remote}
+                    checking={t('mail.accounts.checking')}
+                    failed={t('mail.accounts.unknown')}
+                    onRetry={() => void accountsRead.retry()}
+                    busy={accountsRead.reading}
+                    className="min-h-[2.75rem]"
+                >
+                    {({ value: accounts, observedAt, stale }) => (accounts.length === 0 ? (
+                        <KnownEmpty of={{ value: accounts, observedAt }} icon={Mail} title={t('mail.emptyAccounts')} />
+                    ) : (
+                        <>
+                            {quotaStatus && !quotaStatus.plugin_enabled && (
+                                <p className="mb-3 flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 px-3 py-2 text-xs text-fg-muted">
+                                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
+                                    {t('mail.quotaNotEnforced')}
+                                </p>
+                            )}
+                            {quotaRead.remote.state === 'unknown' && (
+                                <CouldNotCheck className="mb-3" text={t('mail.quota.unknown')} onRetry={() => void quotaRead.retry()} busy={quotaRead.reading} />
+                            )}
                         <div className="overflow-x-auto rounded-lg border border-border">
                             <table className="w-full text-sm">
                                 <thead>
@@ -369,7 +395,7 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-2.5 text-fg-muted">
-                                                    {!readOnly && editingQuota === a.id ? (
+                                                    {!readOnly && !stale && editingQuota === a.id ? (
                                                         <span className="flex items-center gap-2">
                                                             <input
                                                                 type="number"
@@ -390,12 +416,14 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
                                                             {a.quota_mb} MB
                                                             {!readOnly && (
                                                                 <button
+                                                                    disabled={stale}
                                                                     onClick={() => {
                                                                         setEditingQuota(a.id);
                                                                         setQuotaDraft(a.quota_mb);
                                                                     }}
                                                                     title={t('mail.editQuota')}
-                                                                    className="rounded p-1 text-fg-subtle hover:bg-surface-2 hover:text-fg"
+                                                                    aria-label={t('mail.editQuota')}
+                                                                    className="rounded p-1.5 text-fg-subtle hover:bg-surface-2 hover:text-fg disabled:pointer-events-none disabled:opacity-50"
                                                                 >
                                                                     <Pencil className="h-3.5 w-3.5" />
                                                                 </button>
@@ -414,7 +442,13 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
                                                             </span>
                                                         </div>
                                                     ) : (
-                                                        <span className="text-fg-subtle">—</span>
+                                                        // Usage that is still being read, could not be
+                                                        // read, or that the server has none for.
+                                                        // Hâlâ okunan, okunamayan ya da sunucunun
+                                                        // tutmadığı kullanım.
+                                                        <span className="text-xs text-fg-muted">
+                                                            {quotaRead.remote.state === 'loading' ? '…' : quotaRead.remote.state === 'unknown' ? t('mail.usageUnknown') : '—'}
+                                                        </span>
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-2.5 text-right">
@@ -423,13 +457,14 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
                                                             <button
                                                                 type="button"
                                                                 onClick={() => openPasswordDialog(a)}
+                                                                disabled={stale}
                                                                 aria-label={t('mail.changePasswordFor', { address: a.address })}
                                                                 title={t('mail.changePasswordFor', { address: a.address })}
                                                                 className="rounded-md p-1.5 text-fg-subtle hover:bg-surface-2 hover:text-primary"
                                                             >
                                                                 <KeyRound className="h-4 w-4" aria-hidden="true" />
                                                             </button>
-                                                            <DeleteBtn onClick={() => deleteAccount(a.id, a.address)} />
+                                                            <DeleteBtn disabled={stale} label={t('mail.deleteAccountNamed', { name: a.address })} onClick={() => deleteAccount(a.id, a.address)} />
                                                         </span>
                                                     )}
                                                 </td>
@@ -439,11 +474,21 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
                                 </tbody>
                             </table>
                         </div>
-                    </>
-                )
-            ) : forwardings.length === 0 ? (
-                <EmptyState icon={ArrowRight} title={t('mail.emptyForwarders')} />
+                        </>
+                    ))}
+                </RemoteGate>
             ) : (
+                <RemoteGate
+                    remote={forwardingsRead.remote}
+                    checking={t('mail.forwarders.checking')}
+                    failed={t('mail.forwarders.unknown')}
+                    onRetry={() => void forwardingsRead.retry()}
+                    busy={forwardingsRead.reading}
+                    className="min-h-[2.75rem]"
+                >
+                    {({ value: forwardings, observedAt, stale }) => (forwardings.length === 0 ? (
+                        <KnownEmpty of={{ value: forwardings, observedAt }} icon={ArrowRight} title={t('mail.emptyForwarders')} />
+                    ) : (
                 <div className="overflow-x-auto rounded-lg border border-border">
                     <table className="w-full text-sm">
                         <thead>
@@ -464,13 +509,15 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
                                         </span>
                                     </td>
                                     <td className="px-4 py-2.5 text-right">
-                                        {!readOnly && <DeleteBtn onClick={() => deleteForwarding(f.id, f.source)} />}
+                                        {!readOnly && <DeleteBtn disabled={stale} label={t('mail.deleteForwarderNamed', { name: f.source })} onClick={() => deleteForwarding(f.id, f.source)} />}
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
+                    ))}
+                </RemoteGate>
             )}
                 </>
             )}
@@ -567,7 +614,7 @@ export function DomainMailManager({ domainId, domainName, readOnly = false }: Do
     );
 }
 
-function Tab({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count?: number }) {
+function Tab({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count?: number | string }) {
     return (
         <button
             onClick={onClick}
@@ -583,10 +630,16 @@ function Tab({ active, onClick, label, count }: { active: boolean; onClick: () =
     );
 }
 
-function DeleteBtn({ onClick }: { onClick: () => void }) {
+function DeleteBtn({ onClick, disabled, label }: { onClick: () => void; disabled?: boolean; label: string }) {
     return (
-        <button onClick={onClick} className="rounded-md p-1.5 text-fg-subtle hover:bg-surface-2 hover:text-danger">
-            <Trash2 className="h-4 w-4" />
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            aria-label={label}
+            title={label}
+            className="rounded-md p-1.5 text-fg-subtle hover:bg-surface-2 hover:text-danger disabled:pointer-events-none disabled:opacity-50"
+        >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
         </button>
     );
 }
@@ -597,23 +650,38 @@ function DeleteBtn({ onClick }: { onClick: () => void }) {
 // be fixed here — the card spells out what to enter at the hosting provider.
 // "Gelen kutusuna düşer mi" için tek trafik-ışığı kartı. PTR buradan
 // düzeltilemez — kart, barındırma sağlayıcısında ne girileceğini yazar.
+interface MailHealth {
+    overall: string;
+    server_ip: string;
+    expected_ptr: string;
+    checks: { id: string; status: string; detail?: string }[];
+}
+
+function decodeMailHealth(raw: unknown): MailHealth {
+    const health = raw as Partial<MailHealth> | null;
+    if (!health || typeof health.overall !== 'string' || !Array.isArray(health.checks)) throw new Error('mail health');
+    return health as MailHealth;
+}
+
 function DeliverabilityCard({ domainId }: { domainId: number }) {
     const { t } = useI18n();
-    const [data, setData] = useState<{
-        overall: string;
-        server_ip: string;
-        expected_ptr: string;
-        checks: { id: string; status: string; detail?: string }[];
-    } | null>(null);
-
-    useEffect(() => {
-        fetch(`/api/v1/domains/${domainId}/mail/health`)
-            .then((r) => (r.ok ? r.json() : null))
-            .then(setData)
-            .catch(() => {});
-    }, [domainId]);
-
-    if (!data) return null;
+    // The checks are read from the server. While they are read the card says
+    // so; when they could not be read it says that, with Retry, instead of
+    // vanishing as it did before 9 Oct 2026.
+    // Denetimler sunucudan okunur. Okunamadıklarında kart bunu Tekrar dene ile
+    // söyler; önceden kaybolurdu.
+    const { remote, reading, retry } = useRemote(`/api/v1/domains/${domainId}/mail/health`, decodeMailHealth);
+    if (remote.state !== 'known') {
+        return (
+            <section className="mb-5 rounded-xl border border-border bg-surface p-5">
+                <h3 className="mb-3 text-sm font-semibold text-fg">{t('mail.health.title')}</h3>
+                {remote.state === 'loading'
+                    ? <Checking label={t('mail.healthChecking')} />
+                    : <CouldNotCheck text={t('mail.healthUnknown')} onRetry={() => void retry()} busy={reading} />}
+            </section>
+        );
+    }
+    const data = remote.value;
 
     const tone: Record<string, string> = {
         ok: 'bg-success', warn: 'bg-warning', fail: 'bg-danger', unknown: 'bg-fg-subtle',

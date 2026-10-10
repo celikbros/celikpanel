@@ -194,6 +194,19 @@ class GuestPopulatedBaselineTests(unittest.TestCase):
         self.assertTrue(result['proof']['domain_defaults_40_42_verified'])
         self.assertEqual(result['proof']['old_rows_missing_or_changed'], 0)
 
+    def test_real_sql38_to43_candidate_with_request_identities_verified(self):
+        self.seeded()
+        connection = sqlite3.connect(self.database)
+        old.apply(connection, self.sql[38:43])
+        connection.close()
+        self.args.expected_version = 43
+        g.capture(self.args)
+        result = g.verify(self.args)
+        self.assertEqual(result['proof']['schema_version'], 43)
+        self.assertEqual(result['proof']['table_count'], 66)
+        self.assertTrue(result['proof']['domain_defaults_40_42_verified'])
+        self.assertEqual(result['proof']['old_rows_missing_or_changed'], 0)
+
     def test_wrong_guest_guard_refuses_before_any_seed_mutation(self):
         self.guard.side_effect = g.probe.ProbeError('DMI differs')
         with self.assertRaises(g.probe.ProbeError):

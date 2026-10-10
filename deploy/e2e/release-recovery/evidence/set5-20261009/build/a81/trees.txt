@@ -1,0 +1,12 @@
+source 67b62cc0f commit 67b62cc0fa4a6b8edd33e6a1bf4a55a982ceaaed tree a3167582da96fe38caa44b58dbc46cecf42a4600
+tag v0.1.0-alpha.81 commit a0beb7263d1f4ca72258f6b306f9111ba4e2a334 tree b1dffa78bcaca9e3514e5b2bc42f0e2cf47dca2f
+baseline a0beb7263d1f4ca72258f6b306f9111ba4e2a334 tree b1dffa78bcaca9e3514e5b2bc42f0e2cf47dca2f
+good 8c2250b05132fa91291a33bd23924d0aefd72617 tree 7e850e716b8d57bb6557205ee0fbbcc9afa6e71f
+files that differ between the source 67b62cc0f and the good candidate: deploy/release-sequence-policy 
+product files (cmd internal web) that differ between 67b62cc0f and the branch head 2ab7bf20c3070ec44e3231c470be47f3f9dd0c37: 0
+files that differ between 67b62cc0f and the branch head outside deploy/e2e/release-recovery/evidence/: 0
+product commits between cfa329676 (set3's candidate) and 67b62cc0f (git log --oneline cfa329676..67b62cc0f -- cmd internal web):
+67b62cc0f A value read from postconf is a value, or it is unknown
+1f182a483 Postfix Stop answers when Postfix has stopped; an import lists only what it imported
+e2be8af30 A mysqld that is not MariaDB does not validate a MariaDB option file
+557b554eb Corrections from the final native round

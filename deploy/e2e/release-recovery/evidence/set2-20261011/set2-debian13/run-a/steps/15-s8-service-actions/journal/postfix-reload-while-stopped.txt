@@ -1,0 +1,5 @@
+-- No entries --
+2026-10-09T03:42:23.074649+00:00 dns-debian13 postfix/postfix-script[41720]: the Postfix mail system is not running
+2026-10-09T03:42:23.599227+00:00 dns-debian13 postfix/postfix-script[41831]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T03:42:23.663575+00:00 dns-debian13 postfix/postfix-script[41860]: the Postfix mail system is not running
+2026-10-09T03:42:25.140482+00:00 dns-debian13 postfix/postfix-script[41928]: the Postfix mail system is not running

@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T03:42:09Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791517327",
+      "-n",
+      "400",
+      "-u",
+      "dovecot.service"
+    ],
+    "at": "2026-10-09T03:42:09Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T03:42:07.230570+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...\n2026-10-09T03:42:07.272146+00:00 dns-debian13 dovecot[40248]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)\n2026-10-09T03:42:07.281633+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791517327,
+  "units": [
+    "dovecot.service"
+  ]
+}

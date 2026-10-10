@@ -1,0 +1,85 @@
+{
+  "at": "2026-10-09T23:01:01Z",
+  "is_active": {
+    "postfix.service": "failed",
+    "postfix@-.service": "inactive"
+  },
+  "is_failed": {
+    "postfix.service": "failed",
+    "postfix@-.service": "inactive"
+  },
+  "journal": {
+    "postfix.service": [
+      "2026-10-09T23:00:56.157398+00:00 dns-debian13 postfix/submission/smtpd[42231]: connect from localhost[127.0.0.1]",
+      "2026-10-09T23:00:56.158305+00:00 dns-debian13 postfix/submission/smtpd[42231]: disconnect from localhost[127.0.0.1] quit=1 commands=1",
+      "2026-10-09T23:00:56.674868+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...",
+      "2026-10-09T23:00:56.724020+00:00 dns-debian13 postfix[42748]: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+      "2026-10-09T23:00:56.723942+00:00 dns-debian13 postfix[42748]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+      "2026-10-09T23:00:57.725509+00:00 dns-debian13 systemd[1]: postfix.service: Control process exited, code=exited, status=1/FAILURE",
+      "2026-10-09T23:00:57.725597+00:00 dns-debian13 postfix/master[24107]: terminating on signal 15",
+      "2026-10-09T23:00:57.728640+00:00 dns-debian13 systemd[1]: postfix.service: Failed with result 'exit-code'.",
+      "2026-10-09T23:00:57.728963+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance)."
+    ],
+    "postfix@-.service": []
+  },
+  "journal_product": [
+    "2026-10-09T23:00:56.589341+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:56 http: TLS handshake error from 127.0.0.1:48348: EOF",
+    "2026-10-09T23:00:57.788262+00:00 dns-debian13 postfix[42767]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+    "2026-10-09T23:00:58.818791+00:00 dns-debian13 cron[42772]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 24947: Resource temporarily unavailable)",
+    "2026-10-09T23:00:59.896566+00:00 dns-debian13 panel[37682]: 2026/10/09 23:00:59 [200][service action] stop postfix: SERVICE_ACTION_NOTE unit_marked_failed_config: postfix.service"
+  ],
+  "journal_systemd_manager": [
+    "2026-10-09T23:00:56.674868+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...",
+    "2026-10-09T23:00:57.725509+00:00 dns-debian13 systemd[1]: postfix.service: Control process exited, code=exited, status=1/FAILURE",
+    "2026-10-09T23:00:57.728640+00:00 dns-debian13 systemd[1]: postfix.service: Failed with result 'exit-code'.",
+    "2026-10-09T23:00:57.728963+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance)."
+  ],
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "since_epoch": 1791586853,
+  "units": {
+    "postfix.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 22:54:15 UTC",
+      "ActiveExitTimestamp": "Fri 2026-10-09 23:00:56 UTC",
+      "ActiveState": "failed",
+      "ExecMainPID": "24107",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 22:54:15 UTC",
+      "ExecMainStatus": "15",
+      "ExecReload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "InactiveEnterTimestamp": "Fri 2026-10-09 23:00:57 UTC",
+      "InactiveExitTimestamp": "Fri 2026-10-09 22:54:15 UTC",
+      "InvocationID": "4626624449334385a344d2b60ec25bfb",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "exit-code",
+      "StateChangeTimestamp": "Fri 2026-10-09 23:00:57 UTC",
+      "SubState": "failed",
+      "Type": "forking"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestamp": "",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "inactive",
+      "ExecMainPID": "0",
+      "ExecMainStartTimestamp": "",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "",
+      "InvocationID": "",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 22:52:13 UTC",
+      "SubState": "dead",
+      "Type": "forking"
+    }
+  }
+}

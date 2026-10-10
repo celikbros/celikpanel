@@ -1,0 +1,637 @@
+2026-10-09T03:52:44.442403+00:00 dns-ubuntu systemd[1]: Starting celikpanel-agent.service - CelikPanel privileged agent...
+2026-10-09T03:52:44.458367+00:00 dns-ubuntu systemd[1]: Started celikpanel-agent.service - CelikPanel privileged agent.
+2026-10-09T03:52:44.468776+00:00 dns-ubuntu agent[7218]: 2026/10/09 03:52:44 Starting CelikPanel Agent...
+2026-10-09T03:52:44.472066+00:00 dns-ubuntu agent[7218]: 2026/10/09 03:52:44 Agent listening on unix socket /run/celikpanel/agent.sock
+2026-10-09T03:52:44.472066+00:00 dns-ubuntu agent[7218]: 2026/10/09 03:52:44 Panel certificate activation remains pending: open trusted panel TLS directory: no such file or directory
+2026-10-09T03:52:46.151504+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-09T03:52:46.173387+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-09T03:52:46.382245+00:00 dns-ubuntu panel[7352]: 2026/10/09 03:52:46 Starting CelikPanel Backend...
+2026-10-09T03:52:46.391329+00:00 dns-ubuntu panel[7352]: 2026/10/09 03:52:46 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-09T03:52:46.392563+00:00 dns-ubuntu panel[7352]: 2026/10/09 03:52:46 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-09T03:52:46.393416+00:00 dns-ubuntu panel[7352]: 2026/10/09 03:52:46 Connected to Agent RPC; preparing normal management access
+2026-10-09T03:52:46.423429+00:00 dns-ubuntu panel[7352]: 2026/10/09 03:52:46 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-ubuntu": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-09T03:52:46.425348+00:00 dns-ubuntu panel[7352]: 2026/10/09 03:52:46 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-09T03:52:46.426859+00:00 dns-ubuntu panel[7352]: 2026/10/09 03:52:46 Panel ready on :2083 (HTTPS)
+2026-10-09T03:52:47.196399+00:00 dns-ubuntu systemd[1]: Stopping celikpanel-panel.service - CelikPanel web panel...
+2026-10-09T03:52:47.211826+00:00 dns-ubuntu systemd[1]: celikpanel-panel.service: Deactivated successfully.
+2026-10-09T03:52:47.212066+00:00 dns-ubuntu systemd[1]: Stopped celikpanel-panel.service - CelikPanel web panel.
+2026-10-09T03:52:47.336518+00:00 dns-ubuntu systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-09T03:52:47.360379+00:00 dns-ubuntu systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-09T03:52:47.563135+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:52:47 Starting CelikPanel Backend...
+2026-10-09T03:52:47.570357+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:52:47 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-09T03:52:47.571036+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:52:47 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-09T03:52:47.571714+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:52:47 Connected to Agent RPC; preparing normal management access
+2026-10-09T03:52:47.583551+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:52:47 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname "dns-ubuntu": a fully qualified DNS name is required; preserve pending outbox: <nil>
+2026-10-09T03:52:47.588788+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:52:47 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose
+2026-10-09T03:52:47.588788+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:52:47 Panel ready on :2083 (HTTPS)
+2026-10-09T03:52:59.814144+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:52:59 http: TLS handshake error from 127.0.0.1:48532: EOF
+2026-10-09T03:53:00.115882+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:53:00 http: TLS handshake error from 127.0.0.1:48562: EOF
+2026-10-09T03:53:00.361278+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:53:00 http: TLS handshake error from 127.0.0.1:48588: EOF
+2026-10-09T03:53:00.382374+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:53:00 http: TLS handshake error from 127.0.0.1:48608: EOF
+2026-10-09T03:53:00.398004+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:53:00 http: TLS handshake error from 127.0.0.1:48624: EOF
+2026-10-09T03:53:00.414974+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:53:00 http: TLS handshake error from 127.0.0.1:48638: EOF
+2026-10-09T03:53:00.449400+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:53:00 http: TLS handshake error from 127.0.0.1:48652: EOF
+2026-10-09T03:53:00.465075+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:53:00 http: TLS handshake error from 127.0.0.1:48680: EOF
+2026-10-09T03:53:00.485105+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:53:00 http: TLS handshake error from 127.0.0.1:48696: EOF
+2026-10-09T03:53:00.499701+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:53:00 http: TLS handshake error from 127.0.0.1:48704: EOF
+2026-10-09T03:57:39.947940+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:57:39 http: TLS handshake error from 127.0.0.1:56850: EOF
+2026-10-09T03:57:39.990882+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:57:39 http: TLS handshake error from 127.0.0.1:56870: EOF
+2026-10-09T03:57:41.192322+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:57:41 http: TLS handshake error from 127.0.0.1:36108: EOF
+2026-10-09T03:57:42.178930+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:57:42 http: TLS handshake error from 127.0.0.1:36130: EOF
+2026-10-09T03:57:42.269775+00:00 dns-ubuntu cron[9922]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T03:57:43.656422+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:57:43 http: TLS handshake error from 127.0.0.1:36134: EOF
+2026-10-09T03:57:48.674832+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:57:48 http: TLS handshake error from 127.0.0.1:36144: EOF
+2026-10-09T03:57:53.616514+00:00 dns-ubuntu adduser[10441]: The home dir /nonexistent you specified can't be accessed: No such file or directory
+2026-10-09T03:57:53.623065+00:00 dns-ubuntu adduser[10441]: Selecting UID from range 100 to 999 ...
+2026-10-09T03:57:53.626995+00:00 dns-ubuntu adduser[10441]: Adding system user `_galera' (UID 109) ...
+2026-10-09T03:57:53.629344+00:00 dns-ubuntu adduser[10441]: Adding new user `_galera' (UID 109) with group `nogroup' ...
+2026-10-09T03:57:53.686950+00:00 dns-ubuntu useradd[10450]: new user: name=_galera, UID=109, GID=65534, home=/nonexistent, shell=/usr/sbin/nologin, from=none
+2026-10-09T03:57:53.693951+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:57:53 http: TLS handshake error from 127.0.0.1:58598: EOF
+2026-10-09T03:57:53.737347+00:00 dns-ubuntu adduser[10441]: Not creating `/nonexistent'.
+2026-10-09T03:57:57.037243+00:00 dns-ubuntu addgroup[10631]: Selecting GID from range 100 to 999 ...
+2026-10-09T03:57:57.040509+00:00 dns-ubuntu addgroup[10631]: Adding group `mysql' (GID 112) ...
+2026-10-09T03:57:57.092689+00:00 dns-ubuntu groupadd[10634]: group added to /etc/group: name=mysql, GID=112
+2026-10-09T03:57:57.118686+00:00 dns-ubuntu groupadd[10634]: group added to /etc/gshadow: name=mysql
+2026-10-09T03:57:57.120890+00:00 dns-ubuntu groupadd[10634]: new group: name=mysql, GID=112
+2026-10-09T03:57:57.162633+00:00 dns-ubuntu adduser[10641]: The home dir /nonexistent you specified can't be accessed: No such file or directory
+2026-10-09T03:57:57.168595+00:00 dns-ubuntu adduser[10641]: Selecting UID from range 100 to 999 ...
+2026-10-09T03:57:57.172740+00:00 dns-ubuntu adduser[10641]: Adding system user `mysql' (UID 110) ...
+2026-10-09T03:57:57.175341+00:00 dns-ubuntu adduser[10641]: Adding new user `mysql' (UID 110) with group `mysql' ...
+2026-10-09T03:57:57.223759+00:00 dns-ubuntu useradd[10646]: new user: name=mysql, UID=110, GID=112, home=/nonexistent, shell=/bin/false, from=none
+2026-10-09T03:57:57.323144+00:00 dns-ubuntu chfn[10653]: changed user 'mysql' information
+2026-10-09T03:57:57.326749+00:00 dns-ubuntu adduser[10641]: Not creating `/nonexistent'.
+2026-10-09T03:57:58.712056+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:57:58 http: TLS handshake error from 127.0.0.1:58614: EOF
+2026-10-09T03:57:59.395532+00:00 dns-ubuntu mariadb-server.postinst[10716]: 2026-10-09  3:57:59 0 [Warning] You need to use --log-bin to make --expire-logs-days or --binlog-expire-logs-seconds work.
+2026-10-09T03:58:03.733624+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:58:03 http: TLS handshake error from 127.0.0.1:41236: EOF
+2026-10-09T03:58:08.752465+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:58:08 http: TLS handshake error from 127.0.0.1:41244: EOF
+2026-10-09T03:58:10.123414+00:00 dns-ubuntu cron[11184]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T03:58:15.298672+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:58:15 http: TLS handshake error from 127.0.0.1:56094: EOF
+2026-10-09T03:58:20.314450+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:58:20 http: TLS handshake error from 127.0.0.1:56108: EOF
+2026-10-09T03:58:24.942427+00:00 dns-ubuntu cron[12080]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T03:58:25.332306+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:58:25 http: TLS handshake error from 127.0.0.1:51426: EOF
+2026-10-09T03:58:26.645970+00:00 dns-ubuntu cron[12108]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T03:58:30.348377+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:58:30 http: TLS handshake error from 127.0.0.1:51452: EOF
+2026-10-09T03:58:35.368210+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:58:35 http: TLS handshake error from 127.0.0.1:46236: EOF
+2026-10-09T03:58:36.294624+00:00 dns-ubuntu php8.3-common[12901]: php_invoke calendar: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:36.631557+00:00 dns-ubuntu php8.3-common[13099]: php_invoke ctype: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:36.668871+00:00 dns-ubuntu php8.3-common[13131]: php_invoke ctype: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:36.988519+00:00 dns-ubuntu php8.3-common[13329]: php_invoke exif: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:37.742851+00:00 dns-ubuntu php8.3-common[13789]: php_invoke ffi: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:37.783947+00:00 dns-ubuntu php8.3-common[13821]: php_invoke ffi: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:38.157775+00:00 dns-ubuntu php8.3-common[14051]: php_invoke ftp: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:38.526791+00:00 dns-ubuntu php8.3-common[14249]: php_invoke gettext: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:38.570444+00:00 dns-ubuntu php8.3-common[14281]: php_invoke gettext: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:38.901398+00:00 dns-ubuntu php8.3-common[14479]: php_invoke iconv: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:38.935075+00:00 dns-ubuntu php8.3-common[14511]: php_invoke iconv: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:39.269612+00:00 dns-ubuntu php8.3-common[14709]: php_invoke pdo: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:39.309759+00:00 dns-ubuntu php8.3-common[14741]: php_invoke pdo: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:39.630724+00:00 dns-ubuntu php8.3-common[14939]: php_invoke phar: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:39.664747+00:00 dns-ubuntu php8.3-common[14971]: php_invoke phar: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:40.037068+00:00 dns-ubuntu php8.3-common[15201]: php_invoke posix: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:40.385903+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:58:40 http: TLS handshake error from 127.0.0.1:46258: EOF
+2026-10-09T03:58:40.394511+00:00 dns-ubuntu php8.3-common[15399]: php_invoke shmop: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:40.437026+00:00 dns-ubuntu php8.3-common[15431]: php_invoke shmop: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:40.772277+00:00 dns-ubuntu php8.3-common[15629]: php_invoke sockets: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:40.812043+00:00 dns-ubuntu php8.3-common[15661]: php_invoke sockets: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:41.158707+00:00 dns-ubuntu php8.3-common[15859]: php_invoke sysvmsg: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:41.196091+00:00 dns-ubuntu php8.3-common[15891]: php_invoke sysvmsg: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:41.529198+00:00 dns-ubuntu php8.3-common[16089]: php_invoke sysvsem: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:41.564395+00:00 dns-ubuntu php8.3-common[16121]: php_invoke sysvsem: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:41.891366+00:00 dns-ubuntu php8.3-common[16319]: php_invoke sysvshm: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:41.925763+00:00 dns-ubuntu php8.3-common[16351]: php_invoke sysvshm: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:42.259798+00:00 dns-ubuntu php8.3-common[16549]: php_invoke tokenizer: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:42.296806+00:00 dns-ubuntu php8.3-common[16581]: php_invoke tokenizer: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:42.703746+00:00 dns-ubuntu php8.3-readline[16780]: php_invoke readline: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:42.747304+00:00 dns-ubuntu php8.3-readline[16812]: php_invoke readline: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:43.143364+00:00 dns-ubuntu php8.3-opcache[17011]: php_invoke opcache: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:43.186756+00:00 dns-ubuntu php8.3-opcache[17043]: php_invoke opcache: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:43.551576+00:00 dns-ubuntu php8.3-cli[17185]: php_invoke exif: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:43.587581+00:00 dns-ubuntu php8.3-cli[17218]: php_invoke phar: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:43.623774+00:00 dns-ubuntu php8.3-cli[17251]: php_invoke shmop: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:43.689422+00:00 dns-ubuntu php8.3-cli[17317]: php_invoke iconv: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:43.722436+00:00 dns-ubuntu php8.3-cli[17350]: php_invoke sysvshm: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:43.755463+00:00 dns-ubuntu php8.3-cli[17383]: php_invoke sockets: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:43.788330+00:00 dns-ubuntu php8.3-cli[17416]: php_invoke ctype: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:43.820810+00:00 dns-ubuntu php8.3-cli[17449]: php_invoke posix: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:43.853641+00:00 dns-ubuntu php8.3-cli[17482]: php_invoke sysvmsg: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:43.886748+00:00 dns-ubuntu php8.3-cli[17515]: php_invoke opcache: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:43.919650+00:00 dns-ubuntu php8.3-cli[17548]: php_invoke gettext: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:43.952520+00:00 dns-ubuntu php8.3-cli[17581]: php_invoke calendar: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:43.984983+00:00 dns-ubuntu php8.3-cli[17614]: php_invoke ffi: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:44.050823+00:00 dns-ubuntu php8.3-cli[17680]: php_invoke tokenizer: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:44.083024+00:00 dns-ubuntu php8.3-cli[17713]: php_invoke readline: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:44.116140+00:00 dns-ubuntu php8.3-cli[17746]: php_invoke ftp: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:44.149603+00:00 dns-ubuntu php8.3-cli[17779]: php_invoke pdo: already enabled for PHP 8.3 cli sapi
+2026-10-09T03:58:44.545640+00:00 dns-ubuntu php8.3-fpm[17918]: php_invoke exif: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:44.579659+00:00 dns-ubuntu php8.3-fpm[17951]: php_invoke phar: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:44.616488+00:00 dns-ubuntu php8.3-fpm[17984]: php_invoke shmop: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:44.649878+00:00 dns-ubuntu php8.3-fpm[18017]: php_invoke fileinfo: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:44.685767+00:00 dns-ubuntu php8.3-fpm[18050]: php_invoke iconv: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:44.720441+00:00 dns-ubuntu php8.3-fpm[18083]: php_invoke sysvshm: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:44.752692+00:00 dns-ubuntu php8.3-fpm[18116]: php_invoke sockets: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:44.785830+00:00 dns-ubuntu php8.3-fpm[18149]: php_invoke ctype: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:44.853089+00:00 dns-ubuntu php8.3-fpm[18215]: php_invoke sysvmsg: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:44.888798+00:00 dns-ubuntu php8.3-fpm[18248]: php_invoke opcache: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:44.921529+00:00 dns-ubuntu php8.3-fpm[18281]: php_invoke gettext: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:44.954564+00:00 dns-ubuntu php8.3-fpm[18314]: php_invoke calendar: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:45.020565+00:00 dns-ubuntu php8.3-fpm[18380]: php_invoke sysvsem: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:45.054385+00:00 dns-ubuntu php8.3-fpm[18413]: php_invoke tokenizer: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:45.087701+00:00 dns-ubuntu php8.3-fpm[18446]: php_invoke readline: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:45.120902+00:00 dns-ubuntu php8.3-fpm[18479]: php_invoke ftp: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:45.153002+00:00 dns-ubuntu php8.3-fpm[18512]: php_invoke pdo: already enabled for PHP 8.3 fpm sapi
+2026-10-09T03:58:45.767017+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:58:45 http: TLS handshake error from 127.0.0.1:50288: EOF
+2026-10-09T03:58:49.731668+00:00 dns-ubuntu cron[18873]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T03:58:50.786008+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:58:50 http: TLS handshake error from 127.0.0.1:52332: EOF
+2026-10-09T03:58:55.802022+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:58:55 http: TLS handshake error from 127.0.0.1:52348: EOF
+2026-10-09T03:59:00.817493+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:59:00 http: TLS handshake error from 127.0.0.1:54596: EOF
+2026-10-09T03:59:05.837490+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:59:05 http: TLS handshake error from 127.0.0.1:54616: EOF
+2026-10-09T03:59:06.943868+00:00 dns-ubuntu addgroup[19423]: Selecting GID from range 100 to 999 ...
+2026-10-09T03:59:06.947437+00:00 dns-ubuntu addgroup[19423]: Adding group `ssl-cert' (GID 113) ...
+2026-10-09T03:59:06.991713+00:00 dns-ubuntu groupadd[19426]: group added to /etc/group: name=ssl-cert, GID=113
+2026-10-09T03:59:07.015538+00:00 dns-ubuntu groupadd[19426]: group added to /etc/gshadow: name=ssl-cert
+2026-10-09T03:59:07.017553+00:00 dns-ubuntu groupadd[19426]: new group: name=ssl-cert, GID=113
+2026-10-09T03:59:08.387130+00:00 dns-ubuntu adduser[20184]: Selecting UID from range 100 to 999 ...
+2026-10-09T03:59:08.390713+00:00 dns-ubuntu adduser[20184]: Selecting GID from range 100 to 999 ...
+2026-10-09T03:59:08.393805+00:00 dns-ubuntu adduser[20184]: Adding system user `postgres' (UID 111) ...
+2026-10-09T03:59:08.397362+00:00 dns-ubuntu adduser[20184]: Adding new group `postgres' (GID 114) ...
+2026-10-09T03:59:08.433322+00:00 dns-ubuntu groupadd[20189]: group added to /etc/group: name=postgres, GID=114
+2026-10-09T03:59:08.449062+00:00 dns-ubuntu groupadd[20189]: group added to /etc/gshadow: name=postgres
+2026-10-09T03:59:08.451041+00:00 dns-ubuntu groupadd[20189]: new group: name=postgres, GID=114
+2026-10-09T03:59:08.454853+00:00 dns-ubuntu adduser[20184]: Adding new user `postgres' (UID 111) with group `postgres' ...
+2026-10-09T03:59:08.496407+00:00 dns-ubuntu useradd[20196]: new user: name=postgres, UID=111, GID=114, home=/var/lib/postgresql, shell=/bin/bash, from=none
+2026-10-09T03:59:08.581889+00:00 dns-ubuntu chfn[20203]: changed user 'postgres' information
+2026-10-09T03:59:08.585522+00:00 dns-ubuntu adduser[20184]: Not creating home directory `/var/lib/postgresql'.
+2026-10-09T03:59:08.602769+00:00 dns-ubuntu su[20216]: (to postgres) root on none
+2026-10-09T03:59:08.603905+00:00 dns-ubuntu su[20216]: pam_unix(su:session): session opened for user postgres(uid=111) by (uid=0)
+2026-10-09T03:59:08.776151+00:00 dns-ubuntu su[20216]: pam_unix(su:session): session closed for user postgres
+2026-10-09T03:59:08.838574+00:00 dns-ubuntu adduser[20242]: Adding user `postgres' to group `ssl-cert' ...
+2026-10-09T03:59:08.881338+00:00 dns-ubuntu usermod[20244]: add 'postgres' to group 'ssl-cert'
+2026-10-09T03:59:08.881410+00:00 dns-ubuntu usermod[20244]: add 'postgres' to shadow group 'ssl-cert'
+2026-10-09T03:59:10.856351+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:59:10 http: TLS handshake error from 127.0.0.1:38028: EOF
+2026-10-09T03:59:16.449603+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:59:16 http: TLS handshake error from 127.0.0.1:38040: EOF
+2026-10-09T03:59:19.049823+00:00 dns-ubuntu cron[21752]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T03:59:21.367842+00:00 dns-ubuntu cron[21783]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T03:59:21.463016+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:59:21 http: TLS handshake error from 127.0.0.1:54036: EOF
+2026-10-09T03:59:22.909732+00:00 dns-ubuntu cron[21812]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T03:59:26.477312+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:59:26 http: TLS handshake error from 127.0.0.1:54048: EOF
+2026-10-09T03:59:29.573163+00:00 dns-ubuntu addgroup[22355]: Selecting GID from range 100 to 999 ...
+2026-10-09T03:59:29.576435+00:00 dns-ubuntu addgroup[22355]: Adding group `postfix' (GID 115) ...
+2026-10-09T03:59:29.612397+00:00 dns-ubuntu groupadd[22358]: group added to /etc/group: name=postfix, GID=115
+2026-10-09T03:59:29.627762+00:00 dns-ubuntu groupadd[22358]: group added to /etc/gshadow: name=postfix
+2026-10-09T03:59:29.629523+00:00 dns-ubuntu groupadd[22358]: new group: name=postfix, GID=115
+2026-10-09T03:59:29.669401+00:00 dns-ubuntu adduser[22365]: Selecting UID from range 100 to 999 ...
+2026-10-09T03:59:29.672499+00:00 dns-ubuntu adduser[22365]: Adding system user `postfix' (UID 112) ...
+2026-10-09T03:59:29.675426+00:00 dns-ubuntu adduser[22365]: Adding new user `postfix' (UID 112) with group `postfix' ...
+2026-10-09T03:59:29.712136+00:00 dns-ubuntu useradd[22369]: new user: name=postfix, UID=112, GID=115, home=/var/spool/postfix, shell=/usr/sbin/nologin, from=none
+2026-10-09T03:59:29.751559+00:00 dns-ubuntu adduser[22365]: Not creating home directory `/var/spool/postfix'.
+2026-10-09T03:59:29.854980+00:00 dns-ubuntu addgroup[22417]: Selecting GID from range 100 to 999 ...
+2026-10-09T03:59:29.858526+00:00 dns-ubuntu addgroup[22417]: Adding group `postdrop' (GID 116) ...
+2026-10-09T03:59:29.898561+00:00 dns-ubuntu groupadd[22420]: group added to /etc/group: name=postdrop, GID=116
+2026-10-09T03:59:29.917778+00:00 dns-ubuntu groupadd[22420]: group added to /etc/gshadow: name=postdrop
+2026-10-09T03:59:29.919714+00:00 dns-ubuntu groupadd[22420]: new group: name=postdrop, GID=116
+2026-10-09T03:59:31.494859+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:59:31 http: TLS handshake error from 127.0.0.1:45734: EOF
+2026-10-09T03:59:36.513782+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:59:36 http: TLS handshake error from 127.0.0.1:45752: EOF
+2026-10-09T03:59:41.531223+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:59:41 http: TLS handshake error from 127.0.0.1:58740: EOF
+2026-10-09T03:59:41.685818+00:00 dns-ubuntu groupadd[23211]: group added to /etc/group: name=vmail, GID=5000
+2026-10-09T03:59:41.701483+00:00 dns-ubuntu groupadd[23211]: group added to /etc/gshadow: name=vmail
+2026-10-09T03:59:41.703257+00:00 dns-ubuntu groupadd[23211]: new group: name=vmail, GID=5000
+2026-10-09T03:59:41.768487+00:00 dns-ubuntu useradd[23222]: new user: name=vmail, UID=5000, GID=5000, home=/var/mail/vhosts, shell=/usr/sbin/nologin, from=none
+2026-10-09T03:59:41.849118+00:00 dns-ubuntu postfix/postmap[23235]: warning: unsupported dictionary type: lmdb. Is the postfix-lmdb package installed?
+2026-10-09T03:59:41.849201+00:00 dns-ubuntu postfix/postmap[23235]: fatal: unsupported map type: lmdb
+2026-10-09T03:59:46.838975+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:59:46 http: TLS handshake error from 127.0.0.1:58748: EOF
+2026-10-09T03:59:47.870915+00:00 dns-ubuntu postfix/postfix-script[23634]: the Postfix mail system is running: PID: 22935
+2026-10-09T03:59:47.948197+00:00 dns-ubuntu postfix/postfix-script[23653]: refreshing the Postfix mail system
+2026-10-09T03:59:48.421718+00:00 dns-ubuntu postfix/postfix-script[23671]: the Postfix mail system is running: PID: 22935
+2026-10-09T03:59:48.933320+00:00 dns-ubuntu postfix/postfix-script[23918]: the Postfix mail system is running: PID: 22935
+2026-10-09T03:59:50.667394+00:00 dns-ubuntu cron[23961]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T03:59:51.856527+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:59:51 http: TLS handshake error from 127.0.0.1:40616: EOF
+2026-10-09T03:59:56.890005+00:00 dns-ubuntu panel[7415]: 2026/10/09 03:59:56 http: TLS handshake error from 127.0.0.1:40634: EOF
+2026-10-09T03:59:58.615062+00:00 dns-ubuntu adduser[24478]: Selecting UID from range 100 to 999 ...
+2026-10-09T03:59:58.619286+00:00 dns-ubuntu adduser[24478]: Selecting GID from range 100 to 999 ...
+2026-10-09T03:59:58.623241+00:00 dns-ubuntu adduser[24478]: Adding system user `dovecot' (UID 113) ...
+2026-10-09T03:59:58.626916+00:00 dns-ubuntu adduser[24478]: Adding new group `dovecot' (GID 117) ...
+2026-10-09T03:59:58.664796+00:00 dns-ubuntu groupadd[24483]: group added to /etc/group: name=dovecot, GID=117
+2026-10-09T03:59:58.681108+00:00 dns-ubuntu groupadd[24483]: group added to /etc/gshadow: name=dovecot
+2026-10-09T03:59:58.682792+00:00 dns-ubuntu groupadd[24483]: new group: name=dovecot, GID=117
+2026-10-09T03:59:58.686685+00:00 dns-ubuntu adduser[24478]: Adding new user `dovecot' (UID 113) with group `dovecot' ...
+2026-10-09T03:59:58.723490+00:00 dns-ubuntu useradd[24490]: new user: name=dovecot, UID=113, GID=117, home=/usr/lib/dovecot, shell=/usr/sbin/nologin, from=none
+2026-10-09T03:59:58.794025+00:00 dns-ubuntu chfn[24497]: changed user 'dovecot' information
+2026-10-09T03:59:58.797750+00:00 dns-ubuntu adduser[24478]: Not creating home directory `/usr/lib/dovecot'.
+2026-10-09T03:59:58.834112+00:00 dns-ubuntu adduser[24504]: The home dir /nonexistent you specified can't be accessed: No such file or directory
+2026-10-09T03:59:58.840656+00:00 dns-ubuntu adduser[24504]: Selecting UID from range 100 to 999 ...
+2026-10-09T03:59:58.843931+00:00 dns-ubuntu adduser[24504]: Selecting GID from range 100 to 999 ...
+2026-10-09T03:59:58.847619+00:00 dns-ubuntu adduser[24504]: Adding system user `dovenull' (UID 114) ...
+2026-10-09T03:59:58.851216+00:00 dns-ubuntu adduser[24504]: Adding new group `dovenull' (GID 118) ...
+2026-10-09T03:59:58.888453+00:00 dns-ubuntu groupadd[24510]: group added to /etc/group: name=dovenull, GID=118
+2026-10-09T03:59:58.907536+00:00 dns-ubuntu groupadd[24510]: group added to /etc/gshadow: name=dovenull
+2026-10-09T03:59:58.909414+00:00 dns-ubuntu groupadd[24510]: new group: name=dovenull, GID=118
+2026-10-09T03:59:58.913396+00:00 dns-ubuntu adduser[24504]: Adding new user `dovenull' (UID 114) with group `dovenull' ...
+2026-10-09T03:59:58.950657+00:00 dns-ubuntu useradd[24517]: new user: name=dovenull, UID=114, GID=118, home=/nonexistent, shell=/usr/sbin/nologin, from=none
+2026-10-09T03:59:59.026927+00:00 dns-ubuntu chfn[24524]: changed user 'dovenull' information
+2026-10-09T03:59:59.033625+00:00 dns-ubuntu adduser[24504]: Not creating `/nonexistent'.
+2026-10-09T04:00:01.910325+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:00:01 http: TLS handshake error from 127.0.0.1:56982: EOF
+2026-10-09T04:00:06.926260+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:00:06 http: TLS handshake error from 127.0.0.1:56992: EOF
+2026-10-09T04:00:11.943122+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:00:11 http: TLS handshake error from 127.0.0.1:48084: EOF
+2026-10-09T04:00:16.864979+00:00 dns-ubuntu postfix/postfix-script[28294]: the Postfix mail system is running: PID: 22935
+2026-10-09T04:00:17.404698+00:00 dns-ubuntu postfix/postfix-script[28391]: the Postfix mail system is running: PID: 22935
+2026-10-09T04:00:17.530829+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:00:17 http: TLS handshake error from 127.0.0.1:48100: EOF
+2026-10-09T04:00:20.034514+00:00 dns-ubuntu cron[28468]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:00:21.711701+00:00 dns-ubuntu cron[28503]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:00:22.547120+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:00:22 http: TLS handshake error from 127.0.0.1:49914: EOF
+2026-10-09T04:00:25.228487+00:00 dns-ubuntu cron[28764]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:00:26.896383+00:00 dns-ubuntu cron[28799]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:00:27.566463+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:00:27 http: TLS handshake error from 127.0.0.1:49930: EOF
+2026-10-09T04:00:31.746811+00:00 dns-ubuntu cron[29092]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:00:32.582382+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:00:32 http: TLS handshake error from 127.0.0.1:45026: EOF
+2026-10-09T04:00:37.597335+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:00:37 http: TLS handshake error from 127.0.0.1:45046: EOF
+2026-10-09T04:00:40.340306+00:00 dns-ubuntu php8.3-intl[29772]: php_invoke intl: already enabled for PHP 8.3 cli sapi
+2026-10-09T04:00:40.375847+00:00 dns-ubuntu php8.3-intl[29804]: php_invoke intl: already enabled for PHP 8.3 fpm sapi
+2026-10-09T04:00:40.783310+00:00 dns-ubuntu php8.3-sqlite3[30003]: php_invoke sqlite3: already enabled for PHP 8.3 cli sapi
+2026-10-09T04:00:40.816623+00:00 dns-ubuntu php8.3-sqlite3[30035]: php_invoke sqlite3: already enabled for PHP 8.3 fpm sapi
+2026-10-09T04:00:41.156116+00:00 dns-ubuntu php8.3-sqlite3[30233]: php_invoke pdo_sqlite: already enabled for PHP 8.3 cli sapi
+2026-10-09T04:00:41.192559+00:00 dns-ubuntu php8.3-sqlite3[30265]: php_invoke pdo_sqlite: already enabled for PHP 8.3 fpm sapi
+2026-10-09T04:00:41.567890+00:00 dns-ubuntu php8.3-mbstring[30464]: php_invoke mbstring: already enabled for PHP 8.3 cli sapi
+2026-10-09T04:00:41.605692+00:00 dns-ubuntu php8.3-mbstring[30496]: php_invoke mbstring: already enabled for PHP 8.3 fpm sapi
+2026-10-09T04:00:41.986212+00:00 dns-ubuntu php8.3-xml[30695]: php_invoke dom: already enabled for PHP 8.3 cli sapi
+2026-10-09T04:00:42.026581+00:00 dns-ubuntu php8.3-xml[30727]: php_invoke dom: already enabled for PHP 8.3 fpm sapi
+2026-10-09T04:00:42.380947+00:00 dns-ubuntu php8.3-xml[30925]: php_invoke simplexml: already enabled for PHP 8.3 cli sapi
+2026-10-09T04:00:42.415356+00:00 dns-ubuntu php8.3-xml[30957]: php_invoke simplexml: already enabled for PHP 8.3 fpm sapi
+2026-10-09T04:00:42.614770+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:00:42 http: TLS handshake error from 127.0.0.1:54896: EOF
+2026-10-09T04:00:42.756970+00:00 dns-ubuntu php8.3-xml[31155]: php_invoke xml: already enabled for PHP 8.3 cli sapi
+2026-10-09T04:00:43.131444+00:00 dns-ubuntu php8.3-xml[31385]: php_invoke xmlreader: already enabled for PHP 8.3 cli sapi
+2026-10-09T04:00:43.167723+00:00 dns-ubuntu php8.3-xml[31417]: php_invoke xmlreader: already enabled for PHP 8.3 fpm sapi
+2026-10-09T04:00:43.494637+00:00 dns-ubuntu php8.3-xml[31615]: php_invoke xmlwriter: already enabled for PHP 8.3 cli sapi
+2026-10-09T04:00:43.531624+00:00 dns-ubuntu php8.3-xml[31647]: php_invoke xmlwriter: already enabled for PHP 8.3 fpm sapi
+2026-10-09T04:00:43.852590+00:00 dns-ubuntu php8.3-xml[31845]: php_invoke xsl: already enabled for PHP 8.3 cli sapi
+2026-10-09T04:00:43.888117+00:00 dns-ubuntu php8.3-xml[31877]: php_invoke xsl: already enabled for PHP 8.3 fpm sapi
+2026-10-09T04:00:44.314398+00:00 dns-ubuntu php8.3-zip[32076]: php_invoke zip: already enabled for PHP 8.3 cli sapi
+2026-10-09T04:00:44.350525+00:00 dns-ubuntu php8.3-zip[32108]: php_invoke zip: already enabled for PHP 8.3 fpm sapi
+2026-10-09T04:00:47.923338+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:00:47 http: TLS handshake error from 127.0.0.1:54924: EOF
+2026-10-09T04:00:48.933721+00:00 dns-ubuntu cron[32296]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:00:52.940378+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:00:52 http: TLS handshake error from 127.0.0.1:34622: EOF
+2026-10-09T04:00:55.871670+00:00 dns-ubuntu postfix/postfix-script[32665]: the Postfix mail system is running: PID: 22935
+2026-10-09T04:00:56.421136+00:00 dns-ubuntu postfix/postfix-script[32701]: the Postfix mail system is running: PID: 22935
+2026-10-09T04:00:57.957218+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:00:57 http: TLS handshake error from 127.0.0.1:34632: EOF
+2026-10-09T04:01:02.619511+00:00 dns-ubuntu postfix/postfix-script[33180]: the Postfix mail system is running: PID: 22935
+2026-10-09T04:01:02.976507+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:01:02 http: TLS handshake error from 127.0.0.1:34746: EOF
+2026-10-09T04:01:03.289015+00:00 dns-ubuntu postfix/postfix-script[33506]: the Postfix mail system is running: PID: 33488
+2026-10-09T04:01:07.993727+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:01:07 http: TLS handshake error from 127.0.0.1:34766: EOF
+2026-10-09T04:01:09.251226+00:00 dns-ubuntu postfix/postfix-script[34186]: the Postfix mail system is running: PID: 33488
+2026-10-09T04:01:09.326456+00:00 dns-ubuntu postfix/postfix-script[34204]: refreshing the Postfix mail system
+2026-10-09T04:01:09.792020+00:00 dns-ubuntu postfix/postfix-script[34222]: the Postfix mail system is running: PID: 33488
+2026-10-09T04:01:12.186423+00:00 dns-ubuntu cron[34553]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:01:13.013451+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:01:13 http: TLS handshake error from 127.0.0.1:36538: EOF
+2026-10-09T04:01:13.847500+00:00 dns-ubuntu cron[34589]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:01:18.625520+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:01:18 http: TLS handshake error from 127.0.0.1:36552: EOF
+2026-10-09T04:01:21.790758+00:00 dns-ubuntu postfix/postfix-script[35250]: the Postfix mail system is running: PID: 33488
+2026-10-09T04:01:21.884061+00:00 dns-ubuntu postfix/postfix-script[35268]: refreshing the Postfix mail system
+2026-10-09T04:01:22.347547+00:00 dns-ubuntu postfix/postfix-script[35286]: the Postfix mail system is running: PID: 33488
+2026-10-09T04:01:23.641564+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:01:23 http: TLS handshake error from 127.0.0.1:50016: EOF
+2026-10-09T04:01:25.488088+00:00 dns-ubuntu postfix/postfix-script[35575]: the Postfix mail system is running: PID: 33488
+2026-10-09T04:01:25.570324+00:00 dns-ubuntu cron[35586]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:01:28.699933+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:01:28 http: TLS handshake error from 127.0.0.1:50024: EOF
+2026-10-09T04:01:33.715051+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:01:33 http: TLS handshake error from 127.0.0.1:42390: EOF
+2026-10-09T04:01:36.069008+00:00 dns-ubuntu postfix/postfix-script[36270]: refreshing the Postfix mail system
+2026-10-09T04:01:38.732136+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:01:38 http: TLS handshake error from 127.0.0.1:42398: EOF
+2026-10-09T04:01:39.207367+00:00 dns-ubuntu cron[36359]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:01:40.937812+00:00 dns-ubuntu cron[36394]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:01:43.794296+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:01:43 http: TLS handshake error from 127.0.0.1:52408: EOF
+2026-10-09T04:01:49.126643+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:01:49 http: TLS handshake error from 127.0.0.1:52424: EOF
+2026-10-09T04:01:53.084945+00:00 dns-ubuntu adduser[37068]: Selecting UID from range 100 to 999 ...
+2026-10-09T04:01:53.088701+00:00 dns-ubuntu adduser[37068]: Selecting GID from range 100 to 999 ...
+2026-10-09T04:01:53.092525+00:00 dns-ubuntu adduser[37068]: Adding system user `_rspamd' (UID 115) ...
+2026-10-09T04:01:53.096347+00:00 dns-ubuntu adduser[37068]: Adding new group `_rspamd' (GID 119) ...
+2026-10-09T04:01:53.347869+00:00 dns-ubuntu groupadd[37073]: group added to /etc/group: name=_rspamd, GID=119
+2026-10-09T04:01:53.371396+00:00 dns-ubuntu groupadd[37073]: group added to /etc/gshadow: name=_rspamd
+2026-10-09T04:01:53.373361+00:00 dns-ubuntu groupadd[37073]: new group: name=_rspamd, GID=119
+2026-10-09T04:01:53.377161+00:00 dns-ubuntu adduser[37068]: Adding new user `_rspamd' (UID 115) with group `_rspamd' ...
+2026-10-09T04:01:53.412999+00:00 dns-ubuntu useradd[37080]: new user: name=_rspamd, UID=115, GID=119, home=/var/lib/rspamd, shell=/usr/sbin/nologin, from=none
+2026-10-09T04:01:53.581536+00:00 dns-ubuntu chfn[37087]: changed user '_rspamd' information
+2026-10-09T04:01:53.585153+00:00 dns-ubuntu adduser[37068]: Not creating home directory `/var/lib/rspamd'.
+2026-10-09T04:01:54.142533+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:01:54 http: TLS handshake error from 127.0.0.1:43256: EOF
+2026-10-09T04:01:59.159089+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:01:59 http: TLS handshake error from 127.0.0.1:43266: EOF
+2026-10-09T04:02:04.179094+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:02:04 http: TLS handshake error from 127.0.0.1:43570: EOF
+2026-10-09T04:02:09.199716+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:02:09 http: TLS handshake error from 127.0.0.1:43588: EOF
+2026-10-09T04:02:09.984581+00:00 dns-ubuntu postfix/postfix-script[38269]: the Postfix mail system is running: PID: 33488
+2026-10-09T04:02:10.061551+00:00 dns-ubuntu postfix/postfix-script[38288]: refreshing the Postfix mail system
+2026-10-09T04:02:10.527678+00:00 dns-ubuntu postfix/postfix-script[38306]: the Postfix mail system is running: PID: 33488
+2026-10-09T04:02:14.231356+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:02:14 http: TLS handshake error from 127.0.0.1:33464: EOF
+2026-10-09T04:02:16.800849+00:00 dns-ubuntu postfix/postfix-script[38758]: the Postfix mail system is running: PID: 33488
+2026-10-09T04:02:17.533156+00:00 dns-ubuntu postfix/postfix-script[39083]: the Postfix mail system is running: PID: 39065
+2026-10-09T04:02:17.617868+00:00 dns-ubuntu cron[39094]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:02:19.898537+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:02:19 http: TLS handshake error from 127.0.0.1:33490: EOF
+2026-10-09T04:02:23.525017+00:00 dns-ubuntu postfix/postfix-script[39848]: refreshing the Postfix mail system
+2026-10-09T04:02:23.989822+00:00 dns-ubuntu postfix/postfix-script[39876]: the Postfix mail system is running: PID: 39065
+2026-10-09T04:02:24.917750+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:02:24 http: TLS handshake error from 127.0.0.1:43978: EOF
+2026-10-09T04:02:26.872064+00:00 dns-ubuntu cron[40221]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:02:29.941276+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:02:29 http: TLS handshake error from 127.0.0.1:43994: EOF
+2026-10-09T04:02:34.956698+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:02:34 http: TLS handshake error from 127.0.0.1:47154: EOF
+2026-10-09T04:02:39.893256+00:00 dns-ubuntu cron[40906]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:02:39.975712+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:02:39 http: TLS handshake error from 127.0.0.1:47172: EOF
+2026-10-09T04:02:45.060797+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:02:45 http: TLS handshake error from 127.0.0.1:46712: EOF
+2026-10-09T04:02:50.397416+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:02:50 http: TLS handshake error from 127.0.0.1:46732: EOF
+2026-10-09T04:02:55.414349+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:02:55 http: TLS handshake error from 127.0.0.1:57064: EOF
+2026-10-09T04:03:00.433526+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:03:00 http: TLS handshake error from 127.0.0.1:57096: EOF
+2026-10-09T04:03:05.456373+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:03:05 http: TLS handshake error from 127.0.0.1:37214: EOF
+2026-10-09T04:03:10.472338+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:03:10 http: TLS handshake error from 127.0.0.1:37242: EOF
+2026-10-09T04:03:15.488699+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:03:15 http: TLS handshake error from 127.0.0.1:37282: EOF
+2026-10-09T04:03:21.088466+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:03:21 http: TLS handshake error from 127.0.0.1:49006: EOF
+2026-10-09T04:03:26.104017+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:03:26 http: TLS handshake error from 127.0.0.1:49028: EOF
+2026-10-09T04:03:31.122368+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:03:31 http: TLS handshake error from 127.0.0.1:37828: EOF
+2026-10-09T04:03:36.138951+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:03:36 http: TLS handshake error from 127.0.0.1:37832: EOF
+2026-10-09T04:03:41.155666+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:03:41 http: TLS handshake error from 127.0.0.1:32930: EOF
+2026-10-09T04:03:46.172066+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:03:46 http: TLS handshake error from 127.0.0.1:32948: EOF
+2026-10-09T04:03:51.500862+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:03:51 http: TLS handshake error from 127.0.0.1:46006: EOF
+2026-10-09T04:03:56.516991+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:03:56 http: TLS handshake error from 127.0.0.1:46022: EOF
+2026-10-09T04:04:01.534683+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:04:01 http: TLS handshake error from 127.0.0.1:36840: EOF
+2026-10-09T04:04:06.549523+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:04:06 http: TLS handshake error from 127.0.0.1:36858: EOF
+2026-10-09T04:04:11.568275+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:04:11 http: TLS handshake error from 127.0.0.1:43654: EOF
+2026-10-09T04:04:16.584503+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:04:16 http: TLS handshake error from 127.0.0.1:43670: EOF
+2026-10-09T04:04:22.193094+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:04:22 http: TLS handshake error from 127.0.0.1:45590: EOF
+2026-10-09T04:04:27.210072+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:04:27 http: TLS handshake error from 127.0.0.1:45600: EOF
+2026-10-09T04:04:32.228524+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:04:32 http: TLS handshake error from 127.0.0.1:53896: EOF
+2026-10-09T04:04:37.251367+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:04:37 http: TLS handshake error from 127.0.0.1:53904: EOF
+2026-10-09T04:04:42.268963+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:04:42 http: TLS handshake error from 127.0.0.1:57018: EOF
+2026-10-09T04:04:47.288719+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:04:47 http: TLS handshake error from 127.0.0.1:57028: EOF
+2026-10-09T04:07:43.653593+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:43 http: TLS handshake error from 127.0.0.1:59710: EOF
+2026-10-09T04:07:45.259949+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:07:45 hosting root: created /var/www/celikpanel at 0755 0:0
+2026-10-09T04:07:45.330266+00:00 dns-ubuntu useradd[42729]: new group: name=set1_owner_test, GID=5001
+2026-10-09T04:07:45.330386+00:00 dns-ubuntu useradd[42729]: new user: name=set1_owner_test, UID=5001, GID=5001, home=/var/www/celikpanel/subscriptions/2/sites/1, shell=/bin/bash, from=none
+2026-10-09T04:07:45.489406+00:00 dns-ubuntu chpasswd[42736]: pam_unix(chpasswd:chauthtok): password changed for set1_owner_test
+2026-10-09T04:07:45.916995+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:45 http: TLS handshake error from 127.0.0.1:59732: EOF
+2026-10-09T04:07:46.051580+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:46 http: TLS handshake error from 127.0.0.1:59750: EOF
+2026-10-09T04:07:46.065989+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:46 http: TLS handshake error from 127.0.0.1:59764: EOF
+2026-10-09T04:07:46.086344+00:00 dns-ubuntu cron[42813]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:07:47.780729+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:47 http: TLS handshake error from 127.0.0.1:59782: EOF
+2026-10-09T04:07:54.488985+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:54 http: TLS handshake error from 127.0.0.1:44138: EOF
+2026-10-09T04:07:54.497684+00:00 dns-ubuntu crontab[43167]: (root) LIST (set1_owner_test)
+2026-10-09T04:07:54.508405+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:54 http: TLS handshake error from 127.0.0.1:44160: EOF
+2026-10-09T04:07:54.529471+00:00 dns-ubuntu crontab[43169]: (root) REPLACE (set1_owner_test)
+2026-10-09T04:07:54.853473+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:54 http: TLS handshake error from 127.0.0.1:44170: EOF
+2026-10-09T04:07:54.861569+00:00 dns-ubuntu crontab[43225]: (root) LIST (set1_owner_test)
+2026-10-09T04:07:54.870650+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:54 http: TLS handshake error from 127.0.0.1:44186: EOF
+2026-10-09T04:07:54.878572+00:00 dns-ubuntu crontab[43226]: (root) LIST (set1_owner_test)
+2026-10-09T04:07:54.879251+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:54 [409][cron] duplicate task refused
+2026-10-09T04:07:55.839766+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:55 http: TLS handshake error from 127.0.0.1:44198: EOF
+2026-10-09T04:07:55.848396+00:00 dns-ubuntu crontab[43391]: (root) LIST (set1_owner_test)
+2026-10-09T04:07:55.849154+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:55 [409][settings] scheduled_tasks refused: SETTINGS_CHANGED
+2026-10-09T04:07:56.171421+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:56 http: TLS handshake error from 127.0.0.1:44214: EOF
+2026-10-09T04:07:56.195448+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:56 http: TLS handshake error from 127.0.0.1:44236: EOF
+2026-10-09T04:07:56.215152+00:00 dns-ubuntu crontab[43449]: (root) REPLACE (set1_owner_test)
+2026-10-09T04:07:56.566310+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:56 http: TLS handshake error from 127.0.0.1:44260: EOF
+2026-10-09T04:07:56.583283+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:56 http: TLS handshake error from 127.0.0.1:44276: EOF
+2026-10-09T04:07:56.591541+00:00 dns-ubuntu crontab[43506]: (root) LIST (set1_owner_test)
+2026-10-09T04:07:56.601744+00:00 dns-ubuntu crontab[43507]: (root) REPLACE (set1_owner_test)
+2026-10-09T04:07:56.933923+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:56 http: TLS handshake error from 127.0.0.1:44288: EOF
+2026-10-09T04:07:56.942071+00:00 dns-ubuntu crontab[43563]: (root) LIST (set1_owner_test)
+2026-10-09T04:07:56.952033+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:56 http: TLS handshake error from 127.0.0.1:44304: EOF
+2026-10-09T04:07:56.959888+00:00 dns-ubuntu crontab[43564]: (root) LIST (set1_owner_test)
+2026-10-09T04:07:57.315192+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:57 http: TLS handshake error from 127.0.0.1:44326: EOF
+2026-10-09T04:07:57.332568+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:57 http: TLS handshake error from 127.0.0.1:44334: EOF
+2026-10-09T04:07:57.340706+00:00 dns-ubuntu crontab[43622]: (root) LIST (set1_owner_test)
+2026-10-09T04:07:57.353604+00:00 dns-ubuntu crontab[43623]: (root) REPLACE (set1_owner_test)
+2026-10-09T04:07:57.686818+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:57 http: TLS handshake error from 127.0.0.1:44354: EOF
+2026-10-09T04:07:57.695395+00:00 dns-ubuntu crontab[43679]: (root) LIST (set1_owner_test)
+2026-10-09T04:07:58.343781+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:58 http: TLS handshake error from 127.0.0.1:44364: EOF
+2026-10-09T04:07:58.351955+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:07:58 cron: the crontab of set1_owner_test could not be read (exit status 1): The user set1_owner_test cannot use this program (crontab)
+2026-10-09T04:07:58.352567+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:58 [502][settings] scheduled_tasks refused: CURRENT_SETTINGS_UNREADABLE cron_allow
+2026-10-09T04:07:58.360142+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:58 http: TLS handshake error from 127.0.0.1:44374: EOF
+2026-10-09T04:07:58.368652+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:07:58 cron: the crontab of set1_owner_test could not be read (exit status 1): The user set1_owner_test cannot use this program (crontab)
+2026-10-09T04:07:58.369059+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:58 [502][settings] scheduled_tasks refused: CURRENT_SETTINGS_UNREADABLE cron_allow
+2026-10-09T04:07:59.583763+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:59 http: TLS handshake error from 127.0.0.1:44392: EOF
+2026-10-09T04:07:59.592424+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:07:59 cron: the crontab of set1_owner_test could not be read (exit status 1): crontabs: No such file or directory crontabs: mkdir: File exists
+2026-10-09T04:07:59.592743+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:59 [502][settings] scheduled_tasks refused: CURRENT_SETTINGS_UNREADABLE
+2026-10-09T04:07:59.602927+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:59 http: TLS handshake error from 127.0.0.1:44414: EOF
+2026-10-09T04:07:59.612363+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:07:59 cron: the crontab of set1_owner_test could not be read (exit status 1): crontabs: No such file or directory crontabs: mkdir: File exists
+2026-10-09T04:07:59.612625+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:07:59 [502][settings] scheduled_tasks refused: CURRENT_SETTINGS_UNREADABLE
+2026-10-09T04:08:00.546610+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:00 http: TLS handshake error from 127.0.0.1:44430: EOF
+2026-10-09T04:08:02.057239+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:02 http: TLS handshake error from 127.0.0.1:32836: EOF
+2026-10-09T04:08:05.267765+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:05 http: TLS handshake error from 127.0.0.1:32848: EOF
+2026-10-09T04:08:05.308360+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:05 http: TLS handshake error from 127.0.0.1:32860: EOF
+2026-10-09T04:08:05.338471+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:05 [409][settings] mail_policy refused: SETTINGS_CHANGED
+2026-10-09T04:08:06.341066+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:06 http: TLS handshake error from 127.0.0.1:32892: EOF
+2026-10-09T04:08:08.862379+00:00 dns-ubuntu postfix/postfix-script[45554]: the Postfix mail system is running: PID: 39065
+2026-10-09T04:08:09.329938+00:00 dns-ubuntu postfix/postfix-script[45575]: the Postfix mail system is running: PID: 39065
+2026-10-09T04:08:10.702577+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:10 http: TLS handshake error from 127.0.0.1:36162: EOF
+2026-10-09T04:08:10.742052+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:10 http: TLS handshake error from 127.0.0.1:36174: EOF
+2026-10-09T04:08:12.992912+00:00 dns-ubuntu postfix/postfix-script[46243]: the Postfix mail system is running: PID: 39065
+2026-10-09T04:08:13.473600+00:00 dns-ubuntu postfix/postfix-script[46264]: the Postfix mail system is running: PID: 39065
+2026-10-09T04:08:17.394660+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:17 http: TLS handshake error from 127.0.0.1:36186: EOF
+2026-10-09T04:08:17.444547+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:17 http: TLS handshake error from 127.0.0.1:36204: EOF
+2026-10-09T04:08:17.473915+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:17 [409][mail policy] refused: MAIL_POLICY_RESTRICTIONS_UNMANAGED variable
+2026-10-09T04:08:18.173508+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:18 http: TLS handshake error from 127.0.0.1:36210: EOF
+2026-10-09T04:08:20.696894+00:00 dns-ubuntu postfix/postfix-script[47482]: the Postfix mail system is running: PID: 39065
+2026-10-09T04:08:21.166401+00:00 dns-ubuntu postfix/postfix-script[47503]: the Postfix mail system is running: PID: 39065
+2026-10-09T04:08:29.415987+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:29 http: TLS handshake error from 127.0.0.1:43270: EOF
+2026-10-09T04:08:29.727290+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:29 http: TLS handshake error from 127.0.0.1:43286: EOF
+2026-10-09T04:08:31.578216+00:00 dns-ubuntu postfix[48379]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T04:08:32.579380+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:08:32 mail policy: the mail policy was written to main.cf; the postfix reload failed: Postfix refuses its configuration: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T04:08:32.619802+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:32 [502][mail policy] written, MAIL_POLICY_NOT_RELOADED check: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T04:08:35.483095+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:35 http: TLS handshake error from 127.0.0.1:35256: EOF
+2026-10-09T04:08:40.907299+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:40 http: TLS handshake error from 127.0.0.1:58908: EOF
+2026-10-09T04:08:41.205777+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:41 http: TLS handshake error from 127.0.0.1:58924: EOF
+2026-10-09T04:08:41.574003+00:00 dns-ubuntu postfix/postfix-script[49230]: the Postfix mail system is running: PID: 39065
+2026-10-09T04:08:43.949511+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:43 http: TLS handshake error from 127.0.0.1:58936: EOF
+2026-10-09T04:08:43.989691+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:43 http: TLS handshake error from 127.0.0.1:58942: EOF
+2026-10-09T04:08:46.781907+00:00 dns-ubuntu postfix/postfix-script[50174]: the Postfix mail system is not running
+2026-10-09T04:08:47.482613+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:47 http: TLS handshake error from 127.0.0.1:58958: EOF
+2026-10-09T04:08:47.518740+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:47 http: TLS handshake error from 127.0.0.1:58966: EOF
+2026-10-09T04:08:47.886845+00:00 dns-ubuntu postfix/postfix-script[50691]: the Postfix mail system is not running
+2026-10-09T04:08:51.222434+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:51 http: TLS handshake error from 127.0.0.1:45152: EOF
+2026-10-09T04:08:51.236615+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:51 http: TLS handshake error from 127.0.0.1:45168: EOF
+2026-10-09T04:08:51.243131+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:51 [409][settings] backup_schedule refused: SETTINGS_VERSION_REQUIRED
+2026-10-09T04:08:51.517161+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:51 http: TLS handshake error from 127.0.0.1:45176: EOF
+2026-10-09T04:08:51.825013+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:51 http: TLS handshake error from 127.0.0.1:45196: EOF
+2026-10-09T04:08:51.831301+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:51 [409][settings] backup_schedule refused: SETTINGS_CHANGED
+2026-10-09T04:08:52.106289+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:52 http: TLS handshake error from 127.0.0.1:45212: EOF
+2026-10-09T04:08:52.402077+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:52 http: TLS handshake error from 127.0.0.1:45234: EOF
+2026-10-09T04:08:52.415912+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:52 http: TLS handshake error from 127.0.0.1:45264: EOF
+2026-10-09T04:08:53.902373+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:53 http: TLS handshake error from 127.0.0.1:45286: EOF
+2026-10-09T04:08:54.264392+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:54 http: TLS handshake error from 127.0.0.1:45306: EOF
+2026-10-09T04:08:54.909946+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:54 http: TLS handshake error from 127.0.0.1:45320: EOF
+2026-10-09T04:08:55.325348+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:08:55 config write: /etc/postgresql/16/main/postgresql.conf installed; the previous file is kept as /etc/postgresql/16/main/postgresql.conf.celikpanel-backup-20261009T040855Z
+2026-10-09T04:08:55.380916+00:00 dns-ubuntu sudo[52516]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on --no-align --tuples-only --quiet
+2026-10-09T04:08:55.381919+00:00 dns-ubuntu sudo[52516]: pam_unix(sudo:session): session opened for user postgres(uid=111) by (uid=0)
+2026-10-09T04:08:55.418240+00:00 dns-ubuntu sudo[52516]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T04:08:56.584851+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:56 http: TLS handshake error from 127.0.0.1:45334: EOF
+2026-10-09T04:08:56.956959+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:56 http: TLS handshake error from 127.0.0.1:45350: EOF
+2026-10-09T04:08:57.322433+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:08:57 config write /etc/postgresql/16/main/postgresql.conf not applied: PostgreSQL does not accept the new postgresql.conf; nothing was changed: invalid value for parameter "work_mem": "eight-megabytes"
+2026-10-09T04:08:57.333723+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:57 [422][config] refused: CONFIG_INVALID daemon
+2026-10-09T04:08:58.186301+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:58 http: TLS handshake error from 127.0.0.1:45376: EOF
+2026-10-09T04:08:58.539285+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:58 http: TLS handshake error from 127.0.0.1:45392: EOF
+2026-10-09T04:08:58.878243+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:08:58 config write /etc/postgresql/16/main/postgresql.conf not applied: the new content is empty; a configuration file is not replaced with nothing
+2026-10-09T04:08:58.893222+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:58 [422][config] refused: CONFIG_INVALID empty
+2026-10-09T04:08:59.174005+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:08:59 http: TLS handshake error from 127.0.0.1:45400: EOF
+2026-10-09T04:08:59.559405+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:08:59 config write: /etc/postgresql/16/main/pg_hba.conf installed; the previous file is kept as /etc/postgresql/16/main/pg_hba.conf.celikpanel-backup-20261009T040859Z
+2026-10-09T04:08:59.565447+00:00 dns-ubuntu sudo[53164]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on --no-align --tuples-only --quiet
+2026-10-09T04:08:59.566409+00:00 dns-ubuntu sudo[53164]: pam_unix(sudo:session): session opened for user postgres(uid=111) by (uid=0)
+2026-10-09T04:08:59.603324+00:00 dns-ubuntu sudo[53164]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T04:09:00.525447+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:00 http: TLS handshake error from 127.0.0.1:45416: EOF
+2026-10-09T04:09:00.891672+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:00 http: TLS handshake error from 127.0.0.1:44142: EOF
+2026-10-09T04:09:01.237688+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:09:01 config write /etc/postgresql/16/main/pg_hba.conf not applied: a changed line of pg_hba.conf is not one PostgreSQL accepts; nothing was changed: end-of-line before authentication method
+2026-10-09T04:09:01.247477+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:01 [422][config] refused: CONFIG_INVALID syntax
+2026-10-09T04:09:01.540593+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:01 http: TLS handshake error from 127.0.0.1:44168: EOF
+2026-10-09T04:09:01.899470+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:01 http: TLS handshake error from 127.0.0.1:44188: EOF
+2026-10-09T04:09:02.237927+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:09:02 config write /etc/postgresql/16/main/pg_hba.conf not applied: the change would take away the local administrator access to PostgreSQL; nothing was changed
+2026-10-09T04:09:02.249113+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:02 [422][config] refused: CONFIG_INVALID lockout
+2026-10-09T04:09:02.521794+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:02 http: TLS handshake error from 127.0.0.1:44200: EOF
+2026-10-09T04:09:03.456059+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:03 http: TLS handshake error from 127.0.0.1:44210: EOF
+2026-10-09T04:09:03.781158+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:09:03 config write /etc/postgresql/16/main/postgresql.conf not applied: the configuration file is not the one the write was built from; nothing was changed
+2026-10-09T04:09:03.791969+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:03 [409][settings] config_file refused: SETTINGS_CHANGED
+2026-10-09T04:09:04.070933+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:04 http: TLS handshake error from 127.0.0.1:44222: EOF
+2026-10-09T04:09:05.299946+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:05 http: TLS handshake error from 127.0.0.1:44232: EOF
+2026-10-09T04:09:05.771527+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:09:05 config write: /etc/postgresql/16/main/postgresql.conf installed; the previous file is kept as /etc/postgresql/16/main/postgresql.conf.celikpanel-backup-20261009T040905Z
+2026-10-09T04:09:05.840724+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:09:05 config write: reload of postgresql@16-main with the restored /etc/postgresql/16/main/postgresql.conf failed too: systemctl reload failed: exit status 1, output: Job for postgresql@16-main.service failed.
+2026-10-09T04:09:05.840724+00:00 dns-ubuntu agent[7218]: See "systemctl status postgresql@16-main.service" and "journalctl -xeu postgresql@16-main.service" for details.
+2026-10-09T04:09:05.846899+00:00 dns-ubuntu sudo[54234]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on --no-align --tuples-only --quiet
+2026-10-09T04:09:05.847914+00:00 dns-ubuntu sudo[54234]: pam_unix(sudo:session): session opened for user postgres(uid=111) by (uid=0)
+2026-10-09T04:09:06.889480+00:00 dns-ubuntu sudo[54234]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T04:09:06.890500+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:09:06 config write /etc/postgresql/16/main/postgresql.conf not applied: the unit's reload failed with the new configuration file and with the previous one; the previous file is back in place, and the server, asked directly, re-read it and runs with the settings it had before: Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.
+2026-10-09T04:09:06.903155+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:06 [502][config] refused: CONFIG_RELOAD_FAILED restored_unit_reload_failed
+2026-10-09T04:09:12.097433+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:12 http: TLS handshake error from 127.0.0.1:49010: EOF
+2026-10-09T04:09:12.478192+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:12 http: TLS handshake error from 127.0.0.1:49024: EOF
+2026-10-09T04:09:12.995537+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:09:12 config write: /etc/mysql/mariadb.conf.d/50-server.cnf installed; the previous file is kept as /etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261009T040912Z
+2026-10-09T04:09:14.825691+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:14 http: TLS handshake error from 127.0.0.1:49048: EOF
+2026-10-09T04:09:15.204504+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:15 http: TLS handshake error from 127.0.0.1:49056: EOF
+2026-10-09T04:09:15.637284+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:09:15 config write /etc/mysql/mariadb.conf.d/50-server.cnf not applied: MariaDB does not accept the new option file; nothing was changed: unknown variable 'set1_unknown_option=1'
+2026-10-09T04:09:15.647920+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:15 [422][config] refused: CONFIG_INVALID daemon
+2026-10-09T04:09:15.937508+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:15 http: TLS handshake error from 127.0.0.1:49078: EOF
+2026-10-09T04:09:16.303114+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:16 http: TLS handshake error from 127.0.0.1:49084: EOF
+2026-10-09T04:09:16.696818+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:09:16 config write /etc/mysql/mariadb.conf.d/50-server.cnf not applied: MariaDB does not accept the new option file; nothing was changed: Unknown suffix 'u' used for variable 'max_connections' (value 'unlimited'). Legal suffix characters are: K, M, G, T, P, E
+2026-10-09T04:09:16.706726+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:16 [422][config] refused: CONFIG_INVALID daemon
+2026-10-09T04:09:16.987959+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:16 http: TLS handshake error from 127.0.0.1:49110: EOF
+2026-10-09T04:09:17.358544+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:17 http: TLS handshake error from 127.0.0.1:49136: EOF
+2026-10-09T04:09:17.809110+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:09:17 config write /etc/mysql/mariadb.conf.d/50-server.cnf not applied: MariaDB would not use a value in the new option file as it is written; nothing was changed: option 'max_connections': unsigned value 0 adjusted to 10
+2026-10-09T04:09:17.820399+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:17 [422][config] refused: CONFIG_INVALID daemon
+2026-10-09T04:09:18.424506+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:18 http: TLS handshake error from 127.0.0.1:49160: EOF
+2026-10-09T04:09:18.797015+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:18 http: TLS handshake error from 127.0.0.1:49174: EOF
+2026-10-09T04:09:19.145008+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:09:19 config write /etc/mysql/mariadb.conf.d/50-server.cnf not applied: the new content is empty; a configuration file is not replaced with nothing
+2026-10-09T04:09:19.153525+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:19 [422][config] refused: CONFIG_INVALID empty
+2026-10-09T04:09:19.434408+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:19 http: TLS handshake error from 127.0.0.1:49190: EOF
+2026-10-09T04:09:20.341918+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:20 http: TLS handshake error from 127.0.0.1:49202: EOF
+2026-10-09T04:09:20.694273+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:09:20 config write /etc/mysql/mariadb.conf.d/50-server.cnf not applied: the configuration file is not the one the write was built from; nothing was changed
+2026-10-09T04:09:20.703194+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:20 [409][settings] config_file refused: SETTINGS_CHANGED
+2026-10-09T04:09:22.195296+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:22 http: TLS handshake error from 127.0.0.1:55626: EOF
+2026-10-09T04:09:22.209113+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:22 http: TLS handshake error from 127.0.0.1:55648: EOF
+2026-10-09T04:09:22.215803+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:22 [409][settings] mail_catch_all refused: SETTINGS_VERSION_REQUIRED
+2026-10-09T04:09:22.223144+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:22 http: TLS handshake error from 127.0.0.1:55674: EOF
+2026-10-09T04:09:22.837086+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:22 http: TLS handshake error from 127.0.0.1:55696: EOF
+2026-10-09T04:09:22.843353+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:22 [409][settings] mail_catch_all refused: SETTINGS_CHANGED
+2026-10-09T04:09:22.854632+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:22 http: TLS handshake error from 127.0.0.1:55714: EOF
+2026-10-09T04:09:22.861041+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:22 [409][settings] mail_catch_all refused: SETTINGS_CHANGED
+2026-10-09T04:09:23.418535+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:23 http: TLS handshake error from 127.0.0.1:55726: EOF
+2026-10-09T04:09:24.325961+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:24 http: TLS handshake error from 127.0.0.1:55736: EOF
+2026-10-09T04:09:24.922707+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:24 http: TLS handshake error from 127.0.0.1:55754: EOF
+2026-10-09T04:09:24.932904+00:00 dns-ubuntu postfix/postqueue[56916]: warning: Mail system is down -- accessing queue directly (Connect to the Postfix showq service: Connection refused)
+2026-10-09T04:09:28.342965+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:28 http: TLS handshake error from 127.0.0.1:55766: EOF
+2026-10-09T04:09:28.355159+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:09:28 mail queue: postqueue -j failed: postqueue: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign; exit status 69
+2026-10-09T04:09:28.355527+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:28 [502][mail queue] could not be read postfix_config
+2026-10-09T04:09:30.439372+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:30 http: TLS handshake error from 127.0.0.1:55770: EOF
+2026-10-09T04:09:34.489993+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:34 http: TLS handshake error from 127.0.0.1:37916: EOF
+2026-10-09T04:09:34.620226+00:00 dns-ubuntu cron[58337]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:09:37.708666+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:37 http: TLS handshake error from 127.0.0.1:37934: EOF
+2026-10-09T04:09:37.871295+00:00 dns-ubuntu cron[58618]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:09:40.667450+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:40 http: TLS handshake error from 127.0.0.1:44046: EOF
+2026-10-09T04:09:40.858136+00:00 dns-ubuntu cron[58896]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:09:43.665742+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:43 http: TLS handshake error from 127.0.0.1:44068: EOF
+2026-10-09T04:09:46.566971+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:46 http: TLS handshake error from 127.0.0.1:44074: EOF
+2026-10-09T04:09:46.665469+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:09:46 ERROR service reload nginx: failed command: exit status 1: nginx.service is not active, cannot reload.
+2026-10-09T04:09:46.699299+00:00 dns-ubuntu cron[59467]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:09:48.323797+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:48 [502][service action] reload nginx: SERVICE_ACTION_FAILED command: exit status 1: nginx.service is not active, cannot reload.
+2026-10-09T04:09:49.476856+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:49 http: TLS handshake error from 127.0.0.1:44092: EOF
+2026-10-09T04:09:52.678235+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:52 http: TLS handshake error from 127.0.0.1:52034: EOF
+2026-10-09T04:09:52.802348+00:00 dns-ubuntu cron[60067]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:09:55.591071+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:55 http: TLS handshake error from 127.0.0.1:52056: EOF
+2026-10-09T04:09:55.690401+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:09:55 ERROR service reload mariadb: failed command: exit status 3: Failed to reload mariadb.service: Job type reload is not applicable for unit mariadb.service.
+2026-10-09T04:09:55.723888+00:00 dns-ubuntu cron[60337]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:09:57.418008+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:57 [502][service action] reload mariadb: SERVICE_ACTION_FAILED command: exit status 3: Failed to reload mariadb.service: Job type reload is not applicable for unit mariadb.service.
+2026-10-09T04:09:58.513938+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:09:58 http: TLS handshake error from 127.0.0.1:52078: EOF
+2026-10-09T04:10:01.954223+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:01 http: TLS handshake error from 127.0.0.1:33654: EOF
+2026-10-09T04:10:05.049035+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:05 http: TLS handshake error from 127.0.0.1:33674: EOF
+2026-10-09T04:10:05.134764+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:10:05 ERROR service reload mariadb: failed command: exit status 3: Failed to reload mariadb.service: Job type reload is not applicable for unit mariadb.service.
+2026-10-09T04:10:06.810333+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:06 [502][service action] reload mariadb: SERVICE_ACTION_FAILED command: exit status 3: Failed to reload mariadb.service: Job type reload is not applicable for unit mariadb.service.
+2026-10-09T04:10:07.963325+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:07 http: TLS handshake error from 127.0.0.1:33696: EOF
+2026-10-09T04:10:11.365368+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:11 http: TLS handshake error from 127.0.0.1:54930: EOF
+2026-10-09T04:10:14.201213+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:14 http: TLS handshake error from 127.0.0.1:54946: EOF
+2026-10-09T04:10:18.182952+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:18 http: TLS handshake error from 127.0.0.1:54978: EOF
+2026-10-09T04:10:23.442949+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:23 http: TLS handshake error from 127.0.0.1:48010: EOF
+2026-10-09T04:10:27.553343+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:27 http: TLS handshake error from 127.0.0.1:48038: EOF
+2026-10-09T04:10:27.649728+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:10:27 ERROR service reload dovecot: failed reload: Dovecot is not running; nothing was reloaded
+2026-10-09T04:10:27.689720+00:00 dns-ubuntu cron[63112]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:10:29.358388+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:29 [502][service action] reload dovecot: SERVICE_ACTION_FAILED reload: Dovecot is not running; nothing was reloaded
+2026-10-09T04:10:30.505534+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:30 http: TLS handshake error from 127.0.0.1:48054: EOF
+2026-10-09T04:10:31.773688+00:00 dns-ubuntu cron[63402]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:10:34.926279+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:34 http: TLS handshake error from 127.0.0.1:41850: EOF
+2026-10-09T04:10:35.562100+00:00 dns-ubuntu cron[63962]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:10:39.093535+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:39 http: TLS handshake error from 127.0.0.1:41868: EOF
+2026-10-09T04:10:39.541366+00:00 dns-ubuntu postfix/postfix-script[64530]: the Postfix mail system is running: PID: 57255
+2026-10-09T04:10:39.622508+00:00 dns-ubuntu postfix/postfix-script[64548]: refreshing the Postfix mail system
+2026-10-09T04:10:43.301398+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:43 http: TLS handshake error from 127.0.0.1:43986: EOF
+2026-10-09T04:10:43.710459+00:00 dns-ubuntu postfix/postfix-script[65138]: the Postfix mail system is running: PID: 57255
+2026-10-09T04:10:44.400423+00:00 dns-ubuntu postfix/postfix-script[65497]: the Postfix mail system is running: PID: 65479
+2026-10-09T04:10:44.481641+00:00 dns-ubuntu cron[65508]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:10:47.597460+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:47 http: TLS handshake error from 127.0.0.1:44002: EOF
+2026-10-09T04:10:48.066809+00:00 dns-ubuntu postfix/postfix-script[66082]: the Postfix mail system is not running
+2026-10-09T04:10:48.114264+00:00 dns-ubuntu cron[66087]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:10:51.249897+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:51 http: TLS handshake error from 127.0.0.1:54466: EOF
+2026-10-09T04:10:51.694717+00:00 dns-ubuntu postfix/postfix-script[66643]: the Postfix mail system is not running
+2026-10-09T04:10:51.710523+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:10:51 ERROR service reload postfix: failed reload: Postfix is not running; nothing was reloaded
+2026-10-09T04:10:51.745557+00:00 dns-ubuntu cron[66648]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:10:53.413202+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:53 [502][service action] reload postfix: SERVICE_ACTION_FAILED reload: Postfix is not running; nothing was reloaded
+2026-10-09T04:10:54.913554+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:54 http: TLS handshake error from 127.0.0.1:54494: EOF
+2026-10-09T04:10:55.322026+00:00 dns-ubuntu postfix/postfix-script[67203]: the Postfix mail system is not running
+2026-10-09T04:10:55.917468+00:00 dns-ubuntu postfix/postfix-script[67511]: the Postfix mail system is running: PID: 67493
+2026-10-09T04:10:56.006115+00:00 dns-ubuntu cron[67523]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:10:59.427648+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:10:59 http: TLS handshake error from 127.0.0.1:54512: EOF
+2026-10-09T04:10:59.623376+00:00 dns-ubuntu cron[67938]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:11:02.525506+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:11:02 http: TLS handshake error from 127.0.0.1:35812: EOF
+2026-10-09T04:11:02.811850+00:00 dns-ubuntu cron[68234]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:11:05.641421+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:11:05 http: TLS handshake error from 127.0.0.1:35824: EOF
+2026-10-09T04:11:08.190983+00:00 dns-ubuntu cron[68553]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:11:11.061723+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:11:11 http: TLS handshake error from 127.0.0.1:37152: EOF
+2026-10-09T04:11:11.803150+00:00 dns-ubuntu cron[68854]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:11:14.691505+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:11:14 http: TLS handshake error from 127.0.0.1:37172: EOF
+2026-10-09T04:11:14.826461+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:11:14 ERROR service reload postgresql: failed command: exit status 1: postgresql.service is not active, cannot reload.
+2026-10-09T04:11:14.871542+00:00 dns-ubuntu cron[69169]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:11:16.669559+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:11:16 [502][service action] reload postgresql: SERVICE_ACTION_FAILED command: exit status 1: postgresql.service is not active, cannot reload.
+2026-10-09T04:11:17.866556+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:11:17 http: TLS handshake error from 127.0.0.1:37192: EOF
+2026-10-09T04:11:20.263668+00:00 dns-ubuntu cron[69482]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:11:29.229321+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:11:29 http: TLS handshake error from 127.0.0.1:38520: EOF
+2026-10-09T04:11:29.271543+00:00 dns-ubuntu postfix[69976]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T04:11:30.288982+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:11:30 ERROR service reload postfix: failed check: Postfix refuses its configuration: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T04:11:30.326038+00:00 dns-ubuntu cron[69981]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:11:32.021492+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:11:32 [502][service action] reload postfix: SERVICE_ACTION_FAILED check: Postfix refuses its configuration: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T04:11:35.445541+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:11:35 http: TLS handshake error from 127.0.0.1:56628: EOF
+2026-10-09T04:11:35.493607+00:00 dns-ubuntu postfix[70298]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T04:11:36.512550+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:11:36 ERROR service restart postfix: failed check: Postfix refuses its configuration: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T04:11:38.193647+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:11:38 [502][service action] restart postfix: SERVICE_ACTION_FAILED check: Postfix refuses its configuration: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T04:11:41.916691+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:11:41 http: TLS handshake error from 127.0.0.1:56468: EOF
+2026-10-09T04:11:41.967064+00:00 dns-ubuntu postfix[70629]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T04:11:43.036558+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:11:43 ERROR service stop postfix: unknown verify: Postfix could not be checked (verify): systemctl stop postfix reported success, but `postfix check` did not pass, so `postfix status` cannot say whether the master stopped: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T04:11:43.085550+00:00 dns-ubuntu cron[70641]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:11:44.766271+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:11:44 [502][service action] stop postfix: SERVICE_ACTION_UNKNOWN : Postfix could not be checked (verify): systemctl stop postfix reported success, but `postfix check` did not pass, so `postfix status` cannot say whether the master stopped: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T04:11:48.183254+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:11:48 http: TLS handshake error from 127.0.0.1:56490: EOF
+2026-10-09T04:11:48.230137+00:00 dns-ubuntu postfix[70993]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T04:11:49.254223+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:11:49 ERROR service start postfix: failed check: Postfix refuses its configuration: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T04:11:49.296505+00:00 dns-ubuntu cron[70998]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:11:50.953438+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:11:50 [502][service action] start postfix: SERVICE_ACTION_FAILED check: Postfix refuses its configuration: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T04:11:55.752851+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:11:55 http: TLS handshake error from 127.0.0.1:54756: EOF
+2026-10-09T04:11:56.158963+00:00 dns-ubuntu postfix/postfix-script[71603]: the Postfix mail system is not running
+2026-10-09T04:11:56.781334+00:00 dns-ubuntu postfix/postfix-script[71911]: the Postfix mail system is running: PID: 71893
+2026-10-09T04:12:00.885030+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:12:00 http: TLS handshake error from 127.0.0.1:48094: EOF
+2026-10-09T04:12:01.067886+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:12:01 ERROR service reload postgresql: failed reload: systemctl reload postgresql reported success for postgresql.service, which only groups other units, but the reload of postgresql@16-main.service failed (exit-code); it keeps running with its previous settings
+2026-10-09T04:12:01.108097+00:00 dns-ubuntu cron[72446]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:12:02.804494+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:12:02 [502][service action] reload postgresql: SERVICE_ACTION_FAILED reload: systemctl reload postgresql reported success for postgresql.service, which only groups other units, but the reload of postgresql@16-main.service failed (exit-code); it keeps running with its previous settings
+2026-10-09T04:12:04.005077+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:12:04 http: TLS handshake error from 127.0.0.1:48110: EOF
+2026-10-09T04:12:06.556036+00:00 dns-ubuntu cron[72765]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:12:09.941972+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:12:09 http: TLS handshake error from 127.0.0.1:48130: EOF
+2026-10-09T04:12:10.191422+00:00 dns-ubuntu cron[73172]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:12:13.689055+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:12:13 http: TLS handshake error from 127.0.0.1:52360: EOF
+2026-10-09T04:12:14.182591+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:12:14 ERROR service restart postgresql: failed start: systemctl restart postgresql reported success for postgresql.service, which only groups other units, but postgresql@16-main.service is failed (failed), result protocol
+2026-10-09T04:12:14.217135+00:00 dns-ubuntu cron[73581]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:12:15.904623+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:12:15 [502][service action] restart postgresql: SERVICE_ACTION_FAILED start: systemctl restart postgresql reported success for postgresql.service, which only groups other units, but postgresql@16-main.service is failed (failed), result protocol
+2026-10-09T04:12:17.090266+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:12:17 http: TLS handshake error from 127.0.0.1:52378: EOF
+2026-10-09T04:12:17.427291+00:00 dns-ubuntu agent[7218]: 2026/10/09 04:12:17 ERROR service start postgresql: failed start: systemctl start postgresql reported success for postgresql.service, which only groups other units, but postgresql@16-main.service is failed (failed), result protocol
+2026-10-09T04:12:17.466480+00:00 dns-ubuntu cron[73909]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 809: Resource temporarily unavailable)
+2026-10-09T04:12:19.127572+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:12:19 [502][service action] start postgresql: SERVICE_ACTION_FAILED start: systemctl start postgresql reported success for postgresql.service, which only groups other units, but postgresql@16-main.service is failed (failed), result protocol
+2026-10-09T04:12:20.640783+00:00 dns-ubuntu panel[7415]: 2026/10/09 04:12:20 http: TLS handshake error from 127.0.0.1:59690: EOF

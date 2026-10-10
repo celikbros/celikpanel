@@ -1,0 +1,30 @@
+{
+  "at": "2026-10-09T07:30:14Z",
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791531003",
+      "-n",
+      "2000",
+      "-u",
+      "nginx.service"
+    ],
+    "at": "2026-10-09T07:30:14Z",
+    "returncode": 0,
+    "seconds": 0.003,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T07:30:05.562683+00:00 dns-arch systemd[1]: Reloading nginx web server...\n2026-10-09T07:30:05.587060+00:00 dns-arch nginx[4211]: 2026/10/09 07:30:05 [warn] 4211#4211: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\n2026-10-09T07:30:05.590853+00:00 dns-arch nginx[4211]: 2026/10/09 07:30:05 [notice] 4211#4211: signal process started\n2026-10-09T07:30:05.593216+00:00 dns-arch systemd[1]: Reloaded nginx web server.\n2026-10-09T07:30:06.034067+00:00 dns-arch systemd[1]: Reloading nginx web server...\n2026-10-09T07:30:06.059861+00:00 dns-arch nginx[4217]: 2026/10/09 07:30:06 [warn] 4217#4217: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\n2026-10-09T07:30:06.063715+00:00 dns-arch nginx[4217]: 2026/10/09 07:30:06 [notice] 4217#4217: signal process started\n2026-10-09T07:30:06.065951+00:00 dns-arch systemd[1]: Reloaded nginx web server.\n2026-10-09T07:30:10.181057+00:00 dns-arch systemd[1]: Reloading nginx web server...\n2026-10-09T07:30:10.201724+00:00 dns-arch nginx[4358]: 2026/10/09 07:30:10 [warn] 4358#4358: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\n2026-10-09T07:30:10.205875+00:00 dns-arch nginx[4358]: 2026/10/09 07:30:10 [notice] 4358#4358: signal process started\n2026-10-09T07:30:10.208243+00:00 dns-arch systemd[1]: Reloaded nginx web server.\n2026-10-09T07:30:10.586523+00:00 dns-arch systemd[1]: Reloading nginx web server...\n2026-10-09T07:30:10.609464+00:00 dns-arch nginx[4365]: 2026/10/09 07:30:10 [warn] 4365#4365: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\n2026-10-09T07:30:10.614580+00:00 dns-arch nginx[4365]: 2026/10/09 07:30:10 [notice] 4365#4365: signal process started\n2026-10-09T07:30:10.618118+00:00 dns-arch systemd[1]: Reloaded nginx web server.\n2026-10-09T07:30:13.290024+00:00 dns-arch systemd[1]: Reloading nginx web server...\n2026-10-09T07:30:13.314139+00:00 dns-arch nginx[4495]: 2026/10/09 07:30:13 [warn] 4495#4495: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\n2026-10-09T07:30:13.318548+00:00 dns-arch nginx[4495]: 2026/10/09 07:30:13 [notice] 4495#4495: signal process started\n2026-10-09T07:30:13.321115+00:00 dns-arch systemd[1]: Reloaded nginx web server.\n2026-10-09T07:30:13.700647+00:00 dns-arch systemd[1]: Reloading nginx web server...\n2026-10-09T07:30:13.724494+00:00 dns-arch nginx[4501]: 2026/10/09 07:30:13 [warn] 4501#4501: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\n2026-10-09T07:30:13.728397+00:00 dns-arch nginx[4501]: 2026/10/09 07:30:13 [notice] 4501#4501: signal process started\n2026-10-09T07:30:13.731267+00:00 dns-arch systemd[1]: Reloaded nginx web server.\n"
+  },
+  "lab_action": false,
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "units": [
+    "nginx.service"
+  ]
+}

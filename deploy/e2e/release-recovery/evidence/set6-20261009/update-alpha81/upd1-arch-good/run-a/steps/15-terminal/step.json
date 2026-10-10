@@ -1,0 +1,286 @@
+{
+  "checks": {
+    "build_identity_ok": true,
+    "builds": {
+      "agent": {
+        "identity": "version=v0.1.0-alpha.82\ncommit=9cb2339f10a0445f26ad7ddcc6058a4c359133f3\n",
+        "returncode": 0,
+        "sha256": "f90f4281b1ca9740c1a37ce3fa04556b2783f861b396007c96747e5654418c38"
+      },
+      "panel": {
+        "identity": "version=v0.1.0-alpha.82\ncommit=9cb2339f10a0445f26ad7ddcc6058a4c359133f3\n",
+        "returncode": 0,
+        "sha256": "31bcb2cde50d43c1bc7db6cc12ca23b573d45036f5089ccbef2a7d2e36f438e2"
+      }
+    },
+    "database": {
+      "differing": [
+        "metrics_samples",
+        "request_identities",
+        "schema_migrations",
+        "server_setup_executions"
+      ],
+      "post_sha256": "381d483d6848c3035e7748b197094934fbc54fb1f8bf5456648174a30597b41d",
+      "pre_sha256": "47ad00453ffa9aad4ee0f2e4a32b5b4da5223c133a61551bdbcd056c6910079c",
+      "schema_equal": false,
+      "tables_compared": 66,
+      "unexpected": [
+        "request_identities",
+        "schema_migrations"
+      ],
+      "verdict": "different",
+      "volatile_excluded": [
+        "audit_logs",
+        "metrics_samples",
+        "server_setup_executions",
+        "sessions",
+        "sqlite_sequence"
+      ],
+      "volatile_reasons": {
+        "audit_logs": "authentication or background writer (BOUND-WORKER AJ)",
+        "metrics_samples": "authentication or background writer (BOUND-WORKER AJ)",
+        "server_setup_executions": "the waiting setup runner rewrites its execution row on every retry (about every 25 s: cmd/panel/server_setup_dns_retry.go claimServerSetupDNSRetry and server_setup_operations.go execution update)",
+        "sessions": "authentication or background writer (BOUND-WORKER AJ)",
+        "sqlite_sequence": "authentication or background writer (BOUND-WORKER AJ)"
+      }
+    },
+    "dns": false,
+    "dns_scope": {
+      "mode": "external",
+      "note": "DNS is not provided by this run (the owner chose DNS hosted elsewhere on one isolated node); DNS continuity is covered by the DNS pair runs of roadmap item 2",
+      "verdict": "not-provided-external-dns"
+    },
+    "final": {
+      "observation": "known",
+      "observed_at": "2026-10-09T22:47:51Z",
+      "phase": "succeeded",
+      "reason": "update_verified",
+      "request_id": "7cde1409d934b558e6db14c230749493",
+      "schema": "celikpanel-recovery-status/v1",
+      "terminal_proof": "update_verified"
+    },
+    "firewall_equal": true,
+    "floor": {
+      "present": true,
+      "sha256": "fb2c2ef4d514862e2d1e9e08d4d756d697b63e1e8508d27aae418f184f1ebc9c",
+      "text": "format=celikpanel-release-sequence-floor-v1\nsequence=82\nversion=v0.1.0-alpha.82\n"
+    },
+    "foundation": {
+      "present": true,
+      "sha256": "5312c7469048ae44e02fabdcf4bdf659fc530b9939b541c68ff132922f100afa",
+      "text": "format=celikpanel-release-recovery-foundation-v1\nprotocol=1\nsequence=82\nrelease-version=v0.1.0-alpha.82\nrelease-commit=9cb2339f10a0445f26ad7ddcc6058a4c359133f3\nrunner-sha256=659a2f6e6f14d2255ea6fe0de1e391b06e579c3b18ecec13d29ebc35aa79e7b5\nservice-sha256=c570e53138a416a6faf531c2f53e9502ca7aa5cc1131a1f6f6ae870b940fe530\ntimer-sha256=33148e5b0fbc209ff6fd725aaaff2c569bd7470751341d4b83b301d0fa54cd86\nstart-guard-sha256=6abd30be38302b4ad09bd5c7db893aa49b97db779514b3236a2f0a4afb60cc12\nagent-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\npanel-dropin-sha256=82e0fe894b3fa676c1b64e65ac964b74b27dcfe5a83ddf91761f44ad5971359f\nprotocol-sha256=a29874f40088f2b5e960b4ce63651657b1ff2622334dcc5cc11c8f338215034c\n"
+    },
+    "login_ok": true,
+    "mailbox": {
+      "checked": false
+    },
+    "outcome": "update-verified",
+    "running_matches_installed": {
+      "celikpanel-agent.service": true,
+      "celikpanel-panel.service": true
+    },
+    "seeded_rows": {
+      "cron": true,
+      "domain": true,
+      "mail": null
+    },
+    "site_marker": true,
+    "smtp": null,
+    "timers": {
+      "changed": {},
+      "compared": 2,
+      "equal": true
+    },
+    "transaction": {
+      "fields": {},
+      "present": false,
+      "status": "ok"
+    },
+    "update_card": {
+      "availability": {
+        "body": {
+          "schema": "celikpanel-panel-availability/v1",
+          "state": "ready"
+        },
+        "http": 200
+      },
+      "check": {
+        "body": {
+          "available": false,
+          "current_commit": "9cb2339f10a0445f26ad7ddcc6058a4c359133f3",
+          "current_version": "v0.1.0-alpha.82",
+          "supported": true
+        },
+        "http": 200
+      },
+      "cron": {
+        "body": {
+          "jobs": [
+            {
+              "command": "/bin/date -u -Iseconds > \"$HOME/upd1-cron-stamp.txt\"",
+              "comment": "upd1 owner cron",
+              "enabled": true,
+              "id": "2455b30ed819fb8f",
+              "schedule": "* * * * *"
+            }
+          ],
+          "version": "ct1-6c9e025a95e461ac5a888e3ff347c496a910cf2756ea42f5207c7f724504e7c9"
+        },
+        "http": 200
+      },
+      "domains": {
+        "body": [
+          {
+            "bandwidth": 0,
+            "created_at": "2026-10-09T22:45:12Z",
+            "disk_usage": 0,
+            "domain_name": "upd1-owner.test",
+            "id": 1,
+            "php_version": "",
+            "project_type": "static",
+            "ssl_enabled": false,
+            "status": "active"
+          }
+        ],
+        "http": 200
+      },
+      "license": {
+        "body": {
+          "can_use_panel": true,
+          "observation": "known",
+          "state": "active",
+          "valid_until": 1791586121
+        },
+        "http": 200
+      },
+      "recovery": {
+        "body": {
+          "observation": "known",
+          "observed_at": "2026-10-09T22:47:51Z",
+          "panel_state": "ready",
+          "phase": "succeeded",
+          "reason": "update_verified",
+          "request_id": "7cde1409d934b558e6db14c230749493",
+          "schema": "celikpanel-recovery-status/v1",
+          "terminal_proof": "update_verified"
+        },
+        "http": 200
+      },
+      "recovery_guidance": {
+        "actionable": true,
+        "keys": [
+          "recovery.phase.succeeded",
+          "recovery.next.succeeded"
+        ],
+        "missing_keys": [],
+        "no_actor_or_action": false,
+        "observation": {
+          "automatic_recovery": null,
+          "failure_code": null,
+          "first_failure_code": null,
+          "observation": "known",
+          "observed_at": "2026-10-09T22:47:51Z",
+          "panel_state": "ready",
+          "phase": "succeeded",
+          "previous_failure": null,
+          "reason": "update_verified",
+          "renewal_before_update": null,
+          "request_id": "7cde1409d934b558e6db14c230749493",
+          "terminal_proof": "update_verified",
+          "waiting_for": null
+        },
+        "observation_unavailable": false,
+        "texts": {
+          "en": [
+            "Update verified",
+            "The server verified this update. Reload CelikPanel to load the installed interface."
+          ],
+          "tr": [
+            "Güncelleme doğrulandı",
+            "Sunucu bu güncellemeyi doğruladı. Kurulu arayüzü yüklemek için CelikPanel’i yeniden yükleyin."
+          ]
+        }
+      },
+      "status": {
+        "body": {
+          "created_at": "2026-10-09T22:47:04.850616678Z",
+          "found": true,
+          "request_id": "7cde1409d934b558e6db14c230749493",
+          "status": "succeeded",
+          "target": {
+            "arch": "amd64",
+            "archive_sha256": "86efd86a0cffcf5c8956ab55ce32144ec1ac52da77fb8f3c69a350cc185f149e",
+            "archive_size": "65906701",
+            "commit": "9cb2339f10a0445f26ad7ddcc6058a4c359133f3",
+            "os": "linux",
+            "sequence": "82",
+            "version": "v0.1.0-alpha.82"
+          },
+          "updated_at": "2026-10-09T22:47:51.688265788Z"
+        },
+        "http": 200
+      },
+      "update_card": {
+        "keys": [
+          "panelUpdate.succeeded",
+          "panelUpdate.succeeded"
+        ],
+        "missing_keys": [],
+        "observation_error": null,
+        "role": "good",
+        "server_message": null,
+        "source": {
+          "observation": {
+            "path": "lib/recoveryObservation.ts",
+            "sha256": "511f922c36fe4bae5feddde6abc18580a7e767a63f9fbaca85bb6d33f3a2685d"
+          },
+          "outcome": {
+            "path": "lib/systemUpdateOutcome.ts",
+            "sha256": "7329a488a436f12637f3c46a60521bbe22027de032044c4963f5686b0a83f67c"
+          },
+          "screen": {
+            "path": "components/RecoveryAccess.tsx",
+            "sha256": "d5e44cfcd69ac883b817da07b9f09e6a987bc453af287ce0d5b6e1a4cca568f9"
+          },
+          "typed": {
+            "path": "lib/systemUpdateFailure.ts",
+            "sha256": "b12d9a0d2989bd70670e02481159128ba716bb21f15db5084b9631475a610af4"
+          }
+        },
+        "state": "succeeded",
+        "texts": {
+          "en": [
+            "The update completed. The panel and agent restarted on the new version.",
+            "The update completed. The panel and agent restarted on the new version."
+          ],
+          "tr": [
+            "Güncelleme tamamlandı. Panel ve agent yeni sürümle yeniden başladı.",
+            "Güncelleme tamamlandı. Panel ve agent yeni sürümle yeniden başladı."
+          ]
+        },
+        "unavailable": null
+      },
+      "update_card_judged": {
+        "findings": [],
+        "server_message_line": null,
+        "verdict": "as-expected"
+      },
+      "version": {
+        "body": {
+          "agent_commit": "9cb2339f10a0445f26ad7ddcc6058a4c359133f3",
+          "agent_matches": true,
+          "commit": "9cb2339f10a0445f26ad7ddcc6058a4c359133f3",
+          "hostname": "dns-arch",
+          "ipv4": "192.0.2.11",
+          "schema_version": 43,
+          "version": "v0.1.0-alpha.82"
+        },
+        "http": 200
+      }
+    }
+  },
+  "finished_at": "2026-10-09T22:48:00Z",
+  "name": "terminal",
+  "started_at": "2026-10-09T22:47:53Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,2106 @@
+{
+  "actions": [
+    {
+      "action": "stop",
+      "answer": {
+        "success": true
+      },
+      "at": "2026-10-09T12:42:43Z",
+      "code": null,
+      "daemon_after": {
+        "asked": "systemd: the unit is active with a main process",
+        "conf_load_time": null,
+        "exec_reload": "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 12:42:40 UTC] ; stop_time=[Fri 2026-10-09 12:42:40 UTC] ; pid=4068 ; code=exited ; status=0 }",
+        "pid": 0,
+        "real_unit": "nginx.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "nginx.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "daemon_before": {
+        "asked": "systemd: the unit is active with a main process",
+        "conf_load_time": null,
+        "exec_reload": "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 12:42:40 UTC] ; stop_time=[Fri 2026-10-09 12:42:40 UTC] ; pid=4068 ; code=exited ; status=0 }",
+        "pid": 1174,
+        "real_unit": "nginx.service",
+        "reload_result": "success",
+        "running": true,
+        "units": {
+          "nginx.service": {
+            "ActiveState": "active",
+            "LoadState": "loaded",
+            "MainPID": "1174",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "running"
+          }
+        }
+      },
+      "journal_lines": [
+        "2026-10-09T12:42:42.711488+00:00 dns-arch systemd[1]: Stopping nginx web server...",
+        "2026-10-09T12:42:42.727974+00:00 dns-arch systemd[1]: nginx.service: Deactivated successfully.",
+        "2026-10-09T12:42:42.728242+00:00 dns-arch systemd[1]: Stopped nginx web server."
+      ],
+      "matches": true,
+      "reason": null,
+      "refused_while_busy": [],
+      "reload_evidence": [],
+      "said": "success",
+      "service": "nginx",
+      "situation": "set4, before the reload",
+      "status": 200,
+      "truth_action_took_effect": true,
+      "vars": null
+    },
+    {
+      "action": "reload",
+      "answer": {
+        "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "at": "2026-10-09T12:42:49Z",
+      "code": "SERVICE_ACTION_FAILED",
+      "daemon_after": {
+        "asked": "systemd: the unit is active with a main process",
+        "conf_load_time": null,
+        "exec_reload": "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 12:42:40 UTC] ; stop_time=[Fri 2026-10-09 12:42:40 UTC] ; pid=4068 ; code=exited ; status=0 }",
+        "pid": 0,
+        "real_unit": "nginx.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "nginx.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "daemon_before": {
+        "asked": "systemd: the unit is active with a main process",
+        "conf_load_time": null,
+        "exec_reload": "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 12:42:40 UTC] ; stop_time=[Fri 2026-10-09 12:42:40 UTC] ; pid=4068 ; code=exited ; status=0 }",
+        "pid": 0,
+        "real_unit": "nginx.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "nginx.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "journal_lines": [
+        "-- No entries --"
+      ],
+      "matches": true,
+      "reason": "not_running",
+      "refused_while_busy": [],
+      "reload_evidence": [],
+      "said": "failed",
+      "service": "nginx",
+      "situation": "while stopped",
+      "status": 409,
+      "truth_action_took_effect": false,
+      "vars": {
+        "action": "reload",
+        "command": "sudo systemctl status nginx",
+        "detail": "nginx.service is inactive (dead); nothing was reloaded",
+        "unit": "nginx"
+      }
+    },
+    {
+      "action": "start",
+      "answer": {
+        "success": true
+      },
+      "at": "2026-10-09T12:42:54Z",
+      "code": null,
+      "daemon_after": {
+        "asked": "systemd: the unit is active with a main process",
+        "conf_load_time": null,
+        "exec_reload": "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 4433,
+        "real_unit": "nginx.service",
+        "reload_result": "success",
+        "running": true,
+        "units": {
+          "nginx.service": {
+            "ActiveState": "active",
+            "LoadState": "loaded",
+            "MainPID": "4433",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "running"
+          }
+        }
+      },
+      "daemon_before": {
+        "asked": "systemd: the unit is active with a main process",
+        "conf_load_time": null,
+        "exec_reload": "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 12:42:40 UTC] ; stop_time=[Fri 2026-10-09 12:42:40 UTC] ; pid=4068 ; code=exited ; status=0 }",
+        "pid": 0,
+        "real_unit": "nginx.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "nginx.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "journal_lines": [
+        "2026-10-09T12:42:53.941990+00:00 dns-arch systemd[1]: Starting nginx web server...",
+        "2026-10-09T12:42:53.964288+00:00 dns-arch nginx[4432]: 2026/10/09 12:42:53 [warn] 4432#4432: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size",
+        "2026-10-09T12:42:53.970463+00:00 dns-arch systemd[1]: Started nginx web server."
+      ],
+      "matches": true,
+      "reason": null,
+      "refused_while_busy": [],
+      "reload_evidence": [],
+      "said": "success",
+      "service": "nginx",
+      "situation": "after the refused reload",
+      "status": 200,
+      "truth_action_took_effect": true,
+      "vars": null
+    },
+    {
+      "action": "stop",
+      "answer": {
+        "success": true
+      },
+      "at": "2026-10-09T12:42:57Z",
+      "code": null,
+      "daemon_after": {
+        "asked": "a query over the local socket and the server's PID file",
+        "conf_load_time": null,
+        "exec_reload": null,
+        "pid": 0,
+        "real_unit": "mariadb.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "mariadb.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "daemon_before": {
+        "asked": "a query over the local socket and the server's PID file",
+        "conf_load_time": null,
+        "exec_reload": null,
+        "pid": 917,
+        "real_unit": "mariadb.service",
+        "reload_result": "success",
+        "running": true,
+        "units": {
+          "mariadb.service": {
+            "ActiveState": "active",
+            "LoadState": "loaded",
+            "MainPID": "917",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "running"
+          }
+        }
+      },
+      "journal_lines": [
+        "2026-10-09T12:42:56.845994+00:00 dns-arch mariadbd[917]: 2026-10-09 12:42:56 0 [Note] /usr/bin/mariadbd (initiated by: unknown): Normal shutdown",
+        "2026-10-09T12:42:56.846085+00:00 dns-arch systemd[1]: Stopping MariaDB 13.0.2 database server...",
+        "2026-10-09T12:42:56.846916+00:00 dns-arch mariadbd[917]: 2026-10-09 12:42:56 0 [Note] InnoDB: FTS optimize thread exiting.",
+        "2026-10-09T12:42:56.878569+00:00 dns-arch mariadbd[917]: 2026-10-09 12:42:56 0 [Note] InnoDB: Starting shutdown...",
+        "2026-10-09T12:42:56.887168+00:00 dns-arch mariadbd[917]: 2026-10-09 12:42:56 0 [Note] InnoDB: Dumping buffer pool(s) to /var/lib/mysql/ib_buffer_pool",
+        "2026-10-09T12:42:56.887168+00:00 dns-arch mariadbd[917]: 2026-10-09 12:42:56 0 [Note] InnoDB: Buffer pool(s) dump completed at 261009 12:42:56",
+        "2026-10-09T12:42:57.013606+00:00 dns-arch mariadbd[917]: 2026-10-09 12:42:57 0 [Note] InnoDB: Removed temporary tablespace data file: \"./ibtmp1\"",
+        "2026-10-09T12:42:57.013606+00:00 dns-arch mariadbd[917]: 2026-10-09 12:42:57 0 [Note] Shutdown completed; log sequence number 90494; transaction id 31",
+        "2026-10-09T12:42:57.057211+00:00 dns-arch mariadbd[917]: 2026-10-09 12:42:57 0 [Note] /usr/bin/mariadbd: Shutdown complete",
+        "2026-10-09T12:42:57.060746+00:00 dns-arch systemd[1]: mariadb.service: Deactivated successfully.",
+        "2026-10-09T12:42:57.061035+00:00 dns-arch systemd[1]: Stopped MariaDB 13.0.2 database server.",
+        "2026-10-09T12:42:57.061467+00:00 dns-arch systemd[1]: mariadb.service: Consumed 476ms CPU time over 3min 51.492s wall clock time, 189.5M memory peak."
+      ],
+      "matches": true,
+      "reason": null,
+      "refused_while_busy": [],
+      "reload_evidence": [],
+      "said": "success",
+      "service": "mariadb",
+      "situation": "set4, before the reload",
+      "status": 200,
+      "truth_action_took_effect": true,
+      "vars": null
+    },
+    {
+      "action": "reload",
+      "answer": {
+        "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "at": "2026-10-09T12:43:04Z",
+      "code": "SERVICE_ACTION_FAILED",
+      "daemon_after": {
+        "asked": "a query over the local socket and the server's PID file",
+        "conf_load_time": null,
+        "exec_reload": null,
+        "pid": 0,
+        "real_unit": "mariadb.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "mariadb.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "daemon_before": {
+        "asked": "a query over the local socket and the server's PID file",
+        "conf_load_time": null,
+        "exec_reload": null,
+        "pid": 0,
+        "real_unit": "mariadb.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "mariadb.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "journal_lines": [
+        "-- No entries --"
+      ],
+      "matches": true,
+      "reason": "not_running",
+      "refused_while_busy": [],
+      "reload_evidence": [],
+      "said": "failed",
+      "service": "mariadb",
+      "situation": "while stopped",
+      "status": 409,
+      "truth_action_took_effect": false,
+      "vars": {
+        "action": "reload",
+        "command": "sudo systemctl status mariadb",
+        "detail": "mariadb.service is inactive (dead); nothing was reloaded",
+        "unit": "mariadb"
+      }
+    },
+    {
+      "action": "start",
+      "answer": {
+        "success": true
+      },
+      "at": "2026-10-09T12:43:09Z",
+      "code": null,
+      "daemon_after": {
+        "asked": "a query over the local socket and the server's PID file",
+        "conf_load_time": null,
+        "exec_reload": null,
+        "pid": 4766,
+        "real_unit": "mariadb.service",
+        "reload_result": "success",
+        "running": true,
+        "units": {
+          "mariadb.service": {
+            "ActiveState": "active",
+            "LoadState": "loaded",
+            "MainPID": "4766",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "running"
+          }
+        }
+      },
+      "daemon_before": {
+        "asked": "a query over the local socket and the server's PID file",
+        "conf_load_time": null,
+        "exec_reload": null,
+        "pid": 0,
+        "real_unit": "mariadb.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "mariadb.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "journal_lines": [
+        "2026-10-09T12:43:08.552365+00:00 dns-arch mariadbd[4766]: 2026-10-09 12:43:08 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...",
+        "2026-10-09T12:43:08.552433+00:00 dns-arch mariadbd[4766]: 2026-10-09 12:43:08 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.",
+        "2026-10-09T12:43:08.553672+00:00 dns-arch mariadbd[4766]: 2026-10-09 12:43:08 0 [Note] InnoDB: log sequence number 90494; transaction id 32",
+        "2026-10-09T12:43:08.553672+00:00 dns-arch mariadbd[4766]: 2026-10-09 12:43:08 0 [Note] Plugin 'wsrep-provider' is disabled.",
+        "2026-10-09T12:43:08.553672+00:00 dns-arch mariadbd[4766]: 2026-10-09 12:43:08 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool",
+        "2026-10-09T12:43:08.562835+00:00 dns-arch mariadbd[4766]: 2026-10-09 12:43:08 0 [Note] InnoDB: Buffer pool(s) load completed at 261009 12:43:08",
+        "2026-10-09T12:43:08.895256+00:00 dns-arch mariadbd[4766]: 2026-10-09 12:43:08 0 [Note] Server socket created on IP: '0.0.0.0', port: '3306'.",
+        "2026-10-09T12:43:08.895256+00:00 dns-arch mariadbd[4766]: 2026-10-09 12:43:08 0 [Note] Server socket created on IP: '::', port: '3306'.",
+        "2026-10-09T12:43:08.898311+00:00 dns-arch mariadbd[4766]: 2026-10-09 12:43:08 0 [Note] mariadbd: Event Scheduler: Loaded 0 events",
+        "2026-10-09T12:43:08.899042+00:00 dns-arch mariadbd[4766]: 2026-10-09 12:43:08 0 [Note] /usr/bin/mariadbd: ready for connections.",
+        "2026-10-09T12:43:08.899042+00:00 dns-arch mariadbd[4766]: Version: '13.0.2-MariaDB'  socket: '/run/mysqld/mysqld.sock'  port: 3306  Arch Linux",
+        "2026-10-09T12:43:08.899173+00:00 dns-arch systemd[1]: Started MariaDB 13.0.2 database server."
+      ],
+      "matches": true,
+      "reason": null,
+      "refused_while_busy": [],
+      "reload_evidence": [],
+      "said": "success",
+      "service": "mariadb",
+      "situation": "after the refused reload",
+      "status": 200,
+      "truth_action_took_effect": true,
+      "vars": null
+    },
+    {
+      "action": "stop",
+      "answer": {
+        "success": true
+      },
+      "at": "2026-10-09T12:43:12Z",
+      "code": null,
+      "daemon_after": {
+        "asked": "a query over the local socket and postmaster.pid",
+        "conf_load_time": "",
+        "exec_reload": "{ path=/bin/kill ; argv[]=/bin/kill -HUP ${MAINPID} ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 0,
+        "real_unit": "postgresql.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "postgresql.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "daemon_before": {
+        "asked": "a query over the local socket and postmaster.pid",
+        "conf_load_time": "2026-10-09 12:39:35.961801+00",
+        "exec_reload": "{ path=/bin/kill ; argv[]=/bin/kill -HUP ${MAINPID} ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 1783,
+        "real_unit": "postgresql.service",
+        "reload_result": "success",
+        "running": true,
+        "units": {
+          "postgresql.service": {
+            "ActiveState": "active",
+            "LoadState": "loaded",
+            "MainPID": "1783",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "running"
+          }
+        }
+      },
+      "journal_lines": [
+        "2026-10-09T12:43:11.800389+00:00 dns-arch systemd[1]: Stopping PostgreSQL database server...",
+        "2026-10-09T12:43:11.800858+00:00 dns-arch postgres[1783]: 2026-10-09 12:43:11.800 UTC [1783] LOG:  received fast shutdown request",
+        "2026-10-09T12:43:11.820399+00:00 dns-arch postgres[1783]: 2026-10-09 12:43:11.820 UTC [1783] LOG:  aborting any active transactions",
+        "2026-10-09T12:43:11.823722+00:00 dns-arch postgres[1783]: 2026-10-09 12:43:11.823 UTC [1783] LOG:  background worker \"logical replication launcher\" (PID 1793) exited with exit code 1",
+        "2026-10-09T12:43:11.823974+00:00 dns-arch postgres[1788]: 2026-10-09 12:43:11.823 UTC [1788] LOG:  shutting down",
+        "2026-10-09T12:43:11.835355+00:00 dns-arch postgres[1788]: 2026-10-09 12:43:11.835 UTC [1788] LOG:  checkpoint starting: shutdown immediate",
+        "2026-10-09T12:43:12.056556+00:00 dns-arch postgres[1788]: 2026-10-09 12:43:12.056 UTC [1788] LOG:  checkpoint complete: wrote 46 buffers (0.3%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.003 s, sync=0.163 s, total=0.233 s; sync files=15, longest=0.014 s, average=0.011 s; distance=337 kB, estimate=337 kB; lsn=0/17BA828, redo lsn=0/17BA828",
+        "2026-10-09T12:43:12.095979+00:00 dns-arch postgres[1783]: 2026-10-09 12:43:12.095 UTC [1783] LOG:  database system is shut down",
+        "2026-10-09T12:43:12.098330+00:00 dns-arch systemd[1]: postgresql.service: Deactivated successfully.",
+        "2026-10-09T12:43:12.098634+00:00 dns-arch systemd[1]: Stopped PostgreSQL database server."
+      ],
+      "matches": true,
+      "reason": null,
+      "refused_while_busy": [],
+      "reload_evidence": [],
+      "said": "success",
+      "service": "postgresql",
+      "situation": "set4, before the reload",
+      "status": 200,
+      "truth_action_took_effect": true,
+      "vars": null
+    },
+    {
+      "action": "reload",
+      "answer": {
+        "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+      },
+      "at": "2026-10-09T12:43:19Z",
+      "code": "SERVICE_ACTION_FAILED",
+      "daemon_after": {
+        "asked": "a query over the local socket and postmaster.pid",
+        "conf_load_time": "",
+        "exec_reload": "{ path=/bin/kill ; argv[]=/bin/kill -HUP ${MAINPID} ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 0,
+        "real_unit": "postgresql.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "postgresql.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "daemon_before": {
+        "asked": "a query over the local socket and postmaster.pid",
+        "conf_load_time": "",
+        "exec_reload": "{ path=/bin/kill ; argv[]=/bin/kill -HUP ${MAINPID} ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 0,
+        "real_unit": "postgresql.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "postgresql.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "journal_lines": [
+        "-- No entries --"
+      ],
+      "matches": true,
+      "reason": "not_running",
+      "refused_while_busy": [],
+      "reload_evidence": [],
+      "said": "failed",
+      "service": "postgresql",
+      "situation": "while stopped",
+      "status": 409,
+      "truth_action_took_effect": false,
+      "vars": {
+        "action": "reload",
+        "command": "sudo systemctl status postgresql",
+        "detail": "postgresql.service is inactive (dead); nothing was reloaded",
+        "unit": "postgresql"
+      }
+    },
+    {
+      "action": "start",
+      "answer": {
+        "success": true
+      },
+      "at": "2026-10-09T12:43:24Z",
+      "code": null,
+      "daemon_after": {
+        "asked": "a query over the local socket and postmaster.pid",
+        "conf_load_time": "2026-10-09 12:43:23.441815+00",
+        "exec_reload": "{ path=/bin/kill ; argv[]=/bin/kill -HUP ${MAINPID} ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 5183,
+        "real_unit": "postgresql.service",
+        "reload_result": "success",
+        "running": true,
+        "units": {
+          "postgresql.service": {
+            "ActiveState": "active",
+            "LoadState": "loaded",
+            "MainPID": "5183",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "running"
+          }
+        }
+      },
+      "daemon_before": {
+        "asked": "a query over the local socket and postmaster.pid",
+        "conf_load_time": "",
+        "exec_reload": "{ path=/bin/kill ; argv[]=/bin/kill -HUP ${MAINPID} ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 0,
+        "real_unit": "postgresql.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "postgresql.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "journal_lines": [
+        "2026-10-09T12:43:23.357627+00:00 dns-arch systemd[1]: Starting PostgreSQL database server...",
+        "2026-10-09T12:43:23.469407+00:00 dns-arch postgres[5183]: 2026-10-09 12:43:23.469 UTC [5183] LOG:  starting PostgreSQL 18.6 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 16.2.1 20260810, 64-bit",
+        "2026-10-09T12:43:23.470742+00:00 dns-arch postgres[5183]: 2026-10-09 12:43:23.470 UTC [5183] LOG:  listening on IPv6 address \"::1\", port 5432",
+        "2026-10-09T12:43:23.470742+00:00 dns-arch postgres[5183]: 2026-10-09 12:43:23.470 UTC [5183] LOG:  listening on IPv4 address \"127.0.0.1\", port 5432",
+        "2026-10-09T12:43:23.478340+00:00 dns-arch postgres[5183]: 2026-10-09 12:43:23.478 UTC [5183] LOG:  listening on Unix socket \"/run/postgresql/.s.PGSQL.5432\"",
+        "2026-10-09T12:43:23.502078+00:00 dns-arch postgres[5190]: 2026-10-09 12:43:23.502 UTC [5190] LOG:  database system was shut down at 2026-10-09 12:43:12 UTC",
+        "2026-10-09T12:43:23.516872+00:00 dns-arch postgres[5183]: 2026-10-09 12:43:23.516 UTC [5183] LOG:  database system is ready to accept connections",
+        "2026-10-09T12:43:23.527361+00:00 dns-arch systemd[1]: Started PostgreSQL database server."
+      ],
+      "matches": true,
+      "reason": null,
+      "refused_while_busy": [],
+      "reload_evidence": [],
+      "said": "success",
+      "service": "postgresql",
+      "situation": "after the refused reload",
+      "status": 200,
+      "truth_action_took_effect": true,
+      "vars": null
+    }
+  ],
+  "calls": [
+    {
+      "at": "2026-10-09T12:42:43Z",
+      "json": {
+        "success": true
+      },
+      "label": "S8 nginx stop (set4, before the reload)",
+      "request": {
+        "body": {
+          "action": "stop",
+          "name": "nginx"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/action"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SERVICE_ACTION_FAILED",
+        "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts.",
+        "reason": "not_running",
+        "vars": {
+          "action": "reload",
+          "command": "sudo systemctl status nginx",
+          "detail": "nginx.service is inactive (dead); nothing was reloaded",
+          "unit": "nginx"
+        }
+      },
+      "at": "2026-10-09T12:42:49Z",
+      "catalogue_texts": {
+        "err.SERVICE_ACTION_FAILED": {
+          "en": "The action on nginx did not take effect. On the server, run sudo systemctl status nginx to see why, correct it, then repeat the action here.",
+          "tr": "nginx üzerindeki işlem etkili olmadı. Sunucuda sudo systemctl status nginx komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin."
+        },
+        "err.SERVICE_ACTION_FAILED.not_running": {
+          "en": "nginx is not running, so there was nothing to reload and nothing was changed. If it should run, use Start here; it reads its configuration files when it starts. To see its state on the server, run sudo systemctl status nginx.",
+          "tr": "nginx çalışmıyor; bu yüzden yeniden yüklenecek bir şey yoktu ve hiçbir şey değiştirilmedi. Çalışması gerekiyorsa burada Başlat’ı kullanın; başlarken yapılandırma dosyalarını okur. Sunucudaki durumunu görmek için sudo systemctl status nginx komutunu çalıştırın."
+        }
+      },
+      "json": {
+        "code": "SERVICE_ACTION_FAILED",
+        "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts.",
+        "reason": "not_running",
+        "vars": {
+          "action": "reload",
+          "command": "sudo systemctl status nginx",
+          "detail": "nginx.service is inactive (dead); nothing was reloaded",
+          "unit": "nginx"
+        }
+      },
+      "label": "S8 nginx reload (while stopped)",
+      "request": {
+        "body": {
+          "action": "reload",
+          "name": "nginx"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/action"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T12:42:54Z",
+      "json": {
+        "success": true
+      },
+      "label": "S8 nginx start (after the refused reload)",
+      "request": {
+        "body": {
+          "action": "start",
+          "name": "nginx"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/action"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T12:42:57Z",
+      "json": {
+        "success": true
+      },
+      "label": "S8 mariadb stop (set4, before the reload)",
+      "request": {
+        "body": {
+          "action": "stop",
+          "name": "mariadb"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/action"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SERVICE_ACTION_FAILED",
+        "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts.",
+        "reason": "not_running",
+        "vars": {
+          "action": "reload",
+          "command": "sudo systemctl status mariadb",
+          "detail": "mariadb.service is inactive (dead); nothing was reloaded",
+          "unit": "mariadb"
+        }
+      },
+      "at": "2026-10-09T12:43:04Z",
+      "catalogue_texts": {
+        "err.SERVICE_ACTION_FAILED": {
+          "en": "The action on mariadb did not take effect. On the server, run sudo systemctl status mariadb to see why, correct it, then repeat the action here.",
+          "tr": "mariadb üzerindeki işlem etkili olmadı. Sunucuda sudo systemctl status mariadb komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin."
+        },
+        "err.SERVICE_ACTION_FAILED.not_running": {
+          "en": "mariadb is not running, so there was nothing to reload and nothing was changed. If it should run, use Start here; it reads its configuration files when it starts. To see its state on the server, run sudo systemctl status mariadb.",
+          "tr": "mariadb çalışmıyor; bu yüzden yeniden yüklenecek bir şey yoktu ve hiçbir şey değiştirilmedi. Çalışması gerekiyorsa burada Başlat’ı kullanın; başlarken yapılandırma dosyalarını okur. Sunucudaki durumunu görmek için sudo systemctl status mariadb komutunu çalıştırın."
+        }
+      },
+      "json": {
+        "code": "SERVICE_ACTION_FAILED",
+        "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts.",
+        "reason": "not_running",
+        "vars": {
+          "action": "reload",
+          "command": "sudo systemctl status mariadb",
+          "detail": "mariadb.service is inactive (dead); nothing was reloaded",
+          "unit": "mariadb"
+        }
+      },
+      "label": "S8 mariadb reload (while stopped)",
+      "request": {
+        "body": {
+          "action": "reload",
+          "name": "mariadb"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/action"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T12:43:09Z",
+      "json": {
+        "success": true
+      },
+      "label": "S8 mariadb start (after the refused reload)",
+      "request": {
+        "body": {
+          "action": "start",
+          "name": "mariadb"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/action"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T12:43:12Z",
+      "json": {
+        "success": true
+      },
+      "label": "S8 postgresql stop (set4, before the reload)",
+      "request": {
+        "body": {
+          "action": "stop",
+          "name": "postgresql"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/action"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "SERVICE_ACTION_FAILED",
+        "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts.",
+        "reason": "not_running",
+        "vars": {
+          "action": "reload",
+          "command": "sudo systemctl status postgresql",
+          "detail": "postgresql.service is inactive (dead); nothing was reloaded",
+          "unit": "postgresql"
+        }
+      },
+      "at": "2026-10-09T12:43:19Z",
+      "catalogue_texts": {
+        "err.SERVICE_ACTION_FAILED": {
+          "en": "The action on postgresql did not take effect. On the server, run sudo systemctl status postgresql to see why, correct it, then repeat the action here.",
+          "tr": "postgresql üzerindeki işlem etkili olmadı. Sunucuda sudo systemctl status postgresql komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin."
+        },
+        "err.SERVICE_ACTION_FAILED.not_running": {
+          "en": "postgresql is not running, so there was nothing to reload and nothing was changed. If it should run, use Start here; it reads its configuration files when it starts. To see its state on the server, run sudo systemctl status postgresql.",
+          "tr": "postgresql çalışmıyor; bu yüzden yeniden yüklenecek bir şey yoktu ve hiçbir şey değiştirilmedi. Çalışması gerekiyorsa burada Başlat’ı kullanın; başlarken yapılandırma dosyalarını okur. Sunucudaki durumunu görmek için sudo systemctl status postgresql komutunu çalıştırın."
+        }
+      },
+      "json": {
+        "code": "SERVICE_ACTION_FAILED",
+        "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts.",
+        "reason": "not_running",
+        "vars": {
+          "action": "reload",
+          "command": "sudo systemctl status postgresql",
+          "detail": "postgresql.service is inactive (dead); nothing was reloaded",
+          "unit": "postgresql"
+        }
+      },
+      "label": "S8 postgresql reload (while stopped)",
+      "request": {
+        "body": {
+          "action": "reload",
+          "name": "postgresql"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/action"
+      },
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T12:43:24Z",
+      "json": {
+        "success": true
+      },
+      "label": "S8 postgresql start (after the refused reload)",
+      "request": {
+        "body": {
+          "action": "start",
+          "name": "postgresql"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/action"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "after": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "nginx.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "answer": {
+          "success": true
+        },
+        "before": {
+          "pid": 1174,
+          "running": true,
+          "units": {
+            "nginx.service": {
+              "ActiveState": "active",
+              "LoadState": "loaded",
+              "MainPID": "1174",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "running"
+            }
+          }
+        },
+        "code": null,
+        "reason": null,
+        "reload_evidence": [],
+        "status": 200,
+        "truth_action_took_effect": true,
+        "vars": null
+      },
+      "name": "S8 nginx stop (set4, before the reload): the answer (success) matches what the service shows",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "nginx.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "answer": {
+          "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+        },
+        "before": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "nginx.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "code": "SERVICE_ACTION_FAILED",
+        "reason": "not_running",
+        "reload_evidence": [],
+        "status": 409,
+        "truth_action_took_effect": false,
+        "vars": {
+          "action": "reload",
+          "command": "sudo systemctl status nginx",
+          "detail": "nginx.service is inactive (dead); nothing was reloaded",
+          "unit": "nginx"
+        }
+      },
+      "name": "S8 nginx reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SERVICE_ACTION_FAILED",
+        "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts.",
+        "reason": "not_running",
+        "status": 409,
+        "vars": {
+          "action": "reload",
+          "command": "sudo systemctl status nginx",
+          "detail": "nginx.service is inactive (dead); nothing was reloaded",
+          "unit": "nginx"
+        }
+      },
+      "name": "S8 nginx reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "daemon": false,
+        "is_active": {
+          "nginx.service": "inactive"
+        },
+        "stopped_by": "the Panel's Stop"
+      },
+      "name": "item 4 (nginx): the unit was stopped before the reload was asked",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "answer": {
+            "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+          },
+          "code": "SERVICE_ACTION_FAILED",
+          "reason": "not_running",
+          "status": 409,
+          "vars": {
+            "action": "reload",
+            "command": "sudo systemctl status nginx",
+            "detail": "nginx.service is inactive (dead); nothing was reloaded",
+            "unit": "nginx"
+          }
+        },
+        "journal_of_systemd_about_them_since": [],
+        "journal_of_the_product_since": [
+          "2026-10-09T12:42:49.047543+00:00 dns-arch panel[424]: 2026/10/09 12:42:49 http: TLS handshake error from 127.0.0.1:33798: EOF",
+          "2026-10-09T12:42:49.161186+00:00 dns-arch agent[412]: 2026/10/09 12:42:49 ERROR service reload nginx: failed not_running: nginx.service is inactive (dead); nothing was reloaded",
+          "2026-10-09T12:42:50.318078+00:00 dns-arch panel[424]: 2026/10/09 12:42:50 [409][service action] reload nginx: SERVICE_ACTION_FAILED not_running: nginx.service is inactive (dead); nothing was reloaded"
+        ],
+        "journal_of_the_units_since": {
+          "nginx.service": []
+        },
+        "service": "nginx",
+        "since": 1791549766,
+        "state_after": {
+          "nginx.service": "inactive"
+        },
+        "state_before": {
+          "nginx.service": "inactive"
+        },
+        "stopped_by": "the Panel's Stop",
+        "unit_properties_before_and_after": {
+          "nginx.service": {
+            "ActiveEnterTimestamp": [
+              "Fri 2026-10-09 12:39:11 UTC",
+              "Fri 2026-10-09 12:39:11 UTC"
+            ],
+            "ActiveState": [
+              "inactive",
+              "inactive"
+            ],
+            "ExecMainStartTimestamp": [
+              "Fri 2026-10-09 12:39:11 UTC",
+              "Fri 2026-10-09 12:39:11 UTC"
+            ],
+            "ExecReload": [
+              "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 12:42:40 UTC] ; stop_time=[Fri 2026-10-09 12:42:40 UTC] ; pid=4068 ; code=exited ; status=0 }",
+              "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 12:42:40 UTC] ; stop_time=[Fri 2026-10-09 12:42:40 UTC] ; pid=4068 ; code=exited ; status=0 }"
+            ],
+            "InactiveEnterTimestamp": [
+              "Fri 2026-10-09 12:42:42 UTC",
+              "Fri 2026-10-09 12:42:42 UTC"
+            ],
+            "InvocationID": [
+              "a569730df45544869a247bfef6ca9704",
+              "a569730df45544869a247bfef6ca9704"
+            ],
+            "MainPID": [
+              "0",
+              "0"
+            ],
+            "NRestarts": [
+              "0",
+              "0"
+            ],
+            "StateChangeTimestamp": [
+              "Fri 2026-10-09 12:42:42 UTC",
+              "Fri 2026-10-09 12:42:42 UTC"
+            ],
+            "SubState": [
+              "dead",
+              "dead"
+            ]
+          }
+        },
+        "unit_properties_unchanged": true,
+        "units": [
+          "nginx.service"
+        ]
+      },
+      "name": "item 4 (nginx): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "pid": 4433,
+          "running": true,
+          "units": {
+            "nginx.service": {
+              "ActiveState": "active",
+              "LoadState": "loaded",
+              "MainPID": "4433",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "running"
+            }
+          }
+        },
+        "answer": {
+          "success": true
+        },
+        "before": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "nginx.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "code": null,
+        "reason": null,
+        "reload_evidence": [],
+        "status": 200,
+        "truth_action_took_effect": true,
+        "vars": null
+      },
+      "name": "S8 nginx start (after the refused reload): the answer (success) matches what the service shows",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "success": true
+        },
+        "code": null,
+        "reason": null,
+        "status": 200
+      },
+      "name": "item 4 (nginx): Start brings the service back afterwards",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "mariadb.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "answer": {
+          "success": true
+        },
+        "before": {
+          "pid": 917,
+          "running": true,
+          "units": {
+            "mariadb.service": {
+              "ActiveState": "active",
+              "LoadState": "loaded",
+              "MainPID": "917",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "running"
+            }
+          }
+        },
+        "code": null,
+        "reason": null,
+        "reload_evidence": [],
+        "status": 200,
+        "truth_action_took_effect": true,
+        "vars": null
+      },
+      "name": "S8 mariadb stop (set4, before the reload): the answer (success) matches what the service shows",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "mariadb.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "answer": {
+          "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+        },
+        "before": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "mariadb.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "code": "SERVICE_ACTION_FAILED",
+        "reason": "not_running",
+        "reload_evidence": [],
+        "status": 409,
+        "truth_action_took_effect": false,
+        "vars": {
+          "action": "reload",
+          "command": "sudo systemctl status mariadb",
+          "detail": "mariadb.service is inactive (dead); nothing was reloaded",
+          "unit": "mariadb"
+        }
+      },
+      "name": "S8 mariadb reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SERVICE_ACTION_FAILED",
+        "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts.",
+        "reason": "not_running",
+        "status": 409,
+        "vars": {
+          "action": "reload",
+          "command": "sudo systemctl status mariadb",
+          "detail": "mariadb.service is inactive (dead); nothing was reloaded",
+          "unit": "mariadb"
+        }
+      },
+      "name": "S8 mariadb reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "daemon": false,
+        "is_active": {
+          "mariadb.service": "inactive"
+        },
+        "stopped_by": "the Panel's Stop"
+      },
+      "name": "item 4 (mariadb): the unit was stopped before the reload was asked",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "answer": {
+            "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+          },
+          "code": "SERVICE_ACTION_FAILED",
+          "reason": "not_running",
+          "status": 409,
+          "vars": {
+            "action": "reload",
+            "command": "sudo systemctl status mariadb",
+            "detail": "mariadb.service is inactive (dead); nothing was reloaded",
+            "unit": "mariadb"
+          }
+        },
+        "journal_of_systemd_about_them_since": [],
+        "journal_of_the_product_since": [
+          "2026-10-09T12:43:03.355355+00:00 dns-arch panel[424]: 2026/10/09 12:43:03 http: TLS handshake error from 127.0.0.1:53910: EOF",
+          "2026-10-09T12:43:03.481952+00:00 dns-arch agent[412]: 2026/10/09 12:43:03 ERROR service reload mariadb: failed not_running: mariadb.service is inactive (dead); nothing was reloaded",
+          "2026-10-09T12:43:04.656126+00:00 dns-arch panel[424]: 2026/10/09 12:43:04 [409][service action] reload mariadb: SERVICE_ACTION_FAILED not_running: mariadb.service is inactive (dead); nothing was reloaded"
+        ],
+        "journal_of_the_units_since": {
+          "mariadb.service": []
+        },
+        "service": "mariadb",
+        "since": 1791549781,
+        "state_after": {
+          "mariadb.service": "inactive"
+        },
+        "state_before": {
+          "mariadb.service": "inactive"
+        },
+        "stopped_by": "the Panel's Stop",
+        "unit_properties_before_and_after": {
+          "mariadb.service": {
+            "ActiveEnterTimestamp": [
+              "Fri 2026-10-09 12:39:06 UTC",
+              "Fri 2026-10-09 12:39:06 UTC"
+            ],
+            "ActiveState": [
+              "inactive",
+              "inactive"
+            ],
+            "ExecMainStartTimestamp": [
+              "Fri 2026-10-09 12:39:05 UTC",
+              "Fri 2026-10-09 12:39:05 UTC"
+            ],
+            "ExecReload": [
+              null,
+              null
+            ],
+            "InactiveEnterTimestamp": [
+              "Fri 2026-10-09 12:42:57 UTC",
+              "Fri 2026-10-09 12:42:57 UTC"
+            ],
+            "InvocationID": [
+              "c2459fef9da149508453423a1a09dddf",
+              "c2459fef9da149508453423a1a09dddf"
+            ],
+            "MainPID": [
+              "0",
+              "0"
+            ],
+            "NRestarts": [
+              "0",
+              "0"
+            ],
+            "StateChangeTimestamp": [
+              "Fri 2026-10-09 12:42:57 UTC",
+              "Fri 2026-10-09 12:42:57 UTC"
+            ],
+            "SubState": [
+              "dead",
+              "dead"
+            ]
+          }
+        },
+        "unit_properties_unchanged": true,
+        "units": [
+          "mariadb.service"
+        ]
+      },
+      "name": "item 4 (mariadb): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "pid": 4766,
+          "running": true,
+          "units": {
+            "mariadb.service": {
+              "ActiveState": "active",
+              "LoadState": "loaded",
+              "MainPID": "4766",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "running"
+            }
+          }
+        },
+        "answer": {
+          "success": true
+        },
+        "before": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "mariadb.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "code": null,
+        "reason": null,
+        "reload_evidence": [],
+        "status": 200,
+        "truth_action_took_effect": true,
+        "vars": null
+      },
+      "name": "S8 mariadb start (after the refused reload): the answer (success) matches what the service shows",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "success": true
+        },
+        "code": null,
+        "reason": null,
+        "status": 200
+      },
+      "name": "item 4 (mariadb): Start brings the service back afterwards",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "postgresql.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "answer": {
+          "success": true
+        },
+        "before": {
+          "pid": 1783,
+          "running": true,
+          "units": {
+            "postgresql.service": {
+              "ActiveState": "active",
+              "LoadState": "loaded",
+              "MainPID": "1783",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "running"
+            }
+          }
+        },
+        "code": null,
+        "reason": null,
+        "reload_evidence": [],
+        "status": 200,
+        "truth_action_took_effect": true,
+        "vars": null
+      },
+      "name": "S8 postgresql stop (set4, before the reload): the answer (success) matches what the service shows",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "postgresql.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "answer": {
+          "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+        },
+        "before": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "postgresql.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "code": "SERVICE_ACTION_FAILED",
+        "reason": "not_running",
+        "reload_evidence": [],
+        "status": 409,
+        "truth_action_took_effect": false,
+        "vars": {
+          "action": "reload",
+          "command": "sudo systemctl status postgresql",
+          "detail": "postgresql.service is inactive (dead); nothing was reloaded",
+          "unit": "postgresql"
+        }
+      },
+      "name": "S8 postgresql reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "SERVICE_ACTION_FAILED",
+        "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts.",
+        "reason": "not_running",
+        "status": 409,
+        "vars": {
+          "action": "reload",
+          "command": "sudo systemctl status postgresql",
+          "detail": "postgresql.service is inactive (dead); nothing was reloaded",
+          "unit": "postgresql"
+        }
+      },
+      "name": "S8 postgresql reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "daemon": false,
+        "is_active": {
+          "postgresql.service": "inactive"
+        },
+        "stopped_by": "the Panel's Stop"
+      },
+      "name": "item 4 (postgresql): the unit was stopped before the reload was asked",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "answer": {
+            "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+          },
+          "code": "SERVICE_ACTION_FAILED",
+          "reason": "not_running",
+          "status": 409,
+          "vars": {
+            "action": "reload",
+            "command": "sudo systemctl status postgresql",
+            "detail": "postgresql.service is inactive (dead); nothing was reloaded",
+            "unit": "postgresql"
+          }
+        },
+        "journal_of_systemd_about_them_since": [],
+        "journal_of_the_product_since": [
+          "2026-10-09T12:43:18.399707+00:00 dns-arch panel[424]: 2026/10/09 12:43:18 http: TLS handshake error from 127.0.0.1:51840: EOF",
+          "2026-10-09T12:43:18.441730+00:00 dns-arch sudo[5025]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on --no-align --tuples-only --quiet",
+          "2026-10-09T12:43:18.442214+00:00 dns-arch sudo[5025]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)",
+          "2026-10-09T12:43:18.447685+00:00 dns-arch sudo[5025]: pam_unix(sudo:session): session closed for user postgres",
+          "2026-10-09T12:43:18.526144+00:00 dns-arch agent[412]: 2026/10/09 12:43:18 ERROR service reload postgresql: failed not_running: postgresql.service is inactive (dead); nothing was reloaded",
+          "2026-10-09T12:43:19.704441+00:00 dns-arch panel[424]: 2026/10/09 12:43:19 [409][service action] reload postgresql: SERVICE_ACTION_FAILED not_running: postgresql.service is inactive (dead); nothing was reloaded"
+        ],
+        "journal_of_the_units_since": {
+          "postgresql.service": []
+        },
+        "service": "postgresql",
+        "since": 1791549796,
+        "state_after": {
+          "postgresql.service": "inactive"
+        },
+        "state_before": {
+          "postgresql.service": "inactive"
+        },
+        "stopped_by": "the Panel's Stop",
+        "unit_properties_before_and_after": {
+          "postgresql.service": {
+            "ActiveEnterTimestamp": [
+              "Fri 2026-10-09 12:39:36 UTC",
+              "Fri 2026-10-09 12:39:36 UTC"
+            ],
+            "ActiveState": [
+              "inactive",
+              "inactive"
+            ],
+            "ExecMainStartTimestamp": [
+              "Fri 2026-10-09 12:39:35 UTC",
+              "Fri 2026-10-09 12:39:35 UTC"
+            ],
+            "ExecReload": [
+              "{ path=/bin/kill ; argv[]=/bin/kill -HUP ${MAINPID} ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+              "{ path=/bin/kill ; argv[]=/bin/kill -HUP ${MAINPID} ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }"
+            ],
+            "InactiveEnterTimestamp": [
+              "Fri 2026-10-09 12:43:12 UTC",
+              "Fri 2026-10-09 12:43:12 UTC"
+            ],
+            "InvocationID": [
+              "4403bfe204604fcb81cf9916163f46a8",
+              "4403bfe204604fcb81cf9916163f46a8"
+            ],
+            "MainPID": [
+              "0",
+              "0"
+            ],
+            "NRestarts": [
+              "0",
+              "0"
+            ],
+            "StateChangeTimestamp": [
+              "Fri 2026-10-09 12:43:12 UTC",
+              "Fri 2026-10-09 12:43:12 UTC"
+            ],
+            "SubState": [
+              "dead",
+              "dead"
+            ]
+          }
+        },
+        "unit_properties_unchanged": true,
+        "units": [
+          "postgresql.service"
+        ]
+      },
+      "name": "item 4 (postgresql): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "pid": 5183,
+          "running": true,
+          "units": {
+            "postgresql.service": {
+              "ActiveState": "active",
+              "LoadState": "loaded",
+              "MainPID": "5183",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "running"
+            }
+          }
+        },
+        "answer": {
+          "success": true
+        },
+        "before": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "postgresql.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "code": null,
+        "reason": null,
+        "reload_evidence": [],
+        "status": 200,
+        "truth_action_took_effect": true,
+        "vars": null
+      },
+      "name": "S8 postgresql start (after the refused reload): the answer (success) matches what the service shows",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "success": true
+        },
+        "code": null,
+        "reason": null,
+        "status": 200
+      },
+      "name": "item 4 (postgresql): Start brings the service back afterwards",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T12:43:24Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/087-nginx-units-at-start.json",
+      "label": "nginx-units-at-start",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/088-nginx-stop-set4-before-the-reload-before.json",
+      "label": "nginx-stop-set4-before-the-reload-before",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/089-nginx-stop-set4-before-the-reload-after.json",
+      "label": "nginx-stop-set4-before-the-reload-after",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/090-nginx-stop-set4-before-the-reload-journal.json",
+      "label": "nginx-stop-set4-before-the-reload-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/091-nginx-stopped-before-reload.json",
+      "label": "nginx-stopped-before-reload",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/092-nginx-reload-while-stopped-before.json",
+      "label": "nginx-reload-while-stopped-before",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/093-nginx-reload-while-stopped-after.json",
+      "label": "nginx-reload-while-stopped-after",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/094-nginx-reload-while-stopped-journal.json",
+      "label": "nginx-reload-while-stopped-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/095-nginx-after-refused-reload.json",
+      "label": "nginx-after-refused-reload",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/096-nginx-start-after-the-refused-reload-before.json",
+      "label": "nginx-start-after-the-refused-reload-before",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/097-nginx-start-after-the-refused-reload-after.json",
+      "label": "nginx-start-after-the-refused-reload-after",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/098-nginx-start-after-the-refused-reload-journal.json",
+      "label": "nginx-start-after-the-refused-reload-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/099-mariadb-units-at-start.json",
+      "label": "mariadb-units-at-start",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/100-mariadb-stop-set4-before-the-reload-before.json",
+      "label": "mariadb-stop-set4-before-the-reload-before",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/101-mariadb-stop-set4-before-the-reload-after.json",
+      "label": "mariadb-stop-set4-before-the-reload-after",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/102-mariadb-stop-set4-before-the-reload-journal.json",
+      "label": "mariadb-stop-set4-before-the-reload-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/103-mariadb-stopped-before-reload.json",
+      "label": "mariadb-stopped-before-reload",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/104-mariadb-reload-while-stopped-before.json",
+      "label": "mariadb-reload-while-stopped-before",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/105-mariadb-reload-while-stopped-after.json",
+      "label": "mariadb-reload-while-stopped-after",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/106-mariadb-reload-while-stopped-journal.json",
+      "label": "mariadb-reload-while-stopped-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/107-mariadb-after-refused-reload.json",
+      "label": "mariadb-after-refused-reload",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/108-mariadb-start-after-the-refused-reload-before.json",
+      "label": "mariadb-start-after-the-refused-reload-before",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/109-mariadb-start-after-the-refused-reload-after.json",
+      "label": "mariadb-start-after-the-refused-reload-after",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/110-mariadb-start-after-the-refused-reload-journal.json",
+      "label": "mariadb-start-after-the-refused-reload-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/111-postgresql-units-at-start.json",
+      "label": "postgresql-units-at-start",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/112-postgresql-stop-set4-before-the-reload-before.json",
+      "label": "postgresql-stop-set4-before-the-reload-before",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/113-postgresql-stop-set4-before-the-reload-after.json",
+      "label": "postgresql-stop-set4-before-the-reload-after",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/114-postgresql-stop-set4-before-the-reload-journal.json",
+      "label": "postgresql-stop-set4-before-the-reload-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/115-postgresql-stopped-before-reload.json",
+      "label": "postgresql-stopped-before-reload",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/116-postgresql-reload-while-stopped-before.json",
+      "label": "postgresql-reload-while-stopped-before",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/117-postgresql-reload-while-stopped-after.json",
+      "label": "postgresql-reload-while-stopped-after",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/118-postgresql-reload-while-stopped-journal.json",
+      "label": "postgresql-reload-while-stopped-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/119-postgresql-after-refused-reload.json",
+      "label": "postgresql-after-refused-reload",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/120-postgresql-start-after-the-refused-reload-before.json",
+      "label": "postgresql-start-after-the-refused-reload-before",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/121-postgresql-start-after-the-refused-reload-after.json",
+      "label": "postgresql-start-after-the-refused-reload-after",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/122-postgresql-start-after-the-refused-reload-journal.json",
+      "label": "postgresql-start-after-the-refused-reload-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [],
+  "owner_actions": [],
+  "reloads": {
+    "mariadb": {
+      "answer": {
+        "answer": {
+          "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+        },
+        "code": "SERVICE_ACTION_FAILED",
+        "reason": "not_running",
+        "status": 409,
+        "vars": {
+          "action": "reload",
+          "command": "sudo systemctl status mariadb",
+          "detail": "mariadb.service is inactive (dead); nothing was reloaded",
+          "unit": "mariadb"
+        }
+      },
+      "journal_of_systemd_about_them_since": [],
+      "journal_of_the_product_since": [
+        "2026-10-09T12:43:03.355355+00:00 dns-arch panel[424]: 2026/10/09 12:43:03 http: TLS handshake error from 127.0.0.1:53910: EOF",
+        "2026-10-09T12:43:03.481952+00:00 dns-arch agent[412]: 2026/10/09 12:43:03 ERROR service reload mariadb: failed not_running: mariadb.service is inactive (dead); nothing was reloaded",
+        "2026-10-09T12:43:04.656126+00:00 dns-arch panel[424]: 2026/10/09 12:43:04 [409][service action] reload mariadb: SERVICE_ACTION_FAILED not_running: mariadb.service is inactive (dead); nothing was reloaded"
+      ],
+      "journal_of_the_units_since": {
+        "mariadb.service": []
+      },
+      "service": "mariadb",
+      "since": 1791549781,
+      "state_after": {
+        "mariadb.service": "inactive"
+      },
+      "state_before": {
+        "mariadb.service": "inactive"
+      },
+      "stopped_by": "the Panel's Stop",
+      "unit_properties_before_and_after": {
+        "mariadb.service": {
+          "ActiveEnterTimestamp": [
+            "Fri 2026-10-09 12:39:06 UTC",
+            "Fri 2026-10-09 12:39:06 UTC"
+          ],
+          "ActiveState": [
+            "inactive",
+            "inactive"
+          ],
+          "ExecMainStartTimestamp": [
+            "Fri 2026-10-09 12:39:05 UTC",
+            "Fri 2026-10-09 12:39:05 UTC"
+          ],
+          "ExecReload": [
+            null,
+            null
+          ],
+          "InactiveEnterTimestamp": [
+            "Fri 2026-10-09 12:42:57 UTC",
+            "Fri 2026-10-09 12:42:57 UTC"
+          ],
+          "InvocationID": [
+            "c2459fef9da149508453423a1a09dddf",
+            "c2459fef9da149508453423a1a09dddf"
+          ],
+          "MainPID": [
+            "0",
+            "0"
+          ],
+          "NRestarts": [
+            "0",
+            "0"
+          ],
+          "StateChangeTimestamp": [
+            "Fri 2026-10-09 12:42:57 UTC",
+            "Fri 2026-10-09 12:42:57 UTC"
+          ],
+          "SubState": [
+            "dead",
+            "dead"
+          ]
+        }
+      },
+      "unit_properties_unchanged": true,
+      "units": [
+        "mariadb.service"
+      ]
+    },
+    "nginx": {
+      "answer": {
+        "answer": {
+          "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+        },
+        "code": "SERVICE_ACTION_FAILED",
+        "reason": "not_running",
+        "status": 409,
+        "vars": {
+          "action": "reload",
+          "command": "sudo systemctl status nginx",
+          "detail": "nginx.service is inactive (dead); nothing was reloaded",
+          "unit": "nginx"
+        }
+      },
+      "journal_of_systemd_about_them_since": [],
+      "journal_of_the_product_since": [
+        "2026-10-09T12:42:49.047543+00:00 dns-arch panel[424]: 2026/10/09 12:42:49 http: TLS handshake error from 127.0.0.1:33798: EOF",
+        "2026-10-09T12:42:49.161186+00:00 dns-arch agent[412]: 2026/10/09 12:42:49 ERROR service reload nginx: failed not_running: nginx.service is inactive (dead); nothing was reloaded",
+        "2026-10-09T12:42:50.318078+00:00 dns-arch panel[424]: 2026/10/09 12:42:50 [409][service action] reload nginx: SERVICE_ACTION_FAILED not_running: nginx.service is inactive (dead); nothing was reloaded"
+      ],
+      "journal_of_the_units_since": {
+        "nginx.service": []
+      },
+      "service": "nginx",
+      "since": 1791549766,
+      "state_after": {
+        "nginx.service": "inactive"
+      },
+      "state_before": {
+        "nginx.service": "inactive"
+      },
+      "stopped_by": "the Panel's Stop",
+      "unit_properties_before_and_after": {
+        "nginx.service": {
+          "ActiveEnterTimestamp": [
+            "Fri 2026-10-09 12:39:11 UTC",
+            "Fri 2026-10-09 12:39:11 UTC"
+          ],
+          "ActiveState": [
+            "inactive",
+            "inactive"
+          ],
+          "ExecMainStartTimestamp": [
+            "Fri 2026-10-09 12:39:11 UTC",
+            "Fri 2026-10-09 12:39:11 UTC"
+          ],
+          "ExecReload": [
+            "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 12:42:40 UTC] ; stop_time=[Fri 2026-10-09 12:42:40 UTC] ; pid=4068 ; code=exited ; status=0 }",
+            "{ path=/usr/bin/nginx ; argv[]=/usr/bin/nginx -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 12:42:40 UTC] ; stop_time=[Fri 2026-10-09 12:42:40 UTC] ; pid=4068 ; code=exited ; status=0 }"
+          ],
+          "InactiveEnterTimestamp": [
+            "Fri 2026-10-09 12:42:42 UTC",
+            "Fri 2026-10-09 12:42:42 UTC"
+          ],
+          "InvocationID": [
+            "a569730df45544869a247bfef6ca9704",
+            "a569730df45544869a247bfef6ca9704"
+          ],
+          "MainPID": [
+            "0",
+            "0"
+          ],
+          "NRestarts": [
+            "0",
+            "0"
+          ],
+          "StateChangeTimestamp": [
+            "Fri 2026-10-09 12:42:42 UTC",
+            "Fri 2026-10-09 12:42:42 UTC"
+          ],
+          "SubState": [
+            "dead",
+            "dead"
+          ]
+        }
+      },
+      "unit_properties_unchanged": true,
+      "units": [
+        "nginx.service"
+      ]
+    },
+    "postgresql": {
+      "answer": {
+        "answer": {
+          "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts."
+        },
+        "code": "SERVICE_ACTION_FAILED",
+        "reason": "not_running",
+        "status": 409,
+        "vars": {
+          "action": "reload",
+          "command": "sudo systemctl status postgresql",
+          "detail": "postgresql.service is inactive (dead); nothing was reloaded",
+          "unit": "postgresql"
+        }
+      },
+      "journal_of_systemd_about_them_since": [],
+      "journal_of_the_product_since": [
+        "2026-10-09T12:43:18.399707+00:00 dns-arch panel[424]: 2026/10/09 12:43:18 http: TLS handshake error from 127.0.0.1:51840: EOF",
+        "2026-10-09T12:43:18.441730+00:00 dns-arch sudo[5025]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --no-psqlrc --set ON_ERROR_STOP=on --no-align --tuples-only --quiet",
+        "2026-10-09T12:43:18.442214+00:00 dns-arch sudo[5025]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)",
+        "2026-10-09T12:43:18.447685+00:00 dns-arch sudo[5025]: pam_unix(sudo:session): session closed for user postgres",
+        "2026-10-09T12:43:18.526144+00:00 dns-arch agent[412]: 2026/10/09 12:43:18 ERROR service reload postgresql: failed not_running: postgresql.service is inactive (dead); nothing was reloaded",
+        "2026-10-09T12:43:19.704441+00:00 dns-arch panel[424]: 2026/10/09 12:43:19 [409][service action] reload postgresql: SERVICE_ACTION_FAILED not_running: postgresql.service is inactive (dead); nothing was reloaded"
+      ],
+      "journal_of_the_units_since": {
+        "postgresql.service": []
+      },
+      "service": "postgresql",
+      "since": 1791549796,
+      "state_after": {
+        "postgresql.service": "inactive"
+      },
+      "state_before": {
+        "postgresql.service": "inactive"
+      },
+      "stopped_by": "the Panel's Stop",
+      "unit_properties_before_and_after": {
+        "postgresql.service": {
+          "ActiveEnterTimestamp": [
+            "Fri 2026-10-09 12:39:36 UTC",
+            "Fri 2026-10-09 12:39:36 UTC"
+          ],
+          "ActiveState": [
+            "inactive",
+            "inactive"
+          ],
+          "ExecMainStartTimestamp": [
+            "Fri 2026-10-09 12:39:35 UTC",
+            "Fri 2026-10-09 12:39:35 UTC"
+          ],
+          "ExecReload": [
+            "{ path=/bin/kill ; argv[]=/bin/kill -HUP ${MAINPID} ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+            "{ path=/bin/kill ; argv[]=/bin/kill -HUP ${MAINPID} ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }"
+          ],
+          "InactiveEnterTimestamp": [
+            "Fri 2026-10-09 12:43:12 UTC",
+            "Fri 2026-10-09 12:43:12 UTC"
+          ],
+          "InvocationID": [
+            "4403bfe204604fcb81cf9916163f46a8",
+            "4403bfe204604fcb81cf9916163f46a8"
+          ],
+          "MainPID": [
+            "0",
+            "0"
+          ],
+          "NRestarts": [
+            "0",
+            "0"
+          ],
+          "StateChangeTimestamp": [
+            "Fri 2026-10-09 12:43:12 UTC",
+            "Fri 2026-10-09 12:43:12 UTC"
+          ],
+          "SubState": [
+            "dead",
+            "dead"
+          ]
+        }
+      },
+      "unit_properties_unchanged": true,
+      "units": [
+        "postgresql.service"
+      ]
+    }
+  },
+  "section": "M4-reload-stopped",
+  "started_at": "2026-10-09T12:42:41Z",
+  "substeps": {
+    "S8 mariadb reload": "passed",
+    "S8 mariadb start": "passed",
+    "S8 mariadb stop": "passed",
+    "S8 nginx reload": "passed",
+    "S8 nginx start": "passed",
+    "S8 nginx stop": "passed",
+    "S8 postgresql reload": "passed",
+    "S8 postgresql start": "passed",
+    "S8 postgresql stop": "passed",
+    "item 4": "passed"
+  },
+  "title": "Reload of a stopped nginx, MariaDB and PostgreSQL (item 4)",
+  "verdict": "passed"
+}

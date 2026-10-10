@@ -1,0 +1,5307 @@
+{
+ "api_routes": {
+  "update-alpha81/upd1-arch-defective/run-a": {
+   "certificate_routes": [],
+   "distinct_routes": 26,
+   "exchanges": 110,
+   "license_routes": [
+    "GET /api/vN/license/access",
+    "GET /api/vN/panel/license",
+    "POST /api/vN/panel/license"
+   ]
+  },
+  "update-alpha81/upd1-arch-good/run-a": {
+   "certificate_routes": [],
+   "distinct_routes": 28,
+   "exchanges": 101,
+   "license_routes": [
+    "GET /api/vN/license/access",
+    "GET /api/vN/panel/license",
+    "POST /api/vN/panel/license"
+   ]
+  },
+  "update-alpha81/upd1-debian13-defective/run-a": {
+   "certificate_routes": [],
+   "distinct_routes": 29,
+   "exchanges": 153,
+   "license_routes": [
+    "GET /api/vN/license/access",
+    "GET /api/vN/panel/license",
+    "POST /api/vN/panel/license"
+   ]
+  },
+  "update-alpha81/upd1-debian13-good/run-a": {
+   "certificate_routes": [],
+   "distinct_routes": 36,
+   "exchanges": 151,
+   "license_routes": [
+    "GET /api/vN/license/access",
+    "GET /api/vN/panel/license",
+    "POST /api/vN/panel/license"
+   ]
+  },
+  "update-alpha81/upd1-debian13-mgmt-off-reboot/run-a": {
+   "certificate_routes": [],
+   "distinct_routes": 31,
+   "exchanges": 163,
+   "license_routes": [
+    "GET /api/vN/license/access",
+    "GET /api/vN/panel/license",
+    "POST /api/vN/panel/license"
+   ]
+  },
+  "update-alpha81/upd1-debian13-owner-continuation/run-a": {
+   "certificate_routes": [],
+   "distinct_routes": 29,
+   "exchanges": 146,
+   "license_routes": [
+    "GET /api/vN/license/access",
+    "GET /api/vN/panel/license",
+    "POST /api/vN/panel/license"
+   ]
+  },
+  "update-alpha81/upd1-debian13-startcheck/run-a": {
+   "certificate_routes": [],
+   "distinct_routes": 29,
+   "exchanges": 151,
+   "license_routes": [
+    "GET /api/vN/license/access",
+    "GET /api/vN/panel/license",
+    "POST /api/vN/panel/license"
+   ]
+  },
+  "update-alpha81/upd1-ubuntu-defective/run-a": {
+   "certificate_routes": [],
+   "distinct_routes": 29,
+   "exchanges": 179,
+   "license_routes": [
+    "GET /api/vN/license/access",
+    "GET /api/vN/panel/license",
+    "POST /api/vN/panel/license"
+   ]
+  },
+  "update-alpha81/upd1-ubuntu-good/run-a": {
+   "certificate_routes": [],
+   "distinct_routes": 36,
+   "exchanges": 183,
+   "license_routes": [
+    "GET /api/vN/license/access",
+    "GET /api/vN/panel/license",
+    "POST /api/vN/panel/license"
+   ]
+  },
+  "update-alpha81/upd1-ubuntu-owner-continuation/run-a": {
+   "certificate_routes": [],
+   "distinct_routes": 29,
+   "exchanges": 181,
+   "license_routes": [
+    "GET /api/vN/license/access",
+    "GET /api/vN/panel/license",
+    "POST /api/vN/panel/license"
+   ]
+  }
+ },
+ "api_routes_total_certificate_routes": 0,
+ "cells": {
+  "upd1-arch-defective": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "compared_values": {
+    "post-return-facts": {
+     "set3": {
+      "card": [
+       "rolled_back",
+       "baseline",
+       [],
+       null,
+       null
+      ],
+      "card_texts_en": [
+       "Update not completed; previous version restored",
+       "The update to v0.1.0-alpha.82 did not complete. The server was returned to v0.1.0-alpha.81 automatically and is running it now.",
+       "Cause: the update failed before it completed; the server recorded no more specific cause.",
+       "Nothing needs to be done on the server. Do not start the update to v0.1.0-alpha.82 again until a corrected version is published. If the server's message names a problem on this server, fix it first.",
+       "Nothing resumes by itself: the server keeps running v0.1.0-alpha.81. When a newer version is published, “Check for updates” offers it.",
+       "The server reported: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved"
+      ],
+      "cli_sentence_en": "The update did not complete, and the server was returned automatically to the version it ran before; that restoration was verified. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published; the panel's update page shows what is known about the cause.",
+      "cli_sentence_tr": "Güncelleme tamamlanmadı ve sunucu otomatik olarak güncellemeden önce çalıştırdığı sürüme döndürüldü; bu geri dönüş doğrulandı. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın; nedenle ilgili bilinenler panelin güncelleme sayfasında gösterilir.",
+      "database_against_the_pre_update_digest": "equal-except-volatile",
+      "ledger": [
+       42,
+       42,
+       "as-expected",
+       "4075629507fd66f6d028bafc373bbc97a1d249b513116865b432d022327101a0",
+       "2754d89b20e2c724c277a7072ac2d837aa41eb2a2a67106b4921e2fa7f015f68"
+      ],
+      "offered_again": [
+       200,
+       true,
+       "v0.1.0-alpha.81",
+       "recovered",
+       "v0.1.0-alpha.82"
+      ],
+      "version_after_the_return": [
+       200,
+       "v0.1.0-alpha.81",
+       "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+       42,
+       true
+      ],
+      "views": [
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       200,
+       "update_failed"
+      ]
+     },
+     "set5": {
+      "card": [
+       "rolled_back",
+       "baseline",
+       [],
+       null,
+       null
+      ],
+      "card_texts_en": [
+       "Update not completed; previous version restored",
+       "The update to v0.1.0-alpha.82 did not complete. The server was returned to v0.1.0-alpha.81 automatically and is running it now.",
+       "Cause: the update failed before it completed; the server recorded no more specific cause.",
+       "Nothing needs to be done on the server. Do not start the update to v0.1.0-alpha.82 again until a corrected version is published. If the server's message names a problem on this server, fix it first.",
+       "Nothing resumes by itself: the server keeps running v0.1.0-alpha.81. When a newer version is published, “Check for updates” offers it.",
+       "The server reported: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved"
+      ],
+      "cli_sentence_en": "The update did not complete, and the server was returned automatically to the version it ran before; that restoration was verified. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published; the panel's update page shows what is known about the cause.",
+      "cli_sentence_tr": "Güncelleme tamamlanmadı ve sunucu otomatik olarak güncellemeden önce çalıştırdığı sürüme döndürüldü; bu geri dönüş doğrulandı. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın; nedenle ilgili bilinenler panelin güncelleme sayfasında gösterilir.",
+      "database_against_the_pre_update_digest": "equal-except-volatile",
+      "ledger": [
+       42,
+       42,
+       "as-expected",
+       "4075629507fd66f6d028bafc373bbc97a1d249b513116865b432d022327101a0",
+       "2754d89b20e2c724c277a7072ac2d837aa41eb2a2a67106b4921e2fa7f015f68"
+      ],
+      "offered_again": [
+       200,
+       true,
+       "v0.1.0-alpha.81",
+       "recovered",
+       "v0.1.0-alpha.82"
+      ],
+      "version_after_the_return": [
+       200,
+       "v0.1.0-alpha.81",
+       "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+       42,
+       true
+      ],
+      "views": [
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       200,
+       "update_failed"
+      ]
+     }
+    },
+    "result.json": {
+     "set3": {
+      "automatic_attempts": [
+       [
+        "1",
+        "rollback",
+        "update",
+        "active"
+       ],
+       [
+        "2",
+        "rollback",
+        "rollback",
+        "completion"
+       ]
+      ],
+      "final_status": [
+       "recovered",
+       "rollback_verified",
+       "update_failed",
+       null
+      ],
+      "findings": [
+       "web_mail was not attempted on the published v0.1.0-alpha.81 baseline (it accepts the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform",
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']"
+      ],
+      "kind_judged": null,
+      "kind_rules": null,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": null,
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": null
+     },
+     "set5": {
+      "automatic_attempts": [
+       [
+        "1",
+        "rollback",
+        "update",
+        "active"
+       ],
+       [
+        "2",
+        "rollback",
+        "rollback",
+        "completion"
+       ]
+      ],
+      "final_status": [
+       "recovered",
+       "rollback_verified",
+       "update_failed",
+       null
+      ],
+      "findings": [
+       "web_mail was not attempted on the published v0.1.0-alpha.81 baseline (it accepts the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform",
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']"
+      ],
+      "kind_judged": null,
+      "kind_rules": null,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": null,
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": null
+     }
+    },
+    "terminal": {
+     "set3": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": null
+     },
+     "set5": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": null
+     }
+    }
+   },
+   "facts_compared": [
+    "result.json: same (automatic_attempts, final_status, findings, owner_attempts, owner_continuation)",
+    "post-return-facts: same (card, card_texts_en, cli_sentence_en, cli_sentence_tr, database_against_the_pre_update_digest, ledger, offered_again, version_after_the_return, views)",
+    "terminal: same (build_identity_ok, firewall_equal, login_ok, running_matches_installed, site_marker)"
+   ],
+   "outcome": [
+    "recovered-automatically",
+    "recovered",
+    "rollback_verified"
+   ],
+   "overall": "complete-for-review",
+   "raw": "update-alpha81/upd1-arch-defective/run-a/result.json",
+   "reasons": [],
+   "run": "run-a",
+   "set3_outcome": [
+    "recovered-automatically",
+    "recovered",
+    "rollback_verified"
+   ],
+   "steps_differing_from_set3": [],
+   "verdict": "PASS"
+  },
+  "upd1-arch-good": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "compared_values": {
+    "post-update-facts": {
+     "set3": {
+      "agreement": [
+       [
+        "succeeded",
+        "update_verified"
+       ],
+       [
+        "succeeded",
+        "update_verified"
+       ],
+       "as-expected"
+      ],
+      "deferred_mail": [
+       false,
+       null,
+       []
+      ],
+      "guard": [
+       428,
+       "REQUEST_ID_REQUIRED",
+       [
+        0,
+        0,
+        1
+       ],
+       200,
+       true,
+       true
+      ],
+      "ledger": [
+       43,
+       43,
+       "as-expected",
+       "a0b5c4247f83f86d4daa700baf272f5a666c0f688ede53e1707285126c96b7c0",
+       "48cbd3b47573c2e09feefa4605fc4822df178a719c5e22a7e1c5cb94bb7770f7"
+      ],
+      "versioned_writes": {
+       "backup_schedule": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ],
+       "cron": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ],
+       "mail_policy": [
+        null,
+        false,
+        null,
+        null,
+        null
+       ]
+      }
+     },
+     "set5": {
+      "agreement": [
+       [
+        "succeeded",
+        "update_verified"
+       ],
+       [
+        "succeeded",
+        "update_verified"
+       ],
+       "as-expected"
+      ],
+      "deferred_mail": [
+       false,
+       null,
+       []
+      ],
+      "guard": [
+       428,
+       "REQUEST_ID_REQUIRED",
+       [
+        0,
+        0,
+        1
+       ],
+       200,
+       true,
+       true
+      ],
+      "ledger": [
+       43,
+       43,
+       "as-expected",
+       "a0b5c4247f83f86d4daa700baf272f5a666c0f688ede53e1707285126c96b7c0",
+       "48cbd3b47573c2e09feefa4605fc4822df178a719c5e22a7e1c5cb94bb7770f7"
+      ],
+      "versioned_writes": {
+       "backup_schedule": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ],
+       "cron": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ],
+       "mail_policy": [
+        null,
+        false,
+        null,
+        null,
+        null
+       ]
+      }
+     }
+    },
+    "result.json": {
+     "set3": {
+      "automatic_attempts": [],
+      "final_status": [
+       "succeeded",
+       "update_verified",
+       null,
+       null
+      ],
+      "findings": [
+       "web_mail was not attempted on the published v0.1.0-alpha.81 baseline (it accepts the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform",
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']"
+      ],
+      "kind_judged": null,
+      "kind_rules": null,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": null,
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": null
+     },
+     "set5": {
+      "automatic_attempts": [],
+      "final_status": [
+       "succeeded",
+       "update_verified",
+       null,
+       null
+      ],
+      "findings": [
+       "web_mail was not attempted on the published v0.1.0-alpha.81 baseline (it accepts the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform",
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']"
+      ],
+      "kind_judged": null,
+      "kind_rules": null,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": null,
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": null
+     }
+    },
+    "terminal": {
+     "set3": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": null
+     },
+     "set5": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": null
+     }
+    }
+   },
+   "facts_compared": [
+    "result.json: same (final_status, findings, owner_attempts, owner_continuation)",
+    "post-update-facts: same (agreement, deferred_mail, guard, ledger, versioned_writes)",
+    "terminal: same (build_identity_ok, firewall_equal, login_ok, running_matches_installed, site_marker)"
+   ],
+   "outcome": [
+    "update-verified",
+    "succeeded",
+    "update_verified"
+   ],
+   "overall": "complete-for-review",
+   "raw": "update-alpha81/upd1-arch-good/run-a/result.json",
+   "reasons": [],
+   "run": "run-a",
+   "set3_outcome": [
+    "update-verified",
+    "succeeded",
+    "update_verified"
+   ],
+   "steps_differing_from_set3": [],
+   "verdict": "PASS"
+  },
+  "upd1-debian13-defective": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "compared_values": {
+    "post-return-facts": {
+     "set3": {
+      "card": [
+       "rolled_back",
+       "baseline",
+       [],
+       null,
+       null
+      ],
+      "card_texts_en": [
+       "Update not completed; previous version restored",
+       "The update to v0.1.0-alpha.82 did not complete. The server was returned to v0.1.0-alpha.81 automatically and is running it now.",
+       "Cause: the update failed before it completed; the server recorded no more specific cause.",
+       "Nothing needs to be done on the server. Do not start the update to v0.1.0-alpha.82 again until a corrected version is published. If the server's message names a problem on this server, fix it first.",
+       "Nothing resumes by itself: the server keeps running v0.1.0-alpha.81. When a newer version is published, “Check for updates” offers it.",
+       "The server reported: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved"
+      ],
+      "cli_sentence_en": "The update did not complete, and the server was returned automatically to the version it ran before; that restoration was verified. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published; the panel's update page shows what is known about the cause.",
+      "cli_sentence_tr": "Güncelleme tamamlanmadı ve sunucu otomatik olarak güncellemeden önce çalıştırdığı sürüme döndürüldü; bu geri dönüş doğrulandı. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın; nedenle ilgili bilinenler panelin güncelleme sayfasında gösterilir.",
+      "database_against_the_pre_update_digest": "equal-except-volatile",
+      "ledger": [
+       42,
+       42,
+       "as-expected",
+       "4075629507fd66f6d028bafc373bbc97a1d249b513116865b432d022327101a0",
+       "2754d89b20e2c724c277a7072ac2d837aa41eb2a2a67106b4921e2fa7f015f68"
+      ],
+      "offered_again": [
+       200,
+       true,
+       "v0.1.0-alpha.81",
+       "recovered",
+       "v0.1.0-alpha.82"
+      ],
+      "version_after_the_return": [
+       200,
+       "v0.1.0-alpha.81",
+       "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+       42,
+       true
+      ],
+      "views": [
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       200,
+       "update_failed"
+      ]
+     },
+     "set5": {
+      "card": [
+       "rolled_back",
+       "baseline",
+       [],
+       null,
+       null
+      ],
+      "card_texts_en": [
+       "Update not completed; previous version restored",
+       "The update to v0.1.0-alpha.82 did not complete. The server was returned to v0.1.0-alpha.81 automatically and is running it now.",
+       "Cause: the update failed before it completed; the server recorded no more specific cause.",
+       "Nothing needs to be done on the server. Do not start the update to v0.1.0-alpha.82 again until a corrected version is published. If the server's message names a problem on this server, fix it first.",
+       "Nothing resumes by itself: the server keeps running v0.1.0-alpha.81. When a newer version is published, “Check for updates” offers it.",
+       "The server reported: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved"
+      ],
+      "cli_sentence_en": "The update did not complete, and the server was returned automatically to the version it ran before; that restoration was verified. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published; the panel's update page shows what is known about the cause.",
+      "cli_sentence_tr": "Güncelleme tamamlanmadı ve sunucu otomatik olarak güncellemeden önce çalıştırdığı sürüme döndürüldü; bu geri dönüş doğrulandı. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın; nedenle ilgili bilinenler panelin güncelleme sayfasında gösterilir.",
+      "database_against_the_pre_update_digest": "equal-except-volatile",
+      "ledger": [
+       42,
+       42,
+       "as-expected",
+       "4075629507fd66f6d028bafc373bbc97a1d249b513116865b432d022327101a0",
+       "2754d89b20e2c724c277a7072ac2d837aa41eb2a2a67106b4921e2fa7f015f68"
+      ],
+      "offered_again": [
+       200,
+       true,
+       "v0.1.0-alpha.81",
+       "recovered",
+       "v0.1.0-alpha.82"
+      ],
+      "version_after_the_return": [
+       200,
+       "v0.1.0-alpha.81",
+       "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+       42,
+       true
+      ],
+      "views": [
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       200,
+       "update_failed"
+      ]
+     }
+    },
+    "result.json": {
+     "set3": {
+      "automatic_attempts": [
+       [
+        "1",
+        "rollback",
+        "update",
+        "active"
+       ],
+       [
+        "2",
+        "rollback",
+        "rollback",
+        "active"
+       ]
+      ],
+      "final_status": [
+       "recovered",
+       "rollback_verified",
+       "update_failed",
+       null
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+      ],
+      "kind_judged": null,
+      "kind_rules": null,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": null,
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": [
+       "reset-submitted-once",
+       true
+      ]
+     },
+     "set5": {
+      "automatic_attempts": [
+       [
+        "1",
+        "rollback",
+        "update",
+        "active"
+       ],
+       [
+        "2",
+        "rollback",
+        "rollback",
+        "active"
+       ]
+      ],
+      "final_status": [
+       "recovered",
+       "rollback_verified",
+       "update_failed",
+       null
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+      ],
+      "kind_judged": null,
+      "kind_rules": null,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": null,
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": [
+       "reset-submitted-once",
+       true
+      ]
+     }
+    },
+    "terminal": {
+     "set3": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     },
+     "set5": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     }
+    }
+   },
+   "facts_compared": [
+    "result.json: same (automatic_attempts, final_status, findings, owner_attempts, owner_continuation, vm_reset)",
+    "post-return-facts: same (card, card_texts_en, cli_sentence_en, cli_sentence_tr, database_against_the_pre_update_digest, ledger, offered_again, version_after_the_return, views)",
+    "terminal: same (build_identity_ok, firewall_equal, login_ok, running_matches_installed, site_marker, smtp)"
+   ],
+   "outcome": [
+    "recovered-automatically",
+    "recovered",
+    "rollback_verified"
+   ],
+   "overall": "complete-for-review",
+   "raw": "update-alpha81/upd1-debian13-defective/run-a/result.json",
+   "reasons": [],
+   "run": "run-a",
+   "set3_outcome": [
+    "recovered-automatically",
+    "recovered",
+    "rollback_verified"
+   ],
+   "steps_differing_from_set3": [],
+   "verdict": "PASS"
+  },
+  "upd1-debian13-good": {
+   "added_steps": {
+    "M10-postfix-stop": "passed",
+    "set4-php-site-after-the-update": "passed",
+    "set4-php-site-before-the-update": "passed",
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "compared_values": {
+    "post-update-facts": {
+     "set3": {
+      "agreement": [
+       [
+        "succeeded",
+        "update_verified"
+       ],
+       [
+        "succeeded",
+        "update_verified"
+       ],
+       "as-expected"
+      ],
+      "deferred_mail": [
+       true,
+       true,
+       [
+        "mail certificate publication",
+        "mail filter wiring"
+       ]
+      ],
+      "guard": [
+       428,
+       "REQUEST_ID_REQUIRED",
+       [
+        0,
+        0,
+        1
+       ],
+       200,
+       true,
+       true
+      ],
+      "ledger": [
+       43,
+       43,
+       "as-expected",
+       "a0b5c4247f83f86d4daa700baf272f5a666c0f688ede53e1707285126c96b7c0",
+       "48cbd3b47573c2e09feefa4605fc4822df178a719c5e22a7e1c5cb94bb7770f7"
+      ],
+      "versioned_writes": {
+       "backup_schedule": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ],
+       "cron": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ],
+       "mail_policy": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ]
+      }
+     },
+     "set5": {
+      "agreement": [
+       [
+        "succeeded",
+        "update_verified"
+       ],
+       [
+        "succeeded",
+        "update_verified"
+       ],
+       "as-expected"
+      ],
+      "deferred_mail": [
+       true,
+       true,
+       [
+        "mail certificate publication",
+        "mail filter wiring"
+       ]
+      ],
+      "guard": [
+       428,
+       "REQUEST_ID_REQUIRED",
+       [
+        0,
+        0,
+        1
+       ],
+       200,
+       true,
+       true
+      ],
+      "ledger": [
+       43,
+       43,
+       "as-expected",
+       "a0b5c4247f83f86d4daa700baf272f5a666c0f688ede53e1707285126c96b7c0",
+       "48cbd3b47573c2e09feefa4605fc4822df178a719c5e22a7e1c5cb94bb7770f7"
+      ],
+      "versioned_writes": {
+       "backup_schedule": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ],
+       "cron": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ],
+       "mail_policy": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ]
+      }
+     }
+    },
+    "result.json": {
+     "set3": {
+      "automatic_attempts": [],
+      "final_status": [
+       "succeeded",
+       "update_verified",
+       null,
+       null
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+      ],
+      "kind_judged": null,
+      "kind_rules": null,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": null,
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": null
+     },
+     "set5": {
+      "automatic_attempts": [],
+      "final_status": [
+       "succeeded",
+       "update_verified",
+       null,
+       null
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+      ],
+      "kind_judged": null,
+      "kind_rules": null,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": null,
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": null
+     }
+    },
+    "terminal": {
+     "set3": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     },
+     "set5": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     }
+    }
+   },
+   "facts_compared": [
+    "result.json: same (final_status, findings, owner_attempts, owner_continuation)",
+    "post-update-facts: same (agreement, deferred_mail, guard, ledger, versioned_writes)",
+    "terminal: same (build_identity_ok, firewall_equal, login_ok, running_matches_installed, site_marker, smtp)"
+   ],
+   "outcome": [
+    "update-verified",
+    "succeeded",
+    "update_verified"
+   ],
+   "overall": "complete-for-review",
+   "raw": "update-alpha81/upd1-debian13-good/run-a/result.json",
+   "reasons": [],
+   "run": "run-a",
+   "set3_outcome": [
+    "update-verified",
+    "succeeded",
+    "update_verified"
+   ],
+   "steps_differing_from_set3": [],
+   "verdict": "PASS"
+  },
+  "upd1-debian13-mgmt-off-reboot": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "compared_values": {
+    "result.json": {
+     "set3": {
+      "automatic_attempts": [],
+      "final_status": [
+       "succeeded",
+       "update_verified",
+       null,
+       null
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+      ],
+      "kind_judged": [
+       "as-expected",
+       0,
+       0
+      ],
+      "kind_rules": 11,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": [
+       "sudo systemctl reboot",
+       true
+      ],
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": null
+     },
+     "set5": {
+      "automatic_attempts": [],
+      "final_status": [
+       "succeeded",
+       "update_verified",
+       null,
+       null
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+      ],
+      "kind_judged": [
+       "as-expected",
+       0,
+       0
+      ],
+      "kind_rules": 11,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": [
+       "sudo systemctl reboot",
+       true
+      ],
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": null
+     }
+    },
+    "terminal": {
+     "set3": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     },
+     "set5": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     }
+    }
+   },
+   "facts_compared": [
+    "result.json: same (final_status, findings, kind_judged, kind_rules, owner_attempts, owner_continuation, owner_reboot)",
+    "terminal: same (build_identity_ok, firewall_equal, login_ok, running_matches_installed, site_marker, smtp)"
+   ],
+   "outcome": [
+    "update-verified",
+    "succeeded",
+    "update_verified"
+   ],
+   "overall": "complete-for-review",
+   "raw": "update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/result.json",
+   "reasons": [],
+   "run": "run-a",
+   "set3_outcome": [
+    "update-verified",
+    "succeeded",
+    "update_verified"
+   ],
+   "steps_differing_from_set3": [],
+   "verdict": "PASS"
+  },
+  "upd1-debian13-owner-continuation": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "compared_values": {
+    "result.json": {
+     "set3": {
+      "automatic_attempts": [
+       [
+        "1",
+        "forward",
+        "update",
+        "completion"
+       ],
+       [
+        "2",
+        "forward",
+        "update",
+        "completion"
+       ],
+       [
+        "3",
+        "forward",
+        "update",
+        "completion"
+       ]
+      ],
+      "final_status": [
+       "succeeded",
+       "update_verified",
+       "recovery_failed",
+       null
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']",
+       "while the recovery budget was exhausted the Panel recovery-status API was unavailable; only the root CLI showed the exhausted state"
+      ],
+      "kind_judged": [
+       "as-expected",
+       0,
+       0
+      ],
+      "kind_rules": 17,
+      "owner_attempts": 1,
+      "owner_continuation": true,
+      "owner_reboot": null,
+      "port_hold": [
+       true,
+       true,
+       true,
+       true,
+       true,
+       "owner-released",
+       [
+        "active",
+        "completion.pending"
+       ]
+      ],
+      "printed_retry_command": "/usr/libexec/celikpanel/recovery recover --retry --snapshot <snapshot>",
+      "vm_reset": null
+     },
+     "set5": {
+      "automatic_attempts": [
+       [
+        "1",
+        "forward",
+        "update",
+        "completion"
+       ],
+       [
+        "2",
+        "forward",
+        "update",
+        "completion"
+       ],
+       [
+        "3",
+        "forward",
+        "update",
+        "completion"
+       ]
+      ],
+      "final_status": [
+       "succeeded",
+       "update_verified",
+       "recovery_failed",
+       null
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']",
+       "while the recovery budget was exhausted the Panel recovery-status API was unavailable; only the root CLI showed the exhausted state"
+      ],
+      "kind_judged": [
+       "as-expected",
+       0,
+       0
+      ],
+      "kind_rules": 17,
+      "owner_attempts": 1,
+      "owner_continuation": true,
+      "owner_reboot": null,
+      "port_hold": [
+       true,
+       true,
+       true,
+       true,
+       true,
+       "owner-released",
+       [
+        "active",
+        "completion.pending"
+       ]
+      ],
+      "printed_retry_command": "/usr/libexec/celikpanel/recovery recover --retry --snapshot <snapshot>",
+      "vm_reset": null
+     }
+    },
+    "terminal": {
+     "set3": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     },
+     "set5": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     }
+    }
+   },
+   "facts_compared": [
+    "result.json: same (automatic_attempts, final_status, findings, kind_judged, kind_rules, owner_attempts, owner_continuation, port_hold, printed_retry_command)",
+    "terminal: same (build_identity_ok, firewall_equal, login_ok, running_matches_installed, site_marker, smtp)"
+   ],
+   "outcome": [
+    "recovered-after-owner-continuation",
+    "succeeded",
+    "update_verified"
+   ],
+   "overall": "complete-for-review",
+   "raw": "update-alpha81/upd1-debian13-owner-continuation/run-a/result.json",
+   "reasons": [],
+   "run": "run-a",
+   "set3_outcome": [
+    "recovered-after-owner-continuation",
+    "succeeded",
+    "update_verified"
+   ],
+   "steps_differing_from_set3": [],
+   "verdict": "PASS"
+  },
+  "upd1-debian13-startcheck": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "compared_values": {
+    "post-return-facts": {
+     "set3": {
+      "card": [
+       "rolled_back",
+       "baseline",
+       [],
+       null,
+       null
+      ],
+      "card_texts_en": [
+       "Update not completed; previous version restored",
+       "The update to v0.1.0-alpha.82 did not complete. The server was returned to v0.1.0-alpha.81 automatically and is running it now.",
+       "Cause: the new version's panel failed its start check before anything was switched on.",
+       "Nothing needs to be done on the server. Do not start the update to v0.1.0-alpha.82 again until a corrected version is published. If the server's message names a problem on this server, fix it first.",
+       "Nothing resumes by itself: the server keeps running v0.1.0-alpha.81. When a newer version is published, “Check for updates” offers it."
+      ],
+      "cli_sentence_en": "The new version's panel failed its start check before anything was switched on, so the server was returned to the previous version automatically. The previous version keeps running. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published. When you report this, include the reason line shown for this update on the panel's update page.",
+      "cli_sentence_tr": "Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi; bu yüzden sunucu otomatik olarak önceki sürüme döndürüldü. Önceki sürüm çalışmaya devam ediyor. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın. Bunu bildirirken panelin güncelleme sayfasında bu güncelleme için gösterilen neden satırını ekleyin.",
+      "database_against_the_pre_update_digest": "equal-except-volatile",
+      "ledger": [
+       42,
+       42,
+       "as-expected",
+       "4075629507fd66f6d028bafc373bbc97a1d249b513116865b432d022327101a0",
+       "2754d89b20e2c724c277a7072ac2d837aa41eb2a2a67106b4921e2fa7f015f68"
+      ],
+      "offered_again": [
+       200,
+       true,
+       "v0.1.0-alpha.81",
+       "recovered",
+       "v0.1.0-alpha.82"
+      ],
+      "version_after_the_return": [
+       200,
+       "v0.1.0-alpha.81",
+       "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+       42,
+       true
+      ],
+      "views": [
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       200,
+       "update_failed"
+      ]
+     },
+     "set5": {
+      "card": [
+       "rolled_back",
+       "baseline",
+       [],
+       null,
+       null
+      ],
+      "card_texts_en": [
+       "Update not completed; previous version restored",
+       "The update to v0.1.0-alpha.82 did not complete. The server was returned to v0.1.0-alpha.81 automatically and is running it now.",
+       "Cause: the new version's panel failed its start check before anything was switched on.",
+       "Nothing needs to be done on the server. Do not start the update to v0.1.0-alpha.82 again until a corrected version is published. If the server's message names a problem on this server, fix it first.",
+       "Nothing resumes by itself: the server keeps running v0.1.0-alpha.81. When a newer version is published, “Check for updates” offers it."
+      ],
+      "cli_sentence_en": "The new version's panel failed its start check before anything was switched on, so the server was returned to the previous version automatically. The previous version keeps running. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published. When you report this, include the reason line shown for this update on the panel's update page.",
+      "cli_sentence_tr": "Yeni sürümün paneli, hiçbir şey devreye alınmadan önce başlangıç denetiminden geçemedi; bu yüzden sunucu otomatik olarak önceki sürüme döndürüldü. Önceki sürüm çalışmaya devam ediyor. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın. Bunu bildirirken panelin güncelleme sayfasında bu güncelleme için gösterilen neden satırını ekleyin.",
+      "database_against_the_pre_update_digest": "equal-except-volatile",
+      "ledger": [
+       42,
+       42,
+       "as-expected",
+       "4075629507fd66f6d028bafc373bbc97a1d249b513116865b432d022327101a0",
+       "2754d89b20e2c724c277a7072ac2d837aa41eb2a2a67106b4921e2fa7f015f68"
+      ],
+      "offered_again": [
+       200,
+       true,
+       "v0.1.0-alpha.81",
+       "recovered",
+       "v0.1.0-alpha.82"
+      ],
+      "version_after_the_return": [
+       200,
+       "v0.1.0-alpha.81",
+       "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+       42,
+       true
+      ],
+      "views": [
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       200,
+       "update_failed"
+      ]
+     }
+    },
+    "result.json": {
+     "set3": {
+      "automatic_attempts": [
+       [
+        "1",
+        "rollback",
+        "update",
+        "active"
+       ],
+       [
+        "2",
+        "rollback",
+        "rollback",
+        "active"
+       ]
+      ],
+      "final_status": [
+       "recovered",
+       "rollback_verified",
+       "update_failed",
+       "candidate_panel_startup_check_failed"
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+      ],
+      "kind_judged": [
+       "as-expected",
+       0,
+       0
+      ],
+      "kind_rules": 12,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": null,
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": [
+       "reset-submitted-once",
+       true
+      ]
+     },
+     "set5": {
+      "automatic_attempts": [
+       [
+        "1",
+        "rollback",
+        "update",
+        "active"
+       ],
+       [
+        "2",
+        "rollback",
+        "rollback",
+        "active"
+       ]
+      ],
+      "final_status": [
+       "recovered",
+       "rollback_verified",
+       "update_failed",
+       "candidate_panel_startup_check_failed"
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+      ],
+      "kind_judged": [
+       "as-expected",
+       0,
+       0
+      ],
+      "kind_rules": 12,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": null,
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": [
+       "reset-submitted-once",
+       true
+      ]
+     }
+    },
+    "terminal": {
+     "set3": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     },
+     "set5": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     }
+    }
+   },
+   "facts_compared": [
+    "result.json: same (automatic_attempts, final_status, findings, kind_judged, kind_rules, owner_attempts, owner_continuation, vm_reset)",
+    "post-return-facts: same (card, card_texts_en, cli_sentence_en, cli_sentence_tr, database_against_the_pre_update_digest, ledger, offered_again, version_after_the_return, views)",
+    "terminal: same (build_identity_ok, firewall_equal, login_ok, running_matches_installed, site_marker, smtp)"
+   ],
+   "outcome": [
+    "recovered-automatically",
+    "recovered",
+    "rollback_verified"
+   ],
+   "overall": "complete-for-review",
+   "raw": "update-alpha81/upd1-debian13-startcheck/run-a/result.json",
+   "reasons": [],
+   "run": "run-a",
+   "set3_outcome": [
+    "recovered-automatically",
+    "recovered",
+    "rollback_verified"
+   ],
+   "steps_differing_from_set3": [],
+   "verdict": "PASS"
+  },
+  "upd1-ubuntu-defective": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "compared_values": {
+    "post-return-facts": {
+     "set3": {
+      "card": [
+       "rolled_back",
+       "baseline",
+       [],
+       null,
+       null
+      ],
+      "card_texts_en": [
+       "Update not completed; previous version restored",
+       "The update to v0.1.0-alpha.82 did not complete. The server was returned to v0.1.0-alpha.81 automatically and is running it now.",
+       "Cause: the update failed before it completed; the server recorded no more specific cause.",
+       "Nothing needs to be done on the server. Do not start the update to v0.1.0-alpha.82 again until a corrected version is published. If the server's message names a problem on this server, fix it first.",
+       "Nothing resumes by itself: the server keeps running v0.1.0-alpha.81. When a newer version is published, “Check for updates” offers it.",
+       "The server reported: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved"
+      ],
+      "cli_sentence_en": "The update did not complete, and the server was returned automatically to the version it ran before; that restoration was verified. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published; the panel's update page shows what is known about the cause.",
+      "cli_sentence_tr": "Güncelleme tamamlanmadı ve sunucu otomatik olarak güncellemeden önce çalıştırdığı sürüme döndürüldü; bu geri dönüş doğrulandı. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın; nedenle ilgili bilinenler panelin güncelleme sayfasında gösterilir.",
+      "database_against_the_pre_update_digest": "equal-except-volatile",
+      "ledger": [
+       42,
+       42,
+       "as-expected",
+       "4075629507fd66f6d028bafc373bbc97a1d249b513116865b432d022327101a0",
+       "2754d89b20e2c724c277a7072ac2d837aa41eb2a2a67106b4921e2fa7f015f68"
+      ],
+      "offered_again": [
+       200,
+       true,
+       "v0.1.0-alpha.81",
+       "recovered",
+       "v0.1.0-alpha.82"
+      ],
+      "version_after_the_return": [
+       200,
+       "v0.1.0-alpha.81",
+       "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+       42,
+       true
+      ],
+      "views": [
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       200,
+       "update_failed"
+      ]
+     },
+     "set5": {
+      "card": [
+       "rolled_back",
+       "baseline",
+       [],
+       null,
+       null
+      ],
+      "card_texts_en": [
+       "Update not completed; previous version restored",
+       "The update to v0.1.0-alpha.82 did not complete. The server was returned to v0.1.0-alpha.81 automatically and is running it now.",
+       "Cause: the update failed before it completed; the server recorded no more specific cause.",
+       "Nothing needs to be done on the server. Do not start the update to v0.1.0-alpha.82 again until a corrected version is published. If the server's message names a problem on this server, fix it first.",
+       "Nothing resumes by itself: the server keeps running v0.1.0-alpha.81. When a newer version is published, “Check for updates” offers it.",
+       "The server reported: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved"
+      ],
+      "cli_sentence_en": "The update did not complete, and the server was returned automatically to the version it ran before; that restoration was verified. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published; the panel's update page shows what is known about the cause.",
+      "cli_sentence_tr": "Güncelleme tamamlanmadı ve sunucu otomatik olarak güncellemeden önce çalıştırdığı sürüme döndürüldü; bu geri dönüş doğrulandı. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın; nedenle ilgili bilinenler panelin güncelleme sayfasında gösterilir.",
+      "database_against_the_pre_update_digest": "equal-except-volatile",
+      "ledger": [
+       42,
+       42,
+       "as-expected",
+       "4075629507fd66f6d028bafc373bbc97a1d249b513116865b432d022327101a0",
+       "2754d89b20e2c724c277a7072ac2d837aa41eb2a2a67106b4921e2fa7f015f68"
+      ],
+      "offered_again": [
+       200,
+       true,
+       "v0.1.0-alpha.81",
+       "recovered",
+       "v0.1.0-alpha.82"
+      ],
+      "version_after_the_return": [
+       200,
+       "v0.1.0-alpha.81",
+       "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+       42,
+       true
+      ],
+      "views": [
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       [
+        "recovered",
+        "rollback_verified"
+       ],
+       200,
+       "update_failed"
+      ]
+     }
+    },
+    "result.json": {
+     "set3": {
+      "automatic_attempts": [
+       [
+        "1",
+        "rollback",
+        "update",
+        "active"
+       ],
+       [
+        "2",
+        "rollback",
+        "rollback",
+        "active"
+       ]
+      ],
+      "final_status": [
+       "recovered",
+       "rollback_verified",
+       "update_failed",
+       null
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']"
+      ],
+      "kind_judged": null,
+      "kind_rules": null,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": null,
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": [
+       "reset-submitted-once",
+       true
+      ]
+     },
+     "set5": {
+      "automatic_attempts": [
+       [
+        "1",
+        "rollback",
+        "update",
+        "active"
+       ],
+       [
+        "2",
+        "rollback",
+        "rollback",
+        "active"
+       ]
+      ],
+      "final_status": [
+       "recovered",
+       "rollback_verified",
+       "update_failed",
+       null
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']"
+      ],
+      "kind_judged": null,
+      "kind_rules": null,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": null,
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": [
+       "reset-submitted-once",
+       true
+      ]
+     }
+    },
+    "terminal": {
+     "set3": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     },
+     "set5": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     }
+    }
+   },
+   "facts_compared": [
+    "result.json: same (automatic_attempts, final_status, findings, owner_attempts, owner_continuation, vm_reset)",
+    "post-return-facts: same (card, card_texts_en, cli_sentence_en, cli_sentence_tr, database_against_the_pre_update_digest, ledger, offered_again, version_after_the_return, views)",
+    "terminal: same (build_identity_ok, firewall_equal, login_ok, running_matches_installed, site_marker, smtp)"
+   ],
+   "outcome": [
+    "recovered-automatically",
+    "recovered",
+    "rollback_verified"
+   ],
+   "overall": "complete-for-review",
+   "raw": "update-alpha81/upd1-ubuntu-defective/run-a/result.json",
+   "reasons": [],
+   "run": "run-a",
+   "set3_outcome": [
+    "recovered-automatically",
+    "recovered",
+    "rollback_verified"
+   ],
+   "steps_differing_from_set3": [],
+   "verdict": "PASS"
+  },
+  "upd1-ubuntu-good": {
+   "added_steps": {
+    "M10-postfix-stop": "passed",
+    "set4-php-site-after-the-update": "passed",
+    "set4-php-site-before-the-update": "passed",
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "compared_values": {
+    "post-update-facts": {
+     "set3": {
+      "agreement": [
+       [
+        "succeeded",
+        "update_verified"
+       ],
+       [
+        "succeeded",
+        "update_verified"
+       ],
+       "as-expected"
+      ],
+      "deferred_mail": [
+       true,
+       true,
+       [
+        "mail certificate publication",
+        "mail filter wiring"
+       ]
+      ],
+      "guard": [
+       428,
+       "REQUEST_ID_REQUIRED",
+       [
+        0,
+        0,
+        1
+       ],
+       200,
+       true,
+       true
+      ],
+      "ledger": [
+       43,
+       43,
+       "as-expected",
+       "a0b5c4247f83f86d4daa700baf272f5a666c0f688ede53e1707285126c96b7c0",
+       "48cbd3b47573c2e09feefa4605fc4822df178a719c5e22a7e1c5cb94bb7770f7"
+      ],
+      "versioned_writes": {
+       "backup_schedule": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ],
+       "cron": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ],
+       "mail_policy": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ]
+      }
+     },
+     "set5": {
+      "agreement": [
+       [
+        "succeeded",
+        "update_verified"
+       ],
+       [
+        "succeeded",
+        "update_verified"
+       ],
+       "as-expected"
+      ],
+      "deferred_mail": [
+       true,
+       true,
+       [
+        "mail certificate publication",
+        "mail filter wiring"
+       ]
+      ],
+      "guard": [
+       428,
+       "REQUEST_ID_REQUIRED",
+       [
+        0,
+        0,
+        1
+       ],
+       200,
+       true,
+       true
+      ],
+      "ledger": [
+       43,
+       43,
+       "as-expected",
+       "a0b5c4247f83f86d4daa700baf272f5a666c0f688ede53e1707285126c96b7c0",
+       "48cbd3b47573c2e09feefa4605fc4822df178a719c5e22a7e1c5cb94bb7770f7"
+      ],
+      "versioned_writes": {
+       "backup_schedule": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ],
+       "cron": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ],
+       "mail_policy": [
+        true,
+        true,
+        409,
+        "SETTINGS_VERSION_REQUIRED",
+        200
+       ]
+      }
+     }
+    },
+    "result.json": {
+     "set3": {
+      "automatic_attempts": [],
+      "final_status": [
+       "succeeded",
+       "update_verified",
+       null,
+       null
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']"
+      ],
+      "kind_judged": null,
+      "kind_rules": null,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": null,
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": null
+     },
+     "set5": {
+      "automatic_attempts": [],
+      "final_status": [
+       "succeeded",
+       "update_verified",
+       null,
+       null
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']"
+      ],
+      "kind_judged": null,
+      "kind_rules": null,
+      "owner_attempts": 0,
+      "owner_continuation": false,
+      "owner_reboot": null,
+      "port_hold": null,
+      "printed_retry_command": null,
+      "vm_reset": null
+     }
+    },
+    "terminal": {
+     "set3": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     },
+     "set5": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     }
+    }
+   },
+   "facts_compared": [
+    "result.json: same (final_status, findings, owner_attempts, owner_continuation)",
+    "post-update-facts: same (agreement, deferred_mail, guard, ledger, versioned_writes)",
+    "terminal: same (build_identity_ok, firewall_equal, login_ok, running_matches_installed, site_marker, smtp)"
+   ],
+   "outcome": [
+    "update-verified",
+    "succeeded",
+    "update_verified"
+   ],
+   "overall": "complete-for-review",
+   "raw": "update-alpha81/upd1-ubuntu-good/run-a/result.json",
+   "reasons": [],
+   "run": "run-a",
+   "set3_outcome": [
+    "update-verified",
+    "succeeded",
+    "update_verified"
+   ],
+   "steps_differing_from_set3": [],
+   "verdict": "PASS"
+  },
+  "upd1-ubuntu-owner-continuation": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "compared_values": {
+    "result.json": {
+     "set3": {
+      "automatic_attempts": [
+       [
+        "1",
+        "forward",
+        "update",
+        "completion"
+       ],
+       [
+        "2",
+        "forward",
+        "update",
+        "completion"
+       ],
+       [
+        "3",
+        "forward",
+        "update",
+        "completion"
+       ]
+      ],
+      "final_status": [
+       "succeeded",
+       "update_verified",
+       "recovery_failed",
+       null
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']",
+       "while the recovery budget was exhausted the Panel recovery-status API was unavailable; only the root CLI showed the exhausted state"
+      ],
+      "kind_judged": [
+       "as-expected",
+       0,
+       0
+      ],
+      "kind_rules": 17,
+      "owner_attempts": 1,
+      "owner_continuation": true,
+      "owner_reboot": null,
+      "port_hold": [
+       true,
+       true,
+       true,
+       true,
+       true,
+       "owner-released",
+       [
+        "active",
+        "completion.pending"
+       ]
+      ],
+      "printed_retry_command": "/usr/libexec/celikpanel/recovery recover --retry --snapshot <snapshot>",
+      "vm_reset": null
+     },
+     "set5": {
+      "automatic_attempts": [
+       [
+        "1",
+        "forward",
+        "update",
+        "completion"
+       ],
+       [
+        "2",
+        "forward",
+        "update",
+        "completion"
+       ],
+       [
+        "3",
+        "forward",
+        "update",
+        "completion"
+       ]
+      ],
+      "final_status": [
+       "succeeded",
+       "update_verified",
+       "recovery_failed",
+       null
+      ],
+      "findings": [
+       "server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']",
+       "while the recovery budget was exhausted the Panel recovery-status API was unavailable; only the root CLI showed the exhausted state"
+      ],
+      "kind_judged": [
+       "as-expected",
+       0,
+       0
+      ],
+      "kind_rules": 17,
+      "owner_attempts": 1,
+      "owner_continuation": true,
+      "owner_reboot": null,
+      "port_hold": [
+       true,
+       true,
+       true,
+       true,
+       true,
+       "owner-released",
+       [
+        "active",
+        "completion.pending"
+       ]
+      ],
+      "printed_retry_command": "/usr/libexec/celikpanel/recovery recover --retry --snapshot <snapshot>",
+      "vm_reset": null
+     }
+    },
+    "terminal": {
+     "set3": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     },
+     "set5": {
+      "build_identity_ok": true,
+      "firewall_equal": true,
+      "login_ok": true,
+      "running_matches_installed": {
+       "celikpanel-agent.service": true,
+       "celikpanel-panel.service": true
+      },
+      "site_marker": true,
+      "smtp": true
+     }
+    }
+   },
+   "facts_compared": [
+    "result.json: same (automatic_attempts, final_status, findings, kind_judged, kind_rules, owner_attempts, owner_continuation, port_hold, printed_retry_command)",
+    "terminal: same (build_identity_ok, firewall_equal, login_ok, running_matches_installed, site_marker, smtp)"
+   ],
+   "outcome": [
+    "recovered-after-owner-continuation",
+    "succeeded",
+    "update_verified"
+   ],
+   "overall": "complete-for-review",
+   "raw": "update-alpha81/upd1-ubuntu-owner-continuation/run-a/result.json",
+   "reasons": [],
+   "run": "run-a",
+   "set3_outcome": [
+    "recovered-after-owner-continuation",
+    "succeeded",
+    "update_verified"
+   ],
+   "steps_differing_from_set3": [],
+   "verdict": "PASS"
+  }
+ },
+ "cron_death_lines": {
+  "update-alpha81/upd1-arch-defective/run-a": 0,
+  "update-alpha81/upd1-arch-good/run-a": 0,
+  "update-alpha81/upd1-debian13-defective/run-a": 3,
+  "update-alpha81/upd1-debian13-good/run-a": 3,
+  "update-alpha81/upd1-debian13-mgmt-off-reboot/run-a": 2,
+  "update-alpha81/upd1-debian13-owner-continuation/run-a": 2,
+  "update-alpha81/upd1-debian13-startcheck/run-a": 3,
+  "update-alpha81/upd1-ubuntu-defective/run-a": 18,
+  "update-alpha81/upd1-ubuntu-good/run-a": 17,
+  "update-alpha81/upd1-ubuntu-owner-continuation/run-a": 18
+ },
+ "gaps": {
+  "update-alpha81/upd1-arch-defective/run-a": {
+   "at": "18:40:56",
+   "host_samples": 45,
+   "largest_host_sample_gap_s": 5.0,
+   "largest_step_gap_s": 0.0,
+   "longest_step": [
+    171.0,
+    "setup"
+   ],
+   "steps": 18,
+   "window": [
+    "2026-10-09T18:34:21Z",
+    "2026-10-09T18:43:56Z"
+   ]
+  },
+  "update-alpha81/upd1-arch-good/run-a": {
+   "at": "18:11:53",
+   "host_samples": 35,
+   "largest_host_sample_gap_s": 5.0,
+   "largest_step_gap_s": 0.0,
+   "longest_step": [
+    172.0,
+    "setup"
+   ],
+   "steps": 18,
+   "window": [
+    "2026-10-09T18:03:30Z",
+    "2026-10-09T18:12:17Z"
+   ]
+  },
+  "update-alpha81/upd1-debian13-defective/run-a": {
+   "at": "17:59:20",
+   "host_samples": 69,
+   "largest_host_sample_gap_s": 10.1,
+   "largest_step_gap_s": 0.0,
+   "longest_step": [
+    369.0,
+    "setup"
+   ],
+   "steps": 19,
+   "window": [
+    "2026-10-09T17:49:01Z",
+    "2026-10-09T18:02:00Z"
+   ]
+  },
+  "update-alpha81/upd1-debian13-good/run-a": {
+   "at": "17:24:12",
+   "host_samples": 49,
+   "largest_host_sample_gap_s": 5.0,
+   "largest_step_gap_s": 0.0,
+   "longest_step": [
+    344.0,
+    "setup"
+   ],
+   "steps": 22,
+   "window": [
+    "2026-10-09T17:14:53Z",
+    "2026-10-09T17:26:10Z"
+   ]
+  },
+  "update-alpha81/upd1-debian13-mgmt-off-reboot/run-a": {
+   "at": "19:57:28",
+   "host_samples": 76,
+   "largest_host_sample_gap_s": 5.8,
+   "largest_step_gap_s": 0.0,
+   "longest_step": [
+    368.0,
+    "setup"
+   ],
+   "steps": 22,
+   "window": [
+    "2026-10-09T19:47:49Z",
+    "2026-10-09T20:01:13Z"
+   ]
+  },
+  "update-alpha81/upd1-debian13-owner-continuation/run-a": {
+   "at": "19:11:26",
+   "host_samples": 125,
+   "largest_host_sample_gap_s": 5.8,
+   "largest_step_gap_s": 0.0,
+   "longest_step": [
+    432.0,
+    "track"
+   ],
+   "steps": 20,
+   "window": [
+    "2026-10-09T18:59:28Z",
+    "2026-10-09T19:17:58Z"
+   ]
+  },
+  "update-alpha81/upd1-debian13-startcheck/run-a": {
+   "at": "18:55:26",
+   "host_samples": 69,
+   "largest_host_sample_gap_s": 10.5,
+   "largest_step_gap_s": 0.0,
+   "longest_step": [
+    357.0,
+    "setup"
+   ],
+   "steps": 20,
+   "window": [
+    "2026-10-09T18:45:14Z",
+    "2026-10-09T18:57:59Z"
+   ]
+  },
+  "update-alpha81/upd1-ubuntu-defective/run-a": {
+   "at": "18:30:21",
+   "host_samples": 59,
+   "largest_host_sample_gap_s": 10.5,
+   "largest_step_gap_s": 0.0,
+   "longest_step": [
+    641.0,
+    "setup"
+   ],
+   "steps": 19,
+   "window": [
+    "2026-10-09T18:12:58Z",
+    "2026-10-09T18:32:52Z"
+   ]
+  },
+  "update-alpha81/upd1-ubuntu-good/run-a": {
+   "at": "17:43:49",
+   "host_samples": 51,
+   "largest_host_sample_gap_s": 5.0,
+   "largest_step_gap_s": 1.0,
+   "longest_step": [
+    659.0,
+    "setup"
+   ],
+   "steps": 22,
+   "window": [
+    "2026-10-09T17:27:22Z",
+    "2026-10-09T17:47:25Z"
+   ]
+  },
+  "update-alpha81/upd1-ubuntu-owner-continuation/run-a": {
+   "at": "19:41:20",
+   "host_samples": 118,
+   "largest_host_sample_gap_s": 9.3,
+   "largest_step_gap_s": 0.0,
+   "longest_step": [
+    702.0,
+    "setup"
+   ],
+   "steps": 20,
+   "window": [
+    "2026-10-09T19:18:58Z",
+    "2026-10-09T19:46:12Z"
+   ]
+  }
+ },
+ "host_clock": {
+  "c-drive-watch.txt": {
+   "first": "2026-10-09T16:58:49Z",
+   "gaps_over_60_s": [],
+   "largest_gap_s": 31.0,
+   "last": "2026-10-09T20:02:49Z",
+   "lines": 368
+  },
+  "mem-watch.txt": {
+   "first": "2026-10-09T17:51:51Z",
+   "gaps_over_60_s": [],
+   "largest_gap_s": 31.0,
+   "last": "2026-10-09T20:02:26Z",
+   "lines": 262
+  },
+  "update-alpha81/upd1-arch-defective/run-a": {
+   "c-drive-watch.txt": {
+    "largest_gap_s": 31.0,
+    "lines": 23
+   },
+   "mem-watch.txt": {
+    "largest_gap_s": 30.0,
+    "lines": 24
+   }
+  },
+  "update-alpha81/upd1-arch-good/run-a": {
+   "c-drive-watch.txt": {
+    "largest_gap_s": 31.0,
+    "lines": 22
+   },
+   "mem-watch.txt": {
+    "largest_gap_s": 30.0,
+    "lines": 21
+   }
+  },
+  "update-alpha81/upd1-debian13-defective/run-a": {
+   "c-drive-watch.txt": {
+    "largest_gap_s": 31.0,
+    "lines": 30
+   },
+   "mem-watch.txt": {
+    "largest_gap_s": 31.0,
+    "lines": 22
+   }
+  },
+  "update-alpha81/upd1-debian13-good/run-a": {
+   "c-drive-watch.txt": {
+    "largest_gap_s": 31.0,
+    "lines": 27
+   },
+   "mem-watch.txt": {
+    "largest_gap_s": null,
+    "lines": 0
+   }
+  },
+  "update-alpha81/upd1-debian13-mgmt-off-reboot/run-a": {
+   "c-drive-watch.txt": {
+    "largest_gap_s": 31.0,
+    "lines": 31
+   },
+   "mem-watch.txt": {
+    "largest_gap_s": 30.0,
+    "lines": 31
+   }
+  },
+  "update-alpha81/upd1-debian13-owner-continuation/run-a": {
+   "c-drive-watch.txt": {
+    "largest_gap_s": 31.0,
+    "lines": 41
+   },
+   "mem-watch.txt": {
+    "largest_gap_s": 31.0,
+    "lines": 41
+   }
+  },
+  "update-alpha81/upd1-debian13-startcheck/run-a": {
+   "c-drive-watch.txt": {
+    "largest_gap_s": 31.0,
+    "lines": 29
+   },
+   "mem-watch.txt": {
+    "largest_gap_s": 30.0,
+    "lines": 30
+   }
+  },
+  "update-alpha81/upd1-ubuntu-defective/run-a": {
+   "c-drive-watch.txt": {
+    "largest_gap_s": 31.0,
+    "lines": 42
+   },
+   "mem-watch.txt": {
+    "largest_gap_s": 31.0,
+    "lines": 43
+   }
+  },
+  "update-alpha81/upd1-ubuntu-good/run-a": {
+   "c-drive-watch.txt": {
+    "largest_gap_s": 31.0,
+    "lines": 43
+   },
+   "mem-watch.txt": {
+    "largest_gap_s": null,
+    "lines": 0
+   }
+  },
+  "update-alpha81/upd1-ubuntu-owner-continuation/run-a": {
+   "c-drive-watch.txt": {
+    "largest_gap_s": 31.0,
+    "lines": 57
+   },
+   "mem-watch.txt": {
+    "largest_gap_s": 31.0,
+    "lines": 57
+   }
+  }
+ },
+ "item9": {
+  "update-alpha81/upd1-debian13-good/run-a": {
+   "after_step": "passed",
+   "before_step": "passed",
+   "equal_after_the_save": {
+    "dotfile": true,
+    "missing_script": true,
+    "missing_static": true,
+    "path_info_deep_tail_php": true,
+    "path_info_plain": true,
+    "path_info_tail_php": true,
+    "probe": true,
+    "probe_query": true,
+    "root": true,
+    "static": true
+   },
+   "equal_after_the_update": {
+    "dotfile": true,
+    "missing_script": true,
+    "missing_static": true,
+    "path_info_deep_tail_php": true,
+    "path_info_plain": true,
+    "path_info_tail_php": true,
+    "probe": true,
+    "probe_query": true,
+    "root": true,
+    "static": true
+   },
+   "files": [
+    "update-alpha81/upd1-debian13-good/run-a/steps/09-set4-php-site-before-the-update/step.json",
+    "update-alpha81/upd1-debian13-good/run-a/steps/18-set4-php-site-after-the-update/step.json"
+   ],
+   "nginx_test": [
+    0,
+    0,
+    0
+   ],
+   "panel_version_after": {
+    "agent_commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+    "agent_matches": true,
+    "commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+    "hostname": "dns-debian13",
+    "ipv4": "192.0.2.10",
+    "schema_version": 43,
+    "version": "v0.1.0-alpha.82"
+   },
+   "panel_version_before": {
+    "agent_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+    "agent_matches": true,
+    "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+    "hostname": "dns-debian13",
+    "ipv4": "192.0.2.10",
+    "schema_version": 42,
+    "version": "v0.1.0-alpha.81"
+   },
+   "probe_after_the_save": {
+    "executed": true,
+    "php_version": "8.4.26",
+    "runs_as": "set4_upd_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "probe_before": {
+    "executed": true,
+    "php_version": "8.4.26",
+    "runs_as": "set4_upd_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "reason": null,
+   "requests": [
+    "dotfile",
+    "missing_script",
+    "missing_static",
+    "path_info_deep_tail_php",
+    "path_info_plain",
+    "path_info_tail_php",
+    "probe",
+    "probe_query",
+    "root",
+    "static"
+   ],
+   "save": {
+    "body": {
+     "status": "success"
+    },
+    "http": 200,
+    "sent": {
+     "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "redirect_www": false,
+     "web_server": "nginx"
+    }
+   },
+   "site_account": "set4_upd_php_test",
+   "status_by_request": {
+    "dotfile": [
+     403,
+     403,
+     403
+    ],
+    "missing_script": [
+     404,
+     404,
+     404
+    ],
+    "missing_static": [
+     200,
+     200,
+     200
+    ],
+    "path_info_deep_tail_php": [
+     200,
+     200,
+     200
+    ],
+    "path_info_plain": [
+     200,
+     200,
+     200
+    ],
+    "path_info_tail_php": [
+     200,
+     200,
+     200
+    ],
+    "probe": [
+     200,
+     200,
+     200
+    ],
+    "probe_query": [
+     200,
+     200,
+     200
+    ],
+    "root": [
+     200,
+     200,
+     200
+    ],
+    "static": [
+     200,
+     200,
+     200
+    ]
+   },
+   "the_save_rendered_the_vhost_again": {
+    "file_written_again": true,
+    "nginx_reloaded_since_the_save": true
+   },
+   "vhost_file_written_again_by_the_save": {
+    "ctime_ns": [
+     1791566638473252209,
+     1791566736981368133
+    ],
+    "inode": [
+     141382,
+     141387
+    ],
+    "mtime_ns": [
+     1791566638473252209,
+     1791566736977368129
+    ]
+   },
+   "vhost_names_the_snippet": [
+    true,
+    false,
+    false
+   ],
+   "vhost_sha256": [
+    "551945c219536b5deca6f56079d4a14c758dbc376e57a6a0ac3bdcc28833e579",
+    "83bd07de34363e12ebe814437dfd219fe1ea4a2ab96760a6bb3411f7b1da5134",
+    "83bd07de34363e12ebe814437dfd219fe1ea4a2ab96760a6bb3411f7b1da5134"
+   ]
+  },
+  "update-alpha81/upd1-ubuntu-good/run-a": {
+   "after_step": "passed",
+   "before_step": "passed",
+   "equal_after_the_save": {
+    "dotfile": true,
+    "missing_script": true,
+    "missing_static": true,
+    "path_info_deep_tail_php": true,
+    "path_info_plain": true,
+    "path_info_tail_php": true,
+    "probe": true,
+    "probe_query": true,
+    "root": true,
+    "static": true
+   },
+   "equal_after_the_update": {
+    "dotfile": true,
+    "missing_script": true,
+    "missing_static": true,
+    "path_info_deep_tail_php": true,
+    "path_info_plain": true,
+    "path_info_tail_php": true,
+    "probe": true,
+    "probe_query": true,
+    "root": true,
+    "static": true
+   },
+   "files": [
+    "update-alpha81/upd1-ubuntu-good/run-a/steps/09-set4-php-site-before-the-update/step.json",
+    "update-alpha81/upd1-ubuntu-good/run-a/steps/18-set4-php-site-after-the-update/step.json"
+   ],
+   "nginx_test": [
+    0,
+    0,
+    0
+   ],
+   "panel_version_after": {
+    "agent_commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+    "agent_matches": true,
+    "commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+    "hostname": "dns-ubuntu",
+    "ipv4": "192.0.2.12",
+    "schema_version": 43,
+    "version": "v0.1.0-alpha.82"
+   },
+   "panel_version_before": {
+    "agent_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+    "agent_matches": true,
+    "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+    "hostname": "dns-ubuntu",
+    "ipv4": "192.0.2.12",
+    "schema_version": 42,
+    "version": "v0.1.0-alpha.81"
+   },
+   "probe_after_the_save": {
+    "executed": true,
+    "php_version": "8.3.6",
+    "runs_as": "set4_upd_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "probe_before": {
+    "executed": true,
+    "php_version": "8.3.6",
+    "runs_as": "set4_upd_php_test",
+    "server_api": "fpm-fcgi",
+    "values": {
+     "DOCUMENT_ROOT": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "DOCUMENT_URI": "/set4-probe.php",
+     "PATH_INFO": "",
+     "PATH_TRANSLATED": "(unset)",
+     "QUERY_STRING": "",
+     "REQUEST_URI": "/set4-probe.php",
+     "SCRIPT_FILENAME": "/var/www/celikpanel/subscriptions/2/sites/2/public_html/set4-probe.php",
+     "SCRIPT_NAME": "/set4-probe.php"
+    }
+   },
+   "reason": null,
+   "requests": [
+    "dotfile",
+    "missing_script",
+    "missing_static",
+    "path_info_deep_tail_php",
+    "path_info_plain",
+    "path_info_tail_php",
+    "probe",
+    "probe_query",
+    "root",
+    "static"
+   ],
+   "save": {
+    "body": {
+     "status": "success"
+    },
+    "http": 200,
+    "sent": {
+     "document_root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+     "redirect_www": false,
+     "web_server": "nginx"
+    }
+   },
+   "site_account": "set4_upd_php_test",
+   "status_by_request": {
+    "dotfile": [
+     403,
+     403,
+     403
+    ],
+    "missing_script": [
+     404,
+     404,
+     404
+    ],
+    "missing_static": [
+     200,
+     200,
+     200
+    ],
+    "path_info_deep_tail_php": [
+     200,
+     200,
+     200
+    ],
+    "path_info_plain": [
+     200,
+     200,
+     200
+    ],
+    "path_info_tail_php": [
+     200,
+     200,
+     200
+    ],
+    "probe": [
+     200,
+     200,
+     200
+    ],
+    "probe_query": [
+     200,
+     200,
+     200
+    ],
+    "root": [
+     200,
+     200,
+     200
+    ],
+    "static": [
+     200,
+     200,
+     200
+    ]
+   },
+   "the_save_rendered_the_vhost_again": {
+    "file_written_again": true,
+    "nginx_reloaded_since_the_save": true
+   },
+   "vhost_file_written_again_by_the_save": {
+    "ctime_ns": [
+     1791567905070438780,
+     1791568007323322696
+    ],
+    "inode": [
+     262669,
+     263478
+    ],
+    "mtime_ns": [
+     1791567905069438772,
+     1791568007322322688
+    ]
+   },
+   "vhost_names_the_snippet": [
+    true,
+    false,
+    false
+   ],
+   "vhost_sha256": [
+    "1a3928354ab43109a20fe5f8e052b1962199c7631a94d3893ba5638d28756fcd",
+    "4cc697cff54bddd5bf77611ce0995fb1f0cb58c05762d2d1d21258b1b948b83c",
+    "4cc697cff54bddd5bf77611ce0995fb1f0cb58c05762d2d1d21258b1b948b83c"
+   ]
+  }
+ },
+ "m10": {
+  "update-alpha81/upd1-debian13-good/run-a": {
+   "checks": [
+    [
+     "item 10: `postfix check` refuses main.cf (the owner's line)",
+     true
+    ],
+    [
+     "S8 postfix stop (main.cf holds a line Postfix refuses): the answer (success) matches what the service shows",
+     true
+    ],
+    [
+     "item 10: Stop answers 200 success and the master is gone",
+     true
+    ],
+    [
+     "item 10: the unit ended `failed`, which it was not before the stop (set3's observation)",
+     true
+    ],
+    [
+     "item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`",
+     true
+    ],
+    [
+     "item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`",
+     true
+    ],
+    [
+     "item 10: the note's sentence is the documented one for its reason",
+     true
+    ],
+    [
+     "item 10: no `reset-failed` was issued: the unit is still `failed` after the answer and 8 seconds later, and the product's journal names no reset-failed",
+     true
+    ],
+    [
+     "S8 postfix start (after the owner's correction): the answer (success) matches what the service shows",
+     true
+    ],
+    [
+     "item 10: after main.cf is restored, Start answers success, the master runs and no unit is `failed`",
+     true
+    ],
+    [
+     "item 10: mail is accepted on 25 and 587 answers at the end",
+     true
+    ]
+   ],
+   "error": null,
+   "file": "update-alpha81/upd1-debian13-good/run-a/steps/21-m10-postfix-stop/section.json",
+   "master_running_after": false,
+   "note_code": "SERVICE_ACTION_NOTE",
+   "note_reason": "unit_marked_failed_config",
+   "note_vars": {
+    "command": "sudo systemctl reset-failed postfix.service",
+    "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+    "failed_unit": "postfix.service",
+    "result": "exit-code",
+    "unit": "postfix"
+   },
+   "reason": null,
+   "request": [
+    {
+     "action": "stop",
+     "name": "postfix"
+    },
+    {
+     "action": "start",
+     "name": "postfix"
+    }
+   ],
+   "reset_failed_in_the_product_journal": false,
+   "section": "passed",
+   "start": {
+    "answer": {
+     "applied": "started",
+     "outcome": "verified",
+     "success": true
+    },
+    "master_running": true,
+    "status": 200,
+    "units": {
+     "postfix.service": "active",
+     "postfix@-.service": "inactive"
+    }
+   },
+   "status": [
+    200,
+    200
+   ],
+   "step": "passed",
+   "stop_answer": {
+    "applied": "stopped",
+    "note": {
+     "code": "SERVICE_ACTION_NOTE",
+     "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+     "reason": "unit_marked_failed_config",
+     "vars": {
+      "command": "sudo systemctl reset-failed postfix.service",
+      "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+      "failed_unit": "postfix.service",
+      "result": "exit-code",
+      "unit": "postfix"
+     }
+    },
+    "outcome": "verified",
+    "success": true
+   },
+   "unit_results_after": {
+    "postfix.service": "exit-code",
+    "postfix@-.service": "success"
+   },
+   "units_8s_later": {
+    "postfix.service": "failed",
+    "postfix@-.service": "inactive"
+   },
+   "units_after": {
+    "postfix.service": "failed",
+    "postfix@-.service": "inactive"
+   },
+   "units_before": {
+    "postfix.service": "active",
+    "postfix@-.service": "inactive"
+   }
+  },
+  "update-alpha81/upd1-ubuntu-good/run-a": {
+   "checks": [
+    [
+     "item 10: `postfix check` refuses main.cf (the owner's line)",
+     true
+    ],
+    [
+     "S8 postfix stop (main.cf holds a line Postfix refuses): the answer (success) matches what the service shows",
+     true
+    ],
+    [
+     "item 10: Stop answers 200 success and the master is gone",
+     true
+    ],
+    [
+     "item 10: the unit ended `failed`, which it was not before the stop (set3's observation)",
+     true
+    ],
+    [
+     "item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`",
+     true
+    ],
+    [
+     "item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`",
+     true
+    ],
+    [
+     "item 10: the note's sentence is the documented one for its reason",
+     true
+    ],
+    [
+     "item 10: no `reset-failed` was issued: the unit is still `failed` after the answer and 8 seconds later, and the product's journal names no reset-failed",
+     true
+    ],
+    [
+     "S8 postfix start (after the owner's correction): the answer (success) matches what the service shows",
+     true
+    ],
+    [
+     "item 10: after main.cf is restored, Start answers success, the master runs and no unit is `failed`",
+     true
+    ],
+    [
+     "item 10: mail is accepted on 25 and 587 answers at the end",
+     true
+    ]
+   ],
+   "error": null,
+   "file": "update-alpha81/upd1-ubuntu-good/run-a/steps/21-m10-postfix-stop/section.json",
+   "master_running_after": false,
+   "note_code": "SERVICE_ACTION_NOTE",
+   "note_reason": "unit_marked_failed_config",
+   "note_vars": {
+    "command": "sudo systemctl reset-failed postfix@-.service",
+    "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+    "failed_unit": "postfix@-.service",
+    "result": "exit-code",
+    "unit": "postfix"
+   },
+   "reason": null,
+   "request": [
+    {
+     "action": "stop",
+     "name": "postfix"
+    },
+    {
+     "action": "start",
+     "name": "postfix"
+    }
+   ],
+   "reset_failed_in_the_product_journal": false,
+   "section": "passed",
+   "start": {
+    "answer": {
+     "applied": "started",
+     "outcome": "verified",
+     "success": true
+    },
+    "master_running": true,
+    "status": 200,
+    "units": {
+     "postfix.service": "active",
+     "postfix@-.service": "active"
+    }
+   },
+   "status": [
+    200,
+    200
+   ],
+   "step": "passed",
+   "stop_answer": {
+    "applied": "stopped",
+    "note": {
+     "code": "SERVICE_ACTION_NOTE",
+     "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+     "reason": "unit_marked_failed_config",
+     "vars": {
+      "command": "sudo systemctl reset-failed postfix@-.service",
+      "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+      "failed_unit": "postfix@-.service",
+      "result": "exit-code",
+      "unit": "postfix"
+     }
+    },
+    "outcome": "verified",
+    "success": true
+   },
+   "unit_results_after": {
+    "postfix.service": "success",
+    "postfix@-.service": "exit-code"
+   },
+   "units_8s_later": {
+    "postfix.service": "inactive",
+    "postfix@-.service": "failed"
+   },
+   "units_after": {
+    "postfix.service": "inactive",
+    "postfix@-.service": "failed"
+   },
+   "units_before": {
+    "postfix.service": "active",
+    "postfix@-.service": "active"
+   }
+  }
+ },
+ "pinning": {
+  "update-alpha81/upd1-arch-defective/run-a": {
+   "boot_id_changed": true,
+   "certbot_log_directory": [],
+   "certbot_program_at_the_end": "/usr/bin/certbot",
+   "end_step": "passed",
+   "files": [
+    "update-alpha81/upd1-arch-defective/run-a/steps/01-set5-name-pinning/name-pinning.json",
+    "update-alpha81/upd1-arch-defective/run-a/steps/18-set5-name-pinning-at-the-end/name-pinning-at-the-end.json"
+   ],
+   "install_started_at": "2026-10-09T18:34:34Z",
+   "loopback_only_at_pinning": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "loopback_only_at_the_end": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "celikpanel.net": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "origin_http": "200",
+   "origin_loopback_only": true,
+   "origin_started_at": "2026-10-09T18:34:26Z",
+   "origin_step": "passed",
+   "pin_step": "passed",
+   "pinned_at": "2026-10-09T18:34:23Z",
+   "product_paths_present": [],
+   "seconds_after_boot": 52.92
+  },
+  "update-alpha81/upd1-arch-good/run-a": {
+   "boot_id_changed": true,
+   "certbot_log_directory": [],
+   "certbot_program_at_the_end": "/usr/bin/certbot",
+   "end_step": "passed",
+   "files": [
+    "update-alpha81/upd1-arch-good/run-a/steps/01-set5-name-pinning/name-pinning.json",
+    "update-alpha81/upd1-arch-good/run-a/steps/18-set5-name-pinning-at-the-end/name-pinning-at-the-end.json"
+   ],
+   "install_started_at": "2026-10-09T18:03:44Z",
+   "loopback_only_at_pinning": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "loopback_only_at_the_end": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "celikpanel.net": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "origin_http": "200",
+   "origin_loopback_only": true,
+   "origin_started_at": "2026-10-09T18:03:35Z",
+   "origin_step": "passed",
+   "pin_step": "passed",
+   "pinned_at": "2026-10-09T18:03:32Z",
+   "product_paths_present": [],
+   "seconds_after_boot": 53.13
+  },
+  "update-alpha81/upd1-debian13-defective/run-a": {
+   "boot_id_changed": true,
+   "certbot_log_directory": null,
+   "certbot_program_at_the_end": "/usr/bin/certbot",
+   "end_step": "passed",
+   "files": [
+    "update-alpha81/upd1-debian13-defective/run-a/steps/01-set5-name-pinning/name-pinning.json",
+    "update-alpha81/upd1-debian13-defective/run-a/steps/19-set5-name-pinning-at-the-end/name-pinning-at-the-end.json"
+   ],
+   "install_started_at": "2026-10-09T17:49:18Z",
+   "loopback_only_at_pinning": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "loopback_only_at_the_end": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "celikpanel.net": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "origin_http": "200",
+   "origin_loopback_only": true,
+   "origin_started_at": "2026-10-09T17:49:06Z",
+   "origin_step": "passed",
+   "pin_step": "passed",
+   "pinned_at": "2026-10-09T17:49:03Z",
+   "product_paths_present": [],
+   "seconds_after_boot": 56.08
+  },
+  "update-alpha81/upd1-debian13-good/run-a": {
+   "boot_id_changed": false,
+   "certbot_log_directory": null,
+   "certbot_program_at_the_end": "/usr/bin/certbot",
+   "end_step": "passed",
+   "files": [
+    "update-alpha81/upd1-debian13-good/run-a/steps/01-set5-name-pinning/name-pinning.json",
+    "update-alpha81/upd1-debian13-good/run-a/steps/22-set5-name-pinning-at-the-end/name-pinning-at-the-end.json"
+   ],
+   "install_started_at": "2026-10-09T17:15:06Z",
+   "loopback_only_at_pinning": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "loopback_only_at_the_end": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "celikpanel.net": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "origin_http": "200",
+   "origin_loopback_only": true,
+   "origin_started_at": "2026-10-09T17:14:57Z",
+   "origin_step": "passed",
+   "pin_step": "passed",
+   "pinned_at": "2026-10-09T17:14:54Z",
+   "product_paths_present": [],
+   "seconds_after_boot": 56.1
+  },
+  "update-alpha81/upd1-debian13-mgmt-off-reboot/run-a": {
+   "boot_id_changed": true,
+   "certbot_log_directory": null,
+   "certbot_program_at_the_end": "/usr/bin/certbot",
+   "end_step": "passed",
+   "files": [
+    "update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/01-set5-name-pinning/name-pinning.json",
+    "update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/21-set5-name-pinning-at-the-end/name-pinning-at-the-end.json"
+   ],
+   "install_started_at": "2026-10-09T19:48:02Z",
+   "loopback_only_at_pinning": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "loopback_only_at_the_end": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "celikpanel.net": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "origin_http": "200",
+   "origin_loopback_only": true,
+   "origin_started_at": "2026-10-09T19:47:53Z",
+   "origin_step": "passed",
+   "pin_step": "passed",
+   "pinned_at": "2026-10-09T19:47:50Z",
+   "product_paths_present": [],
+   "seconds_after_boot": 57.91
+  },
+  "update-alpha81/upd1-debian13-owner-continuation/run-a": {
+   "boot_id_changed": false,
+   "certbot_log_directory": null,
+   "certbot_program_at_the_end": "/usr/bin/certbot",
+   "end_step": "passed",
+   "files": [
+    "update-alpha81/upd1-debian13-owner-continuation/run-a/steps/01-set5-name-pinning/name-pinning.json",
+    "update-alpha81/upd1-debian13-owner-continuation/run-a/steps/19-set5-name-pinning-at-the-end/name-pinning-at-the-end.json"
+   ],
+   "install_started_at": "2026-10-09T18:59:40Z",
+   "loopback_only_at_pinning": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "loopback_only_at_the_end": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "celikpanel.net": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "origin_http": "200",
+   "origin_loopback_only": true,
+   "origin_started_at": "2026-10-09T18:59:32Z",
+   "origin_step": "passed",
+   "pin_step": "passed",
+   "pinned_at": "2026-10-09T18:59:29Z",
+   "product_paths_present": [],
+   "seconds_after_boot": 55.51
+  },
+  "update-alpha81/upd1-debian13-startcheck/run-a": {
+   "boot_id_changed": true,
+   "certbot_log_directory": null,
+   "certbot_program_at_the_end": "/usr/bin/certbot",
+   "end_step": "passed",
+   "files": [
+    "update-alpha81/upd1-debian13-startcheck/run-a/steps/01-set5-name-pinning/name-pinning.json",
+    "update-alpha81/upd1-debian13-startcheck/run-a/steps/19-set5-name-pinning-at-the-end/name-pinning-at-the-end.json"
+   ],
+   "install_started_at": "2026-10-09T18:45:26Z",
+   "loopback_only_at_pinning": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "loopback_only_at_the_end": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "celikpanel.net": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "origin_http": "200",
+   "origin_loopback_only": true,
+   "origin_started_at": "2026-10-09T18:45:18Z",
+   "origin_step": "passed",
+   "pin_step": "passed",
+   "pinned_at": "2026-10-09T18:45:15Z",
+   "product_paths_present": [],
+   "seconds_after_boot": 54.12
+  },
+  "update-alpha81/upd1-ubuntu-defective/run-a": {
+   "boot_id_changed": true,
+   "certbot_log_directory": null,
+   "certbot_program_at_the_end": "/usr/bin/certbot",
+   "end_step": "passed",
+   "files": [
+    "update-alpha81/upd1-ubuntu-defective/run-a/steps/01-set5-name-pinning/name-pinning.json",
+    "update-alpha81/upd1-ubuntu-defective/run-a/steps/19-set5-name-pinning-at-the-end/name-pinning-at-the-end.json"
+   ],
+   "install_started_at": "2026-10-09T18:13:12Z",
+   "loopback_only_at_pinning": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "loopback_only_at_the_end": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "celikpanel.net": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "origin_http": "200",
+   "origin_loopback_only": true,
+   "origin_started_at": "2026-10-09T18:13:03Z",
+   "origin_step": "passed",
+   "pin_step": "passed",
+   "pinned_at": "2026-10-09T18:12:57Z",
+   "product_paths_present": [],
+   "seconds_after_boot": 18.17
+  },
+  "update-alpha81/upd1-ubuntu-good/run-a": {
+   "boot_id_changed": false,
+   "certbot_log_directory": null,
+   "certbot_program_at_the_end": "/usr/bin/certbot",
+   "end_step": "passed",
+   "files": [
+    "update-alpha81/upd1-ubuntu-good/run-a/steps/01-set5-name-pinning/name-pinning.json",
+    "update-alpha81/upd1-ubuntu-good/run-a/steps/22-set5-name-pinning-at-the-end/name-pinning-at-the-end.json"
+   ],
+   "install_started_at": "2026-10-09T17:27:36Z",
+   "loopback_only_at_pinning": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "loopback_only_at_the_end": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "celikpanel.net": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "origin_http": "200",
+   "origin_loopback_only": true,
+   "origin_started_at": "2026-10-09T17:27:27Z",
+   "origin_step": "passed",
+   "pin_step": "passed",
+   "pinned_at": "2026-10-09T17:27:22Z",
+   "product_paths_present": [],
+   "seconds_after_boot": 18.1
+  },
+  "update-alpha81/upd1-ubuntu-owner-continuation/run-a": {
+   "boot_id_changed": false,
+   "certbot_log_directory": null,
+   "certbot_program_at_the_end": "/usr/bin/certbot",
+   "end_step": "passed",
+   "files": [
+    "update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/01-set5-name-pinning/name-pinning.json",
+    "update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/19-set5-name-pinning-at-the-end/name-pinning-at-the-end.json"
+   ],
+   "install_started_at": "2026-10-09T19:19:20Z",
+   "loopback_only_at_pinning": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "loopback_only_at_the_end": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "celikpanel.net": true,
+    "dv.acme-v02.api.pki.goog": true
+   },
+   "origin_http": "200",
+   "origin_loopback_only": true,
+   "origin_started_at": "2026-10-09T19:19:08Z",
+   "origin_step": "passed",
+   "pin_step": "passed",
+   "pinned_at": "2026-10-09T19:18:58Z",
+   "product_paths_present": [],
+   "seconds_after_boot": 25.31
+  }
+ },
+ "platforms": {
+  "update-alpha81/upd1-arch-defective/run-a": {
+   "kernel": "7.2.9-arch1-1",
+   "os_release": {
+    "BUILD_ID": "rolling",
+    "ID": "arch",
+    "PRETTY_NAME": "Arch Linux"
+   },
+   "packages": {
+    "certbot": "5.8.0-1",
+    "cron": "1.7.2-2",
+    "cronie": "1.7.2-2",
+    "mariadb": "13.0.2-2",
+    "mariadb-server": "13.0.2-2",
+    "nginx": "1.30.5-1",
+    "openssl": "3.6.5-1",
+    "php": "8.5.11-1",
+    "php-fpm": "8.5.11-1",
+    "systemd": "262-1"
+   },
+   "source": "the last step's reading (`set5-name-pinning-at-the-end`)"
+  },
+  "update-alpha81/upd1-arch-good/run-a": {
+   "kernel": "7.2.9-arch1-1",
+   "os_release": {
+    "BUILD_ID": "rolling",
+    "ID": "arch",
+    "PRETTY_NAME": "Arch Linux"
+   },
+   "packages": {
+    "certbot": "5.8.0-1",
+    "cron": "1.7.2-2",
+    "cronie": "1.7.2-2",
+    "mariadb": "13.0.2-2",
+    "mariadb-server": "13.0.2-2",
+    "nginx": "1.30.5-1",
+    "openssl": "3.6.5-1",
+    "php": "8.5.11-1",
+    "php-fpm": "8.5.11-1",
+    "systemd": "262-1"
+   },
+   "source": "the last step's reading (`set5-name-pinning-at-the-end`)"
+  },
+  "update-alpha81/upd1-debian13-defective/run-a": {
+   "kernel": "6.12.105+deb13-cloud-amd64",
+   "os_release": {
+    "ID": "debian",
+    "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+    "VERSION_CODENAME": "trixie",
+    "VERSION_ID": "13"
+   },
+   "packages": {
+    "certbot": "4.0.0-2+deb13u1",
+    "cron": "3.0pl1-197",
+    "dovecot-core": "1:2.4.1+dfsg1-6+deb13u7",
+    "mariadb-server": "1:11.8.6-0+deb13u1",
+    "nginx": "1.26.3-3+deb13u9",
+    "nginx-common": "1.26.3-3+deb13u9",
+    "openssl": "3.5.7-1~deb13u2",
+    "php-fpm": "2:8.4+96",
+    "php8.4-fpm": "8.4.26-1~deb13u1",
+    "postfix": "3.10.13-0+deb13u1",
+    "rspamd": "3.12.1-1",
+    "systemd": "257.13-1~deb13u1"
+   },
+   "source": "the last step's reading (`set5-name-pinning-at-the-end`)"
+  },
+  "update-alpha81/upd1-debian13-good/run-a": {
+   "kernel": null,
+   "os_release": {
+    "ID": "debian",
+    "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+    "VERSION_CODENAME": "trixie",
+    "VERSION_ID": "13"
+   },
+   "packages": {
+    "certbot": "4.0.0-2+deb13u1",
+    "dovecot-core": "1:2.4.1+dfsg1-6+deb13u7",
+    "mariadb-server": "1:11.8.6-0+deb13u1",
+    "nginx": "1.26.3-3+deb13u9",
+    "nginx-common": "1.26.3-3+deb13u9",
+    "php-fpm": "2:8.4+96",
+    "php8.4-fpm": "8.4.26-1~deb13u1",
+    "postfix": "3.10.13-0+deb13u1",
+    "systemd": "257.13-1~deb13u1"
+   },
+   "source": "the item-9 platform reading before the update (`set4-php-site-before-the-update`)"
+  },
+  "update-alpha81/upd1-debian13-mgmt-off-reboot/run-a": {
+   "kernel": "6.12.105+deb13-cloud-amd64",
+   "os_release": {
+    "ID": "debian",
+    "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+    "VERSION_CODENAME": "trixie",
+    "VERSION_ID": "13"
+   },
+   "packages": {
+    "certbot": "4.0.0-2+deb13u1",
+    "cron": "3.0pl1-197",
+    "dovecot-core": "1:2.4.1+dfsg1-6+deb13u7",
+    "mariadb-server": "1:11.8.6-0+deb13u1",
+    "nginx": "1.26.3-3+deb13u9",
+    "nginx-common": "1.26.3-3+deb13u9",
+    "openssl": "3.5.7-1~deb13u2",
+    "php-fpm": "2:8.4+96",
+    "php8.4-fpm": "8.4.26-1~deb13u1",
+    "postfix": "3.10.13-0+deb13u1",
+    "rspamd": "3.12.1-1",
+    "systemd": "257.13-1~deb13u1"
+   },
+   "source": "the last step's reading (`set5-name-pinning-at-the-end`)"
+  },
+  "update-alpha81/upd1-debian13-owner-continuation/run-a": {
+   "kernel": "6.12.105+deb13-cloud-amd64",
+   "os_release": {
+    "ID": "debian",
+    "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+    "VERSION_CODENAME": "trixie",
+    "VERSION_ID": "13"
+   },
+   "packages": {
+    "certbot": "4.0.0-2+deb13u1",
+    "cron": "3.0pl1-197",
+    "dovecot-core": "1:2.4.1+dfsg1-6+deb13u7",
+    "mariadb-server": "1:11.8.6-0+deb13u1",
+    "nginx": "1.26.3-3+deb13u9",
+    "nginx-common": "1.26.3-3+deb13u9",
+    "openssl": "3.5.7-1~deb13u2",
+    "php-fpm": "2:8.4+96",
+    "php8.4-fpm": "8.4.26-1~deb13u1",
+    "postfix": "3.10.13-0+deb13u1",
+    "rspamd": "3.12.1-1",
+    "systemd": "257.13-1~deb13u1"
+   },
+   "source": "the last step's reading (`set5-name-pinning-at-the-end`)"
+  },
+  "update-alpha81/upd1-debian13-startcheck/run-a": {
+   "kernel": "6.12.105+deb13-cloud-amd64",
+   "os_release": {
+    "ID": "debian",
+    "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+    "VERSION_CODENAME": "trixie",
+    "VERSION_ID": "13"
+   },
+   "packages": {
+    "certbot": "4.0.0-2+deb13u1",
+    "cron": "3.0pl1-197",
+    "dovecot-core": "1:2.4.1+dfsg1-6+deb13u7",
+    "mariadb-server": "1:11.8.6-0+deb13u1",
+    "nginx": "1.26.3-3+deb13u9",
+    "nginx-common": "1.26.3-3+deb13u9",
+    "openssl": "3.5.7-1~deb13u2",
+    "php-fpm": "2:8.4+96",
+    "php8.4-fpm": "8.4.26-1~deb13u1",
+    "postfix": "3.10.13-0+deb13u1",
+    "rspamd": "3.12.1-1",
+    "systemd": "257.13-1~deb13u1"
+   },
+   "source": "the last step's reading (`set5-name-pinning-at-the-end`)"
+  },
+  "update-alpha81/upd1-ubuntu-defective/run-a": {
+   "kernel": "6.8.0-138-generic",
+   "os_release": {
+    "ID": "ubuntu",
+    "PRETTY_NAME": "Ubuntu 24.04.4 LTS",
+    "VERSION_CODENAME": "noble",
+    "VERSION_ID": "24.04"
+   },
+   "packages": {
+    "certbot": "2.9.0-1",
+    "cron": "3.0pl1-184ubuntu2",
+    "dovecot-core": "1:2.3.21+dfsg1-2ubuntu6.5",
+    "mariadb-server": "1:10.11.14-0ubuntu0.24.04.1",
+    "nginx": "1.24.0-2ubuntu7.18",
+    "nginx-common": "1.24.0-2ubuntu7.18",
+    "openssl": "3.0.13-0ubuntu3.15",
+    "php-fpm": "2:8.3+93ubuntu2",
+    "php8.3-fpm": "8.3.6-0ubuntu0.24.04.11",
+    "postfix": "3.8.6-1ubuntu0.1",
+    "rspamd": "3.8.1-1ubuntu3",
+    "systemd": "255.4-1ubuntu8.17"
+   },
+   "source": "the last step's reading (`set5-name-pinning-at-the-end`)"
+  },
+  "update-alpha81/upd1-ubuntu-good/run-a": {
+   "kernel": null,
+   "os_release": {
+    "ID": "ubuntu",
+    "PRETTY_NAME": "Ubuntu 24.04.4 LTS",
+    "VERSION_CODENAME": "noble",
+    "VERSION_ID": "24.04"
+   },
+   "packages": {
+    "certbot": "2.9.0-1",
+    "dovecot-core": "1:2.3.21+dfsg1-2ubuntu6.5",
+    "mariadb-server": "1:10.11.14-0ubuntu0.24.04.1",
+    "nginx": "1.24.0-2ubuntu7.18",
+    "nginx-common": "1.24.0-2ubuntu7.18",
+    "php-fpm": "2:8.3+93ubuntu2",
+    "php8.3-fpm": "8.3.6-0ubuntu0.24.04.11",
+    "postfix": "3.8.6-1ubuntu0.1",
+    "systemd": "255.4-1ubuntu8.17"
+   },
+   "source": "the item-9 platform reading before the update (`set4-php-site-before-the-update`)"
+  },
+  "update-alpha81/upd1-ubuntu-owner-continuation/run-a": {
+   "kernel": "6.8.0-138-generic",
+   "os_release": {
+    "ID": "ubuntu",
+    "PRETTY_NAME": "Ubuntu 24.04.4 LTS",
+    "VERSION_CODENAME": "noble",
+    "VERSION_ID": "24.04"
+   },
+   "packages": {
+    "certbot": "2.9.0-1",
+    "cron": "3.0pl1-184ubuntu2",
+    "dovecot-core": "1:2.3.21+dfsg1-2ubuntu6.5",
+    "mariadb-server": "1:10.11.14-0ubuntu0.24.04.1",
+    "nginx": "1.24.0-2ubuntu7.18",
+    "nginx-common": "1.24.0-2ubuntu7.18",
+    "openssl": "3.0.13-0ubuntu3.15",
+    "php-fpm": "2:8.3+93ubuntu2",
+    "php8.3-fpm": "8.3.6-0ubuntu0.24.04.11",
+    "postfix": "3.8.6-1ubuntu0.1",
+    "rspamd": "3.8.1-1ubuntu3",
+    "systemd": "255.4-1ubuntu8.17"
+   },
+   "source": "the last step's reading (`set5-name-pinning-at-the-end`)"
+  }
+ },
+ "power_events": {
+  "events": [
+   [
+    "2026-10-09T14:07:45Z",
+    507,
+    "leaving modern standby"
+   ],
+   [
+    "2026-10-09T14:17:15Z",
+    506,
+    "entering modern standby"
+   ],
+   [
+    "2026-10-09T14:21:38Z",
+    507,
+    "leaving modern standby"
+   ],
+   [
+    "2026-10-09T14:32:46Z",
+    506,
+    "entering modern standby"
+   ],
+   [
+    "2026-10-09T14:37:54Z",
+    507,
+    "leaving modern standby"
+   ],
+   [
+    "2026-10-09T14:38:58Z",
+    105,
+    "power source change"
+   ],
+   [
+    "2026-10-09T14:39:00Z",
+    506,
+    "entering modern standby"
+   ],
+   [
+    "2026-10-09T14:39:13Z",
+    507,
+    "leaving modern standby"
+   ],
+   [
+    "2026-10-09T14:39:13Z",
+    506,
+    "entering modern standby"
+   ],
+   [
+    "2026-10-09T15:06:52Z",
+    507,
+    "leaving modern standby"
+   ],
+   [
+    "2026-10-09T15:06:57Z",
+    42,
+    "entering sleep"
+   ],
+   [
+    "2026-10-09T15:07:01Z",
+    107,
+    "resumed from sleep"
+   ],
+   [
+    "2026-10-09T15:22:32Z",
+    105,
+    "power source change"
+   ],
+   [
+    "2026-10-09T15:22:33Z",
+    506,
+    "entering modern standby"
+   ],
+   [
+    "2026-10-09T15:22:34Z",
+    507,
+    "leaving modern standby"
+   ],
+   [
+    "2026-10-09T15:23:08Z",
+    506,
+    "entering modern standby"
+   ],
+   [
+    "2026-10-09T15:23:35Z",
+    507,
+    "leaving modern standby"
+   ],
+   [
+    "2026-10-09T15:32:13Z",
+    506,
+    "entering modern standby"
+   ],
+   [
+    "2026-10-09T15:39:03Z",
+    507,
+    "leaving modern standby"
+   ],
+   [
+    "2026-10-09T16:38:46Z",
+    506,
+    "entering modern standby"
+   ],
+   [
+    "2026-10-09T16:56:45Z",
+    507,
+    "leaving modern standby"
+   ],
+   [
+    "2026-10-09T17:10:44Z",
+    506,
+    "entering modern standby"
+   ],
+   [
+    "2026-10-09T19:15:44Z",
+    507,
+    "leaving modern standby"
+   ],
+   [
+    "2026-10-09T19:31:37Z",
+    506,
+    "entering modern standby"
+   ]
+  ],
+  "update-alpha81/upd1-arch-defective/run-a": {
+   "inside": [],
+   "last_resume_from_sleep_before": "2026-10-09T15:07:01Z",
+   "state_at_start": "entering modern standby at 2026-10-09T17:10:44Z"
+  },
+  "update-alpha81/upd1-arch-good/run-a": {
+   "inside": [],
+   "last_resume_from_sleep_before": "2026-10-09T15:07:01Z",
+   "state_at_start": "entering modern standby at 2026-10-09T17:10:44Z"
+  },
+  "update-alpha81/upd1-debian13-defective/run-a": {
+   "inside": [],
+   "last_resume_from_sleep_before": "2026-10-09T15:07:01Z",
+   "state_at_start": "entering modern standby at 2026-10-09T17:10:44Z"
+  },
+  "update-alpha81/upd1-debian13-good/run-a": {
+   "inside": [],
+   "last_resume_from_sleep_before": "2026-10-09T15:07:01Z",
+   "state_at_start": "entering modern standby at 2026-10-09T17:10:44Z"
+  },
+  "update-alpha81/upd1-debian13-mgmt-off-reboot/run-a": {
+   "inside": [],
+   "last_resume_from_sleep_before": "2026-10-09T15:07:01Z",
+   "state_at_start": "entering modern standby at 2026-10-09T19:31:37Z"
+  },
+  "update-alpha81/upd1-debian13-owner-continuation/run-a": {
+   "inside": [
+    [
+     "2026-10-09T19:15:44Z",
+     507,
+     "leaving modern standby"
+    ]
+   ],
+   "last_resume_from_sleep_before": "2026-10-09T15:07:01Z",
+   "state_at_start": "entering modern standby at 2026-10-09T17:10:44Z"
+  },
+  "update-alpha81/upd1-debian13-startcheck/run-a": {
+   "inside": [],
+   "last_resume_from_sleep_before": "2026-10-09T15:07:01Z",
+   "state_at_start": "entering modern standby at 2026-10-09T17:10:44Z"
+  },
+  "update-alpha81/upd1-ubuntu-defective/run-a": {
+   "inside": [],
+   "last_resume_from_sleep_before": "2026-10-09T15:07:01Z",
+   "state_at_start": "entering modern standby at 2026-10-09T17:10:44Z"
+  },
+  "update-alpha81/upd1-ubuntu-good/run-a": {
+   "inside": [],
+   "last_resume_from_sleep_before": "2026-10-09T15:07:01Z",
+   "state_at_start": "entering modern standby at 2026-10-09T17:10:44Z"
+  },
+  "update-alpha81/upd1-ubuntu-owner-continuation/run-a": {
+   "inside": [
+    [
+     "2026-10-09T19:31:37Z",
+     506,
+     "entering modern standby"
+    ]
+   ],
+   "last_resume_from_sleep_before": "2026-10-09T15:07:01Z",
+   "state_at_start": "leaving modern standby at 2026-10-09T19:15:44Z"
+  }
+ },
+ "runs": {
+  "update-alpha81/upd1-arch-defective/run-a": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "artifacts": {
+    "baseline": {
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "ecccd8d7b3f3e8106b9d7d21bfb8d0ef1e1ad8ef",
+     "sha256": "3f35d8c653ca2f8177434b5a1ec2f171c309bd89419db2152096cee82bc58c59",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+     "sha256": "a814f52a98b088edccb256d926786eba9320fc25115945b83731a65ef782218a",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "cell": "upd1-arch-defective",
+   "classification": "recovered-automatically",
+   "final": [
+    "recovered",
+    "rollback_verified"
+   ],
+   "findings": [
+    "arch: web_mail was not attempted on the published v0.1.0-alpha.81 baseline (it accepts the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform",
+    "arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']"
+   ],
+   "harness": "harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)",
+   "is_latest": true,
+   "native_evidence": false,
+   "overall": "complete-for-review",
+   "reasons": [],
+   "request_id": "957b0e9b2f224116a62e6c75de6a2ac6",
+   "run": "run-a",
+   "steps": [
+    [
+     "set5-name-pinning",
+     "passed"
+    ],
+    [
+     "preflight",
+     "passed"
+    ],
+    [
+     "origin",
+     "passed"
+    ],
+    [
+     "baseline-install",
+     "passed"
+    ],
+    [
+     "owner-login",
+     "passed"
+    ],
+    [
+     "license",
+     "passed"
+    ],
+    [
+     "setup",
+     "observed"
+    ],
+    [
+     "seed",
+     "passed"
+    ],
+    [
+     "pre-state",
+     "passed"
+    ],
+    [
+     "arm",
+     "passed"
+    ],
+    [
+     "owner-start",
+     "passed"
+    ],
+    [
+     "track",
+     "passed"
+    ],
+    [
+     "owner-continuation (required)",
+     "skipped"
+    ],
+    [
+     "terminal",
+     "passed"
+    ],
+    [
+     "post-return-facts",
+     "passed"
+    ],
+    [
+     "collect",
+     "passed"
+    ],
+    [
+     "verdicts",
+     "passed"
+    ],
+    [
+     "set5-name-pinning-at-the-end",
+     "passed"
+    ]
+   ],
+   "verdict_by_set3_criteria": "PASS",
+   "wrapper": [
+    "2026-10-09T18:33:20Z",
+    "2026-10-09T18:43:57Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "update-alpha81/upd1-arch-good/run-a": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "artifacts": {
+    "baseline": {
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "ecccd8d7b3f3e8106b9d7d21bfb8d0ef1e1ad8ef",
+     "sha256": "3f35d8c653ca2f8177434b5a1ec2f171c309bd89419db2152096cee82bc58c59",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+     "sha256": "a814f52a98b088edccb256d926786eba9320fc25115945b83731a65ef782218a",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "cell": "upd1-arch-good",
+   "classification": "update-verified",
+   "final": [
+    "succeeded",
+    "update_verified"
+   ],
+   "findings": [
+    "arch: web_mail was not attempted on the published v0.1.0-alpha.81 baseline (it accepts the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform",
+    "arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']"
+   ],
+   "harness": "harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)",
+   "is_latest": true,
+   "native_evidence": false,
+   "overall": "complete-for-review",
+   "reasons": [],
+   "request_id": "197c9a00829a9e351753086b264ba369",
+   "run": "run-a",
+   "steps": [
+    [
+     "set5-name-pinning",
+     "passed"
+    ],
+    [
+     "preflight",
+     "passed"
+    ],
+    [
+     "origin",
+     "passed"
+    ],
+    [
+     "baseline-install",
+     "passed"
+    ],
+    [
+     "owner-login",
+     "passed"
+    ],
+    [
+     "license",
+     "passed"
+    ],
+    [
+     "setup",
+     "observed"
+    ],
+    [
+     "seed",
+     "passed"
+    ],
+    [
+     "pre-state",
+     "passed"
+    ],
+    [
+     "arm",
+     "passed"
+    ],
+    [
+     "owner-start",
+     "passed"
+    ],
+    [
+     "track",
+     "passed"
+    ],
+    [
+     "owner-continuation (required)",
+     "skipped"
+    ],
+    [
+     "terminal",
+     "passed"
+    ],
+    [
+     "post-update-facts",
+     "passed"
+    ],
+    [
+     "collect",
+     "passed"
+    ],
+    [
+     "verdicts",
+     "passed"
+    ],
+    [
+     "set5-name-pinning-at-the-end",
+     "passed"
+    ]
+   ],
+   "verdict_by_set3_criteria": "PASS",
+   "wrapper": [
+    "2026-10-09T18:02:29Z",
+    "2026-10-09T18:12:17Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "update-alpha81/upd1-debian13-defective/run-a": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "artifacts": {
+    "baseline": {
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "ecccd8d7b3f3e8106b9d7d21bfb8d0ef1e1ad8ef",
+     "sha256": "3f35d8c653ca2f8177434b5a1ec2f171c309bd89419db2152096cee82bc58c59",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+     "sha256": "a814f52a98b088edccb256d926786eba9320fc25115945b83731a65ef782218a",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "cell": "upd1-debian13-defective",
+   "classification": "recovered-automatically",
+   "final": [
+    "recovered",
+    "rollback_verified"
+   ],
+   "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+   ],
+   "harness": "harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)",
+   "is_latest": true,
+   "native_evidence": false,
+   "overall": "complete-for-review",
+   "reasons": [],
+   "request_id": "18a12642d258a32e685ca544545b472b",
+   "run": "run-a",
+   "steps": [
+    [
+     "set5-name-pinning",
+     "passed"
+    ],
+    [
+     "preflight",
+     "passed"
+    ],
+    [
+     "origin",
+     "passed"
+    ],
+    [
+     "baseline-install",
+     "passed"
+    ],
+    [
+     "owner-login",
+     "passed"
+    ],
+    [
+     "license",
+     "passed"
+    ],
+    [
+     "setup",
+     "observed"
+    ],
+    [
+     "seed",
+     "passed"
+    ],
+    [
+     "pre-state",
+     "passed"
+    ],
+    [
+     "arm",
+     "passed"
+    ],
+    [
+     "owner-start",
+     "passed"
+    ],
+    [
+     "track",
+     "passed"
+    ],
+    [
+     "owner-continuation (required)",
+     "skipped"
+    ],
+    [
+     "terminal",
+     "passed"
+    ],
+    [
+     "deferred-mail-watch",
+     "observed"
+    ],
+    [
+     "post-return-facts",
+     "passed"
+    ],
+    [
+     "collect",
+     "passed"
+    ],
+    [
+     "verdicts",
+     "passed"
+    ],
+    [
+     "set5-name-pinning-at-the-end",
+     "passed"
+    ]
+   ],
+   "verdict_by_set3_criteria": "PASS",
+   "wrapper": [
+    "2026-10-09T17:47:59Z",
+    "2026-10-09T18:02:01Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "update-alpha81/upd1-debian13-good/run-a": {
+   "added_steps": {
+    "M10-postfix-stop": "passed",
+    "set4-php-site-after-the-update": "passed",
+    "set4-php-site-before-the-update": "passed",
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "artifacts": {
+    "baseline": {
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "ecccd8d7b3f3e8106b9d7d21bfb8d0ef1e1ad8ef",
+     "sha256": "3f35d8c653ca2f8177434b5a1ec2f171c309bd89419db2152096cee82bc58c59",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+     "sha256": "a814f52a98b088edccb256d926786eba9320fc25115945b83731a65ef782218a",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "cell": "upd1-debian13-good",
+   "classification": "update-verified",
+   "final": [
+    "succeeded",
+    "update_verified"
+   ],
+   "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+   ],
+   "harness": "harness=/var/tmp/cp-set5-run/harness-d (git archive 67b62cc0f without earlier evidence, overlay overlay-d, harness.diff sha256 6f03b5f4b9a507377d2bdb6b6f9080cfa768688065d088a99004bff77ed25d0d)",
+   "is_latest": true,
+   "native_evidence": false,
+   "overall": "complete-for-review",
+   "reasons": [],
+   "request_id": "10beb50a8cd018140dbfb41b8258555e",
+   "run": "run-a",
+   "steps": [
+    [
+     "set5-name-pinning",
+     "passed"
+    ],
+    [
+     "preflight",
+     "passed"
+    ],
+    [
+     "origin",
+     "passed"
+    ],
+    [
+     "baseline-install",
+     "passed"
+    ],
+    [
+     "owner-login",
+     "passed"
+    ],
+    [
+     "license",
+     "passed"
+    ],
+    [
+     "setup",
+     "observed"
+    ],
+    [
+     "seed",
+     "passed"
+    ],
+    [
+     "set4-php-site-before-the-update",
+     "passed"
+    ],
+    [
+     "pre-state",
+     "passed"
+    ],
+    [
+     "arm",
+     "passed"
+    ],
+    [
+     "owner-start",
+     "passed"
+    ],
+    [
+     "track",
+     "passed"
+    ],
+    [
+     "owner-continuation (required)",
+     "skipped"
+    ],
+    [
+     "terminal",
+     "passed"
+    ],
+    [
+     "deferred-mail-watch",
+     "observed"
+    ],
+    [
+     "post-update-facts",
+     "passed"
+    ],
+    [
+     "set4-php-site-after-the-update",
+     "passed"
+    ],
+    [
+     "collect",
+     "passed"
+    ],
+    [
+     "verdicts",
+     "passed"
+    ],
+    [
+     "M10-postfix-stop",
+     "passed"
+    ],
+    [
+     "set5-name-pinning-at-the-end",
+     "passed"
+    ]
+   ],
+   "verdict_by_set3_criteria": "PASS",
+   "wrapper": [
+    "2026-10-09T17:13:51Z",
+    "2026-10-09T17:26:10Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "update-alpha81/upd1-debian13-mgmt-off-reboot/run-a": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "artifacts": {
+    "baseline": {
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "ecccd8d7b3f3e8106b9d7d21bfb8d0ef1e1ad8ef",
+     "sha256": "3f35d8c653ca2f8177434b5a1ec2f171c309bd89419db2152096cee82bc58c59",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+     "sha256": "a814f52a98b088edccb256d926786eba9320fc25115945b83731a65ef782218a",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "cell": "upd1-debian13-mgmt-off-reboot",
+   "classification": "update-verified",
+   "final": [
+    "succeeded",
+    "update_verified"
+   ],
+   "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+   ],
+   "harness": "harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)",
+   "is_latest": true,
+   "native_evidence": false,
+   "overall": "complete-for-review",
+   "reasons": [],
+   "request_id": "1b61180adddcdae7721c2088d3c02081",
+   "run": "run-a",
+   "steps": [
+    [
+     "set5-name-pinning",
+     "passed"
+    ],
+    [
+     "preflight",
+     "passed"
+    ],
+    [
+     "origin",
+     "passed"
+    ],
+    [
+     "baseline-install",
+     "passed"
+    ],
+    [
+     "owner-login",
+     "passed"
+    ],
+    [
+     "license",
+     "passed"
+    ],
+    [
+     "setup",
+     "observed"
+    ],
+    [
+     "seed",
+     "passed"
+    ],
+    [
+     "pre-state",
+     "passed"
+    ],
+    [
+     "arm",
+     "passed"
+    ],
+    [
+     "owner-start",
+     "passed"
+    ],
+    [
+     "track",
+     "passed"
+    ],
+    [
+     "owner-continuation (required)",
+     "skipped"
+    ],
+    [
+     "terminal",
+     "passed"
+    ],
+    [
+     "management-off",
+     "passed"
+    ],
+    [
+     "owner-reboot",
+     "passed"
+    ],
+    [
+     "management-off-measure",
+     "passed"
+    ],
+    [
+     "management-return",
+     "passed"
+    ],
+    [
+     "collect",
+     "passed"
+    ],
+    [
+     "verdicts",
+     "passed"
+    ],
+    [
+     "set5-name-pinning-at-the-end",
+     "passed"
+    ],
+    [
+     "kind-expectation",
+     "passed"
+    ]
+   ],
+   "verdict_by_set3_criteria": "PASS",
+   "wrapper": [
+    "2026-10-09T19:46:42Z",
+    "2026-10-09T20:01:14Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "update-alpha81/upd1-debian13-owner-continuation/run-a": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "artifacts": {
+    "baseline": {
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "ecccd8d7b3f3e8106b9d7d21bfb8d0ef1e1ad8ef",
+     "sha256": "3f35d8c653ca2f8177434b5a1ec2f171c309bd89419db2152096cee82bc58c59",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+     "sha256": "a814f52a98b088edccb256d926786eba9320fc25115945b83731a65ef782218a",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "cell": "upd1-debian13-owner-continuation",
+   "classification": "recovered-after-owner-continuation",
+   "final": [
+    "succeeded",
+    "update_verified"
+   ],
+   "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']",
+    "while the recovery budget was exhausted the Panel recovery-status API was unavailable; only the root CLI showed the exhausted state"
+   ],
+   "harness": "harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)",
+   "is_latest": true,
+   "native_evidence": false,
+   "overall": "complete-for-review",
+   "reasons": [],
+   "request_id": "91edfc70ddbff085a35083a5b9bfcf4f",
+   "run": "run-a",
+   "steps": [
+    [
+     "set5-name-pinning",
+     "passed"
+    ],
+    [
+     "preflight",
+     "passed"
+    ],
+    [
+     "origin",
+     "passed"
+    ],
+    [
+     "baseline-install",
+     "passed"
+    ],
+    [
+     "owner-login",
+     "passed"
+    ],
+    [
+     "license",
+     "passed"
+    ],
+    [
+     "setup",
+     "observed"
+    ],
+    [
+     "seed",
+     "passed"
+    ],
+    [
+     "pre-state",
+     "passed"
+    ],
+    [
+     "arm",
+     "passed"
+    ],
+    [
+     "owner-start",
+     "passed"
+    ],
+    [
+     "track",
+     "observed"
+    ],
+    [
+     "owner-continuation (required)",
+     "observed"
+    ],
+    [
+     "track-after-owner-continuation",
+     "passed"
+    ],
+    [
+     "terminal",
+     "passed"
+    ],
+    [
+     "deferred-mail-watch",
+     "observed"
+    ],
+    [
+     "collect",
+     "passed"
+    ],
+    [
+     "verdicts",
+     "passed"
+    ],
+    [
+     "set5-name-pinning-at-the-end",
+     "passed"
+    ],
+    [
+     "kind-expectation",
+     "passed"
+    ]
+   ],
+   "verdict_by_set3_criteria": "PASS",
+   "wrapper": [
+    "2026-10-09T18:58:26Z",
+    "2026-10-09T19:17:59Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "update-alpha81/upd1-debian13-startcheck/run-a": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "artifacts": {
+    "baseline": {
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "ecccd8d7b3f3e8106b9d7d21bfb8d0ef1e1ad8ef",
+     "sha256": "3f35d8c653ca2f8177434b5a1ec2f171c309bd89419db2152096cee82bc58c59",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+     "sha256": "a814f52a98b088edccb256d926786eba9320fc25115945b83731a65ef782218a",
+     "version": "v0.1.0-alpha.82"
+    },
+    "startcheck": {
+     "commit": "49143bd1c108ecc7d84b7c861358312db6f15063",
+     "sha256": "8b3b75d275aceafbbd63272da64f3c025b0642659b0d2adccab44b3329458cce",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "cell": "upd1-debian13-startcheck",
+   "classification": "recovered-automatically",
+   "final": [
+    "recovered",
+    "rollback_verified"
+   ],
+   "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+   ],
+   "harness": "harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)",
+   "is_latest": true,
+   "native_evidence": false,
+   "overall": "complete-for-review",
+   "reasons": [],
+   "request_id": "a1c8738285e98c52a0b75968f21b455c",
+   "run": "run-a",
+   "steps": [
+    [
+     "set5-name-pinning",
+     "passed"
+    ],
+    [
+     "preflight",
+     "passed"
+    ],
+    [
+     "origin",
+     "passed"
+    ],
+    [
+     "baseline-install",
+     "passed"
+    ],
+    [
+     "owner-login",
+     "passed"
+    ],
+    [
+     "license",
+     "passed"
+    ],
+    [
+     "setup",
+     "observed"
+    ],
+    [
+     "seed",
+     "passed"
+    ],
+    [
+     "pre-state",
+     "passed"
+    ],
+    [
+     "arm",
+     "passed"
+    ],
+    [
+     "owner-start",
+     "passed"
+    ],
+    [
+     "track",
+     "passed"
+    ],
+    [
+     "owner-continuation (required)",
+     "skipped"
+    ],
+    [
+     "terminal",
+     "passed"
+    ],
+    [
+     "deferred-mail-watch",
+     "observed"
+    ],
+    [
+     "post-return-facts",
+     "passed"
+    ],
+    [
+     "collect",
+     "passed"
+    ],
+    [
+     "verdicts",
+     "passed"
+    ],
+    [
+     "set5-name-pinning-at-the-end",
+     "passed"
+    ],
+    [
+     "kind-expectation",
+     "passed"
+    ]
+   ],
+   "verdict_by_set3_criteria": "PASS",
+   "wrapper": [
+    "2026-10-09T18:44:15Z",
+    "2026-10-09T18:58:00Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "update-alpha81/upd1-ubuntu-defective/run-a": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "artifacts": {
+    "baseline": {
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "ecccd8d7b3f3e8106b9d7d21bfb8d0ef1e1ad8ef",
+     "sha256": "3f35d8c653ca2f8177434b5a1ec2f171c309bd89419db2152096cee82bc58c59",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+     "sha256": "a814f52a98b088edccb256d926786eba9320fc25115945b83731a65ef782218a",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "cell": "upd1-ubuntu-defective",
+   "classification": "recovered-automatically",
+   "final": [
+    "recovered",
+    "rollback_verified"
+   ],
+   "findings": [
+    "ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']"
+   ],
+   "harness": "harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)",
+   "is_latest": true,
+   "native_evidence": false,
+   "overall": "complete-for-review",
+   "reasons": [],
+   "request_id": "dcc3c023514a94b8e765f36c03415daa",
+   "run": "run-a",
+   "steps": [
+    [
+     "set5-name-pinning",
+     "passed"
+    ],
+    [
+     "preflight",
+     "passed"
+    ],
+    [
+     "origin",
+     "passed"
+    ],
+    [
+     "baseline-install",
+     "passed"
+    ],
+    [
+     "owner-login",
+     "passed"
+    ],
+    [
+     "license",
+     "passed"
+    ],
+    [
+     "setup",
+     "observed"
+    ],
+    [
+     "seed",
+     "passed"
+    ],
+    [
+     "pre-state",
+     "passed"
+    ],
+    [
+     "arm",
+     "passed"
+    ],
+    [
+     "owner-start",
+     "passed"
+    ],
+    [
+     "track",
+     "passed"
+    ],
+    [
+     "owner-continuation (required)",
+     "skipped"
+    ],
+    [
+     "terminal",
+     "passed"
+    ],
+    [
+     "deferred-mail-watch",
+     "observed"
+    ],
+    [
+     "post-return-facts",
+     "passed"
+    ],
+    [
+     "collect",
+     "passed"
+    ],
+    [
+     "verdicts",
+     "passed"
+    ],
+    [
+     "set5-name-pinning-at-the-end",
+     "passed"
+    ]
+   ],
+   "verdict_by_set3_criteria": "PASS",
+   "wrapper": [
+    "2026-10-09T18:12:34Z",
+    "2026-10-09T18:32:53Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "update-alpha81/upd1-ubuntu-good/run-a": {
+   "added_steps": {
+    "M10-postfix-stop": "passed",
+    "set4-php-site-after-the-update": "passed",
+    "set4-php-site-before-the-update": "passed",
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "artifacts": {
+    "baseline": {
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "ecccd8d7b3f3e8106b9d7d21bfb8d0ef1e1ad8ef",
+     "sha256": "3f35d8c653ca2f8177434b5a1ec2f171c309bd89419db2152096cee82bc58c59",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+     "sha256": "a814f52a98b088edccb256d926786eba9320fc25115945b83731a65ef782218a",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "cell": "upd1-ubuntu-good",
+   "classification": "update-verified",
+   "final": [
+    "succeeded",
+    "update_verified"
+   ],
+   "findings": [
+    "ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']"
+   ],
+   "harness": "harness=/var/tmp/cp-set5-run/harness-d (git archive 67b62cc0f without earlier evidence, overlay overlay-d, harness.diff sha256 6f03b5f4b9a507377d2bdb6b6f9080cfa768688065d088a99004bff77ed25d0d)",
+   "is_latest": true,
+   "native_evidence": false,
+   "overall": "complete-for-review",
+   "reasons": [],
+   "request_id": "1cb076fd1772d85d644f6415f15d04dd",
+   "run": "run-a",
+   "steps": [
+    [
+     "set5-name-pinning",
+     "passed"
+    ],
+    [
+     "preflight",
+     "passed"
+    ],
+    [
+     "origin",
+     "passed"
+    ],
+    [
+     "baseline-install",
+     "passed"
+    ],
+    [
+     "owner-login",
+     "passed"
+    ],
+    [
+     "license",
+     "passed"
+    ],
+    [
+     "setup",
+     "observed"
+    ],
+    [
+     "seed",
+     "passed"
+    ],
+    [
+     "set4-php-site-before-the-update",
+     "passed"
+    ],
+    [
+     "pre-state",
+     "passed"
+    ],
+    [
+     "arm",
+     "passed"
+    ],
+    [
+     "owner-start",
+     "passed"
+    ],
+    [
+     "track",
+     "passed"
+    ],
+    [
+     "owner-continuation (required)",
+     "skipped"
+    ],
+    [
+     "terminal",
+     "passed"
+    ],
+    [
+     "deferred-mail-watch",
+     "observed"
+    ],
+    [
+     "post-update-facts",
+     "passed"
+    ],
+    [
+     "set4-php-site-after-the-update",
+     "passed"
+    ],
+    [
+     "collect",
+     "passed"
+    ],
+    [
+     "verdicts",
+     "passed"
+    ],
+    [
+     "M10-postfix-stop",
+     "passed"
+    ],
+    [
+     "set5-name-pinning-at-the-end",
+     "passed"
+    ]
+   ],
+   "verdict_by_set3_criteria": "PASS",
+   "wrapper": [
+    "2026-10-09T17:26:58Z",
+    "2026-10-09T17:47:26Z"
+   ],
+   "wrapper_rc": "0"
+  },
+  "update-alpha81/upd1-ubuntu-owner-continuation/run-a": {
+   "added_steps": {
+    "set5-name-pinning": "passed",
+    "set5-name-pinning-at-the-end": "passed"
+   },
+   "artifacts": {
+    "baseline": {
+     "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+     "sha256": "3350ff44dad2bb699ab5ee0a112b58b7bfb7fa47aa0ebdd3dd3c2da73d080109",
+     "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+     "commit": "ecccd8d7b3f3e8106b9d7d21bfb8d0ef1e1ad8ef",
+     "sha256": "3f35d8c653ca2f8177434b5a1ec2f171c309bd89419db2152096cee82bc58c59",
+     "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+     "commit": "8c2250b05132fa91291a33bd23924d0aefd72617",
+     "sha256": "a814f52a98b088edccb256d926786eba9320fc25115945b83731a65ef782218a",
+     "version": "v0.1.0-alpha.82"
+    }
+   },
+   "cell": "upd1-ubuntu-owner-continuation",
+   "classification": "recovered-after-owner-continuation",
+   "final": [
+    "succeeded",
+    "update_verified"
+   ],
+   "findings": [
+    "ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']",
+    "while the recovery budget was exhausted the Panel recovery-status API was unavailable; only the root CLI showed the exhausted state"
+   ],
+   "harness": "harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)",
+   "is_latest": true,
+   "native_evidence": false,
+   "overall": "complete-for-review",
+   "reasons": [],
+   "request_id": "bd5f83a8b513938ce70b5208bb269006",
+   "run": "run-a",
+   "steps": [
+    [
+     "set5-name-pinning",
+     "passed"
+    ],
+    [
+     "preflight",
+     "passed"
+    ],
+    [
+     "origin",
+     "passed"
+    ],
+    [
+     "baseline-install",
+     "passed"
+    ],
+    [
+     "owner-login",
+     "passed"
+    ],
+    [
+     "license",
+     "passed"
+    ],
+    [
+     "setup",
+     "observed"
+    ],
+    [
+     "seed",
+     "passed"
+    ],
+    [
+     "pre-state",
+     "passed"
+    ],
+    [
+     "arm",
+     "passed"
+    ],
+    [
+     "owner-start",
+     "passed"
+    ],
+    [
+     "track",
+     "observed"
+    ],
+    [
+     "owner-continuation (required)",
+     "observed"
+    ],
+    [
+     "track-after-owner-continuation",
+     "passed"
+    ],
+    [
+     "terminal",
+     "passed"
+    ],
+    [
+     "deferred-mail-watch",
+     "observed"
+    ],
+    [
+     "collect",
+     "passed"
+    ],
+    [
+     "verdicts",
+     "passed"
+    ],
+    [
+     "set5-name-pinning-at-the-end",
+     "passed"
+    ],
+    [
+     "kind-expectation",
+     "passed"
+    ]
+   ],
+   "verdict_by_set3_criteria": "PASS",
+   "wrapper": [
+    "2026-10-09T19:18:26Z",
+    "2026-10-09T19:46:13Z"
+   ],
+   "wrapper_rc": "0"
+  }
+ },
+ "timeline": {
+  "update-alpha81/upd1-arch-defective/run-a": {
+   "final": [
+    "recovered",
+    "rollback_verified"
+   ],
+   "final_read_at": "2026-10-09T18:43:46Z",
+   "installed": [
+    "version=v0.1.0-alpha.81 commit=a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+    "version=v0.1.0-alpha.81 commit=a0beb7263d1f4ca72258f6b306f9111ba4e2a334"
+   ],
+   "kernel": "7.2.9-arch1-1",
+   "owner_start": "2026-10-09T18:42:07Z",
+   "panel_verdict": "down-only-during-transaction",
+   "panel_windows": [
+    "30-40 (unexplained)",
+    "5-15 (unexplained)"
+   ],
+   "reboot": null
+  },
+  "update-alpha81/upd1-arch-good/run-a": {
+   "final": [
+    "succeeded",
+    "update_verified"
+   ],
+   "final_read_at": "2026-10-09T18:12:00Z",
+   "installed": [
+    "version=v0.1.0-alpha.82 commit=8c2250b05132fa91291a33bd23924d0aefd72617",
+    "version=v0.1.0-alpha.82 commit=8c2250b05132fa91291a33bd23924d0aefd72617"
+   ],
+   "kernel": "7.2.9-arch1-1",
+   "owner_start": "2026-10-09T18:11:09Z",
+   "panel_verdict": "down-only-during-transaction",
+   "panel_windows": [
+    "20-30 (unexplained)"
+   ],
+   "reboot": null
+  },
+  "update-alpha81/upd1-debian13-defective/run-a": {
+   "final": [
+    "recovered",
+    "rollback_verified"
+   ],
+   "final_read_at": "2026-10-09T18:00:32Z",
+   "installed": [
+    "version=v0.1.0-alpha.81 commit=a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+    "version=v0.1.0-alpha.81 commit=a0beb7263d1f4ca72258f6b306f9111ba4e2a334"
+   ],
+   "kernel": "6.12.105+deb13-cloud-amd64",
+   "owner_start": "2026-10-09T17:58:14Z",
+   "panel_verdict": "down-only-during-transaction",
+   "panel_windows": [
+    "105-115 (host-reset)"
+   ],
+   "reboot": {
+    "after_boot_id": "4cdb1314-7233-4421-a7b1-42ba8e97c1ba",
+    "before_boot_id": "931e9e91-1d27-40ae-8ba7-fb42e7a11ec5",
+    "new_boot": true,
+    "reset_at": 1791568758.831716,
+    "ssh_return_seconds": 8.842478293000113,
+    "status": "reset-submitted-once"
+   }
+  },
+  "update-alpha81/upd1-debian13-good/run-a": {
+   "final": [
+    "succeeded",
+    "update_verified"
+   ],
+   "final_read_at": "2026-10-09T17:24:10Z",
+   "installed": [
+    "version=v0.1.0-alpha.82 commit=8c2250b05132fa91291a33bd23924d0aefd72617",
+    "version=v0.1.0-alpha.82 commit=8c2250b05132fa91291a33bd23924d0aefd72617"
+   ],
+   "kernel": null,
+   "owner_start": "2026-10-09T17:23:11Z",
+   "panel_verdict": "down-only-during-transaction",
+   "panel_windows": [
+    "20-30 (unexplained)"
+   ],
+   "reboot": null
+  },
+  "update-alpha81/upd1-debian13-mgmt-off-reboot/run-a": {
+   "final": [
+    "succeeded",
+    "update_verified"
+   ],
+   "final_read_at": "2026-10-09T19:57:03Z",
+   "installed": [
+    "version=v0.1.0-alpha.82 commit=8c2250b05132fa91291a33bd23924d0aefd72617",
+    "version=v0.1.0-alpha.82 commit=8c2250b05132fa91291a33bd23924d0aefd72617"
+   ],
+   "kernel": "6.12.105+deb13-cloud-amd64",
+   "owner_start": "2026-10-09T19:56:07Z",
+   "panel_verdict": "down-only-during-transaction",
+   "panel_windows": [
+    "25-35 (unexplained)"
+   ],
+   "reboot": {
+    "after_boot_id": "ee4a11e9-8103-4130-9e91-c79173c2f7d2",
+    "before_boot_id": "021ed0e7-c8bb-4df8-a898-c119d998feac",
+    "command": "sudo systemctl reboot",
+    "new_boot": true,
+    "ssh_return_seconds": 8.3
+   }
+  },
+  "update-alpha81/upd1-debian13-owner-continuation/run-a": {
+   "final": [
+    "succeeded",
+    "update_verified"
+   ],
+   "final_read_at": "2026-10-09T19:16:40Z",
+   "installed": [
+    "version=v0.1.0-alpha.82 commit=8c2250b05132fa91291a33bd23924d0aefd72617",
+    "version=v0.1.0-alpha.82 commit=8c2250b05132fa91291a33bd23924d0aefd72617"
+   ],
+   "kernel": "6.12.105+deb13-cloud-amd64",
+   "owner_start": "2026-10-09T19:08:17Z",
+   "panel_verdict": "down-only-during-transaction",
+   "panel_windows": [
+    "459-469 (unexplained)"
+   ],
+   "reboot": null
+  },
+  "update-alpha81/upd1-debian13-startcheck/run-a": {
+   "final": [
+    "recovered",
+    "rollback_verified"
+   ],
+   "final_read_at": "2026-10-09T18:56:31Z",
+   "installed": [
+    "version=v0.1.0-alpha.81 commit=a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+    "version=v0.1.0-alpha.81 commit=a0beb7263d1f4ca72258f6b306f9111ba4e2a334"
+   ],
+   "kernel": "6.12.105+deb13-cloud-amd64",
+   "owner_start": "2026-10-09T18:54:11Z",
+   "panel_verdict": "down-only-during-transaction",
+   "panel_windows": [
+    "109-119 (host-reset)"
+   ],
+   "reboot": {
+    "after_boot_id": "3f550aed-2126-4c2d-8d0b-4babb744c17a",
+    "before_boot_id": "10b266ea-7a99-47ad-b02c-9c9a14ce5845",
+    "new_boot": true,
+    "reset_at": 1791572124.3123658,
+    "ssh_return_seconds": 8.457026381000105,
+    "status": "reset-submitted-once"
+   }
+  },
+  "update-alpha81/upd1-ubuntu-defective/run-a": {
+   "final": [
+    "recovered",
+    "rollback_verified"
+   ],
+   "final_read_at": "2026-10-09T18:31:30Z",
+   "installed": [
+    "version=v0.1.0-alpha.81 commit=a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+    "version=v0.1.0-alpha.81 commit=a0beb7263d1f4ca72258f6b306f9111ba4e2a334"
+   ],
+   "kernel": "6.8.0-138-generic",
+   "owner_start": "2026-10-09T18:29:16Z",
+   "panel_verdict": "down-only-during-transaction",
+   "panel_windows": [
+    "104-114 (host-reset)"
+   ],
+   "reboot": {
+    "after_boot_id": "7442d247-166a-4e38-a803-2c4e7393338b",
+    "before_boot_id": "f9f29f8b-fb6e-4e4f-95a9-7fb457d37c33",
+    "new_boot": true,
+    "reset_at": 1791570620.630396,
+    "ssh_return_seconds": 10.958253526999215,
+    "status": "reset-submitted-once"
+   }
+  },
+  "update-alpha81/upd1-ubuntu-good/run-a": {
+   "final": [
+    "succeeded",
+    "update_verified"
+   ],
+   "final_read_at": "2026-10-09T17:45:16Z",
+   "installed": [
+    "version=v0.1.0-alpha.82 commit=8c2250b05132fa91291a33bd23924d0aefd72617",
+    "version=v0.1.0-alpha.82 commit=8c2250b05132fa91291a33bd23924d0aefd72617"
+   ],
+   "kernel": null,
+   "owner_start": "2026-10-09T17:44:15Z",
+   "panel_verdict": "down-only-during-transaction",
+   "panel_windows": [
+    "25-35 (unexplained)"
+   ],
+   "reboot": null
+  },
+  "update-alpha81/upd1-ubuntu-owner-continuation/run-a": {
+   "final": [
+    "succeeded",
+    "update_verified"
+   ],
+   "final_read_at": "2026-10-09T19:44:52Z",
+   "installed": [
+    "version=v0.1.0-alpha.82 commit=8c2250b05132fa91291a33bd23924d0aefd72617",
+    "version=v0.1.0-alpha.82 commit=8c2250b05132fa91291a33bd23924d0aefd72617"
+   ],
+   "kernel": "6.8.0-138-generic",
+   "owner_start": "2026-10-09T19:36:09Z",
+   "panel_verdict": "down-only-during-transaction",
+   "panel_windows": [
+    "483-493 (unexplained)"
+   ],
+   "reboot": null
+  }
+ }
+}

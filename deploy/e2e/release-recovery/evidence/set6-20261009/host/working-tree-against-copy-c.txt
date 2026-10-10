@@ -1,0 +1,7 @@
+read at 2026-10-09T23:23:03Z: the files of tools/files.txt in the working tree (bytes as they are on disk) against run copy c
+equal     53103dd0d81bac4c38069c506fa9bd18657e8d0d64d779bf3fd19e54cf532add  deploy/e2e/release-recovery/set6_trial.py
+equal     b3588df501a08bdce6a812fec207b38e70274f6d30ec5fce6465eb8afbd36105  deploy/e2e/release-recovery/set6_redact.py
+equal     7b48ad90e023ec997d23e0d78de947cc56b5dee1c755555f129360a884553807  deploy/e2e/release-recovery/run-set6.sh
+equal     fd493b2167efc1bb9d0d498f166f05d55bec2c221b457a8d15f816bd124efed7  deploy/e2e/release-recovery/test_set6_trial.py
+equal     9b6c76caa652dec6425d3fdb956ec06599e8de3c3ae902c5783413529564e683  deploy/e2e/release-recovery/worker_fixture_origin.py
+equal: 5 of 5

@@ -1,0 +1,1 @@
+`api-routes.txt`: every route each cell called, from its recorded exchanges; 0 routes whose path names ssl, certificate, acme, letsencrypt or certbot, in every cell; the licence routes are `GET` and `POST /api/v1/panel/license` and `GET /api/v1/license/access`

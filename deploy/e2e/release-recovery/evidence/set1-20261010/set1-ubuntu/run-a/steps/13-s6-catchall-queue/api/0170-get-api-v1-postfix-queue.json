@@ -1,0 +1,67 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S6 mail queue: queue-main.cf-typo",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/postfix/queue"
+  },
+  "response": {
+    "elapsed_seconds": 0.017,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 08 Oct 2026 21:48:31 GMT"
+      ],
+      [
+        "Content-Length",
+        "283"
+      ]
+    ],
+    "json": {
+      "code": "MAIL_QUEUE_UNREADABLE",
+      "error": "The mail queue could not be read from Postfix, so it is not shown. This does not mean the queue is empty. Nothing was changed. Try again; if it keeps failing, the server owner checks that Postfix is running (sudo systemctl status postfix)."
+    },
+    "status": 502,
+    "text": null
+  }
+}

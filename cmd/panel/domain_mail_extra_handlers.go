@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/alicelik/celikpanel/internal/transport"
@@ -79,31 +82,102 @@ func (p *Panel) handleMailClientSetup(w http.ResponseWriter, r *http.Request, do
 	})
 }
 
+const settingsResourceMailCatchAll = "mail_catch_all"
+
+// errMailCatchAllChanged ends a catch-all write whose row is no longer the one
+// the request was built from. The transaction is rolled back; nothing reached
+// Postfix.
+// errMailCatchAllChanged, satırı artık isteğin kurulduğu satır olmayan bir
+// catch-all yazısını bitirir.
+var errMailCatchAllChanged = errors.New("the catch-all changed since it was read")
+
+// mailCatchAllState is a domain's catch-all as the Panel's database holds it.
+type mailCatchAllState struct {
+	exists      bool
+	destination string
+}
+
+// version identifies this exact catch-all. The GET returns it and the PUT and
+// DELETE must carry it back (9 Oct 2026; D-022, D-024): before this the field
+// was editable before the read answered, and whatever was typed replaced, by
+// upsert, an address the page had never shown.
+// version tam bu catch-all'ı tanımlar. GET onu döndürür; PUT ve DELETE geri
+// taşımak zorundadır.
+func (s mailCatchAllState) version() string {
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%t\x00%s", s.exists, s.destination)))
+	return "ca1-" + hex.EncodeToString(sum[:])
+}
+
+func (p *Panel) readMailCatchAll(ctx context.Context, domainID int) (mailCatchAllState, error) {
+	var state mailCatchAllState
+	err := p.db.GetDB().QueryRowContext(ctx,
+		"SELECT destination FROM mail_catch_all WHERE domain_id = ?", domainID).Scan(&state.destination)
+	if errors.Is(err, sql.ErrNoRows) {
+		return mailCatchAllState{}, nil
+	}
+	if err != nil {
+		return mailCatchAllState{}, err
+	}
+	state.exists = true
+	return state, nil
+}
+
+// mailCatchAllWriteAdmitted reads the catch-all a write would replace and
+// refuses the write when the request does not carry its version.
+// mailCatchAllWriteAdmitted, bir yazının değiştireceği catch-all'ı okur ve
+// istek onun sürümünü taşımıyorsa yazıyı reddeder.
+func (p *Panel) mailCatchAllWriteAdmitted(w http.ResponseWriter, r *http.Request, domainID int, version string) (mailCatchAllState, bool) {
+	if version == "" {
+		writeSettingsVersionRequired(w, settingsResourceMailCatchAll)
+		return mailCatchAllState{}, false
+	}
+	current, err := p.readMailCatchAll(r.Context(), domainID)
+	if err != nil {
+		writeServerError(w, err)
+		return mailCatchAllState{}, false
+	}
+	if version != current.version() {
+		writeSettingsChanged(w, settingsResourceMailCatchAll)
+		return mailCatchAllState{}, false
+	}
+	return current, true
+}
+
+func mailCatchAllChangedOneRow(result sql.Result, execErr error) error {
+	if execErr != nil {
+		return execErr
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows != 1 {
+		return errMailCatchAllChanged
+	}
+	return nil
+}
+
 // handleMailCatchAll handles GET/PUT/DELETE for a domain's catch-all address.
 // handleMailCatchAll, bir domain'in catch-all adresi için GET/PUT/DELETE'i
 // karşılar.
 func (p *Panel) handleMailCatchAll(w http.ResponseWriter, r *http.Request, domainID int) {
 	w.Header().Set("Content-Type", "application/json")
-	pool := p.db.GetDB()
 
 	switch r.Method {
 	case http.MethodGet:
-		var dest string
-		err := pool.QueryRowContext(r.Context(),
-			"SELECT destination FROM mail_catch_all WHERE domain_id = ?", domainID).Scan(&dest)
-		if errors.Is(err, sql.ErrNoRows) {
-			json.NewEncoder(w).Encode(map[string]any{"enabled": false, "destination": ""})
-			return
-		}
+		state, err := p.readMailCatchAll(r.Context(), domainID)
 		if err != nil {
 			writeServerError(w, err)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]any{"enabled": true, "destination": dest})
+		json.NewEncoder(w).Encode(map[string]any{
+			"enabled": state.exists, "destination": state.destination, "version": state.version(),
+		})
 
 	case http.MethodPut:
 		var req struct {
 			Destination string `json:"destination"`
+			Version     string `json:"version"`
 		}
 		if err := decodeStrictJSON(w, r, &req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request body")
@@ -120,35 +194,65 @@ func (p *Panel) handleMailCatchAll(w http.ResponseWriter, r *http.Request, domai
 			return
 		}
 		p.mailMutationMu.Lock()
+		current, admitted := p.mailCatchAllWriteAdmitted(w, r, domainID, req.Version)
+		if !admitted {
+			p.mailMutationMu.Unlock()
+			return
+		}
+		// The write is conditional on the row just read, so a catch-all that
+		// changed between the read and the write is not replaced either.
+		// Yazı, az önce okunan satıra koşulludur.
 		err = p.mutateForwardings(r.Context(), domainID, func(tx *sql.Tx) error {
-			_, err := tx.ExecContext(r.Context(),
-				"INSERT INTO mail_catch_all (domain_id, destination) VALUES (?, ?) "+
-					"ON CONFLICT(domain_id) DO UPDATE SET destination = excluded.destination",
-				domainID, dest)
-			return err
+			if current.exists {
+				return mailCatchAllChangedOneRow(tx.ExecContext(r.Context(),
+					"UPDATE mail_catch_all SET destination = ? WHERE domain_id = ? AND destination = ?",
+					dest, domainID, current.destination))
+			}
+			return mailCatchAllChangedOneRow(tx.ExecContext(r.Context(),
+				"INSERT INTO mail_catch_all (domain_id, destination) VALUES (?, ?) ON CONFLICT(domain_id) DO NOTHING",
+				domainID, dest))
 		})
 		p.mailMutationMu.Unlock()
+		if errors.Is(err, errMailCatchAllChanged) {
+			writeSettingsChanged(w, settingsResourceMailCatchAll)
+			return
+		}
+		if err != nil {
+			writeMailDomainMutationError(w, err)
+			return
+		}
+		saved := mailCatchAllState{exists: true, destination: dest}
+		json.NewEncoder(w).Encode(map[string]any{
+			"enabled": true, "destination": dest, "source": "@" + domain, "version": saved.version(),
+		})
+
+	case http.MethodDelete:
+		p.mailMutationMu.Lock()
+		current, admitted := p.mailCatchAllWriteAdmitted(w, r, domainID, r.URL.Query().Get("version"))
+		if !admitted {
+			p.mailMutationMu.Unlock()
+			return
+		}
+		var err error
+		if current.exists {
+			err = p.mutateForwardings(r.Context(), domainID, func(tx *sql.Tx) error {
+				return mailCatchAllChangedOneRow(tx.ExecContext(r.Context(),
+					"DELETE FROM mail_catch_all WHERE domain_id = ? AND destination = ?",
+					domainID, current.destination))
+			})
+		}
+		p.mailMutationMu.Unlock()
+		if errors.Is(err, errMailCatchAllChanged) {
+			writeSettingsChanged(w, settingsResourceMailCatchAll)
+			return
+		}
 		if err != nil {
 			writeMailDomainMutationError(w, err)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]any{
-			"enabled": true, "destination": dest, "source": "@" + domain,
+			"enabled": false, "destination": "", "version": mailCatchAllState{}.version(),
 		})
-
-	case http.MethodDelete:
-		p.mailMutationMu.Lock()
-		err := p.mutateForwardings(r.Context(), domainID, func(tx *sql.Tx) error {
-			_, err := tx.ExecContext(r.Context(),
-				"DELETE FROM mail_catch_all WHERE domain_id = ?", domainID)
-			return err
-		})
-		p.mailMutationMu.Unlock()
-		if err != nil {
-			writeMailDomainMutationError(w, err)
-			return
-		}
-		json.NewEncoder(w).Encode(map[string]any{"enabled": false})
 
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

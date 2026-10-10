@@ -1,0 +1,90 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "C6b create a PHP site (AddDomainModal)",
+  "request": {
+    "body": {
+      "domain": "set3-php.test",
+      "project_type": "php",
+      "ssl_type": "none"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18464"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18464"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "90dd9dac790c16a2f0db4c4cfd541056"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/create"
+  },
+  "response": {
+    "elapsed_seconds": 2.538,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 07:23:42 GMT"
+      ],
+      [
+        "Content-Length",
+        "242"
+      ]
+    ],
+    "json": {
+      "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+      "Domain": "set3-php.test",
+      "DomainID": 2,
+      "FTPPassword": "[REDACTED]",
+      "FTPUser": "set3_php_test",
+      "PHPVersion": "8.3",
+      "ProjectType": "php",
+      "SiteID": 2,
+      "TempDomain": ""
+    },
+    "status": 200,
+    "text": null
+  }
+}

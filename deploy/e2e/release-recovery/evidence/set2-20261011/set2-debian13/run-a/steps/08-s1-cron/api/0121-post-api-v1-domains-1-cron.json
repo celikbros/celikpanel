@@ -1,0 +1,87 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S1f add under the owner's spool-relocated",
+  "request": {
+    "body": {
+      "command": "/usr/bin/true set1-fault-job",
+      "schedule": "7 7 * * *",
+      "version": "ct1-c3e1e91abab07c9f999835ad8038092e9c8bf36768b978074dcea9afb89ce263"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18453"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18453"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "7ee1f345af40e7ec041c890f703237ba"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/1/cron"
+  },
+  "response": {
+    "elapsed_seconds": 0.005,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 03:39:58 GMT"
+      ],
+      [
+        "Content-Length",
+        "595"
+      ]
+    ],
+    "json": {
+      "code": "CURRENT_SETTINGS_UNREADABLE",
+      "error": "CelikPanel could not read this site user's scheduled tasks from the server, so the list is not shown and nothing was changed. This does not mean the user has no tasks. CelikPanel has not established why; what the server's crontab program said is shown with this message when it said anything. Reload the page to read the tasks again. If it keeps failing, the server owner runs sudo crontab -u <site user> -l on the server, which prints the same reason.",
+      "reason": "scheduled_tasks",
+      "vars": {
+        "detail": "crontabs: No such file or directory"
+      }
+    },
+    "status": 502,
+    "text": null
+  }
+}

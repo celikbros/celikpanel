@@ -1,0 +1,6 @@
+2026-10-09T11:27:41.953525+00:00 dns-ubuntu systemd[1]: postgresql.service: Deactivated successfully.
+2026-10-09T11:27:41.953864+00:00 dns-ubuntu systemd[1]: Stopped postgresql.service - PostgreSQL RDBMS.
+2026-10-09T11:27:41.960356+00:00 dns-ubuntu systemd[1]: Stopping postgresql@16-main.service - PostgreSQL Cluster 16-main...
+2026-10-09T11:27:42.121528+00:00 dns-ubuntu systemd[1]: postgresql@16-main.service: Deactivated successfully.
+2026-10-09T11:27:42.122266+00:00 dns-ubuntu systemd[1]: Stopped postgresql@16-main.service - PostgreSQL Cluster 16-main.
+2026-10-09T11:27:42.122869+00:00 dns-ubuntu systemd[1]: postgresql@16-main.service: Consumed 1.134s CPU time, 27.5M memory peak, 0B memory swap peak.

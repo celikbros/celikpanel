@@ -1,0 +1,264 @@
+== update-alpha81/upd1-debian13-good/run-a  wrapper 2026-10-09T17:13:51Z - 2026-10-09T17:26:10Z  rc=0
+   by set3's criteria: PASS
+   overall=complete-for-review native_evidence=False outcome=update-verified final=succeeded/update_verified
+   harness=/var/tmp/cp-set5-run/harness-d (git archive 67b62cc0f without earlier evidence, overlay overlay-d, harness.diff sha256 6f03b5f4b9a507377d2bdb6b6f9080cfa768688065d088a99004bff77ed25d0d)
+   step set5-name-pinning                  passed        2026-10-09T17:14:53Z - 2026-10-09T17:14:53Z (added by set5)
+   step preflight                          passed        2026-10-09T17:14:53Z - 2026-10-09T17:14:57Z
+   step origin                             passed        2026-10-09T17:14:57Z - 2026-10-09T17:15:06Z
+   step baseline-install                   passed        2026-10-09T17:15:06Z - 2026-10-09T17:15:40Z
+   step owner-login                        passed        2026-10-09T17:15:40Z - 2026-10-09T17:15:41Z
+   step license                            passed        2026-10-09T17:15:41Z - 2026-10-09T17:15:41Z
+   step setup                              observed      2026-10-09T17:15:41Z - 2026-10-09T17:21:25Z
+   step seed                               passed        2026-10-09T17:21:25Z - 2026-10-09T17:21:27Z
+   step set4-php-site-before-the-update    passed        2026-10-09T17:21:27Z - 2026-10-09T17:21:32Z (added by set5)
+   step pre-state                          passed        2026-10-09T17:21:32Z - 2026-10-09T17:23:09Z
+   step arm                                passed        2026-10-09T17:23:09Z - 2026-10-09T17:23:11Z
+   step owner-start                        passed        2026-10-09T17:23:11Z - 2026-10-09T17:23:11Z
+   step track                              passed        2026-10-09T17:23:11Z - 2026-10-09T17:24:11Z
+   step owner-continuation (required)      skipped       2026-10-09T17:24:11Z - 2026-10-09T17:24:11Z
+   step terminal                           passed        2026-10-09T17:24:11Z - 2026-10-09T17:24:18Z
+   step deferred-mail-watch                observed      2026-10-09T17:24:18Z - 2026-10-09T17:25:25Z
+   step post-update-facts                  passed        2026-10-09T17:25:25Z - 2026-10-09T17:25:31Z
+   step set4-php-site-after-the-update     passed        2026-10-09T17:25:31Z - 2026-10-09T17:25:40Z (added by set5)
+   step collect                            passed        2026-10-09T17:25:40Z - 2026-10-09T17:25:42Z
+   step verdicts                           passed        2026-10-09T17:25:42Z - 2026-10-09T17:25:42Z
+   step M10-postfix-stop                   passed        2026-10-09T17:25:42Z - 2026-10-09T17:26:09Z (added by set5)
+   step set5-name-pinning-at-the-end       passed        2026-10-09T17:26:09Z - 2026-10-09T17:26:10Z (added by set5)
+   finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+
+== update-alpha81/upd1-ubuntu-good/run-a  wrapper 2026-10-09T17:26:58Z - 2026-10-09T17:47:26Z  rc=0
+   by set3's criteria: PASS
+   overall=complete-for-review native_evidence=False outcome=update-verified final=succeeded/update_verified
+   harness=/var/tmp/cp-set5-run/harness-d (git archive 67b62cc0f without earlier evidence, overlay overlay-d, harness.diff sha256 6f03b5f4b9a507377d2bdb6b6f9080cfa768688065d088a99004bff77ed25d0d)
+   step set5-name-pinning                  passed        2026-10-09T17:27:22Z - 2026-10-09T17:27:22Z (added by set5)
+   step preflight                          passed        2026-10-09T17:27:22Z - 2026-10-09T17:27:27Z
+   step origin                             passed        2026-10-09T17:27:27Z - 2026-10-09T17:27:36Z
+   step baseline-install                   passed        2026-10-09T17:27:36Z - 2026-10-09T17:28:26Z
+   step owner-login                        passed        2026-10-09T17:28:26Z - 2026-10-09T17:28:28Z
+   step license                            passed        2026-10-09T17:28:28Z - 2026-10-09T17:28:28Z
+   step setup                              observed      2026-10-09T17:28:28Z - 2026-10-09T17:39:27Z
+   step seed                               passed        2026-10-09T17:39:27Z - 2026-10-09T17:42:26Z
+   step set4-php-site-before-the-update    passed        2026-10-09T17:42:26Z - 2026-10-09T17:42:33Z (added by set5)
+   step pre-state                          passed        2026-10-09T17:42:33Z - 2026-10-09T17:44:12Z
+   step arm                                passed        2026-10-09T17:44:12Z - 2026-10-09T17:44:15Z
+   step owner-start                        passed        2026-10-09T17:44:15Z - 2026-10-09T17:44:16Z
+   step track                              passed        2026-10-09T17:44:16Z - 2026-10-09T17:45:17Z
+   step owner-continuation (required)      skipped       2026-10-09T17:45:17Z - 2026-10-09T17:45:17Z
+   step terminal                           passed        2026-10-09T17:45:17Z - 2026-10-09T17:45:25Z
+   step deferred-mail-watch                observed      2026-10-09T17:45:25Z - 2026-10-09T17:46:32Z
+   step post-update-facts                  passed        2026-10-09T17:46:32Z - 2026-10-09T17:46:40Z
+   step set4-php-site-after-the-update     passed        2026-10-09T17:46:40Z - 2026-10-09T17:46:51Z (added by set5)
+   step collect                            passed        2026-10-09T17:46:52Z - 2026-10-09T17:46:54Z
+   step verdicts                           passed        2026-10-09T17:46:54Z - 2026-10-09T17:46:54Z
+   step M10-postfix-stop                   passed        2026-10-09T17:46:54Z - 2026-10-09T17:47:25Z (added by set5)
+   step set5-name-pinning-at-the-end       passed        2026-10-09T17:47:25Z - 2026-10-09T17:47:25Z (added by set5)
+   finding: ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']
+
+== update-alpha81/upd1-arch-good/run-a  wrapper 2026-10-09T18:02:29Z - 2026-10-09T18:12:17Z  rc=0
+   by set3's criteria: PASS
+   overall=complete-for-review native_evidence=False outcome=update-verified final=succeeded/update_verified
+   harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)
+   step set5-name-pinning                  passed        2026-10-09T18:03:30Z - 2026-10-09T18:03:31Z (added by set5)
+   step preflight                          passed        2026-10-09T18:03:31Z - 2026-10-09T18:03:35Z
+   step origin                             passed        2026-10-09T18:03:35Z - 2026-10-09T18:03:44Z
+   step baseline-install                   passed        2026-10-09T18:03:44Z - 2026-10-09T18:06:22Z
+   step owner-login                        passed        2026-10-09T18:06:22Z - 2026-10-09T18:06:23Z
+   step license                            passed        2026-10-09T18:06:23Z - 2026-10-09T18:06:23Z
+   step setup                              observed      2026-10-09T18:06:23Z - 2026-10-09T18:09:15Z
+   step seed                               passed        2026-10-09T18:09:15Z - 2026-10-09T18:09:18Z
+   step pre-state                          passed        2026-10-09T18:09:18Z - 2026-10-09T18:11:07Z
+   step arm                                passed        2026-10-09T18:11:07Z - 2026-10-09T18:11:09Z
+   step owner-start                        passed        2026-10-09T18:11:09Z - 2026-10-09T18:11:09Z
+   step track                              passed        2026-10-09T18:11:09Z - 2026-10-09T18:12:04Z
+   step owner-continuation (required)      skipped       2026-10-09T18:12:04Z - 2026-10-09T18:12:04Z
+   step terminal                           passed        2026-10-09T18:12:04Z - 2026-10-09T18:12:10Z
+   step post-update-facts                  passed        2026-10-09T18:12:10Z - 2026-10-09T18:12:14Z
+   step collect                            passed        2026-10-09T18:12:14Z - 2026-10-09T18:12:16Z
+   step verdicts                           passed        2026-10-09T18:12:16Z - 2026-10-09T18:12:16Z
+   step set5-name-pinning-at-the-end       passed        2026-10-09T18:12:16Z - 2026-10-09T18:12:17Z (added by set5)
+   finding: arch: web_mail was not attempted on the published v0.1.0-alpha.81 baseline (it accepts the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform
+   finding: arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']
+
+== update-alpha81/upd1-debian13-defective/run-a  wrapper 2026-10-09T17:47:59Z - 2026-10-09T18:02:01Z  rc=0
+   by set3's criteria: PASS
+   overall=complete-for-review native_evidence=False outcome=recovered-automatically final=recovered/rollback_verified
+   harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)
+   step set5-name-pinning                  passed        2026-10-09T17:49:01Z - 2026-10-09T17:49:02Z (added by set5)
+   step preflight                          passed        2026-10-09T17:49:02Z - 2026-10-09T17:49:06Z
+   step origin                             passed        2026-10-09T17:49:06Z - 2026-10-09T17:49:18Z
+   step baseline-install                   passed        2026-10-09T17:49:18Z - 2026-10-09T17:49:52Z
+   step owner-login                        passed        2026-10-09T17:49:52Z - 2026-10-09T17:49:53Z
+   step license                            passed        2026-10-09T17:49:53Z - 2026-10-09T17:49:53Z
+   step setup                              observed      2026-10-09T17:49:53Z - 2026-10-09T17:56:02Z
+   step seed                               passed        2026-10-09T17:56:02Z - 2026-10-09T17:56:04Z
+   step pre-state                          passed        2026-10-09T17:56:04Z - 2026-10-09T17:58:13Z
+   step arm                                passed        2026-10-09T17:58:13Z - 2026-10-09T17:58:14Z
+   step owner-start                        passed        2026-10-09T17:58:14Z - 2026-10-09T17:58:14Z
+   step track                              passed        2026-10-09T17:58:14Z - 2026-10-09T18:00:34Z
+   step owner-continuation (required)      skipped       2026-10-09T18:00:34Z - 2026-10-09T18:00:34Z
+   step terminal                           passed        2026-10-09T18:00:34Z - 2026-10-09T18:00:40Z
+   step deferred-mail-watch                observed      2026-10-09T18:00:40Z - 2026-10-09T18:01:57Z
+   step post-return-facts                  passed        2026-10-09T18:01:57Z - 2026-10-09T18:01:58Z
+   step collect                            passed        2026-10-09T18:01:58Z - 2026-10-09T18:02:00Z
+   step verdicts                           passed        2026-10-09T18:02:00Z - 2026-10-09T18:02:00Z
+   step set5-name-pinning-at-the-end       passed        2026-10-09T18:02:00Z - 2026-10-09T18:02:00Z (added by set5)
+   finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+
+== update-alpha81/upd1-ubuntu-defective/run-a  wrapper 2026-10-09T18:12:34Z - 2026-10-09T18:32:53Z  rc=0
+   by set3's criteria: PASS
+   overall=complete-for-review native_evidence=False outcome=recovered-automatically final=recovered/rollback_verified
+   harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)
+   step set5-name-pinning                  passed        2026-10-09T18:12:58Z - 2026-10-09T18:12:59Z (added by set5)
+   step preflight                          passed        2026-10-09T18:12:59Z - 2026-10-09T18:13:03Z
+   step origin                             passed        2026-10-09T18:13:03Z - 2026-10-09T18:13:12Z
+   step baseline-install                   passed        2026-10-09T18:13:12Z - 2026-10-09T18:14:03Z
+   step owner-login                        passed        2026-10-09T18:14:03Z - 2026-10-09T18:14:04Z
+   step license                            passed        2026-10-09T18:14:04Z - 2026-10-09T18:14:04Z
+   step setup                              observed      2026-10-09T18:14:04Z - 2026-10-09T18:24:45Z
+   step seed                               passed        2026-10-09T18:24:45Z - 2026-10-09T18:27:44Z
+   step pre-state                          passed        2026-10-09T18:27:44Z - 2026-10-09T18:29:13Z
+   step arm                                passed        2026-10-09T18:29:13Z - 2026-10-09T18:29:16Z
+   step owner-start                        passed        2026-10-09T18:29:16Z - 2026-10-09T18:29:17Z
+   step track                              passed        2026-10-09T18:29:17Z - 2026-10-09T18:31:34Z
+   step owner-continuation (required)      skipped       2026-10-09T18:31:34Z - 2026-10-09T18:31:34Z
+   step terminal                           passed        2026-10-09T18:31:34Z - 2026-10-09T18:31:41Z
+   step deferred-mail-watch                observed      2026-10-09T18:31:41Z - 2026-10-09T18:32:48Z
+   step post-return-facts                  passed        2026-10-09T18:32:48Z - 2026-10-09T18:32:49Z
+   step collect                            passed        2026-10-09T18:32:49Z - 2026-10-09T18:32:52Z
+   step verdicts                           passed        2026-10-09T18:32:52Z - 2026-10-09T18:32:52Z
+   step set5-name-pinning-at-the-end       passed        2026-10-09T18:32:52Z - 2026-10-09T18:32:52Z (added by set5)
+   finding: ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']
+
+== update-alpha81/upd1-arch-defective/run-a  wrapper 2026-10-09T18:33:20Z - 2026-10-09T18:43:57Z  rc=0
+   by set3's criteria: PASS
+   overall=complete-for-review native_evidence=False outcome=recovered-automatically final=recovered/rollback_verified
+   harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)
+   step set5-name-pinning                  passed        2026-10-09T18:34:21Z - 2026-10-09T18:34:22Z (added by set5)
+   step preflight                          passed        2026-10-09T18:34:22Z - 2026-10-09T18:34:26Z
+   step origin                             passed        2026-10-09T18:34:26Z - 2026-10-09T18:34:34Z
+   step baseline-install                   passed        2026-10-09T18:34:34Z - 2026-10-09T18:37:11Z
+   step owner-login                        passed        2026-10-09T18:37:11Z - 2026-10-09T18:37:12Z
+   step license                            passed        2026-10-09T18:37:12Z - 2026-10-09T18:37:12Z
+   step setup                              observed      2026-10-09T18:37:12Z - 2026-10-09T18:40:03Z
+   step seed                               passed        2026-10-09T18:40:03Z - 2026-10-09T18:40:06Z
+   step pre-state                          passed        2026-10-09T18:40:06Z - 2026-10-09T18:42:05Z
+   step arm                                passed        2026-10-09T18:42:05Z - 2026-10-09T18:42:07Z
+   step owner-start                        passed        2026-10-09T18:42:07Z - 2026-10-09T18:42:07Z
+   step track                              passed        2026-10-09T18:42:07Z - 2026-10-09T18:43:46Z
+   step owner-continuation (required)      skipped       2026-10-09T18:43:46Z - 2026-10-09T18:43:46Z
+   step terminal                           passed        2026-10-09T18:43:46Z - 2026-10-09T18:43:53Z
+   step post-return-facts                  passed        2026-10-09T18:43:53Z - 2026-10-09T18:43:53Z
+   step collect                            passed        2026-10-09T18:43:53Z - 2026-10-09T18:43:56Z
+   step verdicts                           passed        2026-10-09T18:43:56Z - 2026-10-09T18:43:56Z
+   step set5-name-pinning-at-the-end       passed        2026-10-09T18:43:56Z - 2026-10-09T18:43:56Z (added by set5)
+   finding: arch: web_mail was not attempted on the published v0.1.0-alpha.81 baseline (it accepts the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform
+   finding: arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']
+
+== update-alpha81/upd1-debian13-startcheck/run-a  wrapper 2026-10-09T18:44:15Z - 2026-10-09T18:58:00Z  rc=0
+   by set3's criteria: PASS
+   overall=complete-for-review native_evidence=False outcome=recovered-automatically final=recovered/rollback_verified
+   harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)
+   step set5-name-pinning                  passed        2026-10-09T18:45:14Z - 2026-10-09T18:45:14Z (added by set5)
+   step preflight                          passed        2026-10-09T18:45:14Z - 2026-10-09T18:45:18Z
+   step origin                             passed        2026-10-09T18:45:18Z - 2026-10-09T18:45:26Z
+   step baseline-install                   passed        2026-10-09T18:45:26Z - 2026-10-09T18:46:00Z
+   step owner-login                        passed        2026-10-09T18:46:00Z - 2026-10-09T18:46:01Z
+   step license                            passed        2026-10-09T18:46:01Z - 2026-10-09T18:46:01Z
+   step setup                              observed      2026-10-09T18:46:01Z - 2026-10-09T18:51:58Z
+   step seed                               passed        2026-10-09T18:51:58Z - 2026-10-09T18:52:01Z
+   step pre-state                          passed        2026-10-09T18:52:01Z - 2026-10-09T18:54:09Z
+   step arm                                passed        2026-10-09T18:54:09Z - 2026-10-09T18:54:11Z
+   step owner-start                        passed        2026-10-09T18:54:11Z - 2026-10-09T18:54:11Z
+   step track                              passed        2026-10-09T18:54:11Z - 2026-10-09T18:56:33Z
+   step owner-continuation (required)      skipped       2026-10-09T18:56:33Z - 2026-10-09T18:56:33Z
+   step terminal                           passed        2026-10-09T18:56:33Z - 2026-10-09T18:56:39Z
+   step deferred-mail-watch                observed      2026-10-09T18:56:39Z - 2026-10-09T18:57:56Z
+   step post-return-facts                  passed        2026-10-09T18:57:56Z - 2026-10-09T18:57:56Z
+   step collect                            passed        2026-10-09T18:57:56Z - 2026-10-09T18:57:58Z
+   step verdicts                           passed        2026-10-09T18:57:58Z - 2026-10-09T18:57:58Z
+   step set5-name-pinning-at-the-end       passed        2026-10-09T18:57:58Z - 2026-10-09T18:57:59Z (added by set5)
+   step kind-expectation                   passed        2026-10-09T18:57:59Z - 2026-10-09T18:57:59Z
+   finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+
+== update-alpha81/upd1-debian13-owner-continuation/run-a  wrapper 2026-10-09T18:58:26Z - 2026-10-09T19:17:59Z  rc=0
+   by set3's criteria: PASS
+   overall=complete-for-review native_evidence=False outcome=recovered-after-owner-continuation final=succeeded/update_verified
+   harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)
+   step set5-name-pinning                  passed        2026-10-09T18:59:28Z - 2026-10-09T18:59:28Z (added by set5)
+   step preflight                          passed        2026-10-09T18:59:28Z - 2026-10-09T18:59:32Z
+   step origin                             passed        2026-10-09T18:59:32Z - 2026-10-09T18:59:40Z
+   step baseline-install                   passed        2026-10-09T18:59:40Z - 2026-10-09T19:00:30Z
+   step owner-login                        passed        2026-10-09T19:00:30Z - 2026-10-09T19:00:31Z
+   step license                            passed        2026-10-09T19:00:31Z - 2026-10-09T19:00:31Z
+   step setup                              observed      2026-10-09T19:00:31Z - 2026-10-09T19:06:34Z
+   step seed                               passed        2026-10-09T19:06:34Z - 2026-10-09T19:06:36Z
+   step pre-state                          passed        2026-10-09T19:06:36Z - 2026-10-09T19:08:15Z
+   step arm                                passed        2026-10-09T19:08:15Z - 2026-10-09T19:08:17Z
+   step owner-start                        passed        2026-10-09T19:08:17Z - 2026-10-09T19:08:17Z
+   step track                              observed      2026-10-09T19:08:17Z - 2026-10-09T19:15:29Z
+   step owner-continuation (required)      observed      2026-10-09T19:15:29Z - 2026-10-09T19:16:39Z
+   step track-after-owner-continuation     passed        2026-10-09T19:16:39Z - 2026-10-09T19:16:41Z
+   step terminal                           passed        2026-10-09T19:16:41Z - 2026-10-09T19:16:49Z
+   step deferred-mail-watch                observed      2026-10-09T19:16:49Z - 2026-10-09T19:17:56Z
+   step collect                            passed        2026-10-09T19:17:56Z - 2026-10-09T19:17:58Z
+   step verdicts                           passed        2026-10-09T19:17:58Z - 2026-10-09T19:17:58Z
+   step set5-name-pinning-at-the-end       passed        2026-10-09T19:17:58Z - 2026-10-09T19:17:58Z (added by set5)
+   step kind-expectation                   passed        2026-10-09T19:17:58Z - 2026-10-09T19:17:58Z
+   finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+   finding: while the recovery budget was exhausted the Panel recovery-status API was unavailable; only the root CLI showed the exhausted state
+
+== update-alpha81/upd1-ubuntu-owner-continuation/run-a  wrapper 2026-10-09T19:18:26Z - 2026-10-09T19:46:13Z  rc=0
+   by set3's criteria: PASS
+   overall=complete-for-review native_evidence=False outcome=recovered-after-owner-continuation final=succeeded/update_verified
+   harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)
+   step set5-name-pinning                  passed        2026-10-09T19:18:58Z - 2026-10-09T19:18:59Z (added by set5)
+   step preflight                          passed        2026-10-09T19:18:59Z - 2026-10-09T19:19:08Z
+   step origin                             passed        2026-10-09T19:19:08Z - 2026-10-09T19:19:20Z
+   step baseline-install                   passed        2026-10-09T19:19:20Z - 2026-10-09T19:20:13Z
+   step owner-login                        passed        2026-10-09T19:20:13Z - 2026-10-09T19:20:14Z
+   step license                            passed        2026-10-09T19:20:14Z - 2026-10-09T19:20:15Z
+   step setup                              observed      2026-10-09T19:20:15Z - 2026-10-09T19:31:57Z
+   step seed                               passed        2026-10-09T19:31:57Z - 2026-10-09T19:34:56Z
+   step pre-state                          passed        2026-10-09T19:34:56Z - 2026-10-09T19:36:05Z
+   step arm                                passed        2026-10-09T19:36:05Z - 2026-10-09T19:36:09Z
+   step owner-start                        passed        2026-10-09T19:36:09Z - 2026-10-09T19:36:09Z
+   step track                              observed      2026-10-09T19:36:09Z - 2026-10-09T19:44:01Z
+   step owner-continuation (required)      observed      2026-10-09T19:44:01Z - 2026-10-09T19:44:51Z
+   step track-after-owner-continuation     passed        2026-10-09T19:44:51Z - 2026-10-09T19:44:54Z
+   step terminal                           passed        2026-10-09T19:44:54Z - 2026-10-09T19:45:02Z
+   step deferred-mail-watch                observed      2026-10-09T19:45:02Z - 2026-10-09T19:46:09Z
+   step collect                            passed        2026-10-09T19:46:09Z - 2026-10-09T19:46:12Z
+   step verdicts                           passed        2026-10-09T19:46:12Z - 2026-10-09T19:46:12Z
+   step set5-name-pinning-at-the-end       passed        2026-10-09T19:46:12Z - 2026-10-09T19:46:12Z (added by set5)
+   step kind-expectation                   passed        2026-10-09T19:46:12Z - 2026-10-09T19:46:12Z
+   finding: ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']
+   finding: while the recovery budget was exhausted the Panel recovery-status API was unavailable; only the root CLI showed the exhausted state
+
+== update-alpha81/upd1-debian13-mgmt-off-reboot/run-a  wrapper 2026-10-09T19:46:42Z - 2026-10-09T20:01:14Z  rc=0
+   by set3's criteria: PASS
+   overall=complete-for-review native_evidence=False outcome=update-verified final=succeeded/update_verified
+   harness=/var/tmp/cp-set5-run/harness-e (git archive 67b62cc0f without earlier evidence, overlay overlay-e, harness.diff sha256 369e8eef33999f0bef82730c16d54b076f7f7256ebbd430fdcdbb26fe0d756fb)
+   step set5-name-pinning                  passed        2026-10-09T19:47:49Z - 2026-10-09T19:47:49Z (added by set5)
+   step preflight                          passed        2026-10-09T19:47:49Z - 2026-10-09T19:47:53Z
+   step origin                             passed        2026-10-09T19:47:53Z - 2026-10-09T19:48:02Z
+   step baseline-install                   passed        2026-10-09T19:48:02Z - 2026-10-09T19:48:36Z
+   step owner-login                        passed        2026-10-09T19:48:36Z - 2026-10-09T19:48:37Z
+   step license                            passed        2026-10-09T19:48:37Z - 2026-10-09T19:48:37Z
+   step setup                              observed      2026-10-09T19:48:37Z - 2026-10-09T19:54:45Z
+   step seed                               passed        2026-10-09T19:54:45Z - 2026-10-09T19:54:48Z
+   step pre-state                          passed        2026-10-09T19:54:48Z - 2026-10-09T19:56:05Z
+   step arm                                passed        2026-10-09T19:56:05Z - 2026-10-09T19:56:07Z
+   step owner-start                        passed        2026-10-09T19:56:07Z - 2026-10-09T19:56:07Z
+   step track                              passed        2026-10-09T19:56:07Z - 2026-10-09T19:57:04Z
+   step owner-continuation (required)      skipped       2026-10-09T19:57:04Z - 2026-10-09T19:57:04Z
+   step terminal                           passed        2026-10-09T19:57:04Z - 2026-10-09T19:57:12Z
+   step management-off                     passed        2026-10-09T19:57:12Z - 2026-10-09T19:57:21Z
+   step owner-reboot                       passed        2026-10-09T19:57:21Z - 2026-10-09T19:57:41Z
+   step management-off-measure             passed        2026-10-09T19:57:41Z - 2026-10-09T20:00:49Z
+   step management-return                  passed        2026-10-09T20:00:49Z - 2026-10-09T20:01:11Z
+   step collect                            passed        2026-10-09T20:01:11Z - 2026-10-09T20:01:13Z
+   step verdicts                           passed        2026-10-09T20:01:13Z - 2026-10-09T20:01:13Z
+   step set5-name-pinning-at-the-end       passed        2026-10-09T20:01:13Z - 2026-10-09T20:01:13Z (added by set5)
+   step kind-expectation                   passed        2026-10-09T20:01:13Z - 2026-10-09T20:01:13Z
+   finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+

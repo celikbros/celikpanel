@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Boxes, FileText, RefreshCw, ScrollText, Search } from 'lucide-react';
 import { ServiceShell } from './ServiceShell';
-import { EmptyState } from './ui';
+import { Checking, CouldNotCheck, KnownEmpty, RemoteGate } from './ui';
 import { useI18n } from '../i18n';
-import { readApiError, apiErrorText } from '../lib/apiError';
+import { apiErrorText } from '../lib/apiError';
+import { decodeListIn, lastKnown, mapRemote, useRemote } from '../lib/remote';
+import { useManagedServices, type ManagedServicesSnapshot } from '../lib/managedServices';
 
 interface Instance {
     version: string;
@@ -32,6 +34,13 @@ interface Component {
     config_files?: { path: string; is_managed: boolean }[];
 }
 
+// One component's record in the stored scan, or null when the scan has no
+// such component.
+// Kayıtlı taramada bir bileşenin kaydı; taramada öyle bir bileşen yoksa null.
+function componentIn(snapshot: ManagedServicesSnapshot, serviceId: string): Component | null {
+    return (snapshot.services.find((service) => service.id === serviceId) as Component | undefined) ?? null;
+}
+
 // The generic component page. Nine components had a hand-written management
 // page; every other one — Rspamd, ClamAV, Redis, Memcached, Node — showed a
 // Manage button that led to a dead end (operator, 25 Jul: "birçok servisin
@@ -56,43 +65,41 @@ interface Component {
 // kendi günlüğünü — gösterir. Yarın kataloğa eklenen bir bileşen, bu dosyaya
 // dokunulmadan çalışan bir Yönet sayfasına kavuşur.
 export function ComponentDetail({ serviceId, onBack, onSelectConfig }: { serviceId: string; onBack: () => void; onSelectConfig?: (path: string) => void }) {
-    const [svc, setSvc] = useState<Component | null>(null);
+    const catalogue = useManagedServices();
     // On an unchecked host this record carries no unit, no versions and no
     // config files — not because there are none, but because nobody has
     // looked. The moment the shell resolves that (the operator's check, or a
     // finished install) this copy is stale, and a stale copy under a resolved
-    // header would state absences as facts: start/stop would target the id
-    // instead of the real unit (BIND's id is "bind", its unit "named"), and
-    // the panels would say "no configuration files". So it is reread.
+    // header would state absences as facts. So it is reread.
     // Bakılmamış bir makinede bu kayıtta unit, sürüm ve ayar dosyası yoktur —
     // yok oldukları için değil, bakılmadığı için. Kabuk durumu çözdüğü anda
     // bu kopya bayatlar ve çözülmüş bir başlığın altındaki bayat kopya
     // yoklukları olgu diye söyler; bu yüzden yeniden okunur.
     const [recordToken, setRecordToken] = useState(0);
+    const reread = catalogue.retry;
 
     useEffect(() => {
-        let cancelled = false;
-        fetch('/api/v1/managed-services')
-            .then((r) => (r.ok ? r.json() : { services: [] }))
-            .then((d: { services: Component[] }) => {
-                if (!cancelled) setSvc((d.services || []).find((s) => s.id === serviceId) ?? null);
-            })
-            .catch(() => {});
-        return () => {
-            cancelled = true;
-        };
+        if (recordToken > 0) void reread();
     }, [serviceId, recordToken]);
+
+    // The name is the record's once the server has given one; until then the
+    // id stands in the title. Start and stop are the shell's, from its own
+    // record: this page names no unit for them.
+    // Ad, sunucu verdiğinde kaydın adıdır; o zamana dek başlıkta kimlik durur.
+    // Başlat ve durdur kabuğundur, kendi kaydından: bu sayfa onlar için birim
+    // adlandırmaz.
+    const known = lastKnown(catalogue.remote);
+    const name = (known && componentIn(known.value, serviceId)?.name) || serviceId;
 
     return (
         <ServiceShell
             serviceId={serviceId}
-            unitName={svc?.unit}
-            name={svc?.name ?? serviceId}
+            name={name}
             icon={Boxes}
             onBack={onBack}
             onServiceRefreshed={() => setRecordToken((token) => token + 1)}
         >
-            <ComponentPanels serviceId={serviceId} svc={svc} onSelectConfig={onSelectConfig} />
+            <ComponentPanels serviceId={serviceId} onSelectConfig={onSelectConfig} />
         </ServiceShell>
     );
 }
@@ -115,34 +122,40 @@ export function ComponentDetail({ serviceId, onBack, onSelectConfig }: { service
 // gizlerler).
 export function ComponentPanels({
     serviceId,
-    svc: svcProp,
     onSelectConfig,
     show,
 }: {
     serviceId: string;
-    svc?: Component | null;
     onSelectConfig?: (path: string) => void;
     show?: { facts?: boolean; configs?: boolean; journal?: boolean };
 }) {
-    const [fetched, setFetched] = useState<Component | null>(null);
-    const needFetch = svcProp === undefined;
-
-    useEffect(() => {
-        if (!needFetch) return;
-        fetch('/api/v1/managed-services')
-            .then((r) => (r.ok ? r.json() : { services: [] }))
-            .then((d: { services: Component[] }) => setFetched((d.services || []).find((s) => s.id === serviceId) ?? null))
-            .catch(() => {});
-    }, [serviceId, needFetch]);
-
-    const svc = needFetch ? fetched : svcProp;
+    const { t } = useI18n();
+    // The same read the page above makes, so the two share one request.
+    // Üstteki sayfanın yaptığı okumanın aynısı; ikisi tek isteği paylaşır.
+    const catalogue = useManagedServices();
+    const record = mapRemote(catalogue.remote, (snapshot) => componentIn(snapshot, serviceId));
     const want = { facts: true, configs: true, journal: true, ...show };
 
+    // Nothing below is drawn from a record that has not arrived: no "no
+    // configuration files", no log of a unit nobody named.
+    // Aşağıdaki hiçbir şey, gelmemiş bir kayıttan çizilmez.
     return (
         <div className="mt-6 space-y-6 first:mt-0">
-            {want.facts && <Facts svc={svc ?? null} />}
-            {want.configs && <ConfigFiles svc={svc ?? null} onSelectConfig={onSelectConfig} />}
-            {want.journal && <Journal unit={svc?.unit || serviceId} />}
+            <RemoteGate
+                remote={record}
+                checking={t('component.checking')}
+                failed={t('component.unknown')}
+                onRetry={() => void catalogue.retry()}
+                busy={catalogue.reading}
+            >
+                {({ value: svc }) => (
+                    <div className="space-y-6">
+                        {want.facts && <Facts svc={svc} />}
+                        {want.configs && svc && <ConfigFiles svc={svc} onSelectConfig={onSelectConfig} />}
+                        {want.journal && <Journal unit={svc?.unit || serviceId} />}
+                    </div>
+                )}
+            </RemoteGate>
         </div>
     );
 }
@@ -220,9 +233,9 @@ function Facts({ svc }: { svc: Component | null }) {
     );
 }
 
-function ConfigFiles({ svc, onSelectConfig }: { svc: Component | null; onSelectConfig?: (path: string) => void }) {
+function ConfigFiles({ svc, onSelectConfig }: { svc: Component; onSelectConfig?: (path: string) => void }) {
     const { t } = useI18n();
-    const files = svc?.config_files ?? [];
+    const files = svc.config_files ?? [];
     return (
         <Card title={t('component.configFiles')} icon={FileText}>
             {files.length === 0 ? (
@@ -247,38 +260,18 @@ function ConfigFiles({ svc, onSelectConfig }: { svc: Component | null; onSelectC
     );
 }
 
+const decodeLogLines = (raw: unknown) => decodeListIn<string>(raw, 'lines');
+
 function Journal({ unit }: { unit: string }) {
     const { t } = useI18n();
-    const [lines, setLines] = useState<string[] | null>(null);
-    const [error, setError] = useState<string | null>(null);
-    const [busy, setBusy] = useState(false);
+    const log = useRemote(`/api/v1/service/logs?unit=${encodeURIComponent(unit)}&lines=200`, decodeLogLines);
     const [filter, setFilter] = useState('');
-
-    const load = async () => {
-        setBusy(true);
-        setError(null);
-        try {
-            const r = await fetch(`/api/v1/service/logs?unit=${encodeURIComponent(unit)}&lines=200`);
-            if (!r.ok) {
-                setError(apiErrorText(await readApiError(r), t, 'component.logsFailed'));
-                setLines([]);
-                return;
-            }
-            const d: { lines?: string[] } = await r.json();
-            setLines(d.lines ?? []);
-        } catch {
-            setError(t('component.logsFailed'));
-            setLines([]);
-        } finally {
-            setBusy(false);
-        }
-    };
-
-    useEffect(() => {
-        load();
-    }, [unit]);
-
-    const shown = (lines ?? []).filter((l) => (filter ? l.toLowerCase().includes(filter.toLowerCase()) : true));
+    const needle = filter.trim().toLowerCase();
+    // The server's own reason, when it gave one, under this screen's sentence.
+    // Sunucu neden bildirdiyse, bu ekranın cümlesinin altında.
+    const reason = log.remote.state === 'unknown' && (log.remote.reason.code || log.remote.reason.message)
+        ? apiErrorText(log.remote.reason, t, 'component.logsFailed')
+        : '';
 
     return (
         <Card
@@ -292,30 +285,62 @@ function Journal({ unit }: { unit: string }) {
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
                             placeholder={t('component.logsFilter')}
+                            aria-label={t('component.logsFilter')}
                             className="w-40 rounded-lg border border-border bg-surface-2 py-1 pl-7 pr-2 text-xs text-fg placeholder:text-fg-subtle"
                         />
                     </div>
                     <button
-                        onClick={load}
-                        disabled={busy}
+                        type="button"
+                        onClick={() => void log.retry()}
+                        disabled={log.reading}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-2.5 py-1 text-xs font-medium text-fg transition-colors hover:bg-surface-2 disabled:opacity-50"
                     >
-                        <RefreshCw className={`h-3.5 w-3.5 ${busy ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`h-3.5 w-3.5 ${log.reading ? 'animate-spin' : ''}`} />
                         {t('component.logsRefresh')}
                     </button>
                 </div>
             }
         >
-            {error ? (
-                <p className="text-sm text-danger">{error}</p>
-            ) : lines === null ? (
-                <p className="text-sm text-fg-subtle">{t('common.loading')}</p>
-            ) : shown.length === 0 ? (
-                <EmptyState icon={ScrollText} title={t('component.logsEmpty')} hint={t('component.logsEmptyHint', { unit })} />
+            {log.remote.state === 'loading' ? (
+                <Checking label={t('component.logsChecking', { unit })} />
+            ) : log.remote.state === 'unknown' && !log.remote.previous ? (
+                <CouldNotCheck
+                    text={(
+                        <>
+                            {t('component.logsUnknown', { unit })}
+                            {reason && <span className="mt-1 block break-words text-xs text-fg-muted">{reason}</span>}
+                        </>
+                    )}
+                    onRetry={() => void log.retry()}
+                    busy={log.reading}
+                />
             ) : (
-                <pre className="max-h-96 overflow-auto rounded-lg bg-surface-2 p-3 font-mono text-xs leading-relaxed text-fg-muted">
-                    {shown.join('\n')}
-                </pre>
+                <RemoteGate
+                    remote={log.remote}
+                    checking={t('component.logsChecking', { unit })}
+                    failed={t('component.logsUnknown', { unit })}
+                    onRetry={() => void log.retry()}
+                    busy={log.reading}
+                >
+                    {(shown) => {
+                        const lines = needle ? shown.value.filter((line) => line.toLowerCase().includes(needle)) : shown.value;
+                        if (shown.value.length === 0) {
+                            return <KnownEmpty of={shown} icon={ScrollText} title={t('component.logsEmpty')} hint={t('component.logsEmptyHint', { unit })} />;
+                        }
+                        // Lines exist and none matches: that is about the
+                        // filter, not about the log.
+                        // Satır var ama hiçbiri eşleşmiyor: bu günlükle değil,
+                        // süzgeçle ilgilidir.
+                        if (lines.length === 0) {
+                            return <p className="text-sm text-fg-muted">{t('component.logsNoMatch', { filter: filter.trim() })}</p>;
+                        }
+                        return (
+                            <pre className="max-h-96 overflow-auto rounded-lg bg-surface-2 p-3 font-mono text-xs leading-relaxed text-fg-muted">
+                                {lines.join('\n')}
+                            </pre>
+                        );
+                    }}
+                </RemoteGate>
             )}
         </Card>
     );

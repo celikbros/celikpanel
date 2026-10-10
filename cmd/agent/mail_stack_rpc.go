@@ -132,18 +132,23 @@ func (a *Agent) ConfigureMailStack(req *ServiceMutationRequest, resp *ConfigureM
 		// Kurulu olan filtreleri Postfix'in İÇİNE bağla. Bu olmadan spam
 		// filtresi posta sunucusunun yanında koşar, içinde değil — kurulu,
 		// "Çalışıyor", hiçbir şey süzmüyor (operatör, 24 Tem).
-		if err := applyMilterChain(ctx); err != nil {
+		if err := writeMilterChain(ctx); err != nil {
 			resp.Error = fmt.Sprintf("milter wiring: %v", err)
 			return nil
 		}
-		if out, err := serviceMutationCommand(ctx, "systemctl", "reload-or-restart", "postfix").CombinedOutput(); err != nil {
-			resp.Error = fmt.Sprintf("postfix reload: %s", strings.TrimSpace(string(out)))
+		// "Configured" is said only for a Postfix that verifiably runs with
+		// what was written: systemctl's exit status alone is the wrapper
+		// unit's on Ubuntu (mail_service_verify.go, 10 Oct 2026).
+		// "Yapılandırıldı", yalnız yazılanla çalıştığı doğrulanan bir Postfix
+		// için söylenir.
+		if _, err := applyPostfixVerified(mailServiceLeaseRunner(ctx), mailServiceReloadOrStart); err != nil {
+			resp.Error = fmt.Sprintf("postfix reload: %v", err)
 			return nil
 		}
 	}
 	if hasDovecot {
-		if out, err := serviceMutationCommand(ctx, "systemctl", "restart", "dovecot").CombinedOutput(); err != nil {
-			resp.Error = fmt.Sprintf("dovecot restart: %s", strings.TrimSpace(string(out)))
+		if _, err := applyDovecotVerified(mailServiceLeaseRunner(ctx), mailServiceRestart); err != nil {
+			resp.Error = fmt.Sprintf("dovecot restart: %v", err)
 			return nil
 		}
 	}
@@ -370,7 +375,20 @@ func postconfExpandedContext(ctx context.Context, key string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("postconf %s failed: %s", key, firstLine(string(out)))
 	}
-	return strings.TrimSpace(string(out)), nil
+	// Both streams are in out. The value is the one line that is not
+	// postconf's own message (postconf_value.go, 2026-10-09): with a warning
+	// in the buffer the trimmed whole used to be taken as "type:path", and the
+	// alias repair that reads it found no file under that name and did
+	// nothing, without a word. A reading that is not one value is an error
+	// the caller returns before it runs anything.
+	// out iki akışı da tutar. Değer, postconf'un kendi iletisi olmayan tek
+	// satırdır; tek bir değer olmayan okuma, çağıranın hiçbir şey
+	// çalıştırmadan döndürdüğü bir hatadır.
+	value, known := postconfOneValue(out)
+	if !known {
+		return "", &postconfUnreadError{setting: key, command: "postconf -x -h " + key}
+	}
+	return value, nil
 }
 
 // applyMilterChain is the SINGLE owner of Postfix's milter settings. Every
@@ -400,6 +418,28 @@ func applyMilterChain(ctx context.Context) error {
 	if _, err := exec.LookPath("postconf"); err != nil {
 		return nil // no postfix here, nothing to wire
 	}
+	if err := writeMilterChain(ctx); err != nil {
+		return err
+	}
+	// A running Postfix must verifiably take the chain; a stopped one is left
+	// stopped and reads main.cf when it starts. Until 10 Oct 2026 this was
+	// `systemctl reload-or-restart postfix` with its result thrown away, so a
+	// filter could be reported as wired into a Postfix that never reloaded.
+	// Çalışan Postfix zinciri doğrulanmış biçimde almalıdır; durmuş olan
+	// durmuş bırakılır ve main.cf'i başlarken okur.
+	if _, err := applyPostfixVerified(mailServiceLeaseRunner(ctx), mailServiceReload); err != nil {
+		return fmt.Errorf("the milter chain is written to main.cf, but %w", err)
+	}
+	return nil
+}
+
+// writeMilterChain writes the composed chain to main.cf and reloads nothing.
+// writeMilterChain, bestelenen zinciri main.cf'e yazar; hiçbir şeyi yeniden
+// yüklemez.
+func writeMilterChain(ctx context.Context) error {
+	if _, err := exec.LookPath("postconf"); err != nil {
+		return nil // no postfix here, nothing to wire
+	}
 
 	spam := ""
 	switch {
@@ -423,7 +463,6 @@ func applyMilterChain(ctx context.Context) error {
 			return fmt.Errorf("postconf %s: %s", kv[0], strings.TrimSpace(string(out)))
 		}
 	}
-	_ = serviceMutationCommand(ctx, "systemctl", "reload-or-restart", "postfix").Run()
 	return nil
 }
 

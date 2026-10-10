@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/alicelik/celikpanel/internal/hostingpath"
+	"github.com/alicelik/celikpanel/internal/transport"
 	"golang.org/x/sys/unix"
 )
 
@@ -24,12 +25,35 @@ const (
 
 var cpmoveSiteHome = hostingpath.SiteHome
 
-func cpmovePayloadRelative(member string) (string, bool, error) {
+// cpmovePayloadRelative answers where under the document root an archive
+// member belongs: ("", true, nil) for the document root itself, (path, true,
+// nil) for a member below it, ("", false, nil) for a member that is not site
+// payload, and an error for a name that must not be extracted at all.
+//
+// tar stores a directory member with one trailing slash
+// ("cpmove-user/homedir/public_html/", POSIX ustar typeflag '5'; GNU tar,
+// Python's tarfile and Go's tar.FileInfoHeader all write it that way), so that
+// one slash is taken off a directory's name before anything else is judged
+// (11 Oct 2026; measured: the member "homedir/public_html/" became the empty
+// payload path and the whole files step was refused). Only for a directory, and
+// only one slash: a file's name that ends in a slash, a doubled slash at the
+// end, "..", a backslash, a NUL and a payload path that cleans to nothing, to
+// "..", or to an absolute path are refused as before.
+//
+// cpmovePayloadRelative, bir arşiv üyesinin belge kökünün altında nereye ait
+// olduğunu söyler. tar bir dizin üyesini sonda tek bir eğik çizgiyle saklar; o
+// tek çizgi yalnızca dizinlerde ve yalnızca bir kez atılır. Diğer her ret
+// (".." bileşeni, ters eğik çizgi, NUL, mutlak ya da boş yol) eskisi gibidir.
+func cpmovePayloadRelative(member string, directory bool) (string, bool, error) {
 	if member == "" || strings.ContainsRune(member, '\x00') ||
 		strings.Contains(member, `\`) {
 		return "", false, os.ErrPermission
 	}
 	raw := strings.TrimPrefix(member, "./")
+	trailingSlash := strings.HasSuffix(raw, "/")
+	if trailingSlash {
+		raw = raw[:len(raw)-1]
+	}
 	parts := strings.Split(raw, "/")
 	for _, component := range parts {
 		if component == ".." {
@@ -41,12 +65,17 @@ func cpmovePayloadRelative(member string) (string, bool, error) {
 		parts = parts[1:]
 	}
 	relative := strings.Join(parts, "/")
+	const prefix = "homedir/public_html/"
+	if relative != "homedir/public_html" && !strings.HasPrefix(relative, prefix) {
+		// Not site payload: skipped, as it always was.
+		return "", false, nil
+	}
+	if trailingSlash && !directory {
+		// Site payload that is not a directory has no trailing slash.
+		return "", false, os.ErrPermission
+	}
 	if relative == "homedir/public_html" {
 		return "", true, nil
-	}
-	const prefix = "homedir/public_html/"
-	if !strings.HasPrefix(relative, prefix) {
-		return "", false, nil
 	}
 	payload := strings.TrimPrefix(relative, prefix)
 	cleaned := path.Clean(payload)
@@ -340,6 +369,7 @@ func extractCpmoveFilesSecure(
 
 	files := 0
 	var bytes int64
+	var left cpmoveLeftOut
 	for {
 		hdr, err := tr.Next()
 		if err == io.EOF {
@@ -348,15 +378,25 @@ func extractCpmoveFilesSecure(
 		if err != nil {
 			return fmt.Errorf("read cpmove archive: %w", err)
 		}
-		relative, payload, err := cpmovePayloadRelative(hdr.Name)
-		if err != nil {
-			return fmt.Errorf("unsafe cpmove member path")
+		if strings.HasPrefix(hdr.Name, "/") {
+			// An absolute name is never placed anywhere, and never silently:
+			// the member is counted and named in the answer.
+			left.refuse(hdr.Name, transport.CpmoveRefusedAbsolutePath)
+			continue
 		}
-		if !payload || relative == "" {
+		relative, payload, err := cpmovePayloadRelative(hdr.Name, hdr.Typeflag == tar.TypeDir)
+		if err != nil {
+			return fmt.Errorf("unsafe cpmove member path: %s", cpmoveMemberName(hdr.Name))
+		}
+		if !payload {
+			left.outside(hdr)
+			continue
+		}
+		if relative == "" {
 			continue
 		}
 		if hdr.Size < 0 || hdr.Size > maxCpmoveSiteBytes-bytes {
-			return fmt.Errorf("cpmove site payload exceeds the allowed size")
+			return fmt.Errorf("cpmove site payload exceeds the allowed size: %s", cpmoveMemberName(hdr.Name))
 		}
 		switch hdr.Typeflag {
 		case tar.TypeDir:
@@ -375,7 +415,7 @@ func extractCpmoveFilesSecure(
 			}
 		case tar.TypeReg, tar.TypeRegA:
 			if files >= maxCpmoveSiteFiles {
-				return fmt.Errorf("cpmove site payload contains too many files")
+				return fmt.Errorf("cpmove site payload contains too many files: more than %d", maxCpmoveSiteFiles)
 			}
 			written, err := writeCpmoveRegularFile(
 				stageFD,
@@ -391,7 +431,7 @@ func extractCpmoveFilesSecure(
 			files++
 			bytes += written
 		default:
-			return fmt.Errorf("unsupported cpmove site entry type")
+			return fmt.Errorf("unsupported cpmove site entry type: %s is %s", cpmoveMemberName(hdr.Name), cpmoveEntryKind(hdr.Typeflag))
 		}
 	}
 	if err := unix.Fsync(stageFD); err != nil {
@@ -409,5 +449,6 @@ func extractCpmoveFilesSecure(
 	resp.Files = files
 	resp.Bytes = bytes
 	resp.Complete = true
+	left.report(resp)
 	return nil
 }

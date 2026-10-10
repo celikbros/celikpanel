@@ -402,8 +402,11 @@ func TestCreateDatabaseV2ReturnsOnlyNewSecretAndStoresItSealed(t *testing.T) {
 	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
 		t.Fatal(err)
 	}
-	if response[`password`] != `new-clear-secret` {
-		t.Fatalf(`new secret was not returned once: %v`, response[`password`])
+	// The caller sent this password, so the answer does not send it back
+	// (11 Oct 2026); it says that the new user has it.
+	if _, echoed := response[`password`]; echoed || response[`password_set`] != true ||
+		strings.Contains(recorder.Body.String(), `new-clear-secret`) {
+		t.Fatalf(`a password the caller sent was answered back: %s`, recorder.Body.String())
 	}
 	if driver.createdUser != `s9201_new_user` ||
 		driver.createdPassword != `new-clear-secret` {

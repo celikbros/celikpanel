@@ -1,0 +1,2 @@
+2026-10-08T21:47:21.696754+00:00 dns-ubuntu postfix/postfix-script[41733]: refreshing the Postfix mail system
+2026-10-08T21:47:21.710768+00:00 dns-ubuntu postfix/master[36110]: reload -- version 3.8.6, configuration /etc/postfix

@@ -1,0 +1,26 @@
+Formatting '/var/tmp/cp-release-drill-rid-arch-b/cells/f1f97bde31aa35fab9893e54/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-rid-arch-b/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-rid-arch-b/cells/f1f97bde31aa35fab9893e54/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-rid-arch-b/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-rid-arch-b", "cell_id": "release-recovery__70d2360b46b09c79", "ssh_ports": [4191, 4192]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-rid-arch-b", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-rid-arch-b", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "site", "verdict": "passed", "reason": null}
+{"step": "C0-prepare", "verdict": "passed", "reason": null}
+{"step": "C1-domain-databases", "verdict": "passed", "reason": null}
+{"step": "C2-admin-account", "verdict": "passed", "reason": null}
+{"step": "C3-server-databases", "verdict": "passed", "reason": null}
+{"step": "C4-backup", "verdict": "passed", "reason": null}
+{"step": "C5-letsencrypt", "verdict": "failed", "reason": "letsencrypt (i): three arrivals in a row of one identity left one native effect; letsencrypt (ii): three arrivals at once of one identity left one native effect"}
+{"step": "C6-vpn-peer", "verdict": "passed", "reason": null}
+{"step": "C7-import", "verdict": "failed", "reason": "an archive that holds the directory member `homedir/public_html/` as tar writes it has its site files imported; import (i): three arrivals in a row of one identity left one native effect; import (ii): three arrivals at once of one identity left one native effect; import (v): the request was still running when the connection was dropped; import (v): the server finished the import after the client was gone (row done; the whole site is there)"}
+{"step": "C8-restore", "verdict": "passed", "reason": null}
+{"step": "C9-identities", "verdict": "passed", "reason": null}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"cell_kind": "request-identity", "matrix": {"admin-account-mariadb": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "admin-account-postgresql": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "backup": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "domain-database-mariadb": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "domain-database-postgresql": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "import": {"i": "FAIL", "ii": "FAIL", "iii": "pass", "iv": "pass", "v": "FAIL"}, "letsencrypt": {"i": "FAIL", "ii": "FAIL", "iii": "pass", "iv": "pass"}, "restore": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass", "v": "pass", "vi": "pass"}, "rows": {"vii": "pass"}, "server-database-mariadb": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "server-database-postgresql": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}, "vpn-peer": {"i": "pass", "ii": "pass", "iii": "pass", "iv": "pass"}}, "overall": "failed", "sections": {"C0-prepare": "passed", "C1-domain-databases": "passed", "C2-admin-account": "passed", "C3-server-databases": "passed", "C4-backup": "passed", "C5-letsencrypt": "failed", "C6-vpn-peer": "passed", "C7-import": "failed", "C8-restore": "passed", "C9-identities": "passed"}}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-rid-arch-b", "evidence_retained": true}
+SET2 cell=rid-arch lab=/var/tmp/cp-release-drill-rid-arch-b driver_exit=1 evidence=/var/tmp/cp-release-drill-rid-arch-b/evidence/*/upd1

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -961,7 +962,7 @@ func (p *Panel) scanManagedServices(ctx context.Context) ([]ManagedServiceRespon
 			Status:                status,
 			Unit:                  primaryUnit,
 			Instances:             instances,
-			ConfigFiles:           configFiles,
+			ConfigFiles:           uniqueConfigFiles(configFiles),
 			InstalledRepoPackages: installedRepoPackages,
 		})
 	}
@@ -1050,4 +1051,47 @@ func portStrings(ports []core.FirewallPort) []string {
 		out = append(out, fmt.Sprintf("%d/%s", p.Port, p.Proto))
 	}
 	return out
+}
+
+// configFileResolve resolves a listed path to the file it names. Swapped by
+// tests.
+// configFileResolve, listelenen bir yolu adlandırdığı dosyaya çözer.
+var configFileResolve = filepath.EvalSymlinks
+
+// uniqueConfigFiles lists each configuration file of a component once
+// (10 Oct 2026). A component can have more than one unit, and each unit's scan
+// returns the component's files: on Debian and Ubuntu PostgreSQL is
+// `postgresql.service` (a wrapper) and `postgresql@<version>-<cluster>.service`,
+// so postgresql.conf and pg_hba.conf were each listed twice. Files are compared
+// by the path they resolve to, so two names for one file are one entry; the
+// name that is the file itself is kept, in the place of the first, because a
+// path through a symbolic link is one the Agent refuses to write. A path that
+// cannot be resolved is compared as it is written.
+//
+// uniqueConfigFiles, bir bileşenin her yapılandırma dosyasını bir kez listeler.
+// Bir bileşenin birden çok birimi olabilir ve her birimin taraması bileşenin
+// dosyalarını döndürür; Debian ve Ubuntu'da PostgreSQL dosyaları bu yüzden iki
+// kez listeleniyordu. Dosyalar çözüldükleri yola göre karşılaştırılır.
+func uniqueConfigFiles(files []core.ConfigFile) []core.ConfigFile {
+	if len(files) < 2 {
+		return files
+	}
+	at := map[string]int{}
+	unique := make([]core.ConfigFile, 0, len(files))
+	for _, file := range files {
+		written := filepath.Clean(file.Path)
+		resolved := written
+		if target, err := configFileResolve(written); err == nil {
+			resolved = filepath.Clean(target)
+		}
+		if index, seen := at[resolved]; seen {
+			if filepath.Clean(unique[index].Path) != resolved && written == resolved {
+				unique[index] = file
+			}
+			continue
+		}
+		at[resolved] = len(unique)
+		unique = append(unique, file)
+	}
+	return unique
 }

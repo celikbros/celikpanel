@@ -22,8 +22,8 @@ const phpPoolTemplate = `[site{{.SiteID}}]
 user = {{.Username}}
 group = {{.Username}}
 listen = {{.Socket}}
-listen.owner = www-data
-listen.group = www-data
+listen.owner = {{.WebServer}}
+listen.group = {{.WebServer}}
 listen.mode = 0660
 pm = dynamic
 pm.max_children = 5
@@ -58,6 +58,9 @@ type PoolData struct {
 	SiteID   int
 	Username string
 	Socket   string
+	// WebServer is the account the web server runs as on this host; it owns
+	// the pool's socket.
+	WebServer string
 }
 
 // CreatePool creates and activates a PHP-FPM pool as one rollback-safe change.
@@ -74,9 +77,9 @@ func (pm *PHPFPMManager) CreatePool(siteID int, username, phpVersion string) (st
 
 	poolName := fmt.Sprintf("site%d", siteID)
 	path := poolFilePath(phpVersion, poolName)
-	socket := fmt.Sprintf("/var/run/php/php%s-fpm-%s.sock", phpVersion, poolName)
+	socket := PHPFPMSocketPath(phpVersion, poolName)
 	var body bytes.Buffer
-	if err := pm.tmpl.Execute(&body, PoolData{SiteID: siteID, Username: username, Socket: socket}); err != nil {
+	if err := pm.tmpl.Execute(&body, PoolData{SiteID: siteID, Username: username, Socket: socket, WebServer: phpWebServerAccount()}); err != nil {
 		return "", fmt.Errorf("render PHP pool %s: %w", poolName, err)
 	}
 	if err := createManagedConfig(path, body.Bytes(), 0o644,

@@ -1,0 +1,26 @@
+{
+  "checks": {
+    "checks": 18,
+    "error": null,
+    "failed": [
+      "domain-database-postgresql (i): three arrivals in a row of one identity left one native effect",
+      "domain-database-postgresql (ii): three arrivals at once of one identity left one native effect"
+    ],
+    "finished_at": "2026-10-09T03:44:42Z",
+    "notes": [],
+    "started_at": "2026-10-09T03:44:33Z",
+    "substeps": {
+      "domain-database-mariadb": "passed",
+      "domain-database-postgresql": "failed",
+      "section": "passed"
+    },
+    "title": "a domain's database (MariaDB and PostgreSQL)",
+    "unknown": [],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-09T03:44:42Z",
+  "name": "C1-domain-databases",
+  "reason": "domain-database-postgresql (i): three arrivals in a row of one identity left one native effect; domain-database-postgresql (ii): three arrivals at once of one identity left one native effect",
+  "started_at": "2026-10-09T03:44:33Z",
+  "verdict": "failed"
+}

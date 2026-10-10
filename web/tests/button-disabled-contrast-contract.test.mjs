@@ -68,33 +68,90 @@ function palettes() {
 // control whose whole job in a refusal is to name the action being refused. The
 // pairing it now uses has to clear AA in every palette the product ships,
 // because a refusal an operator cannot read explains nothing.
-test('a disabled primary button is legible in every palette the product ships', () => {
+//
+// 9 Oct 2026: the recessed fill that replaced the wash was legible, and in the
+// dark theme it was also a navy block with a light label - a disabled primary
+// looked more like a button to press than the enabled one beside it. A control
+// that cannot be used has no fill now, so its label stands on whatever the
+// button stands on. The label therefore has to clear AA on every one of those
+// surfaces (before: on surface-2 only). The dashed outline that says "not
+// available" is drawn in the label's own colour (border-current), so the same
+// measurement covers it: the border token of the imitation skins is as low as
+// 1.1:1 on their dark surfaces and would have left a label with no outline.
+const standsOn = ['bg', 'surface', 'surface-2', 'surface-subtle'];
+
+test('a disabled button label is legible on every surface a button stands on, in every palette', () => {
   for (const palette of palettes()) {
     const fg = palette.tokens['fg-muted'];
-    const bg = palette.tokens['surface-2'];
-    assert.ok(fg && bg, `${palette.name} must resolve fg-muted and surface-2`);
-    const ratio = contrast(fg, bg);
-    assert.ok(
-      ratio >= 4.5,
-      `${palette.name}: disabled primary label is ${ratio.toFixed(2)}:1, want at least 4.5:1`,
-    );
+    assert.ok(fg, `${palette.name} must resolve fg-muted`);
+    for (const surface of standsOn) {
+      const bg = palette.tokens[surface];
+      assert.ok(bg, `${palette.name} must resolve ${surface}`);
+      const ratio = contrast(fg, bg);
+      assert.ok(
+        ratio >= 4.5,
+        `${palette.name}: disabled label on ${surface} is ${ratio.toFixed(2)}:1, want at least 4.5:1`,
+      );
+    }
   }
 });
 
-// The disabled treatment is a token pairing on the base, not a wash over each
+// A working button is the one place the recessed fill remains: it is busy, not
+// unavailable. Its label stands on surface-2, as every disabled label did before.
+test('a working button label is legible on its recessed fill in every palette', () => {
+  for (const palette of palettes()) {
+    const ratio = contrast(palette.tokens['fg-muted'], palette.tokens['surface-2']);
+    assert.ok(ratio >= 4.5, `${palette.name}: working label is ${ratio.toFixed(2)}:1, want at least 4.5:1`);
+  }
+});
+
+// What makes an enabled primary and a disabled one two different things is the
+// fill: the enabled one is a block of the primary colour, the disabled one has
+// none and shows the surface it stands on. That difference is only real if the
+// primary colour itself can be told from that surface. Measured, not assumed:
+// in the product's own light and dark themes the fill clears the 3:1 floor for
+// a graphic that carries meaning (WCAG 1.4.11) on every surface a button
+// stands on (lowest measured 9 Oct 2026: 7.8:1, dark, on surface-2). The
+// imitation skins bring their own primary; the lowest is 2.87:1 (aapanel,
+// light, on surface-2), so they are held to "no closer than today" - there the
+// dashed outline, pinned below, is what carries the difference.
+test('an enabled primary fill can be told from the unfilled disabled button, on every surface, in every palette', () => {
+  for (const palette of palettes()) {
+    const fill = palette.tokens.primary;
+    assert.ok(fill, `${palette.name} must resolve primary`);
+    const own = palette.name === 'light' || palette.name === 'dark';
+    for (const surface of standsOn) {
+      const ratio = contrast(fill, palette.tokens[surface]);
+      const floor = own ? 3 : 2.8;
+      assert.ok(
+        ratio >= floor,
+        `${palette.name}: the enabled primary fill is ${ratio.toFixed(2)}:1 against ${surface}, want at least ${floor}:1 - `
+        + 'otherwise a filled and an unfilled button look alike',
+      );
+    }
+  }
+});
+
+// The disabled treatment is one rule on the base, not a wash over each
 // variant's own skin. One rule, so no variant can drift back to an unreadable
 // disabled state, and pointer events are off so no variant's hover colour can
 // repaint a control that does nothing.
-test('the disabled state is one recessed rule, not a wash over three skins', () => {
+test('the disabled state is one rule by shape and colour, not a wash over three skins', () => {
   const styles = ui.slice(ui.indexOf('const styles = {'), ui.indexOf('}[variant]'));
   assert.doesNotMatch(styles, /disabled:/,
     'a variant that owns its own disabled skin is a variant that can drift');
 
+  const off = ui.slice(ui.indexOf('const off = loading'), ui.indexOf('return (', ui.indexOf('const off = loading')));
+  assert.match(off, /loading\s*\?\s*'disabled:border-transparent disabled:bg-surface-2'\s*:\s*'disabled:border-dashed disabled:border-current disabled:bg-transparent'/,
+    'unavailable has no fill and a dashed outline in the label colour; only a working button keeps the recessed fill');
+
   const base = ui.slice(ui.indexOf('inline-flex items-center gap-1.5'), ui.indexOf('${styles}'));
-  assert.match(base, /disabled:bg-surface-2/);
   assert.match(base, /disabled:text-fg-muted/);
   assert.match(base, /disabled:pointer-events-none/,
     'a disabled fill must not light up under the cursor');
+  assert.match(base, /\$\{off\}/, 'the shape rule is applied to every variant');
   assert.doesNotMatch(base, /disabled:opacity-50/,
     'the wash is what put a disabled label below AA against its own fill');
+  assert.doesNotMatch(base, /disabled:bg-surface-2/,
+    'a fill on an unavailable control is what read as a call to action in the dark theme');
 });

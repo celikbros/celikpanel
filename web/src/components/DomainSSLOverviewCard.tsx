@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import {
     AlertTriangle,
     ArrowRight,
@@ -10,7 +10,8 @@ import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
 import { sslTier, sslTierLabel, type SSLTier } from '../lib/sslTier';
 import { Button } from './ui';
-import type { SSLRuntimeSummary } from './DomainSSLSettings';
+import { lastKnown, useRemote } from '../lib/remote';
+import { decodeSSLData, type SSLRuntimeSummary } from './DomainSSLSettings';
 
 interface OverviewCertificate {
     issuer: string;
@@ -58,42 +59,31 @@ export function DomainSSLOverviewCard({
     onOpen: () => void;
     onCertificateChange?: (status: SSLRuntimeSummary) => void;
 }) {
-    const { t } = useI18n();
-    const [data, setData] = useState<OverviewSSLData | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [failed, setFailed] = useState(false);
+    const { t, locale } = useI18n();
+    // The same address and the same decoder as the SSL/TLS tab, so the card
+    // and the tab can never disagree about what the answer means. The card
+    // keeps one shape in its three states: checking, could not check (with the
+    // read again), and the certificate the server described. After a read that
+    // failed, an earlier answer stays, marked with the time it was read.
+    // SSL/TLS sekmesiyle aynı adres ve aynı çözücü. Kart üç durumunda da tek
+    // biçimdedir: kontrol ediliyor, kontrol edilemedi (yeniden okumayla) ve
+    // sunucunun tarif ettiği sertifika. Başarısız okumadan sonra önceki yanıt,
+    // okunduğu saatle işaretlenerek kalır.
+    const ssl = useRemote(`/api/v1/domains/${domainId}/ssl`, decodeSSLData);
+    const shown = lastKnown(ssl.remote);
+    const data: OverviewSSLData | null = shown ? shown.value : null;
+    const loading = ssl.remote.state === 'loading';
+    const failed = ssl.remote.state === 'unknown' && !shown;
+    const stale = ssl.remote.state === 'unknown' && shown !== undefined;
 
+    const known = ssl.remote.state === 'known' ? ssl.remote.value : null;
     useEffect(() => {
-        const controller = new AbortController();
-        setLoading(true);
-        setFailed(false);
-
-        fetch(`/api/v1/domains/${domainId}/ssl`, {
-            cache: 'no-store',
-            signal: controller.signal,
-        })
-            .then((response) => {
-                if (!response.ok) throw new Error();
-                return response.json();
-            })
-            .then((result: OverviewSSLData) => {
-                setData(result);
-                onCertificateChange?.({
-                    activated: result.certificate?.activated === true,
-                    usable: result.certificate?.usable === true,
-                });
-            })
-            .catch((error: unknown) => {
-                if (error instanceof DOMException && error.name === 'AbortError') return;
-                setData(null);
-                setFailed(true);
-            })
-            .finally(() => {
-                if (!controller.signal.aborted) setLoading(false);
-            });
-
-        return () => controller.abort();
-    }, [domainId, onCertificateChange]);
+        if (!known) return;
+        onCertificateChange?.({
+            activated: known.certificate?.activated === true,
+            usable: known.certificate?.usable === true,
+        });
+    }, [known, onCertificateChange]);
 
     const cert = data?.certificate;
     const certificateTier = sslTier(data?.has_certificate ? cert : undefined);
@@ -157,18 +147,36 @@ export function DomainSSLOverviewCard({
                     <p className={`mt-0.5 text-sm font-medium ${tier.color}`} aria-live="polite">
                         {t(tier.label)}
                     </p>
-                    <p className="mt-1 text-xs leading-relaxed text-fg-muted">{detail}</p>
+                    {/* Two lines of room on a phone, where the usual answers
+                        take two: the card under this one does not move when
+                        the answer arrives.
+                        Telefonda iki satırlık yer; yanıt gelince alttaki kart
+                        oynamaz. */}
+                    <p className="mt-1 min-h-[2.5rem] text-xs leading-relaxed text-fg-muted sm:min-h-0">{detail}</p>
+                    {stale && shown && (
+                        <p className="mt-1 text-xs leading-relaxed text-fg">
+                            {t('domain.overview.ssl.stale', {
+                                time: new Date(shown.observedAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
+                            })}
+                        </p>
+                    )}
                 </div>
             </div>
-            <Button
-                type="button"
-                variant={!loading && !failed && (!hasCertificate || !cert?.usable) ? 'primary' : 'secondary'}
-                icon={ArrowRight}
-                onClick={onOpen}
-                className="shrink-0 self-start sm:self-center"
-            >
-                {t('domain.overview.ssl.open')}
-            </Button>
+            <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
+                {ssl.remote.state === 'unknown' && (
+                    <Button type="button" loading={ssl.reading} onClick={() => void ssl.retry()}>
+                        {t('common.retry')}
+                    </Button>
+                )}
+                <Button
+                    type="button"
+                    variant={ssl.remote.state === 'known' && (!hasCertificate || !cert?.usable) ? 'primary' : 'secondary'}
+                    icon={ArrowRight}
+                    onClick={onOpen}
+                >
+                    {t('domain.overview.ssl.open')}
+                </Button>
+            </div>
         </section>
     );
 }

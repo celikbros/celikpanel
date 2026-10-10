@@ -46,15 +46,17 @@ func TestMailHostConfigurationObservationRefusesDriftWithoutMutation(t *testing.
 						return []byte("private-output"), errors.New("credential")
 					}
 					if args[1] == "tls_server_sni_maps" {
+						// As postconf prints them: one line per value, an
+						// empty line for a setting that is not set.
 						if scenario == "sni-drift" {
-							return []byte("hash:/owner/map"), nil
+							return []byte("hash:/owner/map\n"), nil
 						}
-						return nil, nil
+						return []byte("\n"), nil
 					}
 					for _, setting := range mailtlsconfig.PostfixSettings(plan.Myhostname, cert, key) {
 						if setting[0] == args[1] {
 							if scenario == "postfix-drift" && args[1] == "smtpd_tls_security_level" {
-								return []byte("encrypt"), nil
+								return []byte("encrypt\n"), nil
 							}
 							return []byte(setting[1] + "\n"), nil
 						}

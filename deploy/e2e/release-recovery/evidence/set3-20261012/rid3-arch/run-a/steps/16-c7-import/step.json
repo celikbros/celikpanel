@@ -1,0 +1,32 @@
+{
+  "checks": {
+    "checks": 20,
+    "error": null,
+    "failed": [
+      "P4: an archive that holds the directory member `homedir/public_html/` as tar writes it imports completely (200, active; the document root's files equal the archive's)",
+      "import (i): three arrivals in a row of one identity left one native effect",
+      "import (ii): three arrivals at once of one identity left one native effect",
+      "import (v): the request was still running when the connection was dropped",
+      "import (v): the server finished the import after the client was gone (row done; the whole site is there)"
+    ],
+    "finished_at": "2026-10-09T07:30:55Z",
+    "notes": [
+      "no sample cPanel archive exists in the repository, so the lab built a minimal one from the rules of the import parser (cmd/agent/cpmove_rpc.go): account file, public_html, one mailbox, one forwarder, one database dump; the dropped import's dump ends with DO SLEEP so that the import lasts long enough to drop. set3: every archive holds the directory member `homedir/public_html/` as tar writes it (the import now takes it, P4), and the mailbox's shadow entry is the sha512-crypt hash of a password the lab knows"
+    ],
+    "started_at": "2026-10-09T07:30:32Z",
+    "substeps": {
+      "P4": "failed",
+      "S1": "passed",
+      "import": "failed",
+      "section": "passed"
+    },
+    "title": "cPanel import",
+    "unknown": [],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-09T07:30:55Z",
+  "name": "C7-import",
+  "reason": "P4: an archive that holds the directory member `homedir/public_html/` as tar writes it imports completely (200, active; the document root's files equal the archive's); import (i): three arrivals in a row of one identity left one native effect; import (ii): three arrivals at once of one identity left one native effect; import (v): the request was still running when the connection was dropped; import (v): the server finished the import after the client was gone (row done; the whole site is there)",
+  "started_at": "2026-10-09T07:30:32Z",
+  "verdict": "failed"
+}

@@ -1,0 +1,84 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "mail policy save: the change without a version (an old page)",
+  "request": {
+    "body": {
+      "dnsbl_zones": [],
+      "message_size_mb": 9,
+      "outbound_rate_limit": 37
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18551"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18551"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "ce27d5d13bc63852e3c62cbf5079e325"
+      ]
+    ],
+    "method": "PUT",
+    "path": "/api/v1/mail/policy"
+  },
+  "response": {
+    "elapsed_seconds": 0.003,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 11:47:44 GMT"
+      ],
+      [
+        "Content-Length",
+        "231"
+      ]
+    ],
+    "json": {
+      "code": "SETTINGS_VERSION_REQUIRED",
+      "error": "This request did not say which settings it was built from, so nothing was changed. Reload the page so it reads the current settings, then make the change again.",
+      "reason": "mail_policy"
+    },
+    "status": 409,
+    "text": null
+  }
+}

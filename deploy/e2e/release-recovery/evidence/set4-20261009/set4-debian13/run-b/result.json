@@ -1,0 +1,336 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+      "sha256": "d2fcf5c98c194c36bec9dd0fe2442eecb6390ba3824842f879a77f9b5debebc5",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "cell": {
+    "components": [
+      "nginx",
+      "php-fpm",
+      "mariadb",
+      "postfix",
+      "dovecot",
+      "roundcube",
+      "rspamd",
+      "postgresql"
+    ],
+    "mail": true,
+    "name": "set4-debian13",
+    "node": "debian13",
+    "purpose": "web_mail"
+  },
+  "cell_kind": "set4-final-round",
+  "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['12-panel_certificate', '13-access_dns', '14-mail_certificate', '15-mail_enrollment', '16-verify']"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__231bdaa04e7ac02a",
+    "node": "debian13",
+    "vm_uuid": "f05048bf-545e-57e9-8e74-bfbf8640a8c0"
+  },
+  "native_evidence": false,
+  "note": "set4: observations for the owner's review; no update is started and no P0 row is judged.",
+  "outcome": {
+    "classification": "set4-measured",
+    "final_status": null
+  },
+  "overall": "complete-for-review",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "sections": {
+    "M0-prepare": {
+      "checks": 5,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T12:52:06Z",
+      "notes": [],
+      "started_at": "2026-10-09T12:52:04Z",
+      "substeps": {
+        "item 7": "passed",
+        "lab isolation": "passed",
+        "section": "passed"
+      },
+      "title": "the platform, the lab's isolation, the nginx package's PHP snippet (item 7)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "M1-php-site": {
+      "checks": 12,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T12:52:14Z",
+      "notes": [
+        "php-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 200",
+        "php-site: the certificate-validation directory of the deleted site is still there"
+      ],
+      "started_at": "2026-10-09T12:52:06Z",
+      "substeps": {
+        "item 1/8": "passed",
+        "php-site": "passed"
+      },
+      "title": "a PHP site: created, nginx -t, executed as the site's account, PATH_INFO, a missing script, the recorded PHP version and socket, deleted (items 1, 3, 8)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "M10-postfix-stop": {
+      "checks": 11,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T12:53:06Z",
+      "notes": [],
+      "started_at": "2026-10-09T12:52:39Z",
+      "substeps": {
+        "S8 postfix start": "passed",
+        "S8 postfix stop": "passed",
+        "item 10": "passed"
+      },
+      "title": "Postfix stopped through the Panel while `postfix check` refuses main.cf (item 10)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "M2-import": {
+      "checks": 14,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T12:52:34Z",
+      "notes": [
+        "imported-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 404"
+      ],
+      "started_at": "2026-10-09T12:52:28Z",
+      "substeps": {
+        "S1": "passed",
+        "imported-site": "passed",
+        "item 2": "passed",
+        "item 5": "passed",
+        "section": "passed"
+      },
+      "title": "the cPanel-archive import of set3's fixture; the imported site served (items 2, 3)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "M4-reload-stopped": {
+      "checks": 21,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T12:53:48Z",
+      "notes": [],
+      "started_at": "2026-10-09T12:53:06Z",
+      "substeps": {
+        "S8 mariadb reload": "passed",
+        "S8 mariadb start": "passed",
+        "S8 mariadb stop": "passed",
+        "S8 nginx reload": "passed",
+        "S8 nginx start": "passed",
+        "S8 nginx stop": "passed",
+        "S8 postgresql reload": "passed",
+        "S8 postgresql start": "passed",
+        "S8 postgresql stop": "passed",
+        "item 4": "passed"
+      },
+      "title": "Reload of a stopped nginx, MariaDB and PostgreSQL (item 4)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "M5-import-absolute": {
+      "checks": 10,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T12:52:39Z",
+      "notes": [],
+      "started_at": "2026-10-09T12:52:34Z",
+      "substeps": {
+        "S1": "passed",
+        "item 5": "passed",
+        "section": "passed"
+      },
+      "title": "an archive with a member named by an absolute path (item 5)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "M6-site-refused": {
+      "checks": 13,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T12:52:28Z",
+      "notes": [
+        "item 6 (owner-moved-file): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it",
+        "refused-again: the certificate-validation directory of the deleted site is still there",
+        "item 6 (long-site-name): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it"
+      ],
+      "started_at": "2026-10-09T12:52:14Z",
+      "substeps": {
+        "item 6": "passed",
+        "refused-again": "passed"
+      },
+      "title": "a new site whose configuration the web server refuses (item 6)",
+      "unknown": [],
+      "verdict": "passed"
+    }
+  },
+  "setup": {
+    "components": [
+      "dovecot",
+      "mariadb",
+      "nginx",
+      "php-fpm",
+      "postfix",
+      "postgresql",
+      "roundcube",
+      "rspamd"
+    ],
+    "purpose": "web_mail",
+    "waiting": {
+      "code": "server_setup_access_dns_required",
+      "mail_steps_reached": true,
+      "not_run": [
+        "12-panel_certificate",
+        "13-access_dns",
+        "14-mail_certificate",
+        "15-mail_enrollment",
+        "16-verify"
+      ],
+      "phase": "access_dns",
+      "polls": 25,
+      "stable_wait_seconds": 122.4,
+      "steps": {
+        "01-dns": "succeeded",
+        "02-service": "succeeded",
+        "03-service": "succeeded",
+        "04-service": "succeeded",
+        "05-service": "succeeded",
+        "06-mail_profile": "succeeded",
+        "07-mail_profile": "succeeded",
+        "08-service": "succeeded",
+        "09-service": "succeeded",
+        "10-firewall": "succeeded",
+        "11-access_dns": "running",
+        "12-panel_certificate": "pending",
+        "13-access_dns": "pending",
+        "14-mail_certificate": "pending",
+        "15-mail_enrollment": "pending",
+        "16-verify": "pending"
+      }
+    }
+  },
+  "site": {
+    "domain_id": 1,
+    "mailbox": "owner@set1-owner.test",
+    "site_user": "set1_owner_test",
+    "subscription_id": 2
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-09T12:44:31Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-09T12:44:28Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T12:44:39Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-09T12:44:31Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T12:45:13Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-09T12:44:39Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T12:45:14Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-09T12:45:13Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T12:45:14Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-09T12:45:14Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T12:52:02Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-09T12:45:14Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-09T12:52:04Z",
+      "name": "site",
+      "reason": null,
+      "started_at": "2026-10-09T12:52:02Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T12:52:06Z",
+      "name": "M0-prepare",
+      "reason": null,
+      "started_at": "2026-10-09T12:52:04Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T12:52:14Z",
+      "name": "M1-php-site",
+      "reason": null,
+      "started_at": "2026-10-09T12:52:06Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T12:52:28Z",
+      "name": "M6-site-refused",
+      "reason": null,
+      "started_at": "2026-10-09T12:52:14Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T12:52:34Z",
+      "name": "M2-import",
+      "reason": null,
+      "started_at": "2026-10-09T12:52:28Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T12:52:39Z",
+      "name": "M5-import-absolute",
+      "reason": null,
+      "started_at": "2026-10-09T12:52:34Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T12:53:06Z",
+      "name": "M10-postfix-stop",
+      "reason": null,
+      "started_at": "2026-10-09T12:52:39Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T12:53:48Z",
+      "name": "M4-reload-stopped",
+      "reason": null,
+      "started_at": "2026-10-09T12:53:06Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T12:53:49Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-09T12:53:48Z",
+      "verdict": "passed"
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "login (Login.tsx)",
+  "request": {
+    "body": {
+      "password": "[REDACTED]",
+      "username": "labadmin"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18451"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18451"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "01508f73c3ce6fb271f1d5855f1f47a1"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/auth/login"
+  },
+  "response": {
+    "elapsed_seconds": 0.225,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Set-Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 03:29:27 GMT"
+      ],
+      [
+        "Content-Length",
+        "180"
+      ]
+    ],
+    "json": {
+      "account_type": "account",
+      "effective_role": "admin",
+      "email": "labadmin@example.invalid",
+      "features": {
+        "team_members": false
+      },
+      "impersonating": false,
+      "role": "admin",
+      "username": "labadmin"
+    },
+    "status": 200,
+    "text": null
+  }
+}

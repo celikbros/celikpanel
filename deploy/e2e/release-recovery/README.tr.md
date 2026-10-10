@@ -37,6 +37,21 @@ Rapor kanıt sınırlarını da korur: ilk Debian denemesinde `dig` yoktu, canl�
 karşılaştırmasını engelledi; TLS edinimi/yenilemesi ve gerçek DNS eş sunucu
 aktarımı test edilmedi. Diğer bağımsız iş yükleri de henüz ölçülmedi.
 
+### Üç kanıt dizininin adı tarih değil, tur etiketi taşır
+
+`evidence/set1-20261010`, `evidence/set2-20261011` ve `evidence/set3-20261012`, saatten
+okunmadan her iş turunda bir artırılan etiketlerle adlandırıldı; yazıldıkları sırada 10, 11
+ve 12 Ekim 2026 günleri henüz gelmemişti. Çalışmalar her dizinin içindeki ham zaman
+damgalarına göre 2026-10-08 21:18-22:15 UTC (set1), 2026-10-09 03:29-04:49 UTC (set2) ve
+2026-10-09 07:00-08:46 UTC (set3) aralıklarında gerçekleşti; depoya 2026-10-09'da
+işlendi (`7a64bda91`, `c523bbfd2`, `dd1710256`; yerel saat, UTC+3). Her dizinin kendi
+`README.md` dosyası başlığında gerçek tarihi zaten verir. Adlar değiştirilmedi: içlerindeki
+her dosya mühürlü bir `SHA256SUMS` listesindedir, başka belgeler bu adlara atıf yapar ve
+dizinler turların tanımlayıcısıdır. Etiket eşleşmesi
+[OPERATION-GUIDANCE.tr.md](../../../docs/OPERATION-GUIDANCE.tr.md) başındaki düzeltme
+notundadır. [RESULTS.tr.md](RESULTS.tr.md) 2026-09-14 tarihli dört denemenin kaydıdır ve bu
+dizinleri listelemez.
+
 ## Sınır ve önkoşullar
 
 - [DNS test düzeneğinde](../dns-kill-matrix/README.md) açıklanan bağımlılıkları ve

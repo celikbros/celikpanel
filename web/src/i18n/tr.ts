@@ -11,13 +11,16 @@ export const tr: Record<ShellKey, string> = {
     'recovery.checkingTitle': 'Panel erişimi kontrol ediliyor',
     'recovery.checkingHelp': 'Oturumunuz ve panelin hazır olma durumu doğrulanıyor. Bu kontrol sunucuda bir işlem başlatmaz.',
     'recovery.authTitle': "Oturumunuz kontrol edilemedi",
-    'recovery.authHelp': "CelikPanel şu anda oturumunuzu doğrulayamıyor. Bağlantı kullanılabilir olduğunda tekrar kontrol edin. Oturumunuz ve panel erişimi doğrulanana kadar yönetim kapalı kalır.",
+    'recovery.authHelp': "CelikPanel şu anda oturumunuzu doğrulayamıyor. Bu sayfa kendiliğinden yeniden kontrol eder; dilerseniz şimdi de kontrol edebilirsiniz. Oturumunuz ve panel erişimi doğrulanana kadar yönetim kapalı kalır.",
     'recovery.startingTitle': "Panel başlatılıyor",
-    'recovery.startingHelp': "Sunucu panel erişimini hazırlıyor. Bu sayfa hazır olma durumunu otomatik kontrol eder. Güncellemenizin kaydedilmiş son sonucunu aşağıda inceleyebilirsiniz.",
+    'recovery.startingHelp': "Sunucu panel erişimini hazırlıyor. Bu sayfa hazır olma durumunu otomatik kontrol eder.",
     'recovery.availabilityTitle': "Panelin hazır olma durumu kontrol edilemedi",
-    'recovery.availabilityHelp': "Oturumunuz doğrulandı ancak panelin hazır olup olmadığı bilinmiyor. Tekrar kontrol edin veya sayfayı yenileyin. Yönetim, sunucu hazır olduğunu ve erişimi doğruladıktan sonra açılır.",
+    'recovery.availabilityHelp': "Oturumunuz doğrulandı ancak panelin hazır olup olmadığı bilinmiyor. Bu sayfa kendiliğinden yeniden kontrol eder ve sunucu hazır olduğunu ve erişimi doğruladığında açılır. Dilerseniz şimdi kontrol edebilir veya sayfayı yenileyebilirsiniz.",
+    'recovery.handoverTitle': "Panel kurulum sırasında bir kez yeniden başlar",
+    'recovery.handoverHelp': "Kurulum {host} için panel erişimini güvenceye aldı; panel yeni sertifikasını kullanmaya başlamak için bir kez yeniden başlar. Kurulum sunucuda devam eder. Bu sayfa kendiliğinden kontrol eder ve panel hazır olduğunda açılır; sizin bir şey yapmanız gerekmez.",
+    'recovery.handoverAddress': "Dilerseniz panelin güvenli adresinden de devam edebilirsiniz:",
     'recovery.licenseTitle': "Lisans durumu kontrol edilemedi",
-    'recovery.licenseHelp': "Lisans sonucu alınamıyor. Bu, lisansınızın eksik veya süresi dolmuş olduğunu göstermez. Doğrulama kullanılabilir olduğunda tekrar kontrol edin; yönetimin açılması için sunucunun erişimi doğrulaması gerekir.",
+    'recovery.licenseHelp': "Lisans sonucu alınamıyor. Bu, lisansınızın eksik veya süresi dolmuş olduğunu göstermez. Bu sayfa kendiliğinden yeniden kontrol eder; sunucu erişimi doğruladığında yönetim açılır. Dilerseniz şimdi de kontrol edebilirsiniz.",
     'recovery.bundleTitle': "Panel arayüzü yüklenemedi",
     'recovery.bundleHelp': "Güncel arayüzü yüklemek için CelikPanel’i yeniden yükleyin. İşlem kimliğiniz korunur. Bu kurtarma görünümü aynı işlemi yeniden başlatmadan okuyabilir.",
     'recovery.retry': "Panel erişimini kontrol et",
@@ -192,7 +195,11 @@ export const tr: Record<ShellKey, string> = {
     // 2026). Temel cümle reddedilen değişikliği, .read listeyi yanıtlar.
     'err.CRON_NOT_INSTALLED': 'Zamanlanmış görevler bu sunucunun cron hizmetini gerektirir ve cron kurulu değil; bu yüzden hiçbir şey değiştirilmedi. Cron’u sunucu sahibi bir kez kurar: CelikPanel’de Bileşenler sayfasını açar ve “Scheduled tasks (cron)” satırını kurar. Ya da sunucuda Debian/Ubuntu’da sudo apt-get install cron, Arch’ta sudo pacman -S cronie ve ardından sudo systemctl enable --now cronie komutlarını çalıştırır. Sonra bu sayfayı yenileyip değişikliği yeniden yapın; hiçbir şey kendiliğinden yeniden denenmez.',
     'err.CRON_NOT_INSTALLED.read': 'Zamanlanmış görevler gösterilemiyor, çünkü bu sunucunun cron hizmeti kurulu değil; cron kurulana kadar hiçbir zamanlanmış görev çalışmaz. Cron’u sunucu sahibi bir kez kurar: CelikPanel’de Bileşenler sayfasını açar ve “Scheduled tasks (cron)” satırını kurar. Ya da sunucuda Debian/Ubuntu’da sudo apt-get install cron, Arch’ta sudo pacman -S cronie ve ardından sudo systemctl enable --now cronie komutlarını çalıştırır. Sonra bu sayfayı yenileyin.',
-    'err.NATIVE_CRON_REMOVAL_REFUSED': 'CelikPanel bu sunucunun cron hizmetini kaldırmaz: panel dışında oluşturulanlar dahil sunucudaki her zamanlanmış görevi o çalıştırır. Hiçbir şey değiştirilmedi. Kaldırmak gerçekten isteniyorsa bunu sunucu sahibi işletim sisteminin paket yöneticisiyle yapar.',
+    'err.CURRENT_SETTINGS_UNREADABLE': 'CelikPanel sunucuda şu an neyin ayarlı olduğunu okuyamadı; bu yüzden hiçbir şey değiştirilmedi. Sayfayı yenileyip tekrar deneyin.',
+    'err.CRON_JOB_DUPLICATE': 'Aynı zamanlama ve komutla bir görev zaten var; bu yüzden hiçbir şey eklenmedi. Var olan görevi değiştirin ya da devre dışıysa etkinleştirin.',
+    'err.MAIL_POLICY_INVALID': 'Hiçbir şey kaydedilmedi: bir posta politikası değeri CelikPanel’in ayarladığı aralığın dışında. Düzeltip yeniden kaydedin.',
+    'err.MAIL_POLICY_INVALID.dnsbl_zone': 'Hiçbir şey kaydedilmedi: DNSBL bölgesi zen.spamhaus.org gibi düz bir alan adı olmalı ve bölgeler virgülle ayrılmalıdır. Bölgeleri düzeltip yeniden kaydedin.',
+    'err.NATIVE_CRON_REMOVAL_REFUSED':'CelikPanel bu sunucunun cron hizmetini kaldırmaz: panel dışında oluşturulanlar dahil sunucudaki her zamanlanmış görevi o çalıştırır. Hiçbir şey değiştirilmedi. Kaldırmak gerçekten isteniyorsa bunu sunucu sahibi işletim sisteminin paket yöneticisiyle yapar.',
     // Barındırma kökünün üstünde, CelikPanel'in oluşturmadığı bir dizin web
     // sunucusunu ya da site kullanıcılarını engelliyor (yerel bulgu P3).
     'err.HOSTING_ROOT_NOT_TRAVERSABLE': 'Site oluşturulmadı ve hiçbir şey değiştirilmedi. {directory} dizini (kip {mode}, sahip {owner}) web sunucusunun ya da site kullanıcılarının /var/www/celikpanel dizinine geçmesine izin vermiyor; orada bir site “bulunamadı” gösterir ve zamanlanmış görevleri çalışmaz. CelikPanel kendi oluşturmadığı dizinleri değiştirmez. Karar sunucu sahibinindir: geçişe izin vermek için sunucuda {command} komutunu çalıştırın. Sonra siteyi yeniden oluşturun; hiçbir şey kendiliğinden yeniden denenmez.',
@@ -235,7 +242,14 @@ export const tr: Record<ShellKey, string> = {
     'common.agentMismatch': 'agent uyuşmuyor',
     'common.agentMismatchHint': 'Arka plan servisi panelden farklı bir yapı ({commit}) koşuyor. İki taraf eşleşsin diye güncellemeyi yeniden çalıştırın — o zamana dek neye izin verildiği konusunda ayrışabilirler.',
     'common.retry': 'Tekrar dene',
+    'common.staleNotice': 'Bu, az önce sunucudan yeniden okunamadı; aşağıda gösterilen, saat {time} itibarıyla olan hâlidir. Hiçbir şey değiştirilmedi. Bir şeyi kaldıran ya da değiştiren denetimler, yeniden okunana dek kapalıdır.',
+    'common.resultUnknown': 'Yanıt gelmeden bağlantı koptu; bu yüzden değişikliğin yapılıp yapılmadığı bilinmiyor. Hiçbir şey ikinci kez gönderilmez. Gösterilen yeniden okunuyor; işlemi yinelemeden önce ona bakın.',
     'common.cancel': 'İptal',
+    'common.resultUnknownRead': 'Yanıt gelmeden bağlantı koptu; bu yüzden değişikliğin yapılıp yapılmadığı bilinmiyor. Hiçbir şey ikinci kez gönderilmedi. Burada gösterilen, saat {time} itibarıyla yeniden okundu: işlemi yinelemeden önce ona bakın.',
+    'common.resultUnknownMade': 'Yanıt gelmeden bağlantı koptu ve hiçbir şey ikinci kez gönderilmedi. Saat {time} itibarıyla yeniden okunan durum değişikliği gösteriyor; yani kaydedildi. Hiçbir şeyin yeniden gönderilmesi gerekmiyor.',
+    'common.resultUnknownNotMade': 'Yanıt gelmeden bağlantı koptu ve hiçbir şey ikinci kez gönderilmedi. Saat {time} itibarıyla yeniden okunan durum değişikliği göstermiyor; bu yüzden kaydedildiği bilinmiyor. Girdikleriniz hâlâ burada. Bağlantı koptuğunda sunucu hâlâ çalışıyorduysa değişiklik sonradan görünebilir: ikinci kez göndermeden önce tekrar kontrol edin.',
+    'common.resultUnknownUnread': 'Yanıt gelmeden bağlantı koptu; bu yüzden değişikliğin yapılıp yapılmadığı bilinmiyor. Hiçbir şey ikinci kez gönderilmedi. Güncel durum da yeniden okunamadı; bu yüzden bir şeyi değiştiren ya da kaldıran denetimler kapalı kalıyor. Tekrar kontrol edin.',
+    'common.checkAgain': 'Tekrar kontrol et',
     'common.close': 'Kapat',
     'common.back': 'Geri',
     'common.itemsTotal': 'Toplam {n} öğe',
@@ -364,4 +378,50 @@ export const tr: Record<ShellKey, string> = {
     'panelUpdate.outcome.preflightStep.generic': "Neden: salt-okur bir denetim mevcut kurulumu doğrulayamadı.",
     'panelUpdate.outcome.stoppedNext': "Sunucunun aşağıdaki iletisi bu sunucudaki bir durumu (örneğin hâlâ süren başka bir işlemi ya da meşgul paket yöneticisini) belirtmiyorsa sunucuda yapmanız gereken bir şey yok; belirtiyorsa önce bitmesini bekleyin ya da sorunu giderin.",
     'panelUpdate.outcome.stoppedResume': "Hiçbir işlem kendiliğinden sürmez. {target} güncellemesini yeniden başlatmak güvenlidir.",
+    // --- batch 2b (9 Oct 2026): database and mail configuration screens: checking,
+    // could not be read, known; saves that carry the version of what was read ---
+    'err.MAIL_POLICY_NOT_RELOADED': "Posta politikası /etc/postfix/main.cf dosyasına kaydedildi ancak Postfix yeniden yüklenemedi; bu yüzden Postfix hâlâ önceki ayarlarla çalışıyor. Hiçbir şey geri alınmadı. Sunucuda sudo postfix check komutuyla Postfix’in neye itiraz ettiğini görün, düzeltin, sonra sudo systemctl reload postfix komutunu çalıştırın. Aşağıda gösterilen değerler kaydedilen değerlerdir.",
+    'err.CRON_JOB_AMBIGUOUS': "Bu görev crontab’da iki kez duruyor; bu yüzden CelikPanel hangi satırı değiştireceğini bilemedi ve hiçbir şeyi değiştirmedi. Sunucuda iki satırdan birini kaldırın (sudo crontab -u <site kullanıcısı> -e), sonra bu listeyi yeniden yükleyin.",
+    // --- end of batch 2b ---
+    // --- set1 corrections (10 Oct 2026): a reload is verified, never inferred; no cause is
+    // named that was not verified; what the server holds after a failed reload ---
+    'err.MAIL_POLICY_NOT_RELOADED.check': "/etc/postfix/main.cf dosyasına kaydedildi ancak Postfix yeniden yüklenmedi: Postfix’in kendi denetimi yapılandırmayı reddediyor. Çalışan bir Postfix önceki ayarlarını korur; bu yüzden kaydedilen değerler yürürlükte değil. Adını verdiği satır aşağıda; bu sayfanın yazmadığı bir satır olabilir. Hiçbir şey geri alınmadı. Sunucuda o satırı düzeltin, hata yazmayana kadar sudo postfix check komutunu çalıştırın, sonra sudo postfix reload komutunu çalıştırın. Aşağıda gösterilen değerler kaydedilen değerlerdir.",
+    'err.MAIL_POLICY_NOT_RELOADED.reload': "/etc/postfix/main.cf dosyasına kaydedildi ve Postfix’in kendi denetimi dosyayı kabul ediyor, ancak yeniden yükleme başarısız oldu; bu yüzden Postfix kaydedilen değerleri almadı. Hiçbir şey geri alınmadı. Sunucuda sudo postfix reload komutunu çalıştırın ve yazdığını okuyun. Aşağıda gösterilen değerler kaydedilen değerlerdir.",
+    'err.MAIL_POLICY_NOT_RELOADED.verify': "/etc/postfix/main.cf dosyasına kaydedildi ancak yeniden yüklemeden sonra Postfix artık çalışmıyordu; bu yüzden posta işlemiyor. Hiçbir şey geri alınmadı. Sunucuda sudo postfix check komutunu çalıştırın, Postfix’i başlatın (sudo systemctl start postfix) ve sudo postfix status ile doğrulayın. Aşağıda gösterilen değerler kaydedilen değerlerdir.",
+    'err.MAIL_POLICY_RELOAD_UNKNOWN': "/etc/postfix/main.cf dosyasına kaydedildi ancak CelikPanel, Postfix’in kaydedilen değerleri alıp almadığını belirleyemedi: Postfix’i denetleyen ya da yeniden yükleyen bir komut çalıştırılamadı ya da zamanında yanıt vermedi. Bu doğrulanmış bir hata değildir; Postfix bu değerlerle çalışıyor olabilir. Hiçbir şey geri alınmadı. Sunucuda önce sudo postfix status, sonra sudo postfix reload komutunu çalıştırın. Aşağıda gösterilen değerler kaydedilen değerlerdir.",
+    // --- end of set1 corrections ---
+
+    // Bir değişiklik bir kez gönderilir ve bir kez yanıtlanır (D-029).
+    'err.REQUEST_ID_REQUIRED': 'Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın.',
+    'err.REQUEST_ID_REUSED': 'Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın.',
+    'err.REQUEST_IN_PROGRESS': 'Bu değişiklik sunucuda hâlâ sürüyor. İkinci kez başlatılmadı. Biraz bekleyin, sonra sonucu görmek için sayfayı yeniden yükleyin; değişikliği yeniden göndermeyin.',
+    'err.REQUEST_OUTCOME_UNKNOWN': 'CelikPanel bu değişiklik sürerken yeniden başladı ya da hata verdi; bu yüzden değişikliğin tamamlanıp tamamlanmadığı bilinmiyor. Kendiliğinden yeniden çalıştırılmayacak. Sayfayı yeniden yükleyip mevcut durumu kontrol edin; değişikliği yalnızca eksikse yeniden yapın.',
+    'err.REQUEST_COMPLETED_RESULT_NOT_RETAINED': 'Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun.',
+    'err.REQUEST_COMPLETED_RESULT_NOT_RETAINED.failed': 'Bu değişiklik daha önce hatayla sonuçlandı ve o yanıt saklanmıyor; ikinci kez denenmedi. Sayfayı yeniden yükleyip mevcut durumu kontrol edin; değişikliği yalnızca eksikse yeniden yapın.',
+    'err.BACKUP_RESTORE_IN_PROGRESS': 'Bu alan adının başka bir geri yüklemesi hâlâ sürüyor; bu yüzden bu geri yükleme başlatılmadı ve hiçbir şeyi değiştirmedi. Bitmesini bekleyip siteyi kontrol edin; yalnızca hâlâ gerekiyorsa yeniden geri yükleyin.',
+
+    // Kimlik taşıyan rotadaki, sonucu bilinmeyen değişiklik (D-029): ilk cümle ne
+    // olduğunu, ikincisi yeniden okunan durumun ne gösterdiğini söyler.
+    'common.lostAsked': "Bu değişikliğin yanıtı ulaşmadı; sunucudan aynı yanıt bir kez daha istendiğinde de gelmedi. Bu yüzden değişikliğin yapılıp yapılmadığı bilinmiyor. Yeniden sormak değişikliği asla ikinci kez yapmaz.",
+    'common.lostInterrupted': "CelikPanel bu değişiklik sürerken yeniden başladı ya da hata verdi; bu yüzden değişikliğin tamamlanıp tamamlanmadığı bilinmiyor. Kendiliğinden yeniden çalıştırılmayacak.",
+    'common.lostRunning': "Bu değişiklik sunucuda hâlâ sürüyor; bu yüzden sonucu henüz bilinmiyor. İkinci kez başlatılmadı.",
+    'common.lostStateReading': "Burada gösterilen yeniden okunuyor. Bir şeyi değiştiren ya da kaldıran denetimler, okuma bitene dek kapalı kalır.",
+    'common.lostStateRead': "Burada gösterilen, saat {time} itibarıyla yeniden okundu. Değişikliği yeniden yapmadan önce ona bakın; değişiklik hâlâ sürüyor olabilirse biraz sonra tekrar kontrol edin.",
+    'common.lostStateUnread': "Güncel durum yeniden okunamadı; bu yüzden bir şeyi değiştiren ya da kaldıran denetimler kapalı kalıyor. Tekrar kontrol edin.",
+    'common.lostStateMade': "Bu değişikliğin yanıtı bu sayfaya ulaşmadı; ancak saat {time} itibarıyla yeniden okunan durum değişikliği gösteriyor, yani yapıldı. Hiçbir şeyin yeniden gönderilmesi gerekmiyor.",
+    'common.lostStateNotMade': "Saat {time} itibarıyla yeniden okunan durum değişikliği göstermiyor; bu yüzden yapıldığı bilinmiyor. Girdikleriniz hâlâ burada. Sunucu hâlâ üzerinde çalışıyorsa değişiklik sonradan görünebilir: ikinci kez göndermeden önce tekrar kontrol edin.",
+
+    // Hizmetler sayfasındaki Başlat, Durdur, Yeniden başlat ve Yeniden yükle
+    // (10 Eki 2026). Bilinmeyen sonuç hata değildir.
+    'err.SERVICE_ACTION_FAILED': "{unit} üzerindeki işlem etkili olmadı. Sunucuda {command} komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin.",
+    'err.SERVICE_ACTION_FAILED.check': "Hiçbir şey değiştirilmedi: {unit} kendi yapılandırmasını reddediyor; bu yüzden işlem yapılmadı. Sunucuda {command} komutunu çalıştırıp neye itiraz ettiğini görün, düzeltin, sonra işlemi burada yineleyin.",
+    'err.SERVICE_ACTION_FAILED.reload': "{unit} yeniden yüklemenin başarısız olduğunu bildirdi. CelikPanel, {unit} hizmetinin şu an hangi ayarlarla çalıştığını ondan okuyamıyor; bu yüzden bu sayfa ne önceki ayarlarını koruduğunu ne de diskteki dosyaları aldığını söylüyor. Sunucuda {command} komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin.",
+    'err.SERVICE_ACTION_FAILED.reload_reread': "{unit} için yeniden yükleme başarısız diye bildirildi, ancak PostgreSQL yapılandırma dosyalarını bundan sonra kendisi yeniden okudu: diskteki dosyalardaki ayarlar, yeniden başlatma gerektirenler dışında, şu an yürürlükte. Birimin kendi yeniden yükleme komutunun bir adımı, sunucuya sinyal gönderildikten sonra başarısız oldu. Sunucuda {command} komutunu çalıştırıp hangi adım olduğunu görün ve sonraki yeniden yüklemenin olduğu gibi bildirilmesi için düzeltin. Bu ayarlar için yeniden yüklemeyi yinelemeniz gerekmez.",
+    'err.SERVICE_ACTION_FAILED.reload_not_reread': "{unit} için yeniden yükleme başarısız oldu ve PostgreSQL yapılandırma dosyalarını yeniden okumadı: önceki ayarlarıyla çalışıyor. Sunucuda {command} komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin.",
+    'err.SERVICE_ACTION_FAILED.not_running': "{unit} çalışmıyor; bu yüzden yeniden yüklenecek bir şey yoktu ve hiçbir şey değiştirilmedi. Çalışması gerekiyorsa burada Başlat’ı kullanın; başlarken yapılandırma dosyalarını okur. Sunucudaki durumunu görmek için {command} komutunu çalıştırın.",
+    'err.SERVICE_ACTION_FAILED.start': "{unit} başlamadı ya da çalışır durumda kalmadı. Sunucuda {command} komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin.",
+    'err.SERVICE_ACTION_FAILED.stop': "{unit} durmadı: hâlâ çalışıyor. Sunucuda {command} komutuyla durumunu görün, sonra işlemi burada yineleyin.",
+    'err.SERVICE_ACTION_FAILED.verify': "İşlem gönderildi ancak {unit} istenen durumda değil. Sunucuda {command} komutuyla durumunu görün, nedeni düzeltin, sonra işlemi burada yineleyin.",
+    'err.SERVICE_ACTION_FAILED.command': "Sunucunun hizmet yöneticisi {unit} üzerindeki işlemi yapmadı. Sunucuda {command} komutunu çalıştırıp nedenini görün, düzeltin, sonra işlemi burada yineleyin.",
+    'err.SERVICE_ACTION_UNKNOWN': "İşlem gönderildi ancak sonucu doğrulanamadı; bu yüzden yapıldı diye gösterilmiyor. Bu doğrulanmış bir hata değildir: {unit} istediğiniz duruma zaten gelmiş olabilir. Sunucuda {command} komutuyla durumunu görün; işlemi yalnız hâlâ gerekiyorsa burada yineleyin.",
 };

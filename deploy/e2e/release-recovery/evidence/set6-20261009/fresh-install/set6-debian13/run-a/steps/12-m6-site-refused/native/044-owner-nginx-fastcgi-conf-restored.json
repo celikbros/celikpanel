@@ -1,0 +1,52 @@
+{
+  "action": "owner-nginx-file",
+  "after": {
+    "file": {
+      "exists": true,
+      "group": "root",
+      "kind": "file",
+      "mode": "0644",
+      "owner": "root",
+      "path": "/etc/nginx/fastcgi.conf"
+    },
+    "moved": {
+      "error": "FileNotFoundError",
+      "exists": false,
+      "path": "/etc/nginx/fastcgi.conf.set4-owner-moved"
+    },
+    "nginx_test": {
+      "at": "2026-10-09T22:17:41Z",
+      "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+      "returncode": 0,
+      "status": "ok"
+    }
+  },
+  "at": "2026-10-09T22:17:41Z",
+  "before": {
+    "file": {
+      "error": "FileNotFoundError",
+      "exists": false,
+      "path": "/etc/nginx/fastcgi.conf"
+    },
+    "moved": {
+      "exists": true,
+      "group": "root",
+      "kind": "file",
+      "mode": "0644",
+      "owner": "root",
+      "path": "/etc/nginx/fastcgi.conf.set4-owner-moved"
+    },
+    "nginx_test": {
+      "at": "2026-10-09T22:17:41Z",
+      "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+      "returncode": 0,
+      "status": "ok"
+    }
+  },
+  "mode": "owner-nginx-file",
+  "moved_to": "/etc/nginx/fastcgi.conf.set4-owner-moved",
+  "owner_action": true,
+  "path": "/etc/nginx/fastcgi.conf",
+  "schema": "celikpanel/set4-native/v1",
+  "what": "restore"
+}

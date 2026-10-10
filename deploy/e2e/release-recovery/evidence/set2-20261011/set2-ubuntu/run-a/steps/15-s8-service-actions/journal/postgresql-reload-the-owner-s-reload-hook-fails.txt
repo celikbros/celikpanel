@@ -1,0 +1,6 @@
+2026-10-09T03:48:40.522971+00:00 dns-ubuntu systemd[1]: Reloading postgresql@16-main.service - PostgreSQL Cluster 16-main...
+2026-10-09T03:48:40.531519+00:00 dns-ubuntu systemctl[71804]: Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.
+2026-10-09T03:48:40.533628+00:00 dns-ubuntu systemd[1]: postgresql@16-main.service: Control process exited, code=exited, status=5/NOTINSTALLED
+2026-10-09T03:48:40.533648+00:00 dns-ubuntu systemd[1]: Reload failed for postgresql@16-main.service - PostgreSQL Cluster 16-main.
+2026-10-09T03:48:40.541445+00:00 dns-ubuntu systemd[1]: Reloading postgresql.service - PostgreSQL RDBMS...
+2026-10-09T03:48:40.543379+00:00 dns-ubuntu systemd[1]: Reloaded postgresql.service - PostgreSQL RDBMS.

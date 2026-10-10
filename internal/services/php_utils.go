@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"os/exec"
 )
 
@@ -12,7 +11,8 @@ import (
 // taklit edebilsin diye değişkendir — havuz yazıcısı testleri, koştukları
 // makinede gerçek bir unit'in varlığına bağımlı olmamalıdır.
 var reloadPHPFPM = func(version string) error {
-	serviceName := fmt.Sprintf("php%s-fpm", version)
-	cmd := exec.Command("systemctl", "reload", serviceName)
+	// The unit is the host's own: `php<version>-fpm` on Debian and Sury, the
+	// single `php-fpm` on Arch (php_layout.go).
+	cmd := exec.Command("systemctl", "reload", phpLayoutFor(version).unit())
 	return cmd.Run()
 }

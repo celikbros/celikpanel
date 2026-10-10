@@ -46,10 +46,10 @@ test('panel access owns only the panel certificate while updates own PanelUpdate
   const panel = tabPanelSource('panel');
   const updates = tabPanelSource('updates');
 
-  assert.match(panel, /<PanelCertificatePanel\s*\/>/);
+  assert.match(panel, /<PanelCertificatePanel active=\{activeID === 'panel'\}\s*\/>/);
   assert.doesNotMatch(panel, /<PanelUpdateCard\s*\/>/);
   assert.match(updates, /<PanelUpdateCard\s*\/>/);
-  assert.doesNotMatch(updates, /<PanelCertificatePanel\s*\/>/);
+  assert.doesNotMatch(updates, /<PanelCertificatePanel\b/);
 });
 
 test('operational Settings components mount only while their URL section is active', () => {

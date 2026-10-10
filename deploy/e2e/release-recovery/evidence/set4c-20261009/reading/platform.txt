@@ -1,0 +1,7 @@
+2026-10-09T16:13:59Z
+"Debian GNU/Linux 13 (trixie)"
+6.18.33.2-microsoft-standard-WSL2
+postfix 3.10.13-0+deb13u1 ii 
+/usr/sbin/postconf
+3.10.13
+postfix service units known to systemd here: 4

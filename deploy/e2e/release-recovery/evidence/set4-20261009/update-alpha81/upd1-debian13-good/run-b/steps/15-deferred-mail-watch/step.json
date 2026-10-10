@@ -1,0 +1,83 @@
+{
+  "checks": {
+    "deferred_mail": {
+      "last": {
+        "deferred": [
+          "mail certificate publication",
+          "mail filter wiring"
+        ],
+        "finished": true,
+        "gave_up": false,
+        "pid": "37518",
+        "ready_at": "2026-10-09T12:18:51.009068+00:00",
+        "repeated": [],
+        "resolved": {
+          "mail certificate publication": [
+            {
+              "at": "2026-10-09T12:19:33.523094+00:00",
+              "attempt": 1,
+              "outcome": "completed"
+            }
+          ],
+          "mail filter wiring": [
+            {
+              "at": "2026-10-09T12:19:33.523094+00:00",
+              "attempt": 1,
+              "outcome": "completed"
+            }
+          ]
+        },
+        "started_at": "2026-10-09T12:18:50.881303+00:00"
+      },
+      "panel_processes": [
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "5130",
+          "ready_at": "2026-10-09T12:10:03.820975+00:00",
+          "repeated": [],
+          "started_at": "2026-10-09T12:10:03.790352+00:00"
+        },
+        {
+          "attempt_lines": 0,
+          "deferred": [],
+          "finished": true,
+          "gave_up": false,
+          "pid": "5195",
+          "ready_at": "2026-10-09T12:10:04.972560+00:00",
+          "repeated": [],
+          "started_at": "2026-10-09T12:10:04.953011+00:00"
+        },
+        {
+          "attempt_lines": 1,
+          "deferred": [
+            "mail certificate publication",
+            "mail filter wiring"
+          ],
+          "finished": true,
+          "gave_up": false,
+          "pid": "37518",
+          "ready_at": "2026-10-09T12:18:51.009068+00:00",
+          "repeated": [],
+          "started_at": "2026-10-09T12:18:50.881303+00:00"
+        }
+      ],
+      "settle": {
+        "at": "2026-10-09T12:20:24Z",
+        "attempt_lines_after": 1,
+        "attempt_lines_before": 1,
+        "repeated_after": [],
+        "same_process": true,
+        "seconds_after_resolution": 45.0
+      },
+      "watch_seconds": 76.5
+    },
+    "polls": 4
+  },
+  "finished_at": "2026-10-09T12:20:24Z",
+  "name": "deferred-mail-watch",
+  "started_at": "2026-10-09T12:19:08Z",
+  "verdict": "observed"
+}

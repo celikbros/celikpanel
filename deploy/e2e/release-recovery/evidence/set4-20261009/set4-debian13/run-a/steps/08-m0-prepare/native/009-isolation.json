@@ -1,0 +1,28 @@
+{
+  "asked_with": "getent -s files hosts NAME",
+  "at": "2026-10-09T10:47:24Z",
+  "hosts_lines": [
+    "127.0.0.1\tlocalhost",
+    "::1\t\tlocalhost ip6-localhost ip6-loopback",
+    "ff02::1\t\tip6-allnodes",
+    "ff02::2\t\tip6-allrouters",
+    "127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture",
+    "127.0.0.1 acme-v02.api.letsencrypt.org",
+    "::1 acme-v02.api.letsencrypt.org",
+    "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+    "::1 acme-staging-v02.api.letsencrypt.org"
+  ],
+  "loopback_only": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "celikpanel.net": true
+  },
+  "mode": "read-isolation",
+  "owner_action": false,
+  "resolves": {
+    "acme-staging-v02.api.letsencrypt.org": "::1             acme-staging-v02.api.letsencrypt.org",
+    "acme-v02.api.letsencrypt.org": "::1             acme-v02.api.letsencrypt.org",
+    "celikpanel.net": "127.0.0.1       celikpanel.net"
+  },
+  "schema": "celikpanel/set4-native/v1"
+}

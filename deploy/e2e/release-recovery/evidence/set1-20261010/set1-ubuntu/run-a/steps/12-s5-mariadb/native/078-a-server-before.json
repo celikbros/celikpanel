@@ -1,0 +1,67 @@
+{
+  "answers": {
+    "max_connections": {
+      "argv": [
+        "/usr/bin/mariadb",
+        "-N",
+        "-B",
+        "-e",
+        "SELECT @@global.max_connections"
+      ],
+      "at": "2026-10-08T21:48:17Z",
+      "returncode": 0,
+      "seconds": 0.009,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "151\n"
+    },
+    "version": {
+      "argv": [
+        "/usr/bin/mariadb",
+        "-N",
+        "-B",
+        "-e",
+        "SELECT VERSION(), @@pid_file"
+      ],
+      "at": "2026-10-08T21:48:17Z",
+      "returncode": 0,
+      "seconds": 0.011,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "10.11.14-MariaDB-0ubuntu0.24.04.1\t/run/mysqld/mysqld.pid\n"
+    }
+  },
+  "at": "2026-10-08T21:48:17Z",
+  "client": "/usr/bin/mariadb",
+  "mode": "read-mariadb",
+  "owner_action": false,
+  "pid_file": "/run/mysqld/mysqld.pid",
+  "schema": "celikpanel/set1-native/v1",
+  "server_pid": 10996,
+  "units": {
+    "mariadb.service": {
+      "ActiveEnterTimestamp": "Thu 2026-10-08 21:37:34 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "Thu 2026-10-08 21:37:34 UTC",
+      "FragmentPath": "/usr/lib/systemd/system/mariadb.service",
+      "LoadState": "loaded",
+      "MainPID": "10996",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "running"
+    },
+    "mysql.service": {
+      "ActiveEnterTimestamp": "Thu 2026-10-08 21:37:34 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "Thu 2026-10-08 21:37:34 UTC",
+      "FragmentPath": "/usr/lib/systemd/system/mariadb.service",
+      "LoadState": "loaded",
+      "MainPID": "10996",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "running"
+    }
+  }
+}

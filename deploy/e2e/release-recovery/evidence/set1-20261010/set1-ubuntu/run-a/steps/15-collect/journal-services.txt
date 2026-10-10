@@ -1,0 +1,291 @@
+2026-10-08T21:31:26.572335+00:00 dns-ubuntu systemd[1]: Started cron.service - Regular background program processing daemon.
+2026-10-08T21:31:26.585820+00:00 dns-ubuntu (cron)[800]: cron.service: Referenced but unset environment variable evaluates to an empty string: EXTRA_OPTS
+2026-10-08T21:31:26.590880+00:00 dns-ubuntu cron[800]: (CRON) INFO (pidfile fd = 3)
+2026-10-08T21:31:26.598258+00:00 dns-ubuntu cron[800]: (CRON) INFO (Running @reboot jobs)
+2026-10-08T21:35:01.101428+00:00 dns-ubuntu CRON[9031]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+2026-10-08T21:35:01.102097+00:00 dns-ubuntu CRON[9032]: (root) CMD (command -v debian-sa1 > /dev/null && debian-sa1 1 1)
+2026-10-08T21:35:01.105895+00:00 dns-ubuntu CRON[9031]: pam_unix(cron:session): session closed for user root
+2026-10-08T21:37:34.122689+00:00 dns-ubuntu systemd[1]: Starting mariadb.service - MariaDB 10.11.14 database server...
+2026-10-08T21:37:34.207760+00:00 dns-ubuntu (mariadbd)[10996]: mariadb.service: Referenced but unset environment variable evaluates to an empty string: MYSQLD_OPTS, _WSREP_NEW_CLUSTER
+2026-10-08T21:37:34.236058+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] Starting MariaDB 10.11.14-MariaDB-0ubuntu0.24.04.1 source revision 053f9bcb5b147bf00edb99e1310bae9125b7f125 server_uid W4SCr1TT1XkuiEEx9TvPKXjj4bk= as process 10996
+2026-10-08T21:37:34.271238+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] InnoDB: Compressed tables use zlib 1.3
+2026-10-08T21:37:34.271926+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-08T21:37:34.272089+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-08T21:37:34.272458+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] InnoDB: Using io_uring
+2026-10-08T21:37:34.273037+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] InnoDB: innodb_buffer_pool_size_max=128m, innodb_buffer_pool_size=128m
+2026-10-08T21:37:34.274960+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] InnoDB: Initialized memory pressure event listener
+2026-10-08T21:37:34.274960+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-08T21:37:34.275264+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] InnoDB: File system buffers for log disabled (block size=512 bytes)
+2026-10-08T21:37:34.292418+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] InnoDB: End of log at LSN=46980
+2026-10-08T21:37:34.345931+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] InnoDB: 128 rollback segments are active.
+2026-10-08T21:37:34.347484+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-08T21:37:34.347484+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-08T21:37:34.348696+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] InnoDB: log sequence number 46980; transaction id 14
+2026-10-08T21:37:34.349020+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] Plugin 'FEEDBACK' is disabled.
+2026-10-08T21:37:34.349196+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+2026-10-08T21:37:34.354359+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Warning] You need to use --log-bin to make --expire-logs-days or --binlog-expire-logs-seconds work.
+2026-10-08T21:37:34.355838+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] Server socket created on IP: '127.0.0.1', port: '3306'.
+2026-10-08T21:37:34.355980+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] InnoDB: Buffer pool(s) load completed at 261008 21:37:34
+2026-10-08T21:37:34.363363+00:00 dns-ubuntu mariadbd[10996]: 2026-10-08 21:37:34 0 [Note] /usr/sbin/mariadbd: ready for connections.
+2026-10-08T21:37:34.363363+00:00 dns-ubuntu mariadbd[10996]: Version: '10.11.14-MariaDB-0ubuntu0.24.04.1'  socket: '/run/mysqld/mysqld.sock'  port: 3306  Ubuntu 24.04
+2026-10-08T21:37:34.395043+00:00 dns-ubuntu systemd[1]: Started mariadb.service - MariaDB 10.11.14 database server.
+2026-10-08T21:37:34.399756+00:00 dns-ubuntu /etc/mysql/debian-start[11016]: Upgrading MariaDB tables if necessary.
+2026-10-08T21:37:34.452687+00:00 dns-ubuntu /etc/mysql/debian-start[11035]: Triggering myisam-recover for all MyISAM tables and aria-recover for all Aria tables
+2026-10-08T21:38:44.755617+00:00 dns-ubuntu systemd[1]: Starting postgresql@16-main.service - PostgreSQL Cluster 16-main...
+2026-10-08T21:38:46.971575+00:00 dns-ubuntu systemd[1]: Started postgresql@16-main.service - PostgreSQL Cluster 16-main.
+2026-10-08T21:39:01.110406+00:00 dns-ubuntu CRON[22363]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+2026-10-08T21:39:01.111388+00:00 dns-ubuntu CRON[22364]: (root) CMD (  [ -x /usr/lib/php/sessionclean ] && if [ ! -d /run/systemd/system ]; then /usr/lib/php/sessionclean; fi)
+2026-10-08T21:39:01.113872+00:00 dns-ubuntu CRON[22363]: pam_unix(cron:session): session closed for user root
+2026-10-08T21:39:12.601634+00:00 dns-ubuntu systemd[1]: Starting postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:39:13.193336+00:00 dns-ubuntu postmulti[23060]: postfix/postlog: starting the Postfix mail system
+2026-10-08T21:39:13.193186+00:00 dns-ubuntu postfix/postfix-script[23060]: starting the Postfix mail system
+2026-10-08T21:39:13.200110+00:00 dns-ubuntu postfix/master[23062]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:39:13.202066+00:00 dns-ubuntu systemd[1]: Started postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:39:13.208660+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:39:13.224984+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:39:21.718526+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:39:23.559412+00:00 dns-ubuntu postmulti[23531]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:39:23.559384+00:00 dns-ubuntu postfix/postfix-script[23531]: refreshing the Postfix mail system
+2026-10-08T21:39:23.566428+00:00 dns-ubuntu postfix/master[23062]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:39:23.568846+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:39:23.580570+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:39:23.586785+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:39:23.616613+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:39:23.647762+00:00 dns-ubuntu postmulti[23553]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:39:23.648076+00:00 dns-ubuntu postfix/postfix-script[23553]: refreshing the Postfix mail system
+2026-10-08T21:39:23.654951+00:00 dns-ubuntu postfix/master[23062]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:39:23.656160+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:39:23.666469+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:39:23.676088+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:39:49.589510+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:39:51.457964+00:00 dns-ubuntu postmulti[27788]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:39:51.457931+00:00 dns-ubuntu postfix/postfix-script[27788]: refreshing the Postfix mail system
+2026-10-08T21:39:51.468113+00:00 dns-ubuntu postfix/master[23062]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:39:51.470599+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:39:51.479588+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:39:51.485824+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:39:51.516526+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:39:51.549637+00:00 dns-ubuntu postmulti[27810]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:39:51.549598+00:00 dns-ubuntu postfix/postfix-script[27810]: refreshing the Postfix mail system
+2026-10-08T21:39:51.558444+00:00 dns-ubuntu postfix/master[23062]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:39:51.560322+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:39:51.567454+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:39:51.578565+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:40:29.565566+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:40:31.409521+00:00 dns-ubuntu postmulti[31865]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:40:31.409488+00:00 dns-ubuntu postfix/postfix-script[31865]: refreshing the Postfix mail system
+2026-10-08T21:40:31.416880+00:00 dns-ubuntu postfix/master[23062]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:40:31.419453+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:40:31.431560+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:40:31.435025+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:40:31.467605+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:40:31.499784+00:00 dns-ubuntu postmulti[31887]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:40:31.500148+00:00 dns-ubuntu postfix/postfix-script[31887]: refreshing the Postfix mail system
+2026-10-08T21:40:31.506354+00:00 dns-ubuntu postfix/master[23062]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:40:31.508347+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:40:31.514602+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:40:31.521802+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:40:34.695021+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-08T21:40:34.695162+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:40:34.695245+00:00 dns-ubuntu systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:40:34.699707+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:40:34.733098+00:00 dns-ubuntu postmulti[32071]: postfix/postlog: stopping the Postfix mail system
+2026-10-08T21:40:34.733656+00:00 dns-ubuntu postfix/postfix-script[32071]: stopping the Postfix mail system
+2026-10-08T21:40:34.736047+00:00 dns-ubuntu postfix/master[23062]: terminating on signal 15
+2026-10-08T21:40:34.742628+00:00 dns-ubuntu systemd[1]: postfix@-.service: Deactivated successfully.
+2026-10-08T21:40:34.742945+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:40:34.743003+00:00 dns-ubuntu systemd[1]: postfix@-.service: Consumed 1.041s CPU time, 11.2M memory peak, 0B memory swap peak.
+2026-10-08T21:40:34.748562+00:00 dns-ubuntu systemd[1]: Starting postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:40:35.275556+00:00 dns-ubuntu postmulti[32356]: postfix/postlog: starting the Postfix mail system
+2026-10-08T21:40:35.275542+00:00 dns-ubuntu postfix/postfix-script[32356]: starting the Postfix mail system
+2026-10-08T21:40:35.283297+00:00 dns-ubuntu postfix/master[32358]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:40:35.286608+00:00 dns-ubuntu systemd[1]: Started postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:40:35.295109+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:40:35.297831+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:40:39.788605+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:40:39.824414+00:00 dns-ubuntu postmulti[32817]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:40:39.824393+00:00 dns-ubuntu postfix/postfix-script[32817]: refreshing the Postfix mail system
+2026-10-08T21:40:39.830972+00:00 dns-ubuntu postfix/master[32358]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:40:39.836900+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:40:39.843434+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:40:39.850427+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:40:49.501055+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:40:51.352588+00:00 dns-ubuntu postmulti[33539]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:40:51.352561+00:00 dns-ubuntu postfix/postfix-script[33539]: refreshing the Postfix mail system
+2026-10-08T21:40:51.360795+00:00 dns-ubuntu postfix/master[32358]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:40:51.364548+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:40:51.372487+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:40:51.378587+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:40:51.408735+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:40:51.466840+00:00 dns-ubuntu postmulti[33561]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:40:51.466328+00:00 dns-ubuntu postfix/postfix-script[33561]: refreshing the Postfix mail system
+2026-10-08T21:40:51.474536+00:00 dns-ubuntu postfix/master[32358]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:40:51.477350+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:40:51.486919+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:40:51.506558+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:41:01.608601+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:41:03.463754+00:00 dns-ubuntu postmulti[34114]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:41:03.463726+00:00 dns-ubuntu postfix/postfix-script[34114]: refreshing the Postfix mail system
+2026-10-08T21:41:03.475102+00:00 dns-ubuntu postfix/master[32358]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:41:03.479047+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:41:03.494584+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:41:03.514619+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:41:03.570886+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:41:03.651089+00:00 dns-ubuntu postmulti[34136]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:41:03.653994+00:00 dns-ubuntu postfix/postfix-script[34136]: refreshing the Postfix mail system
+2026-10-08T21:41:03.681136+00:00 dns-ubuntu postfix/master[32358]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:41:03.685594+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:41:03.699323+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:41:03.724899+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:41:29.812493+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:41:31.356240+00:00 dns-ubuntu postmulti[35451]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:41:31.355386+00:00 dns-ubuntu postfix/postfix-script[35451]: refreshing the Postfix mail system
+2026-10-08T21:41:31.362832+00:00 dns-ubuntu postfix/master[32358]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:41:31.364269+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:41:31.371510+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:41:31.384471+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:41:35.762868+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:41:37.604139+00:00 dns-ubuntu postmulti[35620]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:41:37.604118+00:00 dns-ubuntu postfix/postfix-script[35620]: refreshing the Postfix mail system
+2026-10-08T21:41:37.611714+00:00 dns-ubuntu postfix/master[32358]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:41:37.614437+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:41:37.623520+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:41:37.630424+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:41:37.663104+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:41:37.697460+00:00 dns-ubuntu postmulti[35642]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:41:37.697833+00:00 dns-ubuntu postfix/postfix-script[35642]: refreshing the Postfix mail system
+2026-10-08T21:41:37.704581+00:00 dns-ubuntu postfix/master[32358]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:41:37.706820+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:41:37.714611+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:41:37.716821+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:41:41.039991+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-08T21:41:41.040634+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:41:41.040828+00:00 dns-ubuntu systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:41:41.051046+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:41:41.122082+00:00 dns-ubuntu postmulti[35823]: postfix/postlog: stopping the Postfix mail system
+2026-10-08T21:41:41.122029+00:00 dns-ubuntu postfix/postfix-script[35823]: stopping the Postfix mail system
+2026-10-08T21:41:41.130971+00:00 dns-ubuntu postfix/master[32358]: terminating on signal 15
+2026-10-08T21:41:41.146310+00:00 dns-ubuntu systemd[1]: postfix@-.service: Deactivated successfully.
+2026-10-08T21:41:41.146755+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:41:41.146879+00:00 dns-ubuntu systemd[1]: postfix@-.service: Consumed 1.319s CPU time, 9.6M memory peak, 0B memory swap peak.
+2026-10-08T21:41:41.154735+00:00 dns-ubuntu systemd[1]: Starting postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:41:41.979330+00:00 dns-ubuntu postmulti[36108]: postfix/postlog: starting the Postfix mail system
+2026-10-08T21:41:41.979317+00:00 dns-ubuntu postfix/postfix-script[36108]: starting the Postfix mail system
+2026-10-08T21:41:41.986933+00:00 dns-ubuntu postfix/master[36110]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:41:41.989783+00:00 dns-ubuntu systemd[1]: Started postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:41:41.997317+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:41:42.001805+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:41:46.843749+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:41:46.879192+00:00 dns-ubuntu postmulti[36573]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:41:46.879161+00:00 dns-ubuntu postfix/postfix-script[36573]: refreshing the Postfix mail system
+2026-10-08T21:41:46.886334+00:00 dns-ubuntu postfix/master[36110]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:41:46.889723+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:41:46.893733+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:41:46.898289+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:45:01.118885+00:00 dns-ubuntu CRON[38539]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+2026-10-08T21:45:01.119452+00:00 dns-ubuntu CRON[38541]: (root) CMD (command -v debian-sa1 > /dev/null && debian-sa1 1 1)
+2026-10-08T21:45:01.122480+00:00 dns-ubuntu CRON[38539]: pam_unix(cron:session): session closed for user root
+2026-10-08T21:47:15.453650+00:00 dns-ubuntu postfix/smtpd[40978]: connect from localhost[127.0.0.1]
+2026-10-08T21:47:15.467554+00:00 dns-ubuntu postfix/smtpd[40978]: 72202825A7: client=localhost[127.0.0.1]
+2026-10-08T21:47:15.468333+00:00 dns-ubuntu postfix/smtpd[40978]: disconnect from localhost[127.0.0.1] ehlo=1 mail=1 rcpt=1 rset=1 quit=1 commands=5
+2026-10-08T21:47:15.479891+00:00 dns-ubuntu postfix/submission/smtpd[40983]: connect from localhost[127.0.0.1]
+2026-10-08T21:47:15.480888+00:00 dns-ubuntu postfix/submission/smtpd[40983]: disconnect from localhost[127.0.0.1] ehlo=1 quit=1 commands=2
+2026-10-08T21:47:16.098548+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:47:17.338715+00:00 dns-ubuntu postmulti[41100]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:47:17.338690+00:00 dns-ubuntu postfix/postfix-script[41100]: refreshing the Postfix mail system
+2026-10-08T21:47:17.347618+00:00 dns-ubuntu postfix/master[36110]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:47:17.350499+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:47:17.357591+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:47:17.368875+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:47:19.440513+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:47:21.696807+00:00 dns-ubuntu postmulti[41733]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:47:21.696754+00:00 dns-ubuntu postfix/postfix-script[41733]: refreshing the Postfix mail system
+2026-10-08T21:47:21.710768+00:00 dns-ubuntu postfix/master[36110]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:47:21.714409+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:47:21.744435+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:47:21.779093+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:47:25.127186+00:00 dns-ubuntu postfix/smtpd[42126]: connect from localhost[127.0.0.1]
+2026-10-08T21:47:25.147447+00:00 dns-ubuntu postfix/smtpd[42126]: 23F6581F70: client=localhost[127.0.0.1]
+2026-10-08T21:47:25.148045+00:00 dns-ubuntu postfix/smtpd[42126]: disconnect from localhost[127.0.0.1] ehlo=1 mail=1 rcpt=1 rset=1 quit=1 commands=5
+2026-10-08T21:47:25.162774+00:00 dns-ubuntu postfix/submission/smtpd[42131]: connect from localhost[127.0.0.1]
+2026-10-08T21:47:25.163872+00:00 dns-ubuntu postfix/submission/smtpd[42131]: disconnect from localhost[127.0.0.1] ehlo=1 quit=1 commands=2
+2026-10-08T21:47:25.316751+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:47:27.461409+00:00 dns-ubuntu postmulti[42149]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:47:27.461395+00:00 dns-ubuntu postfix/postfix-script[42149]: refreshing the Postfix mail system
+2026-10-08T21:47:27.468136+00:00 dns-ubuntu postfix/master[36110]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:47:27.471068+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:47:27.480700+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:47:27.487102+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:47:28.861651+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:47:30.403169+00:00 dns-ubuntu postmulti[42549]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:47:30.403120+00:00 dns-ubuntu postfix/postfix-script[42549]: refreshing the Postfix mail system
+2026-10-08T21:47:30.410477+00:00 dns-ubuntu postfix/master[36110]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:47:30.412989+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:47:30.423473+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:47:30.425630+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:47:32.921997+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:47:34.535310+00:00 dns-ubuntu postmulti[43130]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:47:34.535271+00:00 dns-ubuntu postfix/postfix-script[43130]: refreshing the Postfix mail system
+2026-10-08T21:47:34.544772+00:00 dns-ubuntu postfix/master[36110]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:47:34.547390+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:47:34.553494+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:47:34.561490+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:47:36.005521+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:47:37.556612+00:00 dns-ubuntu postmulti[43530]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:47:37.556589+00:00 dns-ubuntu postfix/postfix-script[43530]: refreshing the Postfix mail system
+2026-10-08T21:47:37.562964+00:00 dns-ubuntu postfix/master[36110]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:47:37.566737+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:47:37.575536+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:47:37.581463+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:47:42.147544+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:47:44.560554+00:00 dns-ubuntu postmulti[44023]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-08T21:47:45.561965+00:00 dns-ubuntu systemd[1]: postfix@-.service: Control process exited, code=exited, status=1/FAILURE
+2026-10-08T21:47:45.561995+00:00 dns-ubuntu systemd[1]: Reload failed for postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:47:45.573882+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:47:45.575374+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:47:49.951721+00:00 dns-ubuntu systemd[1]: Reloading postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:47:51.516716+00:00 dns-ubuntu postmulti[44324]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T21:47:51.516685+00:00 dns-ubuntu postfix/postfix-script[44324]: refreshing the Postfix mail system
+2026-10-08T21:47:51.527679+00:00 dns-ubuntu postfix/master[36110]: reload -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:47:51.534747+00:00 dns-ubuntu systemd[1]: Reloaded postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:47:51.548286+00:00 dns-ubuntu systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:47:51.556530+00:00 dns-ubuntu systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:47:52.842290+00:00 dns-ubuntu postfix/smtpd[44661]: connect from localhost[127.0.0.1]
+2026-10-08T21:47:52.866417+00:00 dns-ubuntu postfix/smtpd[44661]: D373C825A8: client=localhost[127.0.0.1]
+2026-10-08T21:47:52.868648+00:00 dns-ubuntu postfix/smtpd[44661]: disconnect from localhost[127.0.0.1] ehlo=1 mail=1 rcpt=1 rset=1 quit=1 commands=5
+2026-10-08T21:47:52.887760+00:00 dns-ubuntu postfix/submission/smtpd[44666]: connect from localhost[127.0.0.1]
+2026-10-08T21:47:52.889340+00:00 dns-ubuntu postfix/submission/smtpd[44666]: disconnect from localhost[127.0.0.1] ehlo=1 quit=1 commands=2
+2026-10-08T21:47:59.802532+00:00 dns-ubuntu systemd[1]: Reloading postgresql@16-main.service - PostgreSQL Cluster 16-main...
+2026-10-08T21:47:59.849642+00:00 dns-ubuntu systemd[1]: Reloaded postgresql@16-main.service - PostgreSQL Cluster 16-main.
+2026-10-08T21:48:05.433561+00:00 dns-ubuntu systemd[1]: Reloading postgresql@16-main.service - PostgreSQL Cluster 16-main...
+2026-10-08T21:48:05.478100+00:00 dns-ubuntu systemd[1]: Reloaded postgresql@16-main.service - PostgreSQL Cluster 16-main.
+2026-10-08T21:48:12.998665+00:00 dns-ubuntu systemd[1]: Reloading postgresql@16-main.service - PostgreSQL Cluster 16-main...
+2026-10-08T21:48:13.019305+00:00 dns-ubuntu systemctl[47125]: Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.
+2026-10-08T21:48:13.020502+00:00 dns-ubuntu systemd[1]: postgresql@16-main.service: Control process exited, code=exited, status=5/NOTINSTALLED
+2026-10-08T21:48:13.020517+00:00 dns-ubuntu systemd[1]: Reload failed for postgresql@16-main.service - PostgreSQL Cluster 16-main.
+2026-10-08T21:48:13.057704+00:00 dns-ubuntu systemd[1]: Reloading postgresql@16-main.service - PostgreSQL Cluster 16-main...
+2026-10-08T21:48:13.066673+00:00 dns-ubuntu systemctl[47129]: Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.
+2026-10-08T21:48:13.067762+00:00 dns-ubuntu systemd[1]: postgresql@16-main.service: Control process exited, code=exited, status=5/NOTINSTALLED
+2026-10-08T21:48:13.067773+00:00 dns-ubuntu systemd[1]: Reload failed for postgresql@16-main.service - PostgreSQL Cluster 16-main.
+2026-10-08T21:48:15.318576+00:00 dns-ubuntu systemd[1]: Reloading postgresql@16-main.service - PostgreSQL Cluster 16-main...
+2026-10-08T21:48:15.356811+00:00 dns-ubuntu systemd[1]: Reloaded postgresql@16-main.service - PostgreSQL Cluster 16-main.
+2026-10-08T21:48:27.698583+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.
+2026-10-08T21:48:27.698749+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:48:27.712564+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:48:27.753760+00:00 dns-ubuntu postmulti[49403]: postfix/postlog: stopping the Postfix mail system
+2026-10-08T21:48:27.753747+00:00 dns-ubuntu postfix/postfix-script[49403]: stopping the Postfix mail system
+2026-10-08T21:48:27.766075+00:00 dns-ubuntu systemd[1]: postfix@-.service: Deactivated successfully.
+2026-10-08T21:48:27.766479+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:48:27.766654+00:00 dns-ubuntu systemd[1]: postfix@-.service: Consumed 1.918s CPU time, 17.9M memory peak, 0B memory swap peak.
+2026-10-08T21:48:28.452549+00:00 dns-ubuntu systemd[1]: Starting postfix@-.service - Postfix Mail Transport Agent (instance -)...
+2026-10-08T21:48:28.992350+00:00 dns-ubuntu postmulti[49798]: postfix/postlog: starting the Postfix mail system
+2026-10-08T21:48:28.992329+00:00 dns-ubuntu postfix/postfix-script[49798]: starting the Postfix mail system
+2026-10-08T21:48:28.999568+00:00 dns-ubuntu postfix/master[49800]: daemon started -- version 3.8.6, configuration /etc/postfix
+2026-10-08T21:48:29.004896+00:00 dns-ubuntu systemd[1]: Started postfix@-.service - Postfix Mail Transport Agent (instance -).
+2026-10-08T21:48:29.018748+00:00 dns-ubuntu systemd[1]: Starting postfix.service - Postfix Mail Transport Agent...
+2026-10-08T21:48:29.021861+00:00 dns-ubuntu systemd[1]: Finished postfix.service - Postfix Mail Transport Agent.
+2026-10-08T21:48:33.728093+00:00 dns-ubuntu postfix/smtpd[50128]: connect from localhost[127.0.0.1]
+2026-10-08T21:48:33.742651+00:00 dns-ubuntu postfix/smtpd[50128]: B548781F70: client=localhost[127.0.0.1]
+2026-10-08T21:48:33.743578+00:00 dns-ubuntu postfix/smtpd[50128]: disconnect from localhost[127.0.0.1] ehlo=1 mail=1 rcpt=1 rset=1 quit=1 commands=5
+2026-10-08T21:48:33.754800+00:00 dns-ubuntu postfix/submission/smtpd[50133]: connect from localhost[127.0.0.1]
+2026-10-08T21:48:33.755638+00:00 dns-ubuntu postfix/submission/smtpd[50133]: disconnect from localhost[127.0.0.1] ehlo=1 quit=1 commands=2

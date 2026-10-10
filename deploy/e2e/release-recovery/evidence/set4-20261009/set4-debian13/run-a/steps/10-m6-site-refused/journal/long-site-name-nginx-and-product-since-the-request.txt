@@ -1,0 +1,18 @@
+##### nginx.service
+2026-10-09T10:47:54.664476+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T10:47:54.702257+00:00 dns-debian13 nginx[31713]: 2026/10/09 10:47:54 [notice] 31713#31713: signal process started
+2026-10-09T10:47:54.705919+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T10:47:55.025653+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T10:47:55.050043+00:00 dns-debian13 nginx[31731]: 2026/10/09 10:47:55 [notice] 31731#31731: signal process started
+2026-10-09T10:47:55.050727+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+##### celikpanel-agent.service and celikpanel-panel.service
+2026-10-09T10:47:52.378459+00:00 dns-debian13 panel[5223]: 2026/10/09 10:47:52 http: TLS handshake error from 127.0.0.1:35148: EOF
+2026-10-09T10:47:54.264377+00:00 dns-debian13 useradd[31688]: new group: name=set4_a_long_site_name_an_owner_c, GID=5002
+2026-10-09T10:47:54.264577+00:00 dns-debian13 useradd[31688]: new user: name=set4_a_long_site_name_an_owner_c, UID=5002, GID=5002, home=/var/www/celikpanel/subscriptions/2/sites/5, shell=/bin/bash, from=none
+2026-10-09T10:47:54.488906+00:00 dns-debian13 chpasswd[31693]: pam_unix(chpasswd:chauthtok): password changed for set4_a_long_site_name_an_owner_c
+2026-10-09T10:47:54.883701+00:00 dns-debian13 userdel[31722]: delete user 'set4_a_long_site_name_an_owner_c'
+2026-10-09T10:47:54.883873+00:00 dns-debian13 userdel[31722]: removed group 'set4_a_long_site_name_an_owner_c' owned by 'set4_a_long_site_name_an_owner_c'
+2026-10-09T10:47:54.883915+00:00 dns-debian13 userdel[31722]: removed shadow group 'set4_a_long_site_name_an_owner_c' owned by 'set4_a_long_site_name_an_owner_c'
+2026-10-09T10:47:55.008156+00:00 dns-debian13 agent[5026]: 2026/10/09 10:47:55 CreateSite set4-a-long-site-name-an-owner-could-plausibly-choose.test: nginx vhost activation: nginx validation failed: nginx validation failed: 2026/10/09 10:47:54 [emerg] 31706#31706: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64
+2026-10-09T10:47:55.008156+00:00 dns-debian13 agent[5026]: nginx: configuration file /etc/nginx/nginx.conf test failed: exit status 1; rollback restored and reloaded the previous vhost
+2026-10-09T10:47:55.078150+00:00 dns-debian13 panel[5223]: 2026/10/09 10:47:55 [502][domain] set4-a-long-site-name-an-owner-could-plausibly-choose.test: SITE_WEB_SERVER_REFUSED removed: 2026/10/09 10:47:54 [emerg] 31706#31706: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64

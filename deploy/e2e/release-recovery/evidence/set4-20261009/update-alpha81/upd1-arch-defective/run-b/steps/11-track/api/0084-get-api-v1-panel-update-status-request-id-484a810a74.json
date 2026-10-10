@@ -1,0 +1,84 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "SystemUpdateOperation status (read-only poll)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18591"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/panel/update/status?request_id=484a810a74a3e382072d094a45a5cbfb"
+  },
+  "response": {
+    "elapsed_seconds": 0.017,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 12:30:12 GMT"
+      ],
+      [
+        "Content-Length",
+        "652"
+      ]
+    ],
+    "json": {
+      "created_at": "2026-10-09T12:29:09.133869943Z",
+      "found": true,
+      "request_id": "484a810a74a3e382072d094a45a5cbfb",
+      "status": "failed",
+      "summary": "reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "99a00422844f0ec376494cd17686e397373318a971d968ad2de06f5877761b29",
+        "archive_size": "65894854",
+        "commit": "c911b3083cb53aa539e6c25b720b7b86c2e08644",
+        "os": "linux",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      },
+      "updated_at": "2026-10-09T12:29:39.830911706Z"
+    },
+    "status": 200,
+    "text": null
+  }
+}

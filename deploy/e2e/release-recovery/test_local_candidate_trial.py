@@ -121,7 +121,7 @@ class ControllerTests(unittest.TestCase):
         tree=subprocess.run(['git','-C',str(repository),'rev-parse',commit+'^{tree}'],check=True,capture_output=True,text=True).stdout.strip()
         candidate={'commit':commit,'tree':tree,'files':{'bin/panel':'a'*64}}
         value=controller.committed_candidate_migrations(candidate,repository)
-        self.assertEqual(len(value['migrations']),42)
+        self.assertEqual(len(value['migrations']),43)
         last=value['migrations'][-1]
         raw=subprocess.run(['git','-C',str(repository),'show',commit+':internal/db/migrations/'+last['filename']],check=True,capture_output=True).stdout
         self.assertEqual(last['sha256'],hashlib.sha256(raw).hexdigest())

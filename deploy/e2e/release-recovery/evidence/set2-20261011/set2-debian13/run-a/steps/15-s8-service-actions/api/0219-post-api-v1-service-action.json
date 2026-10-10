@@ -1,0 +1,89 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S8 postfix start (main.cf holds a line Postfix refuses)",
+  "request": {
+    "body": {
+      "action": "start",
+      "name": "postfix"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18453"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18453"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "7a2e70eb42ad6ca785aa2e463fbb7560"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/service/action"
+  },
+  "response": {
+    "elapsed_seconds": 2.274,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 03:43:14 GMT"
+      ],
+      [
+        "Content-Length",
+        "518"
+      ]
+    ],
+    "json": {
+      "code": "SERVICE_ACTION_FAILED",
+      "error": "Nothing was changed: the service's own check refuses its configuration, so the action was not carried out. The server owner runs the command shown to read the service's own answer, corrects what it names, and then repeats this action here; nothing repeats it automatically.",
+      "reason": "check",
+      "vars": {
+        "action": "start",
+        "command": "sudo postfix check",
+        "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+        "unit": "postfix"
+      }
+    },
+    "status": 502,
+    "text": null
+  }
+}

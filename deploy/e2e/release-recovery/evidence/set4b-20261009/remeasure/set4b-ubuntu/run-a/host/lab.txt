@@ -1,0 +1,2 @@
+lab=/var/tmp/cp-release-drill-s4b-ub-a
+set4b-ubuntu-20261009t143855z

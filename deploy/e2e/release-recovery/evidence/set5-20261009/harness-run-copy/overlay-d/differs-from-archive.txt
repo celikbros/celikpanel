@@ -1,0 +1,6 @@
+differs:       1 < ./deploy/e2e/release-recovery/lab.py
+differs:       1 > ./deploy/e2e/release-recovery/lab.py
+differs:       1 > ./deploy/e2e/release-recovery/run-set5.sh
+differs:       1 > ./deploy/e2e/release-recovery/set5_redact.py
+differs:       1 > ./deploy/e2e/release-recovery/set5_trial.py
+differs:       1 > ./deploy/e2e/release-recovery/test_set5_trial.py

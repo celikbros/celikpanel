@@ -1,0 +1,53 @@
+2026-10-09T07:09:29Z W3 waiting for cell-rid3-ub
+2026-10-09T07:13:33Z W1 waiting for cell-rid3-d13
+2026-10-09T07:13:34Z W2 waiting for cell-set3-ub
+2026-10-09T07:13:53Z W1 start cell-set3-d13 (C: 94.4 GiB)
+2026-10-09T07:22:04Z W2 start cell-rid3-arch (C: 93.7 GiB)
+2026-10-09T07:27:30Z W1 end cell-set3-d13 rc=0
+2026-10-09T07:27:38Z W1 staged cell-set3-d13 rc=0 overall: complete-for-review | native_evidence: False | outcome: settings-writes-measured
+2026-10-09T07:27:38Z W1 start c2-d13-good (C: 92.2 GiB)
+2026-10-09T07:28:10Z W3 start c2-ub-good (C: 92.2 GiB)
+2026-10-09T07:28:20Z manual staged cell-rid3-ub rc=0 overall: failed | native_evidence: False | outcome: request-identity-measured
+2026-10-09T07:33:19Z W2 end cell-rid3-arch rc=1
+2026-10-09T07:33:24Z W2 staged cell-rid3-arch rc=0 overall: failed | native_evidence: False | outcome: request-identity-measured
+2026-10-09T07:33:24Z W2 start c2-arch-good (C: 90.5 GiB)
+2026-10-09T07:35:38Z W4 waiting for c2-d13-mr
+2026-10-09T07:40:40Z W1 end c2-d13-good rc=0
+2026-10-09T07:40:42Z W1 staged c2-d13-good rc=0 overall: complete-for-review | native_evidence: False | outcome: update-verified
+2026-10-09T07:40:43Z W1 start c2-d13-def (C: 90.5 GiB)
+2026-10-09T07:41:27Z W5 waiting for cell-rid3-archb
+2026-10-09T07:42:25Z W2 end c2-arch-good rc=0
+2026-10-09T07:42:27Z W2 staged c2-arch-good rc=0 overall: complete-for-review | native_evidence: False | outcome: update-verified
+2026-10-09T07:42:27Z W2 start c2-arch-def (C: 90.5 GiB)
+2026-10-09T07:48:51Z W3 end c2-ub-good rc=0
+2026-10-09T07:48:53Z W3 staged c2-ub-good rc=0 overall: complete-for-review | native_evidence: False | outcome: update-verified
+2026-10-09T07:48:54Z W3 start c2-ub-def (C: 89.9 GiB)
+2026-10-09T07:53:04Z W2 end c2-arch-def rc=0
+2026-10-09T07:53:07Z W2 staged c2-arch-def rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-automatically
+2026-10-09T07:53:07Z W2 start c2-d13-mr (C: 89.5 GiB)
+2026-10-09T07:53:54Z W1 end c2-d13-def rc=0
+2026-10-09T07:53:57Z W1 staged c2-d13-def rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-automatically
+2026-10-09T07:53:57Z W1 start c2-d13-sc (C: 89.5 GiB)
+2026-10-09T08:08:01Z W1 end c2-d13-sc rc=0
+2026-10-09T08:08:04Z W1 staged c2-d13-sc rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-automatically
+2026-10-09T08:08:04Z W1 start c2-d13-oc (C: 86.6 GiB)
+2026-10-09T08:08:20Z W2 end c2-d13-mr rc=0
+2026-10-09T08:08:24Z W2 staged c2-d13-mr rc=0 overall: complete-for-review | native_evidence: False | outcome: update-verified
+2026-10-09T08:08:24Z W2 worker done
+2026-10-09T08:08:28Z W4 start cell-rid3-archb (C: 86.6 GiB)
+2026-10-09T08:10:00Z W3 end c2-ub-def rc=0
+2026-10-09T08:10:04Z W3 staged c2-ub-def rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-automatically
+2026-10-09T08:10:04Z W3 start c2-ub-oc (C: 86.6 GiB)
+2026-10-09T08:19:56Z W4 end cell-rid3-archb rc=0
+2026-10-09T08:19:57Z W5 start cell-rid3-d13b (C: 81.1 GiB)
+2026-10-09T08:20:02Z W4 staged cell-rid3-archb rc=0 overall: complete-for-review | native_evidence: False | outcome: request-identity-measured
+2026-10-09T08:20:02Z W4 worker done
+2026-10-09T08:28:28Z W1 end c2-d13-oc rc=0
+2026-10-09T08:28:31Z W1 staged c2-d13-oc rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-after-owner-continuation
+2026-10-09T08:28:31Z W1 worker done
+2026-10-09T08:34:39Z W5 end cell-rid3-d13b rc=0
+2026-10-09T08:34:46Z W5 staged cell-rid3-d13b rc=0 overall: complete-for-review | native_evidence: False | outcome: request-identity-measured
+2026-10-09T08:34:46Z W5 worker done
+2026-10-09T08:37:45Z W3 end c2-ub-oc rc=0
+2026-10-09T08:37:49Z W3 staged c2-ub-oc rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-after-owner-continuation
+2026-10-09T08:37:49Z W3 worker done

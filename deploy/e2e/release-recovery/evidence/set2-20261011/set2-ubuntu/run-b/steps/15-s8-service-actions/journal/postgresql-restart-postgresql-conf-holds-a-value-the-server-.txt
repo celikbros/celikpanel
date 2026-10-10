@@ -1,0 +1,17 @@
+2026-10-09T04:12:13.808871+00:00 dns-ubuntu systemd[1]: postgresql.service: Deactivated successfully.
+2026-10-09T04:12:13.809307+00:00 dns-ubuntu systemd[1]: Stopped postgresql.service - PostgreSQL RDBMS.
+2026-10-09T04:12:13.809438+00:00 dns-ubuntu systemd[1]: Stopping postgresql.service - PostgreSQL RDBMS...
+2026-10-09T04:12:13.819504+00:00 dns-ubuntu systemd[1]: Stopping postgresql@16-main.service - PostgreSQL Cluster 16-main...
+2026-10-09T04:12:13.957235+00:00 dns-ubuntu systemd[1]: postgresql@16-main.service: Deactivated successfully.
+2026-10-09T04:12:13.957631+00:00 dns-ubuntu systemd[1]: Stopped postgresql@16-main.service - PostgreSQL Cluster 16-main.
+2026-10-09T04:12:13.963668+00:00 dns-ubuntu systemd[1]: Starting postgresql@16-main.service - PostgreSQL Cluster 16-main...
+2026-10-09T04:12:14.113288+00:00 dns-ubuntu postgresql@16-main[73562]: Error: /usr/lib/postgresql/16/bin/pg_ctl /usr/lib/postgresql/16/bin/pg_ctl start -D /var/lib/postgresql/16/main -l /var/log/postgresql/postgresql-16-main.log -s -o  -c config_file="/etc/postgresql/16/main/postgresql.conf"  exited with status 1:
+2026-10-09T04:12:14.113758+00:00 dns-ubuntu postgresql@16-main[73562]: 2026-10-09 04:12:14.022 GMT [73567] LOG:  invalid value for parameter "work_mem": "eight-megabytes"
+2026-10-09T04:12:14.113758+00:00 dns-ubuntu postgresql@16-main[73562]: 2026-10-09 04:12:14.022 UTC [73567] FATAL:  configuration file "/etc/postgresql/16/main/postgresql.conf" contains errors
+2026-10-09T04:12:14.113758+00:00 dns-ubuntu postgresql@16-main[73562]: pg_ctl: could not start server
+2026-10-09T04:12:14.113758+00:00 dns-ubuntu postgresql@16-main[73562]: Examine the log output.
+2026-10-09T04:12:14.115640+00:00 dns-ubuntu systemd[1]: postgresql@16-main.service: Can't open PID file /run/postgresql/16-main.pid (yet?) after start: No such file or directory
+2026-10-09T04:12:14.116106+00:00 dns-ubuntu systemd[1]: postgresql@16-main.service: Failed with result 'protocol'.
+2026-10-09T04:12:14.118761+00:00 dns-ubuntu systemd[1]: Failed to start postgresql@16-main.service - PostgreSQL Cluster 16-main.
+2026-10-09T04:12:14.125629+00:00 dns-ubuntu systemd[1]: Starting postgresql.service - PostgreSQL RDBMS...
+2026-10-09T04:12:14.128622+00:00 dns-ubuntu systemd[1]: Finished postgresql.service - PostgreSQL RDBMS.

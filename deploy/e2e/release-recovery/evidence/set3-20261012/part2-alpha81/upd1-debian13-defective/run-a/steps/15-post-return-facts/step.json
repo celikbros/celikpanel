@@ -1,0 +1,233 @@
+{
+  "checks": {
+    "database_against_the_pre_update_digest": "equal-except-volatile",
+    "ledger": {
+      "expected_version": 42,
+      "facts": {
+        "integrity": true,
+        "ledger_is_the_released_one": true,
+        "request_identities": true,
+        "schema_is_the_released_one": true,
+        "version": true
+      },
+      "ledger_last": [
+        {
+          "filename": "040_dns_management.sql",
+          "sha256": "4137adc9388ff7190d866b865f98985af56b29d627fc782e3781a3e92fda8520",
+          "version": 40
+        },
+        {
+          "filename": "041_server_setup_execution.sql",
+          "sha256": "5939ee55623ec7dd2ea5eecfdd8fe3c9c48000d4a50b0c2dbbe0b1680ce809bd",
+          "version": 41
+        },
+        {
+          "filename": "042_remote_dns_publish.sql",
+          "sha256": "60b4c3ee2c0c1348072d74ef505d4f7368552f35503e90871aa7eeb4f7b9e8d5",
+          "version": 42
+        }
+      ],
+      "ledger_rows": 42,
+      "ledger_sha256": "4075629507fd66f6d028bafc373bbc97a1d249b513116865b432d022327101a0",
+      "pinned_ledger_sha256": "4075629507fd66f6d028bafc373bbc97a1d249b513116865b432d022327101a0",
+      "pinned_schema_sha256": "2754d89b20e2c724c277a7072ac2d837aa41eb2a2a67106b4921e2fa7f015f68",
+      "request_identities": {
+        "exists": false
+      },
+      "schema_sha256": "2754d89b20e2c724c277a7072ac2d837aa41eb2a2a67106b4921e2fa7f015f68",
+      "schema_sha256_without_statistics": "2754d89b20e2c724c277a7072ac2d837aa41eb2a2a67106b4921e2fa7f015f68",
+      "schema_version": 42,
+      "statistics_tables": [],
+      "table_count": 65,
+      "verdict": "as-expected"
+    },
+    "offered_again": {
+      "body": {
+        "available": true,
+        "current_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+        "current_version": "v0.1.0-alpha.81",
+        "previous_attempt": {
+          "finished_at": "2026-10-09T07:52:24Z",
+          "phase": "recovered",
+          "request_id": "b6d67cc409404a6f762cedab2e080fd7"
+        },
+        "supported": true,
+        "target": {
+          "arch": "amd64",
+          "archive_sha256": "e17ddb7fae3c2227986b2b36f57a631b99ff060401fc0820af236bedae663420",
+          "archive_size": "65870672",
+          "commit": "b11032be780c6b4f3c2edf392af7af754d124083",
+          "os": "linux",
+          "published_at": "2026-10-09T07:41:48Z",
+          "sequence": "82",
+          "version": "v0.1.0-alpha.82"
+        }
+      },
+      "http": 200
+    },
+    "version": {
+      "body": {
+        "agent_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+        "agent_matches": true,
+        "commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+        "hostname": "dns-debian13",
+        "ipv4": "192.0.2.10",
+        "schema_version": 42,
+        "version": "v0.1.0-alpha.81"
+      },
+      "http": 200
+    },
+    "views": {
+      "agreement": {
+        "known_sources": [
+          "api",
+          "cli"
+        ],
+        "phase": {
+          "api": "recovered",
+          "cli": "recovered"
+        },
+        "reasons": [],
+        "sources": [
+          "api",
+          "cli",
+          "shell"
+        ],
+        "verdict": "agree"
+      },
+      "api_pair": [
+        "recovered",
+        "rollback_verified"
+      ],
+      "cli_pair": [
+        "recovered",
+        "rollback_verified"
+      ],
+      "cli_previous_failure": "update_failed",
+      "cli_text": {
+        "en": "The update did not complete, and the server was returned automatically to the version it ran before; that restoration was verified. Nothing needs to be done on the server. Do not start the same version again until a corrected version is published; the panel's update page shows what is known about the cause.\nRequest: b6d67cc409404a6f762cedab2e080fd7\nRecorded at: 2026-10-09T07:52:24Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed\n",
+        "tr": "Güncelleme tamamlanmadı ve sunucu otomatik olarak güncellemeden önce çalıştırdığı sürüme döndürüldü; bu geri dönüş doğrulandı. Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar aynı sürümü yeniden başlatmayın; nedenle ilgili bilinenler panelin güncelleme sayfasında gösterilir.\nİşlem: b6d67cc409404a6f762cedab2e080fd7\nKayıt zamanı: 2026-10-09T07:52:24Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovered reason=rollback_verified proof=rollback_verified previous_failure=update_failed\n"
+      },
+      "expected": [
+        "recovered",
+        "rollback_verified"
+      ],
+      "recovery_api_http": 200,
+      "recovery_screen": {
+        "actionable": true,
+        "keys": [
+          "recovery.phase.recovered",
+          "recovery.next.recovered",
+          "recovery.previousFailure",
+          "recovery.reason.update_failed"
+        ],
+        "missing_keys": [],
+        "no_actor_or_action": false,
+        "observation": {
+          "automatic_recovery": null,
+          "failure_code": null,
+          "first_failure_code": null,
+          "observation": "known",
+          "observed_at": "2026-10-09T07:52:24Z",
+          "panel_state": "ready",
+          "phase": "recovered",
+          "previous_failure": "update_failed",
+          "reason": "rollback_verified",
+          "renewal_before_update": null,
+          "request_id": "b6d67cc409404a6f762cedab2e080fd7",
+          "terminal_proof": "rollback_verified",
+          "waiting_for": null
+        },
+        "observation_unavailable": false,
+        "texts": {
+          "en": [
+            "Rollback verified",
+            "The server verified restoration of the previous release. Reload CelikPanel to check panel access.",
+            "Previously recorded failure: Update failed"
+          ],
+          "tr": [
+            "Geri alma doğrulandı",
+            "Sunucu önceki sürümün geri yüklendiğini doğruladı. Panel erişimini kontrol etmek için CelikPanel’i yeniden yükleyin.",
+            "Önceden kaydedilmiş hata: Güncelleme başarısız oldu"
+          ]
+        }
+      },
+      "update_card": {
+        "keys": [
+          "panelUpdate.outcome.rolledBackTitle",
+          "panelUpdate.outcome.rolledBack",
+          "panelUpdate.outcome.cause.generic",
+          "panelUpdate.outcome.rolledBackNext",
+          "panelUpdate.outcome.rolledBackResume",
+          "panelUpdate.outcome.serverMessage"
+        ],
+        "missing_keys": [],
+        "observation_error": null,
+        "role": "baseline",
+        "server_message": "reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved",
+        "source": {
+          "observation": {
+            "path": "lib/recoveryObservation.ts",
+            "sha256": "3b1c955fd04bdcfe754ca80da5f0a10d85a16caebc435d3e719d2e4e3fd57629"
+          },
+          "outcome": {
+            "path": "lib/systemUpdateOutcome.ts",
+            "sha256": "7329a488a436f12637f3c46a60521bbe22027de032044c4963f5686b0a83f67c"
+          },
+          "screen": {
+            "path": "components/RecoveryAccess.tsx",
+            "sha256": "4cc5136c5e24f522cd44c1a9e8cb698c0d7450a90670ffab19bbc03ee74311c0"
+          },
+          "typed": {
+            "path": "lib/systemUpdateFailure.ts",
+            "sha256": "b12d9a0d2989bd70670e02481159128ba716bb21f15db5084b9631475a610af4"
+          }
+        },
+        "state": "rolled_back",
+        "texts": {
+          "en": [
+            "Update not completed; previous version restored",
+            "The update to v0.1.0-alpha.82 did not complete. The server was returned to v0.1.0-alpha.81 automatically and is running it now.",
+            "Cause: the update failed before it completed; the server recorded no more specific cause.",
+            "Nothing needs to be done on the server. Do not start the update to v0.1.0-alpha.82 again until a corrected version is published. If the server's message names a problem on this server, fix it first.",
+            "Nothing resumes by itself: the server keeps running v0.1.0-alpha.81. When a newer version is published, “Check for updates” offers it.",
+            "The server reported: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved"
+          ],
+          "tr": [
+            "Güncelleme tamamlanmadı; önceki sürüm geri yüklendi",
+            "v0.1.0-alpha.82 sürümüne güncelleme tamamlanmadı. Sunucu otomatik olarak v0.1.0-alpha.81 sürümüne döndürüldü ve şu an onu çalıştırıyor.",
+            "Neden: güncelleme tamamlanmadan başarısız oldu; sunucu daha belirli bir neden kaydetmedi.",
+            "Sunucuda yapmanız gereken bir şey yok. Düzeltilmiş bir sürüm yayımlanana kadar v0.1.0-alpha.82 güncellemesini yeniden başlatmayın. Sunucunun iletisi bu sunucudaki bir sorunu belirtiyorsa önce onu giderin.",
+            "Hiçbir işlem kendiliğinden sürmez: sunucu v0.1.0-alpha.81 sürümünü çalıştırmaya devam eder. Daha yeni bir sürüm yayımlandığında “Güncellemeyi kontrol et” onu gösterir.",
+            "Sunucunun İngilizce günlük satırı: reviewed updater failed: exit status 1: offline panel database migration failed; its original database and work evidence are preserved"
+          ]
+        },
+        "unavailable": null
+      },
+      "update_status": {
+        "body": {
+          "created_at": "2026-10-09T07:50:11.879018382Z",
+          "found": true,
+          "request_id": "b6d67cc409404a6f762cedab2e080fd7",
+          "status": "failed",
+          "summary": "reviewed updater failed: exit status 1: !! CELIKPANEL_UPDATE_FAILURE code=update_failed state=recovery_required reason=offline panel database migration failed; its original database and work evidence are preserved detail=",
+          "target": {
+            "arch": "amd64",
+            "archive_sha256": "e17ddb7fae3c2227986b2b36f57a631b99ff060401fc0820af236bedae663420",
+            "archive_size": "65870672",
+            "commit": "b11032be780c6b4f3c2edf392af7af754d124083",
+            "os": "linux",
+            "sequence": "82",
+            "version": "v0.1.0-alpha.82"
+          },
+          "updated_at": "2026-10-09T07:50:57.85423299Z"
+        },
+        "http": 200
+      }
+    }
+  },
+  "finished_at": "2026-10-09T07:53:52Z",
+  "name": "post-return-facts",
+  "started_at": "2026-10-09T07:53:51Z",
+  "verdict": "passed"
+}

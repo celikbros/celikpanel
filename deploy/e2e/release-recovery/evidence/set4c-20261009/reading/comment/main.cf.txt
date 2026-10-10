@@ -1,0 +1,10 @@
+compatibility_level = 3.6
+myhostname = mail.set4c.test
+mydestination = localhost
+queue_directory = /var/spool/postfix
+alias_maps = hash:/etc/aliases
+alias_database = $alias_maps
+smtpd_tls_cert_file = /etc/ssl/celikpanel-mail/default.crt
+smtpd_tls_key_file = /etc/ssl/celikpanel-mail/default.key
+smtpd_tls_security_level = may
+default_process_limit = 200 # raised for the campaign

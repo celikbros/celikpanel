@@ -1,0 +1,13 @@
+{
+  "checks": {
+    "after_boot_id": "4f309e2d-9213-4c3f-8b7b-781796ccfe59",
+    "before_boot_id": "e1796165-1bf8-410a-b775-bcb196aa7d77",
+    "command": "sudo systemctl reboot",
+    "new_boot": true,
+    "ssh_return_seconds": 3.8
+  },
+  "finished_at": "2026-10-09T08:04:47Z",
+  "name": "owner-reboot",
+  "started_at": "2026-10-09T08:04:31Z",
+  "verdict": "passed"
+}

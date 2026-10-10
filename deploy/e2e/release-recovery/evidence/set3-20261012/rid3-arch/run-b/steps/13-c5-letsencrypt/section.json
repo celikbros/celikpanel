@@ -1,0 +1,966 @@
+{
+  "answer_without_acme": {
+    "json": {
+      "code": "CERTIFICATE_ISSUE_FAILED",
+      "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+      "reason": "authority_unreachable",
+      "vars": {
+        "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+        "domain": "set1-owner.test",
+        "kept": "none"
+      }
+    },
+    "seconds": 0.548,
+    "status": 502,
+    "text": null
+  },
+  "calls": [
+    {
+      "answer": {
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+        "reason": "authority_unreachable",
+        "vars": {
+          "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+          "domain": "set1-owner.test",
+          "kept": "none"
+        }
+      },
+      "at": "2026-10-09T08:16:05Z",
+      "body_bytes": 847,
+      "body_sha256": "5833cf9549f627d0ce536b48991cb1d23edc6064d171ad426ef95e82fcb58f02",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "71f9f642f137e1ba2be8d526fda77f48"
+      },
+      "json": {
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+        "reason": "authority_unreachable",
+        "vars": {
+          "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+          "domain": "set1-owner.test",
+          "kept": "none"
+        }
+      },
+      "label": "letsencrypt: one request with an identity of its own (what one entry leaves)",
+      "n": 61,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "71f9f642f137e1ba2be8d526fda77f48",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.596,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 502,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "at": "2026-10-09T08:16:09Z",
+      "body_bytes": 354,
+      "body_sha256": "7493044ee0ab05fdc18ae1bd147cae25a5bf4de689629b9df545994dd58da413",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REQUIRED": {
+          "en": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again.",
+          "tr": "Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json"
+      },
+      "json": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "label": "letsencrypt (iii) without the header",
+      "n": 62,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": false,
+        "identity": null,
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.003,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 428,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+        "reason": "authority_unreachable",
+        "vars": {
+          "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+          "domain": "set1-owner.test",
+          "kept": "none"
+        }
+      },
+      "at": "2026-10-09T08:16:10Z",
+      "body_bytes": 847,
+      "body_sha256": "5833cf9549f627d0ce536b48991cb1d23edc6064d171ad426ef95e82fcb58f02",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "dbdd11565c2b513698d54f766f28f5de"
+      },
+      "json": {
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+        "reason": "authority_unreachable",
+        "vars": {
+          "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+          "domain": "set1-owner.test",
+          "kept": "none"
+        }
+      },
+      "label": "letsencrypt (i) sequential arrival 1 of 3",
+      "n": 63,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "dbdd11565c2b513698d54f766f28f5de",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.548,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 502,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+        "reason": "authority_unreachable",
+        "vars": {
+          "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+          "domain": "set1-owner.test",
+          "kept": "none"
+        }
+      },
+      "at": "2026-10-09T08:16:11Z",
+      "body_bytes": 847,
+      "body_sha256": "5833cf9549f627d0ce536b48991cb1d23edc6064d171ad426ef95e82fcb58f02",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "dbdd11565c2b513698d54f766f28f5de",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+        "reason": "authority_unreachable",
+        "vars": {
+          "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+          "domain": "set1-owner.test",
+          "kept": "none"
+        }
+      },
+      "label": "letsencrypt (i) sequential arrival 2 of 3",
+      "n": 64,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "dbdd11565c2b513698d54f766f28f5de",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.003,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 502,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+        "reason": "authority_unreachable",
+        "vars": {
+          "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+          "domain": "set1-owner.test",
+          "kept": "none"
+        }
+      },
+      "at": "2026-10-09T08:16:11Z",
+      "body_bytes": 847,
+      "body_sha256": "5833cf9549f627d0ce536b48991cb1d23edc6064d171ad426ef95e82fcb58f02",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "dbdd11565c2b513698d54f766f28f5de",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+        "reason": "authority_unreachable",
+        "vars": {
+          "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+          "domain": "set1-owner.test",
+          "kept": "none"
+        }
+      },
+      "label": "letsencrypt (i) sequential arrival 3 of 3",
+      "n": 65,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "dbdd11565c2b513698d54f766f28f5de",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.004,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 502,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "dbdd11565c2b513698d54f766f28f5de"
+        }
+      },
+      "at": "2026-10-09T08:16:12Z",
+      "body_bytes": 256,
+      "body_sha256": "c9914c4867c638ac63dd79742e55c64b4f61831eb7a4c4c20c57de5c45986414",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REUSED": {
+          "en": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+          "tr": "Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "dbdd11565c2b513698d54f766f28f5de"
+      },
+      "json": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "dbdd11565c2b513698d54f766f28f5de"
+        }
+      },
+      "label": "letsencrypt (iv) the same identity with a different body",
+      "n": 66,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "auto_renew": false,
+          "email": "other@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "dbdd11565c2b513698d54f766f28f5de",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.004,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+        "reason": "authority_unreachable",
+        "vars": {
+          "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+          "domain": "set1-owner.test",
+          "kept": "none"
+        }
+      },
+      "at": "2026-10-09T08:16:14Z",
+      "body_bytes": 847,
+      "body_sha256": "5833cf9549f627d0ce536b48991cb1d23edc6064d171ad426ef95e82fcb58f02",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "ec3b2dd343b0df69ae01199345e6cf2a",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+        "reason": "authority_unreachable",
+        "vars": {
+          "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+          "domain": "set1-owner.test",
+          "kept": "none"
+        }
+      },
+      "label": "letsencrypt (ii) concurrent arrival 1 of 3",
+      "n": 67,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "ec3b2dd343b0df69ae01199345e6cf2a",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.493,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 502,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+        "reason": "authority_unreachable",
+        "vars": {
+          "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+          "domain": "set1-owner.test",
+          "kept": "none"
+        }
+      },
+      "at": "2026-10-09T08:16:14Z",
+      "body_bytes": 847,
+      "body_sha256": "5833cf9549f627d0ce536b48991cb1d23edc6064d171ad426ef95e82fcb58f02",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "ec3b2dd343b0df69ae01199345e6cf2a",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+        "reason": "authority_unreachable",
+        "vars": {
+          "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+          "domain": "set1-owner.test",
+          "kept": "none"
+        }
+      },
+      "label": "letsencrypt (ii) concurrent arrival 2 of 3",
+      "n": 68,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "ec3b2dd343b0df69ae01199345e6cf2a",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.493,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 502,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+        "reason": "authority_unreachable",
+        "vars": {
+          "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+          "domain": "set1-owner.test",
+          "kept": "none"
+        }
+      },
+      "at": "2026-10-09T08:16:14Z",
+      "body_bytes": 847,
+      "body_sha256": "5833cf9549f627d0ce536b48991cb1d23edc6064d171ad426ef95e82fcb58f02",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "ec3b2dd343b0df69ae01199345e6cf2a"
+      },
+      "json": {
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+        "reason": "authority_unreachable",
+        "vars": {
+          "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+          "domain": "set1-owner.test",
+          "kept": "none"
+        }
+      },
+      "label": "letsencrypt (ii) concurrent arrival 3 of 3",
+      "n": 69,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "auto_renew": true,
+          "email": "owner@set2-lab.test",
+          "reissue": true
+        },
+        "header_sent": true,
+        "identity": "ec3b2dd343b0df69ae01199345e6cf2a",
+        "method": "POST",
+        "path": "/api/v1/domains/1/ssl/letsencrypt"
+      },
+      "seconds": 0.492,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 502,
+      "text": null
+    }
+  ],
+  "certificate_failure": {
+    "code": "CERTIFICATE_ISSUE_FAILED",
+    "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+    "one_entry_answer": {
+      "code": "CERTIFICATE_ISSUE_FAILED",
+      "error": null,
+      "outcome": "answer",
+      "reason": "authority_unreachable",
+      "replayed": null,
+      "seconds": 0.596,
+      "status": 502
+    },
+    "reason": "authority_unreachable",
+    "status": 502,
+    "texts": null,
+    "vars": {
+      "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+      "domain": "set1-owner.test",
+      "kept": "none"
+    }
+  },
+  "checks": [
+    {
+      "detail": {
+        "answer": {
+          "code": "CERTIFICATE_ISSUE_FAILED",
+          "error": null,
+          "outcome": "answer",
+          "reason": "authority_unreachable",
+          "replayed": null,
+          "seconds": 0.596,
+          "status": 502
+        },
+        "delta": {
+          "nginx_reload_lines": 4,
+          "panel_and_agent_lines": 1
+        },
+        "lines": [
+          "2026-10-09T08:16:06.754719+00:00 dns-arch panel[423]: 2026/10/09 08:16:06 [502][certificate] set1-owner.test: CERTIFICATE_ISSUE_FAILED authority_unreachable: certbot failed: exit status 1 Output: Saving debug log to /var/log/celikpanel/certbot/letsencrypt.log An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'acme-v02.api.letsencrypt.org'. (_ssl.c:1082)\"))) Ask for help or search for soluti…"
+        ]
+      },
+      "name": "one entry into the handler leaves a trace that can be counted (journal lines, certbot logs or reloads)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.003,
+        "status": 428
+      },
+      "name": "letsencrypt (iii): without the header the answer is 428 REQUEST_ID_REQUIRED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "certbot_logs": 2,
+          "certificates": 0,
+          "nginx_reload_lines": 4,
+          "panel_and_agent_lines": 1
+        },
+        "before": {
+          "certbot_logs": 2,
+          "certificates": 0,
+          "nginx_reload_lines": 4,
+          "panel_and_agent_lines": 1
+        }
+      },
+      "name": "letsencrypt (iii): and nothing changed on the server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "code": "CERTIFICATE_ISSUE_FAILED",
+          "error": null,
+          "outcome": "answer",
+          "reason": "authority_unreachable",
+          "replayed": null,
+          "seconds": 0.548,
+          "status": 502
+        },
+        "certbot_log_files": [
+          2,
+          3
+        ],
+        "delta": {
+          "nginx_reload_lines": 4,
+          "panel_and_agent_lines": 1
+        },
+        "one_entry_leaves": {
+          "nginx_reload_lines": 4,
+          "panel_and_agent_lines": 1
+        },
+        "what_counts": "journal lines of the Panel and the Agent about the issuance and nginx reloads for the validation virtual host, each compared with what one entry left"
+      },
+      "name": "letsencrypt (i): three arrivals in a row of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "replays_marked": true,
+        "same_bytes": true,
+        "statuses": [
+          502,
+          502,
+          502
+        ]
+      },
+      "name": "letsencrypt (i): the three answers are the same bytes, the later two marked as replays",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REUSED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.004,
+        "status": 409
+      },
+      "name": "letsencrypt (iv): the same identity with a different body is refused 409 REQUEST_ID_REUSED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "certbot_logs": 3,
+          "certificates": 0,
+          "nginx_reload_lines": 8,
+          "panel_and_agent_lines": 2
+        },
+        "before": {
+          "certbot_logs": 3,
+          "certificates": 0,
+          "nginx_reload_lines": 8,
+          "panel_and_agent_lines": 2
+        }
+      },
+      "name": "letsencrypt (iv): and there is no second effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "code": "CERTIFICATE_ISSUE_FAILED",
+          "error": null,
+          "outcome": "answer",
+          "reason": "authority_unreachable",
+          "replayed": "1",
+          "seconds": 0.493,
+          "status": 502
+        },
+        "certbot_log_files": [
+          3,
+          4
+        ],
+        "delta": {
+          "nginx_reload_lines": 4,
+          "panel_and_agent_lines": 1
+        },
+        "one_entry_leaves": {
+          "nginx_reload_lines": 4,
+          "panel_and_agent_lines": 1
+        },
+        "what_counts": "journal lines of the Panel and the Agent about the issuance and nginx reloads for the validation virtual host, each compared with what one entry left"
+      },
+      "name": "letsencrypt (ii): three arrivals at once of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answers": [
+          {
+            "code": "CERTIFICATE_ISSUE_FAILED",
+            "error": null,
+            "outcome": "answer",
+            "reason": "authority_unreachable",
+            "replayed": "1",
+            "seconds": 0.493,
+            "status": 502
+          },
+          {
+            "code": "CERTIFICATE_ISSUE_FAILED",
+            "error": null,
+            "outcome": "answer",
+            "reason": "authority_unreachable",
+            "replayed": "1",
+            "seconds": 0.493,
+            "status": 502
+          },
+          {
+            "code": "CERTIFICATE_ISSUE_FAILED",
+            "error": null,
+            "outcome": "answer",
+            "reason": "authority_unreachable",
+            "replayed": null,
+            "seconds": 0.492,
+            "status": 502
+          }
+        ],
+        "in_progress": 0
+      },
+      "name": "letsencrypt (ii): the answers are the same bytes, or REQUEST_IN_PROGRESS for a waiter",
+      "ok": true
+    },
+    {
+      "detail": {
+        "certbot_logs": 4,
+        "certificates": 0,
+        "nginx_reload_lines": 12,
+        "panel_and_agent_lines": 3
+      },
+      "name": "no certificate was recorded for the domain",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "CERTIFICATE_ISSUE_FAILED",
+        "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+        "one_entry_answer": {
+          "code": "CERTIFICATE_ISSUE_FAILED",
+          "error": null,
+          "outcome": "answer",
+          "reason": "authority_unreachable",
+          "replayed": null,
+          "seconds": 0.596,
+          "status": 502
+        },
+        "reason": "authority_unreachable",
+        "status": 502,
+        "texts": null,
+        "vars": {
+          "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+          "domain": "set1-owner.test",
+          "kept": "none"
+        }
+      },
+      "name": "O9: with the certificate authority unreachable the answer is 502 CERTIFICATE_ISSUE_FAILED, reason authority_unreachable",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T08:16:15Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/087-letsencrypt-isolation.json",
+      "lab_action": false,
+      "label": "letsencrypt-isolation",
+      "mode": "read-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/088-letsencrypt-one-entry-before-acme.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-before-acme",
+      "mode": "read-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/089-letsencrypt-one-entry-before-journal.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-before-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/090-letsencrypt-one-entry-before-nginx.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-before-nginx",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/091-letsencrypt-one-entry-before-rows.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-before-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/092-letsencrypt-one-entry-after-acme.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-after-acme",
+      "mode": "read-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/093-letsencrypt-one-entry-after-journal.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-after-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/094-letsencrypt-one-entry-after-nginx.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-after-nginx",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/095-letsencrypt-one-entry-after-rows.json",
+      "lab_action": false,
+      "label": "letsencrypt-one-entry-after-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/096-letsencrypt-before-acme.json",
+      "lab_action": false,
+      "label": "letsencrypt-before-acme",
+      "mode": "read-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/097-letsencrypt-before-journal.json",
+      "lab_action": false,
+      "label": "letsencrypt-before-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/098-letsencrypt-before-nginx.json",
+      "lab_action": false,
+      "label": "letsencrypt-before-nginx",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/099-letsencrypt-before-rows.json",
+      "lab_action": false,
+      "label": "letsencrypt-before-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/100-letsencrypt-after-iii-acme.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iii-acme",
+      "mode": "read-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/101-letsencrypt-after-iii-journal.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iii-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/102-letsencrypt-after-iii-nginx.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iii-nginx",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/103-letsencrypt-after-iii-rows.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/104-letsencrypt-after-i-acme.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-i-acme",
+      "mode": "read-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/105-letsencrypt-after-i-journal.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-i-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/106-letsencrypt-after-i-nginx.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-i-nginx",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/107-letsencrypt-after-i-rows.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-i-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/108-letsencrypt-after-iv-acme.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iv-acme",
+      "mode": "read-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/109-letsencrypt-after-iv-journal.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iv-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/110-letsencrypt-after-iv-nginx.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iv-nginx",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/111-letsencrypt-after-iv-rows.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-iv-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/112-letsencrypt-after-ii-acme.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-ii-acme",
+      "mode": "read-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/113-letsencrypt-after-ii-journal.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-ii-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/114-letsencrypt-after-ii-nginx.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-ii-nginx",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/115-letsencrypt-after-ii-rows.json",
+      "lab_action": false,
+      "label": "letsencrypt-after-ii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [
+    {
+      "detail": {
+        "json": {
+          "code": "CERTIFICATE_ISSUE_FAILED",
+          "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+          "reason": "authority_unreachable",
+          "vars": {
+            "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+            "domain": "set1-owner.test",
+            "kept": "none"
+          }
+        },
+        "seconds": 0.548,
+        "status": 502,
+        "text": null
+      },
+      "note": "no certificate authority is reachable from this guest, so no issuance was attempted against one; the route's answer without ACME is recorded and only the guard is judged"
+    }
+  ],
+  "one_entry_leaves": {
+    "answer": {
+      "code": "CERTIFICATE_ISSUE_FAILED",
+      "error": null,
+      "outcome": "answer",
+      "reason": "authority_unreachable",
+      "replayed": null,
+      "seconds": 0.596,
+      "status": 502
+    },
+    "delta": {
+      "nginx_reload_lines": 4,
+      "panel_and_agent_lines": 1
+    },
+    "lines": [
+      "2026-10-09T08:16:06.754719+00:00 dns-arch panel[423]: 2026/10/09 08:16:06 [502][certificate] set1-owner.test: CERTIFICATE_ISSUE_FAILED authority_unreachable: certbot failed: exit status 1 Output: Saving debug log to /var/log/celikpanel/certbot/letsencrypt.log An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'acme-v02.api.letsencrypt.org'. (_ssl.c:1082)\"))) Ask for help or search for soluti…"
+    ]
+  },
+  "owner_actions": [],
+  "section": "C5-letsencrypt",
+  "started_at": "2026-10-09T08:16:03Z",
+  "substeps": {
+    "O9": "passed",
+    "letsencrypt": "passed",
+    "section": "passed"
+  },
+  "title": "Let's Encrypt reissue: the guard only",
+  "verdict": "passed"
+}

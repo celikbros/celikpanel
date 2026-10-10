@@ -1,0 +1,68 @@
+{
+  "checks": {
+    "config_files": {
+      "listed": {
+        "mariadb": [
+          "/etc/my.cnf"
+        ],
+        "postgresql": [
+          "/var/lib/postgres/data/postgresql.conf",
+          "/var/lib/postgres/data/pg_hba.conf"
+        ]
+      },
+      "mariadb_conf": "/etc/my.cnf",
+      "pg_conf": "/var/lib/postgres/data/postgresql.conf",
+      "pg_hba": "/var/lib/postgres/data/pg_hba.conf"
+    },
+    "crontab_binary": "/usr/sbin/crontab",
+    "crontab_package": "/usr/bin/crontab is owned by cronie 1.7.2-2",
+    "domain": "set1-owner.test",
+    "domain_id": 1,
+    "metadata_before": {
+      "/etc/my.cnf": {
+        "exists": true,
+        "gid": 0,
+        "group": "root",
+        "inode": 81025,
+        "mode": "0644",
+        "owner": "root",
+        "sha256": "888e33ad5f5370d8f441bdd065965cf4d682d5b151ab11c04be6061cf48401e6",
+        "type": "regular",
+        "uid": 0
+      },
+      "/var/lib/postgres/data/pg_hba.conf": {
+        "exists": true,
+        "gid": 967,
+        "group": "postgres",
+        "inode": 86018,
+        "mode": "0600",
+        "owner": "postgres",
+        "sha256": "e6305f548fd8096217d02a8f93b5c50716d58df1d2441b12346dfe57db7027fd",
+        "type": "regular",
+        "uid": 967
+      },
+      "/var/lib/postgres/data/postgresql.conf": {
+        "exists": true,
+        "gid": 967,
+        "group": "postgres",
+        "inode": 86014,
+        "mode": "0600",
+        "owner": "postgres",
+        "sha256": "7623dcd2004bd7941eed873720e9d6acbd674fc1fdd8be741096bbb86fdc638a",
+        "type": "regular",
+        "uid": 967
+      }
+    },
+    "scan_http": 200,
+    "site_account": {
+      "gid": 1002,
+      "home": "/var/www/celikpanel/subscriptions/2/sites/1",
+      "uid": 1002
+    },
+    "site_user": "set1_owner_test"
+  },
+  "finished_at": "2026-10-09T22:06:28Z",
+  "name": "site",
+  "started_at": "2026-10-09T22:06:26Z",
+  "verdict": "passed"
+}

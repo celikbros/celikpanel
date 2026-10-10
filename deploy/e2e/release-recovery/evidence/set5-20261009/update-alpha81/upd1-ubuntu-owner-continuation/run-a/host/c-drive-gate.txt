@@ -1,0 +1,2 @@
+2026-10-09T19:18:26Z before upd1-ubuntu-owner-continuation run-a (lab prepare) free_GiB=41.46 free_bytes=44521316352 (Get-PSDrive C reading of 2026-10-09T19:18:11Z, 15s old) allowed=yes
+2026-10-09T19:18:28Z before upd1-ubuntu-owner-continuation run-a (guest start) free_GiB=41.46 free_bytes=44521316352 (Get-PSDrive C reading of 2026-10-09T19:18:11Z, 17s old) allowed=yes

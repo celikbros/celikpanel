@@ -1,0 +1,18 @@
+{
+  "at": "2026-10-09T10:36:18Z",
+  "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+  "body_sha256": "d036873a4d861772ecad038fcfa1e8ceda867bc430d9f142eed2b54c71c62909",
+  "bytes": 153,
+  "headers": {
+    "content-length": "153",
+    "content-type": "text/html",
+    "server": "nginx/1.30.5"
+  },
+  "host": "set4-refused.test",
+  "mode": "read-http",
+  "owner_action": false,
+  "path": "/.env",
+  "schema": "celikpanel/set4-native/v1",
+  "status": 403,
+  "status_line": "HTTP/1.1 403 Forbidden"
+}

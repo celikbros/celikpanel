@@ -1,0 +1,4 @@
+-- No entries --
+2026-10-09T04:10:34.625845+00:00 dns-ubuntu postfix/postfix-script[63664]: the Postfix mail system is running: PID: 57255
+2026-10-09T04:10:35.435751+00:00 dns-ubuntu postfix/postfix-script[63951]: the Postfix mail system is running: PID: 57255
+2026-10-09T04:10:37.870625+00:00 dns-ubuntu postfix/postfix-script[64069]: the Postfix mail system is running: PID: 57255

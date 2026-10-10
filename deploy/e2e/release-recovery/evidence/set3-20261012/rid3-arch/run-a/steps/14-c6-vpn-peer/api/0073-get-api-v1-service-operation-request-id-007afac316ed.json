@@ -1,0 +1,79 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "service operation poll",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18465"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/service/operation?request_id=007afac316edd7b545d22890440bd7e1"
+  },
+  "response": {
+    "elapsed_seconds": 0.004,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 07:30:25 GMT"
+      ],
+      [
+        "Content-Length",
+        "331"
+      ]
+    ],
+    "json": {
+      "operation": {
+        "finished_at": "2026-10-09T07:30:21.219894678Z",
+        "id": "793133a9dd2ba052b5739c810bcc28d3",
+        "kind": "service_install",
+        "phase": "completed",
+        "request_id": "007afac316edd7b545d22890440bd7e1",
+        "result": {
+          "installed": true,
+          "success": true
+        },
+        "service_id": "wireguard",
+        "started_at": "2026-10-09T07:30:15.066541925Z",
+        "status": "succeeded"
+      }
+    },
+    "status": 200,
+    "text": null
+  }
+}

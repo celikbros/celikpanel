@@ -1,0 +1,1564 @@
+{
+  "acknowledged": [
+    {
+      "peer": 1,
+      "status": 200
+    },
+    {
+      "peer": 2,
+      "status": 200
+    }
+  ],
+  "calls": [
+    {
+      "at": "2026-10-09T07:30:14Z",
+      "json": {
+        "configured": false,
+        "endpoint": "",
+        "installed": false,
+        "peer_count": 0,
+        "policy": {
+          "allowed_ips": "0.0.0.0/0",
+          "client_dns": "1.1.1.1",
+          "firewall_required": true,
+          "forward_required": true,
+          "full_tunnel": true,
+          "interface": "wg0",
+          "listen_port": 51820,
+          "listen_protocol": "UDP",
+          "nat_required": true,
+          "network": "10.8.0.0/24",
+          "server_address": "10.8.0.1"
+        },
+        "port": 0,
+        "running": false,
+        "server_public_key": "",
+        "sync": {
+          "errors": 0,
+          "in_sync": true,
+          "pending": 0
+        }
+      },
+      "label": "C6 VPN status (VPNPage)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/vpn/status"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:30:14Z",
+      "json": {
+        "operation": {
+          "id": "793133a9dd2ba052b5739c810bcc28d3",
+          "kind": "service_install",
+          "phase": "queued",
+          "request_id": "007afac316edd7b545d22890440bd7e1",
+          "service_id": "wireguard",
+          "started_at": "2026-10-09T07:30:15.066541925Z",
+          "status": "queued"
+        }
+      },
+      "label": "C6 install the WireGuard component (Components page)",
+      "request": {
+        "body": {
+          "request_id": "007afac316edd7b545d22890440bd7e1",
+          "service_id": "wireguard"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/install"
+      },
+      "status": 202,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:30:26Z",
+      "json": {
+        "dns_identity_ready": true,
+        "mail_hostname": {
+          "current": "dns-arch",
+          "current_usable": false,
+          "will_set_hostname": false
+        },
+        "profiles": [
+          {
+            "available": false,
+            "blocked_reason": "Dovecot: CelikPanel cannot set up Dovecot on Arch Linux yet: the Arch package keeps its mail, login and TLS settings in one /etc/dovecot/dovecot.conf that CelikPanel does not manage. The server administrator can choose a setup purpose without mail (Web hosting), or install and configure mail with the operating system's own tools.",
+            "description": "Postfix SMTP and Dovecot IMAP/POP3 with authenticated submission.",
+            "id": "core-mail",
+            "latest_attempt_status": "none",
+            "name": "Core Mail",
+            "services": [
+              "postfix",
+              "dovecot"
+            ],
+            "status": "blocked",
+            "verified": false
+          },
+          {
+            "available": false,
+            "blocked_reason": "Dovecot: CelikPanel cannot set up Dovecot on Arch Linux yet: the Arch package keeps its mail, login and TLS settings in one /etc/dovecot/dovecot.conf that CelikPanel does not manage. The server administrator can choose a setup purpose without mail (Web hosting), or install and configure mail with the operating system's own tools.",
+            "description": "Core mail plus Nginx, PHP-FPM and Roundcube webmail.",
+            "id": "webmail",
+            "latest_attempt_status": "none",
+            "name": "Webmail",
+            "services": [
+              "postfix",
+              "dovecot",
+              "nginx",
+              "php-fpm",
+              "roundcube"
+            ],
+            "status": "blocked",
+            "verified": false
+          },
+          {
+            "available": false,
+            "blocked_reason": "Dovecot: CelikPanel cannot set up Dovecot on Arch Linux yet: the Arch package keeps its mail, login and TLS settings in one /etc/dovecot/dovecot.conf that CelikPanel does not manage. The server administrator can choose a setup purpose without mail (Web hosting), or install and configure mail with the operating system's own tools.",
+            "description": "Core mail with Rspamd spam filtering.",
+            "id": "protected-mail",
+            "latest_attempt_status": "none",
+            "name": "Spam-Protected Mail",
+            "services": [
+              "postfix",
+              "dovecot",
+              "rspamd"
+            ],
+            "status": "blocked",
+            "verified": false
+          }
+        ],
+        "scanned_at": "2026-10-09T07:30:26.489231819Z",
+        "services": [
+          {
+            "category": "web",
+            "config_files": [],
+            "description": "PHP FastCGI Process Manager",
+            "icon": "🐘",
+            "id": "php-fpm",
+            "installed_evidence": "systemd_unit",
+            "instances": [
+              {
+                "managed": true,
+                "path": "/etc/php",
+                "status": "active (running)",
+                "unit": "php-fpm",
+                "version": "8.5"
+              }
+            ],
+            "is_installed": true,
+            "kind": "runtime",
+            "name": "PHP-FPM",
+            "packages": [
+              "php-fpm"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "php-fpm",
+            "versions": [
+              "8.5"
+            ]
+          },
+          {
+            "category": "web",
+            "config_files": [],
+            "description": "JavaScript Runtime",
+            "icon": "🟩",
+            "id": "node",
+            "instances": [],
+            "is_installed": false,
+            "kind": "runtime",
+            "name": "Node.js",
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "web",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/nginx/nginx.conf"
+              },
+              {
+                "is_managed": true,
+                "path": "/etc/nginx/sites-enabled/set1-owner.test.conf"
+              }
+            ],
+            "description": "Reverse Proxy Server",
+            "icon": "🔄",
+            "id": "nginx",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Nginx",
+            "packages": [
+              "nginx"
+            ],
+            "ports": [
+              "80/tcp",
+              "443/tcp"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "nginx",
+            "versions": []
+          },
+          {
+            "category": "web",
+            "config_files": [],
+            "conflict_with": "Nginx",
+            "description": "Web Server",
+            "icon": "🪶",
+            "id": "apache",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Apache",
+            "not_offered": true,
+            "not_offered_kind": "integration",
+            "not_offered_reason": "Apache virtual-host integration is not available in CelikPanel yet; use Nginx.",
+            "packages": [
+              "apache"
+            ],
+            "ports": [
+              "80/tcp",
+              "443/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/var/lib/postgres/data/postgresql.conf"
+              },
+              {
+                "is_managed": true,
+                "path": "/var/lib/postgres/data/pg_hba.conf"
+              }
+            ],
+            "description": "Database Server",
+            "icon": "🐘",
+            "id": "postgresql",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "PostgreSQL",
+            "packages": [
+              "postgresql"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "postgresql",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [
+              {
+                "is_managed": true,
+                "path": "/etc/my.cnf"
+              }
+            ],
+            "description": "Database Server",
+            "icon": "🦭",
+            "id": "mariadb",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "MariaDB",
+            "packages": [
+              "mariadb"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "mariadb",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [],
+            "description": "MariaDB/MySQL web admin tool",
+            "icon": "🐬",
+            "id": "phpmyadmin",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": false,
+            "kind": "tool",
+            "name": "phpMyAdmin",
+            "packages": [
+              "phpmyadmin"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "database",
+            "config_files": [],
+            "description": "PostgreSQL web admin tool",
+            "icon": "🐘",
+            "id": "phppgadmin",
+            "instances": [],
+            "is_installed": false,
+            "kind": "tool",
+            "name": "phpPgAdmin",
+            "not_offered": true,
+            "not_offered_kind": "distribution",
+            "not_offered_reason": "automatic installation is not supported on this Linux distribution yet",
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "description": "SMTP Server",
+            "icon": "📧",
+            "id": "postfix",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Postfix",
+            "packages": [
+              "postfix"
+            ],
+            "ports": [
+              "25/tcp",
+              "587/tcp",
+              "465/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "description": "SMTP Server",
+            "icon": "📮",
+            "id": "exim",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Exim",
+            "not_offered": true,
+            "not_offered_kind": "integration",
+            "not_offered_reason": "Exim mailbox, TLS and submission integration is not available in CelikPanel yet; use Postfix.",
+            "packages": [
+              "exim"
+            ],
+            "ports": [
+              "25/tcp",
+              "587/tcp",
+              "465/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "description": "Spam Filter & DKIM",
+            "icon": "🧹",
+            "id": "rspamd",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Rspamd",
+            "packages": [
+              "rspamd"
+            ],
+            "repair_available": true,
+            "requires_missing": [
+              "smtp-server"
+            ],
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "description": "IMAP/POP3 Server",
+            "icon": "📬",
+            "id": "dovecot",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Dovecot",
+            "not_offered": true,
+            "not_offered_kind": "distribution",
+            "not_offered_reason": "CelikPanel cannot set up Dovecot on Arch Linux yet: the Arch package keeps its mail, login and TLS settings in one /etc/dovecot/dovecot.conf that CelikPanel does not manage. The server administrator can choose a setup purpose without mail (Web hosting), or install and configure mail with the operating system's own tools.",
+            "packages": [
+              "dovecot"
+            ],
+            "ports": [
+              "143/tcp",
+              "993/tcp",
+              "110/tcp",
+              "995/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "description": "Webmail",
+            "icon": "✉️",
+            "id": "roundcube",
+            "installed_evidence": "application_files",
+            "instances": [],
+            "is_installed": false,
+            "kind": "tool",
+            "name": "Roundcube",
+            "repair_available": true,
+            "requires_missing": [
+              "smtp-server",
+              "imap-server"
+            ],
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "email",
+            "config_files": [],
+            "description": "Spam Filter",
+            "icon": "🛡️",
+            "id": "spamassassin",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "SpamAssassin",
+            "not_offered": true,
+            "not_offered_kind": "distribution",
+            "not_offered_reason": "automatic installation is not supported on this Linux distribution yet",
+            "repair_available": true,
+            "requires_missing": [
+              "smtp-server"
+            ],
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "Built-in VPN server",
+            "icon": "🔐",
+            "id": "wireguard",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "WireGuard VPN",
+            "packages": [
+              "wireguard-tools"
+            ],
+            "ports": [
+              "51820/udp"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "wg-quick@wg0",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "SSL certificate provider",
+            "icon": "🔐",
+            "id": "certbot",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": true,
+            "kind": "tool",
+            "name": "Let's Encrypt client (certbot)",
+            "packages": [
+              "certbot"
+            ],
+            "repair_available": true,
+            "status": "installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "Intrusion Prevention",
+            "icon": "🚫",
+            "id": "fail2ban",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Fail2ban",
+            "packages": [
+              "fail2ban"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "nftables — the panel firewall's packet-filtering engine",
+            "icon": "🧱",
+            "id": "nftables",
+            "installed_evidence": "package",
+            "instances": [],
+            "is_installed": true,
+            "kind": "tool",
+            "name": "Firewall engine",
+            "packages": [
+              "nftables"
+            ],
+            "repair_available": true,
+            "status": "installed",
+            "versions": []
+          },
+          {
+            "category": "security",
+            "config_files": [],
+            "description": "Antivirus / malware scanner",
+            "icon": "🦠",
+            "id": "clamav",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "ClamAV",
+            "packages": [
+              "clamav"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "dns",
+            "config_files": [],
+            "description": "DNS Server",
+            "icon": "🌐",
+            "id": "bind",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "BIND",
+            "packages": [
+              "bind"
+            ],
+            "ports": [
+              "53/tcp",
+              "53/udp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "dns",
+            "config_files": [],
+            "description": "DNS Server",
+            "icon": "⚡",
+            "id": "pdns",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "PowerDNS",
+            "not_offered": true,
+            "not_offered_kind": "distribution",
+            "not_offered_reason": "the managed service lifecycle is not supported in this package ecosystem yet",
+            "packages": [
+              "powerdns"
+            ],
+            "ports": [
+              "53/tcp",
+              "53/udp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "ftp",
+            "config_files": [],
+            "description": "FTP Server",
+            "icon": "📂",
+            "id": "vsftpd",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "vsftpd",
+            "not_offered": true,
+            "not_offered_kind": "integration",
+            "not_offered_reason": "vsftpd passive-mode ports, TLS and per-subscription access are not integrated in CelikPanel yet.",
+            "packages": [
+              "vsftpd"
+            ],
+            "ports": [
+              "21/tcp"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "cache",
+            "config_files": [],
+            "description": "Cache Server",
+            "icon": "⚡",
+            "id": "redis",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Redis",
+            "not_offered": true,
+            "not_offered_kind": "distribution",
+            "not_offered_reason": "automatic installation is not supported on this Linux distribution yet",
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "cache",
+            "config_files": [],
+            "description": "Cache Server",
+            "icon": "🗝️",
+            "id": "valkey",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Valkey",
+            "packages": [
+              "valkey"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "cache",
+            "config_files": [],
+            "description": "Cache Server",
+            "icon": "💾",
+            "id": "memcached",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Memcached",
+            "packages": [
+              "memcached"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "monitoring",
+            "config_files": [],
+            "description": "Real-time metrics agent",
+            "icon": "📈",
+            "id": "netdata",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": false,
+            "kind": "service",
+            "name": "Netdata",
+            "packages": [
+              "netdata"
+            ],
+            "repair_available": true,
+            "status": "not_installed",
+            "versions": []
+          },
+          {
+            "category": "system",
+            "config_files": [],
+            "description": "Native cron daemon that runs scheduled tasks",
+            "icon": "⏰",
+            "id": "cron",
+            "installed_evidence": "systemd_unit",
+            "instances": [],
+            "is_installed": true,
+            "kind": "service",
+            "name": "Scheduled tasks (cron)",
+            "packages": [
+              "cronie"
+            ],
+            "repair_available": true,
+            "status": "active (running)",
+            "unit": "cronie",
+            "versions": []
+          }
+        ]
+      },
+      "label": "C6 scan the components again",
+      "request": {
+        "body": null,
+        "method": "POST",
+        "path": "/api/v1/managed-services/scan"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:30:26Z",
+      "json": {
+        "configured": true,
+        "endpoint": "10.0.2.15",
+        "installed": true,
+        "peer_count": 0,
+        "policy": {
+          "allowed_ips": "0.0.0.0/0",
+          "client_dns": "1.1.1.1",
+          "firewall_required": true,
+          "forward_required": true,
+          "full_tunnel": true,
+          "interface": "wg0",
+          "listen_port": 51820,
+          "listen_protocol": "UDP",
+          "nat_required": true,
+          "network": "10.8.0.0/24",
+          "server_address": "10.8.0.1"
+        },
+        "port": 51820,
+        "running": true,
+        "server_public_key": "lCdaRvVNM2OVwBA90zwwGn9KGW77a9WHWyRVS9Oh4TI=",
+        "sync": {
+          "errors": 0,
+          "in_sync": true,
+          "pending": 0
+        }
+      },
+      "label": "C6 VPN status after the install",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/vpn/status"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:30:26Z",
+      "json": {
+        "success": true
+      },
+      "label": "C6 grant the VPN add-on to the subscription (Add-ons page)",
+      "request": {
+        "body": {
+          "product_id": "vpn"
+        },
+        "method": "POST",
+        "path": "/api/v1/subscriptions/2/entitlements"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "at": "2026-10-09T07:30:26Z",
+      "body_bytes": 354,
+      "body_sha256": "7493044ee0ab05fdc18ae1bd147cae25a5bf4de689629b9df545994dd58da413",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REQUIRED": {
+          "en": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again.",
+          "tr": "Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json"
+      },
+      "json": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "label": "vpn-peer (iii) without the header",
+      "n": 70,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "set2 laptop",
+          "subscription_id": 2
+        },
+        "header_sent": false,
+        "identity": null,
+        "method": "POST",
+        "path": "/api/v1/vpn/peers"
+      },
+      "seconds": 0.003,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 428,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:30:27Z",
+      "body_bytes": 488,
+      "body_sha256": "(not recorded: the answer carries a one-time secret)",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store, max-age=0",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "bb346e0ed49df9bf4212701c8dda27b8"
+      },
+      "json": {
+        "client_config": "[REDACTED client configuration]",
+        "delivery_token": "[REDACTED]",
+        "id": 1,
+        "ip": "10.8.0.2",
+        "public_key": "/PGd1SrFtxHsmk1sG2uznAqjB3JbUu47NW73Yx9uX08=",
+        "success": true
+      },
+      "label": "vpn-peer (i) sequential arrival 1 of 3",
+      "n": 71,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "set2 laptop",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "bb346e0ed49df9bf4212701c8dda27b8",
+        "method": "POST",
+        "path": "/api/v1/vpn/peers"
+      },
+      "seconds": 0.253,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:30:27Z",
+      "json": {
+        "success": true
+      },
+      "label": "C6 the page confirms it received the configuration of peer 1",
+      "request": {
+        "body": {
+          "delivery_token": "[REDACTED]"
+        },
+        "method": "POST",
+        "path": "/api/v1/vpn/peers/1/ack"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "bb346e0ed49df9bf4212701c8dda27b8"
+        }
+      },
+      "at": "2026-10-09T07:30:27Z",
+      "body_bytes": 361,
+      "body_sha256": "03f7ae7bbb2c60033bfd1c1ed56efacdf4b86e28063a1d26a23c73395f4896e9",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "bb346e0ed49df9bf4212701c8dda27b8"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "bb346e0ed49df9bf4212701c8dda27b8"
+        }
+      },
+      "label": "vpn-peer (i) sequential arrival 2 of 3",
+      "n": 72,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "set2 laptop",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "bb346e0ed49df9bf4212701c8dda27b8",
+        "method": "POST",
+        "path": "/api/v1/vpn/peers"
+      },
+      "seconds": 0.009,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "bb346e0ed49df9bf4212701c8dda27b8"
+        }
+      },
+      "at": "2026-10-09T07:30:27Z",
+      "body_bytes": 361,
+      "body_sha256": "03f7ae7bbb2c60033bfd1c1ed56efacdf4b86e28063a1d26a23c73395f4896e9",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "bb346e0ed49df9bf4212701c8dda27b8"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "bb346e0ed49df9bf4212701c8dda27b8"
+        }
+      },
+      "label": "vpn-peer (i) sequential arrival 3 of 3",
+      "n": 73,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "set2 laptop",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "bb346e0ed49df9bf4212701c8dda27b8",
+        "method": "POST",
+        "path": "/api/v1/vpn/peers"
+      },
+      "seconds": 0.003,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "bb346e0ed49df9bf4212701c8dda27b8"
+        }
+      },
+      "at": "2026-10-09T07:30:28Z",
+      "body_bytes": 256,
+      "body_sha256": "bdb9f7036c2615ccbd7512e2c52c12c25130314608957be8f14fb18337af8afb",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REUSED": {
+          "en": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+          "tr": "Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "bb346e0ed49df9bf4212701c8dda27b8"
+      },
+      "json": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "bb346e0ed49df9bf4212701c8dda27b8"
+        }
+      },
+      "label": "vpn-peer (iv) the same identity with a different body",
+      "n": 74,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "set2 other",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "bb346e0ed49df9bf4212701c8dda27b8",
+        "method": "POST",
+        "path": "/api/v1/vpn/peers"
+      },
+      "seconds": 0.004,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:30:29Z",
+      "body_bytes": 488,
+      "body_sha256": "(not recorded: the answer carries a one-time secret)",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store, max-age=0",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "a5e861ab821971eb63b79baa5ed03ca6"
+      },
+      "json": {
+        "client_config": "[REDACTED client configuration]",
+        "delivery_token": "[REDACTED]",
+        "id": 2,
+        "ip": "10.8.0.3",
+        "public_key": "8o/ppdVVEX21Jgz1XWU+ZmhqpsW28fslErPXA5e5kHI=",
+        "success": true
+      },
+      "label": "vpn-peer (ii) concurrent arrival 1 of 3",
+      "n": 75,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "set2 phone",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "a5e861ab821971eb63b79baa5ed03ca6",
+        "method": "POST",
+        "path": "/api/v1/vpn/peers"
+      },
+      "seconds": 0.218,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "a5e861ab821971eb63b79baa5ed03ca6"
+        }
+      },
+      "at": "2026-10-09T07:30:29Z",
+      "body_bytes": 361,
+      "body_sha256": "d779ac58d1f6ad9f40a9007e54ce906c99c055ecc2ecf1078e1e2fa5f6aa72fa",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "a5e861ab821971eb63b79baa5ed03ca6"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "a5e861ab821971eb63b79baa5ed03ca6"
+        }
+      },
+      "label": "vpn-peer (ii) concurrent arrival 2 of 3",
+      "n": 76,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "set2 phone",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "a5e861ab821971eb63b79baa5ed03ca6",
+        "method": "POST",
+        "path": "/api/v1/vpn/peers"
+      },
+      "seconds": 0.219,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "a5e861ab821971eb63b79baa5ed03ca6"
+        }
+      },
+      "at": "2026-10-09T07:30:29Z",
+      "body_bytes": 361,
+      "body_sha256": "d779ac58d1f6ad9f40a9007e54ce906c99c055ecc2ecf1078e1e2fa5f6aa72fa",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "a5e861ab821971eb63b79baa5ed03ca6"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "a5e861ab821971eb63b79baa5ed03ca6"
+        }
+      },
+      "label": "vpn-peer (ii) concurrent arrival 3 of 3",
+      "n": 77,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "name": "set2 phone",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "a5e861ab821971eb63b79baa5ed03ca6",
+        "method": "POST",
+        "path": "/api/v1/vpn/peers"
+      },
+      "seconds": 0.219,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:30:29Z",
+      "json": {
+        "success": true
+      },
+      "label": "C6 the page confirms it received the configuration of peer 2",
+      "request": {
+        "body": {
+          "delivery_token": "[REDACTED]"
+        },
+        "method": "POST",
+        "path": "/api/v1/vpn/peers/2/ack"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:30:30Z",
+      "json": {
+        "peers": [
+          {
+            "created_at": "2026-10-09T07:30:27Z",
+            "desired_state": "active",
+            "id": 1,
+            "ip": "10.8.0.2",
+            "last_handshake": 0,
+            "name": "set2 laptop",
+            "public_key": "/PGd1SrFtxHsmk1sG2uznAqjB3JbUu47NW73Yx9uX08=",
+            "rx_bytes": 0,
+            "subscription": "Admin Subscription",
+            "subscription_id": 2,
+            "sync_state": "applied",
+            "tx_bytes": 0
+          },
+          {
+            "created_at": "2026-10-09T07:30:29Z",
+            "desired_state": "active",
+            "id": 2,
+            "ip": "10.8.0.3",
+            "last_handshake": 0,
+            "name": "set2 phone",
+            "public_key": "8o/ppdVVEX21Jgz1XWU+ZmhqpsW28fslErPXA5e5kHI=",
+            "rx_bytes": 0,
+            "subscription": "Admin Subscription",
+            "subscription_id": 2,
+            "sync_state": "applied",
+            "tx_bytes": 0
+          }
+        ]
+      },
+      "label": "C6 the devices list (VPNPage)",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/vpn/peers"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.003,
+        "status": 428
+      },
+      "name": "vpn-peer (iii): without the header the answer is 428 REQUEST_ID_REQUIRED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "config_peer_blocks": 0,
+          "panel_active_rows": [],
+          "panel_rows": 0,
+          "wg_peers": []
+        },
+        "before": {
+          "config_peer_blocks": 0,
+          "panel_active_rows": [],
+          "panel_rows": 0,
+          "wg_peers": []
+        }
+      },
+      "name": "vpn-peer (iii): and nothing changed on the server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.253,
+          "status": 200
+        },
+        "answer_public_key": "/PGd1SrFtxHsmk1sG2uznAqjB3JbUu47NW73Yx9uX08=",
+        "config_peer_blocks": [
+          0,
+          1
+        ],
+        "new_active_rows": [
+          "/PGd1SrFtxHsmk1sG2uznAqjB3JbUu47NW73Yx9uX08="
+        ],
+        "new_wg_peers": [
+          "/PGd1SrFtxHsmk1sG2uznAqjB3JbUu47NW73Yx9uX08="
+        ],
+        "rows_before_after": [
+          0,
+          1
+        ]
+      },
+      "name": "vpn-peer (i): three arrivals in a row of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "first": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.253,
+          "status": 200
+        },
+        "later": [
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.009,
+            "status": 409
+          },
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.003,
+            "status": 409
+          }
+        ]
+      },
+      "name": "vpn-peer (i): the three answers are the handler's own answer once, then the status-only refusal",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REUSED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.004,
+        "status": 409
+      },
+      "name": "vpn-peer (iv): the same identity with a different body is refused 409 REQUEST_ID_REUSED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "config_peer_blocks": 1,
+          "panel_active_rows": [
+            "/PGd1SrFtxHsmk1sG2uznAqjB3JbUu47NW73Yx9uX08="
+          ],
+          "panel_rows": 1,
+          "wg_peers": [
+            "/PGd1SrFtxHsmk1sG2uznAqjB3JbUu47NW73Yx9uX08="
+          ]
+        },
+        "before": {
+          "config_peer_blocks": 1,
+          "panel_active_rows": [
+            "/PGd1SrFtxHsmk1sG2uznAqjB3JbUu47NW73Yx9uX08="
+          ],
+          "panel_rows": 1,
+          "wg_peers": [
+            "/PGd1SrFtxHsmk1sG2uznAqjB3JbUu47NW73Yx9uX08="
+          ]
+        }
+      },
+      "name": "vpn-peer (iv): and there is no second effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.218,
+          "status": 200
+        },
+        "answer_public_key": "8o/ppdVVEX21Jgz1XWU+ZmhqpsW28fslErPXA5e5kHI=",
+        "config_peer_blocks": [
+          1,
+          2
+        ],
+        "new_active_rows": [
+          "8o/ppdVVEX21Jgz1XWU+ZmhqpsW28fslErPXA5e5kHI="
+        ],
+        "new_wg_peers": [
+          "8o/ppdVVEX21Jgz1XWU+ZmhqpsW28fslErPXA5e5kHI="
+        ],
+        "rows_before_after": [
+          1,
+          2
+        ]
+      },
+      "name": "vpn-peer (ii): three arrivals at once of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answers": [
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.218,
+            "status": 200
+          },
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.219,
+            "status": 409
+          },
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.219,
+            "status": 409
+          }
+        ],
+        "in_progress": 0
+      },
+      "name": "vpn-peer (ii): the answers are the handler's own answer for exactly one arrival; the others the status-only refusal or REQUEST_IN_PROGRESS",
+      "ok": true
+    }
+  ],
+  "devices_listed": [
+    {
+      "desired_state": "active",
+      "id": 1,
+      "ip": "10.8.0.2",
+      "name": "set2 laptop",
+      "sync_state": "applied"
+    },
+    {
+      "desired_state": "active",
+      "id": 2,
+      "ip": "10.8.0.3",
+      "name": "set2 phone",
+      "sync_state": "applied"
+    }
+  ],
+  "finished_at": "2026-10-09T07:30:30Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/116-vpn-peer-before.json",
+      "lab_action": false,
+      "label": "vpn-peer-before",
+      "mode": "read-wireguard",
+      "owner_action": false
+    },
+    {
+      "file": "native/117-vpn-peer-before-rows.json",
+      "lab_action": false,
+      "label": "vpn-peer-before-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/118-vpn-peer-after-iii.json",
+      "lab_action": false,
+      "label": "vpn-peer-after-iii",
+      "mode": "read-wireguard",
+      "owner_action": false
+    },
+    {
+      "file": "native/119-vpn-peer-after-iii-rows.json",
+      "lab_action": false,
+      "label": "vpn-peer-after-iii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/120-vpn-peer-after-i.json",
+      "lab_action": false,
+      "label": "vpn-peer-after-i",
+      "mode": "read-wireguard",
+      "owner_action": false
+    },
+    {
+      "file": "native/121-vpn-peer-after-i-rows.json",
+      "lab_action": false,
+      "label": "vpn-peer-after-i-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/122-vpn-peer-after-iv.json",
+      "lab_action": false,
+      "label": "vpn-peer-after-iv",
+      "mode": "read-wireguard",
+      "owner_action": false
+    },
+    {
+      "file": "native/123-vpn-peer-after-iv-rows.json",
+      "lab_action": false,
+      "label": "vpn-peer-after-iv-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/124-vpn-peer-after-ii.json",
+      "lab_action": false,
+      "label": "vpn-peer-after-ii",
+      "mode": "read-wireguard",
+      "owner_action": false
+    },
+    {
+      "file": "native/125-vpn-peer-after-ii-rows.json",
+      "lab_action": false,
+      "label": "vpn-peer-after-ii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [],
+  "owner_actions": [],
+  "prerequisites": [
+    {
+      "answer": null,
+      "status": 202,
+      "step": "install"
+    },
+    {
+      "operation": {
+        "error": null,
+        "finished_at": "2026-10-09T07:30:21.219894678Z",
+        "phase": "completed",
+        "started_at": "2026-10-09T07:30:15.066541925Z",
+        "status": "succeeded"
+      },
+      "step": "install-operation"
+    },
+    {
+      "status": 200,
+      "step": "scan"
+    },
+    {
+      "answer": {
+        "success": true
+      },
+      "status": 200,
+      "step": "entitlement"
+    }
+  ],
+  "section": "C6-vpn-peer",
+  "started_at": "2026-10-09T07:30:14Z",
+  "substeps": {
+    "vpn-peer": "passed"
+  },
+  "title": "VPN peer",
+  "verdict": "passed",
+  "vpn_status": {
+    "configured": true,
+    "endpoint": "10.0.2.15",
+    "installed": true,
+    "peer_count": 0,
+    "port": 51820,
+    "running": true
+  },
+  "wireguard_install": {
+    "error": null,
+    "finished_at": "2026-10-09T07:30:21.219894678Z",
+    "phase": "completed",
+    "started_at": "2026-10-09T07:30:15.066541925Z",
+    "status": "succeeded"
+  }
+}

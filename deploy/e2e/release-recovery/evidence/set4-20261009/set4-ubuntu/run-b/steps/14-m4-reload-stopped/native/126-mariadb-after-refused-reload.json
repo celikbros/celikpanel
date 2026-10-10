@@ -1,0 +1,45 @@
+{
+  "at": "2026-10-09T13:12:28Z",
+  "is_active": {
+    "mariadb.service": "inactive"
+  },
+  "is_failed": {
+    "mariadb.service": "inactive"
+  },
+  "journal": {
+    "mariadb.service": []
+  },
+  "journal_product": [
+    "2026-10-09T13:12:23.922258+00:00 dns-ubuntu panel[7494]: 2026/10/09 13:12:23 http: TLS handshake error from 127.0.0.1:40470: EOF",
+    "2026-10-09T13:12:23.997063+00:00 dns-ubuntu agent[7295]: 2026/10/09 13:12:23 ERROR service reload mariadb: failed not_running: mariadb.service is inactive (dead); nothing was reloaded",
+    "2026-10-09T13:12:24.023049+00:00 dns-ubuntu cron[52314]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 799: Resource temporarily unavailable)",
+    "2026-10-09T13:12:25.747775+00:00 dns-ubuntu panel[7494]: 2026/10/09 13:12:25 [409][service action] reload mariadb: SERVICE_ACTION_FAILED not_running: mariadb.service is inactive (dead); nothing was reloaded"
+  ],
+  "journal_systemd_manager": [],
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "since_epoch": 1791551541,
+  "units": {
+    "mariadb.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 13:00:39 UTC",
+      "ActiveExitTimestamp": "Fri 2026-10-09 13:12:16 UTC",
+      "ActiveState": "inactive",
+      "ExecMainPID": "11141",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 13:00:39 UTC",
+      "ExecMainStatus": "0",
+      "FragmentPath": "/usr/lib/systemd/system/mariadb.service",
+      "InactiveEnterTimestamp": "Fri 2026-10-09 13:12:16 UTC",
+      "InactiveExitTimestamp": "Fri 2026-10-09 13:00:39 UTC",
+      "InvocationID": "008c83b6e6d44a6cbc7e745c14bd9310",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 13:12:16 UTC",
+      "SubState": "dead",
+      "Type": "notify"
+    }
+  }
+}

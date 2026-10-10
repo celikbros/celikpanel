@@ -1,0 +1,85 @@
+{
+  "at": "2026-10-09T13:56:20Z",
+  "epoch": 1791554180.6529832,
+  "mode": "read-service",
+  "owner_action": false,
+  "postfix": {
+    "master_alive": true,
+    "master_pid": 39747,
+    "status": {
+      "argv": [
+        "postfix",
+        "status"
+      ],
+      "at": "2026-10-09T13:56:20Z",
+      "returncode": 0,
+      "seconds": 0.051,
+      "status": "ok",
+      "stderr": "postfix/postlog: the Postfix mail system is running: PID: 39747\n",
+      "stdout": ""
+    }
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "postfix.service": {
+      "cat": "# /usr/lib/systemd/system/postfix.service\n[Unit]\nDescription=Postfix Mail Transport Agent\nDocumentation=man:postfix(1)\nConflicts=sendmail.service exim4.service\nConditionPathExists=/etc/postfix/main.cf\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/bin/true\nExecReload=/bin/true\n\n[Install]\nWantedBy=multi-user.target\n",
+      "is_active": "active",
+      "properties": {
+        "ActiveEnterTimestamp": "Fri 2026-10-09 13:49:55 UTC",
+        "ActiveState": "active",
+        "ConsistsOf": "postfix@-.service",
+        "DropInPaths": "",
+        "ExecMainPID": "39751",
+        "ExecMainStartTimestamp": "Fri 2026-10-09 13:49:55 UTC",
+        "ExecReload": "{ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "ExecStart": "{ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+        "InactiveEnterTimestamp": "Fri 2026-10-09 13:49:48 UTC",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "NRestarts": "0",
+        "PartOf": "",
+        "PropagatesReloadTo": "postfix@-.service",
+        "ReloadPropagatedFrom": "",
+        "ReloadResult": "success",
+        "RemainAfterExit": "yes",
+        "Result": "success",
+        "SubState": "exited",
+        "Type": "oneshot",
+        "WantedBy": "multi-user.target",
+        "Wants": "postfix@-.service"
+      },
+      "returncode": 0
+    },
+    "postfix@-.service": {
+      "cat": "# /usr/lib/systemd/system/postfix@.service\n[Unit]\nDescription=Postfix Mail Transport Agent (instance %i)\nDocumentation=man:postfix(1)\nPartOf=postfix.service\nBefore=postfix.service\nReloadPropagatedFrom=postfix.service\nAfter=network-online.target nss-lookup.target\nWants=network-online.target\n\n[Service]\nType=forking\nGuessMainPID=no\nExecStartPre=/usr/lib/postfix/configure-instance.sh %i\nExecStart=/usr/sbin/postmulti -i %i -p start\nExecStop=/usr/sbin/postmulti -i %i -p stop\nExecReload=/usr/sbin/postmulti -i %i -p reload\n\n[Install]\nWantedBy=multi-user.target\n",
+      "is_active": "active",
+      "properties": {
+        "ActiveEnterTimestamp": "Fri 2026-10-09 13:49:54 UTC",
+        "ActiveState": "active",
+        "ConsistsOf": "",
+        "DropInPaths": "",
+        "ExecMainPID": "0",
+        "ExecMainStartTimestamp": "",
+        "ExecReload": "{ path=/usr/sbin/postmulti ; argv[]=/usr/sbin/postmulti -i - -p reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "ExecStart": "{ path=/usr/sbin/postmulti ; argv[]=/usr/sbin/postmulti -i - -p start ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+        "InactiveEnterTimestamp": "Fri 2026-10-09 13:49:49 UTC",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "NRestarts": "0",
+        "PartOf": "postfix.service",
+        "PropagatesReloadTo": "",
+        "ReloadPropagatedFrom": "postfix.service",
+        "ReloadResult": "success",
+        "RemainAfterExit": "no",
+        "Result": "success",
+        "SubState": "running",
+        "Type": "forking",
+        "WantedBy": "postfix.service",
+        "Wants": "network-online.target"
+      },
+      "returncode": 0
+    }
+  }
+}

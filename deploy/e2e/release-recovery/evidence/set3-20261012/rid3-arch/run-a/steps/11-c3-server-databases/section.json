@@ -1,0 +1,1752 @@
+{
+  "calls": [
+    {
+      "at": "2026-10-09T07:29:26Z",
+      "json": [
+        {
+          "admin_username": "celikpanel_admin",
+          "created_at": "2026-10-09T07:29:00Z",
+          "host": "localhost",
+          "id": 1,
+          "is_default": true,
+          "is_local": true,
+          "name": "MariaDB",
+          "port": 3306,
+          "status": "active",
+          "type_icon": "🦭",
+          "type_id": 2,
+          "type_name": "MariaDB",
+          "version": "13.0.2-MariaDB"
+        },
+        {
+          "admin_username": "celikpanel_admin",
+          "created_at": "2026-10-09T07:29:00Z",
+          "host": "localhost",
+          "id": 2,
+          "is_default": false,
+          "is_local": true,
+          "name": "PostgreSQL",
+          "port": 5432,
+          "status": "active",
+          "type_icon": "🐘",
+          "type_id": 1,
+          "type_name": "PostgreSQL",
+          "version": "18.6"
+        }
+      ],
+      "label": "database servers (the Databases page): C3, after the Panel's account was provisioned again",
+      "request": {
+        "body": null,
+        "method": "GET",
+        "path": "/api/v1/database-servers"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "at": "2026-10-09T07:29:28Z",
+      "body_bytes": 354,
+      "body_sha256": "7493044ee0ab05fdc18ae1bd147cae25a5bf4de689629b9df545994dd58da413",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REQUIRED": {
+          "en": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again.",
+          "tr": "Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json"
+      },
+      "json": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "label": "server-database-mariadb (iii) without the header",
+      "n": 33,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "database_name": "srvseq",
+          "new_username": "srvsequ"
+        },
+        "header_sent": false,
+        "identity": null,
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/databases"
+      },
+      "seconds": 0.004,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 428,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:29:29Z",
+      "body_bytes": 135,
+      "body_sha256": "(not recorded: the answer carries a one-time secret)",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "05ac0129c5eeb60147c0f6ee219d7a69"
+      },
+      "json": {
+        "created_at": "2026-10-09T07:29:29Z",
+        "id": 5,
+        "name": "s2_srvseq",
+        "password": "[REDACTED]",
+        "password_set": true,
+        "user": "s2_srvsequ"
+      },
+      "label": "server-database-mariadb (i) sequential arrival 1 of 3",
+      "n": 34,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "database_name": "srvseq",
+          "new_username": "srvsequ"
+        },
+        "header_sent": true,
+        "identity": "05ac0129c5eeb60147c0f6ee219d7a69",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/databases"
+      },
+      "seconds": 0.156,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "05ac0129c5eeb60147c0f6ee219d7a69"
+        }
+      },
+      "at": "2026-10-09T07:29:29Z",
+      "body_bytes": 361,
+      "body_sha256": "00c60521531e2bc1c483ae90db265c128186e9e18455794a14b65ccd409c7b14",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "05ac0129c5eeb60147c0f6ee219d7a69"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "05ac0129c5eeb60147c0f6ee219d7a69"
+        }
+      },
+      "label": "server-database-mariadb (i) sequential arrival 2 of 3",
+      "n": 35,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "database_name": "srvseq",
+          "new_username": "srvsequ"
+        },
+        "header_sent": true,
+        "identity": "05ac0129c5eeb60147c0f6ee219d7a69",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/databases"
+      },
+      "seconds": 0.003,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "05ac0129c5eeb60147c0f6ee219d7a69"
+        }
+      },
+      "at": "2026-10-09T07:29:29Z",
+      "body_bytes": 361,
+      "body_sha256": "00c60521531e2bc1c483ae90db265c128186e9e18455794a14b65ccd409c7b14",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "05ac0129c5eeb60147c0f6ee219d7a69"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "05ac0129c5eeb60147c0f6ee219d7a69"
+        }
+      },
+      "label": "server-database-mariadb (i) sequential arrival 3 of 3",
+      "n": 36,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "database_name": "srvseq",
+          "new_username": "srvsequ"
+        },
+        "header_sent": true,
+        "identity": "05ac0129c5eeb60147c0f6ee219d7a69",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/databases"
+      },
+      "seconds": 0.003,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "05ac0129c5eeb60147c0f6ee219d7a69"
+        }
+      },
+      "at": "2026-10-09T07:29:30Z",
+      "body_bytes": 256,
+      "body_sha256": "d1e4b5558607f37eb04026c9e0195559953733a7067b0c9790cf9e80abf6c071",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REUSED": {
+          "en": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+          "tr": "Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "05ac0129c5eeb60147c0f6ee219d7a69"
+      },
+      "json": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "05ac0129c5eeb60147c0f6ee219d7a69"
+        }
+      },
+      "label": "server-database-mariadb (iv) the same identity with a different body",
+      "n": 37,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "database_name": "srvoth",
+          "new_username": "srvothu"
+        },
+        "header_sent": true,
+        "identity": "05ac0129c5eeb60147c0f6ee219d7a69",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/databases"
+      },
+      "seconds": 0.004,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:29:30Z",
+      "body_bytes": 135,
+      "body_sha256": "(not recorded: the answer carries a one-time secret)",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "c31ce39d578593247019cb5b86b93b20"
+      },
+      "json": {
+        "created_at": "2026-10-09T07:29:31Z",
+        "id": 6,
+        "name": "s2_srvcon",
+        "password": "[REDACTED]",
+        "password_set": true,
+        "user": "s2_srvconu"
+      },
+      "label": "server-database-mariadb (ii) concurrent arrival 1 of 3",
+      "n": 38,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "database_name": "srvcon",
+          "new_username": "srvconu"
+        },
+        "header_sent": true,
+        "identity": "c31ce39d578593247019cb5b86b93b20",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/databases"
+      },
+      "seconds": 0.155,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "c31ce39d578593247019cb5b86b93b20"
+        }
+      },
+      "at": "2026-10-09T07:29:30Z",
+      "body_bytes": 361,
+      "body_sha256": "0ae0bf73df0449d1510997d3f0492d40830069465388540676b829a45933d4fe",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "c31ce39d578593247019cb5b86b93b20"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "c31ce39d578593247019cb5b86b93b20"
+        }
+      },
+      "label": "server-database-mariadb (ii) concurrent arrival 2 of 3",
+      "n": 39,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "database_name": "srvcon",
+          "new_username": "srvconu"
+        },
+        "header_sent": true,
+        "identity": "c31ce39d578593247019cb5b86b93b20",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/databases"
+      },
+      "seconds": 0.154,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 409,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "c31ce39d578593247019cb5b86b93b20"
+        }
+      },
+      "at": "2026-10-09T07:29:30Z",
+      "body_bytes": 361,
+      "body_sha256": "0ae0bf73df0449d1510997d3f0492d40830069465388540676b829a45933d4fe",
+      "catalogue_texts": {
+        "err.REQUEST_COMPLETED_RESULT_NOT_RETAINED": {
+          "en": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+          "tr": "Bu değişiklik zaten yapıldı; ikinci kez yapılmadı. Sonucu yalnızca bir kez gösterildi ve saklanmıyor. Mevcut durumu görmek için sayfayı yeniden yükleyin; bir kez gösterilene (parola ya da yapılandırma dosyası) hâlâ ihtiyacınız varsa yenisini oluşturun."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "c31ce39d578593247019cb5b86b93b20"
+      },
+      "json": {
+        "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+        "error": "This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.",
+        "vars": {
+          "request_id": "c31ce39d578593247019cb5b86b93b20"
+        }
+      },
+      "label": "server-database-mariadb (ii) concurrent arrival 3 of 3",
+      "n": 40,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "database_name": "srvcon",
+          "new_username": "srvconu"
+        },
+        "header_sent": true,
+        "identity": "c31ce39d578593247019cb5b86b93b20",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/databases"
+      },
+      "seconds": 0.157,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:29:32Z",
+      "body_bytes": 106,
+      "body_sha256": "b878d7a966f23ac379f4edd739d09e487848e369930045e10f90a0d8c184d1e8",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "0bcee464f17da02dd5e936cc20d45736"
+      },
+      "json": {
+        "created_at": "2026-10-09T07:29:32Z",
+        "id": 7,
+        "name": "s2_srvsent",
+        "password_set": true,
+        "user": "s2_srvsentu"
+      },
+      "label": "server-database-mariadb: a new user with a password the owner sent",
+      "n": 41,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "database_name": "srvsent",
+          "new_password": "[REDACTED]",
+          "new_username": "srvsentu"
+        },
+        "header_sent": true,
+        "identity": "0bcee464f17da02dd5e936cc20d45736",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/databases"
+      },
+      "seconds": 0.161,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:29:32Z",
+      "body_bytes": 106,
+      "body_sha256": "b878d7a966f23ac379f4edd739d09e487848e369930045e10f90a0d8c184d1e8",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "0bcee464f17da02dd5e936cc20d45736",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "created_at": "2026-10-09T07:29:32Z",
+        "id": 7,
+        "name": "s2_srvsent",
+        "password_set": true,
+        "user": "s2_srvsentu"
+      },
+      "label": "server-database-mariadb: the same request again",
+      "n": 42,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "database_name": "srvsent",
+          "new_password": "[REDACTED]",
+          "new_username": "srvsentu"
+        },
+        "header_sent": true,
+        "identity": "0bcee464f17da02dd5e936cc20d45736",
+        "method": "POST",
+        "path": "/api/v1/database-servers/1/databases"
+      },
+      "seconds": 0.003,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "at": "2026-10-09T07:29:34Z",
+      "body_bytes": 354,
+      "body_sha256": "7493044ee0ab05fdc18ae1bd147cae25a5bf4de689629b9df545994dd58da413",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REQUIRED": {
+          "en": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again.",
+          "tr": "Bu sayfa CelikPanel güncellenmeden önce açılmış; bu yüzden sunucu değişikliği kabul etmedi ve hiçbir şey değiştirilmedi. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json"
+      },
+      "json": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": "This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again. (A client that is not the CelikPanel page sends the header X-CelikPanel-Request-Id: 32 lowercase hexadecimal characters, a new value for each action.)"
+      },
+      "label": "server-database-postgresql (iii) without the header",
+      "n": 43,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "database_name": "srvseq",
+          "user_id": 3
+        },
+        "header_sent": false,
+        "identity": null,
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/databases"
+      },
+      "seconds": 0.003,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 428,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:29:35Z",
+      "body_bytes": 98,
+      "body_sha256": "1b81b82ed2f2148e8662c0f8db0dd3a83ba2116916a1cdd811499eea596a6880",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "ffe74142cc0abd5d998837d31d807eaa"
+      },
+      "json": {
+        "created_at": "2026-10-09T07:29:35Z",
+        "id": 8,
+        "name": "s2_srvseq",
+        "user": "set1_owner_test_seq_user"
+      },
+      "label": "server-database-postgresql (i) sequential arrival 1 of 3",
+      "n": 44,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "database_name": "srvseq",
+          "user_id": 3
+        },
+        "header_sent": true,
+        "identity": "ffe74142cc0abd5d998837d31d807eaa",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/databases"
+      },
+      "seconds": 0.156,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:29:35Z",
+      "body_bytes": 98,
+      "body_sha256": "1b81b82ed2f2148e8662c0f8db0dd3a83ba2116916a1cdd811499eea596a6880",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "ffe74142cc0abd5d998837d31d807eaa",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "created_at": "2026-10-09T07:29:35Z",
+        "id": 8,
+        "name": "s2_srvseq",
+        "user": "set1_owner_test_seq_user"
+      },
+      "label": "server-database-postgresql (i) sequential arrival 2 of 3",
+      "n": 45,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "database_name": "srvseq",
+          "user_id": 3
+        },
+        "header_sent": true,
+        "identity": "ffe74142cc0abd5d998837d31d807eaa",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/databases"
+      },
+      "seconds": 0.003,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:29:35Z",
+      "body_bytes": 98,
+      "body_sha256": "1b81b82ed2f2148e8662c0f8db0dd3a83ba2116916a1cdd811499eea596a6880",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "ffe74142cc0abd5d998837d31d807eaa",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "created_at": "2026-10-09T07:29:35Z",
+        "id": 8,
+        "name": "s2_srvseq",
+        "user": "set1_owner_test_seq_user"
+      },
+      "label": "server-database-postgresql (i) sequential arrival 3 of 3",
+      "n": 46,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "database_name": "srvseq",
+          "user_id": 3
+        },
+        "header_sent": true,
+        "identity": "ffe74142cc0abd5d998837d31d807eaa",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/databases"
+      },
+      "seconds": 0.003,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "ffe74142cc0abd5d998837d31d807eaa"
+        }
+      },
+      "at": "2026-10-09T07:29:36Z",
+      "body_bytes": 256,
+      "body_sha256": "344256c014d15088fd5f3094672bc384b4b48d30e29655a451247aac26a12990",
+      "catalogue_texts": {
+        "err.REQUEST_ID_REUSED": {
+          "en": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+          "tr": "Bu değişiklik, sunucunun başka bir değişiklik için zaten kullandığı bir kimlikle gönderildi; bu yüzden uygulanmadı. Sayfayı yeniden yükleyin, sonra değişikliği yeniden yapın."
+        }
+      },
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "ffe74142cc0abd5d998837d31d807eaa"
+      },
+      "json": {
+        "code": "REQUEST_ID_REUSED",
+        "error": "This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.",
+        "vars": {
+          "request_id": "ffe74142cc0abd5d998837d31d807eaa"
+        }
+      },
+      "label": "server-database-postgresql (iv) the same identity with a different body",
+      "n": 47,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "database_name": "srvoth",
+          "user_id": 3
+        },
+        "header_sent": true,
+        "identity": "ffe74142cc0abd5d998837d31d807eaa",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/databases"
+      },
+      "seconds": 0.003,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 409,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:29:36Z",
+      "body_bytes": 98,
+      "body_sha256": "57c1bca970ad530aaa3fcfcb27b2c894a9dd3ed81bfc61d74542695d49a1e074",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "cb46c43ab2846649e3c71eea944fb4f8",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "created_at": "2026-10-09T07:29:37Z",
+        "id": 9,
+        "name": "s2_srvcon",
+        "user": "set1_owner_test_seq_user"
+      },
+      "label": "server-database-postgresql (ii) concurrent arrival 1 of 3",
+      "n": 48,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "database_name": "srvcon",
+          "user_id": 3
+        },
+        "header_sent": true,
+        "identity": "cb46c43ab2846649e3c71eea944fb4f8",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/databases"
+      },
+      "seconds": 0.173,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:29:36Z",
+      "body_bytes": 98,
+      "body_sha256": "57c1bca970ad530aaa3fcfcb27b2c894a9dd3ed81bfc61d74542695d49a1e074",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "cb46c43ab2846649e3c71eea944fb4f8"
+      },
+      "json": {
+        "created_at": "2026-10-09T07:29:37Z",
+        "id": 9,
+        "name": "s2_srvcon",
+        "user": "set1_owner_test_seq_user"
+      },
+      "label": "server-database-postgresql (ii) concurrent arrival 2 of 3",
+      "n": 49,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "database_name": "srvcon",
+          "user_id": 3
+        },
+        "header_sent": true,
+        "identity": "cb46c43ab2846649e3c71eea944fb4f8",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/databases"
+      },
+      "seconds": 0.174,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:29:36Z",
+      "body_bytes": 98,
+      "body_sha256": "57c1bca970ad530aaa3fcfcb27b2c894a9dd3ed81bfc61d74542695d49a1e074",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "cb46c43ab2846649e3c71eea944fb4f8",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "created_at": "2026-10-09T07:29:37Z",
+        "id": 9,
+        "name": "s2_srvcon",
+        "user": "set1_owner_test_seq_user"
+      },
+      "label": "server-database-postgresql (ii) concurrent arrival 3 of 3",
+      "n": 50,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "database_name": "srvcon",
+          "user_id": 3
+        },
+        "header_sent": true,
+        "identity": "cb46c43ab2846649e3c71eea944fb4f8",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/databases"
+      },
+      "seconds": 0.173,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:29:38Z",
+      "body_bytes": 107,
+      "body_sha256": "aedc9fa22070702bc234bfc37c847944164eb73763617dfd09e3789b2b1dba44",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "27a58a20b6b12872d1dd8ec234541deb"
+      },
+      "json": {
+        "created_at": "2026-10-09T07:29:38Z",
+        "id": 10,
+        "name": "s2_srvsent",
+        "password_set": true,
+        "user": "s2_srvsentu"
+      },
+      "label": "server-database-postgresql: a new user with a password the owner sent",
+      "n": 51,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "database_name": "srvsent",
+          "new_password": "[REDACTED]",
+          "new_username": "srvsentu"
+        },
+        "header_sent": true,
+        "identity": "27a58a20b6b12872d1dd8ec234541deb",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/databases"
+      },
+      "seconds": 0.164,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T07:29:38Z",
+      "body_bytes": 107,
+      "body_sha256": "aedc9fa22070702bc234bfc37c847944164eb73763617dfd09e3789b2b1dba44",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "27a58a20b6b12872d1dd8ec234541deb",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "created_at": "2026-10-09T07:29:38Z",
+        "id": 10,
+        "name": "s2_srvsent",
+        "password_set": true,
+        "user": "s2_srvsentu"
+      },
+      "label": "server-database-postgresql: the same request again",
+      "n": 52,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "database_name": "srvsent",
+          "new_password": "[REDACTED]",
+          "new_username": "srvsentu"
+        },
+        "header_sent": true,
+        "identity": "27a58a20b6b12872d1dd8ec234541deb",
+        "method": "POST",
+        "path": "/api/v1/database-servers/2/databases"
+      },
+      "seconds": 0.003,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "mariadb_client_version_line": "/usr/sbin/mariadb from 13.0.2-MariaDB, client 15.2 for Linux (x86_64) using readline 5.1",
+        "mariadb_select_version": "13.0.2-MariaDB",
+        "mariadb_shown_is_exactly_select_version": true,
+        "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 13.0.2-MariaDB for Linux on x86_64 (Arch Linux)",
+        "os": {
+          "ID": "arch",
+          "PRETTY_NAME": "Arch Linux"
+        },
+        "postgresql_show_server_version": "18.6",
+        "shown": {
+          "mariadb": "13.0.2-MariaDB",
+          "postgresql": "18.6"
+        },
+        "when": "C3, after the Panel's account was provisioned again"
+      },
+      "name": "O14 (C3, after the Panel's account was provisioned again): the MariaDB version the Databases page shows is the server's own",
+      "ok": true
+    },
+    {
+      "detail": {
+        "mariadb_client_version_line": "/usr/sbin/mariadb from 13.0.2-MariaDB, client 15.2 for Linux (x86_64) using readline 5.1",
+        "mariadb_select_version": "13.0.2-MariaDB",
+        "mariadb_shown_is_exactly_select_version": true,
+        "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 13.0.2-MariaDB for Linux on x86_64 (Arch Linux)",
+        "os": {
+          "ID": "arch",
+          "PRETTY_NAME": "Arch Linux"
+        },
+        "postgresql_show_server_version": "18.6",
+        "shown": {
+          "mariadb": "13.0.2-MariaDB",
+          "postgresql": "18.6"
+        },
+        "when": "C3, after the Panel's account was provisioned again"
+      },
+      "name": "O14 (C3, after the Panel's account was provisioned again): the PostgreSQL version shown is the server's own",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.004,
+        "status": 428
+      },
+      "name": "server-database-mariadb (iii): without the header the answer is 428 REQUEST_ID_REQUIRED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "on_engine": [
+            "set1_owner_test_con",
+            "set1_owner_test_seq",
+            "test"
+          ],
+          "panel_rows": [
+            "1:set1_owner_test_con",
+            "1:set1_owner_test_seq"
+          ]
+        },
+        "before": {
+          "on_engine": [
+            "set1_owner_test_con",
+            "set1_owner_test_seq",
+            "test"
+          ],
+          "panel_rows": [
+            "1:set1_owner_test_con",
+            "1:set1_owner_test_seq"
+          ]
+        }
+      },
+      "name": "server-database-mariadb (iii): and nothing changed on the server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.156,
+          "status": 200
+        },
+        "answer_names": "s2_srvseq",
+        "new_on_engine": [
+          "s2_srvseq"
+        ],
+        "new_panel_rows": [
+          "s2_srvseq"
+        ]
+      },
+      "name": "server-database-mariadb (i): three arrivals in a row of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "first": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.156,
+          "status": 200
+        },
+        "later": [
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.003,
+            "status": 409
+          },
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.003,
+            "status": 409
+          }
+        ]
+      },
+      "name": "server-database-mariadb (i): the three answers are the handler's own answer once, then the status-only refusal",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REUSED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.004,
+        "status": 409
+      },
+      "name": "server-database-mariadb (iv): the same identity with a different body is refused 409 REQUEST_ID_REUSED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "on_engine": [
+            "s2_srvseq",
+            "set1_owner_test_con",
+            "set1_owner_test_seq",
+            "test"
+          ],
+          "panel_rows": [
+            "1:s2_srvseq",
+            "1:set1_owner_test_con",
+            "1:set1_owner_test_seq"
+          ]
+        },
+        "before": {
+          "on_engine": [
+            "s2_srvseq",
+            "set1_owner_test_con",
+            "set1_owner_test_seq",
+            "test"
+          ],
+          "panel_rows": [
+            "1:s2_srvseq",
+            "1:set1_owner_test_con",
+            "1:set1_owner_test_seq"
+          ]
+        }
+      },
+      "name": "server-database-mariadb (iv): and there is no second effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.155,
+          "status": 200
+        },
+        "answer_names": "s2_srvcon",
+        "new_on_engine": [
+          "s2_srvcon"
+        ],
+        "new_panel_rows": [
+          "s2_srvcon"
+        ]
+      },
+      "name": "server-database-mariadb (ii): three arrivals at once of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answers": [
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.155,
+            "status": 200
+          },
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.154,
+            "status": 409
+          },
+          {
+            "code": "REQUEST_COMPLETED_RESULT_NOT_RETAINED",
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.157,
+            "status": 409
+          }
+        ],
+        "in_progress": 0
+      },
+      "name": "server-database-mariadb (ii): the answers are the handler's own answer for exactly one arrival; the others the status-only refusal or REQUEST_IN_PROGRESS",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer_carries_a_password_field": false,
+        "answer_keys": [
+          "created_at",
+          "id",
+          "name",
+          "password_set",
+          "user"
+        ],
+        "first": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.161,
+          "status": 200
+        },
+        "new_on_engine": [
+          "s2_srvsent"
+        ],
+        "password_set": true,
+        "replay": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": "1",
+          "seconds": 0.003,
+          "status": 200
+        },
+        "replay_sent_value_occurs": 0,
+        "same_bytes": true,
+        "sent_value_occurs_in_the_raw_answer": 0
+      },
+      "name": "O10 (mariadb): a database created with a password the owner sent: the answer does not echo it (no `password` field, `password_set: true`, the value is not in the answer's bytes)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer_carries_a_password_field": false,
+        "answer_keys": [
+          "created_at",
+          "id",
+          "name",
+          "password_set",
+          "user"
+        ],
+        "first": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.161,
+          "status": 200
+        },
+        "new_on_engine": [
+          "s2_srvsent"
+        ],
+        "password_set": true,
+        "replay": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": "1",
+          "seconds": 0.003,
+          "status": 200
+        },
+        "replay_sent_value_occurs": 0,
+        "same_bytes": true,
+        "sent_value_occurs_in_the_raw_answer": 0
+      },
+      "name": "O10 (mariadb): its replay is the first answer byte for byte, marked as a replay, and one database was created",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REQUIRED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.003,
+        "status": 428
+      },
+      "name": "server-database-postgresql (iii): without the header the answer is 428 REQUEST_ID_REQUIRED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "on_engine": [
+            "set1_owner_test_con",
+            "set1_owner_test_seq"
+          ],
+          "panel_rows": [
+            "2:set1_owner_test_con",
+            "2:set1_owner_test_seq"
+          ]
+        },
+        "before": {
+          "on_engine": [
+            "set1_owner_test_con",
+            "set1_owner_test_seq"
+          ],
+          "panel_rows": [
+            "2:set1_owner_test_con",
+            "2:set1_owner_test_seq"
+          ]
+        }
+      },
+      "name": "server-database-postgresql (iii): and nothing changed on the server",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.156,
+          "status": 200
+        },
+        "answer_names": "s2_srvseq",
+        "new_on_engine": [
+          "s2_srvseq"
+        ],
+        "new_panel_rows": [
+          "s2_srvseq"
+        ]
+      },
+      "name": "server-database-postgresql (i): three arrivals in a row of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "replays_marked": true,
+        "same_bytes": true,
+        "statuses": [
+          200,
+          200,
+          200
+        ]
+      },
+      "name": "server-database-postgresql (i): the three answers are the same bytes, the later two marked as replays",
+      "ok": true
+    },
+    {
+      "detail": {
+        "code": "REQUEST_ID_REUSED",
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.003,
+        "status": 409
+      },
+      "name": "server-database-postgresql (iv): the same identity with a different body is refused 409 REQUEST_ID_REUSED",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "on_engine": [
+            "s2_srvseq",
+            "set1_owner_test_con",
+            "set1_owner_test_seq"
+          ],
+          "panel_rows": [
+            "2:s2_srvseq",
+            "2:set1_owner_test_con",
+            "2:set1_owner_test_seq"
+          ]
+        },
+        "before": {
+          "on_engine": [
+            "s2_srvseq",
+            "set1_owner_test_con",
+            "set1_owner_test_seq"
+          ],
+          "panel_rows": [
+            "2:s2_srvseq",
+            "2:set1_owner_test_con",
+            "2:set1_owner_test_seq"
+          ]
+        }
+      },
+      "name": "server-database-postgresql (iv): and there is no second effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": "1",
+          "seconds": 0.173,
+          "status": 200
+        },
+        "answer_names": "s2_srvcon",
+        "new_on_engine": [
+          "s2_srvcon"
+        ],
+        "new_panel_rows": [
+          "s2_srvcon"
+        ]
+      },
+      "name": "server-database-postgresql (ii): three arrivals at once of one identity left one native effect",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answers": [
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 0.173,
+            "status": 200
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": null,
+            "seconds": 0.174,
+            "status": 200
+          },
+          {
+            "code": null,
+            "error": null,
+            "outcome": "answer",
+            "reason": null,
+            "replayed": "1",
+            "seconds": 0.173,
+            "status": 200
+          }
+        ],
+        "in_progress": 0
+      },
+      "name": "server-database-postgresql (ii): the answers are the same bytes, or REQUEST_IN_PROGRESS for a waiter",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer_carries_a_password_field": false,
+        "answer_keys": [
+          "created_at",
+          "id",
+          "name",
+          "password_set",
+          "user"
+        ],
+        "first": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.164,
+          "status": 200
+        },
+        "new_on_engine": [
+          "s2_srvsent"
+        ],
+        "password_set": true,
+        "replay": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": "1",
+          "seconds": 0.003,
+          "status": 200
+        },
+        "replay_sent_value_occurs": 0,
+        "same_bytes": true,
+        "sent_value_occurs_in_the_raw_answer": 0
+      },
+      "name": "O10 (postgresql): a database created with a password the owner sent: the answer does not echo it (no `password` field, `password_set: true`, the value is not in the answer's bytes)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "answer_carries_a_password_field": false,
+        "answer_keys": [
+          "created_at",
+          "id",
+          "name",
+          "password_set",
+          "user"
+        ],
+        "first": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": null,
+          "seconds": 0.164,
+          "status": 200
+        },
+        "new_on_engine": [
+          "s2_srvsent"
+        ],
+        "password_set": true,
+        "replay": {
+          "code": null,
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": "1",
+          "seconds": 0.003,
+          "status": 200
+        },
+        "replay_sent_value_occurs": 0,
+        "same_bytes": true,
+        "sent_value_occurs_in_the_raw_answer": 0
+      },
+      "name": "O10 (postgresql): its replay is the first answer byte for byte, marked as a replay, and one database was created",
+      "ok": true
+    }
+  ],
+  "engine_versions": [
+    {
+      "mariadb_client_version_line": "/usr/sbin/mariadb from 13.0.2-MariaDB, client 15.2 for Linux (x86_64) using readline 5.1",
+      "mariadb_select_version": "13.0.2-MariaDB",
+      "mariadb_shown_is_exactly_select_version": true,
+      "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 13.0.2-MariaDB for Linux on x86_64 (Arch Linux)",
+      "os": {
+        "ID": "arch",
+        "PRETTY_NAME": "Arch Linux"
+      },
+      "postgresql_show_server_version": "18.6",
+      "shown": {
+        "mariadb": "13.0.2-MariaDB",
+        "postgresql": "18.6"
+      },
+      "when": "C3, after the Panel's account was provisioned again"
+    }
+  ],
+  "finished_at": "2026-10-09T07:29:39Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/052-engine-versions-c3-after-the-panel-s-account-was-provisi.json",
+      "lab_action": false,
+      "label": "engine-versions-c3-after-the-panel-s-account-was-provisi",
+      "mode": "read-engine-versions",
+      "owner_action": false
+    },
+    {
+      "file": "native/053-server-database-mariadb-before.json",
+      "lab_action": false,
+      "label": "server-database-mariadb-before",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/054-server-database-mariadb-before-rows.json",
+      "lab_action": false,
+      "label": "server-database-mariadb-before-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/055-server-database-mariadb-after-iii.json",
+      "lab_action": false,
+      "label": "server-database-mariadb-after-iii",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/056-server-database-mariadb-after-iii-rows.json",
+      "lab_action": false,
+      "label": "server-database-mariadb-after-iii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/057-server-database-mariadb-after-i.json",
+      "lab_action": false,
+      "label": "server-database-mariadb-after-i",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/058-server-database-mariadb-after-i-rows.json",
+      "lab_action": false,
+      "label": "server-database-mariadb-after-i-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/059-server-database-mariadb-after-iv.json",
+      "lab_action": false,
+      "label": "server-database-mariadb-after-iv",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/060-server-database-mariadb-after-iv-rows.json",
+      "lab_action": false,
+      "label": "server-database-mariadb-after-iv-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/061-server-database-mariadb-after-ii.json",
+      "lab_action": false,
+      "label": "server-database-mariadb-after-ii",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/062-server-database-mariadb-after-ii-rows.json",
+      "lab_action": false,
+      "label": "server-database-mariadb-after-ii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/063-server-database-mariadb-sent-before.json",
+      "lab_action": false,
+      "label": "server-database-mariadb-sent-before",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/064-server-database-mariadb-sent-before-rows.json",
+      "lab_action": false,
+      "label": "server-database-mariadb-sent-before-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/065-server-database-mariadb-sent-after.json",
+      "lab_action": false,
+      "label": "server-database-mariadb-sent-after",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/066-server-database-mariadb-sent-after-rows.json",
+      "lab_action": false,
+      "label": "server-database-mariadb-sent-after-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/067-server-database-postgresql-users.json",
+      "lab_action": false,
+      "label": "server-database-postgresql-users",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/068-server-database-postgresql-before.json",
+      "lab_action": false,
+      "label": "server-database-postgresql-before",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/069-server-database-postgresql-before-rows.json",
+      "lab_action": false,
+      "label": "server-database-postgresql-before-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/070-server-database-postgresql-after-iii.json",
+      "lab_action": false,
+      "label": "server-database-postgresql-after-iii",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/071-server-database-postgresql-after-iii-rows.json",
+      "lab_action": false,
+      "label": "server-database-postgresql-after-iii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/072-server-database-postgresql-after-i.json",
+      "lab_action": false,
+      "label": "server-database-postgresql-after-i",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/073-server-database-postgresql-after-i-rows.json",
+      "lab_action": false,
+      "label": "server-database-postgresql-after-i-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/074-server-database-postgresql-after-iv.json",
+      "lab_action": false,
+      "label": "server-database-postgresql-after-iv",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/075-server-database-postgresql-after-iv-rows.json",
+      "lab_action": false,
+      "label": "server-database-postgresql-after-iv-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/076-server-database-postgresql-after-ii.json",
+      "lab_action": false,
+      "label": "server-database-postgresql-after-ii",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/077-server-database-postgresql-after-ii-rows.json",
+      "lab_action": false,
+      "label": "server-database-postgresql-after-ii-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/078-server-database-postgresql-sent-before.json",
+      "lab_action": false,
+      "label": "server-database-postgresql-sent-before",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/079-server-database-postgresql-sent-before-rows.json",
+      "lab_action": false,
+      "label": "server-database-postgresql-sent-before-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/080-server-database-postgresql-sent-after.json",
+      "lab_action": false,
+      "label": "server-database-postgresql-sent-after",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/081-server-database-postgresql-sent-after-rows.json",
+      "lab_action": false,
+      "label": "server-database-postgresql-sent-after-rows",
+      "mode": "read-panel-state",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [],
+  "owner_actions": [],
+  "section": "C3-server-databases",
+  "sent_password": {
+    "mariadb": {
+      "answer_carries_a_password_field": false,
+      "answer_keys": [
+        "created_at",
+        "id",
+        "name",
+        "password_set",
+        "user"
+      ],
+      "first": {
+        "code": null,
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.161,
+        "status": 200
+      },
+      "new_on_engine": [
+        "s2_srvsent"
+      ],
+      "password_set": true,
+      "replay": {
+        "code": null,
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": "1",
+        "seconds": 0.003,
+        "status": 200
+      },
+      "replay_sent_value_occurs": 0,
+      "same_bytes": true,
+      "sent_value_occurs_in_the_raw_answer": 0
+    },
+    "postgresql": {
+      "answer_carries_a_password_field": false,
+      "answer_keys": [
+        "created_at",
+        "id",
+        "name",
+        "password_set",
+        "user"
+      ],
+      "first": {
+        "code": null,
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": null,
+        "seconds": 0.164,
+        "status": 200
+      },
+      "new_on_engine": [
+        "s2_srvsent"
+      ],
+      "password_set": true,
+      "replay": {
+        "code": null,
+        "error": null,
+        "outcome": "answer",
+        "reason": null,
+        "replayed": "1",
+        "seconds": 0.003,
+        "status": 200
+      },
+      "replay_sent_value_occurs": 0,
+      "same_bytes": true,
+      "sent_value_occurs_in_the_raw_answer": 0
+    }
+  },
+  "started_at": "2026-10-09T07:29:26Z",
+  "substeps": {
+    "O10": "passed",
+    "O14": "passed",
+    "server-database-mariadb": "passed",
+    "server-database-postgresql": "passed"
+  },
+  "title": "a database on a database server (MariaDB and PostgreSQL)",
+  "verdict": "passed",
+  "who_chose_the_database_users_pw": {
+    "mariadb": "a new user without a password: the Panel mints one and shows it once (the answer is not kept)",
+    "postgresql": "an existing database user is given access: the answer carries no password and is kept"
+  }
+}

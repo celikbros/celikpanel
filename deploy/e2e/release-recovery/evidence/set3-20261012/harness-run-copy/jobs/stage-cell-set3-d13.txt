@@ -1,0 +1,5 @@
+driver SHA256SUMS verified on the staged copy (622 files)
+2026-10-09T07:27:38Z removed /var/tmp/cp-release-drill-set3-d13-a/cells/1607fb8307d93785bd43c48a/arch/overlay.qcow2 bytes=158400512 (evidence staged at set3-20261012/set3-debian13/run-a, checksums verified)
+2026-10-09T07:27:38Z removed /var/tmp/cp-release-drill-set3-d13-a/cells/1607fb8307d93785bd43c48a/debian13/overlay.qcow2 bytes=1742536704 (evidence staged at set3-20261012/set3-debian13/run-a, checksums verified)
+633
+overall: complete-for-review | native_evidence: False | outcome: settings-writes-measured

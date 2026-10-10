@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 11,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T17:47:25Z",
+    "notes": [],
+    "started_at": "2026-10-09T17:46:54Z",
+    "substeps": {
+      "S8 postfix start": "passed",
+      "S8 postfix stop": "passed",
+      "item 10": "passed"
+    },
+    "title": "Postfix stopped through the Panel while `postfix check` refuses main.cf (set4's section; the candidate installed by the update)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T17:47:25Z",
+  "name": "M10-postfix-stop",
+  "started_at": "2026-10-09T17:46:54Z",
+  "verdict": "passed"
+}

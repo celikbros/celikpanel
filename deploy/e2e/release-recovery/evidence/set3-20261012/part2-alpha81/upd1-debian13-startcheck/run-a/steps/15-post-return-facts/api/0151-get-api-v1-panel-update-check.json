@@ -1,0 +1,89 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "update check after the return",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18473"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/panel/update/check"
+  },
+  "response": {
+    "elapsed_seconds": 0.023,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 08:07:59 GMT"
+      ],
+      [
+        "Content-Length",
+        "595"
+      ]
+    ],
+    "json": {
+      "available": true,
+      "current_commit": "a0beb7263d1f4ca72258f6b306f9111ba4e2a334",
+      "current_version": "v0.1.0-alpha.81",
+      "previous_attempt": {
+        "failure_code": "candidate_panel_startup_check_failed",
+        "finished_at": "2026-10-09T08:06:32Z",
+        "phase": "recovered",
+        "request_id": "ea084962228e54fabc3c714f62668496"
+      },
+      "supported": true,
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "af948dc49a5b53dcb8b91212867087195bbd2062d80c32e095c23b7f75d3e53b",
+        "archive_size": "65878529",
+        "commit": "f18a9d416fbc785236891e6645cd53063d8f91ec",
+        "os": "linux",
+        "published_at": "2026-10-09T07:55:03Z",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      }
+    },
+    "status": 200,
+    "text": null
+  }
+}

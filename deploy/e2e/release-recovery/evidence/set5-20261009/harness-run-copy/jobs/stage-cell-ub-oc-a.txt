@@ -1,0 +1,11 @@
+driver SHA256SUMS verified on the staged copy (281 files)
+token-digest sweep at staging: host-side files changed 0, driver files changed 0, places {"learned_value": 0, "migration_directory": 0, "named_field": 0}
+token-digest count after the sweep: 0 file(s) would change, values known: 0
+driver SHA256SUMS verified again after the sweep
+2026-10-09T19:46:41Z removed /var/tmp/cp-release-drill-s5-ub-oc-a/cells/4fbfbd34be526857d2fe59f4/ubuntu/overlay.qcow2 bytes=1789722624 (overlay disk of this run's lab, on this lab's tmpfs mount (RAM); evidence staged at set5-20261009/update-alpha81/upd1-ubuntu-owner-continuation/run-a, checksums verified)
+2026-10-09T19:46:41Z released the tmpfs mount /var/tmp/cp-release-drill-s5-ub-oc-a/cells/4fbfbd34be526857d2fe59f4/ubuntu (it held 452K after the overlay was removed; its remaining files were put back on the disk)
+2026-10-09T19:46:41Z removed /var/tmp/cp-release-drill-s5-ub-oc-a/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img (this lab's hard link to the cached base image /var/tmp/cp-v3n28/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img; the cached file stays, link count now 2)
+298
+overall: complete-for-review | native_evidence: False | outcome: recovered-after-owner-continuation | final: None succeeded
+  finding: ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']
+  finding: while the recovery budget was exhausted the Panel recovery-status API was unavailable; only the root CLI showed the exhausted state

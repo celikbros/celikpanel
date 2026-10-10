@@ -1,0 +1,219 @@
+{
+  "archives": 7,
+  "at": "2026-10-09T08:19:10Z",
+  "directory": "/var/backups/celikpanel/subscriptions/2/domains/1",
+  "entries": [
+    {
+      "bytes": 201463327,
+      "kind": "file",
+      "manifest": {
+        "created_at": "2026-10-09T08:15:45.086529352Z",
+        "databases": 4,
+        "domain_id": 1,
+        "job_key": "request:4f701763d32b9347639cbdf7567f0589",
+        "keys": [
+          "created_at",
+          "databases",
+          "domain_id",
+          "files",
+          "job_key",
+          "origin",
+          "subscription_id",
+          "type",
+          "version"
+        ],
+        "origin": "manual",
+        "subscription_id": 2,
+        "type": "full",
+        "version": 2
+      },
+      "mode": "0600",
+      "mtime": 1791533754,
+      "name": "full-20261009T081549.943871733Z-1777ec0f003cdde7.cpbak"
+    },
+    {
+      "bytes": 201463320,
+      "kind": "file",
+      "manifest": {
+        "created_at": "2026-10-09T08:15:55.342254615Z",
+        "databases": 4,
+        "domain_id": 1,
+        "job_key": "request:25c66085580dea5ebb9a65d6b42f2f91",
+        "keys": [
+          "created_at",
+          "databases",
+          "domain_id",
+          "files",
+          "job_key",
+          "origin",
+          "subscription_id",
+          "type",
+          "version"
+        ],
+        "origin": "manual",
+        "subscription_id": 2,
+        "type": "full",
+        "version": 2
+      },
+      "mode": "0600",
+      "mtime": 1791533763,
+      "name": "full-20261009T081559.410900921Z-bfccf80cabd57b11.cpbak"
+    },
+    {
+      "bytes": 201460659,
+      "kind": "file",
+      "manifest": {
+        "created_at": "2026-10-09T08:17:43.119371327Z",
+        "databases": 4,
+        "domain_id": 1,
+        "keys": [
+          "created_at",
+          "databases",
+          "domain_id",
+          "files",
+          "origin",
+          "subscription_id",
+          "type",
+          "version"
+        ],
+        "origin": "pre_restore",
+        "subscription_id": 2,
+        "type": "full",
+        "version": 2
+      },
+      "mode": "0600",
+      "mtime": 1791533871,
+      "name": "full-20261009T081747.841483241Z-fe4aa84498c9bd8a.cpbak"
+    },
+    {
+      "bytes": 201460719,
+      "kind": "file",
+      "manifest": {
+        "created_at": "2026-10-09T08:18:01.764528478Z",
+        "databases": 4,
+        "domain_id": 1,
+        "keys": [
+          "created_at",
+          "databases",
+          "domain_id",
+          "files",
+          "origin",
+          "subscription_id",
+          "type",
+          "version"
+        ],
+        "origin": "pre_restore",
+        "subscription_id": 2,
+        "type": "full",
+        "version": 2
+      },
+      "mode": "0600",
+      "mtime": 1791533890,
+      "name": "full-20261009T081806.337072485Z-2c49c48ead1d40fd.cpbak"
+    },
+    {
+      "bytes": 201460699,
+      "kind": "file",
+      "manifest": {
+        "created_at": "2026-10-09T08:18:18.147968153Z",
+        "databases": 4,
+        "domain_id": 1,
+        "keys": [
+          "created_at",
+          "databases",
+          "domain_id",
+          "files",
+          "origin",
+          "subscription_id",
+          "type",
+          "version"
+        ],
+        "origin": "pre_restore",
+        "subscription_id": 2,
+        "type": "full",
+        "version": 2
+      },
+      "mode": "0600",
+      "mtime": 1791533906,
+      "name": "full-20261009T081822.676912992Z-7216eb5f5577121e.cpbak"
+    },
+    {
+      "bytes": 201460653,
+      "kind": "file",
+      "manifest": {
+        "created_at": "2026-10-09T08:18:35.133433843Z",
+        "databases": 4,
+        "domain_id": 1,
+        "keys": [
+          "created_at",
+          "databases",
+          "domain_id",
+          "files",
+          "origin",
+          "subscription_id",
+          "type",
+          "version"
+        ],
+        "origin": "pre_restore",
+        "subscription_id": 2,
+        "type": "full",
+        "version": 2
+      },
+      "mode": "0600",
+      "mtime": 1791533923,
+      "name": "full-20261009T081839.730458406Z-991235ae8cfc1809.cpbak"
+    },
+    {
+      "bytes": 201460707,
+      "kind": "file",
+      "manifest": {
+        "created_at": "2026-10-09T08:18:53.940187706Z",
+        "databases": 4,
+        "domain_id": 1,
+        "keys": [
+          "created_at",
+          "databases",
+          "domain_id",
+          "files",
+          "origin",
+          "subscription_id",
+          "type",
+          "version"
+        ],
+        "origin": "pre_restore",
+        "subscription_id": 2,
+        "type": "full",
+        "version": 2
+      },
+      "mode": "0600",
+      "mtime": 1791533942,
+      "name": "full-20261009T081858.467001233Z-6c5dfaa4e591479d.cpbak"
+    }
+  ],
+  "epoch": 1791533950.0864866,
+  "exists": true,
+  "lab_action": false,
+  "manifests_read": 7,
+  "mode": "read-backups",
+  "origins": {
+    "manual": 2,
+    "pre_restore": 5
+  },
+  "owner_action": false,
+  "partial_files": [],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "tree": [
+    "d 26 /var/backups/celikpanel",
+    "d 2 /var/backups/celikpanel/subscriptions",
+    "d 14 /var/backups/celikpanel/subscriptions/2",
+    "d 2 /var/backups/celikpanel/subscriptions/2/domains",
+    "d 756 /var/backups/celikpanel/subscriptions/2/domains/1",
+    "f 201463327 /var/backups/celikpanel/subscriptions/2/domains/1/full-20261009T081549.943871733Z-1777ec0f003cdde7.cpbak",
+    "f 201463320 /var/backups/celikpanel/subscriptions/2/domains/1/full-20261009T081559.410900921Z-bfccf80cabd57b11.cpbak",
+    "f 201460659 /var/backups/celikpanel/subscriptions/2/domains/1/full-20261009T081747.841483241Z-fe4aa84498c9bd8a.cpbak",
+    "f 201460719 /var/backups/celikpanel/subscriptions/2/domains/1/full-20261009T081806.337072485Z-2c49c48ead1d40fd.cpbak",
+    "f 201460699 /var/backups/celikpanel/subscriptions/2/domains/1/full-20261009T081822.676912992Z-7216eb5f5577121e.cpbak",
+    "f 201460653 /var/backups/celikpanel/subscriptions/2/domains/1/full-20261009T081839.730458406Z-991235ae8cfc1809.cpbak",
+    "f 201460707 /var/backups/celikpanel/subscriptions/2/domains/1/full-20261009T081858.467001233Z-6c5dfaa4e591479d.cpbak"
+  ]
+}

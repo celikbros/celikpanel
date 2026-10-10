@@ -1,0 +1,122 @@
+{
+  "cell_directory": "/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76",
+  "cell_id": "release-recovery__f189a87dd9dac352",
+  "host_requirements": {
+    "accelerator": "kvm",
+    "daemonization": "qemu-daemonize",
+    "os": "linux",
+    "qmp_transport": "unix"
+  },
+  "nodes": {
+    "ubuntu": {
+      "base": {
+        "bytes": 624829952,
+        "digest": {
+          "algorithm": "sha256",
+          "value": "d0fe84bb5f80853425fa6be28e2c106f30104c3cfe8611933f2e65c9b63f0e30"
+        },
+        "path": "/var/tmp/cp-release-drill-u14-ub-good-a/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img"
+      },
+      "cloud_init": {
+        "meta-data": "instance-id: dns-kill-5406f76cc485c3fbfb3d\nlocal-hostname: dns-ubuntu\n",
+        "network-config": "version: 2\nethernets:\n  mgmt:\n    match:\n      macaddress: \"52:54:00:13:00:12\"\n    set-name: mgmt0\n    dhcp4: true\n    dhcp6: false\n    optional: false\n  peer:\n    match:\n      macaddress: \"52:54:00:53:00:12\"\n    set-name: peer0\n    dhcp4: false\n    dhcp6: false\n    addresses:\n      - 192.0.2.12/24\n    optional: false\n",
+        "user-data": "#cloud-config\nusers:\n  - default\n  - name: celik\n    gecos: CelikPanel kill matrix\n    groups: [sudo]\n    sudo: [\"ALL=(ALL) NOPASSWD:ALL\"]\n    shell: /bin/bash\n    lock_passwd: true\n    ssh_authorized_keys:\n      - \"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII7Z0WFFo0bGLisHhZvhSmzEw9xgm7WD5veegfj0o3Nx root@ALIASUSPC\"\ndisable_root: true\nssh_pwauth: false\npackage_update: false\npackage_upgrade: false\nwrite_files:\n  - path: /etc/celikpanel-dns-kill-matrix\n    owner: root:root\n    permissions: '0444'\n    content: |\n      schema=celikpanel/dns-kill-fixture-plan/v1\n      cell_id=release-recovery__f189a87dd9dac352\n      node=ubuntu\n  - path: /etc/celikpanel-release-recovery-lab\n    owner: root:root\n    permissions: '0444'\n    content: |\n      {\"schema\": \"celikpanel-release-recovery-lab/v1\", \"nonce\": \"f189a87dd9dac3526ad6a01e6cd41bcf8d44cc22b18182d83bff0df02c485ee1\", \"vm_uuid\": \"1a52344c-8867-5a60-90a3-470166f42444\", \"cell_id\": \"release-recovery__f189a87dd9dac352\", \"node\": \"ubuntu\"}\nruncmd:\n  - [systemctl, enable, --now, ssh.service]\n  - [touch, /etc/celikpanel-dns-kill-matrix-ready]\nfinal_message: \"CelikPanel DNS kill fixture ready\"\n"
+      },
+      "hostname": "dns-ubuntu",
+      "management": {
+        "mac": "52:54:00:13:00:12",
+        "mode": "qemu-user-nat",
+        "ssh_host": "127.0.0.1",
+        "ssh_port": 4361
+      },
+      "overlay_command": [
+        "qemu-img",
+        "create",
+        "-f",
+        "qcow2",
+        "-F",
+        "qcow2",
+        "-b",
+        "/var/tmp/cp-release-drill-u14-ub-good-a/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img",
+        "/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/overlay.qcow2",
+        "24G"
+      ],
+      "paths": {
+        "directory": "/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu",
+        "overlay": "/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/overlay.qcow2",
+        "pid": "/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/qemu.pid",
+        "qmp": "/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/qmp.sock",
+        "seed_directory": "/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/seed",
+        "seed_iso": "/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/seed.iso",
+        "serial": "/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/serial.log"
+      },
+      "peer": {
+        "address": "192.0.2.12/24",
+        "device_id": "peer-link",
+        "mac": "52:54:00:53:00:12",
+        "transport": "loopback-socket",
+        "transport_port": 4363
+      },
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-name",
+        "dns-kill-ubuntu",
+        "-uuid",
+        "1a52344c-8867-5a60-90a3-470166f42444",
+        "-accel",
+        "kvm",
+        "-cpu",
+        "host",
+        "-smp",
+        "2",
+        "-m",
+        "3072",
+        "-drive",
+        "file=/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/overlay.qcow2,if=virtio,format=qcow2,cache=none,discard=unmap",
+        "-drive",
+        "file=/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/seed.iso,if=virtio,format=raw,media=cdrom,readonly=on",
+        "-netdev",
+        "user,id=mgmt,hostfwd=tcp:127.0.0.1:4361-:22",
+        "-device",
+        "virtio-net-pci,netdev=mgmt,id=mgmt-link,mac=52:54:00:13:00:12",
+        "-netdev",
+        "socket,id=peer,listen=127.0.0.1:4363",
+        "-device",
+        "virtio-net-pci,netdev=peer,id=peer-link,mac=52:54:00:53:00:12",
+        "-qmp",
+        "unix:/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/qmp.sock,server=on,wait=off",
+        "-pidfile",
+        "/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/qemu.pid",
+        "-serial",
+        "file:/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/serial.log",
+        "-display",
+        "none",
+        "-monitor",
+        "none",
+        "-daemonize"
+      ],
+      "seed_command": [
+        "genisoimage",
+        "-quiet",
+        "-output",
+        "/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/seed.iso",
+        "-volid",
+        "cidata",
+        "-joliet",
+        "-rock",
+        "/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/seed/user-data",
+        "/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/seed/meta-data",
+        "/var/tmp/cp-release-drill-u14-ub-good-a/cells/6f96ca734312d9b2272fef76/ubuntu/seed/network-config"
+      ]
+    }
+  },
+  "peer_link_policy": {
+    "initial": "up",
+    "qmp_device": "peer-link"
+  },
+  "schema": "celikpanel/dns-kill-fixture-plan/v1",
+  "start_order": [
+    "ubuntu"
+  ],
+  "work_root": "/var/tmp/cp-release-drill-u14-ub-good-a"
+}

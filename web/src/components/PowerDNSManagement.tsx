@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from '../router';
 import { Network, Wrench, RotateCw, CheckCircle2, Globe, FileText, ChevronDown, ChevronRight, Info } from 'lucide-react';
 import { ServiceShell } from './ServiceShell';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import { api } from '../lib/api';
-import { Button } from './ui';
+import { Button, Checking, CouldNotCheck } from './ui';
+import { useComponentConfigFiles } from '../lib/managedServices';
 
 interface PowerDNSManagementProps {
     onBack: () => void;
@@ -26,19 +27,15 @@ export function PowerDNSManagement({ onBack }: PowerDNSManagementProps) {
     const { t } = useI18n();
     const navigate = useNavigate();
     const [repairing, setRepairing] = useState(false);
-    const [configFiles, setConfigFiles] = useState<string[]>([]);
+    // Which files PowerDNS has on this server comes from the stored component
+    // records, through their one shared read: being read, could not be read,
+    // or known (9 Oct 2026). Before, this page read them on its own and showed
+    // no file list at all for a read that failed, without a word.
+    // PowerDNS'in bu sunucudaki dosyaları, kayıtlı bileşen kayıtlarının tek
+    // paylaşılan okumasından gelir: okunuyor, okunamadı ya da biliniyor.
+    const { files, retry, reading } = useComponentConfigFiles('pdns');
     const [openFile, setOpenFile] = useState<string | null>(null);
     const [fileContent, setFileContent] = useState<string>('');
-
-    useEffect(() => {
-        fetch('/api/v1/managed-services')
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d) => {
-                const svc = (d?.services || []).find((s: { id: string }) => s.id === 'pdns');
-                setConfigFiles((svc?.config_files || []).map((f: { path: string }) => f.path));
-            })
-            .catch(() => {});
-    }, []);
 
     const toggleFile = async (path: string) => {
         if (openFile === path) {
@@ -94,9 +91,17 @@ export function PowerDNSManagement({ onBack }: PowerDNSManagementProps) {
             </section>
 
             {/* Actual configuration, read-only / Gerçek yapılandırma, salt-okur */}
-            {configFiles.length > 0 && (
+            {files.state === 'loading' && (
+                <section className="mb-5 rounded-xl border border-border-strong bg-surface px-4">
+                    <Checking label={t('dbconf.files.checking', { service: 'PowerDNS' })} className="min-h-[2.875rem]" />
+                </section>
+            )}
+            {files.state === 'unknown' && (
+                <CouldNotCheck text={t('dbconf.files.unknown', { service: 'PowerDNS' })} onRetry={retry} busy={reading} className="mb-5" />
+            )}
+            {files.state === 'known' && files.value.length > 0 && (
                 <section className="mb-5 overflow-hidden rounded-xl border border-border-strong bg-surface">
-                    {configFiles.map((path) => (
+                    {files.value.map((path) => (
                         <div key={path} className="border-b border-border last:border-0">
                             <button
                                 onClick={() => toggleFile(path)}

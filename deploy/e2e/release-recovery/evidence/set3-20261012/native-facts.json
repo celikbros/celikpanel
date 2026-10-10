@@ -1,0 +1,3444 @@
+{
+ "arch": {
+  "C0-prepare": {
+   "engine_versions": [
+    {
+     "mariadb_client_version_line": "/usr/sbin/mariadb from 13.0.2-MariaDB, client 15.2 for Linux (x86_64) using readline 5.1",
+     "mariadb_select_version": "13.0.2-MariaDB",
+     "mariadb_shown_is_exactly_select_version": true,
+     "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 13.0.2-MariaDB for Linux on x86_64 (Arch Linux)",
+     "os": {
+      "ID": "arch",
+      "PRETTY_NAME": "Arch Linux"
+     },
+     "postgresql_show_server_version": "18.6",
+     "shown": {
+      "mariadb": "13.0.2-MariaDB",
+      "postgresql": "18.6"
+     },
+     "when": "C0, as the engines were registered"
+    }
+   ]
+  },
+  "C3-server-databases": {
+   "engine_versions": [
+    {
+     "mariadb_client_version_line": "/usr/sbin/mariadb from 13.0.2-MariaDB, client 15.2 for Linux (x86_64) using readline 5.1",
+     "mariadb_select_version": "13.0.2-MariaDB",
+     "mariadb_shown_is_exactly_select_version": true,
+     "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 13.0.2-MariaDB for Linux on x86_64 (Arch Linux)",
+     "os": {
+      "ID": "arch",
+      "PRETTY_NAME": "Arch Linux"
+     },
+     "postgresql_show_server_version": "18.6",
+     "shown": {
+      "mariadb": "13.0.2-MariaDB",
+      "postgresql": "18.6"
+     },
+     "when": "C3, after the Panel's account was provisioned again"
+    }
+   ],
+   "sent_password": {
+    "mariadb": {
+     "answer_carries_a_password_field": false,
+     "answer_keys": [
+      "created_at",
+      "id",
+      "name",
+      "password_set",
+      "user"
+     ],
+     "first": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": null,
+      "seconds": 0.161,
+      "status": 200
+     },
+     "new_on_engine": [
+      "s2_srvsent"
+     ],
+     "password_set": true,
+     "replay": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": "1",
+      "seconds": 0.003,
+      "status": 200
+     },
+     "replay_sent_value_occurs": 0,
+     "same_bytes": true,
+     "sent_value_occurs_in_the_raw_answer": 0
+    },
+    "postgresql": {
+     "answer_carries_a_password_field": false,
+     "answer_keys": [
+      "created_at",
+      "id",
+      "name",
+      "password_set",
+      "user"
+     ],
+     "first": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": null,
+      "seconds": 0.164,
+      "status": 200
+     },
+     "new_on_engine": [
+      "s2_srvsent"
+     ],
+     "password_set": true,
+     "replay": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": "1",
+      "seconds": 0.003,
+      "status": 200
+     },
+     "replay_sent_value_occurs": 0,
+     "same_bytes": true,
+     "sent_value_occurs_in_the_raw_answer": 0
+    }
+   }
+  },
+  "C5-letsencrypt": {
+   "certificate_failure": {
+    "code": "CERTIFICATE_ISSUE_FAILED",
+    "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+    "one_entry_answer": {
+     "code": "CERTIFICATE_ISSUE_FAILED",
+     "error": null,
+     "outcome": "answer",
+     "reason": "authority_unreachable",
+     "replayed": null,
+     "seconds": 0.569,
+     "status": 502
+    },
+    "reason": "authority_unreachable",
+    "status": 502,
+    "texts": null,
+    "vars": {
+     "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+     "domain": "set1-owner.test",
+     "kept": "none"
+    }
+   }
+  },
+  "C7-import": {
+   "archive_as_tar_writes_it": {
+    "archive_files": {
+     "assets/site.css": [
+      34,
+      "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+     ],
+     "index.html": [
+      66,
+      "28f8aaac03799998f25ee227702b33b13d8cd65e71096a8e670e4d843230a94c"
+     ]
+    },
+    "docroot_files": null,
+    "import_status": null,
+    "imported": null,
+    "native": {
+     "database_on_engine": false,
+     "database_row": [],
+     "docroot_sha256": null,
+     "domain_row": false,
+     "files": null,
+     "forwardings": 0,
+     "mailboxes": [],
+     "rows": null,
+     "status": null
+    },
+    "not_imported": null,
+    "status": 502,
+    "steps": null
+   },
+   "previews": [
+    {
+     "archive": "i",
+     "at": "2026-10-09T07:30:34Z",
+     "databases": [
+      "s2impseq_app"
+     ],
+     "domains": [
+      "set2-import-seq.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-seq.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-seq.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 401,
+     "status": 200
+    },
+    {
+     "archive": "ii",
+     "at": "2026-10-09T07:30:34Z",
+     "databases": [
+      "s2impcon_app"
+     ],
+     "domains": [
+      "set2-import-con.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-con.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-con.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 401,
+     "status": 200
+    },
+    {
+     "archive": "v",
+     "at": "2026-10-09T07:30:34Z",
+     "databases": [
+      "s2impdrop_app"
+     ],
+     "domains": [
+      "set2-import-drop.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-drop.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-drop.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 413,
+     "status": 200
+    },
+    {
+     "archive": "tar",
+     "at": "2026-10-09T07:30:34Z",
+     "databases": [
+      "s2imptar_app"
+     ],
+     "domains": [
+      "set2-import-tar.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-tar.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-tar.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 401,
+     "status": 200
+    }
+   ]
+  },
+  "C7b-import-answers": {
+   "hostile": {
+    "absolute": {
+     "archive_files_in_the_docroot": [],
+     "code": "IMPORT_SITE_NOT_CREATED",
+     "docroot_files": [],
+     "domain_status": null,
+     "entries_outside": [],
+     "entries_outside_before": [],
+     "hostile_members": [
+      {
+       "name": "/etc/set3-escape-absolute.txt",
+       "type": "file"
+      }
+     ],
+     "import_status": null,
+     "imported": null,
+     "kind": "absolute",
+     "message": null,
+     "native": {
+      "database_on_engine": false,
+      "database_row": [],
+      "docroot_sha256": null,
+      "domain_row": false,
+      "files": null,
+      "forwardings": 0,
+      "mailboxes": [],
+      "rows": null,
+      "status": null
+     },
+     "non_regular_in_the_docroot": null,
+     "not_imported": null,
+     "request": {
+      "do_databases": false,
+      "do_dns": false,
+      "do_files": true,
+      "do_mail": false
+     },
+     "site_home_entries": null,
+     "status": 502,
+     "steps": []
+    },
+    "dotdot": {
+     "archive_files_in_the_docroot": [],
+     "code": "IMPORT_SITE_NOT_CREATED",
+     "docroot_files": [],
+     "domain_status": null,
+     "entries_outside": [],
+     "entries_outside_before": [],
+     "hostile_members": [
+      {
+       "name": "cpmove-s3hdd/homedir/public_html/../../set3-escape-dotdot.txt",
+       "type": "file"
+      }
+     ],
+     "import_status": null,
+     "imported": null,
+     "kind": "dotdot",
+     "message": null,
+     "native": {
+      "database_on_engine": false,
+      "database_row": [],
+      "docroot_sha256": null,
+      "domain_row": false,
+      "files": null,
+      "forwardings": 0,
+      "mailboxes": [],
+      "rows": null,
+      "status": null
+     },
+     "non_regular_in_the_docroot": null,
+     "not_imported": null,
+     "request": {
+      "do_databases": true,
+      "do_dns": false,
+      "do_files": true,
+      "do_mail": false
+     },
+     "site_home_entries": null,
+     "status": 502,
+     "steps": []
+    },
+    "symlink": {
+     "archive_files_in_the_docroot": [],
+     "code": "IMPORT_SITE_NOT_CREATED",
+     "docroot_files": [],
+     "domain_status": null,
+     "entries_outside": [],
+     "entries_outside_before": [],
+     "hostile_members": [
+      {
+       "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link",
+       "type": "symlink -> /etc"
+      },
+      {
+       "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link/set3-escape-symlink.txt",
+       "type": "file"
+      }
+     ],
+     "import_status": null,
+     "imported": null,
+     "kind": "symlink",
+     "message": null,
+     "native": {
+      "database_on_engine": false,
+      "database_row": [],
+      "docroot_sha256": null,
+      "domain_row": false,
+      "files": null,
+      "forwardings": 0,
+      "mailboxes": [],
+      "rows": null,
+      "status": null
+     },
+     "non_regular_in_the_docroot": null,
+     "not_imported": null,
+     "request": {
+      "do_databases": false,
+      "do_dns": false,
+      "do_files": true,
+      "do_mail": false
+     },
+     "site_home_entries": null,
+     "status": 502,
+     "steps": []
+    }
+   },
+   "previews": [
+    {
+     "archive": "hostile-dotdot",
+     "at": "2026-10-09T07:30:55Z",
+     "databases": [
+      "s3hdd_app"
+     ],
+     "domains": [
+      "set3-hostile-dotdot.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set3-hostile-dotdot.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set3-hostile-dotdot.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 415,
+     "status": 200
+    },
+    {
+     "archive": "hostile-absolute",
+     "at": "2026-10-09T07:31:00Z",
+     "databases": [
+      "s3hab_app"
+     ],
+     "domains": [
+      "set3-hostile-absolute.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set3-hostile-absolute.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set3-hostile-absolute.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 425,
+     "status": 200
+    },
+    {
+     "archive": "hostile-symlink",
+     "at": "2026-10-09T07:31:04Z",
+     "databases": [
+      "s3hsl_app"
+     ],
+     "domains": [
+      "set3-hostile-symlink.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set3-hostile-symlink.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set3-hostile-symlink.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 420,
+     "status": 200
+    }
+   ]
+  },
+  "C9-identities": {
+   "answers_searched": {
+    "answers": 105,
+    "echoing_a_sent_secret": [],
+    "holding_a_hash_shaped_value": []
+   },
+   "journal_searched": {
+    "hash_shaped_values": 0,
+    "lines": 374
+   }
+  }
+ },
+ "arch_snippet": {
+  "C0-prepare": {
+   "engine_versions": [
+    {
+     "mariadb_client_version_line": "/usr/sbin/mariadb from 13.0.2-MariaDB, client 15.2 for Linux (x86_64) using readline 5.1",
+     "mariadb_select_version": "13.0.2-MariaDB",
+     "mariadb_shown_is_exactly_select_version": true,
+     "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 13.0.2-MariaDB for Linux on x86_64 (Arch Linux)",
+     "os": {
+      "ID": "arch",
+      "PRETTY_NAME": "Arch Linux"
+     },
+     "postgresql_show_server_version": "18.6",
+     "shown": {
+      "mariadb": "13.0.2-MariaDB",
+      "postgresql": "18.6"
+     },
+     "when": "C0, as the engines were registered"
+    }
+   ]
+  },
+  "C3-server-databases": {
+   "engine_versions": [
+    {
+     "mariadb_client_version_line": "/usr/sbin/mariadb from 13.0.2-MariaDB, client 15.2 for Linux (x86_64) using readline 5.1",
+     "mariadb_select_version": "13.0.2-MariaDB",
+     "mariadb_shown_is_exactly_select_version": true,
+     "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 13.0.2-MariaDB for Linux on x86_64 (Arch Linux)",
+     "os": {
+      "ID": "arch",
+      "PRETTY_NAME": "Arch Linux"
+     },
+     "postgresql_show_server_version": "18.6",
+     "shown": {
+      "mariadb": "13.0.2-MariaDB",
+      "postgresql": "18.6"
+     },
+     "when": "C3, after the Panel's account was provisioned again"
+    }
+   ],
+   "sent_password": {
+    "mariadb": {
+     "answer_carries_a_password_field": false,
+     "answer_keys": [
+      "created_at",
+      "id",
+      "name",
+      "password_set",
+      "user"
+     ],
+     "first": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": null,
+      "seconds": 0.167,
+      "status": 200
+     },
+     "new_on_engine": [
+      "s2_srvsent"
+     ],
+     "password_set": true,
+     "replay": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": "1",
+      "seconds": 0.004,
+      "status": 200
+     },
+     "replay_sent_value_occurs": 0,
+     "same_bytes": true,
+     "sent_value_occurs_in_the_raw_answer": 0
+    },
+    "postgresql": {
+     "answer_carries_a_password_field": false,
+     "answer_keys": [
+      "created_at",
+      "id",
+      "name",
+      "password_set",
+      "user"
+     ],
+     "first": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": null,
+      "seconds": 0.208,
+      "status": 200
+     },
+     "new_on_engine": [
+      "s2_srvsent"
+     ],
+     "password_set": true,
+     "replay": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": "1",
+      "seconds": 0.004,
+      "status": 200
+     },
+     "replay_sent_value_occurs": 0,
+     "same_bytes": true,
+     "sent_value_occurs_in_the_raw_answer": 0
+    }
+   }
+  },
+  "C5-letsencrypt": {
+   "certificate_failure": {
+    "code": "CERTIFICATE_ISSUE_FAILED",
+    "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+    "one_entry_answer": {
+     "code": "CERTIFICATE_ISSUE_FAILED",
+     "error": null,
+     "outcome": "answer",
+     "reason": "authority_unreachable",
+     "replayed": null,
+     "seconds": 0.596,
+     "status": 502
+    },
+    "reason": "authority_unreachable",
+    "status": 502,
+    "texts": null,
+    "vars": {
+     "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+     "domain": "set1-owner.test",
+     "kept": "none"
+    }
+   }
+  },
+  "C6b-php-site": {
+   "php_deleted": {
+    "delete_answer": {
+     "domain": "set3-php.test",
+     "status": "deleted"
+    },
+    "delete_status": 200,
+    "domain_rows": [],
+    "listed_after_seconds": 1.1,
+    "no_longer_listed": true,
+    "page_after": {
+     "marker": false,
+     "status": 403
+    },
+    "php_fpm_units_after": {
+     "php-fpm.service": "active"
+    },
+    "pool_file_left": false,
+    "site_account": null,
+    "socket_left": false
+   },
+   "php_native": {
+    "pool_directories": [
+     "/etc/php/php-fpm.d"
+    ],
+    "program": "/usr/sbin/php-fpm",
+    "program_version": [
+     "PHP 8.5.11 (fpm-fcgi) (built: Sep 23 2026 17:41:29) (NTS)"
+    ],
+    "run_directories": [
+     {
+      "exists": true,
+      "group": "root",
+      "kind": "directory",
+      "mode": "0755",
+      "owner": "root",
+      "path": "/run/php-fpm"
+     }
+    ],
+    "site_pool": {
+     "directory": "/etc/php/php-fpm.d",
+     "exists": true,
+     "group": "celikpanel",
+     "kind": "file",
+     "mode": "0644",
+     "owner": "root",
+     "path": "/etc/php/php-fpm.d/site2.conf",
+     "settings": {
+      "group": "set3_php_test",
+      "listen": "/run/php-fpm/php8.3-fpm-site2.sock",
+      "listen.group": "http",
+      "listen.mode": "0660",
+      "listen.owner": "http",
+      "pool": "site2",
+      "user": "set3_php_test"
+     }
+    },
+    "socket": {
+     "exists": true,
+     "group": "http",
+     "kind": "socket",
+     "mode": "0660",
+     "owner": "http",
+     "path": "/run/php-fpm/php8.3-fpm-site2.sock"
+    },
+    "units": {
+     "php-fpm.service": {
+      "ActiveState": "active",
+      "ExecStart": "{ path=/usr/bin/php-fpm ; argv[]=/usr/bin/php-fpm --nodaemonize --fpm-config /etc/php/php-fpm.conf ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/php-fpm.service",
+      "LoadState": "loaded",
+      "PrivateTmp": "[REDACTED]",
+      "ProtectHome": "no",
+      "ProtectSystem": "full",
+      "ReadWritePaths": "",
+      "SubState": "running"
+     }
+    },
+    "web_server_accounts": [
+     "http"
+    ]
+   },
+   "php_page": {
+    "body": "set3-php-executed:42:8.5.11:fpm-fcgi:set3_php_test\n",
+    "error": null,
+    "headers": {
+     "content-type": "text/plain;charset=UTF-8",
+     "server": "nginx/1.30.5",
+     "x-powered-by": "PHP/8.5.11"
+    },
+    "php_version": "8.5.11",
+    "runs_as": "set3_php_test",
+    "server_api": "fpm-fcgi",
+    "site_account": "set3_php_test",
+    "status": 200
+   }
+  },
+  "C7-import": {
+   "archive_as_tar_writes_it": {
+    "archive_files": {
+     "assets/site.css": [
+      34,
+      "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+     ],
+     "index.html": [
+      66,
+      "28f8aaac03799998f25ee227702b33b13d8cd65e71096a8e670e4d843230a94c"
+     ]
+    },
+    "docroot_files": {
+     "assets/site.css": [
+      34,
+      "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+     ],
+     "index.html": [
+      66,
+      "28f8aaac03799998f25ee227702b33b13d8cd65e71096a8e670e4d843230a94c"
+     ]
+    },
+    "import_status": "active",
+    "imported": [
+     "domain",
+     "files",
+     "dns",
+     "database:s2imptar_app"
+    ],
+    "native": {
+     "database_on_engine": true,
+     "database_row": [
+      "s2imptar_app"
+     ],
+     "docroot_sha256": "c600275c986eacd74a00b12f52d5d98bb811dd07b12a8218332e8c482cbf2d88",
+     "domain_row": true,
+     "files": 2,
+     "forwardings": 0,
+     "mailboxes": [],
+     "rows": "300",
+     "status": "active"
+    },
+    "not_imported": [],
+    "status": 200,
+    "steps": [
+     {
+      "detail": "set2-import-tar.test (id 3, site 3) → /var/www/celikpanel/subscriptions/2/sites/3/public_html",
+      "ok": true,
+      "step": "domain"
+     },
+     {
+      "detail": "2 files, 100 bytes",
+      "ok": true,
+      "step": "files"
+     },
+     {
+      "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+      "ok": true,
+      "step": "dns"
+     },
+     {
+      "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+      "ok": true,
+      "step": "database:s2imptar_app"
+     }
+    ]
+   },
+   "previews": [
+    {
+     "archive": "i",
+     "at": "2026-10-09T08:16:38Z",
+     "databases": [
+      "s2impseq_app"
+     ],
+     "domains": [
+      "set2-import-seq.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-seq.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-seq.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 401,
+     "status": 200
+    },
+    {
+     "archive": "ii",
+     "at": "2026-10-09T08:16:38Z",
+     "databases": [
+      "s2impcon_app"
+     ],
+     "domains": [
+      "set2-import-con.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-con.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-con.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 401,
+     "status": 200
+    },
+    {
+     "archive": "v",
+     "at": "2026-10-09T08:16:38Z",
+     "databases": [
+      "s2impdrop_app"
+     ],
+     "domains": [
+      "set2-import-drop.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-drop.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-drop.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 413,
+     "status": 200
+    },
+    {
+     "archive": "tar",
+     "at": "2026-10-09T08:16:38Z",
+     "databases": [
+      "s2imptar_app"
+     ],
+     "domains": [
+      "set2-import-tar.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-tar.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-tar.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 401,
+     "status": 200
+    }
+   ]
+  },
+  "C7b-import-answers": {
+   "hostile": {
+    "absolute": {
+     "archive_files_in_the_docroot": [
+      "assets/site.css",
+      "index.html"
+     ],
+     "code": null,
+     "docroot_files": [
+      "assets/site.css",
+      "index.html"
+     ],
+     "domain_status": "active",
+     "entries_outside": [],
+     "entries_outside_before": [],
+     "hostile_members": [
+      {
+       "name": "/etc/set3-escape-absolute.txt",
+       "type": "file"
+      }
+     ],
+     "import_status": "active",
+     "imported": [
+      "domain",
+      "files",
+      "dns"
+     ],
+     "kind": "absolute",
+     "message": null,
+     "native": {
+      "database_on_engine": false,
+      "database_row": [],
+      "docroot_sha256": "fa4d726878f7fc3377dd8998becebf60df9a3cdc503383d878db584c3e51b592",
+      "domain_row": true,
+      "files": 2,
+      "forwardings": 0,
+      "mailboxes": [],
+      "rows": null,
+      "status": "active"
+     },
+     "non_regular_in_the_docroot": [],
+     "not_imported": [],
+     "request": {
+      "do_databases": false,
+      "do_dns": false,
+      "do_files": true,
+      "do_mail": false
+     },
+     "site_home_entries": [
+      "public_html"
+     ],
+     "status": 200,
+     "steps": [
+      {
+       "detail": "set3-hostile-absolute.test (id 8, site 8) → /var/www/celikpanel/subscriptions/2/sites/8/public_html",
+       "ok": true,
+       "step": "domain"
+      },
+      {
+       "detail": "2 files, 106 bytes",
+       "ok": true,
+       "step": "files"
+      },
+      {
+       "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+       "ok": true,
+       "step": "dns"
+      }
+     ]
+    },
+    "dotdot": {
+     "archive_files_in_the_docroot": [],
+     "code": "IMPORT_PARTIAL",
+     "docroot_files": [
+      "index.php"
+     ],
+     "domain_status": "pending",
+     "entries_outside": [],
+     "entries_outside_before": [],
+     "hostile_members": [
+      {
+       "name": "cpmove-s3hdd/homedir/public_html/../../set3-escape-dotdot.txt",
+       "type": "file"
+      }
+     ],
+     "import_status": "partial",
+     "imported": [
+      "domain",
+      "dns",
+      "database:s3hdd_app"
+     ],
+     "kind": "dotdot",
+     "message": "The import ended with a part of the archive not imported, and it does not continue by itself. Imported: domain, dns, database:s3hdd_app. Not imported: files. The domain set3-hostile-dotdot.test was created and is kept; it is left marked as not finished. The reason of each part that was not imported is in its step below. The server owner either adds the missing parts by hand on the domain's own pages, or removes set3-hostile-dotdot.test on the Domains page, corrects what the step names and imports the archive again; an import into a domain that already exists is refused, so nothing is imported twice.",
+     "native": {
+      "database_on_engine": true,
+      "database_row": [
+       "s3hdd_app"
+      ],
+      "docroot_sha256": "46a86266080f47cec35feff9eb13225296fe91b21f3b7077e6e7a50048fa65fa",
+      "domain_row": true,
+      "files": 1,
+      "forwardings": 0,
+      "mailboxes": [],
+      "rows": "300",
+      "status": "pending"
+     },
+     "non_regular_in_the_docroot": [],
+     "not_imported": [
+      "files"
+     ],
+     "request": {
+      "do_databases": true,
+      "do_dns": false,
+      "do_files": true,
+      "do_mail": false
+     },
+     "site_home_entries": [
+      "public_html"
+     ],
+     "status": 200,
+     "steps": [
+      {
+       "detail": "set3-hostile-dotdot.test (id 7, site 7) → /var/www/celikpanel/subscriptions/2/sites/7/public_html",
+       "ok": true,
+       "step": "domain"
+      },
+      {
+       "detail": "unsafe cpmove member path",
+       "ok": false,
+       "step": "files"
+      },
+      {
+       "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+       "ok": true,
+       "step": "dns"
+      },
+      {
+       "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+       "ok": true,
+       "step": "database:s3hdd_app"
+      }
+     ]
+    },
+    "symlink": {
+     "archive_files_in_the_docroot": [],
+     "code": "IMPORT_PARTIAL",
+     "docroot_files": [
+      "index.php"
+     ],
+     "domain_status": "pending",
+     "entries_outside": [],
+     "entries_outside_before": [],
+     "hostile_members": [
+      {
+       "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link",
+       "type": "symlink -> /etc"
+      },
+      {
+       "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link/set3-escape-symlink.txt",
+       "type": "file"
+      }
+     ],
+     "import_status": "partial",
+     "imported": [
+      "domain",
+      "dns"
+     ],
+     "kind": "symlink",
+     "message": "The import ended with a part of the archive not imported, and it does not continue by itself. Imported: domain, dns. Not imported: files. The domain set3-hostile-symlink.test was created and is kept; it is left marked as not finished. The reason of each part that was not imported is in its step below. The server owner either adds the missing parts by hand on the domain's own pages, or removes set3-hostile-symlink.test on the Domains page, corrects what the step names and imports the archive again; an import into a domain that already exists is refused, so nothing is imported twice.",
+     "native": {
+      "database_on_engine": false,
+      "database_row": [],
+      "docroot_sha256": "b5f41dec04118062bed0cb7005ad50b23de70b1705c132531ffc7a85f1ba6dc0",
+      "domain_row": true,
+      "files": 1,
+      "forwardings": 0,
+      "mailboxes": [],
+      "rows": null,
+      "status": "pending"
+     },
+     "non_regular_in_the_docroot": [],
+     "not_imported": [
+      "files"
+     ],
+     "request": {
+      "do_databases": false,
+      "do_dns": false,
+      "do_files": true,
+      "do_mail": false
+     },
+     "site_home_entries": [
+      "public_html"
+     ],
+     "status": 200,
+     "steps": [
+      {
+       "detail": "set3-hostile-symlink.test (id 9, site 9) → /var/www/celikpanel/subscriptions/2/sites/9/public_html",
+       "ok": true,
+       "step": "domain"
+      },
+      {
+       "detail": "unsupported cpmove site entry type",
+       "ok": false,
+       "step": "files"
+      },
+      {
+       "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+       "ok": true,
+       "step": "dns"
+      }
+     ]
+    }
+   },
+   "previews": [
+    {
+     "archive": "hostile-dotdot",
+     "at": "2026-10-09T08:17:25Z",
+     "databases": [
+      "s3hdd_app"
+     ],
+     "domains": [
+      "set3-hostile-dotdot.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set3-hostile-dotdot.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set3-hostile-dotdot.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 415,
+     "status": 200
+    },
+    {
+     "archive": "hostile-absolute",
+     "at": "2026-10-09T08:17:30Z",
+     "databases": [
+      "s3hab_app"
+     ],
+     "domains": [
+      "set3-hostile-absolute.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set3-hostile-absolute.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set3-hostile-absolute.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 425,
+     "status": 200
+    },
+    {
+     "archive": "hostile-symlink",
+     "at": "2026-10-09T08:17:34Z",
+     "databases": [
+      "s3hsl_app"
+     ],
+     "domains": [
+      "set3-hostile-symlink.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set3-hostile-symlink.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set3-hostile-symlink.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 420,
+     "status": 200
+    }
+   ]
+  },
+  "C9-identities": {
+   "answers_searched": {
+    "answers": 105,
+    "echoing_a_sent_secret": [],
+    "holding_a_hash_shaped_value": []
+   },
+   "journal_searched": {
+    "hash_shaped_values": 0,
+    "lines": 327
+   }
+  }
+ },
+ "debian13": {
+  "C0-prepare": {
+   "engine_versions": [
+    {
+     "mariadb_client_version_line": "/usr/bin/mariadb from 11.8.6-MariaDB, client 15.2 for debian-linux-gnu (x86_64) using  EditLine wrapper",
+     "mariadb_select_version": "11.8.6-MariaDB-0+deb13u1 from Debian",
+     "mariadb_shown_is_exactly_select_version": true,
+     "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 11.8.6-MariaDB-0+deb13u1 from Debian for debian-linux-gnu on x86_64 (-- Please help get to 10k stars at https://github.com/MariaDB/Server)",
+     "os": {
+      "ID": "debian",
+      "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+      "VERSION_ID": "13"
+     },
+     "postgresql_show_server_version": "17.11 (Debian 17.11-0+deb13u1)",
+     "shown": {
+      "mariadb": "11.8.6-MariaDB-0+deb13u1 from Debian",
+      "postgresql": "17.11 (Debian 17.11-0+deb13u1)"
+     },
+     "when": "C0, as the engines were registered"
+    }
+   ]
+  },
+  "C3-server-databases": {
+   "engine_versions": [
+    {
+     "mariadb_client_version_line": "/usr/bin/mariadb from 11.8.6-MariaDB, client 15.2 for debian-linux-gnu (x86_64) using  EditLine wrapper",
+     "mariadb_select_version": "11.8.6-MariaDB-0+deb13u1 from Debian",
+     "mariadb_shown_is_exactly_select_version": true,
+     "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 11.8.6-MariaDB-0+deb13u1 from Debian for debian-linux-gnu on x86_64 (-- Please help get to 10k stars at https://github.com/MariaDB/Server)",
+     "os": {
+      "ID": "debian",
+      "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+      "VERSION_ID": "13"
+     },
+     "postgresql_show_server_version": "17.11 (Debian 17.11-0+deb13u1)",
+     "shown": {
+      "mariadb": "11.8.6-MariaDB-0+deb13u1 from Debian",
+      "postgresql": "17.11 (Debian 17.11-0+deb13u1)"
+     },
+     "when": "C3, after the Panel's account was provisioned again"
+    }
+   ],
+   "sent_password": {
+    "mariadb": {
+     "answer_carries_a_password_field": false,
+     "answer_keys": [
+      "created_at",
+      "id",
+      "name",
+      "password_set",
+      "user"
+     ],
+     "first": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": null,
+      "seconds": 0.16,
+      "status": 200
+     },
+     "new_on_engine": [
+      "s2_srvsent"
+     ],
+     "password_set": true,
+     "replay": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": "1",
+      "seconds": 0.004,
+      "status": 200
+     },
+     "replay_sent_value_occurs": 0,
+     "same_bytes": true,
+     "sent_value_occurs_in_the_raw_answer": 0
+    },
+    "postgresql": {
+     "answer_carries_a_password_field": false,
+     "answer_keys": [
+      "created_at",
+      "id",
+      "name",
+      "password_set",
+      "user"
+     ],
+     "first": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": null,
+      "seconds": 0.17,
+      "status": 200
+     },
+     "new_on_engine": [
+      "s2_srvsent"
+     ],
+     "password_set": true,
+     "replay": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": "1",
+      "seconds": 0.004,
+      "status": 200
+     },
+     "replay_sent_value_occurs": 0,
+     "same_bytes": true,
+     "sent_value_occurs_in_the_raw_answer": 0
+    }
+   }
+  },
+  "C5-letsencrypt": {
+   "certificate_failure": {
+    "code": "CERTIFICATE_ISSUE_FAILED",
+    "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+    "one_entry_answer": {
+     "code": "CERTIFICATE_ISSUE_FAILED",
+     "error": null,
+     "outcome": "answer",
+     "reason": "authority_unreachable",
+     "replayed": null,
+     "seconds": 1.118,
+     "status": 502
+    },
+    "reason": "authority_unreachable",
+    "status": 502,
+    "texts": null,
+    "vars": {
+     "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+     "domain": "set1-owner.test",
+     "kept": "none"
+    }
+   }
+  },
+  "C6b-php-site": {
+   "php_deleted": {
+    "delete_answer": {
+     "domain": "set3-php.test",
+     "status": "deleted"
+    },
+    "delete_status": 200,
+    "domain_rows": [],
+    "listed_after_seconds": 0.9,
+    "no_longer_listed": true,
+    "page_after": {
+     "marker": false,
+     "status": 404
+    },
+    "php_fpm_units_after": {
+     "php8.4-fpm.service": "active",
+     "phpsessionclean.service": "[REDACTED]"
+    },
+    "pool_file_left": false,
+    "site_account": null,
+    "socket_left": false
+   },
+   "php_native": {
+    "pool_directories": [
+     "/etc/php/8.4/fpm/pool.d"
+    ],
+    "program": "/usr/sbin/php-fpm8.4",
+    "program_version": [
+     "PHP 8.4.26 (fpm-fcgi) (built: Sep 24 2026 17:16:18) (NTS)"
+    ],
+    "run_directories": [
+     {
+      "exists": true,
+      "group": "www-data",
+      "kind": "directory",
+      "mode": "0755",
+      "owner": "www-data",
+      "path": "/run/php"
+     }
+    ],
+    "site_pool": {
+     "directory": "/etc/php/8.4/fpm/pool.d",
+     "exists": true,
+     "group": "celikpanel",
+     "kind": "file",
+     "mode": "0644",
+     "owner": "root",
+     "path": "/etc/php/8.4/fpm/pool.d/site2.conf",
+     "settings": {
+      "group": "set3_php_test",
+      "listen": "/var/run/php/php8.4-fpm-site2.sock",
+      "listen.group": "www-data",
+      "listen.mode": "0660",
+      "listen.owner": "www-data",
+      "pool": "site2",
+      "user": "set3_php_test"
+     }
+    },
+    "socket": {
+     "exists": true,
+     "group": "www-data",
+     "kind": "socket",
+     "mode": "0660",
+     "owner": "www-data",
+     "path": "/var/run/php/php8.4-fpm-site2.sock"
+    },
+    "units": {
+     "php8.4-fpm.service": {
+      "ActiveState": "active",
+      "ExecStart": "{ path=/usr/sbin/php-fpm8.4 ; argv[]=/usr/sbin/php-fpm8.4 --nodaemonize --fpm-config /etc/php/8.4/fpm/php-fpm.conf ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/php8.4-fpm.service",
+      "LoadState": "loaded",
+      "PrivateTmp": "[REDACTED]",
+      "ProtectHome": "no",
+      "ProtectSystem": "no",
+      "ReadWritePaths": "",
+      "SubState": "running"
+     },
+     "phpsessionclean.service": {
+      "ActiveState": "inactive",
+      "ExecStart": "{ path=/usr/lib/php/sessionclean ; argv[]=/usr/lib/php/sessionclean ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/phpsessionclean.service",
+      "LoadState": "loaded",
+      "PrivateTmp": "[REDACTED]",
+      "ProtectHome": "yes",
+      "ProtectSystem": "yes",
+      "ReadWritePaths": "",
+      "SubState": "dead"
+     }
+    },
+    "web_server_accounts": [
+     "www-data"
+    ]
+   },
+   "php_page": {
+    "body": "set3-php-executed:42:8.4.26:fpm-fcgi:set3_php_test\n",
+    "error": null,
+    "headers": {
+     "content-type": "text/plain;charset=UTF-8",
+     "server": "nginx"
+    },
+    "php_version": "8.4.26",
+    "runs_as": "set3_php_test",
+    "server_api": "fpm-fcgi",
+    "site_account": "set3_php_test",
+    "status": 200
+   }
+  },
+  "C7-import": {
+   "archive_as_tar_writes_it": {
+    "archive_files": {
+     "assets/site.css": [
+      34,
+      "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+     ],
+     "index.html": [
+      66,
+      "28f8aaac03799998f25ee227702b33b13d8cd65e71096a8e670e4d843230a94c"
+     ]
+    },
+    "docroot_files": {
+     "assets/site.css": [
+      34,
+      "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+     ],
+     "index.html": [
+      66,
+      "28f8aaac03799998f25ee227702b33b13d8cd65e71096a8e670e4d843230a94c"
+     ]
+    },
+    "import_status": "active",
+    "imported": [
+     "domain",
+     "files",
+     "mail",
+     "forwarders",
+     "dns",
+     "database:s2imptar_app"
+    ],
+    "native": {
+     "database_on_engine": true,
+     "database_row": [
+      "s2imptar_app"
+     ],
+     "docroot_sha256": "c600275c986eacd74a00b12f52d5d98bb811dd07b12a8218332e8c482cbf2d88",
+     "domain_row": true,
+     "files": 2,
+     "forwardings": 1,
+     "mailboxes": [
+      "info@set2-import-tar.test"
+     ],
+     "rows": "300",
+     "status": "active"
+    },
+    "not_imported": [],
+    "status": 200,
+    "steps": [
+     {
+      "detail": "set2-import-tar.test (id 3, site 3) → /var/www/celikpanel/subscriptions/2/sites/3/public_html",
+      "ok": true,
+      "step": "domain"
+     },
+     {
+      "detail": "2 files, 100 bytes",
+      "ok": true,
+      "step": "files"
+     },
+     {
+      "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+      "ok": true,
+      "step": "mail"
+     },
+     {
+      "detail": "1 forwarders",
+      "ok": true,
+      "step": "forwarders"
+     },
+     {
+      "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+      "ok": true,
+      "step": "dns"
+     },
+     {
+      "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+      "ok": true,
+      "step": "database:s2imptar_app"
+     }
+    ]
+   },
+   "previews": [
+    {
+     "archive": "i",
+     "at": "2026-10-09T08:31:00Z",
+     "databases": [
+      "s2impseq_app"
+     ],
+     "domains": [
+      "set2-import-seq.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-seq.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-seq.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 401,
+     "status": 200
+    },
+    {
+     "archive": "ii",
+     "at": "2026-10-09T08:31:00Z",
+     "databases": [
+      "s2impcon_app"
+     ],
+     "domains": [
+      "set2-import-con.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-con.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-con.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 401,
+     "status": 200
+    },
+    {
+     "archive": "v",
+     "at": "2026-10-09T08:31:00Z",
+     "databases": [
+      "s2impdrop_app"
+     ],
+     "domains": [
+      "set2-import-drop.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-drop.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-drop.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 413,
+     "status": 200
+    },
+    {
+     "archive": "tar",
+     "at": "2026-10-09T08:31:00Z",
+     "databases": [
+      "s2imptar_app"
+     ],
+     "domains": [
+      "set2-import-tar.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-tar.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-tar.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 401,
+     "status": 200
+    }
+   ]
+  },
+  "C7b-import-answers": {
+   "hostile": {
+    "absolute": {
+     "archive_files_in_the_docroot": [
+      "assets/site.css",
+      "index.html"
+     ],
+     "code": null,
+     "docroot_files": [
+      "assets/site.css",
+      "index.html"
+     ],
+     "domain_status": "active",
+     "entries_outside": [],
+     "entries_outside_before": [],
+     "hostile_members": [
+      {
+       "name": "/etc/set3-escape-absolute.txt",
+       "type": "file"
+      }
+     ],
+     "import_status": "active",
+     "imported": [
+      "domain",
+      "files",
+      "dns"
+     ],
+     "kind": "absolute",
+     "message": null,
+     "native": {
+      "database_on_engine": false,
+      "database_row": [],
+      "docroot_sha256": "fa4d726878f7fc3377dd8998becebf60df9a3cdc503383d878db584c3e51b592",
+      "domain_row": true,
+      "files": 2,
+      "forwardings": 0,
+      "mailboxes": [],
+      "rows": null,
+      "status": "active"
+     },
+     "non_regular_in_the_docroot": [],
+     "not_imported": [],
+     "request": {
+      "do_databases": false,
+      "do_dns": false,
+      "do_files": true,
+      "do_mail": false
+     },
+     "site_home_entries": [
+      "public_html"
+     ],
+     "status": 200,
+     "steps": [
+      {
+       "detail": "set3-hostile-absolute.test (id 8, site 8) → /var/www/celikpanel/subscriptions/2/sites/8/public_html",
+       "ok": true,
+       "step": "domain"
+      },
+      {
+       "detail": "2 files, 106 bytes",
+       "ok": true,
+       "step": "files"
+      },
+      {
+       "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+       "ok": true,
+       "step": "dns"
+      }
+     ]
+    },
+    "dotdot": {
+     "archive_files_in_the_docroot": [],
+     "code": "IMPORT_PARTIAL",
+     "docroot_files": [
+      "index.php"
+     ],
+     "domain_status": "pending",
+     "entries_outside": [],
+     "entries_outside_before": [],
+     "hostile_members": [
+      {
+       "name": "cpmove-s3hdd/homedir/public_html/../../set3-escape-dotdot.txt",
+       "type": "file"
+      }
+     ],
+     "import_status": "partial",
+     "imported": [
+      "domain",
+      "mail",
+      "forwarders",
+      "dns",
+      "database:s3hdd_app"
+     ],
+     "kind": "dotdot",
+     "message": "The import ended with a part of the archive not imported, and it does not continue by itself. Imported: domain, mail, forwarders, dns, database:s3hdd_app. Not imported: files. The domain set3-hostile-dotdot.test was created and is kept; it is left marked as not finished. The reason of each part that was not imported is in its step below. The server owner either adds the missing parts by hand on the domain's own pages, or removes set3-hostile-dotdot.test on the Domains page, corrects what the step names and imports the archive again; an import into a domain that already exists is refused, so nothing is imported twice.",
+     "native": {
+      "database_on_engine": true,
+      "database_row": [
+       "s3hdd_app"
+      ],
+      "docroot_sha256": "46a86266080f47cec35feff9eb13225296fe91b21f3b7077e6e7a50048fa65fa",
+      "domain_row": true,
+      "files": 1,
+      "forwardings": 1,
+      "mailboxes": [
+       "info@set3-hostile-dotdot.test"
+      ],
+      "rows": "300",
+      "status": "pending"
+     },
+     "non_regular_in_the_docroot": [],
+     "not_imported": [
+      "files"
+     ],
+     "request": {
+      "do_databases": true,
+      "do_dns": false,
+      "do_files": true,
+      "do_mail": true
+     },
+     "site_home_entries": [
+      "public_html"
+     ],
+     "status": 200,
+     "steps": [
+      {
+       "detail": "set3-hostile-dotdot.test (id 7, site 7) → /var/www/celikpanel/subscriptions/2/sites/7/public_html",
+       "ok": true,
+       "step": "domain"
+      },
+      {
+       "detail": "unsafe cpmove member path",
+       "ok": false,
+       "step": "files"
+      },
+      {
+       "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+       "ok": true,
+       "step": "mail"
+      },
+      {
+       "detail": "1 forwarders",
+       "ok": true,
+       "step": "forwarders"
+      },
+      {
+       "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+       "ok": true,
+       "step": "dns"
+      },
+      {
+       "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+       "ok": true,
+       "step": "database:s3hdd_app"
+      }
+     ]
+    },
+    "symlink": {
+     "archive_files_in_the_docroot": [],
+     "code": "IMPORT_PARTIAL",
+     "docroot_files": [
+      "index.php"
+     ],
+     "domain_status": "pending",
+     "entries_outside": [],
+     "entries_outside_before": [],
+     "hostile_members": [
+      {
+       "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link",
+       "type": "symlink -> /etc"
+      },
+      {
+       "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link/set3-escape-symlink.txt",
+       "type": "file"
+      }
+     ],
+     "import_status": "partial",
+     "imported": [
+      "domain",
+      "dns"
+     ],
+     "kind": "symlink",
+     "message": "The import ended with a part of the archive not imported, and it does not continue by itself. Imported: domain, dns. Not imported: files. The domain set3-hostile-symlink.test was created and is kept; it is left marked as not finished. The reason of each part that was not imported is in its step below. The server owner either adds the missing parts by hand on the domain's own pages, or removes set3-hostile-symlink.test on the Domains page, corrects what the step names and imports the archive again; an import into a domain that already exists is refused, so nothing is imported twice.",
+     "native": {
+      "database_on_engine": false,
+      "database_row": [],
+      "docroot_sha256": "b5f41dec04118062bed0cb7005ad50b23de70b1705c132531ffc7a85f1ba6dc0",
+      "domain_row": true,
+      "files": 1,
+      "forwardings": 0,
+      "mailboxes": [],
+      "rows": null,
+      "status": "pending"
+     },
+     "non_regular_in_the_docroot": [],
+     "not_imported": [
+      "files"
+     ],
+     "request": {
+      "do_databases": false,
+      "do_dns": false,
+      "do_files": true,
+      "do_mail": false
+     },
+     "site_home_entries": [
+      "public_html"
+     ],
+     "status": 200,
+     "steps": [
+      {
+       "detail": "set3-hostile-symlink.test (id 9, site 9) → /var/www/celikpanel/subscriptions/2/sites/9/public_html",
+       "ok": true,
+       "step": "domain"
+      },
+      {
+       "detail": "unsupported cpmove site entry type",
+       "ok": false,
+       "step": "files"
+      },
+      {
+       "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+       "ok": true,
+       "step": "dns"
+      }
+     ]
+    }
+   },
+   "mail_logins": [
+    {
+     "a_wrong_password": {
+      "doveadm_auth_test": {
+       "returncode": 77,
+       "status": "ok",
+       "stderr": "",
+       "stdout": "passdb: info@set2-import-tar.test auth failed\nextra fields:\n  user=info@set2-import-tar.test\n"
+      },
+      "imap": {
+       "answer": "b'[AUTHENTICATIONFAILED] Authentication failed.'",
+       "connected": true,
+       "logged_in": false,
+       "transport": "imaps 127.0.0.1:993"
+      }
+     },
+     "address": "info@set2-import-tar.test",
+     "doveadm_user": {
+      "fields": [
+       "gid",
+       "home",
+       "mail_path",
+       "quota_rule",
+       "uid"
+      ],
+      "returncode": 0
+     },
+     "dovecot": "2.4.1-4 (7d8c0e5759)",
+     "the_original_password": {
+      "doveadm_auth_test": {
+       "returncode": 0,
+       "status": "ok",
+       "stderr": "",
+       "stdout": "passdb: info@set2-import-tar.test auth succeeded\nextra fields:\n  user=info@set2-import-tar.test\n"
+      },
+      "imap": {
+       "answer": "OK",
+       "connected": true,
+       "inbox_selected": false,
+       "logged_in": true,
+       "transport": "imaps 127.0.0.1:993"
+      }
+     }
+    },
+    {
+     "a_wrong_password": {
+      "doveadm_auth_test": {
+       "returncode": 77,
+       "status": "ok",
+       "stderr": "",
+       "stdout": "passdb: info@set2-import-seq.test auth failed\nextra fields:\n  user=info@set2-import-seq.test\n"
+      },
+      "imap": {
+       "answer": "b'[AUTHENTICATIONFAILED] Authentication failed.'",
+       "connected": true,
+       "logged_in": false,
+       "transport": "imaps 127.0.0.1:993"
+      }
+     },
+     "address": "info@set2-import-seq.test",
+     "doveadm_user": {
+      "fields": [
+       "gid",
+       "home",
+       "mail_path",
+       "quota_rule",
+       "uid"
+      ],
+      "returncode": 0
+     },
+     "dovecot": "2.4.1-4 (7d8c0e5759)",
+     "the_original_password": {
+      "doveadm_auth_test": {
+       "returncode": 0,
+       "status": "ok",
+       "stderr": "",
+       "stdout": "passdb: info@set2-import-seq.test auth succeeded\nextra fields:\n  user=info@set2-import-seq.test\n"
+      },
+      "imap": {
+       "answer": "OK",
+       "connected": true,
+       "inbox_selected": false,
+       "logged_in": true,
+       "transport": "imaps 127.0.0.1:993"
+      }
+     }
+    },
+    {
+     "a_wrong_password": {
+      "doveadm_auth_test": {
+       "returncode": 77,
+       "status": "ok",
+       "stderr": "",
+       "stdout": "passdb: info@set2-import-drop.test auth failed\nextra fields:\n  user=info@set2-import-drop.test\n"
+      },
+      "imap": {
+       "answer": "b'[AUTHENTICATIONFAILED] Authentication failed.'",
+       "connected": true,
+       "logged_in": false,
+       "transport": "imaps 127.0.0.1:993"
+      }
+     },
+     "address": "info@set2-import-drop.test",
+     "doveadm_user": {
+      "fields": [
+       "gid",
+       "home",
+       "mail_path",
+       "quota_rule",
+       "uid"
+      ],
+      "returncode": 0
+     },
+     "dovecot": "2.4.1-4 (7d8c0e5759)",
+     "the_original_password": {
+      "doveadm_auth_test": {
+       "returncode": 0,
+       "status": "ok",
+       "stderr": "",
+       "stdout": "passdb: info@set2-import-drop.test auth succeeded\nextra fields:\n  user=info@set2-import-drop.test\n"
+      },
+      "imap": {
+       "answer": "OK",
+       "connected": true,
+       "inbox_selected": false,
+       "logged_in": true,
+       "transport": "imaps 127.0.0.1:993"
+      }
+     }
+    }
+   ],
+   "previews": [
+    {
+     "archive": "hostile-dotdot",
+     "at": "2026-10-09T08:32:17Z",
+     "databases": [
+      "s3hdd_app"
+     ],
+     "domains": [
+      "set3-hostile-dotdot.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set3-hostile-dotdot.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set3-hostile-dotdot.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 415,
+     "status": 200
+    },
+    {
+     "archive": "hostile-absolute",
+     "at": "2026-10-09T08:32:21Z",
+     "databases": [
+      "s3hab_app"
+     ],
+     "domains": [
+      "set3-hostile-absolute.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set3-hostile-absolute.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set3-hostile-absolute.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 425,
+     "status": 200
+    },
+    {
+     "archive": "hostile-symlink",
+     "at": "2026-10-09T08:32:24Z",
+     "databases": [
+      "s3hsl_app"
+     ],
+     "domains": [
+      "set3-hostile-symlink.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set3-hostile-symlink.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set3-hostile-symlink.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 420,
+     "status": 200
+    }
+   ]
+  },
+  "C9-identities": {
+   "answers_searched": {
+    "answers": 105,
+    "echoing_a_sent_secret": [],
+    "holding_a_hash_shaped_value": []
+   },
+   "journal_searched": {
+    "hash_shaped_values": 0,
+    "lines": 388
+   }
+  },
+  "S4-postgresql": {
+   "reload_hook": {
+    "applied": {
+     "dropin": "/etc/systemd/system/postgresql@17-main.service.d/set1-owner-reload-hook.conf",
+     "script": "/usr/local/sbin/set1-owner-reload-hook",
+     "unit": "postgresql@17-main.service"
+    },
+    "exec_reload": "ExecReload={ path=/usr/local/sbin/set1-owner-reload-hook ; argv[]=/usr/local/sbin/set1-owner-reload-hook ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n",
+    "realism": "an owner's own unit drop-in; no failure of the packaged unit's reload was found that an owner causes"
+   }
+  },
+  "S8-service-actions": {
+   "busy_refusals": {
+    "actions": 42,
+    "refusals": [],
+    "server_setup_busy": 0,
+    "setup_waiting": {
+     "code": "server_setup_access_dns_required",
+     "phase": "access_dns"
+    }
+   },
+   "reload_hook": {
+    "answer_detail": "the reload of postgresql@17-main.service was reported as failed (exit-code), but PostgreSQL re-read its configuration files after it: pg_conf_load_time() moved The unit reported the reload as failed, but PostgreSQL itself re-read its configuration files after it: the settings in the files on disk are in effect now, except those that need a restart. A step of the unit's own reload command failed after the server had been signalled. The server owner runs the command shown to see which step, and corrects it so that the next reload is reported as it went; the reload does not need to be repeated for these settings.",
+    "exec_reload": "ExecReload={ path=/usr/local/sbin/set1-owner-reload-hook ; argv[]=/usr/local/sbin/set1-owner-reload-hook ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n",
+    "reload_result": "exit-code",
+    "server_reread_its_files": true,
+    "unit": "postgresql@17-main.service"
+   },
+   "reload_hook_before_signal": {
+    "answer_detail": "the reload of postgresql@17-main.service failed (exit-code) and PostgreSQL did not re-read its configuration files: pg_conf_load_time() did not move",
+    "exec_reload": "ExecReload={ path=/usr/local/sbin/set1-owner-reload-hook ; argv[]=/usr/local/sbin/set1-owner-reload-hook ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n",
+    "reload_result": "exit-code",
+    "script": "#!/bin/sh\n# owner hook: reload the pooler first, then tell PostgreSQL to re-read its files\n/usr/bin/systemctl reload set1-owner-pooler.service || exit 1\nexec kill -HUP \"$MAINPID\"\n",
+    "server_did_not_reread": true,
+    "unit": "postgresql@17-main.service"
+   }
+  }
+ },
+ "ubuntu": {
+  "C0-prepare": {
+   "engine_versions": [
+    {
+     "mariadb_client_version_line": "/usr/bin/mariadb  Ver 15.1 Distrib 10.11.14-MariaDB, for debian-linux-gnu (x86_64) using  EditLine wrapper",
+     "mariadb_select_version": "10.11.14-MariaDB-0ubuntu0.24.04.1",
+     "mariadb_shown_is_exactly_select_version": true,
+     "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 10.11.14-MariaDB-0ubuntu0.24.04.1 for debian-linux-gnu on x86_64 (Ubuntu 24.04)",
+     "os": {
+      "ID": "ubuntu",
+      "PRETTY_NAME": "Ubuntu 24.04.4 LTS",
+      "VERSION_ID": "24.04"
+     },
+     "postgresql_show_server_version": "16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)",
+     "shown": {
+      "mariadb": "10.11.14-MariaDB-0ubuntu0.24.04.1",
+      "postgresql": "16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)"
+     },
+     "when": "C0, as the engines were registered"
+    }
+   ]
+  },
+  "C3-server-databases": {
+   "engine_versions": [
+    {
+     "mariadb_client_version_line": "/usr/bin/mariadb  Ver 15.1 Distrib 10.11.14-MariaDB, for debian-linux-gnu (x86_64) using  EditLine wrapper",
+     "mariadb_select_version": "10.11.14-MariaDB-0ubuntu0.24.04.1",
+     "mariadb_shown_is_exactly_select_version": true,
+     "mariadbd_version_line": "/usr/sbin/mariadbd  Ver 10.11.14-MariaDB-0ubuntu0.24.04.1 for debian-linux-gnu on x86_64 (Ubuntu 24.04)",
+     "os": {
+      "ID": "ubuntu",
+      "PRETTY_NAME": "Ubuntu 24.04.4 LTS",
+      "VERSION_ID": "24.04"
+     },
+     "postgresql_show_server_version": "16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)",
+     "shown": {
+      "mariadb": "10.11.14-MariaDB-0ubuntu0.24.04.1",
+      "postgresql": "16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)"
+     },
+     "when": "C3, after the Panel's account was provisioned again"
+    }
+   ],
+   "sent_password": {
+    "mariadb": {
+     "answer_carries_a_password_field": false,
+     "answer_keys": [
+      "created_at",
+      "id",
+      "name",
+      "password_set",
+      "user"
+     ],
+     "first": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": null,
+      "seconds": 0.106,
+      "status": 200
+     },
+     "new_on_engine": [
+      "s2_srvsent"
+     ],
+     "password_set": true,
+     "replay": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": "1",
+      "seconds": 0.007,
+      "status": 200
+     },
+     "replay_sent_value_occurs": 0,
+     "same_bytes": true,
+     "sent_value_occurs_in_the_raw_answer": 0
+    },
+    "postgresql": {
+     "answer_carries_a_password_field": false,
+     "answer_keys": [
+      "created_at",
+      "id",
+      "name",
+      "password_set",
+      "user"
+     ],
+     "first": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": null,
+      "seconds": 0.19,
+      "status": 200
+     },
+     "new_on_engine": [
+      "s2_srvsent"
+     ],
+     "password_set": true,
+     "replay": {
+      "code": null,
+      "error": null,
+      "outcome": "answer",
+      "reason": null,
+      "replayed": "1",
+      "seconds": 0.003,
+      "status": 200
+     },
+     "replay_sent_value_occurs": 0,
+     "same_bytes": true,
+     "sent_value_occurs_in_the_raw_answer": 0
+    }
+   }
+  },
+  "C5-letsencrypt": {
+   "certificate_failure": {
+    "code": "CERTIFICATE_ISSUE_FAILED",
+    "error": "No certificate was issued: this server could not reach the certificate authority, so no request was placed with it. The server owner checks that this server can open HTTPS connections to the internet (DNS resolution, outbound port 443, the system clock), then requests the certificate here again. The site has no certificate from this request and is served as before. Nothing asks again automatically.",
+    "one_entry_answer": {
+     "code": "CERTIFICATE_ISSUE_FAILED",
+     "error": null,
+     "outcome": "answer",
+     "reason": "authority_unreachable",
+     "replayed": null,
+     "seconds": 1.543,
+     "status": 502
+    },
+    "reason": "authority_unreachable",
+    "status": 502,
+    "texts": null,
+    "vars": {
+     "detail": "An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, ce...",
+     "domain": "set1-owner.test",
+     "kept": "none"
+    }
+   }
+  },
+  "C6b-php-site": {
+   "php_deleted": {
+    "delete_answer": {
+     "domain": "set3-php.test",
+     "status": "deleted"
+    },
+    "delete_status": 200,
+    "domain_rows": [],
+    "listed_after_seconds": 1.5,
+    "no_longer_listed": true,
+    "page_after": {
+     "marker": false,
+     "status": 404
+    },
+    "php_fpm_units_after": {
+     "php8.3-fpm.service": "active",
+     "phpsessionclean.service": "[REDACTED]"
+    },
+    "pool_file_left": false,
+    "site_account": null,
+    "socket_left": false
+   },
+   "php_native": {
+    "pool_directories": [
+     "/etc/php/8.3/fpm/pool.d"
+    ],
+    "program": "/usr/sbin/php-fpm8.3",
+    "program_version": [
+     "PHP 8.3.6 (fpm-fcgi) (built: Sep  2 2026 12:56:02)"
+    ],
+    "run_directories": [
+     {
+      "exists": true,
+      "group": "www-data",
+      "kind": "directory",
+      "mode": "0755",
+      "owner": "www-data",
+      "path": "/run/php"
+     }
+    ],
+    "site_pool": {
+     "directory": "/etc/php/8.3/fpm/pool.d",
+     "exists": true,
+     "group": "celikpanel",
+     "kind": "file",
+     "mode": "0644",
+     "owner": "root",
+     "path": "/etc/php/8.3/fpm/pool.d/site2.conf",
+     "settings": {
+      "group": "set3_php_test",
+      "listen": "/var/run/php/php8.3-fpm-site2.sock",
+      "listen.group": "www-data",
+      "listen.mode": "0660",
+      "listen.owner": "www-data",
+      "pool": "site2",
+      "user": "set3_php_test"
+     }
+    },
+    "socket": {
+     "exists": true,
+     "group": "www-data",
+     "kind": "socket",
+     "mode": "0660",
+     "owner": "www-data",
+     "path": "/var/run/php/php8.3-fpm-site2.sock"
+    },
+    "units": {
+     "php8.3-fpm.service": {
+      "ActiveState": "active",
+      "ExecStart": "{ path=/usr/sbin/php-fpm8.3 ; argv[]=/usr/sbin/php-fpm8.3 --nodaemonize --fpm-config /etc/php/8.3/fpm/php-fpm.conf ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/php8.3-fpm.service",
+      "LoadState": "loaded",
+      "PrivateTmp": "[REDACTED]",
+      "ProtectHome": "no",
+      "ProtectSystem": "no",
+      "ReadWritePaths": "",
+      "SubState": "running"
+     },
+     "phpsessionclean.service": {
+      "ActiveState": "inactive",
+      "ExecStart": "{ path=/usr/lib/php/sessionclean ; argv[]=/usr/lib/php/sessionclean ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/phpsessionclean.service",
+      "LoadState": "loaded",
+      "PrivateTmp": "[REDACTED]",
+      "ProtectHome": "yes",
+      "ProtectSystem": "yes",
+      "ReadWritePaths": "",
+      "SubState": "dead"
+     }
+    },
+    "web_server_accounts": [
+     "www-data"
+    ]
+   },
+   "php_page": {
+    "body": "set3-php-executed:42:8.3.6:fpm-fcgi:set3_php_test\n",
+    "error": null,
+    "headers": {
+     "content-type": "text/plain;charset=UTF-8",
+     "server": "nginx/1.24.0 (Ubuntu)"
+    },
+    "php_version": "8.3.6",
+    "runs_as": "set3_php_test",
+    "server_api": "fpm-fcgi",
+    "site_account": "set3_php_test",
+    "status": 200
+   }
+  },
+  "C7-import": {
+   "archive_as_tar_writes_it": {
+    "archive_files": {
+     "assets/site.css": [
+      34,
+      "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+     ],
+     "index.html": [
+      66,
+      "28f8aaac03799998f25ee227702b33b13d8cd65e71096a8e670e4d843230a94c"
+     ]
+    },
+    "docroot_files": {
+     "assets/site.css": [
+      34,
+      "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+     ],
+     "index.html": [
+      66,
+      "28f8aaac03799998f25ee227702b33b13d8cd65e71096a8e670e4d843230a94c"
+     ]
+    },
+    "import_status": "active",
+    "imported": [
+     "domain",
+     "files",
+     "mail",
+     "forwarders",
+     "dns",
+     "database:s2imptar_app"
+    ],
+    "native": {
+     "database_on_engine": true,
+     "database_row": [
+      "s2imptar_app"
+     ],
+     "docroot_sha256": "c600275c986eacd74a00b12f52d5d98bb811dd07b12a8218332e8c482cbf2d88",
+     "domain_row": true,
+     "files": 2,
+     "forwardings": 1,
+     "mailboxes": [
+      "info@set2-import-tar.test"
+     ],
+     "rows": "300",
+     "status": "active"
+    },
+    "not_imported": [],
+    "status": 200,
+    "steps": [
+     {
+      "detail": "set2-import-tar.test (id 3, site 3) → /var/www/celikpanel/subscriptions/2/sites/3/public_html",
+      "ok": true,
+      "step": "domain"
+     },
+     {
+      "detail": "2 files, 100 bytes",
+      "ok": true,
+      "step": "files"
+     },
+     {
+      "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+      "ok": true,
+      "step": "mail"
+     },
+     {
+      "detail": "1 forwarders",
+      "ok": true,
+      "step": "forwarders"
+     },
+     {
+      "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+      "ok": true,
+      "step": "dns"
+     },
+     {
+      "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+      "ok": true,
+      "step": "database:s2imptar_app"
+     }
+    ]
+   },
+   "previews": [
+    {
+     "archive": "i",
+     "at": "2026-10-09T07:23:48Z",
+     "databases": [
+      "s2impseq_app"
+     ],
+     "domains": [
+      "set2-import-seq.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-seq.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-seq.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 401,
+     "status": 200
+    },
+    {
+     "archive": "ii",
+     "at": "2026-10-09T07:23:48Z",
+     "databases": [
+      "s2impcon_app"
+     ],
+     "domains": [
+      "set2-import-con.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-con.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-con.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 401,
+     "status": 200
+    },
+    {
+     "archive": "v",
+     "at": "2026-10-09T07:23:48Z",
+     "databases": [
+      "s2impdrop_app"
+     ],
+     "domains": [
+      "set2-import-drop.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-drop.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-drop.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 413,
+     "status": 200
+    },
+    {
+     "archive": "tar",
+     "at": "2026-10-09T07:23:48Z",
+     "databases": [
+      "s2imptar_app"
+     ],
+     "domains": [
+      "set2-import-tar.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set2-import-tar.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set2-import-tar.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 401,
+     "status": 200
+    }
+   ]
+  },
+  "C7b-import-answers": {
+   "hostile": {
+    "absolute": {
+     "archive_files_in_the_docroot": [
+      "assets/site.css",
+      "index.html"
+     ],
+     "code": null,
+     "docroot_files": [
+      "assets/site.css",
+      "index.html"
+     ],
+     "domain_status": "active",
+     "entries_outside": [],
+     "entries_outside_before": [],
+     "hostile_members": [
+      {
+       "name": "/etc/set3-escape-absolute.txt",
+       "type": "file"
+      }
+     ],
+     "import_status": "active",
+     "imported": [
+      "domain",
+      "files",
+      "dns"
+     ],
+     "kind": "absolute",
+     "message": null,
+     "native": {
+      "database_on_engine": false,
+      "database_row": [],
+      "docroot_sha256": "fa4d726878f7fc3377dd8998becebf60df9a3cdc503383d878db584c3e51b592",
+      "domain_row": true,
+      "files": 2,
+      "forwardings": 0,
+      "mailboxes": [],
+      "rows": null,
+      "status": "active"
+     },
+     "non_regular_in_the_docroot": [],
+     "not_imported": [],
+     "request": {
+      "do_databases": false,
+      "do_dns": false,
+      "do_files": true,
+      "do_mail": false
+     },
+     "site_home_entries": [
+      "public_html"
+     ],
+     "status": 200,
+     "steps": [
+      {
+       "detail": "set3-hostile-absolute.test (id 8, site 8) → /var/www/celikpanel/subscriptions/2/sites/8/public_html",
+       "ok": true,
+       "step": "domain"
+      },
+      {
+       "detail": "2 files, 106 bytes",
+       "ok": true,
+       "step": "files"
+      },
+      {
+       "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+       "ok": true,
+       "step": "dns"
+      }
+     ]
+    },
+    "dotdot": {
+     "archive_files_in_the_docroot": [],
+     "code": "IMPORT_PARTIAL",
+     "docroot_files": [
+      "index.php"
+     ],
+     "domain_status": "pending",
+     "entries_outside": [],
+     "entries_outside_before": [],
+     "hostile_members": [
+      {
+       "name": "cpmove-s3hdd/homedir/public_html/../../set3-escape-dotdot.txt",
+       "type": "file"
+      }
+     ],
+     "import_status": "partial",
+     "imported": [
+      "domain",
+      "mail",
+      "forwarders",
+      "dns",
+      "database:s3hdd_app"
+     ],
+     "kind": "dotdot",
+     "message": "The import ended with a part of the archive not imported, and it does not continue by itself. Imported: domain, mail, forwarders, dns, database:s3hdd_app. Not imported: files. The domain set3-hostile-dotdot.test was created and is kept; it is left marked as not finished. The reason of each part that was not imported is in its step below. The server owner either adds the missing parts by hand on the domain's own pages, or removes set3-hostile-dotdot.test on the Domains page, corrects what the step names and imports the archive again; an import into a domain that already exists is refused, so nothing is imported twice.",
+     "native": {
+      "database_on_engine": true,
+      "database_row": [
+       "s3hdd_app"
+      ],
+      "docroot_sha256": "46a86266080f47cec35feff9eb13225296fe91b21f3b7077e6e7a50048fa65fa",
+      "domain_row": true,
+      "files": 1,
+      "forwardings": 1,
+      "mailboxes": [
+       "info@set3-hostile-dotdot.test"
+      ],
+      "rows": "300",
+      "status": "pending"
+     },
+     "non_regular_in_the_docroot": [],
+     "not_imported": [
+      "files"
+     ],
+     "request": {
+      "do_databases": true,
+      "do_dns": false,
+      "do_files": true,
+      "do_mail": true
+     },
+     "site_home_entries": [
+      "public_html"
+     ],
+     "status": 200,
+     "steps": [
+      {
+       "detail": "set3-hostile-dotdot.test (id 7, site 7) → /var/www/celikpanel/subscriptions/2/sites/7/public_html",
+       "ok": true,
+       "step": "domain"
+      },
+      {
+       "detail": "unsafe cpmove member path",
+       "ok": false,
+       "step": "files"
+      },
+      {
+       "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+       "ok": true,
+       "step": "mail"
+      },
+      {
+       "detail": "1 forwarders",
+       "ok": true,
+       "step": "forwarders"
+      },
+      {
+       "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+       "ok": true,
+       "step": "dns"
+      },
+      {
+       "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+       "ok": true,
+       "step": "database:s3hdd_app"
+      }
+     ]
+    },
+    "symlink": {
+     "archive_files_in_the_docroot": [],
+     "code": "IMPORT_PARTIAL",
+     "docroot_files": [
+      "index.php"
+     ],
+     "domain_status": "pending",
+     "entries_outside": [],
+     "entries_outside_before": [],
+     "hostile_members": [
+      {
+       "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link",
+       "type": "symlink -> /etc"
+      },
+      {
+       "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link/set3-escape-symlink.txt",
+       "type": "file"
+      }
+     ],
+     "import_status": "partial",
+     "imported": [
+      "domain",
+      "dns"
+     ],
+     "kind": "symlink",
+     "message": "The import ended with a part of the archive not imported, and it does not continue by itself. Imported: domain, dns. Not imported: files. The domain set3-hostile-symlink.test was created and is kept; it is left marked as not finished. The reason of each part that was not imported is in its step below. The server owner either adds the missing parts by hand on the domain's own pages, or removes set3-hostile-symlink.test on the Domains page, corrects what the step names and imports the archive again; an import into a domain that already exists is refused, so nothing is imported twice.",
+     "native": {
+      "database_on_engine": false,
+      "database_row": [],
+      "docroot_sha256": "b5f41dec04118062bed0cb7005ad50b23de70b1705c132531ffc7a85f1ba6dc0",
+      "domain_row": true,
+      "files": 1,
+      "forwardings": 0,
+      "mailboxes": [],
+      "rows": null,
+      "status": "pending"
+     },
+     "non_regular_in_the_docroot": [],
+     "not_imported": [
+      "files"
+     ],
+     "request": {
+      "do_databases": false,
+      "do_dns": false,
+      "do_files": true,
+      "do_mail": false
+     },
+     "site_home_entries": [
+      "public_html"
+     ],
+     "status": 200,
+     "steps": [
+      {
+       "detail": "set3-hostile-symlink.test (id 9, site 9) → /var/www/celikpanel/subscriptions/2/sites/9/public_html",
+       "ok": true,
+       "step": "domain"
+      },
+      {
+       "detail": "unsupported cpmove site entry type",
+       "ok": false,
+       "step": "files"
+      },
+      {
+       "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+       "ok": true,
+       "step": "dns"
+      }
+     ]
+    }
+   },
+   "mail_logins": [
+    {
+     "a_wrong_password": {
+      "doveadm_auth_test": {
+       "returncode": 77,
+       "status": "ok",
+       "stderr": "",
+       "stdout": "passdb: info@set2-import-tar.test auth failed\nextra fields:\n  user=info@set2-import-tar.test\n"
+      },
+      "imap": {
+       "answer": "b'[AUTHENTICATIONFAILED] Authentication failed.'",
+       "connected": true,
+       "logged_in": false,
+       "transport": "imaps 127.0.0.1:993"
+      }
+     },
+     "address": "info@set2-import-tar.test",
+     "doveadm_user": {
+      "fields": [
+       "gid",
+       "home",
+       "mail",
+       "quota_rule",
+       "uid"
+      ],
+      "returncode": 0
+     },
+     "dovecot": "2.3.21 (47349e2482)",
+     "the_original_password": {
+      "doveadm_auth_test": {
+       "returncode": 0,
+       "status": "ok",
+       "stderr": "",
+       "stdout": "passdb: info@set2-import-tar.test auth succeeded\nextra fields:\n  user=info@set2-import-tar.test\n  \n"
+      },
+      "imap": {
+       "answer": "OK",
+       "connected": true,
+       "inbox_selected": true,
+       "logged_in": true,
+       "transport": "imaps 127.0.0.1:993"
+      }
+     }
+    },
+    {
+     "a_wrong_password": {
+      "doveadm_auth_test": {
+       "returncode": 77,
+       "status": "ok",
+       "stderr": "",
+       "stdout": "passdb: info@set2-import-seq.test auth failed\nextra fields:\n  user=info@set2-import-seq.test\n"
+      },
+      "imap": {
+       "answer": "b'[AUTHENTICATIONFAILED] Authentication failed.'",
+       "connected": true,
+       "logged_in": false,
+       "transport": "imaps 127.0.0.1:993"
+      }
+     },
+     "address": "info@set2-import-seq.test",
+     "doveadm_user": {
+      "fields": [
+       "gid",
+       "home",
+       "mail",
+       "quota_rule",
+       "uid"
+      ],
+      "returncode": 0
+     },
+     "dovecot": "2.3.21 (47349e2482)",
+     "the_original_password": {
+      "doveadm_auth_test": {
+       "returncode": 0,
+       "status": "ok",
+       "stderr": "",
+       "stdout": "passdb: info@set2-import-seq.test auth succeeded\nextra fields:\n  user=info@set2-import-seq.test\n  \n"
+      },
+      "imap": {
+       "answer": "OK",
+       "connected": true,
+       "inbox_selected": true,
+       "logged_in": true,
+       "transport": "imaps 127.0.0.1:993"
+      }
+     }
+    },
+    {
+     "a_wrong_password": {
+      "doveadm_auth_test": {
+       "returncode": 77,
+       "status": "ok",
+       "stderr": "",
+       "stdout": "passdb: info@set2-import-drop.test auth failed\nextra fields:\n  user=info@set2-import-drop.test\n"
+      },
+      "imap": {
+       "answer": "b'[AUTHENTICATIONFAILED] Authentication failed.'",
+       "connected": true,
+       "logged_in": false,
+       "transport": "imaps 127.0.0.1:993"
+      }
+     },
+     "address": "info@set2-import-drop.test",
+     "doveadm_user": {
+      "fields": [
+       "gid",
+       "home",
+       "mail",
+       "quota_rule",
+       "uid"
+      ],
+      "returncode": 0
+     },
+     "dovecot": "2.3.21 (47349e2482)",
+     "the_original_password": {
+      "doveadm_auth_test": {
+       "returncode": 0,
+       "status": "ok",
+       "stderr": "",
+       "stdout": "passdb: info@set2-import-drop.test auth succeeded\nextra fields:\n  user=info@set2-import-drop.test\n  \n"
+      },
+      "imap": {
+       "answer": "OK",
+       "connected": true,
+       "inbox_selected": true,
+       "logged_in": true,
+       "transport": "imaps 127.0.0.1:993"
+      }
+     }
+    }
+   ],
+   "previews": [
+    {
+     "archive": "hostile-dotdot",
+     "at": "2026-10-09T07:25:13Z",
+     "databases": [
+      "s3hdd_app"
+     ],
+     "domains": [
+      "set3-hostile-dotdot.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set3-hostile-dotdot.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set3-hostile-dotdot.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 415,
+     "status": 200
+    },
+    {
+     "archive": "hostile-absolute",
+     "at": "2026-10-09T07:25:18Z",
+     "databases": [
+      "s3hab_app"
+     ],
+     "domains": [
+      "set3-hostile-absolute.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set3-hostile-absolute.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set3-hostile-absolute.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 425,
+     "status": 200
+    },
+    {
+     "archive": "hostile-symlink",
+     "at": "2026-10-09T07:25:23Z",
+     "databases": [
+      "s3hsl_app"
+     ],
+     "domains": [
+      "set3-hostile-symlink.test"
+     ],
+     "hash_shaped_values_in_the_raw_answer": 0,
+     "keys": [
+      "databases",
+      "dns_zones",
+      "domains",
+      "forwarders",
+      "mail_accounts",
+      "main_domain",
+      "public_html",
+      "site_bytes",
+      "username"
+     ],
+     "label": "inspect the archive of set3-hostile-symlink.test (ImportPage preview)",
+     "mail_accounts": [
+      {
+       "domain": "set3-hostile-symlink.test",
+       "has_password": true,
+       "quota_mb": 256,
+       "user": "info"
+      }
+     ],
+     "mailbox_keys": [
+      "domain",
+      "has_password",
+      "quota_mb",
+      "user"
+     ],
+     "public_html": true,
+     "raw_bytes": 420,
+     "status": 200
+    }
+   ]
+  },
+  "C9-identities": {
+   "answers_searched": {
+    "answers": 105,
+    "echoing_a_sent_secret": [],
+    "holding_a_hash_shaped_value": []
+   },
+   "journal_searched": {
+    "hash_shaped_values": 0,
+    "lines": 385
+   }
+  },
+  "S4-postgresql": {
+   "reload_hook": {
+    "applied": {
+     "dropin": "/etc/systemd/system/postgresql@16-main.service.d/set1-owner-reload-hook.conf",
+     "script": "/usr/local/sbin/set1-owner-reload-hook",
+     "unit": "postgresql@16-main.service"
+    },
+    "exec_reload": "ExecReload={ path=/usr/local/sbin/set1-owner-reload-hook ; argv[]=/usr/local/sbin/set1-owner-reload-hook ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n",
+    "realism": "an owner's own unit drop-in; no failure of the packaged unit's reload was found that an owner causes"
+   }
+  },
+  "S8-service-actions": {
+   "busy_refusals": {
+    "actions": 42,
+    "refusals": [],
+    "server_setup_busy": 0,
+    "setup_waiting": {
+     "code": "server_setup_access_dns_required",
+     "phase": "access_dns"
+    }
+   },
+   "reload_hook": {
+    "answer_detail": "the reload of postgresql@16-main.service was reported as failed (exit-code), but PostgreSQL re-read its configuration files after it: pg_conf_load_time() moved The unit reported the reload as failed, but PostgreSQL itself re-read its configuration files after it: the settings in the files on disk are in effect now, except those that need a restart. A step of the unit's own reload command failed after the server had been signalled. The server owner runs the command shown to see which step, and corrects it so that the next reload is reported as it went; the reload does not need to be repeated for these settings.",
+    "exec_reload": "ExecReload={ path=/usr/local/sbin/set1-owner-reload-hook ; argv[]=/usr/local/sbin/set1-owner-reload-hook ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n",
+    "reload_result": "exit-code",
+    "server_reread_its_files": true,
+    "unit": "postgresql@16-main.service"
+   },
+   "reload_hook_before_signal": {
+    "answer_detail": "the reload of postgresql@16-main.service failed (exit-code) and PostgreSQL did not re-read its configuration files: pg_conf_load_time() did not move",
+    "exec_reload": "ExecReload={ path=/usr/local/sbin/set1-owner-reload-hook ; argv[]=/usr/local/sbin/set1-owner-reload-hook ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n",
+    "reload_result": "exit-code",
+    "script": "#!/bin/sh\n# owner hook: reload the pooler first, then tell PostgreSQL to re-read its files\n/usr/bin/systemctl reload set1-owner-pooler.service || exit 1\nexec kill -HUP \"$MAINPID\"\n",
+    "server_did_not_reread": true,
+    "unit": "postgresql@16-main.service"
+   }
+  }
+ }
+}

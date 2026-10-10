@@ -1,0 +1,88 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S1f add under the owner's cron-allow",
+  "request": {
+    "body": {
+      "command": "/usr/bin/true set1-fault-job",
+      "schedule": "7 7 * * *",
+      "version": "ct1-c3e1e91abab07c9f999835ad8038092e9c8bf36768b978074dcea9afb89ce263"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18453"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18453"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "5eb92b573cc08023b4bb3ebc78fe2940"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/1/cron"
+  },
+  "response": {
+    "elapsed_seconds": 0.007,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 03:39:57 GMT"
+      ],
+      [
+        "Content-Length",
+        "594"
+      ]
+    ],
+    "json": {
+      "code": "CURRENT_SETTINGS_UNREADABLE",
+      "detail": "cron_allow",
+      "error": "CelikPanel cannot read or change this site user's scheduled tasks: this server restricts crontab with /etc/cron.allow, and the user is not listed in it. Nothing was changed, and the tasks already on the server are untouched. While the server restricts crontab this way, CelikPanel cannot manage this user's tasks. The server owner adds the site user's name on its own line in /etc/cron.allow, then reloads this page.",
+      "reason": "scheduled_tasks",
+      "vars": {
+        "detail": "The user set1_owner_test cannot use this program (crontab)"
+      }
+    },
+    "status": 502,
+    "text": null
+  }
+}

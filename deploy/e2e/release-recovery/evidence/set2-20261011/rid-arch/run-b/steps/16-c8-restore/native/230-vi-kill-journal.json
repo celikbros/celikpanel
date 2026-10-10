@@ -1,0 +1,33 @@
+{
+  "at": "2026-10-09T04:35:33Z",
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791520511",
+      "-n",
+      "600",
+      "-u",
+      "celikpanel-agent.service",
+      "-u",
+      "celikpanel-panel.service"
+    ],
+    "at": "2026-10-09T04:35:33Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T04:35:11.582020+00:00 dns-arch panel[6823]: 2026/10/09 04:35:11 http: TLS handshake error from 127.0.0.1:45658: EOF\n2026-10-09T04:35:12.511753+00:00 dns-arch systemd[1]: celikpanel-panel.service: Sent signal SIGKILL to main process 6823 (panel) on client request.\n2026-10-09T04:35:12.514928+00:00 dns-arch systemd[1]: celikpanel-panel.service: Main process exited, code=killed, status=9/KILL\n2026-10-09T04:35:12.515211+00:00 dns-arch systemd[1]: celikpanel-panel.service: Failed with result 'signal'.\n2026-10-09T04:35:12.515607+00:00 dns-arch systemd[1]: celikpanel-panel.service: Consumed 207ms CPU time over 15.425s wall clock time, 80.8M memory peak.\n2026-10-09T04:35:15.376872+00:00 dns-arch sudo[7185]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_seq\n2026-10-09T04:35:15.377609+00:00 dns-arch sudo[7185]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)\n2026-10-09T04:35:15.426200+00:00 dns-arch sudo[7185]: pam_unix(sudo:session): session closed for user postgres\n2026-10-09T04:35:15.449875+00:00 dns-arch sudo[7189]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_con\n2026-10-09T04:35:15.450408+00:00 dns-arch sudo[7189]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)\n2026-10-09T04:35:15.496063+00:00 dns-arch sudo[7189]: pam_unix(sudo:session): session closed for user postgres\n2026-10-09T04:35:15.570380+00:00 dns-arch systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 1.\n2026-10-09T04:35:15.572681+00:00 dns-arch systemd[1]: Starting CelikPanel web panel...\n2026-10-09T04:35:15.601108+00:00 dns-arch systemd[1]: Started CelikPanel web panel.\n2026-10-09T04:35:15.752273+00:00 dns-arch panel[7200]: 2026/10/09 04:35:15 Starting CelikPanel Backend...\n2026-10-09T04:35:15.759613+00:00 dns-arch panel[7200]: 2026/10/09 04:35:15 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)\n2026-10-09T04:35:15.772147+00:00 dns-arch panel[7200]: 2026/10/09 04:35:15 [request-identity] 1 request(s) were running when the Panel stopped; their outcome is reported as unknown\n2026-10-09T04:35:15.772880+00:00 dns-arch panel[7200]: 2026/10/09 04:35:15 Panel startup listener active on :2083 (HTTPS; application gated)\n2026-10-09T04:35:15.773803+00:00 dns-arch panel[7200]: 2026/10/09 04:35:15 Connected to Agent RPC; preparing normal management access\n2026-10-09T04:35:15.864163+00:00 dns-arch panel[7200]: 2026/10/09 04:35:15 certificate startup reconcile: restored 1 hosted vhosts with one nginx validation and reload\n2026-10-09T04:35:15.866660+00:00 dns-arch panel[7200]: 2026/10/09 04:35:15 certificate startup reconcile: certificate dependents: publish full mail SNI snapshot: mail server hostname is not a valid FQDN: invalid hostname \"dns-arch\": a fully qualified DNS name is required; preserve pending outbox: <nil>\n2026-10-09T04:35:15.873548+00:00 dns-arch panel[7200]: 2026/10/09 04:35:15 milter chain: nothing to wire at startup: no mail server is installed on this server, so there is no Postfix milter chain to compose\n2026-10-09T04:35:15.875031+00:00 dns-arch panel[7200]: 2026/10/09 04:35:15 Panel ready on :2083 (HTTPS)\n2026-10-09T04:35:16.675172+00:00 dns-arch panel[7200]: 2026/10/09 04:35:16 http: TLS handshake error from 127.0.0.1:45704: EOF\n2026-10-09T04:35:16.675308+00:00 dns-arch panel[7200]: 2026/10/09 04:35:16 http: TLS handshake error from 127.0.0.1:45712: EOF\n2026-10-09T04:35:22.246887+00:00 dns-arch sudo[7294]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_seq\n2026-10-09T04:35:22.247401+00:00 dns-arch sudo[7294]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)\n2026-10-09T04:35:22.257062+00:00 dns-arch sudo[7294]: pam_unix(sudo:session): session closed for user postgres\n2026-10-09T04:35:22.266968+00:00 dns-arch sudo[7298]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_con\n2026-10-09T04:35:22.268725+00:00 dns-arch sudo[7298]: pam_unix(sudo:session): session opened for user postgres(uid=967) by (uid=0)\n2026-10-09T04:35:22.277839+00:00 dns-arch sudo[7298]: pam_unix(sudo:session): session closed for user postgres\n"
+  },
+  "lab_action": false,
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "units": [
+    "celikpanel-agent.service",
+    "celikpanel-panel.service"
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "C6 grant the VPN add-on to the subscription (Add-ons page)",
+  "request": {
+    "body": {
+      "product_id": "vpn"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18481"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18481"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "a6f9e2d457ae159511bc7b433c78e824"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/subscriptions/2/entitlements"
+  },
+  "response": {
+    "elapsed_seconds": 0.017,
+    "headers": [
+      [
+        "Cache-Control",
+        "private, no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Pragma",
+        "no-cache"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 08:16:27 GMT"
+      ],
+      [
+        "Content-Length",
+        "17"
+      ]
+    ],
+    "json": {
+      "success": true
+    },
+    "status": 200,
+    "text": null
+  }
+}

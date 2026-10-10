@@ -17,12 +17,15 @@ import { Login } from './components/Login';
 import { LicenseOnboarding } from './components/LicenseOnboarding';
 import { usePanelSession } from './auth/usePanelSession';
 import { RecoveryAccess } from './components/RecoveryAccess';
+import { AccessHold } from './components/AccessHold';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import type { CurrentUser } from './lib/api';
 import { navItems, canAccessPath, type NavAccessContext } from './nav';
 import { Layout } from './components/Layout';
 import { ComponentOperationProvider } from './components/ComponentOperation';
 import { useI18n } from './i18n';
 import { Spinner } from './components/ui';
+import { sendIdentified } from './lib/requestIdentity';
 import {
   publishSystemUpdateAuthentication,
   shouldApplyUnauthorizedResponse,
@@ -42,7 +45,7 @@ const ServerSetupGate = lazyNamed(() => import('./components/ServerSetupGate'), 
 const ServerSetup = lazyNamed(() => import('./components/ServerSetup'), 'ServerSetup');
 const Dashboard = lazyNamed(() => import('./components/Dashboard'), 'Dashboard');
 const Domains = lazyNamed(() => import('./components/Domains'), 'Domains');
-const DomainDetail = lazyNamed(() => import('./components/DomainDetail'), 'DomainDetail');
+const DomainDetailByName = lazyNamed(() => import('./components/DomainDetail'), 'DomainDetailByName');
 const DatabaseManagementV2 = lazyNamed(() => import('./components/DatabaseManagementV2'), 'DatabaseManagementV2');
 const ServiceList = lazyNamed(() => import('./components/ServiceList'), 'ServiceList');
 const MonitoringPage = lazyNamed(() => import('./components/MonitoringPage'), 'MonitoringPage');
@@ -63,85 +66,23 @@ const VsftpdManagement = lazyNamed(() => import('./components/VsftpdManagement')
 const PostgreSQLManagement = lazyNamed(() => import('./components/PostgreSQLManagement'), 'PostgreSQLManagement');
 const MariaDBManagement = lazyNamed(() => import('./components/MariaDBManagement'), 'MariaDBManagement');
 const ComponentDetail = lazyNamed(() => import('./components/ComponentDetail'), 'ComponentDetail');
+const ServiceRecordLookup = lazyNamed(() => import('./components/ServiceRecordLookup'), 'ServiceRecordLookup');
 
-// Domain Detail Wrapper - fetches domain ID from domain name
+// The page of one domain, addressed by its name. Looking the name up, and
+// saying what came of it, belongs to the page's own bundle (DomainDetailByName):
+// the person stays on this address whether the list could not be read or has
+// no such name. Before 9 Oct 2026 both were a silent return to the list.
+//
+// Bir alan adının, adıyla adreslenen sayfası. Adın aranması ve sonucunun
+// söylenmesi sayfanın kendi paketine aittir: liste okunamasa da, öyle bir ad
+// olmasa da kişi bu adreste kalır. 9 Eki 2026'dan önce ikisi de listeye sessiz
+// bir dönüştü.
 function DomainDetailPage() {
   const { domainName } = useParams();
   const navigate = useNavigate();
-  const [domainId, setDomainId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const requestIdRef = useRef(0);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const requestId = ++requestIdRef.current;
-    setDomainId(null);
-    setLoading(true);
-
-    const fetchDomain = async () => {
-      try {
-        if (!domainName) {
-          navigate('/domains');
-          return;
-        }
-
-        const res = await fetch('/api/v1/domains', {
-          signal: controller.signal,
-          cache: 'no-store',
-        });
-        if (!res.ok) {
-          throw new Error(`Failed to fetch domains: ${res.status}`);
-        }
-
-        const domains: Array<{ id: number; domain_name: string }> = await res.json();
-        if (controller.signal.aborted || requestIdRef.current !== requestId) {
-          return;
-        }
-
-        const domain = domains.find((item) => item.domain_name === domainName);
-        if (domain) {
-          setDomainId(domain.id);
-        } else {
-          navigate('/domains');
-        }
-      } catch (err) {
-        if (controller.signal.aborted || requestIdRef.current !== requestId) {
-          return;
-        }
-        console.error('Failed to fetch domain:', err);
-        navigate('/domains');
-      } finally {
-        if (!controller.signal.aborted && requestIdRef.current === requestId) {
-          setLoading(false);
-        }
-      }
-    };
-    fetchDomain();
-
-    return () => {
-      controller.abort();
-    };
-  }, [domainName, navigate]);
-
-  if (loading) {
-    return (
-      <PageWithLayout>
-        <div className="flex items-center justify-center h-full">
-          <Spinner />
-        </div>
-      </PageWithLayout>
-    );
-  }
-
-  if (!domainId) return null;
-
   return (
     <PageWithLayout>
-      <DomainDetail
-        key={domainId}
-        domainId={domainId}
-        onBack={() => navigate('/domains')}
-      />
+      <DomainDetailByName domainName={domainName ?? ''} onBack={() => navigate('/domains')} />
     </PageWithLayout>
   );
 }
@@ -200,44 +141,11 @@ function ServiceManagementPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const navigationState = location.state as { versions?: string[] } | null;
-  const [versions, setVersions] = useState<string[]>(navigationState?.versions || []);
-  const [loading, setLoading] = useState(!navigationState?.versions);
   // Config files listed on the generic page open in the same editor the
   // Components page uses — one editor, not a second copy.
   // Genel sayfada listelenen ayar dosyaları, Bileşenler sayfasının kullandığı
   // editörde açılır — tek editör, ikinci bir kopya değil.
   const [configPath, setConfigPath] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!serviceId) return;
-
-    // If versions are not in state (e.g. refresh), fetch them
-    if (versions.length === 0) {
-      setLoading(true);
-      fetch('/api/v1/managed-services')
-        .then(res => res.json())
-        .then((data: any) => {
-          const services: any[] = data?.services || [];
-          const service = services.find(s => s.id === serviceId);
-          if (service) {
-            setVersions(service.versions);
-          } else {
-            // Service not found
-            navigate('/services');
-          }
-        })
-        .catch(() => navigate('/services'))
-        .finally(() => setLoading(false));
-    }
-  }, [serviceId, versions.length, navigate]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Spinner />
-      </div>
-    );
-  }
 
   // No empty-versions bailout: with the "default" sentinel dead (B3b), an
   // installed nginx/postfix legitimately has versions: [] — bailing out here
@@ -245,11 +153,22 @@ function ServiceManagementPage() {
   // Boş-sürüm kaçışı yok: "default" sentinel'i öldüğünden (B3b) kurulu bir
   // nginx/postfix meşru olarak versions: [] taşır — burada kaçmak, böyle her
   // Yönet tıklamasının arkasında BOŞ sayfa çiziyordu.
-  if (configPath) {
-    return <ConfigEditor path={configPath} onBack={() => setConfigPath(null)} />;
-  }
-
-  return <ServiceManagement serviceId={serviceId!} versions={versions} onSelectConfig={setConfigPath} />;
+  //
+  // After a reload the versions are not in the navigation any more; the lookup
+  // reads them and stays on this address whatever that read says.
+  // Yeniden yüklemeden sonra sürümler gezinmede yoktur; arama onları okur ve
+  // okuma ne derse desin bu adreste kalır.
+  return (
+    <ServiceRecordLookup
+      serviceId={serviceId ?? ''}
+      carriedVersions={navigationState?.versions}
+      onBack={() => navigate('/services')}
+    >
+      {(versions) => (configPath
+        ? <ConfigEditor path={configPath} onBack={() => setConfigPath(null)} />
+        : <ServiceManagement serviceId={serviceId!} versions={versions} onSelectConfig={setConfigPath} />)}
+    </ServiceRecordLookup>
+  );
 }
 
 
@@ -462,10 +381,40 @@ function AppRoutes() {
 // AuthGate ön kapıdır: herhangi bir sayfa render edilmeden önce mevcut
 // oturumu çözer, oturum yoksa giriş ekranını gösterir ve kullanım
 // sırasında oturum düşerse (herhangi bir API 401) girişe geri döner.
+//
+// A page that is already mounted is replaced only by a KNOWN negative: a
+// confirmed 401, or a sign-out. A session or readiness answer that is merely
+// unknown (PANEL_STARTING, AUTH_STATUS_UNAVAILABLE, a failed read) keeps the
+// pages mounted and unreachable behind AccessHold until the server answers. The
+// full recovery page is for a load on which the application cannot start at all.
+//
+// Açık bir sayfayı yalnızca BİLİNEN olumsuz sonuç değiştirir: doğrulanmış 401 ya
+// da çıkış. Yalnızca bilinmeyen oturum ya da hazır olma yanıtı sayfaları bağlı ve
+// erişilmez tutar; tam kurtarma sayfası uygulamanın hiç başlayamadığı yükleme içindir.
 function AuthGate() {
   const { user, state, checking, generation: authGenerationRef, retry, transitionAuthentication, markUnavailable } = usePanelSession();
   const [observationRecovery, setObservationRecovery] = useState(false);
   const endSession = useCallback(() => transitionAuthentication(null), [transitionAuthentication]);
+  // The identity whose pages are mounted, whether the owner signed out, and
+  // whether the session ended under a mounted page. Derived while rendering so
+  // that the pages and their hold never disagree for a frame.
+  const mounted = useRef<CurrentUser | null>(null);
+  const signingOut = useRef(false);
+  const sessionEnded = useRef(false);
+  if (state === 'ready' && user) {
+    mounted.current = user;
+    sessionEnded.current = false;
+  } else if (state === 'unauthenticated') {
+    if (mounted.current) sessionEnded.current = !signingOut.current;
+    mounted.current = null;
+    signingOut.current = false;
+  } else if (user && mounted.current && user.username !== mounted.current.username) {
+    mounted.current = null;
+  }
+  const signOut = useCallback(() => {
+    signingOut.current = true;
+    transitionAuthentication(null);
+  }, [transitionAuthentication]);
   useLayoutEffect(() => {
     // Pause the optional tracker while the independent status surface owns access.
     // This preserves the exact saved operation; it does not end the session.
@@ -481,7 +430,9 @@ function AuthGate() {
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
       const requestGeneration = authGenerationRef.current;
-      const res = await originalFetch(...args);
+      // One identity per user action on every state-changing call (D-029).
+      // Durum değiştiren her çağrıda kullanıcı eylemi başına tek kimlik.
+      const res = await sendIdentified(originalFetch, args[0], args[1]);
       const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;
       if (res.status === 401
         && url.includes('/api/')
@@ -493,7 +444,10 @@ function AuthGate() {
         && shouldApplyUnauthorizedResponse(requestGeneration, authGenerationRef.current)) {
         void res.clone().json().then(problem => {
           if (!shouldApplyUnauthorizedResponse(requestGeneration, authGenerationRef.current)) return;
-          if (['license_required', 'LICENSE_VERIFICATION_UNAVAILABLE', 'LICENSE_STATUS_UNAVAILABLE'].includes(problem.code)) {
+          // The access route is what that event makes the gate read. Its own
+          // refusal is the gate's answer already and must not ask for another read.
+          if (['license_required', 'LICENSE_VERIFICATION_UNAVAILABLE', 'LICENSE_STATUS_UNAVAILABLE'].includes(problem.code)
+            && !url.includes('/api/v1/license/access')) {
             window.dispatchEvent(new Event('celikpanel:license-locked'));
           }
           if (problem.code === 'AUTH_STATUS_UNAVAILABLE') markUnavailable(true);
@@ -505,16 +459,22 @@ function AuthGate() {
     return () => { window.fetch = originalFetch; };
   }, [transitionAuthentication, markUnavailable, authGenerationRef]);
 
-  if (state === 'unauthenticated') return <Login onSuccess={transitionAuthentication} />;
-  if (state !== 'ready' || !user) return <RecoveryAccess
-    user={state === 'auth_unavailable' ? null : user}
-    cause={state === 'auth_unavailable' || !user ? 'auth' : state === 'starting' ? 'starting' : 'availability'}
-    checking={checking} onRetry={() => void retry()} onUnauthorized={endSession}
-  />;
+  // The router keeps the address while the sign-in form is shown, so signing in
+  // again opens the same route. What was typed on that page is not kept.
+  if (state === 'unauthenticated') return <Login onSuccess={transitionAuthentication} sessionEnded={sessionEnded.current} />;
+  const known = state === 'auth_unavailable' ? null : user;
+  // Never depends on two state updates landing in one render: without a verified
+  // identity in hand, the pages that are mounted stay the ones that are shown.
+  const shown = state === 'ready' && user ? user : mounted.current;
+  // First read still in flight: nothing has failed yet, so nothing is reported as failed.
+  const cause = state === 'checking' ? 'checking' : state === 'auth_unavailable' || !user ? 'auth' : state === 'starting' ? 'starting' : 'availability';
+  if (!shown) return <RecoveryAccess user={known} cause={cause} checking={checking} onRetry={() => void retry()} onUnauthorized={endSession} />;
 
   return (
-    <AuthProvider user={user} onLogout={() => transitionAuthentication(null)}>
-        <LicenseOnboarding onRecoveryChange={setObservationRecovery}>
+    <AccessHold active={state !== 'ready'} cause={cause === 'checking' ? 'availability' : cause} checking={checking}
+      user={known} onRetry={() => void retry()} onUnauthorized={endSession}>
+    <AuthProvider key={shown.username} user={shown} onLogout={signOut}>
+        <LicenseOnboarding onRecoveryChange={setObservationRecovery} suspended={state !== 'ready'}>
         <Suspense fallback={<PageLoading />}>
           <ComponentOperationProvider>
             <ServerSetupGate><AppRoutes /></ServerSetupGate>
@@ -522,15 +482,19 @@ function AuthGate() {
         </Suspense>
         </LicenseOnboarding>
     </AuthProvider>
+    </AccessHold>
   );
 }
 
-function StandaloneRecovery() {
+// loading: the interface is still being fetched. That is a wait, not a failure,
+// so the page says "checking" until a read or the fetch has actually failed.
+function StandaloneRecovery({ loading = false }: { loading?: boolean }) {
   const { user, state, checking, retry, transitionAuthentication } = usePanelSession();
   const endSession = useCallback(() => transitionAuthentication(null), [transitionAuthentication]);
   if (state === 'unauthenticated') return <Login onSuccess={transitionAuthentication} />;
-  return <RecoveryAccess user={state === 'auth_unavailable' ? null : user}
-    cause={state === 'auth_unavailable' || !user ? 'auth' : 'bundle'} checking={checking}
+  const cause = state === 'auth_unavailable' ? 'auth' : state === 'checking' ? 'checking' : !user ? 'auth'
+    : !loading ? 'bundle' : state === 'starting' ? 'starting' : state === 'availability_unavailable' ? 'availability' : 'checking';
+  return <RecoveryAccess user={state === 'auth_unavailable' ? null : user} cause={cause} checking={checking}
     onRetry={() => void retry()} onUnauthorized={endSession} />;
 }
 
@@ -543,7 +507,7 @@ class RecoveryBoundary extends Component<{ children: ReactNode }, { failed: bool
 function App() {
   return (
     <RecoveryBoundary>
-      <Suspense fallback={<StandaloneRecovery />}>
+      <Suspense fallback={<StandaloneRecovery loading />}>
         <SystemUpdateOperationProvider>
           <BrowserRouter>
             <AuthGate />

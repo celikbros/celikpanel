@@ -1,0 +1,22 @@
+##### nginx.service
+2026-10-09T21:55:24.940872+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T21:55:24.966419+00:00 dns-arch nginx[3407]: 2026/10/09 21:55:24 [warn] 3407#3407: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T21:55:24.970965+00:00 dns-arch nginx[3407]: 2026/10/09 21:55:24 [notice] 3407#3407: signal process started
+2026-10-09T21:55:24.974166+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T21:55:25.241604+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T21:55:25.271585+00:00 dns-arch nginx[3420]: 2026/10/09 21:55:25 [warn] 3420#3420: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T21:55:25.276254+00:00 dns-arch nginx[3420]: 2026/10/09 21:55:25 [notice] 3420#3420: signal process started
+2026-10-09T21:55:25.278596+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+##### celikpanel-agent.service and celikpanel-panel.service
+2026-10-09T21:55:23.307715+00:00 dns-arch panel[418]: 2026/10/09 21:55:23 http: TLS handshake error from 127.0.0.1:44994: EOF
+2026-10-09T21:55:24.651499+00:00 dns-arch useradd[3385]: new group: name=set4_refused_test, GID=1003
+2026-10-09T21:55:24.651624+00:00 dns-arch useradd[3385]: new user: name=set4_refused_test, UID=1003, GID=1003, home=/var/www/celikpanel/subscriptions/2/sites/3, shell=/bin/bash, from=none
+2026-10-09T21:55:24.760014+00:00 dns-arch chpasswd[3386]: pam_unix(chpasswd:chauthtok): password changed for set4_refused_test
+2026-10-09T21:55:24.818796+00:00 dns-arch php-fpm[3391]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful
+2026-10-09T21:55:25.020745+00:00 dns-arch php-fpm[3410]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful
+2026-10-09T21:55:25.130996+00:00 dns-arch userdel[3415]: delete user 'set4_refused_test'
+2026-10-09T21:55:25.133217+00:00 dns-arch userdel[3415]: removed group 'set4_refused_test' owned by 'set4_refused_test'
+2026-10-09T21:55:25.133515+00:00 dns-arch userdel[3415]: removed shadow group 'set4_refused_test' owned by 'set4_refused_test'
+2026-10-09T21:55:25.219588+00:00 dns-arch agent[407]: 2026/10/09 21:55:25 CreateSite set4-refused.test: nginx vhost activation: nginx validation failed: nginx validation failed: 2026/10/09 21:55:24 [emerg] 3398#3398: open() "/etc/nginx/fastcgi.conf" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31
+2026-10-09T21:55:25.219588+00:00 dns-arch agent[407]: nginx: configuration file /etc/nginx/nginx.conf test failed: exit status 1; rollback restored and reloaded the previous vhost
+2026-10-09T21:55:25.299949+00:00 dns-arch panel[418]: 2026/10/09 21:55:25 [502][domain] set4-refused.test: SITE_WEB_SERVER_REFUSED removed: 2026/10/09 21:55:24 [emerg] 3398#3398: open() "/etc/nginx/fastcgi.conf" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31

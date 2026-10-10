@@ -26,12 +26,15 @@ BASELINE_COMMIT = '3ee8dac009c7e3db1d940f9b8be078e186693a80'
 MIGRATIONS = {
     38: 'ef6821f3243832de5d19351a31e70db19c6df86f31679971ff77906c349db534',
     42: '4075629507fd66f6d028bafc373bbc97a1d249b513116865b432d022327101a0',
+    # Migration 43 (request identities, D-029): one new table, no old one changed.
+    43: 'a0b5c4247f83f86d4daa700baf272f5a666c0f688ede53e1707285126c96b7c0',
 }
 # Exact sqlite_schema SQL from the released SQL, including triggers and indexes.
 # Tests reconstruct it from unmodified migration bytes, never a downgraded ledger.
 SCHEMAS = {
     38: 'e19fe19deee2e280b90be04c15fe4c3bad69ed23e428d0e579c877e9d6eaedcf',
     42: '2754d89b20e2c724c277a7072ac2d837aa41eb2a2a67106b4921e2fa7f015f68',
+    43: '48cbd3b47573c2e09feefa4605fc4822df178a719c5e22a7e1c5cb94bb7770f7',
 }
 ADMISSION_SCHEMA = 'celikpanel/lab-populated-database-admission/v1'
 MANIFEST_SCHEMA = 'celikpanel/lab-populated-database-manifest/v1'
@@ -40,6 +43,10 @@ SIDECARS = ('-wal', '-shm', '-journal')
 NEW_TABLES_42 = {'server_setup_state', 'server_setup_plans', 'server_setup_executions',
                  'remote_dns_enrollments', 'remote_dns_clients', 'remote_dns_connections',
                  'remote_dns_zone_ownership', 'remote_dns_records', 'remote_dns_zones', 'remote_dns_origin_history'}
+NEW_TABLES_43 = NEW_TABLES_42 | {'request_identities'}
+# The tables each pinned schema after the baseline adds to the 55 of schema38.
+# A schema that is not a key here is the baseline itself.
+NEW_TABLES = {42: NEW_TABLES_42, 43: NEW_TABLES_43}
 MAX_BYTES = 128 * 1024 * 1024
 MAX_MANIFEST_BYTES = 16 * 1024 * 1024
 MAX_ROWS = 100_000
@@ -179,7 +186,7 @@ def _connect(path, *, writable=False):
 
 def _schema(connection, version):
     if type(version) is not int or version not in SCHEMAS:
-        raise Refused('only exact schema38 or schema42 is supported')
+        raise Refused('only exact schema38, schema42 or schema43 is supported')
     objects = connection.execute('SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY type,name').fetchall()
     if _sha(json.dumps(objects, ensure_ascii=True, separators=(',', ':')).encode()) != SCHEMAS[version]:
         raise Refused('schema SQL differs from pinned released schema')
@@ -441,19 +448,20 @@ def verify_copy(database: Path, manifest: dict, *, manifest_sha256: str, expecte
         connection.execute('BEGIN')
         _schema(connection, expected_version)
         actual_tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_schema WHERE type='table'")}
-        old_names = actual_tables - NEW_TABLES_42 if expected_version == 42 else actual_tables
+        migrated = expected_version in NEW_TABLES
+        old_names = actual_tables - NEW_TABLES[expected_version] if migrated else actual_tables
         if set(tables) != old_names:
             raise Refused('exact historical table set required')
         for table, proof in tables.items():
             columns = [row[1] for row in connection.execute('PRAGMA table_info(' + _quote(table) + ')')]
-            if expected_version == 42 and table == 'domains':
+            if migrated and table == 'domains':
                 columns = [name for name in columns if name not in ('dns_management', 'dns_remote_connection_id')]
             if proof['columns'] != columns:
                 raise Refused('every old column must be included in order')
         _relations(connection, admission['nonce'], manifest['fixture_ids'], expected_version)
         projected = _projections(connection, tables)
         changes = _retained(tables, projected)
-        if expected_version == 42:
+        if migrated:
             for rowid, _ in tables['domains']['rows']:
                 if connection.execute('SELECT dns_management,dns_remote_connection_id FROM domains WHERE rowid=?', (rowid,)).fetchone() != ('local', ''):
                     raise Refused('old domain migration40/42 defaults differ')
@@ -467,6 +475,6 @@ def verify_copy(database: Path, manifest: dict, *, manifest_sha256: str, expecte
             'table_count': len(actual_tables), 'old_table_count': 55, 'old_row_count': total,
             'old_rows_missing_or_changed': 0, 'tables': changes, 'excluded_tables': [],
             'fixture_domain_count': 2, 'fixture_alias_count': 1, 'fixture_hostname_reservations': 6,
-            'domain_defaults_40_42_verified': expected_version == 42,
+            'domain_defaults_40_42_verified': migrated,
             'database_sha256': _sha(raw), 'manifest_sha256': manifest_sha256,
             'global_bytes_equal_to_populated': _sha(raw) == manifest['populated_sha256']}

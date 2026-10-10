@@ -91,6 +91,31 @@ class PanelClientTest(unittest.TestCase):
         self.assertIn(["Set-Cookie", REDACTED], self.captured[0]["response"]["headers"])
         self.assertEqual(self.client.mutations[0]["path"], "/api/v1/auth/login")
 
+    def test_unsafe_requests_carry_one_request_identity_like_the_web_ui(self) -> None:
+        # D-029: the web UI's fetch interceptor names every state-changing
+        # request; eight routes are refused without the header.
+        self.login_ok()
+        self.client.login("owner", PASSWORD)
+        self.script.on("POST", "/api/v1/domains/7/databases", ok({"status": "success"}))
+        self.script.on("POST", "/api/v1/service/install", ok({"operation": {}}))
+        self.script.on("GET", "/api/v1/domains/7/databases", ok({"databases": []}))
+        self.client.post("/api/v1/domains/7/databases", {"name": "db", "type": "mysql", "password": "x"})
+        self.client.post("/api/v1/domains/7/databases", {"name": "db2", "type": "mysql", "password": "x"})
+        self.client.post("/api/v1/service/install", {"service_id": "nginx", "request_id": "a" * 32})
+        self.client.get("/api/v1/domains/7/databases")
+        first, second, operation, read = (call[2] for call in self.script.calls[2:6])
+        header = "X-CelikPanel-Request-Id"
+        self.assertRegex(first[header], r"^[0-9a-f]{32}$")
+        self.assertRegex(second[header], r"^[0-9a-f]{32}$")
+        self.assertNotEqual(first[header], second[header], "a new request reused an identity")
+        self.assertNotIn(header, operation, "a body that names its request got a second identity")
+        self.assertNotIn(header, read)
+        # The identity is kept in the evidence so an exchange can be matched
+        # to the Panel's row.
+        recorded = dict(next(e for e in self.captured if e["request"]["path"] == "/api/v1/domains/7/databases"
+                             and e["request"]["method"] == "POST")["request"]["headers"])
+        self.assertEqual(recorded[header], first[header])
+
     def test_totp_and_non_admin_refused(self) -> None:
         self.script.on("POST", "/api/v1/auth/login", ok({"totp_required": True, "pending_token": "pending-token-xyz"}))
         with self.assertRaisesRegex(PanelError, "TOTP"):

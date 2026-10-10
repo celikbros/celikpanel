@@ -1,0 +1,68 @@
+........E.EE...............................ss..s.....................................................................E.........................................................................
+======================================================================
+ERROR: test_draft_choice_refusals (deploy.e2e.release-recovery.test_owner_update_trial.DNSScopeTests.test_draft_choice_refusals)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-set5-run/harness-a/deploy/e2e/release-recovery/test_owner_update_trial.py", line 939, in test_draft_choice_refusals
+    peers = json.loads((RUN_EVIDENCE / "harness-run-copy" / "draft-debian13.json").read_text())
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 787, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 771, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/var/tmp/cp-set5-run/harness-a/deploy/e2e/release-recovery/evidence/upd1-20261001/harness-run-copy/draft-debian13.json'
+
+======================================================================
+ERROR: test_external_is_the_default_and_matches_the_run_copy_choice (deploy.e2e.release-recovery.test_owner_update_trial.DNSScopeTests.test_external_is_the_default_and_matches_the_run_copy_choice)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-set5-run/harness-a/deploy/e2e/release-recovery/test_owner_update_trial.py", line 928, in test_external_is_the_default_and_matches_the_run_copy_choice
+    run_copy = json.loads((RUN_EVIDENCE / "harness-run-copy" / "draft-external.json").read_text())
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 787, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 771, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/var/tmp/cp-set5-run/harness-a/deploy/e2e/release-recovery/evidence/upd1-20261001/harness-run-copy/draft-external.json'
+
+======================================================================
+ERROR: test_plan_cli_records_the_dns_scope (deploy.e2e.release-recovery.test_owner_update_trial.DNSScopeTests.test_plan_cli_records_the_dns_scope)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-set5-run/harness-a/deploy/e2e/release-recovery/test_owner_update_trial.py", line 968, in test_plan_cli_records_the_dns_scope
+    self.assertEqual(t.main(base + ["--dns-mode", "local", "--setup-draft-json", str(draft)]), 0)
+                     ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/tmp/cp-set5-run/harness-a/deploy/e2e/release-recovery/owner_update_trial.py", line 6272, in main
+    draft = json.loads(args.setup_draft_json.read_text()) if args.setup_draft_json else None
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 787, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 771, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/var/tmp/cp-set5-run/harness-a/deploy/e2e/release-recovery/evidence/upd1-20261001/harness-run-copy/draft-debian13.json'
+
+======================================================================
+ERROR: test_mail_requirement_follows_the_recorded_setup (deploy.e2e.release-recovery.test_owner_update_trial.SetupWaitTests.test_mail_requirement_follows_the_recorded_setup)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/var/tmp/cp-set5-run/harness-a/deploy/e2e/release-recovery/test_owner_update_trial.py", line 1027, in test_mail_requirement_follows_the_recorded_setup
+    waited_early = json.loads((RUN_EVIDENCE / "upd1-debian13-good/run-b/steps/06-setup/setup-execution.json").read_text())
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 787, in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/pathlib/__init__.py", line 771, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/var/tmp/cp-set5-run/harness-a/deploy/e2e/release-recovery/evidence/upd1-20261001/upd1-debian13-good/run-b/steps/06-setup/setup-execution.json'
+
+----------------------------------------------------------------------
+Ran 191 tests in 4.781s
+
+FAILED (errors=4, skipped=3)

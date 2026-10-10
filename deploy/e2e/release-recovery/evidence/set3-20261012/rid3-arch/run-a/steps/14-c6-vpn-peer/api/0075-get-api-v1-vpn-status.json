@@ -1,0 +1,102 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "C6 VPN status after the install",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18465"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/vpn/status"
+  },
+  "response": {
+    "elapsed_seconds": 0.008,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store, max-age=0"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Expires",
+        "0"
+      ],
+      [
+        "Pragma",
+        "no-cache"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 07:30:26 GMT"
+      ],
+      [
+        "Content-Length",
+        "479"
+      ]
+    ],
+    "json": {
+      "configured": true,
+      "endpoint": "10.0.2.15",
+      "installed": true,
+      "peer_count": 0,
+      "policy": {
+        "allowed_ips": "0.0.0.0/0",
+        "client_dns": "1.1.1.1",
+        "firewall_required": true,
+        "forward_required": true,
+        "full_tunnel": true,
+        "interface": "wg0",
+        "listen_port": 51820,
+        "listen_protocol": "UDP",
+        "nat_required": true,
+        "network": "10.8.0.0/24",
+        "server_address": "10.8.0.1"
+      },
+      "port": 51820,
+      "running": true,
+      "server_public_key": "lCdaRvVNM2OVwBA90zwwGn9KGW77a9WHWyRVS9Oh4TI=",
+      "sync": {
+        "errors": 0,
+        "in_sync": true,
+        "pending": 0
+      }
+    },
+    "status": 200,
+    "text": null
+  }
+}

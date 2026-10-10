@@ -1,0 +1,574 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "0473af3e56364e4e0f78b4b6b971f3ccfefb59fe",
+      "sha256": "a94e84bfefdf842747a5d76d636271ec7fa547339f79012e3223148c230e5a57",
+      "version": "v0.1.0-alpha.81"
+    }
+  },
+  "cell": {
+    "components": [
+      "nginx",
+      "php-fpm",
+      "mariadb",
+      "postgresql"
+    ],
+    "mail": false,
+    "name": "rid3-arch",
+    "node": "arch",
+    "purpose": "web"
+  },
+  "cell_kind": "request-identity",
+  "findings": [
+    "arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-verify']"
+  ],
+  "identities_used": 35,
+  "identity": {
+    "cell_id": "release-recovery__5c86af1c952d9dda",
+    "node": "arch",
+    "vm_uuid": "8af59239-ad22-5866-ac3a-d732b29f81b1"
+  },
+  "matrix": {
+    "admin-account-mariadb": {
+      "i": "pass",
+      "ii": "pass",
+      "iii": "pass",
+      "iv": "pass"
+    },
+    "admin-account-postgresql": {
+      "i": "pass",
+      "ii": "pass",
+      "iii": "pass",
+      "iv": "pass"
+    },
+    "backup": {
+      "i": "pass",
+      "ii": "pass",
+      "iii": "pass",
+      "iv": "pass"
+    },
+    "domain-database-mariadb": {
+      "i": "pass",
+      "ii": "pass",
+      "iii": "pass",
+      "iv": "pass"
+    },
+    "domain-database-postgresql": {
+      "i": "pass",
+      "ii": "pass",
+      "iii": "pass",
+      "iv": "pass"
+    },
+    "import": {
+      "i": "pass",
+      "ii": "pass",
+      "iii": "pass",
+      "iv": "pass",
+      "v": "pass"
+    },
+    "letsencrypt": {
+      "i": "pass",
+      "ii": "pass",
+      "iii": "pass",
+      "iv": "pass"
+    },
+    "restore": {
+      "i": "pass",
+      "ii": "pass",
+      "iii": "pass",
+      "iv": "pass",
+      "v": "pass",
+      "vi": "pass"
+    },
+    "rows": {
+      "vii": "pass"
+    },
+    "server-database-mariadb": {
+      "i": "pass",
+      "ii": "pass",
+      "iii": "pass",
+      "iv": "pass"
+    },
+    "server-database-postgresql": {
+      "i": "pass",
+      "ii": "pass",
+      "iii": "pass",
+      "iv": "pass"
+    },
+    "vpn-peer": {
+      "i": "pass",
+      "ii": "pass",
+      "iii": "pass",
+      "iv": "pass"
+    }
+  },
+  "native_evidence": false,
+  "note": "request-identity: observations for the owner's review; no update is started and no P0 row is judged.",
+  "outcome": {
+    "classification": "request-identity-measured",
+    "final_status": null
+  },
+  "overall": "complete-for-review",
+  "owner_placed_the_nginx_php_snippet": true,
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": null,
+  "routes": {
+    "admin-account-mariadb": "POST /api/v1/database-servers/{id}/admin-account (MariaDB)",
+    "admin-account-postgresql": "POST /api/v1/database-servers/{id}/admin-account (PostgreSQL)",
+    "backup": "POST /api/v1/domains/{id}/backups",
+    "domain-database-mariadb": "POST /api/v1/domains/{id}/databases (MariaDB)",
+    "domain-database-postgresql": "POST /api/v1/domains/{id}/databases (PostgreSQL)",
+    "import": "POST /api/v1/import/cpanel/apply",
+    "letsencrypt": "POST /api/v1/domains/{id}/ssl/letsencrypt (reissue)",
+    "restore": "POST /api/v1/domains/{id}/backups/restore",
+    "server-database-mariadb": "POST /api/v1/database-servers/{id}/databases (MariaDB)",
+    "server-database-postgresql": "POST /api/v1/database-servers/{id}/databases (PostgreSQL)",
+    "vpn-peer": "POST /api/v1/vpn/peers"
+  },
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "sections": {
+    "C0-prepare": {
+      "checks": 7,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T08:15:13Z",
+      "notes": [],
+      "started_at": "2026-10-09T08:15:07Z",
+      "substeps": {
+        "O14": "passed",
+        "lab isolation": "passed",
+        "section": "passed"
+      },
+      "title": "the owner's site, the engines and the lab's isolation",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "C1-domain-databases": {
+      "checks": 18,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T08:15:23Z",
+      "notes": [],
+      "started_at": "2026-10-09T08:15:13Z",
+      "substeps": {
+        "domain-database-mariadb": "passed",
+        "domain-database-postgresql": "passed",
+        "section": "passed"
+      },
+      "title": "a domain's database (MariaDB and PostgreSQL)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "C2-admin-account": {
+      "checks": 18,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T08:15:31Z",
+      "notes": [],
+      "started_at": "2026-10-09T08:15:23Z",
+      "substeps": {
+        "admin-account-mariadb": "passed",
+        "admin-account-postgresql": "passed"
+      },
+      "title": "the Panel's own account on each database engine",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "C3-server-databases": {
+      "checks": 22,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T08:15:44Z",
+      "notes": [],
+      "started_at": "2026-10-09T08:15:31Z",
+      "substeps": {
+        "O10": "passed",
+        "O14": "passed",
+        "server-database-mariadb": "passed",
+        "server-database-postgresql": "passed"
+      },
+      "title": "a database on a database server (MariaDB and PostgreSQL)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "C4-backup": {
+      "checks": 9,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T08:16:03Z",
+      "notes": [],
+      "started_at": "2026-10-09T08:15:44Z",
+      "substeps": {
+        "backup": "passed",
+        "section": "passed"
+      },
+      "title": "manual backup",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "C5-letsencrypt": {
+      "checks": 11,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T08:16:15Z",
+      "notes": [
+        "no certificate authority is reachable from this guest, so no issuance was attempted against one; the route's answer without ACME is recorded and only the guard is judged"
+      ],
+      "started_at": "2026-10-09T08:16:03Z",
+      "substeps": {
+        "O9": "passed",
+        "letsencrypt": "passed",
+        "section": "passed"
+      },
+      "title": "Let's Encrypt reissue: the guard only",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "C6-vpn-peer": {
+      "checks": 8,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T08:16:31Z",
+      "notes": [],
+      "started_at": "2026-10-09T08:16:16Z",
+      "substeps": {
+        "vpn-peer": "passed"
+      },
+      "title": "VPN peer",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "C6b-php-site": {
+      "checks": 5,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T08:16:36Z",
+      "notes": [
+        "OWNER ACTION for this reading: the server owner placed /etc/nginx/snippets/fastcgi-php.conf by hand (the text Debian's nginx package ships). Every result of C6b, C7 and C7b in this run is a result WITH that file; without it the PHP site cannot be created on this platform (the first run)."
+      ],
+      "started_at": "2026-10-09T08:16:31Z",
+      "substeps": {
+        "P5": "passed"
+      },
+      "title": "a PHP site: created, served by PHP-FPM through the web server, deleted (set3, P5)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "C7-import": {
+      "checks": 20,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T08:17:24Z",
+      "notes": [
+        "no sample cPanel archive exists in the repository, so the lab built a minimal one from the rules of the import parser (cmd/agent/cpmove_rpc.go): account file, public_html, one mailbox, one forwarder, one database dump; the dropped import's dump ends with DO SLEEP so that the import lasts long enough to drop. set3: every archive holds the directory member `homedir/public_html/` as tar writes it (the import now takes it, P4), and the mailbox's shadow entry is the sha512-crypt hash of a password the lab knows"
+      ],
+      "started_at": "2026-10-09T08:16:36Z",
+      "substeps": {
+        "P4": "passed",
+        "S1": "passed",
+        "import": "passed",
+        "section": "passed"
+      },
+      "title": "cPanel import",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "C7b-import-answers": {
+      "checks": 17,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T08:17:38Z",
+      "notes": [
+        "mail is not supported on this platform: no mailbox was imported, so S1's login is not measured here",
+        "the member with an absolute path is not site payload: the files step left it out and imported the site's own files; nothing was written at that path"
+      ],
+      "started_at": "2026-10-09T08:17:25Z",
+      "substeps": {
+        "P4": "passed",
+        "S1": "passed",
+        "section": "passed"
+      },
+      "title": "the imported mailbox's password, a failed files step, hostile archive members (set3, S1 and P4)",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "C8-restore": {
+      "checks": 24,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T08:19:54Z",
+      "notes": [
+        "the site as it is now is the site both manual backups hold: nothing changed it since C4",
+        "(vi, restart) the owner restarts the Panel's service (systemctl restart): the client saw {'status': 200, 'code': None, 'reason': None, 'replayed': None, 'seconds': 12.88, 'outcome': 'answer', 'error': None}; the row is `done`; the Agent left: finished: the document root and the rows are those of the backup; the Panel served management requests again after 1.0 s",
+        "(vi, kill) the Panel's process is killed outright (SIGKILL, as a crash or the OOM killer): the client saw {'status': None, 'code': None, 'reason': None, 'replayed': None, 'seconds': 1.02, 'outcome': 'no-answer', 'error': 'RemoteDisconnected: Remote end closed connection without response'}; the row is `interrupted`; the Agent left: finished: the document root and the rows are those of the backup; the Panel served management requests again after 1.0 s"
+      ],
+      "started_at": "2026-10-09T08:17:38Z",
+      "substeps": {
+        "restore": "passed",
+        "section": "passed"
+      },
+      "title": "domain restore, with a dropped connection and a Panel restart",
+      "unknown": [],
+      "verdict": "passed"
+    },
+    "C9-identities": {
+      "checks": 9,
+      "error": null,
+      "failed": [],
+      "finished_at": "2026-10-09T08:19:55Z",
+      "notes": [],
+      "started_at": "2026-10-09T08:19:54Z",
+      "substeps": {
+        "rows": "passed"
+      },
+      "title": "the request_identities rows",
+      "unknown": [],
+      "verdict": "passed"
+    }
+  },
+  "setup": {
+    "components": [
+      "mariadb",
+      "nginx",
+      "php-fpm",
+      "postgresql"
+    ],
+    "purpose": "web",
+    "waiting": {
+      "code": "server_setup_access_dns_required",
+      "mail_steps_reached": true,
+      "not_run": [
+        "10-panel_certificate",
+        "11-verify"
+      ],
+      "phase": "access_dns",
+      "polls": 25,
+      "stable_wait_seconds": 122.8,
+      "steps": {
+        "01-dns": "succeeded",
+        "02-service": "succeeded",
+        "03-service": "succeeded",
+        "04-service": "succeeded",
+        "05-service": "succeeded",
+        "06-service": "succeeded",
+        "07-service": "succeeded",
+        "08-firewall": "succeeded",
+        "09-access_dns": "running",
+        "10-panel_certificate": "pending",
+        "11-verify": "pending"
+      }
+    }
+  },
+  "site": {
+    "backups": {
+      "other": "full-20261009T081559.410900921Z-bfccf80cabd57b11.cpbak",
+      "reference": "full-20261009T081549.943871733Z-1777ec0f003cdde7.cpbak"
+    },
+    "database_servers": {
+      "mariadb": 1,
+      "postgresql": 2
+    },
+    "domain_id": 1,
+    "mailbox": null,
+    "site_databases": {
+      "mariadb": {
+        "id": 1,
+        "name": "set1_owner_test_seq"
+      },
+      "postgresql": {
+        "id": 3,
+        "name": "set1_owner_test_seq"
+      }
+    },
+    "site_user": "set1_owner_test",
+    "subscription_id": 2
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-09T08:09:36Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-09T08:09:31Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:09:46Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-09T08:09:36Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:11:45Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-09T08:09:46Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:11:46Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-09T08:11:45Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:11:47Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-09T08:11:46Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:15:05Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-09T08:11:47Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-09T08:15:07Z",
+      "name": "site",
+      "reason": null,
+      "started_at": "2026-10-09T08:15:05Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:15:13Z",
+      "name": "C0-prepare",
+      "reason": null,
+      "started_at": "2026-10-09T08:15:07Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:15:23Z",
+      "name": "C1-domain-databases",
+      "reason": null,
+      "started_at": "2026-10-09T08:15:13Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:15:31Z",
+      "name": "C2-admin-account",
+      "reason": null,
+      "started_at": "2026-10-09T08:15:23Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:15:44Z",
+      "name": "C3-server-databases",
+      "reason": null,
+      "started_at": "2026-10-09T08:15:31Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:16:03Z",
+      "name": "C4-backup",
+      "reason": null,
+      "started_at": "2026-10-09T08:15:44Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:16:15Z",
+      "name": "C5-letsencrypt",
+      "reason": null,
+      "started_at": "2026-10-09T08:16:03Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:16:31Z",
+      "name": "C6-vpn-peer",
+      "reason": null,
+      "started_at": "2026-10-09T08:16:16Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:16:36Z",
+      "name": "C6b-php-site",
+      "reason": null,
+      "started_at": "2026-10-09T08:16:31Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:17:25Z",
+      "name": "C7-import",
+      "reason": null,
+      "started_at": "2026-10-09T08:16:36Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:17:38Z",
+      "name": "C7b-import-answers",
+      "reason": null,
+      "started_at": "2026-10-09T08:17:25Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:19:54Z",
+      "name": "C8-restore",
+      "reason": null,
+      "started_at": "2026-10-09T08:17:38Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:19:55Z",
+      "name": "C9-identities",
+      "reason": null,
+      "started_at": "2026-10-09T08:19:54Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-09T08:19:56Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-09T08:19:55Z",
+      "verdict": "passed"
+    }
+  ],
+  "times": {
+    "admin-account-mariadb": {
+      "finished_at": "2026-10-09T08:15:27Z",
+      "started_at": "2026-10-09T08:15:23Z"
+    },
+    "admin-account-postgresql": {
+      "finished_at": "2026-10-09T08:15:31Z",
+      "started_at": "2026-10-09T08:15:27Z"
+    },
+    "backup": {
+      "finished_at": "2026-10-09T08:16:03Z",
+      "started_at": "2026-10-09T08:15:44Z"
+    },
+    "domain-database-mariadb": {
+      "finished_at": "2026-10-09T08:15:17Z",
+      "started_at": "2026-10-09T08:15:13Z"
+    },
+    "domain-database-postgresql": {
+      "finished_at": "2026-10-09T08:15:22Z",
+      "started_at": "2026-10-09T08:15:17Z"
+    },
+    "import": {
+      "finished_at": "2026-10-09T08:16:54Z",
+      "started_at": "2026-10-09T08:16:41Z"
+    },
+    "letsencrypt": {
+      "finished_at": "2026-10-09T08:16:15Z",
+      "started_at": "2026-10-09T08:16:07Z"
+    },
+    "server-database-mariadb": {
+      "finished_at": "2026-10-09T08:15:36Z",
+      "started_at": "2026-10-09T08:15:31Z"
+    },
+    "server-database-postgresql": {
+      "finished_at": "2026-10-09T08:15:42Z",
+      "started_at": "2026-10-09T08:15:38Z"
+    },
+    "vpn-peer": {
+      "finished_at": "2026-10-09T08:16:31Z",
+      "started_at": "2026-10-09T08:16:27Z"
+    }
+  }
+}

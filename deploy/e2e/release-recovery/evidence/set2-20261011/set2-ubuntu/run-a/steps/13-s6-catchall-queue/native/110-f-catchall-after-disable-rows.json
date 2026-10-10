@@ -1,0 +1,26 @@
+{
+  "at": "2026-10-09T03:45:50Z",
+  "domain_id": 1,
+  "mode": "read-panel-rows",
+  "owner_action": false,
+  "rows": {
+    "backup_schedules": [
+      {
+        "active_job_key": null,
+        "backup_type": "full",
+        "created_at": "2026-10-09 03:45:19",
+        "domain_id": 1,
+        "enabled": 1,
+        "frequency": "weekly",
+        "id": 1,
+        "last_attempt": null,
+        "last_error": null,
+        "last_run": null,
+        "last_status": null,
+        "retention": 14
+      }
+    ],
+    "mail_catch_all": []
+  },
+  "schema": "celikpanel/set1-native/v1"
+}

@@ -22,6 +22,7 @@ const dnsEnglishURL = dataURL(compile('../src/i18n/setupDNS/en.ts'));
 const dnsTurkishURL = dataURL(compile('../src/i18n/setupDNS/tr.ts'));
 const dnsCopyURL = dataURL(compile('../src/i18n/setupDNS.ts').replace("from './setupDNS/en'", `from '${dnsEnglishURL}'`).replace("from './setupDNS/tr'", `from '${dnsTurkishURL}'`));
 const guidanceURL = dataURL(compile('../src/lib/serverSetupGuidance.ts'));
+const handoverURL = dataURL(compile('../src/lib/panelHandover.ts'));
 const setup = await import(setupURL);
 const operations = await import(operationURL);
 const stub = dataURL(`
@@ -40,6 +41,7 @@ export const Spinner=()=>React.createElement('span',null,'loading');
 export const ArrowRight=()=>null, Check=()=>null, Circle=()=>null, Loader2=()=>null;
 export const ServerSetupDNSConnection=props=>React.createElement('remote-connection',props);
 export const inputClass='';
+export const AddressLink=props=>React.createElement('a',{href:props.href},props.address);
 `);
 const stepsURL = dataURL(`import React from '${reactURL}';\n` + compile('../src/components/ServerSetupSteps.tsx').replace(/from ['"]([^'"]+)['"]/g, (_, path) => `from '${stub}'`));
 const choiceURL = dataURL(`import React from '${reactURL}';\n` + compile('../src/components/ServerSetupChoice.tsx').replace(/from ['"]([^'"]+)['"]/g, (_, path) => `from '${path === 'react' ? reactURL : path.endsWith('/serverSetup') ? setupURL : stub}'`));
@@ -47,7 +49,7 @@ const componentUIURL = dataURL(`import React from '${reactURL}';\n` + compile('.
 const { ServerSetupComponents: ComponentPicker } = await import(componentUIURL);
 async function loadComponent(name) {
     const source = compile(`../src/components/${name}.tsx`).replace(/from ['"]([^'"]+)['"]/g, (_, path) => {
-        const url = path === 'react' ? reactURL : path.endsWith('/ServerSetupSteps') ? stepsURL : path.endsWith('/remoteDNS') ? remoteURL : path.endsWith('/ServerSetupComponents') ? componentUIURL : path.endsWith('/serverSetupComponents') ? componentLibURL : path.endsWith('/ServerSetupChoice') ? choiceURL : path.endsWith('/setupDNS') ? dnsCopyURL : path.endsWith('/serverSetupGuidance') ? guidanceURL : path.endsWith('/serverSetupOperation') ? operationURL : path.endsWith('/serverSetup') ? setupURL : stub;
+        const url = path === 'react' ? reactURL : path.endsWith('/ServerSetupSteps') ? stepsURL : path.endsWith('/remoteDNS') ? remoteURL : path.endsWith('/ServerSetupComponents') ? componentUIURL : path.endsWith('/serverSetupComponents') ? componentLibURL : path.endsWith('/ServerSetupChoice') ? choiceURL : path.endsWith('/setupDNS') ? dnsCopyURL : path.endsWith('/panelHandover') ? handoverURL : path.endsWith('/serverSetupGuidance') ? guidanceURL : path.endsWith('/serverSetupOperation') ? operationURL : path.endsWith('/serverSetup') ? setupURL : stub;
         return `from '${url}'`;
     });
     return (await import(dataURL(`import React from '${reactURL}';\n${source}`)))[name];
@@ -1197,4 +1199,73 @@ test('review displays independent mail renewal without its internal kit digest o
   assert.equal(findButton('setup.start').props.disabled,true);
   assert.ok(!calls.some(call=>call.url==='/api/v1/setup/start'));
  }finally{await cleanup();}
+});
+
+// 2026-10-08: the certificate step restarts the Panel once. On another address
+// than the host being secured the wizard says so in advance, and when the
+// connection drops at that step it names the restart instead of an unknown result.
+test('planned certificate handover: advance notice, then a calm state when the connection drops',async()=>{
+    const host='panel.example.com';
+    const marker={request_id:'d'.repeat(32),plan_id:'a'.repeat(32),panel_domain:host,handover:true};
+    const steps=certificate=>[{id:'service-certbot',kind:'service',target:'certbot',status:'succeeded'},{id:'panel-certificate',kind:'panel_certificate',target:host,status:certificate},{id:'service-nginx',kind:'service',target:'nginx',status:'pending'},{id:'verify',kind:'verify',target:'web',status:'pending'}];
+    const running=certificate=>({...execution(marker),panel_url:`https://${host}:2083/`,steps:steps(certificate)});
+    const text=()=>JSON.stringify(tree.toJSON());
+    const start=async(current,hostname='192.0.2.4')=>{
+        init('admin',{status:'running',draft:{...fresh().draft,panel_domain:host}});
+        store.set('celikpanel.setup.start.admin',JSON.stringify(marker));
+        let reply=()=>Response.json(current),tick=()=>{};
+        globalThis.window={...globalThis.window,setInterval:fn=>{tick=fn;return 1;},location:{hostname,port:'2083',reload(){}}};
+        globalThis.fetch=async url=>url.includes('/setup/operation')?reply():Response.json(state);
+        await mount();
+        return{drop:async()=>{reply=()=>{throw new Error('connection refused')};await act(async()=>{tick();});await act(async()=>{});},back:async next=>{reply=()=>Response.json(next);await act(async()=>{tick();});await act(async()=>{});}};
+    };
+    // Before and during the step, on the IP address: the notice and a real link.
+    for(const certificate of ['pending','running']){
+        const page=await start(running(certificate));
+        try{
+            assert.ok(text().includes('setup.handover.title')&&text().includes('setup.handover.notice'),certificate);
+            assert.ok(tree.root.findAllByType('a').some(link=>link.props.href===`https://${host}:2083/setup`&&link.props.children===`https://${host}:2083`),certificate);
+            assert.equal(tree.root.findAllByProps({role:'alert'}).length,0);
+            // The connection drops: the planned restart is named; nothing is called unknown.
+            await page.drop();
+            assert.ok(text().includes('setup.handover.dropTitle')&&text().includes('setup.handover.drop'),certificate);
+            assert.ok(!text().includes('setup.uncertain')&&!text().includes('setup.reconnecting'),certificate);
+            assert.ok(tree.root.findAllByType('a').some(link=>link.props.href===`https://${host}:2083/setup`));
+            assert.ok(findButton('setup.reconnect'),'reading the same operation stays available');
+            assert.ok(!calls.some(call=>call.options?.method==='POST'));
+            // It reconnects by itself; after the step the existing secure-address link remains.
+            await page.back(running('succeeded'));
+            assert.ok(!text().includes('setup.handover.')&&text().includes('setup.secureAddress'),certificate);
+        }finally{await cleanup();}
+    }
+    // The restart follows the finished step: still the planned one, without the advance notice.
+    let page=await start(running('succeeded'));
+    try{assert.ok(!text().includes('setup.handover.title'));await page.drop();assert.ok(text().includes('setup.handover.dropTitle'));}finally{await cleanup();}
+    // Already on the host being secured: no notice and no link, but the restart is still named.
+    page=await start(running('running'),host);
+    try{
+        assert.ok(!text().includes('setup.handover.title'));
+        await page.drop();
+        assert.ok(text().includes('setup.handover.drop')&&!text().includes('setup.handover.dropAddress'));
+    }finally{await cleanup();}
+    // A drop during another step stays an unknown result.
+    page=await start({...running('pending'),steps:[{id:'service-certbot',kind:'service',target:'certbot',status:'running'},...steps('pending').slice(1)]});
+    try{
+        assert.ok(text().includes('setup.handover.title'));
+        await page.drop();
+        assert.ok(text().includes('setup.reconnecting')&&text().includes('setup.uncertain')&&!text().includes('setup.handover.'));
+    }finally{await cleanup();}
+    // Once a later step has finished the saved marker loses its flag.
+    page=await start({...running('succeeded'),steps:steps('succeeded').map(item=>item.kind==='service'?{...item,status:'succeeded'}:item)});
+    try{assert.equal(JSON.parse(store.get('celikpanel.setup.start.admin')).handover,undefined);}finally{await cleanup();}
+});
+test('a reviewed plan with the certificate step states the restart before setup starts',async()=>{
+    init();const reviewed=plan({steps:[{id:'panel-certificate',kind:'panel_certificate',target:'panel.example.com'},{id:'verify',kind:'verify',target:'web'}]});
+    const base=globalThis.fetch;globalThis.fetch=async(url,options)=>url==='/api/v1/setup/plan'?(calls.push({url,options}),Response.json({...reviewed,revision:state.revision})):base(url,options);
+    try{
+        await mount();await toReview();
+        const content=JSON.stringify(tree.toJSON());
+        assert.ok(content.includes('setup.handover.title')&&content.includes('setup.handover.address'),content.slice(0,400));
+        assert.ok(tree.root.findAllByType('a').some(link=>link.props.href==='https://panel.example.com/setup'));
+    }finally{await cleanup();}
 });

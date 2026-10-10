@@ -1,0 +1,310 @@
+{
+  "calls": [],
+  "checks": [
+    {
+      "detail": {
+        "identities_used": 14,
+        "missing_rows": [],
+        "rows": 14,
+        "unknown_rows": []
+      },
+      "name": "rows (vii): every identity this driver used has exactly one row, and there is no other row",
+      "ok": true
+    },
+    {
+      "detail": {
+        "rows_holding_one": [],
+        "secrets_compared": "[REDACTED]"
+      },
+      "name": "rows (vii): no stored answer holds a secret this run was shown (VPN keys, minted and stored passwords)",
+      "ok": true
+    },
+    {
+      "detail": [],
+      "name": "rows (vii): the engine-account and VPN peer rows keep the status only (no stored body)",
+      "ok": true
+    },
+    {
+      "detail": {},
+      "name": "rows (vii): no stored answer contains a private key, a client configuration, a delivery token or a password field",
+      "ok": true
+    },
+    {
+      "detail": {
+        "lifetimes": [
+          86400
+        ],
+        "states": {
+          "done": 14
+        }
+      },
+      "name": "rows (vii): every row lives 24 hours and none is still `running`",
+      "ok": true
+    },
+    {
+      "detail": [],
+      "name": "rows (vii): the one interrupted row is the restore the Panel restart cut",
+      "ok": false
+    }
+  ],
+  "finished_at": "2026-10-09T03:51:14Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/107-identities-at-end.json",
+      "lab_action": false,
+      "label": "identities-at-end",
+      "mode": "read-identities",
+      "owner_action": false
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [],
+  "owner_actions": [],
+  "owner_waited_for_idle": {
+    "at": "2026-10-09T03:51:14Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.2
+  },
+  "rows": {
+    "by_route": {
+      "/api/v1/domains/{id}/backups": {
+        "retained": 2,
+        "rows": 2,
+        "states": {
+          "done": 2
+        },
+        "status_only": 0
+      },
+      "/api/v1/domains/{id}/databases": {
+        "retained": 4,
+        "rows": 4,
+        "states": {
+          "done": 4
+        },
+        "status_only": 0
+      },
+      "/api/v1/domains/{id}/ssl/letsencrypt": {
+        "retained": 3,
+        "rows": 3,
+        "states": {
+          "done": 3
+        },
+        "status_only": 0
+      },
+      "/api/v1/import/cpanel/apply": {
+        "retained": 3,
+        "rows": 3,
+        "states": {
+          "done": 3
+        },
+        "status_only": 0
+      },
+      "/api/v1/vpn/peers": {
+        "retained": 0,
+        "rows": 2,
+        "states": {
+          "done": 2
+        },
+        "status_only": 2
+      }
+    },
+    "count": 14,
+    "rows_holding_a_secret_of_this_run": [],
+    "secrets_compared": "[REDACTED]",
+    "states": {
+      "done": 14
+    },
+    "table": [
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/databases",
+        "status": "done",
+        "stored_bytes": 106,
+        "stored_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "used_for": "domain-database-mariadb (i)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/databases",
+        "status": "done",
+        "stored_bytes": 106,
+        "stored_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "used_for": "domain-database-mariadb (ii)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/databases",
+        "status": "done",
+        "stored_bytes": 111,
+        "stored_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "used_for": "domain-database-postgresql (i)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/databases",
+        "status": "done",
+        "stored_bytes": 111,
+        "stored_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "used_for": "domain-database-postgresql (ii)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/backups",
+        "status": "done",
+        "stored_bytes": 205,
+        "stored_keys": [
+          "backup",
+          "success"
+        ],
+        "used_for": "backup (i)"
+      },
+      {
+        "response_status": 200,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/backups",
+        "status": "done",
+        "stored_bytes": 205,
+        "stored_keys": [
+          "backup",
+          "success"
+        ],
+        "used_for": "backup (ii)"
+      },
+      {
+        "response_status": 500,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/ssl/letsencrypt",
+        "status": "done",
+        "stored_bytes": 52,
+        "stored_keys": [
+          "code",
+          "error"
+        ],
+        "used_for": "letsencrypt (one entry, for comparison)"
+      },
+      {
+        "response_status": 500,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/ssl/letsencrypt",
+        "status": "done",
+        "stored_bytes": 52,
+        "stored_keys": [
+          "code",
+          "error"
+        ],
+        "used_for": "letsencrypt (i)"
+      },
+      {
+        "response_status": 500,
+        "retained": 1,
+        "route": "/api/v1/domains/{id}/ssl/letsencrypt",
+        "status": "done",
+        "stored_bytes": 52,
+        "stored_keys": [
+          "code",
+          "error"
+        ],
+        "used_for": "letsencrypt (ii)"
+      },
+      {
+        "response_status": 200,
+        "retained": 0,
+        "route": "/api/v1/vpn/peers",
+        "status": "done",
+        "stored_bytes": null,
+        "stored_keys": null,
+        "used_for": "vpn-peer (i)"
+      },
+      {
+        "response_status": 200,
+        "retained": 0,
+        "route": "/api/v1/vpn/peers",
+        "status": "done",
+        "stored_bytes": null,
+        "stored_keys": null,
+        "used_for": "vpn-peer (ii)"
+      },
+      {
+        "response_status": 202,
+        "retained": 1,
+        "route": "/api/v1/import/cpanel/apply",
+        "status": "done",
+        "stored_bytes": 698,
+        "stored_keys": [
+          "domain_id",
+          "site_id",
+          "status",
+          "steps"
+        ],
+        "used_for": "import (i)"
+      },
+      {
+        "response_status": 202,
+        "retained": 1,
+        "route": "/api/v1/import/cpanel/apply",
+        "status": "done",
+        "stored_bytes": 698,
+        "stored_keys": [
+          "domain_id",
+          "site_id",
+          "status",
+          "steps"
+        ],
+        "used_for": "import (ii)"
+      },
+      {
+        "response_status": 202,
+        "retained": 1,
+        "route": "/api/v1/import/cpanel/apply",
+        "status": "done",
+        "stored_bytes": 700,
+        "stored_keys": [
+          "domain_id",
+          "site_id",
+          "status",
+          "steps"
+        ],
+        "used_for": "import (v)"
+      }
+    ]
+  },
+  "section": "C9-identities",
+  "started_at": "2026-10-09T03:51:14Z",
+  "substeps": {
+    "rows": "failed"
+  },
+  "title": "the request_identities rows",
+  "verdict": "failed"
+}

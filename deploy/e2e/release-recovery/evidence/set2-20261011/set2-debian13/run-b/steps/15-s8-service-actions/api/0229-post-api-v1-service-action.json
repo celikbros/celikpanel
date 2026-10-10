@@ -1,0 +1,88 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S8 postfix stop (main.cf holds a line Postfix refuses)",
+  "request": {
+    "body": {
+      "action": "stop",
+      "name": "postfix"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18455"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18455"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "ea3f94c61df8fab8e773770e0ffc293a"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/service/action"
+  },
+  "response": {
+    "elapsed_seconds": 3.309,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 04:04:49 GMT"
+      ],
+      [
+        "Content-Length",
+        "708"
+      ]
+    ],
+    "json": {
+      "code": "SERVICE_ACTION_UNKNOWN",
+      "error": "The action was sent, but what came of it could not be verified, so it is not reported as done. This is not a verified failure: the service may already be in the state that was asked for. The server owner runs the command shown to see the service's state, and repeats this action here only if it is still needed; nothing repeats it automatically.",
+      "vars": {
+        "action": "stop",
+        "command": "sudo postfix status",
+        "detail": "systemctl stop postfix reported success, but `postfix check` did not pass, so `postfix status` cannot say whether the master stopped: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+        "unit": "postfix"
+      }
+    },
+    "status": 502,
+    "text": null
+  }
+}

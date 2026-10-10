@@ -1,0 +1,346 @@
+{
+  "calls": [],
+  "checks": [
+    {
+      "detail": {
+        "after": {
+          "gid": 106,
+          "group": "postgres",
+          "inode": 271058,
+          "mode": "0644",
+          "owner": "postgres",
+          "uid": 104
+        },
+        "backups": [
+          {
+            "group": "postgres",
+            "mode": "0644",
+            "owner": "postgres",
+            "path": "/etc/postgresql/17/main/postgresql.conf.celikpanel-backup-20261009T040218Z"
+          }
+        ],
+        "before": {
+          "gid": 106,
+          "group": "postgres",
+          "inode": 264924,
+          "mode": "0644",
+          "owner": "postgres",
+          "uid": 104
+        },
+        "content_or_inode_changed": true,
+        "equal": true
+      },
+      "name": "/etc/postgresql/17/main/postgresql.conf: owner, group and mode are what they were before the sections",
+      "ok": true
+    },
+    {
+      "detail": [
+        {
+          "group": "postgres",
+          "mode": "0644",
+          "owner": "postgres",
+          "path": "/etc/postgresql/17/main/postgresql.conf.celikpanel-backup-20261009T040218Z"
+        }
+      ],
+      "name": "/etc/postgresql/17/main/postgresql.conf: every kept backup has the file's owner, group and mode",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "gid": 106,
+          "group": "postgres",
+          "inode": 271059,
+          "mode": "0640",
+          "owner": "postgres",
+          "uid": 104
+        },
+        "backups": [
+          {
+            "group": "postgres",
+            "mode": "0640",
+            "owner": "postgres",
+            "path": "/etc/postgresql/17/main/pg_hba.conf.celikpanel-backup-20261009T040223Z"
+          }
+        ],
+        "before": {
+          "gid": 106,
+          "group": "postgres",
+          "inode": 263951,
+          "mode": "0640",
+          "owner": "postgres",
+          "uid": 104
+        },
+        "content_or_inode_changed": true,
+        "equal": true
+      },
+      "name": "/etc/postgresql/17/main/pg_hba.conf: owner, group and mode are what they were before the sections",
+      "ok": true
+    },
+    {
+      "detail": [
+        {
+          "group": "postgres",
+          "mode": "0640",
+          "owner": "postgres",
+          "path": "/etc/postgresql/17/main/pg_hba.conf.celikpanel-backup-20261009T040223Z"
+        }
+      ],
+      "name": "/etc/postgresql/17/main/pg_hba.conf: every kept backup has the file's owner, group and mode",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "gid": 0,
+          "group": "root",
+          "inode": 135507,
+          "mode": "0644",
+          "owner": "root",
+          "uid": 0
+        },
+        "backups": [
+          {
+            "group": "root",
+            "mode": "0644",
+            "owner": "root",
+            "path": "/etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261009T040237Z"
+          }
+        ],
+        "before": {
+          "gid": 0,
+          "group": "root",
+          "inode": 134514,
+          "mode": "0644",
+          "owner": "root",
+          "uid": 0
+        },
+        "content_or_inode_changed": true,
+        "equal": true
+      },
+      "name": "/etc/mysql/mariadb.conf.d/50-server.cnf: owner, group and mode are what they were before the sections",
+      "ok": true
+    },
+    {
+      "detail": [
+        {
+          "group": "root",
+          "mode": "0644",
+          "owner": "root",
+          "path": "/etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261009T040237Z"
+        }
+      ],
+      "name": "/etc/mysql/mariadb.conf.d/50-server.cnf: every kept backup has the file's owner, group and mode",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "gid": 989,
+          "group": "celikpanel",
+          "inode": 271056,
+          "mode": "0644",
+          "owner": "root",
+          "uid": 0
+        },
+        "backups": [],
+        "before": {
+          "gid": 989,
+          "group": "celikpanel",
+          "inode": 268809,
+          "mode": "0644",
+          "owner": "root",
+          "uid": 0
+        },
+        "content_or_inode_changed": true,
+        "equal": true
+      },
+      "name": "/etc/postfix/main.cf: owner, group and mode are what they were before the sections",
+      "ok": true
+    },
+    {
+      "detail": [],
+      "name": "/etc/postfix/main.cf: every kept backup has the file's owner, group and mode",
+      "ok": true
+    },
+    {
+      "detail": {
+        "listed": {
+          "mariadb": [
+            "/etc/mysql/mariadb.cnf",
+            "/etc/mysql/mariadb.conf.d/50-server.cnf"
+          ],
+          "postgresql": [
+            "/etc/postgresql/17/main/postgresql.conf",
+            "/etc/postgresql/17/main/pg_hba.conf"
+          ]
+        },
+        "listed_more_than_once": {
+          "mariadb": [],
+          "postgresql": []
+        }
+      },
+      "name": "O5: the component scan lists each configuration file once (PostgreSQL and MariaDB)",
+      "ok": true
+    }
+  ],
+  "config_files_listed": {
+    "mariadb": [
+      "/etc/mysql/mariadb.cnf",
+      "/etc/mysql/mariadb.conf.d/50-server.cnf"
+    ],
+    "postgresql": [
+      "/etc/postgresql/17/main/postgresql.conf",
+      "/etc/postgresql/17/main/pg_hba.conf"
+    ]
+  },
+  "files": {
+    "/etc/mysql/mariadb.conf.d/50-server.cnf": {
+      "after": {
+        "gid": 0,
+        "group": "root",
+        "inode": 135507,
+        "mode": "0644",
+        "owner": "root",
+        "uid": 0
+      },
+      "backups": [
+        {
+          "group": "root",
+          "mode": "0644",
+          "owner": "root",
+          "path": "/etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261009T040237Z"
+        }
+      ],
+      "before": {
+        "gid": 0,
+        "group": "root",
+        "inode": 134514,
+        "mode": "0644",
+        "owner": "root",
+        "uid": 0
+      },
+      "content_or_inode_changed": true,
+      "equal": true
+    },
+    "/etc/postfix/main.cf": {
+      "after": {
+        "gid": 989,
+        "group": "celikpanel",
+        "inode": 271056,
+        "mode": "0644",
+        "owner": "root",
+        "uid": 0
+      },
+      "backups": [],
+      "before": {
+        "gid": 989,
+        "group": "celikpanel",
+        "inode": 268809,
+        "mode": "0644",
+        "owner": "root",
+        "uid": 0
+      },
+      "content_or_inode_changed": true,
+      "equal": true
+    },
+    "/etc/postgresql/17/main/pg_hba.conf": {
+      "after": {
+        "gid": 106,
+        "group": "postgres",
+        "inode": 271059,
+        "mode": "0640",
+        "owner": "postgres",
+        "uid": 104
+      },
+      "backups": [
+        {
+          "group": "postgres",
+          "mode": "0640",
+          "owner": "postgres",
+          "path": "/etc/postgresql/17/main/pg_hba.conf.celikpanel-backup-20261009T040223Z"
+        }
+      ],
+      "before": {
+        "gid": 106,
+        "group": "postgres",
+        "inode": 263951,
+        "mode": "0640",
+        "owner": "postgres",
+        "uid": 104
+      },
+      "content_or_inode_changed": true,
+      "equal": true
+    },
+    "/etc/postgresql/17/main/postgresql.conf": {
+      "after": {
+        "gid": 106,
+        "group": "postgres",
+        "inode": 271058,
+        "mode": "0644",
+        "owner": "postgres",
+        "uid": 104
+      },
+      "backups": [
+        {
+          "group": "postgres",
+          "mode": "0644",
+          "owner": "postgres",
+          "path": "/etc/postgresql/17/main/postgresql.conf.celikpanel-backup-20261009T040218Z"
+        }
+      ],
+      "before": {
+        "gid": 106,
+        "group": "postgres",
+        "inode": 264924,
+        "mode": "0644",
+        "owner": "postgres",
+        "uid": 104
+      },
+      "content_or_inode_changed": true,
+      "equal": true
+    }
+  },
+  "finished_at": "2026-10-09T04:02:55Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/121-meta-after-etc_postgresql_17_main_postgresql.conf.json",
+      "label": "meta-after-etc_postgresql_17_main_postgresql.conf",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/122-meta-after-etc_postgresql_17_main_pg_hba.conf.json",
+      "label": "meta-after-etc_postgresql_17_main_pg_hba.conf",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/123-meta-after-etc_mysql_mariadb.conf.d_50-server.cnf.json",
+      "label": "meta-after-etc_mysql_mariadb.conf.d_50-server.cnf",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/124-meta-after-etc_postfix_main.cf.json",
+      "label": "meta-after-etc_postfix_main.cf",
+      "mode": "read-file",
+      "owner_action": false
+    }
+  ],
+  "node": "debian13",
+  "notes": [],
+  "owner_actions": [],
+  "section": "S7-file-metadata",
+  "started_at": "2026-10-09T04:02:54Z",
+  "substeps": {
+    "/etc/mysql/mariadb.conf.d/50-server.cnf": "passed",
+    "/etc/postfix/main.cf": "passed",
+    "/etc/postgresql/17/main/pg_hba.conf": "passed",
+    "/etc/postgresql/17/main/postgresql.conf": "passed",
+    "O5": "passed"
+  },
+  "title": "owner, group and mode of the files the Panel wrote",
+  "verdict": "passed"
+}

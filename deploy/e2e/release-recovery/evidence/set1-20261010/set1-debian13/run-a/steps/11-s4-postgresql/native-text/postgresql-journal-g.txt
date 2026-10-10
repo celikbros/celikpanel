@@ -1,0 +1,8 @@
+2026-10-08T21:27:30.477402+00:00 dns-debian13 systemd[1]: Reloading postgresql@17-main.service - PostgreSQL Cluster 17-main...
+2026-10-08T21:27:30.511520+00:00 dns-debian13 systemctl[32240]: Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.
+2026-10-08T21:27:30.512518+00:00 dns-debian13 systemd[1]: postgresql@17-main.service: Control process exited, code=exited, status=5/NOTINSTALLED
+2026-10-08T21:27:30.512555+00:00 dns-debian13 systemd[1]: Reload failed for postgresql@17-main.service - PostgreSQL Cluster 17-main.
+2026-10-08T21:27:30.542757+00:00 dns-debian13 systemd[1]: Reloading postgresql@17-main.service - PostgreSQL Cluster 17-main...
+2026-10-08T21:27:30.565372+00:00 dns-debian13 systemctl[32244]: Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.
+2026-10-08T21:27:30.566024+00:00 dns-debian13 systemd[1]: postgresql@17-main.service: Control process exited, code=exited, status=5/NOTINSTALLED
+2026-10-08T21:27:30.566033+00:00 dns-debian13 systemd[1]: Reload failed for postgresql@17-main.service - PostgreSQL Cluster 17-main.

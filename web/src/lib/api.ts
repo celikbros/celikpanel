@@ -27,6 +27,8 @@ export interface Service {
 export interface ConfigResponse {
     Content: string;
     Parsed: string;
+    // The exact bytes that were read; a save carries it back.
+    Version?: string;
 }
 
 const API_BASE = '/api/v1';
@@ -493,13 +495,17 @@ class API {
         return res.json();
     }
 
-    async saveConfig(path: string, content: string) {
-        const res = await fetch(`${API_BASE}/config?path=${encodeURIComponent(path)}`, {
+    // saveConfig sends the file as the JSON the handler reads, with the version
+    // of the read it was built from. It posted text/plain before 9 Oct 2026, so
+    // every save answered 400. The answer is returned as it came: the refusal
+    // codes are the caller's to show (see lib/configFile.ts, which screens use).
+    // saveConfig dosyayı, kurulduğu okumanın sürümüyle JSON olarak gönderir.
+    async saveConfig(path: string, content: string, version: string): Promise<Response> {
+        return fetch(`${API_BASE}/config`, {
             method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            body: content,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path, content, version }),
         });
-        if (!res.ok) throw new Error('Failed to save config');
     }
 
     async serviceAction(serviceName: string, action: string) {

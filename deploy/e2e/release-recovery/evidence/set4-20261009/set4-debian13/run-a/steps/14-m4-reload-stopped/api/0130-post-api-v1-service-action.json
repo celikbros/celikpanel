@@ -1,0 +1,89 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S8 mariadb reload (while stopped)",
+  "request": {
+    "body": {
+      "action": "reload",
+      "name": "mariadb"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18521"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18521"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "0e6d332c5dd674c81b3baba84f32eab7"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/service/action"
+  },
+  "response": {
+    "elapsed_seconds": 2.251,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 10:49:03 GMT"
+      ],
+      [
+        "Content-Length",
+        "423"
+      ]
+    ],
+    "json": {
+      "code": "SERVICE_ACTION_FAILED",
+      "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts.",
+      "reason": "not_running",
+      "vars": {
+        "action": "reload",
+        "command": "sudo systemctl status mariadb",
+        "detail": "mariadb.service is inactive (dead); nothing was reloaded",
+        "unit": "mariadb"
+      }
+    },
+    "status": 409,
+    "text": null
+  }
+}

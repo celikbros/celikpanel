@@ -1,0 +1,83 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "DomainMailManager create account",
+  "request": {
+    "body": {
+      "address": "owner@set1-owner.test",
+      "password": "[REDACTED]",
+      "quota_mb": 100
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18455"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18455"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "40f6218f981f892783cee8d8911ed761"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/1/mail/accounts"
+  },
+  "response": {
+    "elapsed_seconds": 0.132,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 04:01:20 GMT"
+      ],
+      [
+        "Content-Length",
+        "24"
+      ]
+    ],
+    "json": {
+      "id": 1,
+      "success": true
+    },
+    "status": 200,
+    "text": null
+  }
+}

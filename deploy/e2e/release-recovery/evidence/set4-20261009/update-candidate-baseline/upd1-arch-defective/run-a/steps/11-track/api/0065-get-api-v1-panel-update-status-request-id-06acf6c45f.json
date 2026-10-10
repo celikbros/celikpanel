@@ -1,0 +1,83 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "SystemUpdateOperation status (read-only poll)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18571"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/panel/update/status?request_id=06acf6c45f86201439f599fd34127534"
+  },
+  "response": {
+    "elapsed_seconds": 0.02,
+    "headers": [
+      [
+        "Cache-Control",
+        "no-store"
+      ],
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 12:06:17 GMT"
+      ],
+      [
+        "Content-Length",
+        "418"
+      ]
+    ],
+    "json": {
+      "created_at": "2026-10-09T12:06:13.725286196Z",
+      "found": true,
+      "request_id": "06acf6c45f86201439f599fd34127534",
+      "status": "running",
+      "target": {
+        "arch": "amd64",
+        "archive_sha256": "ea8f81c844c6bf0e08ffb6c628448bac2da56d1060b2f5cd32f19f6947eecf01",
+        "archive_size": "65895628",
+        "commit": "52208d415f61041dd9ec27bdb9cbe0b2d5c7eac4",
+        "os": "linux",
+        "sequence": "82",
+        "version": "v0.1.0-alpha.82"
+      },
+      "updated_at": "2026-10-09T12:06:13.81595812Z"
+    },
+    "status": 200,
+    "text": null
+  }
+}

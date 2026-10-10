@@ -1,0 +1,85 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S3 stale write (the version from before the create)",
+  "request": {
+    "body": {
+      "backup_type": "files",
+      "frequency": "daily",
+      "retention": 7,
+      "version": "bs1-a451686b962008db0e385f50feb14a1922948fda32d1f34fccc0688d7752a682"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18455"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18455"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "3842d17a2fe1490836f49e4bc480a51f"
+      ]
+    ],
+    "method": "PUT",
+    "path": "/api/v1/domains/1/backups/schedule"
+  },
+  "response": {
+    "elapsed_seconds": 0.003,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 04:02:15 GMT"
+      ],
+      [
+        "Content-Length",
+        "221"
+      ]
+    ],
+    "json": {
+      "code": "SETTINGS_CHANGED",
+      "error": "The settings changed on the server since this page loaded, so nothing was changed. Reload the page to see the current settings, then make the change again.",
+      "reason": "backup_schedule"
+    },
+    "status": 409,
+    "text": null
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "at": "2026-10-09T13:11:41Z",
+  "is_active": {
+    "postfix.service": "inactive",
+    "postfix@-.service": "failed"
+  },
+  "is_failed": {
+    "postfix.service": "inactive",
+    "postfix@-.service": "failed"
+  },
+  "journal": {
+    "postfix.service": [
+      "2026-10-09T13:11:37.161138+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.",
+      "2026-10-09T13:11:37.161498+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent."
+    ],
+    "postfix@-.service": [
+      "2026-10-09T13:11:37.169731+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...",
+      "2026-10-09T13:11:37.176373+00:00 dns-ubuntu postmulti[49168]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+      "2026-10-09T13:11:38.180464+00:00 dns-ubuntu systemd[1]: postfix@-.service: Control process exited, code=exited, status=1/FAILURE",
+      "2026-10-09T13:11:38.183989+00:00 dns-ubuntu postfix/master[39290]: terminating on signal 15",
+      "2026-10-09T13:11:38.188651+00:00 dns-ubuntu systemd[1]: postfix@-.service: Failed with result 'exit-code'.",
+      "2026-10-09T13:11:38.189086+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -)."
+    ]
+  },
+  "journal_product": [
+    "2026-10-09T13:11:37.058096+00:00 dns-ubuntu panel[7494]: 2026/10/09 13:11:37 http: TLS handshake error from 127.0.0.1:33484: EOF"
+  ],
+  "journal_systemd_manager": [
+    "2026-10-09T13:11:37.161138+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.",
+    "2026-10-09T13:11:37.161498+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.",
+    "2026-10-09T13:11:37.169731+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...",
+    "2026-10-09T13:11:38.180464+00:00 dns-ubuntu systemd[1]: postfix@-.service: Control process exited, code=exited, status=1/FAILURE",
+    "2026-10-09T13:11:38.188651+00:00 dns-ubuntu systemd[1]: postfix@-.service: Failed with result 'exit-code'.",
+    "2026-10-09T13:11:38.189086+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -)."
+  ],
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "since_epoch": 1791551494,
+  "units": {
+    "postfix.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 13:04:52 UTC",
+      "ActiveExitTimestamp": "Fri 2026-10-09 13:11:37 UTC",
+      "ActiveState": "inactive",
+      "ExecMainPID": "39295",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 13:04:52 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "InactiveEnterTimestamp": "Fri 2026-10-09 13:11:37 UTC",
+      "InactiveExitTimestamp": "Fri 2026-10-09 13:04:52 UTC",
+      "InvocationID": "4ee8e1069fd24ec2a335cd420b04f2f5",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 13:11:37 UTC",
+      "SubState": "dead",
+      "Type": "oneshot"
+    },
+    "postfix@-.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 13:04:52 UTC",
+      "ActiveExitTimestamp": "Fri 2026-10-09 13:11:37 UTC",
+      "ActiveState": "failed",
+      "ExecMainPID": "0",
+      "ExecMainStartTimestamp": "",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/sbin/postmulti ; argv[]=/usr/sbin/postmulti -i - -p reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+      "InactiveEnterTimestamp": "Fri 2026-10-09 13:11:38 UTC",
+      "InactiveExitTimestamp": "Fri 2026-10-09 13:04:52 UTC",
+      "InvocationID": "d255f5f24c3b41f6ad0d69b01563dc49",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "exit-code",
+      "StateChangeTimestamp": "Fri 2026-10-09 13:11:38 UTC",
+      "SubState": "failed",
+      "Type": "forking"
+    }
+  }
+}

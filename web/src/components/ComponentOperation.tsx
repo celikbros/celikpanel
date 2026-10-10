@@ -12,6 +12,8 @@ import {
 import { createPortal } from 'react-dom';
 import { useI18n } from '../i18n';
 import { readApiError, type ApiError } from '../lib/apiError';
+import { scanRefusedBySetup } from '../lib/panelHandover';
+import { refreshRemote } from '../lib/remote';
 import { useNavigationBlocker } from '../router';
 import { showToast } from './Toast';
 
@@ -191,6 +193,15 @@ export interface InteractionBlockView {
     busy?: boolean;
     severity?: 'warning' | 'error';
     message?: string;
+    // One thing the person at the screen may choose while the lock is held.
+    // The lock never does it by itself: a timer or a poll only reads.
+    // Kilit tutulurken ekrandaki kisinin secebilecegi tek sey. Kilit bunu
+    // kendiliginden yapmaz: zamanlayici ya da yoklama yalniz okur.
+    action?: {
+        label: string;
+        busy?: boolean;
+        onAct: () => void;
+    };
     details?: Array<{
         label: string;
         value: string;
@@ -205,6 +216,14 @@ export interface InteractionBlockLease {
 interface ComponentOperationContextValue {
     operation: ComponentOperation | null;
     locked: boolean;
+    /**
+     * Locked only because the page is still asking the server whether an
+     * operation is running. Nothing is being installed; a control that says
+     * "installing" for this state says something that is not known.
+     * Yalnız, sayfa sunucuya bir işlemin sürüp sürmediğini hâlâ sorduğu için
+     * kilitli. Hiçbir şey kurulmuyor.
+     */
+    checking: boolean;
     failure: ApiError | null;
     catalogSnapshot: ManagedServicesSnapshot | null;
     startInstall: (request: InstallOperationRequest) => Promise<boolean>;
@@ -293,6 +312,23 @@ export function decodeManagedMailProfiles(
         profiles.push(profile as unknown as ManagedMailProfile);
     }
     return profileIDs.size === expectedIDs.size ? profiles : null;
+}
+
+// A component operation that has ended, either way, changed what the stored
+// component records say. Screens that show those records through the shared
+// read (lib/managedServices.ts) keep an answer for half a minute; without this
+// a PostgreSQL or MariaDB page opened right after its install went on listing
+// the files of "not installed" for up to 30 seconds (open item of 9 Oct 2026).
+// It is called once per operation, at the one point where the tracker has
+// verified the end with a fresh scan, never from a poll tick, and it only
+// reads: with no such screen open nothing is requested.
+// Biten bir bilesen islemi, kayitli bilesen kayitlarinin soyledigini degistirir.
+// O kayitlari paylasilan okumayla gosteren ekranlar yaniti yarim dakika tutar;
+// bu olmadan kurulumdan hemen sonra acilan sayfa 30 saniyeye kadar eski
+// taramayi gosteriyordu. Islem basina bir kez, izleyicinin bitisi taze taramayla
+// dogruladigi noktada cagrilir; yalniz okur.
+function refreshShownComponentRecords() {
+    refreshRemote('/api/v1/managed-services');
 }
 
 // A terminal operation may unlock the page only after every field consumed by
@@ -399,14 +435,34 @@ export function decodeManagedServicesSnapshot(value: unknown): ManagedServicesSn
     };
 }
 
+// A snapshot confirms a terminal operation when it was taken after the
+// operation finished and shows the state the operation claims. One other
+// snapshot is accepted, only where the caller says so (the scan refused by a
+// running server setup): the scan the operation itself ran as its last phase.
+// The Panel stores that scan to the second, before it records the result, and
+// refuses a requested scan while an operation runs, so the stored snapshot is
+// that scan when it is no older than the second the operation started.
+// Snapshot, işlem bittikten sonra alındıysa ve işlemin bildirdiği durumu
+// gösteriyorsa terminal işlemi doğrular. Yalnız çağıranın belirttiği durumda
+// (tarama kurulum yüzünden reddedildiğinde) işlemin kendi son aşamasında
+// yaptığı ve Panelin saniye duyarlığıyla sakladığı tarama da kabul edilir.
 function snapshotConfirmsTerminalOperation(
     snapshot: ManagedServicesSnapshot,
     operation: ComponentOperation,
+    storedByOperation = false,
 ): boolean {
     const scannedAt = Date.parse(snapshot.scanned_at || '');
     const finishedAt = Date.parse(operation.finished_at || '');
-    if (!Number.isFinite(scannedAt) || !Number.isFinite(finishedAt) || scannedAt < finishedAt) {
-        return false;
+    if (!Number.isFinite(scannedAt) || !Number.isFinite(finishedAt)) return false;
+    if (scannedAt < finishedAt) {
+        const startedAt = Date.parse(operation.started_at || '');
+        if (
+            !storedByOperation
+            || !Number.isFinite(startedAt)
+            || scannedAt < Math.floor(startedAt / 1000) * 1000
+        ) {
+            return false;
+        }
     }
     if (operation.status === 'failed') return true;
     if (operation.status !== 'succeeded') return false;
@@ -1571,6 +1627,7 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
 
             if (cancelled) return;
             setCatalogSnapshot(freshSnapshot);
+            refreshShownComponentRecords();
             finishFailure(terminalFailure);
         };
 
@@ -1672,11 +1729,32 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 // Bileşenler tüketicileri aynı snapshot'ı çizer.
                 setRefreshingCatalog(true);
                 let scanResponse: Response;
+                let storedByOperation = false;
                 try {
                     scanResponse = await fetch('/api/v1/managed-services/scan', {
                         method: 'POST',
                         cache: 'no-store',
                     });
+                    // 2026-10-08: one typed refusal has its own evidence. While a
+                    // server setup owns the host the Panel answers the scan with
+                    // 409 server_setup_busy until the whole setup ends; this
+                    // operation was one of its steps. Waiting for a new scan
+                    // would name a finished step as "installing" and call a
+                    // reachable Panel a lost connection for the rest of the
+                    // setup. The operation's own last phase already scanned the
+                    // host and stored the result, so that stored scan is read
+                    // (no new probe) and must pass the same checks below. Any
+                    // other refused, failed or unreadable reply keeps the lock.
+                    // Kurulum makineyi tutarken tarama reddedilir. İşlemin kendi
+                    // son aşaması makineyi zaten tarayıp sonucu sakladı; o kayıt
+                    // okunur ve aşağıdaki aynı denetimlerden geçmek zorundadır.
+                    // Diğer her ret, hata ya da okunamayan yanıt kilidi korur.
+                    if (await scanRefusedBySetup(scanResponse)) {
+                        storedByOperation = true;
+                        scanResponse = await fetch('/api/v1/managed-services', {
+                            cache: 'no-store',
+                        });
+                    }
                 } catch {
                     setConnectionInterrupted(true);
                     schedule(poll, RETRY_DELAY_MS);
@@ -1702,7 +1780,7 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                 const freshSnapshot = decodeManagedServicesSnapshot(snapshot);
                 if (
                     freshSnapshot === null
-                    || !snapshotConfirmsTerminalOperation(freshSnapshot, next)
+                    || !snapshotConfirmsTerminalOperation(freshSnapshot, next, storedByOperation)
                 ) {
                     setConnectionInterrupted(true);
                     schedule(poll, RETRY_DELAY_MS);
@@ -1713,6 +1791,7 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
                     : null;
 
                 setCatalogSnapshot(freshSnapshot);
+                refreshShownComponentRecords();
                 clearStoredOperation();
                 recoveryMarkerRef.current = null;
                 adoptedOperationIDRef.current = '';
@@ -1758,6 +1837,7 @@ export function ComponentOperationProvider({ children }: { children: ReactNode }
             value={{
                 operation,
                 locked,
+                checking: discoveringActive && !interactionBlocked,
                 failure,
                 catalogSnapshot,
                 startInstall,

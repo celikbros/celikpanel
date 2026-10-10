@@ -29,13 +29,16 @@ export const en = {
     'recovery.checkingTitle': 'Checking panel access',
     'recovery.checkingHelp': 'Confirming your session and panel readiness. This check does not start a server operation.',
     'recovery.authTitle': "Your session could not be checked",
-    'recovery.authHelp': "CelikPanel cannot confirm your session right now. Check again when the connection is available. Management stays closed until your session and panel access are verified.",
+    'recovery.authHelp': "CelikPanel cannot confirm your session right now. This page checks again by itself; you can also check now. Management stays closed until your session and panel access are verified.",
     'recovery.startingTitle': "The panel is starting",
-    'recovery.startingHelp': "The server is preparing panel access. This page checks readiness automatically. You can inspect the last recorded result of your update below.",
+    'recovery.startingHelp': "The server is preparing panel access. This page checks readiness automatically.",
     'recovery.availabilityTitle': "Panel readiness could not be checked",
-    'recovery.availabilityHelp': "Your session was verified, but panel readiness is unknown. Check again or reload the page. Management opens only after the server confirms readiness and access.",
+    'recovery.availabilityHelp': "Your session was verified, but panel readiness is unknown. This page checks again by itself and opens once the server confirms readiness and access. You can also check now or reload the page.",
+    'recovery.handoverTitle': "The Panel restarts once during setup",
+    'recovery.handoverHelp': "Setup secured panel access for {host}, and the Panel restarts once to start using its new certificate. Setup continues on the server. This page checks by itself and opens when the Panel is ready; you do not need to do anything.",
+    'recovery.handoverAddress': "You can also continue at the Panel’s secure address:",
     'recovery.licenseTitle': "License status could not be checked",
-    'recovery.licenseHelp': "The license result is unavailable. This does not establish that your license is missing or expired. Check again when verification is available; the server must confirm access before management resumes.",
+    'recovery.licenseHelp': "The license result is unavailable. This does not establish that your license is missing or expired. This page checks again by itself, and management opens once the server confirms access. You can also check now.",
     'recovery.bundleTitle': "The panel interface could not be loaded",
     'recovery.bundleHelp': "Reload CelikPanel to load its current interface. Your operation ID is kept. This recovery view can read the same operation without starting it again.",
     'recovery.retry': "Check panel access",
@@ -277,7 +280,11 @@ export const en = {
     // base sentence answers a refused change; .read answers the list.
     'err.CRON_NOT_INSTALLED': 'Scheduled tasks need this server’s cron service, and it is not installed, so nothing was changed. The server owner installs it once: in CelikPanel, open Components and install “Scheduled tasks (cron)”. Or, on the server, run sudo apt-get install cron on Debian/Ubuntu, or sudo pacman -S cronie and then sudo systemctl enable --now cronie on Arch. Then refresh this page and make the change again; nothing retries by itself.',
     'err.CRON_NOT_INSTALLED.read': 'Scheduled tasks cannot be shown because this server’s cron service is not installed, and no scheduled task runs until it is. The server owner installs it once: in CelikPanel, open Components and install “Scheduled tasks (cron)”. Or, on the server, run sudo apt-get install cron on Debian/Ubuntu, or sudo pacman -S cronie and then sudo systemctl enable --now cronie on Arch. Then refresh this page.',
-    'err.NATIVE_CRON_REMOVAL_REFUSED': 'CelikPanel does not remove this server’s cron service: it runs every scheduled task on the server, including tasks created outside the panel. Nothing was changed. If removing it is really intended, the server owner does so with the operating system’s package manager.',
+    'err.CURRENT_SETTINGS_UNREADABLE': 'CelikPanel could not read what is currently set on the server, so nothing was changed. Reload the page and try again.',
+    'err.CRON_JOB_DUPLICATE': 'A task with the same schedule and command already exists, so nothing was added. Change the existing task instead, or enable it if it is disabled.',
+    'err.MAIL_POLICY_INVALID': 'Nothing was saved: a mail policy value is outside what CelikPanel sets. Correct it and save again.',
+    'err.MAIL_POLICY_INVALID.dnsbl_zone': 'Nothing was saved: a DNSBL zone must be a plain host name such as zen.spamhaus.org, with zones separated by commas. Correct the zones and save again.',
+    'err.NATIVE_CRON_REMOVAL_REFUSED':'CelikPanel does not remove this server’s cron service: it runs every scheduled task on the server, including tasks created outside the panel. Nothing was changed. If removing it is really intended, the server owner does so with the operating system’s package manager.',
     // A directory above the hosting root that CelikPanel did not create blocks
     // the web server or the site users (native finding P3, 1 Oct 2026).
     'err.HOSTING_ROOT_NOT_TRAVERSABLE': 'The site was not created, and nothing was changed. The directory {directory} (mode {mode}, owner {owner}) does not let the web server or the site users through to /var/www/celikpanel, so a site there would show “not found” and its scheduled tasks would not run. CelikPanel does not change directories it did not create. The server owner decides: to allow access, run {command} on the server. Then create the site again; nothing retries by itself.',
@@ -320,6 +327,13 @@ export const en = {
     'common.agentMismatch': 'agent mismatch',
     'common.agentMismatchHint': 'The background service is running a different build ({commit}) from the panel. Re-run the update so both sides match — until then they may disagree about what is allowed.',
     'common.retry': 'Retry',
+    'common.staleNotice': 'This could not be read again from the server just now, so what is shown below is as it was at {time}. Nothing was changed. Controls that remove or change something are off until it has been read again.',
+    'common.resultUnknown': 'The connection dropped before the answer arrived, so it is not known whether the change was made. Nothing is sent a second time. What is shown is being read again; check it before repeating the action.',
+    'common.resultUnknownRead': 'The connection dropped before the answer arrived, so it is not known whether the change was made. Nothing was sent a second time. What is shown here was read again at {time}: check it before repeating the action.',
+    'common.resultUnknownMade': 'The connection dropped before the answer arrived, and nothing was sent a second time. What was read again at {time} shows the change, so it was saved. Nothing needs to be sent again.',
+    'common.resultUnknownNotMade': 'The connection dropped before the answer arrived, and nothing was sent a second time. What was read again at {time} does not show the change, so it is not known to have been saved. What you entered is still here. If the server was still working when the connection dropped, the change can appear later: check again before sending it a second time.',
+    'common.resultUnknownUnread': 'The connection dropped before the answer arrived, so it is not known whether the change was made. Nothing was sent a second time. The current state could not be read again either, so controls that change or remove something stay off. Check again.',
+    'common.checkAgain': 'Check again',
     'common.cancel': 'Cancel',
     'common.close': 'Close',
     'common.back': 'Back',
@@ -392,6 +406,55 @@ export const en = {
     'profile.wrongCurrent': 'Current password is incorrect.',
 
     'nav.import': 'Import',
+    // --- batch 2b (9 Oct 2026): database and mail configuration screens: checking,
+    // could not be read, known; saves that carry the version of what was read ---
+    'err.MAIL_POLICY_NOT_RELOADED': "The mail policy was saved to /etc/postfix/main.cf, but Postfix could not be reloaded, so Postfix is still running with the previous settings. Nothing was rolled back. On the server, run sudo postfix check to see what Postfix objects to, correct it, then run sudo systemctl reload postfix. The values shown below are the saved ones.",
+    'err.CRON_JOB_AMBIGUOUS': "This task stands twice in the crontab, so CelikPanel cannot tell which line to change and changed nothing. Remove one of the two lines on the server (sudo crontab -u <site user> -e), then reload this list.",
+    // --- end of batch 2b ---
+    // --- set1 corrections (10 Oct 2026): a reload is verified, never inferred; no cause is
+    // named that was not verified; what the server holds after a failed reload ---
+    'err.MAIL_POLICY_NOT_RELOADED.check': "Saved to /etc/postfix/main.cf, but Postfix was not reloaded: its own check refuses the configuration. A running Postfix keeps the settings it had before, so the saved values are not in effect. The line it names is below and may be one this page did not write. Nothing was rolled back. On the server, correct that line, run sudo postfix check until it prints no error, then run sudo postfix reload. The values shown below are the saved ones.",
+    'err.MAIL_POLICY_NOT_RELOADED.reload': "Saved to /etc/postfix/main.cf, and Postfix’s own check accepts the file, but the reload failed, so Postfix has not taken the saved values. Nothing was rolled back. On the server, run sudo postfix reload and read what it prints. The values shown below are the saved ones.",
+    'err.MAIL_POLICY_NOT_RELOADED.verify': "Saved to /etc/postfix/main.cf, but Postfix was no longer running after the reload, so it is not handling mail. Nothing was rolled back. On the server, run sudo postfix check, start Postfix (sudo systemctl start postfix) and confirm with sudo postfix status. The values shown below are the saved ones.",
+    'err.MAIL_POLICY_RELOAD_UNKNOWN': "Saved to /etc/postfix/main.cf, but CelikPanel could not establish whether Postfix took the saved values: a command that checks or reloads Postfix could not be run or did not answer in time. This is not a verified failure; Postfix may already be running with them. Nothing was rolled back. On the server, run sudo postfix status, then sudo postfix reload. The values shown below are the saved ones.",
+    // --- end of set1 corrections ---
+
+    // A change is sent once and answered once (D-029). Order: what happened,
+    // what was and was not changed, the next action.
+    'err.REQUEST_ID_REQUIRED': 'This page was opened before CelikPanel was updated, so the server did not accept the change and nothing was changed. Reload the page, then make the change again.',
+    'err.REQUEST_ID_REUSED': 'This change was sent with an identifier the server already used for a different change, so it was not carried out. Reload the page, then make the change again.',
+    'err.REQUEST_IN_PROGRESS': 'This change is still running on the server. It was not started a second time. Wait a little, then reload the page to see the result; do not send it again.',
+    'err.REQUEST_OUTCOME_UNKNOWN': 'CelikPanel restarted or failed while this change was running, so it is not known whether the change was completed. It will not be run again by itself. Reload the page and check the current state; make the change again only if it is missing.',
+    'err.REQUEST_COMPLETED_RESULT_NOT_RETAINED': 'This change was already made; it was not made a second time. Its result was shown only once and is not kept. Reload the page to see the current state; if you still need what was shown once (a password or a configuration file), create a new one.',
+    'err.REQUEST_COMPLETED_RESULT_NOT_RETAINED.failed': 'This change already ended with an error, and that answer is not kept; it was not tried a second time. Reload the page and check the current state; make the change again only if it is missing.',
+    'err.BACKUP_RESTORE_IN_PROGRESS': 'Another restore of this domain is still running, so this one was not started and changed nothing. Wait for it to finish and check the site; restore again only if it is still needed.',
+
+    // A change on a route that carries an identity whose result is not known
+    // (D-029 with lib/lostAnswer.ts): the first sentence says what happened, the
+    // second what the state that was read again shows.
+    'common.lostAsked': "No answer arrived for this change, and asking the server once more for the same answer brought none either, so it is not known whether the change was made. Asking again never makes the change a second time.",
+    'common.lostInterrupted': "CelikPanel restarted or failed while this change was running, so it is not known whether the change was completed. It will not be run again by itself.",
+    'common.lostRunning': "This change is still running on the server, so its result is not known yet. It was not started a second time.",
+    'common.lostStateReading': "What is shown here is being read again. Controls that change or remove something stay off until it has been read.",
+    'common.lostStateRead': "What is shown here was read again at {time}. Check it before making the change again; if the change may still be running, check again in a little while.",
+    'common.lostStateUnread': "The current state could not be read again, so controls that change or remove something stay off. Check again.",
+    'common.lostStateMade': "The answer to this change did not reach this page, but what was read again at {time} shows the change, so it was made. Nothing needs to be sent again.",
+    'common.lostStateNotMade': "What was read again at {time} does not show the change, so it is not known to have been made. What you entered is still here. If the server is still working on it, the change can appear later: check again before sending it a second time.",
+
+    // Start, Stop, Restart and Reload on the Services page (10 Oct 2026): what the
+    // service showed, the one command the server owner runs, how the work resumes.
+    // An unknown result is not a failure.
+    'err.SERVICE_ACTION_FAILED': "The action on {unit} did not take effect. On the server, run {command} to see why, correct it, then repeat the action here.",
+    'err.SERVICE_ACTION_FAILED.check': "Nothing was changed: {unit} refuses its own configuration, so the action was not carried out. On the server, run {command} to see what it objects to, correct it, then repeat the action here.",
+    'err.SERVICE_ACTION_FAILED.reload': "{unit} reported that the reload failed. CelikPanel cannot read from {unit} which settings it is running with now, so this page says neither that it kept the settings it had nor that it took the files on disk. On the server, run {command} to see why, correct it, then repeat the action here.",
+    'err.SERVICE_ACTION_FAILED.reload_reread': "The reload of {unit} was reported as failed, but PostgreSQL itself re-read its configuration files after it: the settings in the files on disk are in effect now, except those that need a restart. A step of the unit’s own reload command failed after the server had been signalled. On the server, run {command} to see which step, and correct it so that the next reload is reported as it went. The reload does not need to be repeated for these settings.",
+    'err.SERVICE_ACTION_FAILED.reload_not_reread': "The reload of {unit} failed and PostgreSQL did not re-read its configuration files: it is running with the settings it had before. On the server, run {command} to see why, correct it, then repeat the action here.",
+    'err.SERVICE_ACTION_FAILED.not_running': "{unit} is not running, so there was nothing to reload and nothing was changed. If it should run, use Start here; it reads its configuration files when it starts. To see its state on the server, run {command}.",
+    'err.SERVICE_ACTION_FAILED.start': "{unit} did not start, or did not stay running. On the server, run {command} to see why, correct it, then repeat the action here.",
+    'err.SERVICE_ACTION_FAILED.stop': "{unit} did not stop: it is still running. On the server, run {command} to see its state, then repeat the action here.",
+    'err.SERVICE_ACTION_FAILED.verify': "The action was sent, but {unit} is not in the state that was asked for. On the server, run {command} to see its state, correct the cause, then repeat the action here.",
+    'err.SERVICE_ACTION_FAILED.command': "The server's service manager did not carry out the action on {unit}. On the server, run {command} to see why, correct it, then repeat the action here.",
+    'err.SERVICE_ACTION_UNKNOWN': "The action was sent, but what came of it could not be verified, so it is not shown as done. This is not a verified failure: {unit} may already be in the state you asked for. On the server, run {command} to see its state, and repeat the action here only if it is still needed.",
 } as const;
 
 export type ShellKey = keyof typeof en;

@@ -6,6 +6,176 @@ Durable record of the **why** behind big directional choices — the reasoning
 we do not want to re-derive from scratch each time the question resurfaces.
 Code decisions live in git; this file is for strategy. Newest first.
 
+> **Erratum on dates (recorded 2026-10-09).** The date line of D-029 ("October 10, 2026")
+> and the reference in it to the "entry of 2026-10-10" are not calendar dates. D-029 was
+> committed on 2026-10-09 at 05:57 (`faa5ef085`, local time, UTC+3). Work rounds were
+> labelled 2026-10-10, 2026-10-11 and 2026-10-12 by raising the label once per round
+> instead of reading the clock; the rounds were committed on 2026-10-09 (2026-10-10:
+> 00:45-05:57; 2026-10-11: 08:05-09:12; 2026-10-12: 09:12-13:06). The labels stay, because
+> entries cite each other by them. The mapping, the commits and the three evidence
+> directories named with the same labels (`set1-20261010`, `set2-20261011`,
+> `set3-20261012`, run on 2026-10-08 and 2026-10-09) are in the erratum at the top of
+> [OPERATION-GUIDANCE.md](OPERATION-GUIDANCE.md). This file has one affected entry,
+> D-029. Entries written after this note use the clock date; a dated entry from 10, 11 or
+> 12 October 2026 other than D-029 is genuine.
+
+---
+
+## D-030 · The Panel's secure-connection rule covers the Panel's own host name only
+
+*October 10, 2026 (clock date) · Owner decision; in source with a component test, native reading pending*
+
+Over HTTPS the Panel sent `Strict-Transport-Security: max-age=31536000;
+includeSubDomains`. A browser that had opened the Panel at a name therefore
+refused plain HTTP on every name under that name for a year. Those names are
+not the Panel's: the owner may serve them elsewhere, without a certificate, or
+not through CelikPanel at all (D-022). Hosted sites never carried
+`includeSubDomains` or `preload`; a test already forbade it there. No decision
+record covered the Panel's own header.
+
+The owner decided on 2026-10-10 that the rule is limited to the Panel's own
+host name and that the change enters v0.1.0-alpha.82. The Panel now sends
+`Strict-Transport-Security: max-age=31536000` over HTTPS and nothing over plain
+HTTP. `preload` stays out.
+
+What an owner sees: nothing on the Panel itself. A browser replaces the rule it
+holds for the Panel's host with the one it reads on its next visit to the
+Panel, so the wider rule ends for that browser at that visit; a browser that
+does not open the Panel again keeps the old rule until its year runs out, and
+the owner can clear it in that browser's own settings. This was not measured in
+a browser; it is how the header is specified (RFC 6797, section 8.1).
+
+Not changed: the header's duration, the Panel's other security headers, hosted
+sites' headers.
+
+---
+
+## D-029 · Every state-changing request carries one identity; a replay never runs twice
+
+*October 10, 2026 · Planner decision on the owner's standing direction (D-024: a lost reply never starts a duplicate mutation; D-025 invariant 4); batch 1 in source with component tests, native cell pending*
+
+A real-browser inspection measured that when a connection is reset while a
+state-changing request is being sent, Chrome sends the POST again by itself:
+one click reached the Panel three times. A read-only inventory of the source at
+`7a64bda91` then classified about 115 state-changing routes: 12 are harmful when
+they run twice, 7 could not be classified, about 38 leave the state right but
+report it wrongly, and about 58 are safe. The subsystems that already carry a
+request identity in the body and keep an operation row (component install, mail
+profile install, panel certificate, server setup, DNS engine switch, panel
+update) were safe.
+
+A second hazard sat under the first. Most handlers passed the connection's
+context to the Agent call and to the database writes after it. A reset cancels
+that context: the Panel returned while the Agent kept working, so the host was
+changed and the Panel never recorded it, and the replay then ran against that
+torn first attempt.
+
+**Decision.** One mechanism for every state-changing request that does not
+already name itself.
+
+- *Identity.* The header `X-CelikPanel-Request-Id`: 32 lowercase hexadecimal
+  characters, the product's existing operation-id format. The web interface's
+  one fetch interceptor adds it to every non-GET `/api/` call whose body does
+  not already carry `request_id`; one identity per user action, a new click is
+  a new identity. It is never sent to another origin.
+- *The guard.* Inside the authenticated chain, in front of the router, backed
+  by the table `request_identities` (migration 43). A row holds the identity,
+  the acting user, the method and route pattern, the SHA-256 of method, path,
+  query and body (never the body itself), the status `running`, `done` or
+  `interrupted`, the answer's status code and, when it is kept, its content
+  type and body, and its creation and expiry times. Rows live 24 hours and are
+  removed by the hourly sweep.
+- *First arrival.* The row is written as `running`, and the handler runs on a
+  context the connection cannot cancel, bounded by the route's own time limit.
+  Its answer is stored, then sent. A handler never starts without its row.
+- *Replay.* The same identity with the same actor and the same hash is answered
+  from the row, byte for byte. While the first arrival is still running the
+  replay waits up to 20 seconds for it, then is answered `409
+  REQUEST_IN_PROGRESS` with the same identity.
+- *Reuse.* The same identity with another body, path, query or actor is `409
+  REQUEST_ID_REUSED`; nothing runs and the first answer is not shown.
+- *Interrupted.* A row found `running` when the Panel starts, or whose handler
+  failed unexpectedly, becomes `interrupted`. Its replay is `409
+  REQUEST_OUTCOME_UNKNOWN` with the next step (check the current state); the
+  request is never executed again under that identity.
+- *Secrets.* An answer that carries a one-time secret, and any answer larger
+  than 64 KiB, is not kept: only its status code is. Its replay is `409
+  REQUEST_COMPLETED_RESULT_NOT_RETAINED` (the change was made; its one-time
+  result was shown only once), or the same code with the reason `failed` when
+  the first attempt ended with an error.
+- *Not wrapped.* Routes that carry `request_id` in the body and keep an
+  operation row; routes that carry a settings version, in this batch.
+
+**Scope of batch 1.** Exactly eight of the harmful routes, each with its
+confirmed outcome:
+
+| Route (POST) | Running twice, or cut by a reset | Time limit |
+|---|---|---|
+| `domains/{id}/backups/restore` | the Agent had no lock: two or three restores extracted into the same document root and imported the same database side by side | 40 min |
+| `import/cpanel/apply` | the first import stopped between two steps with the site half imported (the domain created; files, mail, DNS or databases not), and the replay was then refused as "domain already exists" | 2 h |
+| `domains/{id}/ssl/letsencrypt` with reissue | every arrival forced another issuance against the certificate authority's duplicate-certificate allowance | 25 min |
+| `domains/{id}/backups` | no job key was sent, so the Agent took no job lock and built one archive per arrival | 35 min |
+| `database-servers/{id}/admin-account` | a new password per arrival; two arrivals interleaving, or a reset between the engine and the record, left the engine on one password and the Panel holding another | 12 min |
+| `vpn/peers` | new keys and a new address per arrival | 10 min |
+| `database-servers/{id}/databases` | MariaDB accepts the second `CREATE DATABASE IF NOT EXISTS`; the replay then failed on the existing record and its compensation dropped the database the first request had created and recorded | 15 min |
+| `domains/{id}/databases` | a reset between the Agent's create and the Panel's record left a database on the engine that the Panel does not list | 15 min |
+
+Beside the guard: the Agent refuses a second restore of a domain while one is
+running, before it reads or writes anything (`409 BACKUP_RESTORE_IN_PROGRESS`),
+so two restores cannot interleave even without the header; a manual backup
+carries its request identity as the Agent's job key; changes of one database
+server's own account run one at a time. The admin-account and VPN peer answers
+are never stored; the database route's answer is not stored when it carries a
+password minted by that request.
+
+On these eight routes a request without the header is refused with `428
+REQUEST_ID_REQUIRED` before the handler: a page opened before the update must
+not be able to run them unprotected. On these eight the web interface asks once
+more for a lost answer, after a short delay and with the same identity, and
+uses that answer. A refusal the Panel itself sent is not a lost answer,
+whatever its status. When the second asking brings no answer either, the screen
+says that the result is not known and that the answer was asked for again,
+reads the state again and keeps its changing controls off until that read
+answers. Every other route behaves as before, with or without the header.
+
+**Not covered yet, deliberately.** The other harmful routes found by the
+inventory (service and application restart, plans, enrollments); the about 38
+routes that leave the state right and report it wrongly; the 7 routes the
+inventory could not classify; the version-token routes. The guard is general;
+each of these is a later batch with its own verification of the bad outcome.
+
+**Consequences.**
+
+- A page that was open during the update is refused on the eight routes until
+  it is reloaded. Release notes say so. A client that is not the web interface
+  sends the header itself.
+- Leaving or closing the page no longer cancels these eight changes: once
+  accepted, a restore, import, issuance, backup or database change runs to its
+  end or to its time limit.
+- One-time secrets are not retained, so a lost answer that carried one cannot
+  be shown again: a VPN peer whose configuration did not arrive is revoked by
+  its existing delivery receipt and a new peer is created; a minted database
+  password is set again. The screens say so in place. The Panel has no control
+  that sets a database user's password yet, so that one is done on the engine.
+- The table is not owner data. An older Panel refuses to start on a ledger that
+  carries entry 43; rollback is the pre-update snapshot restore, as for every
+  earlier migration, and losing the table at restore is harmless: a replay of a
+  forgotten identity is then a first arrival.
+- A manual backup now reads the manifests of the domain's existing archives to
+  find one this job already published, as a scheduled backup always has.
+
+**Evidence state.** Component tests of the guard, of each of the eight routes
+through the product's dispatcher with a fake Agent (three sends in a row and
+three at once: one effect, the same answer), of the detached context, of the
+Agent's restore lock and of the backup job key; web tests of the header, the
+second asking and the texts. A real Chrome against a loopback mock that keeps
+the guard's contract: with the connection really reset, one click arrived up to
+10 times under one identity and each change was made once (resilience contract,
+entry of 2026-10-10). Not yet measured: a real browser re-sending a request
+against a real Panel, a Panel restart in the middle of one of the eight, and
+the real services. Installed servers were not touched; the decision
+does not authorise updating them.
+
 ---
 
 ## D-028 · The fresh paired PowerDNS primary is offered, within the measured envelope

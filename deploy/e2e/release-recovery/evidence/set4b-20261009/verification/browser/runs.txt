@@ -1,0 +1,7 @@
+desktop-light-en rc=0 errors []
+desktop-light-tr rc=0 errors []
+phone-light-en rc=0 errors []
+phone-light-tr rc=0 errors []
+desktop-dark-tr rc=0 errors []
+phone-dark-en rc=0 errors []
+done

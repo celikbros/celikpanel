@@ -1,0 +1,23 @@
+{
+  "backups": [],
+  "candidates_left": [],
+  "file": {
+    "exists": true,
+    "gid": 989,
+    "group": "celikpanel",
+    "inode": 271033,
+    "mode": "0644",
+    "mtime_ns": 1791494833547273999,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/postfix/main.cf",
+    "sha256": "5962ac8be1aea2152b9b19baba79b459cda2008b9e0ac0e864d50cbb85f9abbb",
+    "size": 4042,
+    "text": "# See /usr/share/postfix/main.cf.dist for a commented, more complete version\n\n# See http://www.postfix.org/COMPATIBILITY_README.html\ncompatibility_level = 3.9\n\n# Which domain that locally-originated mail appears to come from.\n# Debian policy suggests to read this value from /etc/mailname.\n#XX needs a review in postinst&config\n#myorigin = /etc/mailname\n#myorigin = $mydomain\nmyorigin = $myhostname\n\n# Text that follows the 220 code in the SMTP server's greeting banner.\n# You MUST specify $myhostname at the start due to an RFC requirement.\nsmtpd_banner = $myhostname ESMTP $mail_name (Debian)\n\n# IP protocols to use: ipv4, ipv6, or all\n# (set this explicitly so `post-install upgrade-configuration' wont complain)\ninet_protocols = all\n\n# List of \"trusted\" SMTP clients (maptype:mapname allowed) that have more\n# privileges than \"strangers\".  If mynetworks is not specified (the default),\n# mynetworks_style is used to compute its value.\n#mynetworks_style = class\n#mynetworks_style = subnet\nmynetworks_style = host\n#\nmynetworks = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128\n\n# Uncomment the next line to generate \"delayed mail\" warnings\n#delay_warning_time = 4h\n\n# List of domains (maptype:mapname allowed) that this machine considers\n# itself the final destination for.\nmydestination = $myhostname, dns-debian13, localhost.localdomain, , localhost\n\n# Maximum size of a user mailbox\nmailbox_size_limit = 0\n\n# Optional external command to use instead of mailbox delivery.  If set,\n# you must set up an alias to forward root mail to a real user.\n#mailbox_command = /usr/bin/procmail\n#mailbox_command = /usr/bin/procmail -a \"$EXTENSION\"\nmailbox_command = \n\n# List of alias maps to use to lookup local addresses.\n# Per Debian Policy it should be /etc/aliases.\nalias_maps = hash:/etc/aliases\n\n# List of alias maps to make indexes on, when running newaliases.\nalias_database = hash:/etc/aliases\n\n# Notify (or not) local biff service when new mail arrives.\n# Rarely used these days.\nbiff = no\n\n# Separator between user name and address extension (user+foo@domain)\n#recipient_delimiter = +\nrecipient_delimiter = +\n\n# A host to send \"other\" mail to\n#relayhost = $mydomain\n#relayhost = [gateway.example.com]\n#relayhost = [ip.add.re.ss]:port\n#relayhost = uucphost\nrelayhost = \n\n# Where to look for Cyrus SASL configuration files.  Upstream default is unset\n# (use compiled-in SASL library default), Debian Policy says it should be\n# /etc/postfix/sasl.\ncyrus_sasl_config_path = /etc/postfix/sasl\n\n# SMTP server RSA key and certificate in PEM format\nsmtpd_tls_key_file = /etc/ssl/celikpanel/_mail/default-key.pem\nsmtpd_tls_cert_file = /etc/ssl/celikpanel/_mail/default-cert.pem\n# SMTP Server security level: none|may|encrypt\nsmtpd_tls_security_level = may\n\n# List of CAs for SMTP Client to trust\n# Prefer this over _CApath when smtp is running chrooted\nsmtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt\n# SMTP Client TLS security level: none|may|encrypt|...\nsmtp_tls_security_level = may\n# SMTP Client TLS session cache\nsmtp_tls_session_cache_database = btree:${data_directory}/smtp_scache\nsmtpd_relay_restrictions = permit_mynetworks permit_sasl_authenticated defer_unauth_destination\nmyhostname = mail-debian13.upd1-infra.test\ninet_interfaces = all\nvirtual_mailbox_base = /var/mail/vhosts\nvirtual_mailbox_domains = hash:/etc/postfix/vmailbox_domains\nvirtual_mailbox_maps = hash:/etc/postfix/vmailbox\nvirtual_alias_maps = hash:/etc/postfix/virtual\nvirtual_transport = virtual\nvirtual_uid_maps = static:5000\nvirtual_gid_maps = static:5000\nvirtual_minimum_uid = 100\nsmtpd_milters = inet:localhost:11332\nnon_smtpd_milters = \nmilter_default_action = accept\nmilter_protocol = 6\nsmtpd_tls_protocols = >=TLSv1.2\nsmtp_tls_protocols = >=TLSv1.2\nsmtpd_tls_loglevel = 1\ntls_server_sni_maps = \nsmtpd_recipient_restrictions =\n    permit_mynetworks,\n    permit_sasl_authenticated,\n    reject_unauth_destination,\n    reject_unknown_sender_domain,\n    check_policy_service unix:private/policyd-spf\nsmtpd_client_message_rate_limit = 46\nmessage_size_limit = 31457280\n",
+    "type": "regular",
+    "uid": 0
+  },
+  "mode": "read-file",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1"
+}

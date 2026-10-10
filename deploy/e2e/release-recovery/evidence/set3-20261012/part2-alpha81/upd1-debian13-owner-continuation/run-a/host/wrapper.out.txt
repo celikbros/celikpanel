@@ -1,0 +1,26 @@
+Formatting '/var/tmp/cp-release-drill-u14-d13-oc-a/cells/beadc63d3fd1036959946467/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-u14-d13-oc-a/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-u14-d13-oc-a/cells/beadc63d3fd1036959946467/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-u14-d13-oc-a/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-u14-d13-oc-a", "cell_id": "release-recovery__9f0dfea81d606f0f", "ssh_ports": [4341, 4342]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-u14-d13-oc-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-u14-d13-oc-a", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "seed", "verdict": "passed", "reason": null}
+{"step": "pre-state", "verdict": "passed", "reason": null}
+{"step": "arm", "verdict": "passed", "reason": null}
+{"step": "owner-start", "verdict": "passed", "reason": null}
+{"step": "track", "verdict": "observed", "reason": null}
+{"step": "owner-continuation (required)", "verdict": "observed", "reason": null}
+{"step": "track-after-owner-continuation", "verdict": "passed", "reason": null}
+{"step": "terminal", "verdict": "passed", "reason": null}
+{"step": "deferred-mail-watch", "verdict": "observed", "reason": null}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"step": "verdicts", "verdict": "passed", "reason": null}
+{"step": "kind-expectation", "verdict": "passed", "reason": null}
+{"kind_measured": true, "outcome": "recovered-after-owner-continuation", "overall": "complete-for-review", "request_id": "3853e9cbda097aa62959e690b0cf0ad8"}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-u14-d13-oc-a", "evidence_retained": true}
+UPD1 cell=upd1-debian13-owner-continuation dns_mode=external lab=/var/tmp/cp-release-drill-u14-d13-oc-a driver_exit=0 evidence=/var/tmp/cp-release-drill-u14-d13-oc-a/evidence/*/upd1

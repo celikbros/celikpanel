@@ -1,0 +1,76 @@
+{
+  "at": "2026-10-09T04:11:04Z",
+  "epoch": 1791519064.7300842,
+  "mode": "read-service",
+  "owner_action": false,
+  "postgres": {
+    "answers": true,
+    "conf_load_time": "2026-10-09 04:11:02.681744+00",
+    "postmaster_alive": true,
+    "postmaster_pid": 21432,
+    "postmaster_start_time": "2026-10-09 03:59:12.531918+00",
+    "server_version": "16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)",
+    "stderr": ""
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "postgresql.service": {
+      "is_active": "active",
+      "properties": {
+        "ActiveEnterTimestamp": "Fri 2026-10-09 03:59:10 UTC",
+        "ActiveState": "active",
+        "ConsistsOf": "postgresql@16-main.service",
+        "DropInPaths": "",
+        "ExecMainPID": "20559",
+        "ExecMainStartTimestamp": "Fri 2026-10-09 03:59:10 UTC",
+        "ExecReload": "{ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[Fri 2026-10-09 04:11:02 UTC] ; stop_time=[Fri 2026-10-09 04:11:02 UTC] ; pid=68222 ; code=exited ; status=0 }",
+        "ExecStart": "{ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "FragmentPath": "/usr/lib/systemd/system/postgresql.service",
+        "InactiveEnterTimestamp": "",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "NRestarts": "0",
+        "PartOf": "",
+        "PropagatesReloadTo": "postgresql@16-main.service",
+        "ReloadPropagatedFrom": "",
+        "ReloadResult": "success",
+        "RemainAfterExit": "yes",
+        "Result": "success",
+        "SubState": "exited",
+        "Type": "oneshot",
+        "WantedBy": "multi-user.target",
+        "Wants": "postgresql@16-main.service"
+      },
+      "returncode": 0
+    },
+    "postgresql@16-main.service": {
+      "is_active": "active",
+      "properties": {
+        "ActiveEnterTimestamp": "Fri 2026-10-09 03:59:14 UTC",
+        "ActiveState": "active",
+        "ConsistsOf": "",
+        "DropInPaths": "",
+        "ExecMainPID": "21432",
+        "ExecMainStartTimestamp": "Fri 2026-10-09 03:59:14 UTC",
+        "ExecReload": "{ path=/usr/bin/pg_ctlcluster ; argv[]=/usr/bin/pg_ctlcluster --skip-systemctl-redirect 16-main reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 04:11:02 UTC] ; stop_time=[Fri 2026-10-09 04:11:02 UTC] ; pid=68219 ; code=exited ; status=0 }",
+        "ExecStart": "{ path=/usr/bin/pg_ctlcluster ; argv[]=/usr/bin/pg_ctlcluster --skip-systemctl-redirect 16-main start ; ignore_errors=yes ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "FragmentPath": "/usr/lib/systemd/system/postgresql@.service",
+        "InactiveEnterTimestamp": "",
+        "LoadState": "loaded",
+        "MainPID": "21432",
+        "NRestarts": "0",
+        "PartOf": "postgresql.service",
+        "PropagatesReloadTo": "",
+        "ReloadPropagatedFrom": "postgresql.service",
+        "ReloadResult": "success",
+        "RemainAfterExit": "no",
+        "Result": "success",
+        "SubState": "running",
+        "Type": "forking",
+        "WantedBy": "postgresql.service",
+        "Wants": ""
+      },
+      "returncode": 0
+    }
+  }
+}

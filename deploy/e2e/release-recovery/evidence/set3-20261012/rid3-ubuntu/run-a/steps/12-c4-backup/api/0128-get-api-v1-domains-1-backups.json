@@ -1,0 +1,83 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "C4 the domain's backups (DomainBackupManager)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18464"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/1/backups"
+  },
+  "response": {
+    "elapsed_seconds": 0.008,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 07:18:10 GMT"
+      ],
+      [
+        "Content-Length",
+        "372"
+      ]
+    ],
+    "json": {
+      "backups": [
+        {
+          "created_at": "2026-10-09T07:17:58.227451433Z",
+          "name": "full-20261009T071805.355890908Z-d1bd3ff2efb1c756.cpbak",
+          "origin": "manual",
+          "restorable": true,
+          "size": 201463274,
+          "type": "full"
+        },
+        {
+          "created_at": "2026-10-09T07:17:46.840158744Z",
+          "name": "full-20261009T071752.106491769Z-9b4af9b4653b5960.cpbak",
+          "origin": "manual",
+          "restorable": true,
+          "size": 201463291,
+          "type": "full"
+        }
+      ]
+    },
+    "status": 200,
+    "text": null
+  }
+}

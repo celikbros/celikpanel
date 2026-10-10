@@ -1,0 +1,27 @@
+{
+  "action": "owner-reload-hook",
+  "applied": {
+    "dropin": "/etc/systemd/system/postgresql@17-main.service.d/set1-owner-reload-hook.conf",
+    "script": "/usr/local/sbin/set1-owner-reload-hook",
+    "unit": "postgresql@17-main.service"
+  },
+  "at": "2026-10-09T07:24:18Z",
+  "daemon_reload": {
+    "argv": [
+      "systemctl",
+      "daemon-reload"
+    ],
+    "at": "2026-10-09T07:24:18Z",
+    "returncode": 0,
+    "seconds": 0.236,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "exec_reload": "ExecReload={ path=/usr/local/sbin/set1-owner-reload-hook ; argv[]=/usr/local/sbin/set1-owner-reload-hook ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n",
+  "mode": "owner-reload-hook",
+  "owner_action": true,
+  "schema": "celikpanel/set1-native/v1",
+  "script_text": "#!/bin/sh\n# owner hook: tell PostgreSQL to re-read its files, then reload the pooler\nkill -HUP \"$MAINPID\" || exit 1\nexec /usr/bin/systemctl reload set1-owner-pooler.service\n",
+  "variant": "signal-then-fail"
+}

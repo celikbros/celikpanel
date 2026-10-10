@@ -1,0 +1,20 @@
+2026-10-09T16:07:06Z
+4.2G	/var/tmp/cp-set4b-run
+922M	/var/tmp/cp-release-drill-s4b-d13-a
+661M	/var/tmp/cp-release-drill-s4b-diag-ub
+662M	/var/tmp/cp-release-drill-s4b-diag-ub-b
+662M	/var/tmp/cp-release-drill-s4b-ub-a
+1.1G	/var/tmp/cp-upd1-build/20261009t143202z
+dist directories this run's build made:
+1008M /var/tmp/cp-pair-accept/dist/0276b2351807b36c554eeb5fbd6061c5e53ec605-acceptance-license
+1008M /var/tmp/cp-pair-accept/dist/1d8d261718801fc818f30b66bebc0aa8fc42d768-acceptance-license
+1008M /var/tmp/cp-pair-accept/dist/3ad3a109b2f50301db1e0fb5b1ffd58ade84e976-acceptance-license
+1008M /var/tmp/cp-pair-accept/dist/8c11d4285826cb2bfa8c87e58d6c2f19dee2e9c4-acceptance-license
+1008M /var/tmp/cp-pair-accept/dist/9180c6f879a7b41f1b4b20b8023434116f3d92e2-acceptance-license
+overlay disks still present in this run's labs:
+none
+no dry-run lab
+working repository HEAD 2e796418de87e15b53baeb0b875ce66bca5c5f01
+candidate commit present in the working repository: no
+__pycache__ under the run directory: 1
+directories of earlier runs (not touched): /var/tmp/cp-set1-run /var/tmp/cp-set2-run /var/tmp/cp-set3-run /var/tmp/cp-set4-run 

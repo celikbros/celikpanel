@@ -1,0 +1,20 @@
+{
+  "checks": {
+    "checks": 8,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T08:30:55Z",
+    "notes": [],
+    "started_at": "2026-10-09T08:30:41Z",
+    "substeps": {
+      "vpn-peer": "passed"
+    },
+    "title": "VPN peer",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T08:30:55Z",
+  "name": "C6-vpn-peer",
+  "started_at": "2026-10-09T08:30:41Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T12:53:09Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791550387",
+      "-n",
+      "400",
+      "-u",
+      "nginx.service"
+    ],
+    "at": "2026-10-09T12:53:09Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T12:53:07.600356+00:00 dns-debian13 systemd[1]: Stopping nginx.service - A high performance web server and a reverse proxy server...\n2026-10-09T12:53:07.653624+00:00 dns-debian13 systemd[1]: nginx.service: Deactivated successfully.\n2026-10-09T12:53:07.653866+00:00 dns-debian13 systemd[1]: Stopped nginx.service - A high performance web server and a reverse proxy server.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791550387,
+  "units": [
+    "nginx.service"
+  ]
+}

@@ -1,0 +1,257 @@
+2026-10-09T22:11:30.911722+00:00 dns-debian13 systemd[1]: Starting mariadb.service - MariaDB 11.8.6 database server...
+2026-10-09T22:11:30.995821+00:00 dns-debian13 (mariadbd)[6693]: mariadb.service: Referenced but unset environment variable evaluates to an empty string: MYSQLD_OPTS, _WSREP_NEW_CLUSTER
+2026-10-09T22:11:31.030982+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] Starting MariaDB 11.8.6-MariaDB-0+deb13u1 from Debian source revision 9bfea48ce1214cc4470f6f6f8a4e30352cef84e7 server_uid ewHC0iXTbxcy4rWctYmifQ9FJtc= as process 6693
+2026-10-09T22:11:31.045863+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: Compressed tables use zlib 1.3.1
+2026-10-09T22:11:31.047157+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-09T22:11:31.047217+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-09T22:11:31.047587+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: Using io_uring
+2026-10-09T22:11:31.047979+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: innodb_buffer_pool_size_max=128m, innodb_buffer_pool_size=128m
+2026-10-09T22:11:31.052873+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: Initialized memory pressure event listener
+2026-10-09T22:11:31.052873+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-09T22:11:31.053516+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: File system buffers for log disabled (block size=512 bytes)
+2026-10-09T22:11:31.067237+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: End of log at LSN=45616
+2026-10-09T22:11:31.123456+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: Opened 3 undo tablespaces
+2026-10-09T22:11:31.123456+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+2026-10-09T22:11:31.123784+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-09T22:11:31.123813+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-09T22:11:31.124253+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: log sequence number 45616; transaction id 14
+2026-10-09T22:11:31.124253+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] Plugin 'FEEDBACK' is disabled.
+2026-10-09T22:11:31.124317+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] Plugin 'wsrep-provider' is disabled.
+2026-10-09T22:11:31.124539+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+2026-10-09T22:11:31.127585+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] InnoDB: Buffer pool(s) load completed at 261009 22:11:31
+2026-10-09T22:11:31.554289+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] Server socket created on IP: '127.0.0.1', port: '3306'.
+2026-10-09T22:11:31.558269+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] mariadbd: Event Scheduler: Loaded 0 events
+2026-10-09T22:11:31.561126+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:11:31 0 [Note] /usr/sbin/mariadbd: ready for connections.
+2026-10-09T22:11:31.561126+00:00 dns-debian13 mariadbd[6693]: Version: '11.8.6-MariaDB-0+deb13u1 from Debian'  socket: '/run/mysqld/mysqld.sock'  port: 3306  -- Please help get to 10k stars at https://github.com/MariaDB/Server
+2026-10-09T22:11:31.609975+00:00 dns-debian13 systemd[1]: Started mariadb.service - MariaDB 11.8.6 database server.
+2026-10-09T22:11:31.611250+00:00 dns-debian13 /etc/mysql/debian-start[6711]: Upgrading MariaDB tables if necessary.
+2026-10-09T22:11:31.656068+00:00 dns-debian13 /etc/mysql/debian-start[6722]: Checking for insecure root accounts.
+2026-10-09T22:11:31.683659+00:00 dns-debian13 /etc/mysql/debian-start[6728]: Triggering myisam-recover for all MyISAM tables and aria-recover for all Aria tables
+2026-10-09T22:11:39.835725+00:00 dns-debian13 systemd[1]: Starting nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:11:39.879786+00:00 dns-debian13 systemd[1]: Started nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:12:17.883839+00:00 dns-debian13 systemd[1]: Starting postgresql.service - PostgreSQL RDBMS...
+2026-10-09T22:12:17.918839+00:00 dns-debian13 systemd[1]: Finished postgresql.service - PostgreSQL RDBMS.
+2026-10-09T22:12:19.863541+00:00 dns-debian13 systemd[1]: Starting postgresql@17-main.service - PostgreSQL Cluster 17-main...
+2026-10-09T22:12:22.072237+00:00 dns-debian13 systemd[1]: Started postgresql@17-main.service - PostgreSQL Cluster 17-main.
+2026-10-09T22:12:38.102447+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-09T22:12:38.389749+00:00 dns-debian13 postfix[16535]: updating /etc/localtime => /var/spool/postfix//etc/localtime
+2026-10-09T22:12:38.389749+00:00 dns-debian13 postfix[16535]: updating /etc/services => /var/spool/postfix//etc/services
+2026-10-09T22:12:38.389749+00:00 dns-debian13 postfix[16535]: updating /etc/resolv.conf => /var/spool/postfix//etc/resolv.conf
+2026-10-09T22:12:38.389749+00:00 dns-debian13 postfix[16535]: updating /etc/hosts => /var/spool/postfix//etc/hosts
+2026-10-09T22:12:38.389749+00:00 dns-debian13 postfix[16535]: updating /etc/host.conf => /var/spool/postfix//etc/host.conf
+2026-10-09T22:12:38.389749+00:00 dns-debian13 postfix[16535]: updating /etc/nsswitch.conf => /var/spool/postfix//etc/nsswitch.conf
+2026-10-09T22:12:38.395081+00:00 dns-debian13 postfix[16538]: '/usr/lib/x86_64-linux-gnu/libnss_resolve.so.2' -> 'lib/libnss_resolve.so.2'
+2026-10-09T22:12:38.395081+00:00 dns-debian13 postfix[16538]: '/usr/lib/x86_64-linux-gnu/libnss_myhostname.so.2' -> 'lib/libnss_myhostname.so.2'
+2026-10-09T22:12:38.454182+00:00 dns-debian13 postfix[16567]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T22:12:38.454160+00:00 dns-debian13 postfix/postfix-script[16567]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T22:12:38.540552+00:00 dns-debian13 postfix/master[16593]: daemon started -- version 3.10.13, configuration /etc/postfix
+2026-10-09T22:12:38.542133+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-09T22:12:44.900666+00:00 dns-debian13 postfix/master[16593]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-09T22:12:56.257528+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:12:56.289762+00:00 dns-debian13 dovecot[19530]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up without any protocols (core dumps disabled)
+2026-10-09T22:12:56.295675+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:12:58.083740+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:12:58.120843+00:00 dns-debian13 dovecot[19530]: master: Warning: Killed with signal 15 (by pid=20066 uid=0 code=kill)
+2026-10-09T22:12:58.129611+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T22:12:58.129952+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:12:58.133407+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:12:58.176291+00:00 dns-debian13 dovecot[20071]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T22:12:58.181220+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:13:03.738032+00:00 dns-debian13 postfix/master[16593]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-09T22:13:04.273427+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:13:04.315774+00:00 dns-debian13 dovecot[20071]: master: Warning: Killed with signal 15 (by pid=20513 uid=0 code=kill)
+2026-10-09T22:13:04.349170+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T22:13:04.349473+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:13:04.353660+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:13:04.394531+00:00 dns-debian13 dovecot[20518]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T22:13:04.400991+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:13:23.018125+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:13:23.049245+00:00 dns-debian13 nginx[23814]: 2026/10/09 22:13:23 [notice] 23814#23814: signal process started
+2026-10-09T22:13:23.051686+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:13:28.891018+00:00 dns-debian13 postfix/master[16593]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-09T22:13:29.429354+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:13:29.460524+00:00 dns-debian13 dovecot[20518]: master: Warning: Killed with signal 15 (by pid=24140 uid=0 code=kill)
+2026-10-09T22:13:29.469697+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T22:13:29.469979+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:13:29.473336+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:13:29.515435+00:00 dns-debian13 dovecot[24145]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T22:13:29.522798+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:13:31.143331+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:13:31.180562+00:00 dns-debian13 dovecot[24145]: master: Warning: Killed with signal 15 (by pid=24310 uid=0 code=kill)
+2026-10-09T22:13:31.197716+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T22:13:31.198309+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:13:31.202651+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:13:31.246876+00:00 dns-debian13 dovecot[24315]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T22:13:31.254181+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:13:32.688590+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-09T22:13:32.767264+00:00 dns-debian13 postfix[24474]: postfix/postlog: stopping the Postfix mail system
+2026-10-09T22:13:32.767246+00:00 dns-debian13 postfix/postfix-script[24474]: stopping the Postfix mail system
+2026-10-09T22:13:32.769101+00:00 dns-debian13 postfix/master[16593]: terminating on signal 15
+2026-10-09T22:13:32.774988+00:00 dns-debian13 systemd[1]: postfix.service: Deactivated successfully.
+2026-10-09T22:13:32.775425+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-09T22:13:32.778145+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-09T22:13:33.064796+00:00 dns-debian13 postfix[24566]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T22:13:33.064727+00:00 dns-debian13 postfix/postfix-script[24566]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T22:13:33.153700+00:00 dns-debian13 postfix/master[24592]: daemon started -- version 3.10.13, configuration /etc/postfix
+2026-10-09T22:13:33.155704+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-09T22:13:37.191729+00:00 dns-debian13 postfix/master[24592]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-09T22:13:37.733539+00:00 dns-debian13 systemd[1]: Reloading dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:13:37.764476+00:00 dns-debian13 dovecot[24315]: master: Warning: SIGHUP received - reloading configuration
+2026-10-09T22:13:37.775688+00:00 dns-debian13 systemd[1]: Reloaded dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:13:48.710757+00:00 dns-debian13 postfix/master[24592]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-09T22:13:49.256286+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:13:49.301975+00:00 dns-debian13 dovecot[24315]: master: Warning: Killed with signal 15 (by pid=25901 uid=0 code=kill)
+2026-10-09T22:13:49.335414+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T22:13:49.335789+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:13:49.339078+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:13:49.383839+00:00 dns-debian13 dovecot[25907]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T22:13:49.391708+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:13:58.882239+00:00 dns-debian13 postfix/master[24592]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-09T22:13:59.423741+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:13:59.450958+00:00 dns-debian13 dovecot[25907]: master: Warning: Killed with signal 15 (by pid=26591 uid=0 code=kill)
+2026-10-09T22:13:59.484481+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T22:13:59.484797+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:13:59.488214+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:13:59.543226+00:00 dns-debian13 dovecot[26596]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T22:13:59.551677+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:14:45.763015+00:00 dns-debian13 postfix/master[24592]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-09T22:14:51.901290+00:00 dns-debian13 postfix/master[24592]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-09T22:14:52.467702+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:14:52.509415+00:00 dns-debian13 dovecot[26596]: master: Warning: Killed with signal 15 (by pid=27968 uid=0 code=kill)
+2026-10-09T22:14:52.543015+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T22:14:52.543308+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:14:52.546823+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:14:52.592095+00:00 dns-debian13 dovecot[27973]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T22:14:52.598227+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:14:54.233580+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:14:54.265134+00:00 dns-debian13 dovecot[27973]: master: Warning: Killed with signal 15 (by pid=28135 uid=0 code=kill)
+2026-10-09T22:14:54.298898+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-09T22:14:54.299196+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:14:54.302663+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:14:54.348316+00:00 dns-debian13 dovecot[28140]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-09T22:14:54.354407+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:14:55.799215+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-09T22:14:55.880808+00:00 dns-debian13 postfix[28299]: postfix/postlog: stopping the Postfix mail system
+2026-10-09T22:14:55.880788+00:00 dns-debian13 postfix/postfix-script[28299]: stopping the Postfix mail system
+2026-10-09T22:14:55.882508+00:00 dns-debian13 postfix/master[24592]: terminating on signal 15
+2026-10-09T22:14:55.888179+00:00 dns-debian13 systemd[1]: postfix.service: Deactivated successfully.
+2026-10-09T22:14:55.888412+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-09T22:14:55.891797+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-09T22:14:56.188532+00:00 dns-debian13 postfix[28391]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T22:14:56.188506+00:00 dns-debian13 postfix/postfix-script[28391]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T22:14:56.284813+00:00 dns-debian13 postfix/master[28417]: daemon started -- version 3.10.13, configuration /etc/postfix
+2026-10-09T22:14:56.287849+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-09T22:15:01.296520+00:00 dns-debian13 postfix/master[28417]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-09T22:15:01.842261+00:00 dns-debian13 systemd[1]: Reloading dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T22:15:01.881055+00:00 dns-debian13 dovecot[28140]: master: Warning: SIGHUP received - reloading configuration
+2026-10-09T22:15:01.891617+00:00 dns-debian13 systemd[1]: Reloaded dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-09T22:15:08.873718+00:00 dns-debian13 systemd[1]: Started cron.service - Regular background program processing daemon.
+2026-10-09T22:15:08.905646+00:00 dns-debian13 cron[29469]: (CRON) INFO (pidfile fd = 3)
+2026-10-09T22:15:08.907716+00:00 dns-debian13 cron[29469]: (CRON) INFO (Running @reboot jobs)
+2026-10-09T22:17:01.912688+00:00 dns-debian13 CRON[30351]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+2026-10-09T22:17:01.913123+00:00 dns-debian13 CRON[30353]: (root) CMD (cd / && run-parts --report /etc/cron.hourly)
+2026-10-09T22:17:01.915330+00:00 dns-debian13 CRON[30351]: pam_unix(cron:session): session closed for user root
+2026-10-09T22:17:25.737541+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:17:25.766215+00:00 dns-debian13 nginx[30469]: 2026/10/09 22:17:25 [notice] 30469#30469: signal process started
+2026-10-09T22:17:25.768270+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:17:30.443707+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:17:30.479443+00:00 dns-debian13 nginx[30737]: 2026/10/09 22:17:30 [notice] 30737#30737: signal process started
+2026-10-09T22:17:30.482945+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:17:33.506328+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:17:33.530529+00:00 dns-debian13 nginx[30951]: 2026/10/09 22:17:33 [notice] 30951#30951: signal process started
+2026-10-09T22:17:33.532358+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:17:39.998927+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:17:40.031525+00:00 dns-debian13 nginx[31274]: 2026/10/09 22:17:40 [notice] 31274#31274: signal process started
+2026-10-09T22:17:40.035711+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:17:40.215934+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:17:40.239031+00:00 dns-debian13 nginx[31296]: 2026/10/09 22:17:40 [notice] 31296#31296: signal process started
+2026-10-09T22:17:40.240578+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:17:42.227683+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:17:42.247418+00:00 dns-debian13 nginx[31423]: 2026/10/09 22:17:42 [notice] 31423#31423: signal process started
+2026-10-09T22:17:42.248302+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:17:42.592576+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:17:42.622849+00:00 dns-debian13 nginx[31455]: 2026/10/09 22:17:42 [notice] 31455#31455: signal process started
+2026-10-09T22:17:42.624379+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:17:48.786075+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:17:48.814513+00:00 dns-debian13 nginx[31761]: 2026/10/09 22:17:48 [notice] 31761#31761: signal process started
+2026-10-09T22:17:48.817635+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:17:49.017929+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:17:49.042564+00:00 dns-debian13 nginx[31783]: 2026/10/09 22:17:49 [notice] 31783#31783: signal process started
+2026-10-09T22:17:49.045170+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:17:51.067698+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:17:51.083552+00:00 dns-debian13 nginx[31876]: 2026/10/09 22:17:51 [notice] 31876#31876: signal process started
+2026-10-09T22:17:51.084654+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:17:57.967674+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:17:57.991697+00:00 dns-debian13 nginx[32309]: 2026/10/09 22:17:57 [notice] 32309#32309: signal process started
+2026-10-09T22:17:57.992817+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:18:06.587698+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-09T22:18:06.645640+00:00 dns-debian13 postfix[32570]: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T22:18:06.645621+00:00 dns-debian13 postfix[32570]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T22:18:07.648671+00:00 dns-debian13 systemd[1]: postfix.service: Control process exited, code=exited, status=1/FAILURE
+2026-10-09T22:18:07.649042+00:00 dns-debian13 postfix/master[28417]: terminating on signal 15
+2026-10-09T22:18:07.652063+00:00 dns-debian13 systemd[1]: postfix.service: Failed with result 'exit-code'.
+2026-10-09T22:18:07.652471+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-09T22:18:23.042561+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-09T22:18:23.335962+00:00 dns-debian13 postfix[33036]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T22:18:23.335932+00:00 dns-debian13 postfix/postfix-script[33036]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T22:18:23.420303+00:00 dns-debian13 postfix/master[33062]: daemon started -- version 3.10.13, configuration /etc/postfix
+2026-10-09T22:18:23.423843+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-09T22:18:25.838031+00:00 dns-debian13 postfix/smtpd[33218]: connect from localhost[127.0.0.1]
+2026-10-09T22:18:25.849004+00:00 dns-debian13 postfix/smtpd[33218]: CF420422F9: client=localhost[127.0.0.1]
+2026-10-09T22:18:25.849329+00:00 dns-debian13 postfix/cleanup[33222]: CF420422F9: removed (canceled)
+2026-10-09T22:18:25.849365+00:00 dns-debian13 postfix/smtpd[33218]: disconnect from localhost[127.0.0.1] ehlo=1 mail=1 rcpt=1 rset=1 quit=1 commands=5
+2026-10-09T22:18:25.860152+00:00 dns-debian13 postfix/submission/smtpd[33223]: connect from localhost[127.0.0.1]
+2026-10-09T22:18:25.863611+00:00 dns-debian13 postfix/submission/smtpd[33223]: disconnect from localhost[127.0.0.1] ehlo=1 quit=1 commands=2
+2026-10-09T22:18:26.652118+00:00 dns-debian13 systemd[1]: Stopping nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:18:26.695744+00:00 dns-debian13 systemd[1]: nginx.service: Deactivated successfully.
+2026-10-09T22:18:26.696052+00:00 dns-debian13 systemd[1]: Stopped nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:18:36.785623+00:00 dns-debian13 systemd[1]: Starting nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:18:36.835001+00:00 dns-debian13 systemd[1]: Started nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:18:39.194626+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:18:39 0 [Note] /usr/sbin/mariadbd (initiated by: unknown): Normal shutdown
+2026-10-09T22:18:39.194744+00:00 dns-debian13 systemd[1]: Stopping mariadb.service - MariaDB 11.8.6 database server...
+2026-10-09T22:18:39.195350+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:18:39 0 [Note] InnoDB: FTS optimize thread exiting.
+2026-10-09T22:18:39.205198+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:18:39 0 [Note] InnoDB: Starting shutdown...
+2026-10-09T22:18:39.239804+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:18:39 0 [Note] InnoDB: Dumping buffer pool(s) to /var/lib/mysql/ib_buffer_pool
+2026-10-09T22:18:39.240266+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:18:39 0 [Note] InnoDB: Buffer pool(s) dump completed at 261009 22:18:39
+2026-10-09T22:18:39.457009+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:18:39 0 [Note] InnoDB: Removed temporary tablespace data file: "./ibtmp1"
+2026-10-09T22:18:39.457009+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:18:39 0 [Note] InnoDB: Shutdown completed; log sequence number 90692; transaction id 31
+2026-10-09T22:18:39.463154+00:00 dns-debian13 mariadbd[6693]: 2026-10-09 22:18:39 0 [Note] /usr/sbin/mariadbd: Shutdown complete
+2026-10-09T22:18:39.467908+00:00 dns-debian13 systemd[1]: mariadb.service: Deactivated successfully.
+2026-10-09T22:18:39.468202+00:00 dns-debian13 systemd[1]: Stopped mariadb.service - MariaDB 11.8.6 database server.
+2026-10-09T22:18:39.468517+00:00 dns-debian13 systemd[1]: mariadb.service: Consumed 1.433s CPU time, 127.8M memory peak.
+2026-10-09T22:18:49.550813+00:00 dns-debian13 systemd[1]: Starting mariadb.service - MariaDB 11.8.6 database server...
+2026-10-09T22:18:49.619102+00:00 dns-debian13 (mariadbd)[34092]: mariadb.service: Referenced but unset environment variable evaluates to an empty string: MYSQLD_OPTS, _WSREP_NEW_CLUSTER
+2026-10-09T22:18:49.650629+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] Starting MariaDB 11.8.6-MariaDB-0+deb13u1 from Debian source revision 9bfea48ce1214cc4470f6f6f8a4e30352cef84e7 server_uid ewHC0iXTbxcy4rWctYmifQ9FJtc= as process 34092
+2026-10-09T22:18:49.664124+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: Compressed tables use zlib 1.3.1
+2026-10-09T22:18:49.665478+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-09T22:18:49.665532+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-09T22:18:49.665721+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: Using io_uring
+2026-10-09T22:18:49.666163+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: innodb_buffer_pool_size_max=128m, innodb_buffer_pool_size=128m
+2026-10-09T22:18:49.670397+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: Initialized memory pressure event listener
+2026-10-09T22:18:49.670397+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-09T22:18:49.671101+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: File system buffers for log disabled (block size=512 bytes)
+2026-10-09T22:18:49.681224+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: End of log at LSN=90692
+2026-10-09T22:18:49.740436+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: Opened 3 undo tablespaces
+2026-10-09T22:18:49.740436+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+2026-10-09T22:18:49.740624+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-09T22:18:49.740675+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-09T22:18:49.741046+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: log sequence number 90692; transaction id 32
+2026-10-09T22:18:49.741297+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] Plugin 'FEEDBACK' is disabled.
+2026-10-09T22:18:49.741297+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] Plugin 'wsrep-provider' is disabled.
+2026-10-09T22:18:49.741487+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+2026-10-09T22:18:49.745285+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:49 0 [Note] InnoDB: Buffer pool(s) load completed at 261009 22:18:49
+2026-10-09T22:18:50.240413+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:50 0 [Note] Server socket created on IP: '127.0.0.1', port: '3306'.
+2026-10-09T22:18:50.247535+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:50 0 [Note] mariadbd: Event Scheduler: Loaded 0 events
+2026-10-09T22:18:50.248368+00:00 dns-debian13 mariadbd[34092]: 2026-10-09 22:18:50 0 [Note] /usr/sbin/mariadbd: ready for connections.
+2026-10-09T22:18:50.248368+00:00 dns-debian13 mariadbd[34092]: Version: '11.8.6-MariaDB-0+deb13u1 from Debian'  socket: '/run/mysqld/mysqld.sock'  port: 3306  -- Please help get to 10k stars at https://github.com/MariaDB/Server
+2026-10-09T22:18:50.296731+00:00 dns-debian13 systemd[1]: Started mariadb.service - MariaDB 11.8.6 database server.
+2026-10-09T22:18:50.298582+00:00 dns-debian13 /etc/mysql/debian-start[34109]: Upgrading MariaDB tables if necessary.
+2026-10-09T22:18:52.830848+00:00 dns-debian13 systemd[1]: postgresql.service: Deactivated successfully.
+2026-10-09T22:18:52.831193+00:00 dns-debian13 systemd[1]: Stopped postgresql.service - PostgreSQL RDBMS.
+2026-10-09T22:18:52.832436+00:00 dns-debian13 systemd[1]: Stopping postgresql@17-main.service - PostgreSQL Cluster 17-main...
+2026-10-09T22:18:52.991405+00:00 dns-debian13 systemd[1]: postgresql@17-main.service: Deactivated successfully.
+2026-10-09T22:18:52.992102+00:00 dns-debian13 systemd[1]: Stopped postgresql@17-main.service - PostgreSQL Cluster 17-main.
+2026-10-09T22:19:03.772745+00:00 dns-debian13 systemd[1]: Starting postgresql@17-main.service - PostgreSQL Cluster 17-main...
+2026-10-09T22:19:05.978850+00:00 dns-debian13 systemd[1]: Started postgresql@17-main.service - PostgreSQL Cluster 17-main.
+2026-10-09T22:19:05.980797+00:00 dns-debian13 systemd[1]: Starting postgresql.service - PostgreSQL RDBMS...
+2026-10-09T22:19:06.001524+00:00 dns-debian13 systemd[1]: Finished postgresql.service - PostgreSQL RDBMS.

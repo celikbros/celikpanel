@@ -1,0 +1,10 @@
+2026-10-09T17:25:51.429745+00:00 dns-debian13 postfix/submission/smtpd[41270]: connect from localhost[127.0.0.1]
+2026-10-09T17:25:51.431630+00:00 dns-debian13 postfix/submission/smtpd[41270]: disconnect from localhost[127.0.0.1] quit=1 commands=1
+2026-10-09T17:25:51.871403+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-09T17:25:51.938564+00:00 dns-debian13 postfix[42204]: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T17:25:51.938494+00:00 dns-debian13 postfix[42204]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T17:25:52.942395+00:00 dns-debian13 systemd[1]: postfix.service: Control process exited, code=exited, status=1/FAILURE
+2026-10-09T17:25:52.947037+00:00 dns-debian13 systemd[1]: postfix.service: Failed with result 'exit-code'.
+2026-10-09T17:25:52.947602+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-09T17:25:52.948211+00:00 dns-debian13 systemd[1]: postfix.service: Consumed 1.017s CPU time, 10M memory peak.
+2026-10-09T17:25:52.942783+00:00 dns-debian13 postfix/master[23970]: terminating on signal 15

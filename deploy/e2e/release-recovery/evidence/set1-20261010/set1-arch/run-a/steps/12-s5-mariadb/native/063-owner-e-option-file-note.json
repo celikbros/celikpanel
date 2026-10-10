@@ -1,0 +1,38 @@
+{
+  "action": "owner-edit",
+  "after": {
+    "exists": true,
+    "gid": 0,
+    "group": "root",
+    "inode": 88907,
+    "mode": "0644",
+    "mtime_ns": 1791496696089075784,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/my.cnf",
+    "sha256": "032553d311d845d7bfddec6b4c808e381908c3dc001d67a79a6eb78078d9aa63",
+    "size": 273,
+    "type": "regular",
+    "uid": 0
+  },
+  "at": "2026-10-08T21:58:16Z",
+  "before": {
+    "exists": true,
+    "gid": 0,
+    "group": "root",
+    "inode": 88907,
+    "mode": "0644",
+    "mtime_ns": 1791496693966436242,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/my.cnf",
+    "sha256": "f2d49ed64ffd8325025cddfd2393156697643723a0edb12a687c3f01efbdf3bd",
+    "size": 225,
+    "type": "regular",
+    "uid": 0
+  },
+  "mode": "owner-edit",
+  "owner_action": true,
+  "path": "/etc/my.cnf",
+  "schema": "celikpanel/set1-native/v1"
+}

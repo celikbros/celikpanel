@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 18,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T04:32:19Z",
+    "notes": [],
+    "started_at": "2026-10-09T04:32:09Z",
+    "substeps": {
+      "domain-database-mariadb": "passed",
+      "domain-database-postgresql": "passed",
+      "section": "passed"
+    },
+    "title": "a domain's database (MariaDB and PostgreSQL)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T04:32:19Z",
+  "name": "C1-domain-databases",
+  "started_at": "2026-10-09T04:32:09Z",
+  "verdict": "passed"
+}

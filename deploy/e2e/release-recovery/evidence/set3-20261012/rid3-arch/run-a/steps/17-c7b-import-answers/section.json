@@ -1,0 +1,1273 @@
+{
+  "calls": [
+    {
+      "answer": {
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "error": "The import did not start: the site for this domain could not be created on this server, so no file, mailbox, DNS record or database of the archive was imported. Whether a part of the new site itself was left behind is not known from this answer: open Domains to see whether the domain is listed. The server owner reads the step that failed on the server with sudo journalctl -u celikpanel-agent, corrects it, and starts the import again; nothing starts it again automatically."
+      },
+      "at": "2026-10-09T07:30:56Z",
+      "body_bytes": 522,
+      "body_sha256": "53460af9ac942c6321651e6d8a40cd469eff31bf7e8cee274b8902bf60e51c8a",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "c6874f1e1f01d2985822ffdf738b02c4"
+      },
+      "json": {
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "error": "The import did not start: the site for this domain could not be created on this server, so no file, mailbox, DNS record or database of the archive was imported. Whether a part of the new site itself was left behind is not known from this answer: open Domains to see whether the domain is listed. The server owner reads the step that failed on the server with sudo journalctl -u celikpanel-agent, corrects it, and starts the import again; nothing starts it again automatically."
+      },
+      "label": "import: an archive with a hostile member (dotdot)",
+      "n": 89,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": false,
+          "domain": "set3-hostile-dotdot.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s3hdd.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "c6874f1e1f01d2985822ffdf738b02c4",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 1.97,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 502,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "error": "The import did not start: the site for this domain could not be created on this server, so no file, mailbox, DNS record or database of the archive was imported. Whether a part of the new site itself was left behind is not known from this answer: open Domains to see whether the domain is listed. The server owner reads the step that failed on the server with sudo journalctl -u celikpanel-agent, corrects it, and starts the import again; nothing starts it again automatically."
+      },
+      "at": "2026-10-09T07:30:59Z",
+      "body_bytes": 522,
+      "body_sha256": "53460af9ac942c6321651e6d8a40cd469eff31bf7e8cee274b8902bf60e51c8a",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "c6874f1e1f01d2985822ffdf738b02c4",
+        "X-Celikpanel-Request-Replayed": "1"
+      },
+      "json": {
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "error": "The import did not start: the site for this domain could not be created on this server, so no file, mailbox, DNS record or database of the archive was imported. Whether a part of the new site itself was left behind is not known from this answer: open Domains to see whether the domain is listed. The server owner reads the step that failed on the server with sudo journalctl -u celikpanel-agent, corrects it, and starts the import again; nothing starts it again automatically."
+      },
+      "label": "import: the same partial import again (the same identity)",
+      "n": 90,
+      "outcome": "answer",
+      "replayed": "1",
+      "request": {
+        "body": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": false,
+          "domain": "set3-hostile-dotdot.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s3hdd.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "c6874f1e1f01d2985822ffdf738b02c4",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 0.003,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 502,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "error": "The import did not start: the site for this domain could not be created on this server, so no file, mailbox, DNS record or database of the archive was imported. Whether a part of the new site itself was left behind is not known from this answer: open Domains to see whether the domain is listed. The server owner reads the step that failed on the server with sudo journalctl -u celikpanel-agent, corrects it, and starts the import again; nothing starts it again automatically."
+      },
+      "at": "2026-10-09T07:31:01Z",
+      "body_bytes": 522,
+      "body_sha256": "53460af9ac942c6321651e6d8a40cd469eff31bf7e8cee274b8902bf60e51c8a",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "c5d8b3c2a572d7badb1e67cbe5318bd1"
+      },
+      "json": {
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "error": "The import did not start: the site for this domain could not be created on this server, so no file, mailbox, DNS record or database of the archive was imported. Whether a part of the new site itself was left behind is not known from this answer: open Domains to see whether the domain is listed. The server owner reads the step that failed on the server with sudo journalctl -u celikpanel-agent, corrects it, and starts the import again; nothing starts it again automatically."
+      },
+      "label": "import: an archive with a hostile member (absolute)",
+      "n": 91,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "do_databases": false,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": false,
+          "domain": "set3-hostile-absolute.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s3hab.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "c5d8b3c2a572d7badb1e67cbe5318bd1",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 1.918,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 502,
+      "text": null
+    },
+    {
+      "answer": {
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "error": "The import did not start: the site for this domain could not be created on this server, so no file, mailbox, DNS record or database of the archive was imported. Whether a part of the new site itself was left behind is not known from this answer: open Domains to see whether the domain is listed. The server owner reads the step that failed on the server with sudo journalctl -u celikpanel-agent, corrects it, and starts the import again; nothing starts it again automatically."
+      },
+      "at": "2026-10-09T07:31:05Z",
+      "body_bytes": 522,
+      "body_sha256": "53460af9ac942c6321651e6d8a40cd469eff31bf7e8cee274b8902bf60e51c8a",
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "headers": {
+        "Content-Type": "application/json",
+        "X-Celikpanel-Request-Id": "b5a3a9812e3deef9e0f0a2a588559c2a"
+      },
+      "json": {
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "error": "The import did not start: the site for this domain could not be created on this server, so no file, mailbox, DNS record or database of the archive was imported. Whether a part of the new site itself was left behind is not known from this answer: open Domains to see whether the domain is listed. The server owner reads the step that failed on the server with sudo journalctl -u celikpanel-agent, corrects it, and starts the import again; nothing starts it again automatically."
+      },
+      "label": "import: an archive with a hostile member (symlink)",
+      "n": 92,
+      "outcome": "answer",
+      "replayed": null,
+      "request": {
+        "body": {
+          "do_databases": false,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": false,
+          "domain": "set3-hostile-symlink.test",
+          "path": "/var/lib/celikpanel-imports/cpmove-s3hsl.tar.gz",
+          "subscription_id": 2
+        },
+        "header_sent": true,
+        "identity": "b5a3a9812e3deef9e0f0a2a588559c2a",
+        "method": "POST",
+        "path": "/api/v1/import/cpanel/apply"
+      },
+      "seconds": 1.894,
+      "sent_secret_values_in_the_raw_answer": "[REDACTED]",
+      "status": 502,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "archive": "hostile-dotdot",
+        "at": "2026-10-09T07:30:55Z",
+        "databases": [
+          "s3hdd_app"
+        ],
+        "domains": [
+          "set3-hostile-dotdot.test"
+        ],
+        "hash_shaped_values_in_the_raw_answer": 0,
+        "keys": [
+          "databases",
+          "dns_zones",
+          "domains",
+          "forwarders",
+          "mail_accounts",
+          "main_domain",
+          "public_html",
+          "site_bytes",
+          "username"
+        ],
+        "label": "inspect the archive of set3-hostile-dotdot.test (ImportPage preview)",
+        "mail_accounts": [
+          {
+            "domain": "set3-hostile-dotdot.test",
+            "has_password": true,
+            "quota_mb": 256,
+            "user": "info"
+          }
+        ],
+        "mailbox_keys": [
+          "domain",
+          "has_password",
+          "quota_mb",
+          "user"
+        ],
+        "public_html": true,
+        "raw_bytes": 415,
+        "status": 200
+      },
+      "name": "the preview of the hostile-dotdot archive names its domain, its mailbox and its database",
+      "ok": true
+    },
+    {
+      "detail": {
+        "archive": "hostile-dotdot",
+        "at": "2026-10-09T07:30:55Z",
+        "databases": [
+          "s3hdd_app"
+        ],
+        "domains": [
+          "set3-hostile-dotdot.test"
+        ],
+        "hash_shaped_values_in_the_raw_answer": 0,
+        "keys": [
+          "databases",
+          "dns_zones",
+          "domains",
+          "forwarders",
+          "mail_accounts",
+          "main_domain",
+          "public_html",
+          "site_bytes",
+          "username"
+        ],
+        "label": "inspect the archive of set3-hostile-dotdot.test (ImportPage preview)",
+        "mail_accounts": [
+          {
+            "domain": "set3-hostile-dotdot.test",
+            "has_password": true,
+            "quota_mb": 256,
+            "user": "info"
+          }
+        ],
+        "mailbox_keys": [
+          "domain",
+          "has_password",
+          "quota_mb",
+          "user"
+        ],
+        "public_html": true,
+        "raw_bytes": 415,
+        "status": 200
+      },
+      "name": "S1: the preview of the hostile-dotdot archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only",
+      "ok": true
+    },
+    {
+      "detail": {
+        "archive_files_in_the_docroot": [],
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "docroot_files": [],
+        "domain_status": null,
+        "entries_outside": [],
+        "entries_outside_before": [],
+        "hostile_members": [
+          {
+            "name": "cpmove-s3hdd/homedir/public_html/../../set3-escape-dotdot.txt",
+            "type": "file"
+          }
+        ],
+        "import_status": null,
+        "imported": null,
+        "kind": "dotdot",
+        "message": null,
+        "native": {
+          "database_on_engine": false,
+          "database_row": [],
+          "docroot_sha256": null,
+          "domain_row": false,
+          "files": null,
+          "forwardings": 0,
+          "mailboxes": [],
+          "rows": null,
+          "status": null
+        },
+        "non_regular_in_the_docroot": null,
+        "not_imported": null,
+        "request": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": false
+        },
+        "site_home_entries": null,
+        "status": 502,
+        "steps": []
+      },
+      "name": "P4 (dotdot): nothing of the hostile member exists anywhere on the server, the document root holds no link and no stage directory was left in the site's home",
+      "ok": true
+    },
+    {
+      "detail": {},
+      "name": "P4 (dotdot): the files step refuses the archive",
+      "ok": false
+    },
+    {
+      "detail": {
+        "archive_files_in_the_docroot": [],
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "docroot_files": [],
+        "domain_status": null,
+        "entries_outside": [],
+        "entries_outside_before": [],
+        "hostile_members": [
+          {
+            "name": "cpmove-s3hdd/homedir/public_html/../../set3-escape-dotdot.txt",
+            "type": "file"
+          }
+        ],
+        "import_status": null,
+        "imported": null,
+        "kind": "dotdot",
+        "message": null,
+        "native": {
+          "database_on_engine": false,
+          "database_row": [],
+          "docroot_sha256": null,
+          "domain_row": false,
+          "files": null,
+          "forwardings": 0,
+          "mailboxes": [],
+          "rows": null,
+          "status": null
+        },
+        "non_regular_in_the_docroot": null,
+        "not_imported": null,
+        "request": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": false
+        },
+        "site_home_entries": null,
+        "status": 502,
+        "steps": []
+      },
+      "name": "P4 (dotdot): the import answers 200 with status `partial`, code IMPORT_PARTIAL and the domain left `pending`",
+      "ok": false
+    },
+    {
+      "detail": {
+        "archive_files_in_the_docroot": [],
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "docroot_files": [],
+        "domain_status": null,
+        "entries_outside": [],
+        "entries_outside_before": [],
+        "hostile_members": [
+          {
+            "name": "cpmove-s3hdd/homedir/public_html/../../set3-escape-dotdot.txt",
+            "type": "file"
+          }
+        ],
+        "import_status": null,
+        "imported": null,
+        "kind": "dotdot",
+        "message": null,
+        "native": {
+          "database_on_engine": false,
+          "database_row": [],
+          "docroot_sha256": null,
+          "domain_row": false,
+          "files": null,
+          "forwardings": 0,
+          "mailboxes": [],
+          "rows": null,
+          "status": null
+        },
+        "non_regular_in_the_docroot": null,
+        "not_imported": null,
+        "request": {
+          "do_databases": true,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": false
+        },
+        "site_home_entries": null,
+        "status": 502,
+        "steps": []
+      },
+      "name": "P4 (dotdot): `imported` and `not_imported` are the steps' own results and are true on the server (the domain row is `pending`; what is listed as imported is there; none of the archive's site files is in the document root)",
+      "ok": false
+    },
+    {
+      "detail": {
+        "replay": {
+          "code": "IMPORT_SITE_NOT_CREATED",
+          "error": null,
+          "outcome": "answer",
+          "reason": null,
+          "replayed": "1",
+          "seconds": 0.003,
+          "status": 502
+        },
+        "unchanged": true
+      },
+      "name": "P4: the replay of a partial import is the stored answer byte for byte and imports nothing again",
+      "ok": false
+    },
+    {
+      "detail": {
+        "archive": "hostile-absolute",
+        "at": "2026-10-09T07:31:00Z",
+        "databases": [
+          "s3hab_app"
+        ],
+        "domains": [
+          "set3-hostile-absolute.test"
+        ],
+        "hash_shaped_values_in_the_raw_answer": 0,
+        "keys": [
+          "databases",
+          "dns_zones",
+          "domains",
+          "forwarders",
+          "mail_accounts",
+          "main_domain",
+          "public_html",
+          "site_bytes",
+          "username"
+        ],
+        "label": "inspect the archive of set3-hostile-absolute.test (ImportPage preview)",
+        "mail_accounts": [
+          {
+            "domain": "set3-hostile-absolute.test",
+            "has_password": true,
+            "quota_mb": 256,
+            "user": "info"
+          }
+        ],
+        "mailbox_keys": [
+          "domain",
+          "has_password",
+          "quota_mb",
+          "user"
+        ],
+        "public_html": true,
+        "raw_bytes": 425,
+        "status": 200
+      },
+      "name": "the preview of the hostile-absolute archive names its domain, its mailbox and its database",
+      "ok": true
+    },
+    {
+      "detail": {
+        "archive": "hostile-absolute",
+        "at": "2026-10-09T07:31:00Z",
+        "databases": [
+          "s3hab_app"
+        ],
+        "domains": [
+          "set3-hostile-absolute.test"
+        ],
+        "hash_shaped_values_in_the_raw_answer": 0,
+        "keys": [
+          "databases",
+          "dns_zones",
+          "domains",
+          "forwarders",
+          "mail_accounts",
+          "main_domain",
+          "public_html",
+          "site_bytes",
+          "username"
+        ],
+        "label": "inspect the archive of set3-hostile-absolute.test (ImportPage preview)",
+        "mail_accounts": [
+          {
+            "domain": "set3-hostile-absolute.test",
+            "has_password": true,
+            "quota_mb": 256,
+            "user": "info"
+          }
+        ],
+        "mailbox_keys": [
+          "domain",
+          "has_password",
+          "quota_mb",
+          "user"
+        ],
+        "public_html": true,
+        "raw_bytes": 425,
+        "status": 200
+      },
+      "name": "S1: the preview of the hostile-absolute archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only",
+      "ok": true
+    },
+    {
+      "detail": {
+        "archive_files_in_the_docroot": [],
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "docroot_files": [],
+        "domain_status": null,
+        "entries_outside": [],
+        "entries_outside_before": [],
+        "hostile_members": [
+          {
+            "name": "/etc/set3-escape-absolute.txt",
+            "type": "file"
+          }
+        ],
+        "import_status": null,
+        "imported": null,
+        "kind": "absolute",
+        "message": null,
+        "native": {
+          "database_on_engine": false,
+          "database_row": [],
+          "docroot_sha256": null,
+          "domain_row": false,
+          "files": null,
+          "forwardings": 0,
+          "mailboxes": [],
+          "rows": null,
+          "status": null
+        },
+        "non_regular_in_the_docroot": null,
+        "not_imported": null,
+        "request": {
+          "do_databases": false,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": false
+        },
+        "site_home_entries": null,
+        "status": 502,
+        "steps": []
+      },
+      "name": "P4 (absolute): nothing of the hostile member exists anywhere on the server, the document root holds no link and no stage directory was left in the site's home",
+      "ok": true
+    },
+    {
+      "detail": {
+        "archive_files_in_the_docroot": [],
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "docroot_files": [],
+        "domain_status": null,
+        "entries_outside": [],
+        "entries_outside_before": [],
+        "hostile_members": [
+          {
+            "name": "/etc/set3-escape-absolute.txt",
+            "type": "file"
+          }
+        ],
+        "import_status": null,
+        "imported": null,
+        "kind": "absolute",
+        "message": null,
+        "native": {
+          "database_on_engine": false,
+          "database_row": [],
+          "docroot_sha256": null,
+          "domain_row": false,
+          "files": null,
+          "forwardings": 0,
+          "mailboxes": [],
+          "rows": null,
+          "status": null
+        },
+        "non_regular_in_the_docroot": null,
+        "not_imported": null,
+        "request": {
+          "do_databases": false,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": false
+        },
+        "site_home_entries": null,
+        "status": 502,
+        "steps": []
+      },
+      "name": "P4 (absolute): the member was left out and the rest imported completely (200, active, the document root's files equal the archive's)",
+      "ok": false
+    },
+    {
+      "detail": {
+        "archive": "hostile-symlink",
+        "at": "2026-10-09T07:31:04Z",
+        "databases": [
+          "s3hsl_app"
+        ],
+        "domains": [
+          "set3-hostile-symlink.test"
+        ],
+        "hash_shaped_values_in_the_raw_answer": 0,
+        "keys": [
+          "databases",
+          "dns_zones",
+          "domains",
+          "forwarders",
+          "mail_accounts",
+          "main_domain",
+          "public_html",
+          "site_bytes",
+          "username"
+        ],
+        "label": "inspect the archive of set3-hostile-symlink.test (ImportPage preview)",
+        "mail_accounts": [
+          {
+            "domain": "set3-hostile-symlink.test",
+            "has_password": true,
+            "quota_mb": 256,
+            "user": "info"
+          }
+        ],
+        "mailbox_keys": [
+          "domain",
+          "has_password",
+          "quota_mb",
+          "user"
+        ],
+        "public_html": true,
+        "raw_bytes": 420,
+        "status": 200
+      },
+      "name": "the preview of the hostile-symlink archive names its domain, its mailbox and its database",
+      "ok": true
+    },
+    {
+      "detail": {
+        "archive": "hostile-symlink",
+        "at": "2026-10-09T07:31:04Z",
+        "databases": [
+          "s3hsl_app"
+        ],
+        "domains": [
+          "set3-hostile-symlink.test"
+        ],
+        "hash_shaped_values_in_the_raw_answer": 0,
+        "keys": [
+          "databases",
+          "dns_zones",
+          "domains",
+          "forwarders",
+          "mail_accounts",
+          "main_domain",
+          "public_html",
+          "site_bytes",
+          "username"
+        ],
+        "label": "inspect the archive of set3-hostile-symlink.test (ImportPage preview)",
+        "mail_accounts": [
+          {
+            "domain": "set3-hostile-symlink.test",
+            "has_password": true,
+            "quota_mb": 256,
+            "user": "info"
+          }
+        ],
+        "mailbox_keys": [
+          "domain",
+          "has_password",
+          "quota_mb",
+          "user"
+        ],
+        "public_html": true,
+        "raw_bytes": 420,
+        "status": 200
+      },
+      "name": "S1: the preview of the hostile-symlink archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only",
+      "ok": true
+    },
+    {
+      "detail": {
+        "archive_files_in_the_docroot": [],
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "docroot_files": [],
+        "domain_status": null,
+        "entries_outside": [],
+        "entries_outside_before": [],
+        "hostile_members": [
+          {
+            "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link",
+            "type": "symlink -> /etc"
+          },
+          {
+            "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link/set3-escape-symlink.txt",
+            "type": "file"
+          }
+        ],
+        "import_status": null,
+        "imported": null,
+        "kind": "symlink",
+        "message": null,
+        "native": {
+          "database_on_engine": false,
+          "database_row": [],
+          "docroot_sha256": null,
+          "domain_row": false,
+          "files": null,
+          "forwardings": 0,
+          "mailboxes": [],
+          "rows": null,
+          "status": null
+        },
+        "non_regular_in_the_docroot": null,
+        "not_imported": null,
+        "request": {
+          "do_databases": false,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": false
+        },
+        "site_home_entries": null,
+        "status": 502,
+        "steps": []
+      },
+      "name": "P4 (symlink): nothing of the hostile member exists anywhere on the server, the document root holds no link and no stage directory was left in the site's home",
+      "ok": true
+    },
+    {
+      "detail": {},
+      "name": "P4 (symlink): the files step refuses the archive",
+      "ok": false
+    },
+    {
+      "detail": {
+        "archive_files_in_the_docroot": [],
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "docroot_files": [],
+        "domain_status": null,
+        "entries_outside": [],
+        "entries_outside_before": [],
+        "hostile_members": [
+          {
+            "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link",
+            "type": "symlink -> /etc"
+          },
+          {
+            "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link/set3-escape-symlink.txt",
+            "type": "file"
+          }
+        ],
+        "import_status": null,
+        "imported": null,
+        "kind": "symlink",
+        "message": null,
+        "native": {
+          "database_on_engine": false,
+          "database_row": [],
+          "docroot_sha256": null,
+          "domain_row": false,
+          "files": null,
+          "forwardings": 0,
+          "mailboxes": [],
+          "rows": null,
+          "status": null
+        },
+        "non_regular_in_the_docroot": null,
+        "not_imported": null,
+        "request": {
+          "do_databases": false,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": false
+        },
+        "site_home_entries": null,
+        "status": 502,
+        "steps": []
+      },
+      "name": "P4 (symlink): the import answers 200 with status `partial`, code IMPORT_PARTIAL and the domain left `pending`",
+      "ok": false
+    },
+    {
+      "detail": {
+        "archive_files_in_the_docroot": [],
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "docroot_files": [],
+        "domain_status": null,
+        "entries_outside": [],
+        "entries_outside_before": [],
+        "hostile_members": [
+          {
+            "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link",
+            "type": "symlink -> /etc"
+          },
+          {
+            "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link/set3-escape-symlink.txt",
+            "type": "file"
+          }
+        ],
+        "import_status": null,
+        "imported": null,
+        "kind": "symlink",
+        "message": null,
+        "native": {
+          "database_on_engine": false,
+          "database_row": [],
+          "docroot_sha256": null,
+          "domain_row": false,
+          "files": null,
+          "forwardings": 0,
+          "mailboxes": [],
+          "rows": null,
+          "status": null
+        },
+        "non_regular_in_the_docroot": null,
+        "not_imported": null,
+        "request": {
+          "do_databases": false,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": false
+        },
+        "site_home_entries": null,
+        "status": 502,
+        "steps": []
+      },
+      "name": "P4 (symlink): `imported` and `not_imported` are the steps' own results and are true on the server (the domain row is `pending`; what is listed as imported is there; none of the archive's site files is in the document root)",
+      "ok": false
+    }
+  ],
+  "finished_at": "2026-10-09T07:31:08Z",
+  "hostile": {
+    "absolute": {
+      "archive_files_in_the_docroot": [],
+      "code": "IMPORT_SITE_NOT_CREATED",
+      "docroot_files": [],
+      "domain_status": null,
+      "entries_outside": [],
+      "entries_outside_before": [],
+      "hostile_members": [
+        {
+          "name": "/etc/set3-escape-absolute.txt",
+          "type": "file"
+        }
+      ],
+      "import_status": null,
+      "imported": null,
+      "kind": "absolute",
+      "message": null,
+      "native": {
+        "database_on_engine": false,
+        "database_row": [],
+        "docroot_sha256": null,
+        "domain_row": false,
+        "files": null,
+        "forwardings": 0,
+        "mailboxes": [],
+        "rows": null,
+        "status": null
+      },
+      "non_regular_in_the_docroot": null,
+      "not_imported": null,
+      "request": {
+        "do_databases": false,
+        "do_dns": false,
+        "do_files": true,
+        "do_mail": false
+      },
+      "site_home_entries": null,
+      "status": 502,
+      "steps": []
+    },
+    "dotdot": {
+      "archive_files_in_the_docroot": [],
+      "code": "IMPORT_SITE_NOT_CREATED",
+      "docroot_files": [],
+      "domain_status": null,
+      "entries_outside": [],
+      "entries_outside_before": [],
+      "hostile_members": [
+        {
+          "name": "cpmove-s3hdd/homedir/public_html/../../set3-escape-dotdot.txt",
+          "type": "file"
+        }
+      ],
+      "import_status": null,
+      "imported": null,
+      "kind": "dotdot",
+      "message": null,
+      "native": {
+        "database_on_engine": false,
+        "database_row": [],
+        "docroot_sha256": null,
+        "domain_row": false,
+        "files": null,
+        "forwardings": 0,
+        "mailboxes": [],
+        "rows": null,
+        "status": null
+      },
+      "non_regular_in_the_docroot": null,
+      "not_imported": null,
+      "request": {
+        "do_databases": true,
+        "do_dns": false,
+        "do_files": true,
+        "do_mail": false
+      },
+      "site_home_entries": null,
+      "status": 502,
+      "steps": []
+    },
+    "symlink": {
+      "archive_files_in_the_docroot": [],
+      "code": "IMPORT_SITE_NOT_CREATED",
+      "docroot_files": [],
+      "domain_status": null,
+      "entries_outside": [],
+      "entries_outside_before": [],
+      "hostile_members": [
+        {
+          "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link",
+          "type": "symlink -> /etc"
+        },
+        {
+          "name": "cpmove-s3hsl/homedir/public_html/set3-escape-link/set3-escape-symlink.txt",
+          "type": "file"
+        }
+      ],
+      "import_status": null,
+      "imported": null,
+      "kind": "symlink",
+      "message": null,
+      "native": {
+        "database_on_engine": false,
+        "database_row": [],
+        "docroot_sha256": null,
+        "domain_row": false,
+        "files": null,
+        "forwardings": 0,
+        "mailboxes": [],
+        "rows": null,
+        "status": null
+      },
+      "non_regular_in_the_docroot": null,
+      "not_imported": null,
+      "request": {
+        "do_databases": false,
+        "do_dns": false,
+        "do_files": true,
+        "do_mail": false
+      },
+      "site_home_entries": null,
+      "status": 502,
+      "steps": []
+    }
+  },
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/159-owner-cpmove-fixture-hostile-dotdot.json",
+      "lab_action": false,
+      "label": "owner-cpmove-fixture-hostile-dotdot",
+      "mode": "owner-cpmove-fixture",
+      "owner_action": true
+    },
+    {
+      "file": "native/160-hostile-dotdot-before.json",
+      "lab_action": false,
+      "label": "hostile-dotdot-before",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/161-hostile-dotdot-before-engines.json",
+      "lab_action": false,
+      "label": "hostile-dotdot-before-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/162-hostile-dotdot-after.json",
+      "lab_action": false,
+      "label": "hostile-dotdot-after",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/163-hostile-dotdot-after-engines.json",
+      "lab_action": false,
+      "label": "hostile-dotdot-after-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/164-hostile-dotdot-after-replay.json",
+      "lab_action": false,
+      "label": "hostile-dotdot-after-replay",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/165-hostile-dotdot-after-replay-engines.json",
+      "lab_action": false,
+      "label": "hostile-dotdot-after-replay-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/166-owner-cpmove-fixture-hostile-absolute.json",
+      "lab_action": false,
+      "label": "owner-cpmove-fixture-hostile-absolute",
+      "mode": "owner-cpmove-fixture",
+      "owner_action": true
+    },
+    {
+      "file": "native/167-hostile-absolute-before.json",
+      "lab_action": false,
+      "label": "hostile-absolute-before",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/168-hostile-absolute-before-engines.json",
+      "lab_action": false,
+      "label": "hostile-absolute-before-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/169-hostile-absolute-after.json",
+      "lab_action": false,
+      "label": "hostile-absolute-after",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/170-hostile-absolute-after-engines.json",
+      "lab_action": false,
+      "label": "hostile-absolute-after-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/171-owner-cpmove-fixture-hostile-symlink.json",
+      "lab_action": false,
+      "label": "owner-cpmove-fixture-hostile-symlink",
+      "mode": "owner-cpmove-fixture",
+      "owner_action": true
+    },
+    {
+      "file": "native/172-hostile-symlink-before.json",
+      "lab_action": false,
+      "label": "hostile-symlink-before",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/173-hostile-symlink-before-engines.json",
+      "lab_action": false,
+      "label": "hostile-symlink-before-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    },
+    {
+      "file": "native/174-hostile-symlink-after.json",
+      "lab_action": false,
+      "label": "hostile-symlink-after",
+      "mode": "read-imported",
+      "owner_action": false
+    },
+    {
+      "file": "native/175-hostile-symlink-after-engines.json",
+      "lab_action": false,
+      "label": "hostile-symlink-after-engines",
+      "mode": "read-engines",
+      "owner_action": false
+    }
+  ],
+  "node": "arch",
+  "notes": [
+    {
+      "detail": null,
+      "note": "mail is not supported on this platform: no mailbox was imported, so S1's login is not measured here"
+    },
+    {
+      "detail": {
+        "archive_files_in_the_docroot": [],
+        "code": "IMPORT_SITE_NOT_CREATED",
+        "docroot_files": [],
+        "domain_status": null,
+        "entries_outside": [],
+        "entries_outside_before": [],
+        "hostile_members": [
+          {
+            "name": "/etc/set3-escape-absolute.txt",
+            "type": "file"
+          }
+        ],
+        "import_status": null,
+        "imported": null,
+        "kind": "absolute",
+        "message": null,
+        "native": {
+          "database_on_engine": false,
+          "database_row": [],
+          "docroot_sha256": null,
+          "domain_row": false,
+          "files": null,
+          "forwardings": 0,
+          "mailboxes": [],
+          "rows": null,
+          "status": null
+        },
+        "non_regular_in_the_docroot": null,
+        "not_imported": null,
+        "request": {
+          "do_databases": false,
+          "do_dns": false,
+          "do_files": true,
+          "do_mail": false
+        },
+        "site_home_entries": null,
+        "status": 502,
+        "steps": []
+      },
+      "note": "the member with an absolute path is not site payload: the files step left it out and imported the site's own files; nothing was written at that path"
+    }
+  ],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T07:30:56Z",
+      "label": "cpmove-fixture-hostile-dotdot",
+      "mode": "owner-cpmove-fixture"
+    },
+    {
+      "at": "2026-10-09T07:31:00Z",
+      "label": "cpmove-fixture-hostile-absolute",
+      "mode": "owner-cpmove-fixture"
+    },
+    {
+      "at": "2026-10-09T07:31:04Z",
+      "label": "cpmove-fixture-hostile-symlink",
+      "mode": "owner-cpmove-fixture"
+    }
+  ],
+  "previews": [
+    {
+      "archive": "hostile-dotdot",
+      "at": "2026-10-09T07:30:55Z",
+      "databases": [
+        "s3hdd_app"
+      ],
+      "domains": [
+        "set3-hostile-dotdot.test"
+      ],
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "keys": [
+        "databases",
+        "dns_zones",
+        "domains",
+        "forwarders",
+        "mail_accounts",
+        "main_domain",
+        "public_html",
+        "site_bytes",
+        "username"
+      ],
+      "label": "inspect the archive of set3-hostile-dotdot.test (ImportPage preview)",
+      "mail_accounts": [
+        {
+          "domain": "set3-hostile-dotdot.test",
+          "has_password": true,
+          "quota_mb": 256,
+          "user": "info"
+        }
+      ],
+      "mailbox_keys": [
+        "domain",
+        "has_password",
+        "quota_mb",
+        "user"
+      ],
+      "public_html": true,
+      "raw_bytes": 415,
+      "status": 200
+    },
+    {
+      "archive": "hostile-absolute",
+      "at": "2026-10-09T07:31:00Z",
+      "databases": [
+        "s3hab_app"
+      ],
+      "domains": [
+        "set3-hostile-absolute.test"
+      ],
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "keys": [
+        "databases",
+        "dns_zones",
+        "domains",
+        "forwarders",
+        "mail_accounts",
+        "main_domain",
+        "public_html",
+        "site_bytes",
+        "username"
+      ],
+      "label": "inspect the archive of set3-hostile-absolute.test (ImportPage preview)",
+      "mail_accounts": [
+        {
+          "domain": "set3-hostile-absolute.test",
+          "has_password": true,
+          "quota_mb": 256,
+          "user": "info"
+        }
+      ],
+      "mailbox_keys": [
+        "domain",
+        "has_password",
+        "quota_mb",
+        "user"
+      ],
+      "public_html": true,
+      "raw_bytes": 425,
+      "status": 200
+    },
+    {
+      "archive": "hostile-symlink",
+      "at": "2026-10-09T07:31:04Z",
+      "databases": [
+        "s3hsl_app"
+      ],
+      "domains": [
+        "set3-hostile-symlink.test"
+      ],
+      "hash_shaped_values_in_the_raw_answer": 0,
+      "keys": [
+        "databases",
+        "dns_zones",
+        "domains",
+        "forwarders",
+        "mail_accounts",
+        "main_domain",
+        "public_html",
+        "site_bytes",
+        "username"
+      ],
+      "label": "inspect the archive of set3-hostile-symlink.test (ImportPage preview)",
+      "mail_accounts": [
+        {
+          "domain": "set3-hostile-symlink.test",
+          "has_password": true,
+          "quota_mb": 256,
+          "user": "info"
+        }
+      ],
+      "mailbox_keys": [
+        "domain",
+        "has_password",
+        "quota_mb",
+        "user"
+      ],
+      "public_html": true,
+      "raw_bytes": 420,
+      "status": 200
+    }
+  ],
+  "section": "C7b-import-answers",
+  "started_at": "2026-10-09T07:30:55Z",
+  "substeps": {
+    "P4": "failed",
+    "S1": "passed",
+    "section": "passed"
+  },
+  "title": "the imported mailbox's password, a failed files step, hostile archive members (set3, S1 and P4)",
+  "verdict": "failed"
+}

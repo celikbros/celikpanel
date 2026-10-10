@@ -1,0 +1,2 @@
+2026-10-09T22:19:39Z before set6-ubuntu run-a (lab prepare) free_GiB=167.97 free_bytes=180352180224 (Get-PSDrive C reading of 2026-10-09T22:19:26Z, 13s old) allowed=yes
+2026-10-09T22:19:41Z before set6-ubuntu run-a (guest start) free_GiB=167.97 free_bytes=180352180224 (Get-PSDrive C reading of 2026-10-09T22:19:26Z, 15s old) allowed=yes

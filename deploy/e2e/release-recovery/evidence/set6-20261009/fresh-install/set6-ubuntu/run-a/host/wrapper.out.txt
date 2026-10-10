@@ -1,0 +1,26 @@
+Formatting '/var/tmp/cp-release-drill-s6-ub-fresh-a/cells/c81c209b49b13fa1c3b2e580/ubuntu/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-s6-ub-fresh-a/images/ubuntu-24.04-server-cloudimg-amd64-20260826.img backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-s6-ub-fresh-a", "cell_id": "release-recovery__dc2383a9726b4052", "ssh_ports": [4631, 4632]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s6-ub-fresh-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s6-ub-fresh-a", "nodes": {"ubuntu": "verified-disposable-systemd-guest"}}
+{"step": "set6-name-pinning", "verdict": "passed", "reason": null}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "site", "verdict": "passed", "reason": null}
+{"step": "M0-prepare", "verdict": "passed", "reason": null}
+{"step": "B-headers-after-setup", "verdict": "passed", "reason": null}
+{"step": "M1-php-site", "verdict": "passed", "reason": null}
+{"step": "M6-site-refused", "verdict": "passed", "reason": null}
+{"step": "M2-import", "verdict": "passed", "reason": null}
+{"step": "M5-import-absolute", "verdict": "passed", "reason": null}
+{"step": "M10-postfix-stop", "verdict": "passed", "reason": null}
+{"step": "M4-reload-stopped", "verdict": "passed", "reason": null}
+{"step": "B-headers-at-the-end", "verdict": "passed", "reason": null}
+{"step": "set6-name-pinning-at-the-end", "verdict": "passed", "reason": null}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"cell_kind": "set6-fresh-install", "overall": "complete-for-review", "sections": {"B-headers-after-setup": "passed", "B-headers-at-the-end": "passed", "M0-prepare": "passed", "M1-php-site": "passed", "M10-postfix-stop": "passed", "M2-import": "passed", "M4-reload-stopped": "passed", "M5-import-absolute": "passed", "M6-site-refused": "passed"}}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-s6-ub-fresh-a", "evidence_retained": true}
+SET6 cell=set6-ubuntu lab=/var/tmp/cp-release-drill-s6-ub-fresh-a driver_exit=0 evidence=/var/tmp/cp-release-drill-s6-ub-fresh-a/evidence/*/upd1

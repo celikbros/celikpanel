@@ -1,0 +1,86 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S2e save size and rate only",
+  "request": {
+    "body": {
+      "dnsbl_zones": [],
+      "message_size_mb": 30,
+      "outbound_rate_limit": 45,
+      "version": "mp1-5f3ec425e112f4591aa8e0fe1e63fb592070cf0f51fedf6a8fee2a44e3674beb"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18443"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18443"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "PUT",
+    "path": "/api/v1/mail/policy"
+  },
+  "response": {
+    "elapsed_seconds": 1.821,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Thu, 08 Oct 2026 21:47:34 GMT"
+      ],
+      [
+        "Content-Length",
+        "198"
+      ]
+    ],
+    "json": {
+      "policy": {
+        "dnsbl_locked": "variable",
+        "dnsbl_zones": [],
+        "message_size_mb": 30,
+        "outbound_rate_limit": 45,
+        "version": "mp1-3166bb4e0d7d38c3f63df2a907467fd81cb030dce34be0021d96ad1b4be98971"
+      },
+      "success": true
+    },
+    "status": 200,
+    "text": null
+  }
+}

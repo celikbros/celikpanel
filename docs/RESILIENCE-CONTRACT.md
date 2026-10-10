@@ -8,6 +8,35 @@ repeated Frankfurt failures. Alpha80 corrects the observed BIND and rollback
 faults; it does not complete this contract. No installed server is changed by
 this document. Installed-panel updates remain user-initiated in CelikPanel.
 
+> **Erratum on dates (recorded 2026-10-09).** Headings below, and some code comments,
+> carry the labels 2026-10-10, 2026-10-11 and 2026-10-12 (also "10 Oct 2026" and so on).
+> They are not calendar dates. The text was committed on 2026-10-08 and 2026-10-09
+> (local time, UTC+3); the label was raised by one per round of work instead of being
+> read from the clock. The labels stay, because entries cite each other by them
+> ("merge of 2026-10-10"). Read each as the name of a round:
+>
+> - 2026-10-10: the first native measurement of settings writes and the work after it
+>   (mail renewal, service actions, request identity). Committed 2026-10-09, 00:45-05:57:
+>   `6746142ae`, `15818740a`, `874d12e43`, `faa5ef085`.
+> - 2026-10-11: the second native measurement and its corrections. Committed 2026-10-09,
+>   08:05-09:12: `76bef04b8`, `c523bbfd2`, `cfa329676`.
+> - 2026-10-12: the final native round. Committed 2026-10-09, 09:12-13:06: `cfa329676`,
+>   `47a28dad0`, `dd1710256`, `557b554eb`.
+> - 2026-10-09 was used the same way earlier: the section "Database and mail
+>   configuration: a file that could not be read is never an editor..." was committed on
+>   2026-10-08 (`545b26337`).
+>
+> The evidence directories `set1-20261010`, `set2-20261011` and `set3-20261012` carry the
+> same labels. They ran on 2026-10-08 21:18-22:15 UTC, 2026-10-09 03:29-04:49 UTC and
+> 2026-10-09 07:00-08:46 UTC. Their names stay, because their checksum lists are sealed.
+>
+> Entries written after this note use the clock date. A section dated 10, 11 or 12 October
+> 2026 that is not listed here is genuine. Sections of this document that carry a round
+> label: "Corrections from the first native measurement of settings writes", "Mail
+> certificate renewal and the Services page", "A state-changing request carries one
+> identity", "Corrections from the second native measurement", "Corrections from the final
+> native round".
+
 ## Finding
 
 The privilege split between the unprivileged panel and root agent remains useful.
@@ -2344,3 +2373,2059 @@ all five runs. No candidate product defect.
   Ubuntu; secure-mail certificates; the signed alpha.80 archive; production
   signing, the real origin, the license service, DNS, renewal itself, a
   browser, power loss; panel removal.
+
+### A mounted page is replaced only by a known negative access result (P0.2, 2026-10-08)
+
+D-025 invariants 2, 3 and 6; D-024. P0.2 stays partial and no acceptance item is
+closed. Source state with component tests; inspected in one real browser against
+a loopback mock on 2026-10-08 and corrected (see "Corrected after the browser
+inspection" below); no native run, no installed panel touched, no license
+service contacted.
+
+**Reported.** An owner on an installed server running v0.1.0-alpha.81: after
+leaving a page for a while the whole screen became "Lisans durumu kontrol
+edilemedi" with the action "Panel erişimini kontrol et"; on return the panel came
+back, but not where it had been left. An open dialogue, typed input and the
+selected tab were gone. The same screen showed "Güncelleme ve kurtarma durumu:
+Güncelleme doğrulandı" for an update that had finished days earlier. The license
+was valid throughout.
+
+**Mechanism (read from the source at `0f9e1067`, not observed on that server).**
+The server's access decision is valid for at most 60 s
+(`internal/licensing/license.go:28,197`, `cmd/panel/license.go:225`). In
+`web/src/components/LicenseOnboarding.tsx` both the 60 s interval (`:55`) and the
+refresh 15 s before the deadline (`:81-83`) skipped a hidden tab; the deadline
+timer (`:84-88`) then set `allowed: null, failed: true`, and `:115` returned the
+full recovery page in place of the application, which unmounted every page. Focus
+(`:56,65`) read again and the application was built from nothing. A visible tab
+whose reads were slow or failed past the deadline took the same path. Related
+paths in `web/src/App.tsx`: any API reply with `PANEL_STARTING` or
+`AUTH_STATUS_UNAVAILABLE` replaced a mounted application (`:492-501`,
+`:509-513`); the readiness read after sign-in or on load was drawn as "Panel
+readiness could not be checked" while it was only in flight (`:509-513` with
+`RecoveryAccess.tsx:106-107`); a 401 showed the sign-in form with no reason
+(`:486-491`, `:508`); `main.tsx:19-27` reloaded without a word when a part of the
+interface failed to load. The recovery page drew the saved update record for
+every administrator, whatever its result.
+
+**Changed (browser only).** A gate replaces the screen only on a KNOWN negative:
+a license reported missing, expired or invalid, a confirmed 401, or a sign-out.
+An unknown or merely not yet refreshed state keeps the mounted pages.
+
+- `AccessHold` (new) keeps the pages mounted and makes them unreachable while
+  access is not confirmed: the subtree is `inert` and hidden from assistive
+  technology, events aimed at it are stopped in the capture phase, and focus that
+  lands in it is taken out. Nothing in it can be used until the server confirms
+  access; the server refuses management requests without a current decision on
+  its own, as before. On release, focus returns to the field it was in.
+- A read that answers within 1.5 s draws nothing. A slower one draws a modal
+  layer that says access is being checked. A read that answered without
+  confirming access draws the reason, that nobody needs to act, and that the page
+  continues where it was. The layer is the shared dialogue with no dismissal,
+  outside the inert subtree and above the operation overlay.
+- Hidden tab: at the deadline the decision stops being used; that is not recorded
+  as a failed read and nothing is read. Returning (visibility or focus) applies
+  the deadline by the clock, so a throttled timer cannot leave an expired decision
+  in use, and starts one read.
+- While unknown, the license answer is read every 5 s in a visible tab (before:
+  every 60 s and on focus); session and readiness every 10 s, now also for an
+  unreadable session (before: on focus only). After 30 s the layer adds "Reload
+  CelikPanel" with its cost.
+- `PANEL_STARTING` and `AUTH_STATUS_UNAVAILABLE` from a request of a mounted page
+  use the same hold. Only the first report changes the session state and it
+  starts one read; pages that keep being refused cannot restart it. The same
+  applies to repeated license refusals.
+- First load and sign-in: the session and readiness reads in flight are a
+  "checking" state. "Could not be checked" needs a read that failed or timed out.
+  The full recovery page remains for a load on which nothing is mounted yet.
+- The saved update record is drawn in an access or readiness gate only for an
+  operation that is still running, failed, rolled back after a failure, or whose
+  result cannot be read. A verified update, or no saved operation, draws nothing
+  and is not read. The page for an interface that failed to load keeps the full
+  reader.
+- A confirmed 401 under a mounted page shows the sign-in form with the reason.
+  The address is kept, so signing in opens the same route.
+- A part of the interface that fails to load after an update: the reason is
+  shown, then the page reloads, once per 30 s as before (first one line for 4 s;
+  since the browser inspection the shared dialogue for 7 s, see below). Before
+  anything is drawn it reloads at once, as before.
+
+**Not changed.** The server-side decision, its 60 s validity, what the server
+refuses without it, and what a known negative does on screen (activation page,
+redirect to `/activate`, tenant message). A decision is never used past its
+deadline and never extended. The update tracker is paused while a hold is
+explained exactly as it was while the recovery page was shown.
+
+**Requests under the layer are not paused.** The server refuses each management
+request while it has no current decision, so a poll under the layer cannot change
+anything. Holding requests in the browser would need a list of exempt recovery
+and update routes kept in step with the server, and a held request would run
+later, at a time nobody chose. Read in the source for the six polling screens:
+the dashboard figures and application status ignore a refused poll; the
+host-change readiness on the dashboard and components page becomes "unverified"
+until the next read; monitoring empties its chart until the next read; the
+domain log viewer with automatic refresh raises its generic error toast on each
+refused poll, behind the layer; setup shows its own reconnect guidance. None of
+them discards typed input.
+
+**Schema or version transition.** None. No server code, API field, stored record
+or browser storage format changes. Eleven strings are added to the screen
+catalogue (EN and TR); one sentence is removed from `recovery.startingHelp`. A
+tab still running the previous interface keeps the previous behaviour until it
+is reloaded.
+
+**Recovery behaviour.** Access confirmed again: the hold ends and the same page
+continues. Known negative while held: the pages are removed and the existing gate
+is shown. Session ended: sign-in with the reason, same address, without what had
+been typed. Still unknown: the layer stays, reads continue, and the owner can
+check, or reload at the stated cost. If the wording part has not arrived, the
+layer still blocks and says only that access is being checked.
+
+**Evidence.** Component tests only: `web/tests/access-hold-runtime.test.mjs`
+(new) and updated cases in `license-onboarding-runtime`, `recovery-access-runtime`
+and `panel-handover`. They cover a decision that ran out in a hidden tab (no
+unmount, no read while hidden, one read on return, nothing drawn), a throttled
+timer, an explained hold over a page that keeps typed input, selected tab and an
+open dialogue, stopped events and focus, each known negative from a hold, the
+checking state on first load and after sign-in, refused background requests
+through the real fetch interception, a finished update in a gate, the ended
+session with an unchanged address, and the reload line. 576 web tests pass.
+Production build: critical boot 302.29 KiB raw / 93.46 KiB gzip (limits 361 /
+110), Settings route 272.99 / 79.77 KiB (limits 280 / 80); no limit raised. The
+design detector reports no finding on the changed files.
+
+**Corrected after the browser inspection (2026-10-08).** Invariants 2, 3 and 6;
+D-024. P0.2 stays partial and no acceptance item is closed. A first pass in a
+real browser against a loopback mock, on commit `8a65d4ca`, showed defects that
+the component tests had not; they are corrected in the same change and the pass
+was repeated. What it covered and did not is recorded in the
+[operation guidance](OPERATION-GUIDANCE.md#access-and-readiness-checks-keep-the-page-explained-hold-checking-state-ended-session-2026-10-08).
+
+- The layer is drawn above the component-operation overlay and the update lock
+  (layer 120 over 100 and 110) and keeps keyboard focus against both. Before,
+  the update lock (110) was above the layer (105). The update lock is still
+  released when a hold begins, because the tracker pauses.
+- While the layer or the reload dialogue is drawn it is the only scrim on the
+  page: every scrim under it is cleared (`web/src/index.css`, `:has()`). Two
+  stacked scrims had made the page that the layer says is kept unreadable. A
+  browser without `:has()` draws both scrims, as before.
+- The title of the layer takes programmatic focus without a focus ring; the
+  "checking" layer has no empty body; the secure address wraps as an address.
+- The activation page draws the saved update record only for an unfinished
+  operation, like the other gates. It showed "No update operation ID is saved in
+  this browser…" beside a license decision.
+- The reload after a failed part is the shared dialogue above everything: the
+  reason, that unsaved input is lost, and "Reload CelikPanel" to bring the reload
+  forward. It reloads by itself after 7 s. The page under it is covered.
+- A coded refusal answered by the access route itself no longer raises the
+  refusal event, and while access stays unknown a refused request starts a read
+  at most as often as the 5 s re-check. Not reachable with the current server,
+  whose access route answers 200 with a typed body; found with a synthetic 503,
+  which had produced 10,581 reads in 28.7 s.
+- The hold text no longer states an interval ("every few seconds"); the first-load
+  pages say that they read again by themselves.
+
+Schema or version transition: none. No server code, API field, stored record or
+browser storage format changes; one string is added to the screen catalogue and
+five texts change (EN and TR). Recovery behaviour is as above, except that the
+reload after a failed part can now be brought forward. Evidence: the updated
+`access-hold-runtime`, `recovery-access-runtime`, `dialog-shape-contract` and
+`boot-copy-contract` tests and the new `address-link` test; 616 web tests pass.
+Production build: critical boot 303.73 KiB raw / 93.97 KiB gzip (limits 361 / 110),
+Settings route 272.99 / 79.76 KiB (limits 280 / 80); no limit raised. The design
+detector reports no finding on the changed files. The browser pass is one Chrome
+against a mock: it is not a native run and closes nothing.
+
+**Open.**
+
+- Seen in one Chrome against a mock only (2026-10-08): timer throttling in a
+  hidden tab, the order of visibility and focus events, `inert` on a
+  `display: contents` element, the caret after focus returns, stacking against
+  the operation overlay and the update lock, EN and TR at desktop and phone
+  width. Not confirmed: the screen-reader announcement, any other browser, a
+  real server.
+- What each page does when its own request is refused under the layer is read
+  for the six polling screens only, not audited page by page and not observed.
+  The log viewer's repeated error toast and the emptied monitoring chart are
+  left as they are. An operation whose reply is lost is reconciled by its own
+  contract, as before.
+- Unsent input is not kept across a real sign-in.
+- Each tab holds on its own; nothing is shared between tabs.
+- Cause not established on the owner's server; the mechanism is read from code.
+
+### A failed read no longer lets three settings screens overwrite the owner's state (invariants 1-4 and 6, 2026-10-08)
+
+D-025 invariants 1 (detect owner changes; never replace them with a preferred
+configuration), 2 (unknown is not absent), 3 (stop the unsafe write at its own
+boundary), 4 (a mutation reads its pre-image first) and 6 (the screen renders
+the authoritative state, not a default); D-022, D-024. No P0 item is closed or
+advanced. Found by a read-only source verification of `v0.1.0-alpha.81`; not
+observed on an installed server.
+
+- **Confirmed in alpha.81.** One failed read on an otherwise healthy server was
+  enough in three places.
+  - *Server mail policy.* A failed `GET /mail/policy` left the form on 25 MB,
+    DNSBL off and no rate limit, with Save enabled. Save rewrote
+    `smtpd_recipient_restrictions` to three fixed entries plus the zones, set
+    `message_size_limit` and `smtpd_client_message_rate_limit` and reloaded
+    Postfix. The Agent also answered a failed `postconf` read as zeros with
+    success, and every save, even after a good read, dropped the restrictions
+    the owner had added, because the read never returned them.
+  - *Automatic backup schedule.* A failed schedule read left "off / daily /
+    files / 7" editable. Turn on wrote it over the real schedule: a full backup
+    became files-only and the next run pruned scheduled copies beyond 7.
+  - *Scheduled tasks.* `crontab -l` failing for any reason was read as an empty
+    crontab. The list said "No scheduled tasks" and one added task replaced the
+    whole crontab.
+- **Changed.**
+  - *Unknown is an error.* The mail policy read, the crontab read and the cron
+    list answer an error when the current state cannot be read; no zero, default
+    or empty list stands in for it. `crontab -l` is accepted as "no crontab" only
+    with exit status 1, no output and exactly `no crontab for <user>` on standard
+    error (run with `LC_ALL=C`); every other failure is unknown. A `postconf`
+    value is known only when the command succeeded and printed a value line.
+  - *Versioned writes.* Each read returns a version of the native state: a hash
+    of the four Postfix values (`message_size_limit`,
+    `smtpd_recipient_restrictions`, `smtpd_client_message_rate_limit`,
+    `anvil_rate_time_unit`), of the crontab bytes, or of the schedule's settings
+    (run status excluded, so a background run does not make a save stale). Every
+    write must carry it. No version: `409 SETTINGS_VERSION_REQUIRED`. A
+    different current state: `409 SETTINGS_CHANGED`. An unreadable pre-image:
+    `502 CURRENT_SETTINGS_UNREADABLE`. Nothing is written in any of the three.
+    For mail and cron the Agent decides under one lock per resource (the Panel
+    also refuses a missing version before calling it); the schedule write is a
+    single statement conditional on the row still holding the settings read.
+  - *Recipient restrictions are preserved.* The writer no longer rebuilds the
+    list. Postfix splits it on commas and whitespace alike and reads an argument
+    as the next element, so keeping every element in order keeps the owner's
+    meaning. The Panel removes or adds only `reject_rbl_client <plain zone>`
+    entries (next to the existing ones, else at the end), keeps the owner's
+    separator style, and writes nothing when the wanted zones are already there.
+    An empty value still receives the baseline `permit_mynetworks,
+    permit_sasl_authenticated, reject_unauth_destination`. A DNSBL entry with a
+    reply filter or behind `warn_if_reject` is the owner's and is left alone.
+  - *Refused instead of guessed.* A DNSBL change is refused with
+    `409 MAIL_POLICY_RESTRICTIONS_UNMANAGED` when the value refers to another
+    setting (`variable`), has an unclosed brace or a `reject_rbl_client` without
+    a zone (`malformed`), is a hand-written list without both permits
+    (`no_baseline`) or ends with `permit`, `reject` or `defer` and has no DNSBL
+    entry to place the new one beside (`terminal`). Message size and rate still
+    save. The read reports the same reason, and the screen then offers no DNSBL
+    control.
+  - *Only what changed is written*, in one `postconf -e`, and Postfix is reloaded
+    only then. A 10240000-byte limit shown as 9 MB is not rounded by a save that
+    did not touch it. A value outside the Panel's range is refused with
+    `400 MAIL_POLICY_INVALID` instead of replaced by 25 MB, and a zone that is
+    not a plain host name is refused instead of silently dropped.
+  - *Cron duplicates.* Adding the same schedule and command again is refused
+    with `409 CRON_JOB_DUPLICATE` (a disabled copy counts; both lines would share
+    one ID). A written crontab always ends with a newline.
+  - *Screens.* The three screens hold `loading | known | unknown`. Loading shows
+    a reading line; unknown shows "could not load" with Retry; neither shows a
+    form, an "off" state or an empty list. A stale save keeps what was typed,
+    disables Save and offers a reload.
+- **Schema or version transition.** No persisted schema and no migration:
+  `main.cf`, crontabs and `backup_schedules` keep their formats. Additive wire
+  fields: `version` and `dnsbl_locked` on the mail policy, `version` on the cron
+  list and on the three cron requests, `code` and `reason` on the Agent's mail
+  policy answer, `version` on the schedule read and write answers. **Now
+  required:** `version` in the body of `PUT /api/v1/mail/policy`,
+  `PUT …/backups/schedule`, `POST` and `PUT …/cron`, and as a query value on
+  `DELETE …/backups/schedule` and `DELETE …/cron`. New refusal codes:
+  `CURRENT_SETTINGS_UNREADABLE`, `SETTINGS_VERSION_REQUIRED`,
+  `SETTINGS_CHANGED`, `CRON_JOB_DUPLICATE`,
+  `MAIL_POLICY_RESTRICTIONS_UNMANAGED`, `MAIL_POLICY_INVALID`. Panel and Agent
+  of different releases cannot write these three: a new Panel refuses the
+  version-less list of an older Agent, and a new Agent refuses an older Panel.
+- **Recovery behaviour.** Every refusal comes before any write, so there is
+  nothing to compensate. The owner reloads the page and decides again against
+  the current state; no read is retried into a write. For a refused DNSBL change
+  the owner edits `smtpd_recipient_restrictions` in `/etc/postfix/main.cf` and
+  reloads Postfix. Postfix, cron and scheduled backups keep running without the
+  Panel exactly as before.
+- **Evidence.** Component tests only; no native run. Agent:
+  `TestPlanRecipientRestrictionsPreservesWhatThePanelDoesNotManage`,
+  `TestPlanRecipientRestrictionsRefusesWhatItCannotPlaceWithCertainty`,
+  `TestGetMailPolicyReportsAFailedReadAsAnErrorNotAsZeros`,
+  `TestSetMailPolicyRefusesWithoutACurrentVersion`,
+  `TestSetMailPolicyWritesOnlyTheValuesThatChanged`,
+  `TestSetMailPolicyKeepsOwnerAddedRestrictions`,
+  `TestSetMailPolicyRefusesToRewriteRestrictionsItCannotPlace`,
+  `TestSetMailPolicyRefusesInvalidValuesInsteadOfSubstitutingDefaults`,
+  `TestReadCrontabTellsNoCrontabFromAFailedRead`,
+  `TestListCronJobsReportsAFailedReadAsAnError`,
+  `TestCronChangesNeverInstallACrontabBuiltFromAFailedRead`,
+  `TestCronChangesRequireTheVersionOfTheCrontabTheyWereBuiltFrom`,
+  `TestAddCronJobRefusesAnExactDuplicate`. Panel:
+  `TestCronChangesWithoutAVersionAreRefusedBeforeTheAgent`,
+  `TestCronHandlersAnswerCrontabProtectionRefusals`,
+  `TestMailPolicyGetReportsAnUnreadablePolicyAndCarriesTheVersion`,
+  `TestMailPolicyPutWithoutAVersionIsRefusedBeforeTheAgent`,
+  `TestMailPolicyPutAnswersEachAgentRefusalWithItsTypedGuidance`,
+  `TestBackupSchedulePutFromAFormThatNeverLoadedIsRefused`,
+  `TestBackupScheduleWritesNeedTheVersionOfTheScheduleTheyReplace`. Web:
+  `web/tests/current-settings-runtime.test.mjs`. Read-only observation on a
+  Debian development guest (Postfix 3.10): `crontab -u <user> -l` without a
+  crontab prints `no crontab for <user>` with exit status 1 and no output;
+  `postconf -h` prints one line per value, an empty line for an empty value and
+  a multi-line value folded to one line.
+
+Open: nothing was run on a real server. cronie's "no crontab" answer on Arch is
+taken from its source, not observed; another cron implementation that words it
+differently now reads as unknown instead of empty. A failed Postfix reload
+after a mail policy write is logged and not reported. An owner edit between the
+Agent's version check and its write is not excluded (the Panel's own requests
+are). A hand-written restriction list keeps DNSBL out of the Panel until the
+owner changes it. The backup schedule read is the Panel's own database, so its
+only unknown state is a failed query. Found beside this and not changed: a
+disabled scheduled task cannot be enabled, edited or deleted (the writers skip
+comment lines), deleting a task also removes a comment or disabled task on the
+line above it, and the mail queue list shows "queue empty" after a failed read.
+The app-wide `loading | known | unknown` layer is a later task; other screens
+are not audited.
+
+### Database and mail configuration: a file that could not be read is never an editor, and a save names what it replaces (invariants 1-4 and 6, 2026-10-09)
+
+D-025 invariants 1 (the owner's native configuration is detected, not replaced),
+2 (unknown is not absent or empty), 3 (the unsafe write is stopped at its own
+boundary), 4 (a mutation reads its pre-image, validates, keeps what it replaces
+and has a tested inverse) and 6 (the screen renders the authoritative state);
+D-022, D-024. No P0 item is closed or advanced. Found by a read-only source
+verification of `v0.1.0-alpha.81`; not observed on an installed server.
+
+- **Confirmed in alpha.81.**
+  - *The PostgreSQL and MariaDB configuration editors did not work, and were one
+    repair from destroying the file.* `saveConfig` posted the file as
+    `text/plain`; `POST /api/v1/config` reads JSON, so every Save answered 400.
+    Behind that accident: after a failed read the three editors showed no
+    settings (or "No access rules") with Save enabled, and the access-rule
+    editor always wrote `pg_hba.conf` from scratch, without its comments. A
+    repaired Save after one failed read would have written a comment-only
+    `pg_hba.conf` (PostgreSQL then refuses every connection, the Panel's own
+    included) or an empty `postgresql.conf` or option file. The Agent had no
+    check for these paths: no validator, no refusal of empty content, no
+    comparison with the file that was read, and it would have changed the file's
+    owner and mode. The setting editors also rewrote every line they could
+    parse, including all commented defaults, and gave two lines with the same
+    name one value.
+  - *"postgresql.conf not found" on an installed server* for as long as the
+    component scan took, and for good when it failed.
+  - *The catch-all field could be typed into before the address was read*, and
+    what was typed replaced the unseen address by upsert; after a failed read
+    "Disable" was hidden.
+  - *A failed read was shown as a fact* in three more places: an empty mailbox
+    list without a word, "Webmail is not available on this server", "The mail
+    queue is empty". The Agent itself answered any failure of `postqueue -j` as
+    "not installed, no items", and a queue action was announced as done whatever
+    the server answered.
+  - *Scheduled tasks.* A task the Panel had disabled could not be enabled,
+    changed or deleted: the writers skipped every line that begins with `#`.
+    Deleting a task also removed the line above it whenever that line began with
+    `#` (the owner's header, or a disabled task) and every blank line of the
+    crontab. The task ID was a 32-bit string sum that is the same for
+    `…/Aa.sh` and `…/BB.sh`.
+  - *A Postfix reload that failed after the policy was written* was logged and
+    answered as a successful save.
+- **Changed.**
+  - *Unknown is an error.* `GET /api/v1/config` answers the file's text with the
+    version of the exact bytes read, or `502 CURRENT_SETTINGS_UNREADABLE`; an
+    empty file is a known answer with a version, a file that cannot be read is
+    never one. The mail queue read answers `502 MAIL_QUEUE_UNREADABLE` when
+    `postqueue -j` fails, prints a line that is not a queue entry or cannot be
+    read to its end; "Postfix is not on this server" stays a known answer.
+  - *Versioned writes.* `POST /api/v1/config` must carry `version`. Before
+    anything is written the Agent reads the file with its owner and mode
+    (unreadable: nothing is written), compares the version (`409
+    SETTINGS_VERSION_REQUIRED`, `409 SETTINGS_CHANGED`), refuses empty content, a
+    NUL byte and more than 1 MiB (`422 CONFIG_INVALID`, reasons `empty`,
+    `shape`), and answers identical content without touching the file or the
+    service. The replacement itself is conditional on the bytes that were read,
+    so an owner edit made during the validation is not overwritten either. The
+    catch-all `PUT` and `DELETE` carry `version` and are written by a statement
+    conditional on the row that was read.
+  - *Validated before it replaces the live file.*
+    - `postgresql.conf`: the installed `postgres` reads a copy placed next to
+      the file: `postgres -C config_file -D <dir> -c config_file=<copy> -c
+      lc_messages=C`. It parses the file and every file it includes with the
+      server's own parser and value checks, prints one setting and exits; it
+      starts nothing and takes no lock. `-C` first is the form PostgreSQL allows
+      root to run. On Debian and Ubuntu the cluster's own binary
+      (`/usr/lib/postgresql/<major>/bin/postgres`) is used, else the one on
+      `PATH`.
+    - A MariaDB option file: the installed `mariadbd` reads the copy:
+      `mariadbd --defaults-file=<copy> --datadir=<private empty directory>
+      --help --verbose`. It refuses an unknown variable, an unusable value, a
+      broken group header and an option before any group. The private data
+      directory, given after the file, keeps it away from the real one.
+    - `pg_hba.conf` cannot be shown to PostgreSQL before it is installed (the
+      server reads only the file `hba_file` names). So the Agent itself refuses
+      a changed or added line PostgreSQL's parser does not accept (the rules of
+      `parse_hba_line`; lines carried over unchanged are the owner's and are not
+      judged), and refuses a file that takes away the local administrator
+      access: if the current file lets the operating system account `postgres`
+      connect as `postgres` over the local socket by `peer` or `trust`, the new
+      one must still do so, in a way that can be read from the file with
+      certainty (`422 CONFIG_INVALID`, reason `lockout`). After the file is
+      installed and before the reload, the running server is asked about it
+      (`pg_hba_file_rules` parses the file on disk at the moment of the query);
+      a file it refuses is put back before it was ever loaded.
+    - Where the validating program cannot be run, nothing is installed (`422
+      CONFIG_INVALID`, reason `no_validator`).
+  - *Installed with its inverse.* The previous file is kept next to the file as
+    `<name>.celikpanel-backup-<UTC time>` with its owner and mode (a name no
+    `include_dir` or `!includedir` reads; the ten newest are kept). The new file
+    replaces it atomically with the same owner and mode. PostgreSQL is reloaded,
+    never restarted; if the unit is known to be stopped nothing is reloaded. If
+    the reload fails, the previous file is put back (only while the file still
+    is the one this write installed), reloaded, and the answer is `502
+    CONFIG_RELOAD_FAILED` (`restored`, or `not_restored` with the name of the
+    kept copy) carrying the first line of the unit's journal that names a
+    failure, with password assignments blanked and 300 characters at most. After
+    a reload the server is asked which settings it could not take and which wait
+    for a restart. MariaDB re-reads its option files only when it starts and has
+    no reload that does, so it is left alone and the answer says the change
+    waits for the next restart, which is the owner's decision.
+  - *Only the changed lines.* The three editors send the file that was read with
+    only the changed lines replaced: a setting keeps its indent, spacing,
+    quoting and trailing comment; a rule that was opened and left alone is not
+    reformatted; rules with options, quoted names, a netmask, a continuation or
+    a trailing comment, and include directives, are shown as written and are
+    never rewritten or removed; new rules are added at the end.
+  - *Scheduled tasks.* A task is the one line whose own text is its ID, enabled
+    or disabled; a change replaces that line and a delete removes that line and
+    nothing else. The ID is derived from the whole text. The same task on two
+    lines is refused (`409 CRON_JOB_AMBIGUOUS`), and changing a task into a copy
+    of another is refused (`409 CRON_JOB_DUPLICATE`).
+  - *Mail policy.* A reload that fails after `postconf -e` succeeded is answered
+    `502 MAIL_POLICY_NOT_RELOADED` with `mutation_applied: true`; nothing is
+    rolled back, and the screen shows the saved values under the notice.
+  - *Screens.* The PostgreSQL and MariaDB pages, the three editors, the raw file
+    editor, a domain's mail tabs, the webmail card, the catch-all, the
+    deliverability card and the mail queue hold `loading | known | unknown`
+    through `lib/remote.ts`. Unknown shows "could not be read" with Retry and no
+    editor; Save exists only for a known file; a stale save keeps what was
+    typed, turns Save off and offers the reload; the service's own line is shown
+    next to the field or rule it names.
+- **Schema or version transition.** No persisted schema and no migration:
+  `postgresql.conf`, `pg_hba.conf`, option files, crontabs and `mail_catch_all`
+  keep their formats. A scheduled task's ID changes form (16 hexadecimal
+  characters instead of 8); it was never stored and is read again with every
+  list. **Now required:** `version` in the body of `POST /api/v1/config` and of
+  `PUT …/mail/catch-all`, and as a query value on `DELETE …/mail/catch-all`.
+  Additive wire fields: `Version` on the configuration read; `version`,
+  `unchanged`, `backup`, `applied`, `daemon_check`, `restart_required` on the
+  configuration write; `version` on the catch-all answers; `Version` and the
+  result fields on the Agent's `UpdateConfig`, `Reason`, `Detail`, `Line`, `Name`
+  on its typed error. New refusal codes: `CONFIG_RELOAD_FAILED`,
+  `MAIL_QUEUE_UNREADABLE`, `MAIL_POLICY_NOT_RELOADED`, `CRON_JOB_AMBIGUOUS`;
+  `CONFIG_INVALID` gains `reason` and `vars` (`detail`, `line`, `name`). A Panel
+  and an Agent of different releases cannot write a configuration file: a new
+  Panel refuses the version-less read of an older Agent, and a new Agent refuses
+  the version-less write of an older Panel.
+- **Recovery behaviour.** Every refusal except two comes before the live file is
+  touched, so there is nothing to compensate. The two that follow a change: a
+  `pg_hba.conf` the running server refuses and a failed reload both put the
+  previous file back, conditional on the file still being the one this write
+  installed; when that cannot be done the previous version stays in the named
+  backup and the owner checks the file and reloads the service on the server.
+  A mail policy that was written and not reloaded is not rolled back; the owner
+  runs `sudo postfix check`, corrects what it names and runs `sudo systemctl
+  reload postfix`. PostgreSQL, MariaDB, Postfix and cron keep running without
+  the Panel exactly as before; the backups are ordinary files the owner can copy
+  back.
+- **Evidence.** Component tests, plus the validating programs run for real.
+  - Agent: `TestGetConfigAnswersAnUnreadableFileAsAnErrorNotAsEmpty`,
+    `TestUpdateConfigRequiresTheVersionOfTheFileItReplaces`,
+    `TestUpdateConfigRefusesEmptyAndMalformedContent`,
+    `TestUpdateConfigWithTheSameContentWritesNothing`,
+    `TestDatabaseConfigTargets`,
+    `TestPostgreSQLConfIsValidatedInstalledBackedUpAndReloaded`,
+    `TestPostgreSQLConfRefusedByPostgresChangesNothing`,
+    `TestDatabaseConfigIsNotInstalledWithoutItsValidator`,
+    `TestFailedReloadPutsThePreviousFileBack`,
+    `TestFailedReloadThatCannotBeUndoneSaysSoAndKeepsTheOtherVersion`,
+    `TestStoppedServiceIsNotReloaded`,
+    `TestPostgresReportingAnErrorAfterTheReloadPutsTheFileBack`,
+    `TestDatabaseConfigIsNotInstalledOverAFileThatChangedMeanwhile`,
+    `TestMariaDBOptionFileIsValidatedInstalledAndNotReloaded`,
+    `TestMariaDBOptionFileRefusedByMariaDBChangesNothing`,
+    `TestHBAIsRefusedBeforeAnythingIsWritten`,
+    `TestHBAIsShownToTheRunningServerBeforeItIsLoaded`,
+    `TestOnlyTheNewestBackupsOfAFileAreKept`,
+    `TestHBALineVerdictsAgreeWithPostgreSQL`,
+    `TestValidateHBAJudgesOnlyTheLinesTheWriteChanges`,
+    `TestHBALocalAdminAccess`, `TestHBALockoutRefusal`,
+    `TestADisabledCronJobCanBeEnabledChangedAndDeleted`,
+    `TestDeletingACronJobRemovesOnlyItsOwnLine`,
+    `TestUpdatingACronJobRewritesOnlyItsOwnLine`,
+    `TestCronJobsAreIdentifiedByTheirWholeText`,
+    `TestACronJobThatStandsTwiceIsNotChanged`,
+    `TestChangingACronJobIntoACopyOfAnotherIsRefused`,
+    `TestPostfixQueueTellsAFailedReadFromAnEmptyQueue`,
+    `TestSetMailPolicyReportsAFailedReloadAsWrittenNotReloaded`.
+  - Panel: `TestConfigReadCarriesTheVersionAndAnUnreadableFileIsAnError`,
+    `TestConfigWriteWithoutAVersionIsRefusedBeforeTheAgent`,
+    `TestConfigWriteAnswersEachAgentRefusalWithItsTypedGuidance`,
+    `TestConfigWriteAnswersWhatHappenedToTheService`,
+    `TestCatchAllWritesNeedTheVersionOfTheCatchAllTheyReplace`,
+    `TestMailQueueThatCouldNotBeReadIsNotAnEmptyQueue`,
+    `TestMailPolicyWrittenButNotReloadedIsAVerifiedFailureAfterAChange`,
+    `TestCronJobThatStandsTwiceIsATypedRefusal`.
+  - Web: `web/tests/remote-state-mounted-batch2b.test.mjs`,
+    `web/tests/db-config-text.test.mjs`, the rewritten
+    `web/tests/webmail-cta-ui-contract.test.mjs`.
+  - With the real programs, on a Debian 13 development guest, from the
+    distribution's packages unpacked into a private directory (not installed):
+    `TestRealPostgresValidatesACandidateFile` against PostgreSQL 17.11 and
+    `TestRealMariaDBValidatesACandidateFile` against MariaDB 11.8.6 (both skip
+    where the program is absent). Observed by hand on the same guest, with a
+    private, temporary PostgreSQL cluster and MariaDB data directory under
+    `/tmp`, without a TCP listener, removed afterwards: `postgres -C` runs as
+    root only with `-C` first, beside a running server and without changing it,
+    and leaves no file behind; an empty `postgresql.conf` passes it (so the
+    Agent's own refusal of empty content is what stops that); a `pg_hba.conf`
+    the server refuses leaves `pg_ctl reload` at exit status 0 and the old rules
+    in force, and `pg_hba_file_rules` names the line; the 44 lines of
+    `TestHBALineVerdictsAgreeWithPostgreSQL` are what that server answered;
+    after a reload `pg_file_settings` and `pending_restart` name
+    `shared_buffers`; `mariadbd --help --verbose` with a private data directory
+    touches no file of the real one, with the server stopped or running, writes
+    nothing to the configured `log_error`, exits 7 for an unknown variable, 9
+    for an unusable value and 1 for a broken group, and exits 0 for a missing
+    `!include`, an out-of-range value it adjusts, and anything in a group the
+    server does not read; a SIGHUP does not make MariaDB re-read the file.
+
+Open: nothing was run on a real server, and no real `systemctl reload` of a
+packaged PostgreSQL unit was exercised: the unit names (`postgresql@<major>-
+<cluster>` on Debian and Ubuntu, `postgresql` elsewhere), the journal line picked
+after a failed reload and `sudo -u postgres psql` reaching the edited cluster are
+from source and component tests. PostgreSQL 15 and 16 and MariaDB 10.11 were not
+run; `postgres -C` and `mariadbd --help --verbose` are long-standing, but a
+different message wording would only cost the line and setting shown next to the
+field, not the refusal. Oracle MySQL (`mysqld --validate-config`) is not handled:
+`mysqld` is run the MariaDB way. Not validated by any program: what
+`postgres -C` does not check (a `shared_buffers` the host cannot provide, a
+certificate file that cannot be loaded) is caught only after the reload or at
+the next start; option-file groups the server does not read; a missing
+`!include`. The `pg_hba.conf` check without a reachable server (stopped, or
+another cluster than the one `psql` reaches) is the Agent's line rules alone,
+which accept every method and option name any PostgreSQL release has had. An
+owner edit between the Agent's read and its conditional replacement is refused;
+one made in the instant between the replacement and a restore is not overwritten
+and leaves the restore undone. Deleting a scheduled task no longer removes the
+comment above it, so a description the Panel wrote for a task stays in the
+crontab after the task is deleted and is then listed with the task below it; the
+Panel cannot tell its own descriptions from the owner's comments. A webmail
+probe that times out is still answered as "not available" by the server. Not
+migrated: the other 47 files of the remote-state allow-list (56 before the
+first part of this batch stood in the same tree).
+
+### Corrections from the first native measurement of settings writes (invariants 1-4 and 6, 2026-10-10)
+
+D-025 invariants 1 (the owner's native configuration is detected, not replaced),
+2 (unknown is not absent, empty or success), 3 (the unsafe write is stopped at
+its own boundary), 4 (a mutation reads its pre-image, validates, keeps what it
+replaces and has a tested inverse) and 6 (the screen renders the authoritative
+state); D-022, D-024. No P0 item is closed or advanced. Source: the `set1` run of
+2026-10-08, the first time the settings writes of the two entries above met the
+packaged services (disposable QEMU/KVM guests: Debian 13, Ubuntu 24.04, Arch;
+evidence `deploy/e2e/release-recovery/evidence/set1-20261010/`). Nothing here
+was observed on an installed server. That run measured two candidate defects
+(P1, P2) and five observations (O1-O5); this entry corrects them in source.
+
+- **Measured.**
+  - *P1, Ubuntu 24.04: a mail policy save answered `200 success` although
+    Postfix did not reload.* The owner had left `default_process_limit = 200 #
+    raised for the campaign` in `main.cf` without reloading. The Agent ran
+    `systemctl reload-or-restart postfix`. On Ubuntu `postfix.service` is a
+    oneshot wrapper (`ExecStart=/bin/true`, `ExecReload=/bin/true`) and the
+    daemon belongs to `postfix@-.service`; the journal said `Reload failed for
+    postfix@-.service`, `systemctl` exited 0, `main.cf` held rate 46 and Postfix
+    ran with 45. Debian 13, whose `postfix.service` is the real unit, answered
+    `502 MAIL_POLICY_NOT_RELOADED` for the same sequence.
+  - *P2, all three platforms: after a reload that failed twice the answer said
+    the previous `postgresql.conf` could not be put back, although it was.* The
+    cause used was an owner's unit drop-in whose `ExecReload` signals PostgreSQL
+    and then fails. The first reload failed, the previous file was put back
+    (byte-identical, same owner, group and mode), the reload with it failed too,
+    and the answer was `CONFIG_RELOAD_FAILED` / `not_restored`, naming a copy of
+    that same file as "the other version". The same run showed why "the server
+    still runs the old settings" may not be assumed either: the first, "failed"
+    reload had already made the server read the NEW file.
+  - *O1.* `max_connections = plenty` was saved with "MariaDB checked the file
+    and accepts it": `mariadbd --help --verbose` exits 0 and prints `[Warning]
+    ... option 'max_connections': unsigned value 0 adjusted to 10`.
+  - *O2.* A `smtpd_recipient_restrictions` written one restriction per line came
+    back as one line after a DNSBL save (elements, order and separators kept).
+  - *O3.* Guidance named a cause that was not the cause. Unreadable scheduled
+    tasks: "checks that the service behind this page is running" (the causes
+    were `/etc/cron.allow` without the site user, and a relocated spool).
+    Unreadable mail queue: "checks that Postfix is running" (the cause was the
+    `main.cf` line above; with Postfix stopped `postqueue -j` reads the queue
+    directly and succeeds).
+  - *O4.* The `502 MAIL_POLICY_NOT_RELOADED` body carried no policy, although
+    its sentence says "the saved values are the ones shown".
+  - *O5.* The component scan listed `postgresql.conf` and `pg_hba.conf` twice on
+    Debian and Ubuntu.
+- **Changed.**
+  - *P1: a Postfix or Dovecot reload, start or restart is verified, never
+    inferred from `systemctl`'s exit status* (`cmd/agent/mail_service_verify.go`).
+    Postfix: `postfix check` first (its refusal is a verified failure with its
+    own line, and nothing is reloaded); a running master is reloaded with
+    `postfix reload`, the command every packaging runs as the unit's reload
+    (Debian 13 and Arch `ExecReload=postfix reload`; Ubuntu's instance
+    `postmulti -i - -p reload`, which is `postfix reload` for the default
+    instance), so the exit status is the instance's; afterwards `postfix status`
+    must still report a running master. A start or restart still goes through
+    systemd, so the unit keeps owning the daemon, and is judged by `postfix
+    status` and the master's process ID (`<queue_directory>/pid/master.pid`), up
+    to 15 seconds. Dovecot: `doveconf -n` first; after `systemctl restart`
+    `dovecot.service` must be active and running with one main process across
+    two readings, and after a restart that process must be a new one. Three
+    outcomes exist: verified, verified failure (stage `check`, `reload`, `start`
+    or `verify`), and unknown (a command could not be run or did not answer).
+    Used by: the mail policy save; mail stack setup; mail filter wiring and DKIM
+    (the reload after the milter chain was `reload-or-restart` with its result
+    thrown away); mail submission setup and its Dovecot recovery; the mail TLS
+    reconcile and its rollback; the raw-file editor's reload after a
+    `/etc/postfix` file.
+  - *P1, behaviour that changes with it.* A stopped Postfix is no longer started
+    by a mail policy save, by filter wiring or by a raw-file save: it is left
+    stopped and the answer says so (`applied: not_running`). Only setup (mail
+    stack, TLS) starts it. Filter wiring and DKIM now fail when Postfix
+    verifiably did not take the chain, instead of reporting success.
+  - *P1, the answers.* `502 MAIL_POLICY_NOT_RELOADED` carries `reason` `check`,
+    `reload` or `verify` with a sentence for each, and Postfix's own line in
+    `vars.detail`. An outcome that could not be established is the new `502
+    MAIL_POLICY_RELOAD_UNKNOWN`. The recovery command in every sentence is `sudo
+    postfix reload`, which prints what Postfix objects to and is the same on
+    every platform; `sudo systemctl reload postfix` on Ubuntu is the wrapper.
+    `200` carries `applied`: `reloaded`, `not_running`, `unchanged` or, since
+    the follow-up below, `unchanged_reloaded`.
+  - *P2: the answer is classified by what is verified*
+    (`cmd/agent/db_config.go`). (a) previous file back and the unit reloaded it:
+    `restored`, as before. (b) previous file back and the unit's reload failed
+    again: the server is told directly (`SELECT pg_reload_conf()` over the local
+    socket as the `postgres` account) and asked what it did. It runs with the
+    settings it had before the change only when all three hold: the answer is
+    about this file (`config_file` / `hba_file`); `pg_conf_load_time()` is later
+    than the moment the signal was sent (PostgreSQL sets it only when a re-read
+    reached the end without a syntax or value error, and with such an error
+    applies nothing); and `pg_file_settings` (or `pg_hba_file_rules`) reports no
+    error in the files on disk. Then `restored_unit_reload_failed`. Anything
+    less is `restored_running_unknown`. (c) the previous file could not be put
+    back (the file on disk is no longer the one this write installed, or the
+    write failed): `not_restored`, which alone names a copy, and that copy is
+    the previous file. In (a) and (b) the copy is removed, because the file on
+    disk is that file; no "other version" is named that does not exist. The
+    same classification applies when PostgreSQL reports an error after a
+    successful reload and the reload of the restored file then fails. The
+    answer carries the unit whose reload fails (`vars.unit`).
+  - *O1.* A `[Warning]` of `mariadbd --help --verbose` that says a value will
+    not be used as written (`option '<name>': ... adjusted to ...`, `option
+    '<name>': boolean value ... wasn't recognized`) refuses the save as
+    `CONFIG_INVALID` / `daemon` with MariaDB's line and the option's name. Other
+    warnings do not (the empty private data directory has no `mysql.plugin`
+    table; a stock Debian or Ubuntu file sets `expire_logs_days` without a
+    binary log; a removed option). A warning the file on the server already
+    produces is not this change's: only then the current file is read the same
+    way and what it already says is left out.
+  - *O3.* No sentence names a cause that was not verified. The Agent's "could
+    not be read" answers keep their fixed first line and may carry two more: a
+    cause the Agent verified itself, and the first line the server's own program
+    printed (bounded to 300 characters, password assignments blanked).
+    `cron_allow`: `crontab` said it refuses the user AND `/etc/cron.allow`
+    exists without that user. `cron_deny`: the same line, no `cron.allow`, and
+    `/etc/cron.deny` lists the user. `postfix_config`: `postqueue` printed
+    `fatal: bad ... configuration: ...` or a fatal naming `main.cf` or
+    `master.cf` and a line. Everything else is "could not be read", with the
+    line. The shared sentence of the settings screens no longer says to check
+    that the service is running.
+  - *O4.* The `502` body after a written policy carries `policy` with its new
+    version; the screen shows it without a second read.
+  - *O5.* The cause: the component has two units on Debian and Ubuntu
+    (`postgresql.service`, a wrapper, and `postgresql@<version>-<cluster>`), and
+    each unit's scan returns the component's files. The Panel's fold lists each
+    file once, compared by the path it resolves to; of two names for one file
+    the one that is the file itself is kept, because the Agent refuses to write
+    through a symbolic link (`/etc/mysql/my.cnf` on Debian resolves to
+    `mariadb.cnf`).
+- **Not changed, and why.**
+  - *O2.* Measured on the development guest with a private temporary
+    configuration directory (Postfix 3.10): `postconf -e` with a value that
+    spans lines exits 1, `postconf: fatal: -e, -X, or -# accepts no multi-line
+    input`. Keeping the owner's layout therefore needs a second writer that
+    edits `main.cf` in place (the last logical assignment, its continuation
+    lines, comments between them, an atomic replacement that keeps owner and
+    mode, and a check that Postfix reads the same value). That is a new write
+    path into the owner's file with no native measurement behind it, for a
+    difference that does not change what Postfix does. Left as it is.
+- **Platform limitation, stated in the guidance.** On a server whose
+  `/etc/cron.allow` does not list a site user, the Panel can neither read nor
+  write that user's crontab: Debian's and Ubuntu's `crontab -u <user>` refuses
+  the user even for root. The Panel says so and changes nothing; it does not
+  edit `cron.allow`.
+- **Schema or version transition.** No database schema and no persisted state.
+  Agent RPC, additive: `MailPolicyResponse.Stage` and `.Applied`, code
+  `mail_policy_reload_unknown`; `ConfigRPCError.Unit`, reasons
+  `restored_unit_reload_failed` and `restored_running_unknown`; the two "could
+  not be read" answers may be followed by `cause=` and `detail=` lines. HTTP,
+  additive: `MAIL_POLICY_RELOAD_UNKNOWN`; `reason` and `policy` on
+  `MAIL_POLICY_NOT_RELOADED`; `applied` on a successful policy save; the two
+  `CONFIG_RELOAD_FAILED` reasons and `vars.unit`; `detail` (the cause token) and
+  `vars.detail` on `CURRENT_SETTINGS_UNREADABLE` / `scheduled_tasks`; `reason`
+  and `vars.detail` on `MAIL_QUEUE_UNREADABLE`. Panel and Agent are installed
+  together by one release. A Panel older than this entry that meets a newer
+  Agent's "could not be read" answer with evidence lines does not recognise it
+  and answers its generic internal error, never an empty list; an older Panel
+  shows `not_restored` for the two new reasons, as it did before.
+- **Recovery behaviour.** Nothing retries by itself and nothing is rolled back
+  that was not before. A written policy that Postfix did not take stays
+  written; the owner corrects the line Postfix names and runs `sudo postfix
+  reload`. A configuration change that was not kept leaves the previous file in
+  place; when the unit's reload fails with it too, the owner is told which unit
+  and that the cause is not only the change.
+- **Evidence.** Component tests only; the native re-run is pending. Agent:
+  `mail_service_verify_test.go` (the wrapper that exits 0 while the daemon did
+  not reload, a reload refused by `postfix check`, success, a master that
+  stops, an unknown outcome, a stopped Postfix, Dovecot exiting after a
+  restart); `mail_policy_reload_test.go`; `db_config_set1_linux_test.go` (each
+  P2 branch, every reading that falls short, `pg_hba.conf`, and the MariaDB
+  lines recorded in the evidence folder as fixtures);
+  `unreadable_evidence_test.go`. Panel: `set1_corrections_test.go`. Screens:
+  four mounted cases in `web/tests/remote-state-mounted-batch2b.test.mjs`. By
+  hand on the development guest, read-only or in a private temporary directory:
+  the `postconf -e` refusal above, and `postfix` writing its `fatal:` line to a
+  standard error that is not a terminal.
+- **Open.**
+  - No fix here has been measured on real services. The native re-run must
+    show, per platform: P1 the Ubuntu sequence answering `502
+    MAIL_POLICY_NOT_RELOADED` / `check` with `policy` in the body, and a healthy
+    save answering `200` / `reloaded` with a `postfix/master ... reload` journal
+    line and the same master process; P2 the drop-in sequence answering
+    `restored_unit_reload_failed` with no copy named or left, `SHOW work_mem`
+    at the previous value; O1 `plenty` refused with MariaDB's line and the stock
+    files still accepted; O3 the three measured causes; O5 one entry per file.
+  - Not changed: the certificate renewal path
+    (`mail_host_certificate_reload.go`) still runs `systemctl reload
+    postfix.service` and judges by `systemctl is-active`, which on Ubuntu are
+    the wrapper's; its command scope is closed and it must not run `postfix
+    check`. The generic service actions of the Services page still report
+    `systemctl`'s exit status, also for the wrapper units `postfix` (Ubuntu) and
+    `postgresql` (Debian, Ubuntu).
+  - Follow-up, same date, component tests only
+    (`cmd/agent/mail_policy_rpc.go`, `mail_policy_reload_test.go`,
+    `cmd/panel/set1_corrections_test.go`): a save that changes nothing used to
+    reload nothing, so after a "not reloaded" answer a second, unchanged save
+    answered `200` / `unchanged` while Postfix still ran the earlier values.
+    Every accepted save now ends with the same verified reload. Nothing is
+    written, no state is recorded for it (Postfix cannot report what a running
+    master holds, and the Agent does not remember the earlier outcome), a
+    stopped Postfix is left stopped, and no schema, stored record or version
+    changes. `200` then carries `unchanged_reloaded` (running, reloaded) or
+    `unchanged` (stopped); a reload that still fails is the same `502` without
+    `mutation_applied`, because that request changed nothing. Still open: this
+    is not measured on a real service, and the reload is asked for on every
+    such save, also when Postfix already runs the file.
+  - `postfix check` also creates missing queue directories; it is what Debian
+    13's unit runs before every start. Postfix has no interface that reports
+    the values a running master holds, so "took the settings" is its own check,
+    its own reload command and a master that is still running.
+  - The PostgreSQL reading reaches the cluster `psql` reaches by default; for
+    another cluster the answer is `restored_running_unknown`. That
+    `pg_conf_load_time()` moves only on an error-free re-read is from
+    PostgreSQL's source behaviour, not measured here. The reading waits one
+    second.
+  - MariaDB: only the two warning forms above are refusals; Oracle MySQL is not
+    handled.
+  - Follow-up, same date: the scheduled tasks screen shows the verified cause
+    (`cron.unknown.cron_allow`, `cron.unknown.cron_deny`) as the server owner's
+    rule, and crontab's line (`cron.unknown.said`) under the neutral sentence
+    for every other answer; mounted cases in
+    `web/tests/remote-state-mounted-batch4.test.mjs`. Still open: a refused
+    write to the scheduled tasks shows the general sentence. The catalogue
+    entries `postfix.queue.unknown` and `mailpolicy.unknown` are no longer
+    used.
+
+  - The scheduled tasks screen does not show the cause or the line yet: the
+    answer and the catalogue entries (`cron.unknown.cron_allow`,
+    `cron.unknown.cron_deny`, `cron.unknown.said`) exist, the screen still
+    shows its one neutral sentence. The catalogue entries `postfix.queue.unknown`
+    and `mailpolicy.unknown` are no longer used.
+
+### Mail certificate renewal and the Services page: the outcome is what the daemon shows, not a wrapper unit's exit status (invariants 1, 2 and 4; P0.4/P0.5; 2026-10-10)
+
+D-025 invariants 1 (the owner keeps authority and working services), 2 (unknown
+is not success; evidence has a meaning) and 4 (a mutation carries its recovery
+contract); D-022 (renewal works without the Panel and the Agent), D-024. P0.4
+(the activation step of the mail TLS contract) and P0.5 (independent renewal).
+No P0 item is closed or advanced. Source: the two items the entry above left
+open after the `set1` measurement (P1). Nothing here was observed on an
+installed server, and nothing here has been measured on real services.
+
+- **Established: every reload or restart of Postfix or Dovecot after a
+  certificate changes.**
+  1. *First issue of the host certificate* (Agent RPC
+     `IssueMailHostCertificateV1`): `applyMailHostCertificateSelection`
+     (`cmd/agent/mail_host_certificate_rpc.go`) runs the mail TLS reconcile,
+     whose `reloadMailTLSService` (`cmd/agent/mail_tls_rpc.go`) has used the
+     verified helpers since the entry above (`postfix check`, `postfix status`,
+     `postfix reload`, `postfix status`; Dovecot `doveconf -n` and a main
+     process that stays). Correct on the wrapper unit. Customer certificates
+     for mail names (SNI) take the same path, and only when the Panel asks for
+     it (`resyncMailTLS`); there is no native hook for them.
+  2. *Renewal of the host certificate.* Certbot's deploy hook only queues: the
+     kit hook runs `<generation>/renew --queue`, the earlier Agent hook
+     `agent --deploy-mail-host-certificate`
+     (`internal/mailrenewalkit/deploy-hook`, `legacy-deploy-hook`). The queue is
+     consumed by the Agent's worker every minute
+     (`runMailHostCertificateRenewalWorker`) and, on an enrolled server, by
+     `celikpanel-mail-renewal.service` (`renew --process-pending`, timer every
+     five minutes), whichever takes the shared locks first. Both run the same
+     code: `publishMailHostCertificateSource` ->
+     `reloadMailHostCertificateSelection` -> `observeOrReloadMailHostTLS`
+     (`cmd/agent/mail_host_certificate_reload.go`): `systemctl reload
+     postfix.service`, then `systemctl reload dovecot.service`, each judged by
+     that command's exit status and by `systemctl is-active --quiet` of the same
+     two units, with the accepted configuration re-read before, between and
+     after.
+  3. *Recovery of an already selected certificate* (Agent start, the helper's
+     automatic retry, `--retry-selected`):
+     `reconcilePersistedMailHostCertificateHostAt`
+     (`cmd/agent/mail_host_certificate_files_linux.go`) calls the same
+     `reloadMailHostCertificateSelection`.
+  4. *Rollback.* The mail TLS reconcile's rollback uses the verified helpers
+     (path 1). A renewal has no service rollback: a certificate that was
+     selected stays selected and the operation stays open.
+  5. *The Panel certificate* reloads nginx only.
+- **On Ubuntu 24.04, paths 2 and 3.** `postfix.service` is `Type=oneshot`,
+  `RemainAfterExit=yes`, `ExecStart=/bin/true`, `ExecReload=/bin/true`; the
+  daemon is `postfix@-.service` with `ReloadPropagatedFrom=postfix.service`
+  (unit texts in `evidence/set1-20261010/set1-ubuntu/run-a/steps/09-s2-mail-policy/native-text/postfix-unit.txt`).
+  `systemctl reload postfix.service` exits 0 whatever the instance's reload did
+  (measured, P1), and `systemctl is-active postfix.service` answers "active"
+  for the wrapper while the master is stopped (from the unit text; not
+  measured). So a renewal was recorded as activated without evidence that
+  Postfix had reloaded or was running. Debian 13's `postfix.service` is the
+  real unit (`ExecReload=postfix reload`; same evidence folder), and so is
+  Arch's; there the two commands are the daemon's. Dovecot: no unit text is in
+  the evidence. From its upstream packaging `dovecot.service` is one real unit
+  on the three platforms, with `ExecReload=doveadm reload`; that command only
+  delivers a signal, so exit 0 does not say Dovecot read its configuration
+  again. Mail setup is refused on Arch, so the renewal path runs on Debian and
+  Ubuntu.
+- **Why the renewal path's command scope is "closed".** It is not a field of
+  the kit manifest and not a protocol version. It is a compiled list in the
+  helper, `validateIndependentMailCommand` (`cmd/agent/mail_renewal_entry.go`):
+  `dovecot --version`, `doveconf -n`, `postconf -h` for nine fixed settings,
+  `systemctl reload` and `systemctl is-active --quiet` for the two fixed units,
+  each as a canonical path in four system directories. The helper checks it
+  before every launch (`runMailHostCertificateCommand`) and again in the
+  re-executed supervisor (`service_mutation_supervisor_linux.go`). The guard
+  test `TestIndependentMailSupervisorCommandScope` pins it and names
+  `/usr/sbin/postfix check` among the refused. `MAIL-RENEWAL-EXECUTOR.md` and
+  `MAIL-RENEWAL-OBSERVATION.md` state it as the helper's contract, and the
+  native acceptance of the helper and its sandbox (BB, BD, BE) measured exactly
+  this list. `postfix check` is excluded for a reason of its own: it creates
+  missing queue directories, and a renewal may observe and reload but not
+  change what the owner has. The kit manifest
+  (`celikpanel-mail-renewal-runtime/v1`) binds the helper's bytes; a different
+  list is a different helper and therefore a different generation, which is
+  what every release build is. What would be a format change is the unit
+  template (`ProtectSystem=full`, `NoNewPrivileges`, `PrivateTmp`): the reader
+  recognises only the exact v1 template.
+- **Changed, renewal (paths 2 and 3).** `systemctl reload` stays the only thing
+  sent to a service: it is the unit's own reload with whatever its owner added
+  to it, and the command list is unchanged. Its exit status and `is-active` are
+  no longer the outcome. After each service's reload and re-observation, the
+  helper performs a TLS handshake with that service's own listeners on this
+  host and compares the certificate presented with the selected one
+  (`cmd/agent/mail_served_certificate.go`): Postfix 465, then 587 and 25 with
+  STARTTLS; Dovecot 993, 995, then 143 and 110 with STARTTLS/STLS; on
+  `127.0.0.1` and `::1`, and on this host's other addresses only when nothing
+  on loopback answers. No server name is sent, so the daemon presents its
+  default certificate, which is the host certificate. No name is resolved and
+  no other host is contacted. Bounded: one second to connect, three for an
+  exchange, nine per service. Three answers: a listener presents the selected
+  certificate (verified); listeners answer and none presents it within the
+  wait (verified: not activated); no listener answers with TLS (unknown).
+  Unknown and "not activated" both leave the operation open exactly as a
+  failed reload did before; neither is recorded as activated. This needs no
+  command, so it works in the helper's existing sandbox (the v1 unit does not
+  restrict the network).
+- **Changed, the Services page (`POST /api/v1/service/action`).** The Agent no
+  longer answers with `systemctl`'s exit status alone
+  (`cmd/agent/service_action_verify.go`).
+  - *Postfix and Dovecot* use the verified helpers. Postfix: `postfix check`
+    first for start, restart and reload, and a refusal is the answer; reload is
+    `postfix reload` and a running master afterwards; start and restart go
+    through systemd and are judged by `postfix status` and the master's process
+    ID; stop is judged by `postfix status` saying the master is not running.
+    Dovecot: `doveconf -n` first; `systemctl reload` (no longer able to start a
+    stopped one), start, restart, each followed by a main process that stays
+    across two readings; stop by the unit having no main process. "Start" on a
+    running service changes nothing and says so; "Reload" on a stopped one
+    fails and does not start it.
+  - *Any other unit* is first asked what it is (`systemctl show`: `Type`,
+    `ExecStart`, `Wants`, `ConsistsOf`, `PropagatesReloadTo`). A oneshot whose
+    one start command is `/bin/true` is a wrapper: Debian's and Ubuntu's
+    `postgresql.service`, with `postgresql@<version>-<cluster>.service` behind
+    it. Its action is judged by the instance units systemd names: start, the
+    units it wants are active; restart, those and the ones that were running
+    are active with a new main process; stop, none is active; reload, each
+    running one shows a reload command that ran since (`ExecReload`) with
+    `ReloadResult=success` and is still active. A wrapper with nothing behind
+    it for the action, or state that cannot be read, is unknown; when the state
+    cannot be read before the action, nothing is sent.
+  - *A unit that runs its own daemon* keeps its job result and its words (nginx,
+    Arch's `postgresql.service`, an instance unit named directly, `wg-quick@`).
+  - *In the catalogue only two units are wrappers:* `postfix` (Ubuntu 24.04;
+    Debian before 13) and `postgresql` (Debian, Ubuntu). The other unit names
+    are real units or aliases of them on the three platforms.
+  - *The answers.* `502 SERVICE_ACTION_FAILED` with `reason` `check`, `reload`,
+    `start`, `stop`, `verify` or `command`, and `502 SERVICE_ACTION_UNKNOWN`;
+    both carry `vars.unit`, `vars.action`, `vars.command` (what the owner runs
+    to read the service's own answer), `vars.detail` (one bounded line) and
+    `vars.owner_unit` when another unit owns the daemon. A failed action used
+    to answer `500` "internal server error". The audit entry says `unknown`
+    for an unknown outcome instead of `failed`.
+- **Not changed, and why.**
+  - *The helper's command scope.* `postfix reload`, `postfix status`, `doveadm
+    reload` and `systemctl show` stay outside it. Running Postfix's own
+    commands from the helper's sandbox has never been measured, and it would
+    bypass the unit's reload. The handshake answers the question the renewal
+    asks.
+  - *The check before publication* still uses `is-active`. A handshake that
+    could refuse a publication would keep a renewed certificate from a server
+    whose listeners it cannot reach; a certificate published while Postfix is
+    stopped harms nothing, because Postfix reads it when it starts.
+  - *The enrolled helper of an existing server.* See the transition below.
+- **Schema or version transition.**
+  - None in persisted state: ledger v1, accepted plan v1, receipt v1, the kit
+    manifest schema and the three native templates are byte-identical, and no
+    database schema changes.
+  - The helper's bytes change, as with every release, so the kit generation of
+    a release that contains this entry differs. An enrolled server keeps the
+    generation it was enrolled with: its hook and unit name that generation's
+    `renew`, a Panel update only publishes the new generation beside it
+    (`prepare-mail-renewal-runtime`), and "existing independent schedules are
+    preserved, including their current kit" (`MAIL-ENROLLMENT-RESERVATION.md`).
+    Therefore: a server with the earlier Agent hook gets the check when its
+    owner updates the Panel; a server enrolled from such a release on has it in
+    its helper; an already enrolled server has it only when the updated Agent's
+    worker takes the queue before the helper's timer does, and not at all when
+    the Agent is absent. Moving an enrolled server to a newer generation is
+    designed below and not implemented.
+  - Agent RPC, additive: `ServiceActionResult.Outcome`, `.Stage`, `.Applied`,
+    `.Detail`, `.Unit`. An older Panel ignores them and still sees `Error` for
+    every answer that is not success. HTTP, additive: the two codes above; a
+    successful answer gains `outcome`, `applied` and `unit`. Panel and Agent
+    are installed together by one release.
+- **Recovery behaviour.**
+  - *Renewal.* The selected certificate stays selected; settings, ledger, queue
+    and certificate evidence are untouched. The operation stays open and is
+    retried by the same request within the existing budget (three executions,
+    then the owner's explicit `--retry-selected` or `--retry-failed`), exactly
+    as after a failed reload. The helper's journal line and the Agent's log
+    line now say which service, whether it is "not complete" or "not
+    confirmed", the command (`postfix reload`, `doveadm reload`, `postfix
+    status`) and that the same operation resumes. While an operation is open, a
+    later renewal is not admitted; that was already so.
+  - *Services page.* Nothing retries and nothing is rolled back. A refused
+    configuration stops start, restart and reload before anything is sent; a
+    stop is always sent. The cached service scan is refreshed after a failed or
+    unknown answer too.
+- **Evidence.** Component tests only; native measurement pending.
+  `cmd/agent/mail_served_certificate_test.go` (a wrapper that exits 0 while
+  Postfix presents the previous certificate; Dovecot keeping it after its
+  reload; a stale then a fresh process; no listener; a listener without TLS; a
+  service bound to one host address; each STARTTLS; a cancelled operation; the
+  sentences; the command scope not widened);
+  `mail_host_certificate_reload_test.go` (the order reload, observe, ask; a
+  reload without the check is refused); `service_action_verify_test.go`
+  (Postfix and Dovecot actions on a wrapper that exits 0 while the daemon did
+  not follow; a wrapper judged by the units behind it for each action, with the
+  `ExecReload` text of the evidence folder as fixture; unknown; real units
+  keeping their job result); `cmd/panel/service_action_outcome_test.go`. No
+  test needs a mail server; the listeners are in-memory. No privileged-command
+  guard entry was added: every command goes through the existing launchers,
+  and the handshake is a connection, not a process.
+- **Open.**
+  - *Not measured on real services.* A native cell must show, on Ubuntu 24.04
+    and Debian 13, with the Panel and Agent stopped and the enrolled helper
+    doing the work: (a) a healthy renewal: the fingerprint presented on 465,
+    587, 993 before and after equals the previous and then the selected
+    certificate, the operation completes, the journal shows Postfix's and
+    Dovecot's reload; (b) Ubuntu with the instance's reload failing (a line
+    Postfix refuses in `main.cf`, as in P1): `systemctl reload postfix.service`
+    exits 0 and the operation stays open or completes, with what the listeners
+    present recorded each way; (c) Ubuntu with `postfix@-` stopped and the
+    wrapper active: "not confirmed", nothing recorded as activated, completion
+    after the owner starts Postfix; (d) Dovecot with a `local.conf` line it
+    refuses: `doveadm reload` exits 0, the previous certificate stays, "not
+    complete"; (e) the handshakes succeed inside the helper's sandbox; (f) what
+    `systemctl is-active postfix.service` says on Ubuntu with the instance
+    stopped. For the Services page: Reload and Restart of `postfix` on Ubuntu
+    with a refused `main.cf`; `postgresql` on Debian and Ubuntu, each action,
+    with a cluster that fails to start and with the owner's failing reload hook;
+    the real `ConsistsOf`, `Wants`, `PropagatesReloadTo`, `ReloadResult` and
+    `ExecReload` values; Dovecot's unit text on the three platforms.
+  - *What "verified" proves for Postfix.* A Postfix server process started after
+    the publication reads the selected certificate even when the master was not
+    reloaded, and a process that was idle leaves within `max_idle`. The check
+    proves that a listener presents the selected certificate; it does not prove
+    that every process that was already running has been replaced.
+  - *A server whose mail listeners cannot be reached on this host* (no TLS on
+    25, 465, 587, or on 110, 143, 993, 995, on any of its own addresses), or
+    whose owner gave every listener another certificate in `master.cf`: the
+    renewal publishes the certificate, reloads, and then stays open as "not
+    confirmed" or "not complete" until the owner continues it, and a later
+    renewal waits behind it. Before this entry such a server was recorded as
+    activated without evidence. The stack CelikPanel sets up opens these ports.
+  - *Designed, not implemented: moving an enrolled server to a newer helper
+    generation.* The file, loaded-unit and inverse primitives exist and have
+    native evidence (`celikpanel-mail-renewal-transition/v1` with the complete
+    previous kit, before-image v1, files v1, loaded v1; `MAIL-RENEWAL-KIT.md`).
+    Missing are: a durable reservation and dispatcher for an "upgrade"
+    operation beside enrollment's, admitted only by the owner's reviewed step;
+    waiting for a running renewal instead of replacing its unit; the
+    application rollback rule (an inverse back to the previous generation
+    whenever the Agent declaration it was admitted with is restored); and the
+    owner's view. The manifest schema stays v1 as long as the three templates
+    do; a `v2` is needed only if a template or a manifest field changes, and
+    then the reader must recognise both. The owner sees, on the mail
+    certificate status, which release the renewal helper is from (the helper
+    already answers `--inspect-build-identity`) and, when it predates this
+    entry, that it reloads the services without confirming the certificate they
+    present, with one reviewed action to move it and the same action as a
+    root command of the new immutable helper for a server without the Panel.
+    Until then the owner of an enrolled Ubuntu server checks after a renewal:
+    `openssl s_client -connect localhost:465 </dev/null 2>/dev/null | openssl
+    x509 -noout -fingerprint -sha256` against `openssl x509 -noout -fingerprint
+    -sha256 -in /etc/ssl/celikpanel/_mail/host/current/fullchain.pem`, and runs
+    `sudo postfix reload` when they differ.
+  - *Screen text (merge of 2026-10-10).* The catalogue has the
+    `err.SERVICE_ACTION_FAILED.*` and `err.SERVICE_ACTION_UNKNOWN` entries, in
+    English and Turkish, and the Services screens show them in place with the
+    service's line, the command and the unit that runs the service (operation
+    guidance entry of this date). A verified failure stands on the failure
+    surface and an unknown result on the attention surface. Inspected in a
+    browser against a mock; not on a real service.
+  - *A wrapper is recognised only on positive evidence.* When `systemctl show`
+    cannot be read before the action, the unit keeps its own job result.
+  - The `StartServiceMutation` RPC (Postfix and Dovecot, used when a mail
+    service has been installed) now starts through the same verified path.
+
+### A state-changing request carries one identity; a replay is answered, never run again (invariants 2, 4 and 6, 2026-10-10)
+
+D-025 invariants 2 (a timeout is not proof of failure, success, or permission to
+start again; unknown is its own state), 4 (the browser is an observer; retry is
+bounded, idempotent and tied to one operation) and 6 (an operation's identity
+stays reachable after reload or reconnect); constitution rule 3 ("refresh,
+reconnect and timeout never authorize duplicate work"); D-024, D-029. No P0
+item is closed or advanced. Found by a real-browser inspection and a read-only
+inventory of the source at `7a64bda91`; not observed on an installed server.
+
+- **Confirmed in the source at `7a64bda91`.**
+  - *The browser repeats a request by itself.* When a connection is reset while
+    a POST is being sent, Chrome sends it again: one click reached the Panel
+    three times. Of about 115 state-changing routes, 12 are harmful when they
+    run twice.
+  - *A reset tore the first attempt.* Handlers passed the connection's context
+    to the Agent call and to the database writes after it. The cancelled Panel
+    returned while the Agent went on, and the replay ran against that state.
+  - *The eight routes of this entry, each read in the code and reproduced by
+    `TestRequestIdentityEightRoutesRepeatTheirEffectWithoutTheGuard`:*
+    - restore of a domain backup: the Agent had no lock, so each arrival wrote
+      a safety backup, replaced the document root and imported the databases,
+      side by side;
+    - cPanel import: stopped between two Agent calls with the site half
+      imported (`TestImportApplyWithoutTheGuardStopsWhenTheConnectionGoesAway`);
+      the replay was then refused as "domain already exists";
+    - Let's Encrypt reissue: every arrival forced another issuance (three
+      arrivals, three issuances);
+    - manual backup: no job key, so no job lock and one archive per arrival;
+    - the Panel's own account on a database engine: a new password per
+      arrival, with nothing keeping two arrivals apart and the record written
+      on the connection's context;
+    - VPN peer: new keys and a new address per arrival (three peers);
+    - database on a database server: MariaDB accepts the second `CREATE
+      DATABASE IF NOT EXISTS`, the replay fails on the existing record, and its
+      compensation drops the database the first request created and recorded;
+    - database of a domain: created on the engine, not recorded by the Panel.
+- **Changed.**
+  - *The guard* (`cmd/panel/request_identity.go`), inside authentication and in
+    front of the router. A request for one of the eight routes must carry
+    `X-CelikPanel-Request-Id` (32 lowercase hexadecimal characters); without it
+    the answer is `428 REQUEST_ID_REQUIRED` and the handler is not reached.
+    The first arrival writes a `running` row and runs the handler on a context
+    the connection cannot cancel, bounded by the route's time limit (restore 40
+    min, import 2 h, issuance 25 min, backup 35 min, databases 15 min, engine
+    account 12 min, VPN peer 10 min). The answer is stored, then sent. A
+    handler never starts without its row.
+  - *A replay* (same identity, actor and SHA-256 of method, path, query and
+    body) is answered from the row. While the first is running it waits up to
+    20 seconds, then gets `409 REQUEST_IN_PROGRESS` with the same identity. The
+    same identity for anything else is `409 REQUEST_ID_REUSED`.
+  - *Unknown stays unknown.* A row left `running` by a previous process, or by
+    a handler that failed unexpectedly, is `interrupted`; its replay is `409
+    REQUEST_OUTCOME_UNKNOWN` and the request is never executed again under
+    that identity.
+  - *Secrets are not retained.* The engine-account and VPN peer routes, a
+    database answer that carries a password minted by that request, and any
+    answer over 64 KiB keep only the status code; the replay is `409
+    REQUEST_COMPLETED_RESULT_NOT_RETAINED` (reason `failed` when the first
+    attempt ended with an error). The request body is never stored.
+  - *At the Agent.* A second restore of a domain is refused while one is
+    running, before anything is read or written (`409
+    BACKUP_RESTORE_IN_PROGRESS` at the Panel). A manual backup sends its
+    request identity as the job key (`request:<identity>`), so the Agent's job
+    lock and its lookup of an archive this job already published apply.
+  - *At the Panel.* Opening, re-keying and removing one database server's own
+    account run one at a time, each reading the row again under the lock.
+  - *In the browser.* The one fetch interceptor adds the header to every
+    non-GET `/api/` call whose body does not carry `request_id`, one identity
+    per action, never to another origin. On the eight routes a lost answer
+    (connection failure, or a 408, 429, 502, 503 or 504 that is not JSON; the
+    Panel's own refusal with one of these statuses is its answer and is shown)
+    is asked for once more after 1.5 seconds with the same identity and that
+    answer is used. When that brings no answer either, or the Panel answers
+    `REQUEST_OUTCOME_UNKNOWN` or `REQUEST_IN_PROGRESS`, each of the eight
+    screens shows the result as not known the way the fourth batch of the
+    remote-state rule does for a change without an identity: a notice in place
+    that says which happened, a read-only re-read, and the controls that
+    change or remove off until that read answers. A change that was made while
+    its one-time result reached nobody says what was made and what to do. The
+    import page keeps the identity and the exact body of its request: starting
+    again after the read-only check is the same request, which the server
+    answers from the first run and cannot import twice.
+  - Every other route behaves as before, with or without the header.
+- **Schema or version transition.** Migration 43
+  (`043_request_identities.sql`) creates `request_identities` and its expiry
+  index through the ordinary ledger; no existing table changes. An older Panel
+  refuses to start on a ledger that carries entry 43
+  (`TestOlderReleaseRefusesALedgerWithTheRequestIdentitiesEntry`); rollback is
+  the pre-update snapshot restore, as for every earlier migration. The table
+  holds no owner data: after a restore that loses it a replay is a first
+  arrival, which is what it was before this change. **Now required:** the
+  header on the eight routes. Additive: the header on every other state-changing
+  call (ignored), `X-CelikPanel-Request-Id` and `X-CelikPanel-Request-Replayed`
+  on guarded answers, `vars.request_id` on the guard's refusals,
+  `CreateRequest.JobKey` on manual backups (a field an older Agent already
+  reads), the Agent answer `RESTORE_IN_PROGRESS`. New refusal codes:
+  `REQUEST_ID_REQUIRED`, `REQUEST_ID_REUSED`, `REQUEST_IN_PROGRESS`,
+  `REQUEST_OUTCOME_UNKNOWN`, `REQUEST_COMPLETED_RESULT_NOT_RETAINED`,
+  `BACKUP_RESTORE_IN_PROGRESS`. A page opened before the update is refused on
+  the eight routes until it is reloaded.
+- **Recovery behaviour.** Nothing is retried or repaired automatically. At
+  start the Panel marks every `running` row `interrupted` before it serves an
+  application request; a `running` row that this process is not running is
+  treated the same way when its replay arrives, so a failed start-up pass or a
+  failed write of the outcome cannot turn into a wait for work nobody runs. An
+  interrupted request has an unknown outcome: the owner checks the current
+  state on the page and makes the change again only if it is missing. The
+  Agent's work is not cancelled by the Panel's time limit or by a Panel
+  restart; native services keep running without the Panel exactly as before,
+  and rows expire after 24 hours.
+- **Evidence.** Component tests; no native run.
+  - Panel, the guard: `TestRequestIdentityFirstArrivalRunsAndReplayIsAnsweredFromTheRow`,
+    `TestRequestIdentityNeverStoresTheRequestBody`,
+    `TestRequestIdentityIsRequiredOnProtectedRoutesAndIgnoredElsewhere`,
+    `TestRequestIdentityReusedForADifferentRequestIsRefused`,
+    `TestRequestIdentityReplayWhileRunningWaitsThenSaysInProgress`,
+    `TestRequestIdentityRunningRowsAreInterruptedAtStartAndNeverReExecuted`,
+    `TestRequestIdentityOversizeAnswerKeepsOnlyItsStatus`,
+    `TestRequestIdentitySecretAnswersAreNeverStored`,
+    `TestRequestIdentityExpirySweep`,
+    `TestRequestIdentityHandlerPanicLeavesATruthfulRow`,
+    `TestRequestIdentityHandlerOutlivesTheConnection`,
+    `TestRequestIdentityConcurrentArrivalsRunOnce`,
+    `TestRequestIdentityHandlerDoesNotRunWithoutItsRow`,
+    `TestKeyedLocksSerialisePerKeyAndForgetIdleKeys`.
+  - Panel, the eight routes through the product's dispatcher with a fake Agent
+    or database driver: `TestRequestIdentityEightRoutesSentThreeTimesInARow`,
+    `TestRequestIdentityEightRoutesSentThreeTimesAtOnce` (one effect, the same
+    answer; for a one-time answer exactly one arrival gets it),
+    `TestRequestIdentityEightRoutesRepeatTheirEffectWithoutTheGuard`,
+    `TestRequestIdentityRoutesMuxMirrorsMain`,
+    `TestImportApplyIsNotCutWhenTheConnectionGoesAway`,
+    `TestImportApplyWithoutTheGuardStopsWhenTheConnectionGoesAway`,
+    `TestDatabaseAdminAccountChangesAreSerialisedPerServer`,
+    `TestRestoreRefusedByTheAgentWhileAnotherRunsIsANamedRefusal`. The import
+    case ends at the import's second Agent call; a whole import was not run.
+  - Agent: `TestOnlyOneRestoreOfADomainHoldsTheLock`,
+    `TestConcurrentRestoreClaimsNeverOverlap`,
+    `TestRestoreBackupIsRefusedWhileAnotherRestoreOfTheDomainRuns`,
+    `TestSecondRestoreOfADomainIsRefusedWhileTheFirstRuns`,
+    `TestManualBackupWithTheRequestJobKeyPublishesOnce`.
+  - Migration: `TestRequestIdentitiesMigrationContracts`,
+    `TestRequestIdentitiesMigrationAppliesToAnExistingDatabase`,
+    `TestOlderReleaseRefusesALedgerWithTheRequestIdentitiesEntry`.
+  - Web: `web/tests/request-identity-runtime.test.mjs` (also: the Panel's own
+    refusal is never asked for again; one definition of a result that is not
+    known for the eight screens); the backup cases of
+    `web/tests/remote-state-mounted-batch4.test.mjs`;
+    `web/tests/service-action-outcome.test.mjs` (the status-only answers); the
+    import case of `web/tests/remote-state-mounted.test.mjs`. Harness:
+    `deploy/e2e/dns-pair-acceptance/test_panel_api.py` (the driver names its
+    unsafe requests the way the web interface does);
+    `test_populated_database.py`, `test_database_exchange_rows.py` and
+    `test_guest_populated_baseline.py` (the schema 43 pin).
+
+Open: a real, installed Chrome was run against a loopback mock that keeps this
+guard's contract (`web/tools/browser-inspect`, scenarios `idbackup`,
+`idrestore`, `idcertificate`, `iddomaindb`, `idserverdb`, `idaccount`,
+`idpeer`, `idimport`, `idrefusal`, `serviceaction`; 53 states in each of eight
+configurations: 1440x900 and 390x844, English and Turkish, light and dark).
+With the connection really reset, one click reached the mock up to 10 times
+(the requests Chrome repeats by itself and the page's one second asking), every
+arrival under one identity, and each of the eight changes was made once. That
+is the browser against a mock, not against this guard; no Panel was restarted
+in the middle of one of the eight; no real restore, import, issuance, backup or
+database engine was run. The route time limits and the 20-second wait are chosen, not measured. The
+time limit bounds the Panel's handler, not the Agent's work, which the Agent
+RPC cannot cancel. A Panel that stops while a guarded request runs leaves the
+Agent's work unreconciled: the row says unknown and the owner checks. The
+owner-started panel update does not yet look at `running` request identities
+before it stops the Panel. The guard answers a repeat of the same request; two
+separate clicks are two requests and both run, except where a lock of the
+route itself refuses or orders them (restore, engine account, certificate). The
+engine-account answer carries no password and is still kept as status only; the
+screen treats that replay as the success it was. A manual backup now stops on
+an unreadable `.cpbak` in the domain's backup directory, as a scheduled backup
+already did. The update harness's populated-database proof
+(`deploy/e2e/release-recovery/populated_database.py`) pins schema 43 beside 38
+and 42 since the merge of 2026-10-10: the migration ledger digest
+`a0b5c4247f83...` and the schema digest `48cbd3b47573...`, computed from the 43
+migration files the way its offline tests build their input (the same
+computation reproduces the two existing pins), 66 tables: the 65 of schema 42
+and `request_identities`. `verify_copy` and `guest_populated_baseline.py verify
+--expected-version` accept 43; `database_exchange_rows.verify_pair` reads from
+the candidate's own ledger which pinned schema it reached, holds it to that
+pin, and requires `request_identities` to be empty after a migration-only
+exchange. A cell that verifies this candidate passes 43 where it passed 42. No
+cell was run with it. The Panel has no control that sets a database user's
+password, so "a minted database password is set again" (D-029) is done on the
+engine; the screen says so. Not covered: the other harmful routes of the
+inventory (service and application restart, plans, enrollments), the about 38
+routes that report wrongly after a replay, the 7 unclassified routes and the
+version-token routes.
+
+### Corrections from the second native measurement (invariants 1-4 and 6, 2026-10-11)
+
+D-025 invariants 1 (the owner's native configuration is detected, not
+replaced), 2 (unknown is not absent, empty or success), 3 (the unsafe write is
+stopped at its own boundary), 4 (a mutation reads its pre-image, validates and
+has a tested inverse) and 6 (the screen renders the authoritative state);
+D-022, D-024, D-029. No P0 item is closed or advanced. Source: the `set2` run
+of 2026-10-09 (UTC) on disposable QEMU/KVM guests (Debian 13, Ubuntu 24.04,
+Arch; evidence `deploy/e2e/release-recovery/evidence/set2-20261011/`), which
+confirmed the corrections of the entry before this one and measured three
+candidate defects (P3, P4, P5) and the observations O6-O15. Nothing here was
+observed on an installed server. This entry corrects them in source; none of
+the corrections has been measured on real services.
+
+- **Measured.**
+  - *O15, a secret answered to the browser.* `POST
+    /api/v1/import/cpanel/inspect` answered each mailbox's password hash
+    (`mail_accounts[].crypt_hash`): the handler encoded the Agent's answer as
+    it came. The apply route already read the archive again on the server; the
+    page sent the archive's path and the owner's choices, never the hashes.
+  - *P3, a failed Reload answered "keeps running with the settings it had",
+    which nobody had read.* (a) PostgreSQL with an owner's drop-in whose
+    `ExecReload` signals the server and then fails: the instance's
+    `ReloadResult` is `exit-code` and `pg_conf_load_time()` had moved; the
+    server had re-read its files. (b) A Reload of a stopped Postfix or Dovecot
+    got the same sentence.
+  - *O8, Stop of Postfix with a refused `main.cf` answered `502
+    SERVICE_ACTION_UNKNOWN` although the master was gone.* `postfix status`
+    reads `main.cf` before it answers, so it cannot answer in that state.
+  - *P4, the files step of an import refused an archive that holds the
+    directory member `homedir/public_html/`* ("unsafe cpmove member path"), the
+    route answered `202` with `status: pending`, and the domain, the mailbox
+    and the database were imported while the site files were not. Nothing was
+    pending: every step had ended.
+  - *P5, Arch: a PHP site could not be created, so every import answered
+    `500`.* The pool file was written to `/etc/php/8.5/fpm/pool.d/`, the Debian
+    layout, and the reload named a unit `php8.5-fpm`.
+  - *O9.* A certbot run that did not issue answered `500 INTERNAL` "internal
+    server error".
+  - *O10.* `database-servers/{id}/databases` answered the new user's password
+    also when the caller had sent it, so the answer was not kept and a replay
+    got the status-only refusal.
+  - *O11.* A service action was refused `409 server_setup_busy` while the setup
+    only waited for a public DNS record, for the moments in which its runner
+    asked the resolvers again.
+  - *O14.* The Databases page showed `15.1` for a MariaDB 10.11.14 (Ubuntu
+    24.04: the client's version) and the literal `VERSION()` on Arch.
+- **Changed.**
+  - *The import preview and the hashes*
+    (`internal/transport/cpmove_contracts.go`, `cmd/agent/cpmove_rpc.go`,
+    `cmd/panel/import_handlers.go`). The browser is answered a type of its own,
+    with every field named: a mailbox is its address, its quota and
+    `has_password`. `CpmoveMailAccount.CryptHash` is never encoded as JSON
+    (`json:"-"`); it travels from the Agent to the Panel over their local RPC,
+    and only when the Panel asks for it
+    (`CpmoveInspectRequest.IncludeMailHashes`), which only the apply of an
+    import with mail does. The apply reads the archive again on the server, as
+    before. A mailbox whose password field is not a crypt hash (a suspended
+    one) is now listed with `has_password: false` instead of being left out,
+    and an apply reports it as a step that was not imported instead of skipping
+    it silently.
+  - *A failed reload says only what was verified*
+    (`cmd/agent/service_action_verify.go`,
+    `cmd/panel/service_action_outcome.go`, `internal/transport/rpc.go`). Three
+    new stages. `not_running`: a reload of a stopped Postfix or Dovecot, or of
+    a wrapper with no running unit behind it; answered `409`, nothing was sent
+    to the daemon. `reload_reread` and `reload_not_reread`: PostgreSQL only.
+    Before a reload the Agent reads, over the local socket and without sending
+    a signal, the postmaster's process ID (`postmaster.pid`),
+    `pg_postmaster_start_time()` and `pg_conf_load_time()`; after a reload that
+    the unit reported as failed it reads them again. Only when both readings
+    are of the same server process and that process is the unit's main process
+    is a later load time "it re-read its files" and an unchanged one, read
+    twice, "it did not". In every other case, and for every service that cannot
+    be asked, the stage is the plain `reload`, whose sentence claims neither
+    state.
+  - *Stop of Postfix is judged by the master's process*
+    (`cmd/agent/mail_service_verify.go`). After `systemctl stop postfix` the
+    Agent reads the process ID in `<queue_directory>/pid/master.pid` and
+    `/proc/<pid>/comm`: the master is gone when that entry does not exist or
+    belongs to another program. `postfix check` is no longer asked for a stop.
+    Only when the process cannot be looked for is Postfix asked itself, as
+    before, and only then can a refused configuration make the outcome unknown.
+  - *Directory members of an archive* (`cmd/agent/cpmove_extract_linux.go`).
+    One trailing slash is taken off the name of a member that is a directory,
+    the way tar stores it. Basis: the tar format (POSIX ustar typeflag `5`; GNU
+    tar, Python's `tarfile` and Go's `tar.FileInfoHeader` all write the slash)
+    and the import's own inspection, which already cleaned the name; the
+    repository holds no real cPanel archive, and none was available to the run.
+    Every other refusal stands and is tested: a `..` component anywhere, a
+    backslash, a NUL, a doubled trailing slash, a payload path that cleans to
+    nothing, a file's name with a trailing slash, symbolic links, hard links,
+    devices.
+  - *An import answers what it came to* (`cmd/panel/import_handlers.go`). `200`
+    with `status: "active"` when every chosen part was imported, or `status:
+    "partial"`, `code: IMPORT_PARTIAL`, the lists `imported` and
+    `not_imported`, `domain_status` and a `message` (D-024). It never answers
+    `202` or `status: "pending"`. A site that could not be created is `502
+    IMPORT_SITE_NOT_CREATED` instead of a bare `500`.
+  - *PHP-FPM on a single-unit host* (`internal/services/php_layout.go` and the
+    five files that built the Debian paths; `cmd/agent/site_rpc.go`,
+    `cmd/agent/vhost_rpc.go`). Decision: PHP sites on Arch are meant to be
+    supported. Basis in the source: the catalogue maps `php-fpm` for pacman and
+    names Arch's single unit, the instance listing asks the program for the
+    version on that layout, and the capability read was changed (B3b) so that
+    Add Domain offers PHP there. The layout is read from the host, as the
+    instance listing reads it: a version with its own tree under `/etc/php` is
+    the versioned layout; a host without it but with `/etc/php/php-fpm.d` is
+    the single-unit layout (pools in `/etc/php/php-fpm.d/`, unit `php-fpm`,
+    program `php-fpm`, `/etc/php/php.ini`, sockets under `/run/php-fpm/`). The
+    socket's owner is the web server account that exists (`www-data`, `nginx`,
+    `http`).
+  - *A certbot failure is typed* (`cmd/agent/certbot_failure.go`,
+    `cmd/panel/certificate_issue_failure.go`). The Agent reads certbot's own
+    output for three kinds (the authority could not be reached, it refused a
+    validation, one of its limits was reached), adds `timeout` and `tool`, and
+    one bounded line. The answer is `502 CERTIFICATE_ISSUE_FAILED` with the
+    kind as `reason`; certbot's line goes to an administrator only.
+  - *A waiting setup does not refuse service actions*
+    (`cmd/panel/server_setup_operations.go`). The rule: an execution is
+    mutating while its row is `running`, except when the step it is at is the
+    public address check (`access_dns`), which only asks public resolvers. A
+    row that cannot be read as an execution counts as mutating.
+  - *A password the caller sent is not sent back*
+    (`cmd/panel/database_v2_handlers.go`). The database and the database-user
+    routes answer `password_set: true`, and `password` only when the request
+    minted it. The first answer is therefore kept and replayed like any other.
+    No other route was found that echoes a sent password.
+  - *The MariaDB version is the server's*
+    (`internal/services/mariadb_driver.go`, `version_detector.go`,
+    `cmd/panel/database_admin_account_handlers.go`). The running engine is
+    asked whenever the Panel has an account on it, with a statement that marks
+    its own answer (`version=...`); the service scan asks the server program
+    (`mariadbd --version`), never the client.
+- **API changes (for the release notes).**
+  - `POST /api/v1/import/cpanel/inspect`: `mail_accounts[].crypt_hash` is gone;
+    `mail_accounts[].has_password` (boolean) is new. A mailbox without a
+    password in the archive is now listed.
+  - `POST /api/v1/import/cpanel/apply`: `200` in place of `202` for an import
+    that ended with a part not imported; `status` is `active` or `partial` (it
+    was `active` or `pending`); new fields `domain`, `domain_status`, `code`,
+    `message`, `imported`, `not_imported`. New refusal `502
+    IMPORT_SITE_NOT_CREATED`.
+  - `POST /api/v1/service/action`: new reasons `not_running` (answered `409`),
+    `reload_reread`, `reload_not_reread`; a Stop of Postfix with a refused
+    `main.cf` answers `200` when the master is gone.
+  - `POST /api/v1/domains/{id}/ssl/letsencrypt`: `502 CERTIFICATE_ISSUE_FAILED`
+    with a `reason` in place of `500 INTERNAL` for a certbot run that did not
+    issue.
+  - `POST /api/v1/database-servers/{id}/databases` and `.../users`: `password`
+    only when the request minted it; `password_set` is new.
+- **Not changed, and why.**
+  - O6 and O7 (a restarted Panel does not cut a running restore; after a killed
+    Panel the Agent finished it while the row says the outcome is unknown) are
+    what D-029 describes; reconciling the row with the Agent is not part of
+    this entry.
+  - O12: a Reload of MariaDB is answered with systemd's own line. The Services
+    screens send Start, Stop and Restart only, so no screen offers that Reload;
+    it is reachable through the API. O13 and O2 are unchanged.
+  - The other DNS waits of a setup (`primary_dns`, `infrastructure_dns`) still
+    refuse service actions while they are re-checked: their re-check can
+    publish native DNS records. The wait for the final verification (which
+    holds the reverse-DNS check) never sets the row to `running`, so it never
+    refused.
+  - On a single-unit host the extension directories (`mods-available`,
+    `conf.d`) are still the Debian ones, and a PHP version switch still builds
+    its socket path on the Panel; such a host has one version to switch to.
+  - A version already recorded for an engine stays until the Panel's account on
+    it is provisioned again.
+  - The Domains page treats a domain's `pending` status as a deletion that may
+    be waiting and asks for its marker; a domain left by a partial import has
+    none and is drawn as an ordinary row.
+- **Schema or version transition.** No database schema and no persisted state.
+  The Agent's RPC gains fields that are transferred by name:
+  `CpmoveMailAccount.HasPassword`, `CpmoveInspectRequest.IncludeMailHashes`,
+  `IssueLetsEncryptResponse.Failure` and `FailureDetail`, and three
+  `ServiceActionResult.Stage` values. The archive calls already require the
+  Panel and the Agent to be the same build. A Panel that meets an Agent without
+  the new fields shows a mailbox as having a password when a hash arrived,
+  answers a certbot failure as before, and has no sentence to choose for a
+  stage it is not sent. A `request_identities` row written before the update
+  replays the answer it stored, in its old shape, until it expires.
+- **Recovery behaviour.** Nothing retries by itself. A partial import leaves
+  the domain and what was imported in place; the owner adds the missing parts
+  by hand, or removes the domain and imports the archive again, and an import
+  into an existing domain is refused. A certificate request that failed added
+  nothing: what certbot left of it is removed before the answer, and a
+  certificate the site had keeps serving. A reload that was reported as failed
+  is not repeated by the Panel, and no signal is sent to PostgreSQL to learn
+  what it did.
+- **Evidence.** Component tests only; the native re-run is pending. Agent:
+  `cpmove_set2_linux_test.go` (an archive as tar writes it, every refusal, the
+  hashes handed over only to an apply), `service_action_verify_test.go` and
+  `mail_service_verify_test.go` (each PostgreSQL reading, a stopped daemon,
+  Stop judged by the master's process), `certbot_failure_test.go`. Panel:
+  `set2_corrections_test.go` (no answer, stored answer or log line holds a
+  hash-shaped value; the partial answer; the certificate answer; a sent
+  password is not echoed and its answer is replayed; the engine is asked for
+  its version), `server_setup_busy_rule_test.go`,
+  `service_action_outcome_test.go`. Services: `php_layout_test.go`. Screens:
+  `web/tests/set2-corrections.test.mjs`, and a real Chrome against the loopback
+  mock (`web/tools/browser-inspect`, scenarios `importpreview`, `importresult`,
+  `reloadwording`, `certfailure`; desktop and phone, English and Turkish, light
+  and dark). No real cPanel archive, no certificate authority and no Arch host
+  was used.
+- **Open.**
+  - No correction here has been measured on real services. The native re-run
+    must show: the preview and every stored answer without a hash and the
+    mailbox imported with its password; an archive with directory members
+    imported completely, and a failed files step answered `200` / `partial`;
+    the PostgreSQL hook sequence answered `reload_reread`, a stopped Postfix
+    and Dovecot answered `409` / `not_running`, and Stop of Postfix with a
+    refused `main.cf` answered `200` / `stopped`; on Arch a PHP site created,
+    served and deleted, and an import completed; a certbot failure answered
+    `502 CERTIFICATE_ISSUE_FAILED`; no `server_setup_busy` while the setup
+    waits at `access_dns`; a sent database password not echoed and its replay
+    answered from the row; the server's MariaDB version on all three platforms.
+  - Whether a PHP page executes on Arch under the packaged unit's hardening,
+    and whether `/run/php-fpm` is where a site's socket may live there, is
+    established only by that run.
+  - Real cPanel archives (the home directory as a nested `homedir.tar`,
+    suspended mailboxes, large sites) have not been imported.
+
+### Corrections from the final native round (invariants 1-4 and 6, 2026-10-12)
+
+D-025 invariants 1 (the owner's native configuration is detected, not
+replaced), 2 (unknown is not absent, empty or success), 3 (the unsafe write is
+stopped at its own boundary), 4 (a mutation reads its pre-image, validates and
+has a tested inverse) and 6 (the screen renders the authoritative state);
+D-022, D-024, D-029. No P0 item is closed or advanced. Source: the `set3` run
+of 2026-10-09 (UTC) on disposable QEMU/KVM guests (Debian 13, Ubuntu 24.04,
+Arch; evidence `deploy/e2e/release-recovery/evidence/set3-20261012/`), which
+passed every corrected item of the entry before this one on Debian 13 and
+Ubuntu 24.04 and the whole update matrix from the published v0.1.0-alpha.81,
+and measured one candidate defect on Arch (P5b) and the observations O16-O21.
+Nothing here was observed on an installed server. This entry corrects them in
+source; none of the corrections has been measured on real services.
+
+- **Measured.**
+  - *P5b, Arch: a PHP site still could not be created.* The pool was written
+    and PHP-FPM accepted it; then nginx refused the virtual host (`open()
+    "/etc/nginx/snippets/fastcgi-php.conf" failed`). The PHP vhost included
+    `snippets/fastcgi-php.conf`, a file Debian's and Ubuntu's nginx packages
+    ship (nginx-common) and Arch's does not; Arch ships `fastcgi.conf` and
+    `fastcgi_params` in `/etc/nginx` and has no `snippets` directory. The Agent
+    restored the vhost and removed the account; the Panel answered `500
+    INTERNAL`, and an import `502 IMPORT_SITE_NOT_CREATED`. With that one file
+    placed by hand (second reading, an owner action) the site was created,
+    served PHP as its own account under the packaged unit and was deleted
+    cleanly, and every import completed.
+  - *O21.* On that guest the site's socket was
+    `/run/php-fpm/php8.3-fpm-site2.sock` although the only PHP is 8.5.11: the
+    create handler read `/etc/php/<version>/fpm` on the Panel's own disk and
+    took the literal `8.3` when it found nothing.
+  - *O16.* A Reload of a stopped nginx and of the stopped PostgreSQL wrapper
+    answered `502` / `command` with systemd's line ("postgresql.service is not
+    active, cannot reload."): systemd refused the reload before the Agent's own
+    reading applied. Only Postfix and Dovecot were answered `409` /
+    `not_running`.
+  - *O17.* An archive member named by an absolute path was left out of the
+    import and the answer was `200` / `active` without a word about it. Nothing
+    had been written for it.
+  - *O19.* After a Stop of Postfix with a main.cf it refuses, the answer was a
+    truthful success (the master was gone) and systemd showed the unit as
+    `failed`, `Result=exit-code` (`postfix.service` on Debian 13,
+    `postfix@-.service` on Ubuntu 24.04). The journal shows why: the unit's own
+    stop command (`postfix stop`) reads main.cf first and exits 1 ("fatal: bad
+    numerical configuration"), and systemd then ends the processes itself.
+  - *O18.* After an automatic return from a defective candidate the update
+    check still offers the same version, with `previous_attempt: {phase:
+    recovered}`; a typed cause is in it only when the recovery record holds one
+    (the start-check candidate), not for a candidate whose migration failed.
+- **Changed.**
+  - *The PHP hand-off is written out in the vhost*
+    (`internal/services/templates/nginx/vhost.conf.tmpl`). The six directives
+    of Debian's `snippets/fastcgi-php.conf` are rendered in its place, in its
+    order: `fastcgi_split_path_info`, the `try_files $fastcgi_script_name =404`
+    guard, `set $path_info`, `fastcgi_param PATH_INFO`, `fastcgi_index
+    index.php`, `include fastcgi.conf`. The lines that followed the include are
+    unchanged. A vhost now includes only `fastcgi.conf` and `fastcgi_params`,
+    nginx's own files, which every package installs. No file is added to the
+    server and none of the owner's is touched. For a site that was generated
+    with the include, a re-render is the same configuration with the include
+    expanded: nginx reads an include as the included file's text in its place.
+  - *A site the web server refused is answered as that*
+    (`internal/services/nginx_generator.go`, `cmd/agent/site_rpc.go`,
+    `internal/services/site_orchestrator.go`,
+    `cmd/panel/domain_web_server_refused.go`). `nginx -t` that exits with its
+    own status is typed (`NginxConfigRefusedError`), and so is a vhost change
+    whose inverse ran to the end (`VhostRestoredError`: the file and link are
+    what they were, nginx accepted the previous configuration and was
+    reloaded). Only when both hold does the Agent answer
+    `WebServerRefusedConfig` with nginx's first `[emerg]` line. The Panel
+    answers `502 SITE_WEB_SERVER_REFUSED`; its `reason` says whether the site's
+    deletion on the Agent (the orchestrator's compensation, which answers
+    success only when the vhost, the pool, the account and the site's directory
+    are gone) was confirmed. nginx's line is shown to an administrator only.
+  - *The PHP version of a new site is one the server runs*
+    (`cmd/panel/domain_handlers.go`, `domain_php_handlers.go`,
+    `internal/services/service_scanner.go`). The create handler takes the
+    newest version the Agent reports (the program's own answer on a host with
+    one unversioned PHP-FPM) and refuses a named version the server does not
+    run (`409 PHP_VERSION_NOT_INSTALLED`) before anything is created. A version
+    switch records the socket the Agent wrote the pool with
+    (`services.PHPFPMSocketPath`) instead of building Debian's path. The list
+    answers no PHP version for a domain without a site (it answered `8.3`). The
+    configuration files listed for PHP-FPM are those of the installed layout,
+    with no assumed version.
+  - *An application unit runs as the web server's account of the host*
+    (`cmd/agent/app_rpc.go`). The Panel asks for `www-data`; where that account
+    does not exist the unit is written with `nginx` or `http`, in the order the
+    rest of the product reads them.
+  - *A reload of anything that is not running is `not_running`*
+    (`cmd/agent/service_action_verify.go`). Read before anything is sent: a
+    wrapper when every unit its reload reaches is `inactive` or `failed`, any
+    other unit when it is loaded and `inactive` or `failed` itself. A state in
+    between, a unit that is not loaded and a state that could not be read keep
+    the service manager's own answer.
+  - *A Stop that left the unit marked as failed says so and leaves the mark*
+    (`cmd/agent/ service_action_verify.go`,
+    `cmd/panel/service_action_outcome.go`). Decision: the Agent does not run
+    `systemctl reset-failed`. The mark is systemd's own record of what the
+    unit's stop command did, and the same one the owner's own `systemctl stop
+    postfix` leaves on that host, so the Panel adds no native state of its own;
+    clearing it would remove from `systemctl --failed` and from monitoring the
+    one native sign that the configuration is refused and that the service
+    cannot be started as it is, and would reset the unit's start-limit
+    counters, which a Stop was not asked to do. Nothing the Agent could send
+    avoids the mark: systemd runs the unit's stop command for every way of
+    stopping it. The unit is read before the stop and after a verified one; a
+    unit that was not failed before and is failed after is reported in the
+    success (`note`), with systemd's result and, for Postfix, the line its own
+    check prints now.
+  - *What the files step of an import leaves out is counted and named*
+    (`cmd/agent/cpmove_left_out.go`, `cpmove_extract_linux.go`,
+    `cmd/panel/import_handlers.go`). Every member ends in exactly one of:
+    imported; the whole step refused, as before, now naming the member and what
+    it is (a symbolic link, a hard link, a device node, a named pipe, a name
+    with `..`, a backslash or a NUL, a payload over the size or count limit);
+    refused by its name and left out (an absolute path), which is listed as a
+    step `member:<name>`, at most 20 and then a count, and makes the import
+    `partial`; or outside `homedir/public_html`, which is counted by the folder
+    of the archive it is in and said on the files step's own line. An import
+    whose only missing entries are refused members is `partial` with
+    `domain_status: active`: every chosen part is there, and the same archive
+    would be refused the same entries again.
+  - *The update card says before Start what already happened*
+    (`web/src/components/PanelUpdateCard.tsx`). A version that was tried here
+    and returned has its own heading, says what the server runs now, the
+    recorded cause or that none was recorded, and what starting it again does.
+    The version is not hidden and Start is not disabled.
+  - *H42* (`deploy/e2e/release-recovery/build-upd1-artifacts.sh`): a dist build
+    that fails or is refused stops the builder instead of being followed by the
+    archive an earlier build left under the same name.
+- **Other assumptions of the Debian layout that were looked for.**
+  - Corrected here: the snippet file; the literal `8.3`; the socket path of a
+    version switch; `www-data` as the account of an application unit; the
+    PHP-FPM file list of the configuration scan.
+  - Already read from the host, and seen working in the second Arch reading:
+    the vhost directories (`sites-available`, `sites-enabled`, added to Arch's
+    `nginx.conf` by the web server's setup step), the web server account, the
+    pool directory, unit and socket directory of PHP-FPM, `/var/log/nginx`.
+  - Not corrected: on a single-unit host the PHP extension directories are
+    still Debian's; MariaDB's settings file is
+    `/etc/mysql/mariadb.conf.d/50-server.cnf`; `DetectInstalledPHPVersion`
+    still reads versioned trees only (the webmail setup uses it for package
+    names that exist on Debian only); a site that was created as static gets
+    PHP through the hosting type change, which was not exercised on Arch.
+- **API changes (for the release notes).**
+  - `POST /api/v1/domains/create`: `502 SITE_WEB_SERVER_REFUSED` with `reason`
+    `removed` or `cleanup_unconfirmed`, `vars` and, for an administrator,
+    `details`, in place of `500 INTERNAL` when nginx refused the site; `409
+    PHP_VERSION_NOT_INSTALLED` for a named PHP version the server does not run.
+  - `POST /api/v1/import/cpanel/apply`: `502 SITE_WEB_SERVER_REFUSED`
+    (`import_removed`, `import_cleanup_unconfirmed`) in place of `502
+    IMPORT_SITE_NOT_CREATED` for that cause; steps `member:<name>` and
+    `members:<n>`; `status: partial` with `domain_status: active` when only
+    such entries are missing; the files step's `detail` is longer.
+  - `POST /api/v1/service/action`: `409` / `not_running` for a reload of any
+    stopped unit (it was `502` / `command`); a successful Stop may carry
+    `note`.
+  - `GET /api/v1/domains`: `php_version` is empty for a domain without a site.
+- **Not changed, and why.**
+  - An owner who had edited the package's
+    `/etc/nginx/snippets/fastcgi-php.conf`: a site's vhost no longer reads that
+    file after its next re-render. The file is left in place and nothing
+    detects that it differs from the packaged one.
+  - The same refusal by nginx during a change of hosting type, of a certificate
+    or of a site's settings still answers its earlier error; only site creation
+    and the import carry the new answer.
+  - A `..` component, a link or a device below the site folder still refuses
+    the whole files step; only an absolute name is left out by itself.
+  - O18: the check still offers the version and the release floor file stays at
+    the candidate's sequence after a return. The update's own line ("offline
+    panel database migration failed ...") is shown by the outcome notice after
+    the return; the card before Start shows the typed cause or that none was
+    recorded.
+  - O20 (the published alpha.81's `web_mail` plan on Arch) is a harness limit
+    of the baseline, not of this source.
+- **Schema or version transition.**
+  - No database schema and no persisted state. The Agent's RPC gains fields
+    that are transferred by name: `CreateSiteResponse.ErrorDetail` and the
+    error code `web_server_refused_config`; `ServiceActionResult.Notice`,
+    `NoticeUnit`, `NoticeResult`, `NoticeDetail`;
+    `CpmoveExtractResponse.Refused`, `RefusedCount`, `OutsideCount`,
+    `OutsideGroups`. A Panel that meets an Agent without them answers as
+    before. (Corrected 2026-10-09 from the fourth native run; an earlier form
+    of this sentence said vhost files on disk are not rewritten by an update.
+    They are: measured on Debian 13 and Ubuntu 24.04, the updated Panel's own
+    start renders the hosted sites again — its journal line is "certificate
+    startup reconcile: restored 2 hosted vhosts with one nginx validation and
+    reload" — so a site created by v0.1.0-alpha.81 had the new text, without
+    the snippet include, before any owner action; ten requests were answered
+    the same before the update, after it and after a later save. The Panel
+    start of earlier releases does the same render; what an owner's own edit
+    of a generated vhost file meets at that start was not measured.) A later
+    render (a certificate, a setting, a hosting change) is the same
+    configuration. Sites and sockets already recorded with a version keep it.
+- **Recovery behaviour.**
+  - Nothing retries by itself. A site nginx refused is removed again by the
+    Agent's own inverse and by the Panel's compensation; when that is not
+    confirmed the domain row is kept so that it can be deleted from the Domains
+    page. A reload of a stopped unit sends nothing. A Stop is never followed by
+    `reset-failed`. An import with refused members keeps everything it imported
+    and marks the domain as finished.
+- **Evidence.**
+  - Component tests only; the native re-check on Arch is pending. Services:
+    `nginx_php_handoff_test.go` (the rendered PHP location is, directive for
+    directive, the old one with Debian's file put in for the include, whose
+    text is pinned by the SHA-256 the set3 run recorded; no vhost of any
+    project type names a file under `snippets/` or includes anything but
+    nginx's two files), `set3_corrections_test.go`. Agent:
+    `set3_corrections_test.go`, `cpmove_set3_linux_test.go`. Panel:
+    `set3_corrections_test.go`. Screens: `web/tests/set3-corrections.test.mjs`,
+    `panel-update-card-mounted.test.mjs`, and a real Chrome against the
+    loopback mock (`web/tools/browser-inspect`, scenarios `siterefused`,
+    `importentries`, `stopnote`, `updaterolledback`; desktop and phone, English
+    and Turkish, light and dark).
+  - A local check with Debian 13's own nginx (`nginx` and `nginx-common`
+    1.26.3-3+deb13u7, fetched and unpacked into a private directory of the
+    development guest, not installed; loopback only): the package's
+    `snippets/fastcgi-php.conf` has the pinned SHA-256 (`a9dd98bf...411f2`);
+    `nginx -t` accepts the vhost as the previous source renders it on a layout
+    with the snippet and refuses it without it, with the line measured on Arch;
+    `nginx -t` accepts the vhost as this source renders it on a layout that has
+    no `snippets` directory; and for 17 requests (a script, a query string,
+    `PATH_INFO`, a missing script, the front controller, a static file, a dot
+    file, the ACME location) the status and every FastCGI parameter, in order,
+    are the same under both. Not checked: Ubuntu's package, Arch's nginx,
+    PHP-FPM itself.
+- **Open.**
+  - The native re-check must show, on Arch: a PHP site created on a stock host,
+    a PHP page executed as the site's account, the site deleted, an import
+    completed; the socket and the recorded version carrying the installed PHP's
+    version. On Debian 13 and Ubuntu 24.04, because the vhost template changed:
+    that `/etc/nginx/snippets/fastcgi-php.conf` has the pinned SHA-256; a PHP
+    site created, a PHP page executed, `PATH_INFO` and a missing script
+    answered as before; a site created by the published alpha.81 re-rendered by
+    this source with `nginx -t` passing and the page still served.
+  - Also to be measured: a refused site answered `502 SITE_WEB_SERVER_REFUSED`
+    with nothing of it left; a reload of a stopped nginx, MariaDB and
+    PostgreSQL wrapper answered `409`; the Stop of Postfix with a refused
+    main.cf answered `200` with the note and the unit still `failed`; the
+    absolute member listed and the domain `active`.
+  - Real cPanel archives have not been imported; the count of entries outside
+    the site folder was seen only on fixtures.
+
+### Corrections after the set4 native measurement (invariants 2, 3 and 6, 2026-10-09)
+
+D-025 invariants 2 (unknown is not absent, empty or success), 3 (the unsafe
+action is stopped at its own boundary) and 6 (the screen renders the
+authoritative state); D-022, D-024. No P0 item is closed or advanced. Source:
+the `set4` run of 2026-10-09 (UTC) on disposable QEMU/KVM guests (evidence
+`deploy/e2e/release-recovery/evidence/set4-20261009/`), which found one product
+failure (its item 10 on Ubuntu 24.04) and two misstatements (its observations 5
+and 6), and the `set4b` measurement of the same day (evidence
+`deploy/e2e/release-recovery/evidence/set4b-20261009/`), which first measured
+what the Agent reads around that Stop and then measured the correction. Nothing
+here was observed on an installed server. 2026-10-09 is the calendar date; the
+dates 2026-10-10 to 2026-10-12 of the entries above are labels of rounds.
+
+- **Measured.**
+  - *Item 10, Ubuntu 24.04: the Stop was answered before Postfix had stopped,
+    and the unit was read while systemd was still stopping it.* On a guest with
+    the product as set4 measured it, five Stops out of five through the Panel,
+    with a main.cf that `postfix check` refuses, answered `200
+    {"applied":"stopped","outcome":"verified","success":true}` without a
+    `note`, and `postfix@-.service` ended `failed` (`Result=exit-code`) each
+    time. `strace` on the Agent (two of the five) shows what it read. Before
+    the stop both units answered `LoadState=loaded`, `ActiveState=active`,
+    `Result=success`, so the instance unit was counted as not failed. After
+    `systemctl stop postfix`, `postconf -h queue_directory` exited 0 and wrote
+    "/usr/sbin/postconf: warning: /etc/postfix/main.cf: #comment after other
+    text is not allowed: # raised for the campa..." to its error stream and
+    then `/var/spool/postfix` to its output. The Agent reads both streams as
+    one buffer and took the buffer whole as the directory: it opened a path
+    made of the warning line, a line break and
+    `/var/spool/postfix/pid/master.pid`, the kernel answered "no such file",
+    and that was read as "no master ever started here". The master was looked
+    for once and taken as gone 29 to 82 ms after the stop command had returned.
+    The Agent then read the two units once: `postfix.service` `inactive`,
+    `postfix@-.service` `ActiveState=deactivating`, `Result=success`. Not
+    failed, so no note.
+  - *The moments, on one clock.* A kernel trace of the programs the Agent
+    started and systemd's own state timestamps (three Stops without `strace`):
+    `systemctl stop postfix` returned 1 to 3 ms after `postfix@-.service` left
+    `active`; the Agent's reading of that unit started 82 to 102 ms after it
+    left `active`; the master ended 1008 to 1057 ms after, and the unit became
+    `failed` 2 to 4 ms after the master ended. So the Agent had read the unit,
+    and taken the stop as verified, about 0.9 seconds before Postfix had
+    stopped. (Corrected after intake of the evidence, 2026-10-09: an earlier
+    form of this sentence said the answer "was given" then. The HTTP answer
+    itself took 1.9 to 3.3 seconds, so it reached the caller after Postfix
+    had stopped; what came too early was the reading it rested on.) The
+    owner's own `systemctl stop
+    postfix` on the same guest, sampled every 10 ms: it returned after 24 ms;
+    the unit showed `deactivating (stop)`, `Result=success`, until its stop
+    command (`postmulti -i - -p stop`, which refuses main.cf and exits 1 after
+    Postfix's own one-second pause) ended 1028 ms after the command was sent;
+    the master ended 3 ms later and the unit became `failed (failed)`,
+    `Result=exit-code`, 3 ms after that.
+  - *What set4's record inferred, and what was measured instead.* set4's README
+    read the journal's timestamps as "the unit was read once, before systemd
+    marked it failed (the mark comes 4 ms after the master ends)", and said
+    that this was an inference. The single reading is right; the cause is not a
+    window of 4 ms. The unit was read about 0.9 seconds before the mark,
+    because the master had been taken as gone at the first look.
+  - *Debian 13.* The same Stop gave the note in set4, twice. There
+    `postfix.service` runs the daemon itself, and `systemctl stop postfix`
+    returns after that unit's whole stop, so the single reading saw `failed`.
+    Whether the master lookup misread postconf's answer there too was not
+    measured before the correction; the code and the warning are the same.
+  - *Observation 5 of set4.* After an automatic return the update check carries
+    one time, `previous_attempt.finished_at`; the card put it into a sentence
+    that said "was started here on {time}". In the cell where both are known
+    the owner's start was at 12:06:13Z and `finished_at` is 12:07:43Z.
+  - *Observation 6 of set4.* An import with `do_dns: false` on a server in
+    external DNS mode answered `imported: [domain, files, dns, ...]` on the
+    three platforms: the `dns` step ended `ok` with "external DNS ownership
+    preserved; ..." and every `ok` step was listed as imported.
+- **Changed.**
+  - *The queue directory is one line of postconf's answer*
+    (`cmd/agent/mail_service_verify.go`, `postfixQueueDirectory`,
+    `postconfOnePath`). A line that begins with the name postconf was started
+    under, `: ` and `warning`, `error`, `fatal` or `panic` is postconf's own
+    message and is left out; exactly one other line must remain and it must be
+    a clean absolute path. Anything else (no line, two lines, a relative path)
+    is not a directory and nothing is claimed. Both readers of the master use
+    it (`postfixMaster`, `postfixMasterProcess`).
+  - *"No master.pid" is a statement only where its directory exists*
+    (`postfixMasterProcess`). A missing file used to mean "no master ever
+    started with this queue directory" for any path. It means that only when
+    `<queue_directory>/pid` is an existing directory; otherwise the master was
+    not looked for, and with a refused main.cf the Stop is unknown, as it
+    already was when the process could not be looked for.
+  - *The unit is read once it has settled*
+    (`cmd/agent/service_action_verify.go`, `noteStopLeftUnitFailed`). While
+    systemd shows a watched unit as `activating`, `deactivating` or
+    `reloading`, it is read again: at most 30 readings 500 ms apart for all the
+    units of one stop together, the interval and bound every other verification
+    in that file uses. Only `systemctl show` is sent meanwhile. A unit that
+    ended `failed` is reported as before (`unit_marked_failed`), with Postfix's
+    own line when its check prints one.
+  - *A unit that did not settle is said as that*
+    (`transport.ServiceActionNoticeUnitNotSettled`,
+    `cmd/panel/service_action_outcome.go`, `ServiceActionNotice.tsx`). When the
+    bound ends with the unit still between two states, or the unit cannot be
+    read after the stop although it was read before it, the success carries
+    `note` with `reason` `unit_not_settled` (and `vars.state`) or
+    `unit_state_not_read`. Staying silent would read as "the unit was looked at
+    and is clean". The note claims neither a mark nor its absence; its command
+    is `systemctl status <unit>`, which changes nothing. The Stop itself stays
+    `verified`: the service's own process was seen to be gone.
+  - *The update card's sentence names the time as the attempt's end*
+    (`web/src/i18n/screens/server/en.ts`, `tr.ts`,
+    `panelUpdate.previousAttempt.recovered`). Text only; the card and what it
+    passes are unchanged.
+  - *An import step that imported nothing is neither imported nor failed*
+    (`cmd/panel/import_handlers.go`, `web/src/components/ImportPage.tsx`). Such
+    a step keeps `ok: true` and carries `state` (`left_to_owner`, `not_chosen`,
+    `none_in_archive`, `none_imported`); the answer lists it under `left_out`.
+    It applies to `dns` in every DNS mode when the archive's records were not
+    imported, to `mail` and `forwarders` when none came in, and to `files` when
+    the site folder of the archive is empty. `ok`, and with it `status` and
+    `IMPORT_PARTIAL`, are decided as before: only a step that failed makes an
+    import partial.
+- **API changes (for the release notes).**
+  - `POST /api/v1/service/action`: a Stop of Postfix is answered when its
+    master process has ended (on Ubuntu 24.04 with a refused main.cf about one
+    second later than before). A successful Stop may carry `note` with `reason`
+    `unit_not_settled` or `unit_state_not_read` and `vars` `pending_unit`,
+    `command`, `state`; and a Stop may take up to about 15 seconds longer while
+    a unit is between two states.
+  - `POST /api/v1/import/cpanel/apply`: `steps[].state` (optional) and the list
+    `left_out` are new; `imported` no longer names a part whose step carries a
+    `state`. `status`, `code`, `not_imported` and every `detail` are unchanged.
+  - `GET /api/v1/panel/update/check`: unchanged.
+- **Not changed, and why.**
+  - Other readings of a postconf value from a buffer that may hold both streams
+    (`cmd/agent/mail_tls_rpc.go` `snapshotMailTLSState`,
+    `cmd/agent/mail_tls_sync_commit.go`, `cmd/agent/mail_stack_rpc.go`
+    `postconfExpandedContext`): seen in the source while this was corrected,
+    not measured, not changed here. Whether their runners mix the two streams
+    was not established.
+  - Instance units behind another wrapper (`postgresql@<version>-<cluster>`)
+    are judged by `verifyWrapperAction`, which already reads them until they
+    settle; they are not among the units the note reads.
+  - The sentences of an attempt that failed without a return or stopped before
+    changing anything say "tried on {time}" with the same time, and stay.
+  - The import page has no list of the parts that were left out, and a step's
+    `detail` stays the server's English.
+- **Schema or version transition.**
+  - No database schema and no persisted state. `ServiceActionResult.Notice`
+    gains one value, transferred by name; a Panel that does not know it gives
+    no note for it, which is the answer it gave before. `steps[].state` and
+    `left_out` are additive; a page that does not know `state` lists such a
+    step as imported, as before.
+- **Recovery behaviour.**
+  - Nothing retries by itself. The wait for a unit is bounded and sends nothing
+    to the unit; a Stop is never followed by `reset-failed`. A Stop whose
+    master cannot be looked for and whose configuration Postfix refuses stays
+    unknown and is not repeated.
+- **Evidence.**
+  - Component tests. Agent: `set4_corrections_test.go` (the bytes postconf
+    printed, as `strace` recorded them, give the directory; the measured
+    sequence on a host whose master lives 1009 ms after the stop and whose unit
+    is `deactivating` until 1013 ms: the Stop is answered after the master has
+    ended, with the note; a unit that settles later, one that ends cleanly, one
+    that never settles within the bound (the note `unit_not_settled`, 29
+    readings, nothing but readings after the stop), one that cannot be read; an
+    answer of postconf that is not one path stays unknown; Debian's shape gives
+    the note at the first reading with no wait). Panel:
+    `set4_corrections_test.go` (the two notes, the import's three lists, the
+    handler's steps), `set2_corrections_test.go`, `set3_corrections_test.go`.
+    Screens: `web/tests/set4-corrections.test.mjs`,
+    `set3-corrections.test.mjs`, and a real Chrome against the loopback mock
+    (`web/tools/browser-inspect`, scenarios `stopnote`, `updaterolledback`,
+    `importentries`, `importleftout`; desktop and phone, English and Turkish).
+  - Native, before the correction: `set4b-20261009/diagnostic/` (the record
+    above; its `run-a` stopped at a defect of the driver before the first Stop
+    and holds only the readings before it).
+  - Native, after the correction: `set4b-20261009/remeasure/`, the candidate
+    (the working tree's corrections as one commit of a disposable clone, built
+    as set4 built its own) installed fresh. Ubuntu 24.04: four Stops out of
+    four answered `200` with the note (`unit_marked_failed_config`,
+    `failed_unit` `postfix@-.service`, `result` `exit-code`); the unit was
+    still `failed` afterwards and no `reset-failed` was sent; Start worked
+    after main.cf was restored. The kernel trace of three of them shows three
+    looks at the master where there had been one, the last after the master had
+    ended (1013 to 1025 ms after the unit left `active`), and the reading of
+    the units starting 145 to 513 ms after the unit had become `failed`. Debian
+    13: four Stops out of four answered `200` with the note for
+    `postfix.service`, as in set4; `systemctl stop postfix` took 1066 to 1083
+    ms there and one look at the master followed. On both, an import with
+    `do_dns: false` answered `imported: [domain, files, mail, forwarders,
+    database:...]`, `left_out: [dns]`, `status: active`. The Windows host slept
+    for 43 minutes during the Ubuntu cell, before the candidate was installed;
+    the evidence README says what that does and does not affect. Not measured
+    natively: the two new notes, the other three import states, the update
+    card, any screen, Arch.
+- **Open.**
+  - Before the correction the master lookup was not measured on Debian 13, and
+    no Stop was measured with a main.cf that makes postconf warn while `postfix
+    check` accepts it (an unused parameter, for one): there the old lookup
+    would have answered a Stop early as well, without a unit left `failed`.
+  - The other readings of a postconf value named above are to be measured with
+    a main.cf that makes postconf warn, and corrected if they take the warning
+    into a value.
+  - No guest held a unit between two states for the whole wait; the two new
+    notes have no native record.
+
+### A value read from postconf is one line: Postfix's own warning is never taken as a value, and a setting that cannot be read stops the change before it starts (invariants 2 and 4, 2026-10-09)
+
+D-025 invariants 2 (unknown is not absent, empty or success) and 4 (a mutation
+reads its pre-image and has a tested inverse); D-022, D-024. The path is the
+secure-mail certificate path: the mail TLS change with its snapshot and
+rollback (P0.4 area: snapshot and restore producers that compose) and the
+read-back that gates a mail certificate publication, also on the native renewal
+path (P0.5 area). No P0 item is closed or advanced. Source: the entry before
+this one, which named these readings as seen in the source and not measured;
+and one native reading of the real postconf (evidence
+`deploy/e2e/release-recovery/evidence/set4c-20261009/`). Nothing here was
+observed on an installed server. The defect is in the published alpha.81 as
+well. 2026-10-09 is the calendar date.
+
+- **Confirmed in the source at `1f182a483`.**
+  - Every mail command of the Agent is run with both output streams in one
+    buffer (`cmd/agent/mail_command.go`: `runMailTLSCommand`,
+    `runMailTLSMutationCommand`, `CombinedOutput`).
+  - *The snapshot.* `snapshotMailTLSState` (`cmd/agent/mail_tls_rpc.go`) read
+    nine Postfix settings with `postconf -h <name>` and kept the trimmed buffer
+    of each as the value. It is called at the start of `reconcileMailTLSHost`,
+    before the first change, by both mail TLS entry points. On any failure
+    after that, `rollback` restored the files and then ran `postconf -e
+    <name>=<kept text>` for every setting.
+  - *The read-back.* `verifyMailTLSConfiguration`
+    (`cmd/agent/mail_tls_sync_commit.go`) read the same settings the same way
+    and compared the trimmed buffer with the committed value for equality. It
+    runs after a mail TLS change and before a mail certificate is published, on
+    the native renewal path as well. A warning in the buffer therefore could
+    not make a differing setting match; it made a matching one differ.
+  - *The expanded reading.* `postconfExpandedContext`
+    (`cmd/agent/mail_stack_rpc.go`) feeds only the alias database repair of the
+    mail installation, which splits the text at commas and at the first colon
+    and looks for the file.
+- **Measured** (the real postconf, `postconf -c <private directory>`, exit
+  status 0 in every reading; `reading/`, `reading-2/`).
+  - A line with a comment after other text: the warning is written first, then
+    the value. An unused parameter: the value first, then the warning. A
+    setting that is not set: an empty line, then the warning. Started by its
+    path the message begins `/usr/sbin/postconf: warning: `, by its name
+    `postconf: warning: `. `postconf -d mail_version` printed no warning with
+    either line.
+  - What the old snapshot kept, handed to the rollback's own command on a
+    private main.cf. A setting that is set (two lines): postconf exits 1 with
+    "fatal: -e, -X, or -# accepts no multi-line input" and main.cf is
+    unchanged, so that setting would not have been restored. A setting that is
+    not set, with an unused parameter in main.cf: the kept text is the warning
+    line alone, postconf exits 0, and main.cf gains `tls_server_sni_maps =
+    /usr/sbin/postconf: warning: ...: unused parameter: campaign_note=raised
+    for the campaign`. So the statement "a rollback writes the warning into
+    main.cf" is confirmed for a setting that is not set and refuted for one
+    that is set.
+  - Not measured: a mail TLS change, a rollback or a certificate publication
+    themselves with such a main.cf (they need a certificate); Postfix 3.8.6 of
+    Ubuntu 24.04 for these settings (its warning for `queue_directory` is in
+    set4b); what Postfix does with the line that was written.
+- **What followed from it, before this change** (from the source and the
+  readings together; none of it was run).
+  - With an unused parameter in main.cf, which `postfix check` accepts: a mail
+    TLS change applied its settings and was then not verified (every read-back
+    differed), so it ended as changed and unverified; a mail certificate
+    publication was paused each time with "current Postfix/Dovecot TLS settings
+    could not be verified"; and a change that failed half-way rolled back to a
+    main.cf with the warning line as the value of every setting that had not
+    been set.
+- **Changed.**
+  - *One rule for a value read from postconf* (`cmd/agent/postconf_value.go`,
+    `postconfOneValue`). A line that is postconf's own message (the name it was
+    started under, `: `, then `warning`, `error`, `fatal` or `panic`) is not
+    part of the answer. What remains must be exactly one line ended by its line
+    break; that line is the value, and it may be empty. Anything else is
+    unknown. The queue directory of the entry before this one follows the same
+    function now.
+  - *The snapshot takes values and refuses otherwise*
+    (`snapshotPostfixTLSSettings`). A setting that cannot be read ends the
+    operation there with `postconfUnreadError`: nothing has been changed, the
+    outcome is "untouched", and the reason names the setting, the reading and
+    the two commands the owner runs.
+  - *A restore writes values only* (`restorePostfixTLSSettings`). Text that
+    holds a line break or a message of postconf's is not handed to `postconf
+    -e`; the setting is reported as not restored.
+  - *The read-back compares the value* (`verifyMailTLSConfiguration`). A
+    reading that is not one value is "not verified", which is neither a match
+    nor a difference.
+  - *The expanded reading returns the value or an error*
+    (`postconfExpandedContext`).
+  - *The streams are still read as one buffer.* The three runners and their
+    test doubles share one signature that returns a single buffer for every
+    mail command; reading the streams apart would have changed that seam for
+    every caller. The rule sits at the reading instead, and the doubles of the
+    affected tests now answer as postconf does (a line per value, an empty line
+    for a setting that is not set).
+- **Other places that read the output of postconf or doveconf.**
+  - Fixed here: the three above and `postfixQueueDirectory`.
+  - Not affected, standard output alone (`exec.Command(...).Output()`):
+    `postconfValue`, `postconfExpanded` (`mail_stack_rpc.go`), the mail health
+    reading (`mail_health_rpc.go`), the mail policy reading
+    (`mail_policy_rpc.go`, which already requires a value line), `doveconf -h
+    mail_plugins` (`mail_rpc.go`).
+  - Not affected, the exit status alone is used and the output only as the text
+    of a failure: every `doveconf -n` (`dovecot_dialect.go`,
+    `mail_service_verify.go`, `mail_stack_rpc.go`, `mail_submission_rpc.go`,
+    `mail_tls_rpc.go`, `main.go`), `postfix check`, `postfix status`, and the
+    writes `postconf -e`, `-M`, `-P`.
+  - Reads both streams, not changed: `postconf -d mail_version` in
+    `internal/services/version_detector.go` (the version shown for the service;
+    measured: no warning is printed with `-d` for the two lines; with another
+    message the version would be shown as unknown, nothing is written from it),
+    and `dovecot --version` (`dovecotIs24WithRunner`: the first field must be a
+    version or the dialect is unknown and the operation stops; whether Dovecot
+    can write to its error stream there was not measured).
+  - No place in `cmd/agent` or `internal/` parses the output of `postconf -n`
+    or `postconf -M`.
+- **API changes (for the release notes).** None in shape. A mail TLS change and
+  a mail certificate publication on a server whose main.cf makes postconf warn
+  now run as on any other server. A new reason text exists for a setting that
+  cannot be read (operation guidance, same date).
+- **Schema or version transition.** None: no database schema, no persisted
+  state, no RPC field. The snapshot lives in memory for one operation.
+- **Recovery behaviour.** Before: with a warning from postconf, a rollback
+  wrote the warning line as the value of each setting that had not been set and
+  could not restore any setting that had been set, which it reported as
+  "rollback incomplete" (outcome "ambiguous", which holds the ledger). After:
+  the snapshot holds values, so the same rollback restores them; a setting that
+  cannot be read stops the operation before the first change; a restore never
+  writes text that was not read as a value. Nothing retries by itself, as
+  before.
+- **Evidence.**
+  - Component tests only, with the measured bytes
+    (`cmd/agent/set4c_postconf_value_test.go`): the rule on every measured
+    shape and on shapes that are not one value; the snapshot keeps values with
+    a warning before, after, or after an empty line; the operation stops at the
+    snapshot with nothing but readings sent; the restore writes two values of
+    four and never a warning line; the read-back verifies committed settings
+    behind a warning, refuses a differing one although the warning holds the
+    committed value, and says "not verified" for a reading that is not one
+    value; the expanded reading; and the rule against the real postconf with a
+    private configuration directory where a postconf exists (it ran on the
+    development guest, Postfix 3.10.13).
+  - Native: the two readings of `set4c-20261009/`. They are readings of
+    postconf, not of the Agent.
+- **Open.**
+  - A mail TLS change that fails after its first change, and a mail certificate
+    publication, on a guest whose main.cf makes postconf warn: the rollback
+    restoring every setting and the publication going through have not been
+    measured.
+  - Postfix 3.8.6 (Ubuntu 24.04) for these settings, and Arch's Postfix.

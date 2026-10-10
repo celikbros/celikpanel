@@ -1,0 +1,33 @@
+{
+  "at": "2026-10-09T04:33:03Z",
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791520373",
+      "-n",
+      "2000",
+      "-u",
+      "celikpanel-panel.service",
+      "-u",
+      "celikpanel-agent.service"
+    ],
+    "at": "2026-10-09T04:33:03Z",
+    "returncode": 0,
+    "seconds": 0.004,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T04:32:54.900267+00:00 dns-arch panel[420]: 2026/10/09 04:32:54 http: TLS handshake error from 127.0.0.1:50088: EOF\n2026-10-09T04:32:55.312402+00:00 dns-arch panel[420]: 2026/10/09 04:32:55 [500][agent] certbot failed: exit status 1 Output: Saving debug log to /var/log/celikpanel/certbot/letsencrypt.log An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'acme-v02.api.letsencrypt.org'. (_ssl.c:1082)\"))) Ask for help or search for soluti…\n2026-10-09T04:32:57.965041+00:00 dns-arch panel[420]: 2026/10/09 04:32:57 http: TLS handshake error from 127.0.0.1:50108: EOF\n2026-10-09T04:32:59.251275+00:00 dns-arch panel[420]: 2026/10/09 04:32:59 http: TLS handshake error from 127.0.0.1:50120: EOF\n2026-10-09T04:32:59.653687+00:00 dns-arch panel[420]: 2026/10/09 04:32:59 [500][agent] certbot failed: exit status 1 Output: Saving debug log to /var/log/celikpanel/certbot/letsencrypt.log An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'acme-v02.api.letsencrypt.org'. (_ssl.c:1082)\"))) Ask for help or search for soluti…\n2026-10-09T04:32:59.758834+00:00 dns-arch panel[420]: 2026/10/09 04:32:59 http: TLS handshake error from 127.0.0.1:50138: EOF\n2026-10-09T04:32:59.766630+00:00 dns-arch panel[420]: 2026/10/09 04:32:59 http: TLS handshake error from 127.0.0.1:50168: EOF\n2026-10-09T04:33:01.050988+00:00 dns-arch panel[420]: 2026/10/09 04:33:01 http: TLS handshake error from 127.0.0.1:57492: EOF\n2026-10-09T04:33:02.321362+00:00 dns-arch panel[420]: 2026/10/09 04:33:02 http: TLS handshake error from 127.0.0.1:57536: EOF\n2026-10-09T04:33:02.321362+00:00 dns-arch panel[420]: 2026/10/09 04:33:02 http: TLS handshake error from 127.0.0.1:57524: EOF\n2026-10-09T04:33:02.321362+00:00 dns-arch panel[420]: 2026/10/09 04:33:02 http: TLS handshake error from 127.0.0.1:57546: EOF\n2026-10-09T04:33:02.720029+00:00 dns-arch panel[420]: 2026/10/09 04:33:02 [500][agent] certbot failed: exit status 1 Output: Saving debug log to /var/log/celikpanel/certbot/letsencrypt.log An unexpected error occurred: requests.exceptions.SSLError: HTTPSConnectionPool(host='acme-v02.api.letsencrypt.org', port=443): Max retries exceeded with url: /directory (Caused by SSLError(SSLCertVerificationError(1, \"[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'acme-v02.api.letsencrypt.org'. (_ssl.c:1082)\"))) Ask for help or search for soluti…\n"
+  },
+  "lab_action": false,
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "units": [
+    "celikpanel-panel.service",
+    "celikpanel-agent.service"
+  ]
+}

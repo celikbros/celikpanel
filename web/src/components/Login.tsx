@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ShieldCheck, Users, User, Eye, EyeOff } from 'lucide-react';
 import { api, type CurrentUser, type DemoAccount } from '../lib/api';
 import { useI18n } from '../i18n';
+import { useAccessGuidance } from '../lib/accessGuidance';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { SkinSwitcher } from './SkinSwitcher';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -21,8 +22,15 @@ const roleIcon: Record<string, typeof User> = {
 // Ön kapı. Tema- ve dil-farkında; paylaşılan i18n ve tema sistemlerini
 // kullanır; böylece kullanıcının gördüğü ilk ekrandan itibaren panelin geri
 // kalanı gibi görünür.
-export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void }) {
-    const { t } = useI18n();
+//
+// sessionEnded: the server confirmed that the session of a page in use is over.
+// The form says so before asking for the password again; the address is kept, so
+// signing in opens the same page, without what had been typed on it.
+// sessionEnded: sunucu, kullanılan sayfanın oturumunun bittiğini doğruladı. Form
+// parolayı yeniden istemeden önce bunu söyler; adres korunur, yazılanlar korunmaz.
+export function Login({ onSuccess, sessionEnded = false }: { onSuccess: (user: CurrentUser) => void; sessionEnded?: boolean }) {
+    const { t, screensReady } = useI18n();
+    const guidance = useAccessGuidance();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -102,6 +110,7 @@ export function Login({ onSuccess }: { onSuccess: (user: CurrentUser) => void })
                     <p className="mt-1 text-sm text-fg-muted">{t('login.subtitle')}</p>
                 </div>
 
+                {sessionEnded && guidance && screensReady && <guidance.SessionEndedNotice />}
                 <PanelAddressHint />
                 {pendingToken ? (
                     <form

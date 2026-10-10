@@ -1,0 +1,10 @@
+test_settings_writes_trial rc=0 OK Ran 27 tests in 0.003s
+test_request_identity_trial rc=0 OK Ran 14 tests in 0.014s
+test_owner_update_trial rc=0 OK Ran 189 tests in 4.241s
+test_recovery_candidate_archive rc=0 OK Ran 11 tests in 0.313s
+test_lab rc=0 OK Ran 15 tests in 0.010s
+test_current_worker_baseline rc=0 OK Ran 7 tests in 0.016s
+test_worker_fixture_origin rc=0 OK Ran 15 tests in 0.679s
+test_bound_worker_reboot rc=0 OK Ran 11 tests in 0.020s
+test_guest_bound_worker rc=0 OK Ran 8 tests in 0.005s
+test_guest_probe rc=0 OK Ran 13 tests in 0.016s

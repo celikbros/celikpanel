@@ -1,0 +1,71 @@
+{
+  "checks": {
+    "asked_with": "getent -s files ahosts NAME and getent -s files hosts NAME (the hosts file only; no DNS question is sent)",
+    "at": "2026-10-09T18:32:53Z",
+    "boot_id": "7442d247-166a-4e38-a803-2c4e7393338b",
+    "boot_id_at_the_pinning": "f9f29f8b-fb6e-4e4f-95a9-7fb457d37c33",
+    "certbot_directories": [
+      {
+        "entries": null,
+        "path": "/var/log/letsencrypt",
+        "reason": "FileNotFoundError"
+      },
+      {
+        "entries": null,
+        "path": "/etc/letsencrypt/accounts",
+        "reason": "FileNotFoundError"
+      },
+      {
+        "entries": null,
+        "path": "/etc/letsencrypt/live",
+        "reason": "FileNotFoundError"
+      },
+      {
+        "entries": null,
+        "path": "/etc/letsencrypt/renewal",
+        "reason": "FileNotFoundError"
+      }
+    ],
+    "certbot_program": "/usr/bin/certbot",
+    "file": "name-pinning-at-the-end.json",
+    "kernel": "6.8.0-138-generic",
+    "loopback_only": {
+      "acme-staging-v02.api.letsencrypt.org": true,
+      "acme-v02.api.letsencrypt.org": true,
+      "acme.zerossl.com": true,
+      "celikpanel.net": true,
+      "dv.acme-v02.api.pki.goog": true
+    },
+    "names": [
+      "acme-v02.api.letsencrypt.org",
+      "acme-staging-v02.api.letsencrypt.org",
+      "acme.zerossl.com",
+      "dv.acme-v02.api.pki.goog",
+      "celikpanel.net"
+    ],
+    "os_release": {
+      "ID": "ubuntu",
+      "PRETTY_NAME": "Ubuntu 24.04.4 LTS",
+      "VERSION_CODENAME": "noble",
+      "VERSION_ID": "24.04"
+    },
+    "packages_installed": {
+      "certbot": "2.9.0-1",
+      "cron": "3.0pl1-184ubuntu2",
+      "dovecot-core": "1:2.3.21+dfsg1-2ubuntu6.5",
+      "mariadb-server": "1:10.11.14-0ubuntu0.24.04.1",
+      "nginx": "1.24.0-2ubuntu7.18",
+      "nginx-common": "1.24.0-2ubuntu7.18",
+      "openssl": "3.0.13-0ubuntu3.15",
+      "php-fpm": "2:8.3+93ubuntu2",
+      "php8.3-fpm": "8.3.6-0ubuntu0.24.04.11",
+      "postfix": "3.8.6-1ubuntu0.1",
+      "rspamd": "3.8.1-1ubuntu3",
+      "systemd": "255.4-1ubuntu8.17"
+    }
+  },
+  "finished_at": "2026-10-09T18:32:52Z",
+  "name": "set5-name-pinning-at-the-end",
+  "started_at": "2026-10-09T18:32:52Z",
+  "verdict": "passed"
+}

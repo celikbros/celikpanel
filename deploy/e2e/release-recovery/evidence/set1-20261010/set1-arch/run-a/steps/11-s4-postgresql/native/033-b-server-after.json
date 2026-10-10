@@ -1,0 +1,178 @@
+{
+  "answers": {
+    "file_errors": {
+      "argv": [
+        "sudo",
+        "-u",
+        "postgres",
+        "psql",
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=on",
+        "--no-align",
+        "--tuples-only",
+        "--quiet",
+        "--field-separator",
+        "\t"
+      ],
+      "at": "2026-10-08T21:57:48Z",
+      "returncode": 0,
+      "seconds": 0.023,
+      "status": "ok",
+      "stderr": "",
+      "stdout": ""
+    },
+    "files": {
+      "argv": [
+        "sudo",
+        "-u",
+        "postgres",
+        "psql",
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=on",
+        "--no-align",
+        "--tuples-only",
+        "--quiet",
+        "--field-separator",
+        "\t"
+      ],
+      "at": "2026-10-08T21:57:48Z",
+      "returncode": 0,
+      "seconds": 0.024,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "/var/lib/postgres/data/postgresql.conf\t/var/lib/postgres/data/pg_hba.conf\t/var/lib/postgres/data\t18.6\n"
+    },
+    "hba": {
+      "argv": [
+        "sudo",
+        "-u",
+        "postgres",
+        "psql",
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=on",
+        "--no-align",
+        "--tuples-only",
+        "--quiet",
+        "--field-separator",
+        "\t"
+      ],
+      "at": "2026-10-08T21:57:48Z",
+      "returncode": 0,
+      "seconds": 0.024,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "117\tlocal\tall\tall\t\t\ttrust\t\n119\thost\tall\tall\t127.0.0.1\t255.255.255.255\ttrust\t\n121\thost\tall\tall\t::1\tffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff\ttrust\t\n124\tlocal\treplication\tall\t\t\ttrust\t\n125\thost\treplication\tall\t127.0.0.1\t255.255.255.255\ttrust\t\n126\thost\treplication\tall\t::1\tffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff\ttrust\t\n"
+    },
+    "load": {
+      "argv": [
+        "sudo",
+        "-u",
+        "postgres",
+        "psql",
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=on",
+        "--no-align",
+        "--tuples-only",
+        "--quiet",
+        "--field-separator",
+        "\t"
+      ],
+      "at": "2026-10-08T21:57:48Z",
+      "returncode": 0,
+      "seconds": 0.024,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "2026-10-08 21:55:07.056919+00\t2026-10-08 21:57:47.699639+00\n"
+    },
+    "pending_restart": {
+      "argv": [
+        "sudo",
+        "-u",
+        "postgres",
+        "psql",
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=on",
+        "--no-align",
+        "--tuples-only",
+        "--quiet",
+        "--field-separator",
+        "\t"
+      ],
+      "at": "2026-10-08T21:57:48Z",
+      "returncode": 0,
+      "seconds": 0.025,
+      "status": "ok",
+      "stderr": "",
+      "stdout": ""
+    },
+    "settings": {
+      "argv": [
+        "sudo",
+        "-u",
+        "postgres",
+        "psql",
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=on",
+        "--no-align",
+        "--tuples-only",
+        "--quiet",
+        "--field-separator",
+        "\t"
+      ],
+      "at": "2026-10-08T21:57:48Z",
+      "returncode": 0,
+      "seconds": 0.023,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "work_mem\t8192\tkB\tconfiguration file\t/var/lib/postgres/data/postgresql.conf\t143\n"
+    },
+    "show_work_mem": {
+      "argv": [
+        "sudo",
+        "-u",
+        "postgres",
+        "psql",
+        "--no-psqlrc",
+        "--set",
+        "ON_ERROR_STOP=on",
+        "--no-align",
+        "--tuples-only",
+        "--quiet",
+        "--field-separator",
+        "\t"
+      ],
+      "at": "2026-10-08T21:57:48Z",
+      "returncode": 0,
+      "seconds": 0.029,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "8MB\n"
+    }
+  },
+  "at": "2026-10-08T21:57:48Z",
+  "mode": "read-postgres",
+  "owner_action": false,
+  "postmaster_pid": 1874,
+  "schema": "celikpanel/set1-native/v1",
+  "unit": "postgresql.service",
+  "units": {
+    "postgresql.service": {
+      "ActiveEnterTimestamp": "Thu 2026-10-08 21:55:07 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "Thu 2026-10-08 21:55:06 UTC",
+      "FragmentPath": "/usr/lib/systemd/system/postgresql.service",
+      "LoadState": "loaded",
+      "MainPID": "1874",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "running"
+    }
+  }
+}

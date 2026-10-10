@@ -1,0 +1,114 @@
+{
+  "calls": [],
+  "checks": [
+    {
+      "detail": {
+        "detail": {
+          "MariaDB": 1,
+          "PostgreSQL": 2
+        },
+        "not reached": "the Databases page lists no such server"
+      },
+      "name": "server-database-mariadb (i): reached",
+      "ok": null
+    },
+    {
+      "detail": {
+        "detail": {
+          "MariaDB": 1,
+          "PostgreSQL": 2
+        },
+        "not reached": "the Databases page lists no such server"
+      },
+      "name": "server-database-mariadb (ii): reached",
+      "ok": null
+    },
+    {
+      "detail": {
+        "detail": {
+          "MariaDB": 1,
+          "PostgreSQL": 2
+        },
+        "not reached": "the Databases page lists no such server"
+      },
+      "name": "server-database-mariadb (iii): reached",
+      "ok": null
+    },
+    {
+      "detail": {
+        "detail": {
+          "MariaDB": 1,
+          "PostgreSQL": 2
+        },
+        "not reached": "the Databases page lists no such server"
+      },
+      "name": "server-database-mariadb (iv): reached",
+      "ok": null
+    },
+    {
+      "detail": {
+        "detail": {
+          "MariaDB": 1,
+          "PostgreSQL": 2
+        },
+        "not reached": "the Databases page lists no such server"
+      },
+      "name": "server-database-postgresql (i): reached",
+      "ok": null
+    },
+    {
+      "detail": {
+        "detail": {
+          "MariaDB": 1,
+          "PostgreSQL": 2
+        },
+        "not reached": "the Databases page lists no such server"
+      },
+      "name": "server-database-postgresql (ii): reached",
+      "ok": null
+    },
+    {
+      "detail": {
+        "detail": {
+          "MariaDB": 1,
+          "PostgreSQL": 2
+        },
+        "not reached": "the Databases page lists no such server"
+      },
+      "name": "server-database-postgresql (iii): reached",
+      "ok": null
+    },
+    {
+      "detail": {
+        "detail": {
+          "MariaDB": 1,
+          "PostgreSQL": 2
+        },
+        "not reached": "the Databases page lists no such server"
+      },
+      "name": "server-database-postgresql (iv): reached",
+      "ok": null
+    }
+  ],
+  "finished_at": "2026-10-09T03:44:42Z",
+  "native_evidence": false,
+  "natives": [],
+  "node": "ubuntu",
+  "notes": [],
+  "owner_actions": [],
+  "owner_waited_for_idle": {
+    "at": "2026-10-09T03:44:42Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.3
+  },
+  "section": "C3-server-databases",
+  "started_at": "2026-10-09T03:44:42Z",
+  "substeps": {
+    "server-database-mariadb": "inconclusive",
+    "server-database-postgresql": "inconclusive"
+  },
+  "title": "a database on a database server (MariaDB and PostgreSQL)",
+  "verdict": "inconclusive"
+}

@@ -1,0 +1,145 @@
+{
+  "asked_with": "getent -s files ahosts NAME and getent -s files hosts NAME (the hosts file only; no DNS question is sent)",
+  "at": "2026-10-09T18:43:57Z",
+  "boot_id": "d273229a-113c-4a41-98a1-bf8870dfd147",
+  "certbot_directories": [
+    {
+      "entries": [],
+      "path": "/var/log/letsencrypt"
+    },
+    {
+      "entries": null,
+      "path": "/etc/letsencrypt/accounts",
+      "reason": "FileNotFoundError"
+    },
+    {
+      "entries": null,
+      "path": "/etc/letsencrypt/live",
+      "reason": "FileNotFoundError"
+    },
+    {
+      "entries": null,
+      "path": "/etc/letsencrypt/renewal",
+      "reason": "FileNotFoundError"
+    }
+  ],
+  "certbot_program": "/usr/bin/certbot",
+  "hosts_lines": [
+    "127.0.0.1        localhost",
+    "::1              localhost",
+    "127.0.0.1 acme-v02.api.letsencrypt.org",
+    "::1 acme-v02.api.letsencrypt.org",
+    "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+    "::1 acme-staging-v02.api.letsencrypt.org",
+    "127.0.0.1 acme.zerossl.com",
+    "::1 acme.zerossl.com",
+    "127.0.0.1 dv.acme-v02.api.pki.goog",
+    "::1 dv.acme-v02.api.pki.goog",
+    "127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture"
+  ],
+  "hosts_mode": "0o644",
+  "hosts_sha256_after": "60f9f6a97c7899d1fc71f1e98da59dab74dc3413e40feda29bdbeaefd2b30802",
+  "hosts_sha256_before": "60f9f6a97c7899d1fc71f1e98da59dab74dc3413e40feda29bdbeaefd2b30802",
+  "kernel": "7.2.9-arch1-1",
+  "mapped_before": {
+    "acme-staging-v02.api.letsencrypt.org": [
+      "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+      "::1 acme-staging-v02.api.letsencrypt.org"
+    ],
+    "acme-v02.api.letsencrypt.org": [
+      "127.0.0.1 acme-v02.api.letsencrypt.org",
+      "::1 acme-v02.api.letsencrypt.org"
+    ],
+    "acme.zerossl.com": [
+      "127.0.0.1 acme.zerossl.com",
+      "::1 acme.zerossl.com"
+    ],
+    "celikpanel.net": [
+      "127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture"
+    ],
+    "dv.acme-v02.api.pki.goog": [
+      "127.0.0.1 dv.acme-v02.api.pki.goog",
+      "::1 dv.acme-v02.api.pki.goog"
+    ]
+  },
+  "mode": "read",
+  "nsswitch_hosts": [
+    "hosts: mymachines resolve [!UNAVAIL=return] files myhostname dns"
+  ],
+  "os_release": {
+    "BUILD_ID": "rolling",
+    "ID": "arch",
+    "PRETTY_NAME": "Arch Linux"
+  },
+  "packages_installed": {
+    "certbot": "5.8.0-1",
+    "cron": "1.7.2-2",
+    "cronie": "1.7.2-2",
+    "mariadb": "13.0.2-2",
+    "mariadb-server": "13.0.2-2",
+    "nginx": "1.30.5-1",
+    "openssl": "3.6.5-1",
+    "php": "8.5.11-1",
+    "php-fpm": "8.5.11-1",
+    "systemd": "262-1"
+  },
+  "product_paths_present": [
+    "/opt/celikpanel",
+    "/etc/celikpanel",
+    "/var/lib/celikpanel",
+    "/usr/libexec/celikpanel"
+  ],
+  "resolves": {
+    "acme-staging-v02.api.letsencrypt.org": {
+      "ahosts": {
+        "returncode": 0,
+        "stdout": "::1             STREAM acme-staging-v02.api.letsencrypt.org\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stdout": "::1             acme-staging-v02.api.letsencrypt.org"
+      }
+    },
+    "acme-v02.api.letsencrypt.org": {
+      "ahosts": {
+        "returncode": 0,
+        "stdout": "::1             STREAM acme-v02.api.letsencrypt.org\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stdout": "::1             acme-v02.api.letsencrypt.org"
+      }
+    },
+    "acme.zerossl.com": {
+      "ahosts": {
+        "returncode": 0,
+        "stdout": "::1             STREAM acme.zerossl.com\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stdout": "::1             acme.zerossl.com"
+      }
+    },
+    "celikpanel.net": {
+      "ahosts": {
+        "returncode": 0,
+        "stdout": "127.0.0.1       STREAM celikpanel.net\n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stdout": "127.0.0.1       celikpanel.net"
+      }
+    },
+    "dv.acme-v02.api.pki.goog": {
+      "ahosts": {
+        "returncode": 0,
+        "stdout": "::1             STREAM dv.acme-v02.api.pki.goog\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stdout": "::1             dv.acme-v02.api.pki.goog"
+      }
+    }
+  },
+  "uptime_seconds": 491.66
+}

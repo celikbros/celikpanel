@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ShieldCheck, KeyRound, FileCheck2, Copy, Plus, Info, type LucideIcon } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
-import { Button, Spinner, StatusDot, inputClass } from './ui';
+import { Button, RemoteGate, ResultUnknown, StatusDot, inputClass } from './ui';
+import { useRemote } from '../lib/remote';
+import { useLostAnswer, type LostAnswerHandle } from '../lib/lostAnswer';
 
 interface AuthRecord {
     name: string;
@@ -38,66 +40,90 @@ interface MailAuthPanelProps {
 // E-posta kimlik doğrulaması (yol haritası 3C): kayıt başına bir kart. Durum,
 // sunucu tarafında zone'dan VE canlı DNS sorgusundan türetilir; "doğrulandı"
 // demek dünyanın onu gerçekten görebildiği demektir — asla varsayım değil.
+const recordStates = ['ok', 'pending', 'missing', 'no_key'];
+
+function authRecord(value: unknown): AuthRecord {
+    if (!value || typeof value !== 'object') throw new Error('record');
+    const record = value as Record<string, unknown>;
+    // A state this screen does not know is not "Missing".
+    // Bu ekranın bilmediği durum "Eksik" değildir.
+    if (typeof record.status !== 'string' || !recordStates.includes(record.status)) throw new Error('status');
+    if (typeof record.recommended !== 'string' || typeof record.resolved !== 'boolean') throw new Error('field');
+    return value as AuthRecord;
+}
+
+// What the server found for the three records, in its zone and in live DNS.
+// Sunucunun üç kayıt için kendi bölgesinde ve canlı DNS'te bulduğu.
+function decodeAuthStatus(raw: unknown): AuthStatus {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('shape');
+    const body = raw as Record<string, unknown>;
+    if (typeof body.signing_installed !== 'boolean') throw new Error('field');
+    authRecord(body.spf);
+    authRecord(body.dkim);
+    authRecord(body.dmarc);
+    return raw as AuthStatus;
+}
+
 export function MailAuthPanel({ domainId, readOnly = false }: MailAuthPanelProps) {
     const { t } = useI18n();
-    const [status, setStatus] = useState<AuthStatus | null>(null);
-    const [loading, setLoading] = useState(true);
+    const auth = useRemote(`/api/v1/domains/${domainId}/mail/auth`, decodeAuthStatus);
+    const answer = useLostAnswer(() => auth.retry());
     const [busy, setBusy] = useState<string | null>(null);
     const [dmarcPolicy, setDmarcPolicy] = useState<'none' | 'quarantine' | 'reject'>('none');
-
-    const load = async () => {
-        try {
-            const res = await fetch(`/api/v1/domains/${domainId}/mail/auth`);
-            if (!res.ok) throw new Error();
-            setStatus(await res.json());
-        } catch {
-            showToast('error', t('common.error'));
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        setLoading(true);
-        load();
-    }, [domainId]);
+    // A record is published, or a key made, only against the state the server
+    // sent and is not being asked about again.
+    // Kayıt yalnız sunucunun gönderdiği ve yeniden sorulmayan duruma karşı
+    // yayımlanır, anahtar da öyle üretilir.
+    const settled = auth.remote.state === 'known' && !auth.reading && !answer.holding;
 
     const generateKey = async () => {
-        if (readOnly) return;
+        if (readOnly || !settled) return;
         setBusy('dkim-key');
         try {
-            const res = await fetch(`/api/v1/domains/${domainId}/mail/auth/dkim`, { method: 'POST' });
-            if (!res.ok) throw new Error();
+            const res = await answer.send(`/api/v1/domains/${domainId}/mail/auth/dkim`, { method: 'POST' });
+            if (!res) return;
+            if (!res.ok) {
+                showToast('error', t('common.error'));
+                return;
+            }
             showToast('success', t('mailauth.keyGenerated'));
-            await load();
-        } catch {
-            showToast('error', t('common.error'));
+            answer.settle();
+            await auth.retry();
         } finally {
             setBusy(null);
         }
     };
 
     const apply = async (record: 'spf' | 'dkim' | 'dmarc') => {
-        if (readOnly || status?.dns_management_mode === 'external') return;
+        if (readOnly || auth.remote.state !== 'known' || !settled || auth.remote.value.dns_management_mode === 'external') return;
         setBusy(record);
         try {
             const body: Record<string, string> = { record };
             if (record === 'dmarc') body.dmarc_policy = dmarcPolicy;
-            const res = await fetch(`/api/v1/domains/${domainId}/mail/auth/apply`, {
+            const res = await answer.send(`/api/v1/domains/${domainId}/mail/auth/apply`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
             });
+            if (!res) return;
             if (!res.ok) {
-                const problem = await res.json().catch(() => null);
+                // Only the refusals this screen has its own sentence for are
+                // named; a remote server's wording is never shown.
+                // Yalnız bu ekranın kendi cümlesi olan retler adlandırılır;
+                // uzak sunucunun sözü asla gösterilmez.
+                let code = '';
+                try {
+                    code = String(((await res.json()) as { code?: unknown } | null)?.code ?? '');
+                } catch {
+                    code = '';
+                }
                 const keys: Record<string, TranslationKey> = { REMOTE_DNS_MAIL_RECORD_CONFLICT: 'mailauth.remoteConflict', REMOTE_DNS_MAIL_ADDRESS_REQUIRED: 'mailauth.remoteAddressRequired', REMOTE_DNS_UNAVAILABLE: 'mailauth.remoteUnavailable' };
-                showToast('error', t(keys[problem?.code] || 'common.error'));
+                showToast('error', t(keys[code] || 'common.error'));
                 return;
             }
             showToast('success', t('mailauth.applied'));
-            await load();
-        } catch {
-            showToast('error', t('common.error'));
+            answer.settle();
+            await auth.retry();
         } finally {
             setBusy(null);
         }
@@ -107,19 +133,63 @@ export function MailAuthPanel({ domainId, readOnly = false }: MailAuthPanelProps
         navigator.clipboard?.writeText(value).then(() => showToast('success', t('mailauth.copied')));
     };
 
-    if (loading || !status) {
-        return (
-            <div className="flex items-center justify-center py-12">
-                <Spinner size="sm" />
-            </div>
-        );
-    }
+    return (
+        <RemoteGate
+            remote={auth.remote}
+            checking={t('mailauth.checking')}
+            failed={t('mailauth.unknown')}
+            onRetry={() => void auth.retry()}
+            busy={auth.reading}
+        >
+            {(shown) => (
+                <AuthRecords
+                    status={shown.value}
+                    readOnly={readOnly}
+                    canChange={settled && !shown.stale}
+                    busy={busy}
+                    answer={answer}
+                    dmarcPolicy={dmarcPolicy}
+                    setDmarcPolicy={setDmarcPolicy}
+                    onApply={apply}
+                    onGenerateKey={generateKey}
+                    onCopy={copy}
+                />
+            )}
+        </RemoteGate>
+    );
+}
 
+function AuthRecords({
+    status,
+    readOnly,
+    canChange,
+    busy,
+    answer,
+    dmarcPolicy,
+    setDmarcPolicy,
+    onApply: apply,
+    onGenerateKey: generateKey,
+    onCopy: copy,
+}: {
+    status: AuthStatus;
+    readOnly: boolean;
+    /** The state on screen is the server's current one, so it may be acted on. */
+    canChange: boolean;
+    busy: string | null;
+    answer: LostAnswerHandle;
+    dmarcPolicy: 'none' | 'quarantine' | 'reject';
+    setDmarcPolicy: (policy: 'none' | 'quarantine' | 'reject') => void;
+    onApply: (record: 'spf' | 'dkim' | 'dmarc') => void;
+    onGenerateKey: () => void;
+    onCopy: (value: string) => void;
+}) {
+    const { t } = useI18n();
     const anyUnresolved = !status.spf.resolved || !status.dmarc.resolved;
 
     return (
         <div className="space-y-4">
             <p className="text-sm text-fg-muted">{t('mailauth.intro')}</p>
+            <ResultUnknown answer={answer} />
             {(status.dns_management_mode === 'external' || status.dns_management_mode === 'existing') && <>
                 <Note>{t(status.dns_management_mode === 'external' ? 'mailauth.externalHelp' : 'mailauth.remoteHelp')}</Note>
                 {status.required_records && <section className="rounded-xl border border-border p-4"><h3 className="font-semibold">{t('mailauth.deliveryRecords')}</h3><dl className="mt-3 divide-y divide-border">{status.required_records.filter(record => record.type !== 'TXT').map((record, index) => <div key={`${record.type}:${record.name}:${index}`} className="flex flex-wrap items-start justify-between gap-3 py-3 text-sm"><div className="min-w-0"><dt className="break-all font-medium">{record.type} {record.name}</dt><dd className="mt-1 break-all text-fg-muted">{record.prio ? `${record.prio} ` : ''}{record.content}</dd></div><Button variant="secondary" onClick={() => copy(record.content)}>{t('conn.copy')}</Button></div>)}</dl></section>}
@@ -135,7 +205,7 @@ export function MailAuthPanel({ domainId, readOnly = false }: MailAuthPanelProps
                 title="SPF"
                 descKey="mailauth.spfDesc"
                 record={status.spf}
-                busy={busy === 'spf'}
+                busy={busy === 'spf' || !canChange}
                 readOnly={readOnly || status.dns_management_mode === 'external'}
                 onApply={() => apply('spf')}
                 onCopy={copy}
@@ -146,13 +216,13 @@ export function MailAuthPanel({ domainId, readOnly = false }: MailAuthPanelProps
                 title="DKIM"
                 descKey="mailauth.dkimDesc"
                 record={status.dkim}
-                busy={busy === 'dkim'}
+                busy={busy === 'dkim' || !canChange}
                 readOnly={readOnly || status.dns_management_mode === 'external'}
                 onApply={() => apply('dkim')}
                 onCopy={copy}
                 extraAction={
                     !readOnly && status.dkim.status === 'no_key' ? (
-                        <Button variant="primary" icon={KeyRound} onClick={generateKey} disabled={busy === 'dkim-key'}>
+                        <Button variant="primary" icon={KeyRound} onClick={generateKey} disabled={busy === 'dkim-key' || !canChange}>
                             {t('mailauth.generateKey')}
                         </Button>
                     ) : undefined
@@ -164,7 +234,7 @@ export function MailAuthPanel({ domainId, readOnly = false }: MailAuthPanelProps
                 title="DMARC"
                 descKey="mailauth.dmarcDesc"
                 record={status.dmarc}
-                busy={busy === 'dmarc'}
+                busy={busy === 'dmarc' || !canChange}
                 readOnly={readOnly || status.dns_management_mode === 'external'}
                 onApply={() => apply('dmarc')}
                 onCopy={copy}

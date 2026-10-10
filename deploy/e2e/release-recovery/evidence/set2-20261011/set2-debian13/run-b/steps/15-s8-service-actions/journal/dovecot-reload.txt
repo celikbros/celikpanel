@@ -1,0 +1,3 @@
+2026-10-09T04:03:29.896009+00:00 dns-debian13 systemd[1]: Reloading dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-09T04:03:29.928019+00:00 dns-debian13 dovecot[28217]: master: Warning: SIGHUP received - reloading configuration
+2026-10-09T04:03:29.939278+00:00 dns-debian13 systemd[1]: Reloaded dovecot.service - Dovecot IMAP/POP3 email server.

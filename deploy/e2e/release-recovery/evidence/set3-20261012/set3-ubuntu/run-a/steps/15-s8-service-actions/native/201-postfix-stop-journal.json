@@ -1,0 +1,34 @@
+{
+  "at": "2026-10-09T07:20:17Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791530414",
+      "-n",
+      "400",
+      "-u",
+      "postfix.service",
+      "-u",
+      "postfix@-.service"
+    ],
+    "at": "2026-10-09T07:20:17Z",
+    "returncode": 0,
+    "seconds": 0.006,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T07:20:14.495299+00:00 dns-ubuntu systemd[1]: postfix.service: Deactivated successfully.\n2026-10-09T07:20:14.495473+00:00 dns-ubuntu systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent.\n2026-10-09T07:20:14.508330+00:00 dns-ubuntu systemd[1]: Stopping postfix@-.service - Postfix Mail Transport Agent (instance -)...\n2026-10-09T07:20:14.542615+00:00 dns-ubuntu postmulti[66130]: postfix/postlog: stopping the Postfix mail system\n2026-10-09T07:20:14.543011+00:00 dns-ubuntu postfix/postfix-script[66130]: stopping the Postfix mail system\n2026-10-09T07:20:14.545458+00:00 dns-ubuntu postfix/master[65756]: terminating on signal 15\n2026-10-09T07:20:14.553303+00:00 dns-ubuntu systemd[1]: postfix@-.service: Deactivated successfully.\n2026-10-09T07:20:14.553523+00:00 dns-ubuntu systemd[1]: Stopped postfix@-.service - Postfix Mail Transport Agent (instance -).\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791530414,
+  "units": [
+    "postfix.service",
+    "postfix@-.service"
+  ]
+}

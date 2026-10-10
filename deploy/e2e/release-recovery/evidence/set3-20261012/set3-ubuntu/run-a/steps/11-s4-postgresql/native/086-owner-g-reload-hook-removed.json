@@ -1,0 +1,25 @@
+{
+  "action": "owner-reload-hook",
+  "at": "2026-10-09T07:18:31Z",
+  "daemon_reload": {
+    "argv": [
+      "systemctl",
+      "daemon-reload"
+    ],
+    "at": "2026-10-09T07:18:31Z",
+    "returncode": 0,
+    "seconds": 0.295,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "exec_reload": "ExecReload={ path=/usr/bin/pg_ctlcluster ; argv[]=/usr/bin/pg_ctlcluster --skip-systemctl-redirect 16-main reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n",
+  "mode": "owner-reload-hook",
+  "owner_action": true,
+  "restored": {
+    "dropin": "/etc/systemd/system/postgresql@16-main.service.d/set1-owner-reload-hook.conf",
+    "made_directory": true,
+    "unit": "postgresql@16-main.service"
+  },
+  "schema": "celikpanel/set1-native/v1"
+}

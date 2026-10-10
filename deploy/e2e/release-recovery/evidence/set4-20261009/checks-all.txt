@@ -1,0 +1,779 @@
+## set4-arch/run-a: overall=complete-for-review native_evidence=False outcome=set4-measured
+step | set4-arch/run-a | preflight | passed | 
+step | set4-arch/run-a | origin | passed | 
+step | set4-arch/run-a | baseline-install | passed | 
+step | set4-arch/run-a | owner-login | passed | 
+step | set4-arch/run-a | license | passed | 
+step | set4-arch/run-a | setup | observed | 
+step | set4-arch/run-a | site | passed | 
+step | set4-arch/run-a | M0-prepare | passed | 
+step | set4-arch/run-a | M1-php-site | passed | 
+step | set4-arch/run-a | M6-site-refused | passed | 
+step | set4-arch/run-a | M2-import | passed | 
+step | set4-arch/run-a | M5-import-absolute | passed | 
+step | set4-arch/run-a | M10-postfix-stop | skipped | 
+step | set4-arch/run-a | M4-reload-stopped | passed | 
+step | set4-arch/run-a | collect | passed | 
+section | set4-arch/run-a/steps/08-m0-prepare | M0-prepare | passed | error=
+check | set4-arch/run-a/steps/08-m0-prepare/section.json | PASS | the Panel's database names the owner's site and its subscription
+check | set4-arch/run-a/steps/08-m0-prepare/section.json | PASS | lab isolation: celikpanel.net resolves to this guest's loopback only (its own fixture origin)
+check | set4-arch/run-a/steps/08-m0-prepare/section.json | PASS | lab isolation: the two Let's Encrypt directory names resolve to this guest's loopback only
+check | set4-arch/run-a/steps/08-m0-prepare/section.json | PASS | item 1 (stock host): the nginx package of this host ships no snippets/fastcgi-php.conf
+check | set4-arch/run-a/steps/08-m0-prepare/section.json | PASS | `nginx -t` passes before anything is measured
+section | set4-arch/run-a/steps/09-m1-php-site | M1-php-site | passed | error=
+check | set4-arch/run-a/steps/09-m1-php-site/section.json | PASS | item 1/8: a PHP site is created through the Panel (200 with the new domain's id)
+check | set4-arch/run-a/steps/09-m1-php-site/section.json | PASS | php-site: `nginx -t` passes with the site's vhost
+check | set4-arch/run-a/steps/09-m1-php-site/section.json | PASS | php-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params
+check | set4-arch/run-a/steps/09-m1-php-site/section.json | PASS | php-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)
+check | set4-arch/run-a/steps/09-m1-php-site/section.json | PASS | php-site: the page runs as the site's own account
+check | set4-arch/run-a/steps/09-m1-php-site/section.json | PASS | php-site: a PHP script that does not exist answers 404
+check | set4-arch/run-a/steps/09-m1-php-site/section.json | PASS | php-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)
+check | set4-arch/run-a/steps/09-m1-php-site/section.json | PASS | php-site: a static file of the site is served as it is (200)
+check | set4-arch/run-a/steps/09-m1-php-site/section.json | PASS | php-site (item 3): the PHP version recorded for the site is the installed one that runs the page
+check | set4-arch/run-a/steps/09-m1-php-site/section.json | PASS | php-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists
+check | set4-arch/run-a/steps/09-m1-php-site/section.json | PASS | php-site: the site is deleted through the Panel and nothing of it is left serving (not listed, no domain or site row, no account, no home, no vhost in nginx, no pool file, no socket, the page and the static file no longer served, `nginx -t` passes)
+check | set4-arch/run-a/steps/09-m1-php-site/section.json | PASS | php-site: PHP-FPM is still active after the delete
+note | set4-arch/run-a/steps/09-m1-php-site/section.json | php-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 200
+note | set4-arch/run-a/steps/09-m1-php-site/section.json | php-site: the certificate-validation directory of the deleted site is still there
+section | set4-arch/run-a/steps/10-m6-site-refused | M6-site-refused | passed | error=
+check | set4-arch/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): after the owner moved /etc/nginx/fastcgi.conf away, `nginx -t` still passes (the refusal can only come with a new vhost)
+check | set4-arch/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): the answer is 502 SITE_WEB_SERVER_REFUSED with a reason
+check | set4-arch/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): `vars` are the domain and `sudo nginx -t`, `details` is one line of nginx's own, and the sentence is the documented one for the reason
+check | set4-arch/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): what the answer says was removed is gone on the guest (vhost, system account, files, PHP pool) and no domain or site row is left; it claims no more than is true
+check | set4-arch/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): nginx still runs as the same process after the refusal (reloaded, not restarted) and `nginx -t` passes
+check | set4-arch/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): the owner put the file back and `nginx -t` passes
+check | set4-arch/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): after the correction the same site is created (200), as the sentence says
+check | set4-arch/run-a/steps/10-m6-site-refused/section.json | PASS | refused-again: the site is deleted through the Panel and nothing of it is left serving (not listed, no domain or site row, no account, no home, no vhost in nginx, no pool file, no socket, the page and the static file no longer served, `nginx -t` passes)
+check | set4-arch/run-a/steps/10-m6-site-refused/section.json | PASS | refused-again: PHP-FPM is still active after the delete
+check | set4-arch/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): the answer is 502 SITE_WEB_SERVER_REFUSED with a reason
+check | set4-arch/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): `vars` are the domain and `sudo nginx -t`, `details` is one line of nginx's own, and the sentence is the documented one for the reason
+check | set4-arch/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): what the answer says was removed is gone on the guest (vhost, system account, files, PHP pool) and no domain or site row is left; it claims no more than is true
+check | set4-arch/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): nginx still runs as the same process after the refusal (reloaded, not restarted) and `nginx -t` passes
+note | set4-arch/run-a/steps/10-m6-site-refused/section.json | item 6 (owner-moved-file): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it
+note | set4-arch/run-a/steps/10-m6-site-refused/section.json | refused-again: the certificate-validation directory of the deleted site is still there
+note | set4-arch/run-a/steps/10-m6-site-refused/section.json | item 6 (long-site-name): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it
+section | set4-arch/run-a/steps/11-m2-import | M2-import | passed | error=
+check | set4-arch/run-a/steps/11-m2-import/section.json | PASS | the preview of the set4 archive names its domain, its mailbox and its database
+check | set4-arch/run-a/steps/11-m2-import/section.json | PASS | S1: the preview of the set4 archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only
+check | set4-arch/run-a/steps/11-m2-import/section.json | PASS | item 2: the import of set3's fixture completes (200, active; the document root's files equal the archive's; the database is on the engine with its rows)
+check | set4-arch/run-a/steps/11-m2-import/section.json | PASS | item 5 (declared deviation): entries of the archive outside the site folder are counted in the files step's line and do not make the import partial
+check | set4-arch/run-a/steps/11-m2-import/section.json | PASS | item 2: the imported site serves the archive's own index page through the web server
+check | set4-arch/run-a/steps/11-m2-import/section.json | PASS | imported-site: `nginx -t` passes with the site's vhost
+check | set4-arch/run-a/steps/11-m2-import/section.json | PASS | imported-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params
+check | set4-arch/run-a/steps/11-m2-import/section.json | PASS | imported-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)
+check | set4-arch/run-a/steps/11-m2-import/section.json | PASS | imported-site: the page runs as the site's own account
+check | set4-arch/run-a/steps/11-m2-import/section.json | PASS | imported-site: a PHP script that does not exist answers 404
+check | set4-arch/run-a/steps/11-m2-import/section.json | PASS | imported-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)
+check | set4-arch/run-a/steps/11-m2-import/section.json | PASS | imported-site: a static file of the site is served as it is (200)
+check | set4-arch/run-a/steps/11-m2-import/section.json | PASS | imported-site (item 3): the PHP version recorded for the site is the installed one that runs the page
+check | set4-arch/run-a/steps/11-m2-import/section.json | PASS | imported-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists
+note | set4-arch/run-a/steps/11-m2-import/section.json | imported-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 404
+section | set4-arch/run-a/steps/12-m5-import-absolute | M5-import-absolute | passed | error=
+check | set4-arch/run-a/steps/12-m5-import-absolute/section.json | PASS | the preview of the absolute archive names its domain, its mailbox and its database
+check | set4-arch/run-a/steps/12-m5-import-absolute/section.json | PASS | S1: the preview of the absolute archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only
+check | set4-arch/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: the member named by an absolute path is listed in the import result as a step of its own (`member:<name>`, not ok) with the documented reason
+check | set4-arch/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: the import answers 200 with status `partial`
+check | set4-arch/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5 (declared deviation): a result that misses only refused entries keeps `domain_status: active`, and the domain's row is `active`
+check | set4-arch/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: `imported` and `not_imported` are the steps' own results; the member is in `not_imported` and every chosen part is in `imported`
+check | set4-arch/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: the message is the documented one (every chosen part imported, the domain in service, the entries refused by their names)
+check | set4-arch/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: the rest is imported: the document root's files equal the archive's site files, the database is on the engine with its rows
+check | set4-arch/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: nothing was written for the member anywhere on the server
+check | set4-arch/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: the imported site serves the archive's index page
+section | set4-arch/run-a/steps/14-m4-reload-stopped | M4-reload-stopped | passed | error=
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): the unit was stopped before the reload was asked
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx start (after the refused reload): the answer (success) matches what the service shows
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): Start brings the service back afterwards
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): the unit was stopped before the reload was asked
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb start (after the refused reload): the answer (success) matches what the service shows
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): Start brings the service back afterwards
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): the unit was stopped before the reload was asked
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql start (after the refused reload): the answer (success) matches what the service shows
+check | set4-arch/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): Start brings the service back afterwards
+## set4-arch/run-b: overall=complete-for-review native_evidence=False outcome=set4-measured
+step | set4-arch/run-b | preflight | passed | 
+step | set4-arch/run-b | origin | passed | 
+step | set4-arch/run-b | baseline-install | passed | 
+step | set4-arch/run-b | owner-login | passed | 
+step | set4-arch/run-b | license | passed | 
+step | set4-arch/run-b | setup | observed | 
+step | set4-arch/run-b | site | passed | 
+step | set4-arch/run-b | M0-prepare | passed | 
+step | set4-arch/run-b | M1-php-site | passed | 
+step | set4-arch/run-b | M6-site-refused | passed | 
+step | set4-arch/run-b | M2-import | passed | 
+step | set4-arch/run-b | M5-import-absolute | passed | 
+step | set4-arch/run-b | M10-postfix-stop | skipped | 
+step | set4-arch/run-b | M4-reload-stopped | passed | 
+step | set4-arch/run-b | collect | passed | 
+section | set4-arch/run-b/steps/08-m0-prepare | M0-prepare | passed | error=
+check | set4-arch/run-b/steps/08-m0-prepare/section.json | PASS | the Panel's database names the owner's site and its subscription
+check | set4-arch/run-b/steps/08-m0-prepare/section.json | PASS | lab isolation: celikpanel.net resolves to this guest's loopback only (its own fixture origin)
+check | set4-arch/run-b/steps/08-m0-prepare/section.json | PASS | lab isolation: the two Let's Encrypt directory names resolve to this guest's loopback only
+check | set4-arch/run-b/steps/08-m0-prepare/section.json | PASS | item 1 (stock host): the nginx package of this host ships no snippets/fastcgi-php.conf
+check | set4-arch/run-b/steps/08-m0-prepare/section.json | PASS | `nginx -t` passes before anything is measured
+section | set4-arch/run-b/steps/09-m1-php-site | M1-php-site | passed | error=
+check | set4-arch/run-b/steps/09-m1-php-site/section.json | PASS | item 1/8: a PHP site is created through the Panel (200 with the new domain's id)
+check | set4-arch/run-b/steps/09-m1-php-site/section.json | PASS | php-site: `nginx -t` passes with the site's vhost
+check | set4-arch/run-b/steps/09-m1-php-site/section.json | PASS | php-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params
+check | set4-arch/run-b/steps/09-m1-php-site/section.json | PASS | php-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)
+check | set4-arch/run-b/steps/09-m1-php-site/section.json | PASS | php-site: the page runs as the site's own account
+check | set4-arch/run-b/steps/09-m1-php-site/section.json | PASS | php-site: a PHP script that does not exist answers 404
+check | set4-arch/run-b/steps/09-m1-php-site/section.json | PASS | php-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)
+check | set4-arch/run-b/steps/09-m1-php-site/section.json | PASS | php-site: a static file of the site is served as it is (200)
+check | set4-arch/run-b/steps/09-m1-php-site/section.json | PASS | php-site (item 3): the PHP version recorded for the site is the installed one that runs the page
+check | set4-arch/run-b/steps/09-m1-php-site/section.json | PASS | php-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists
+check | set4-arch/run-b/steps/09-m1-php-site/section.json | PASS | php-site: the site is deleted through the Panel and nothing of it is left serving (not listed, no domain or site row, no account, no home, no vhost in nginx, no pool file, no socket, the page and the static file no longer served, `nginx -t` passes)
+check | set4-arch/run-b/steps/09-m1-php-site/section.json | PASS | php-site: PHP-FPM is still active after the delete
+note | set4-arch/run-b/steps/09-m1-php-site/section.json | php-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 200
+note | set4-arch/run-b/steps/09-m1-php-site/section.json | php-site: the certificate-validation directory of the deleted site is still there
+section | set4-arch/run-b/steps/10-m6-site-refused | M6-site-refused | passed | error=
+check | set4-arch/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): after the owner moved /etc/nginx/fastcgi.conf away, `nginx -t` still passes (the refusal can only come with a new vhost)
+check | set4-arch/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): the answer is 502 SITE_WEB_SERVER_REFUSED with a reason
+check | set4-arch/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): `vars` are the domain and `sudo nginx -t`, `details` is one line of nginx's own, and the sentence is the documented one for the reason
+check | set4-arch/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): what the answer says was removed is gone on the guest (vhost, system account, files, PHP pool) and no domain or site row is left; it claims no more than is true
+check | set4-arch/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): nginx still runs as the same process after the refusal (reloaded, not restarted) and `nginx -t` passes
+check | set4-arch/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): the owner put the file back and `nginx -t` passes
+check | set4-arch/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): after the correction the same site is created (200), as the sentence says
+check | set4-arch/run-b/steps/10-m6-site-refused/section.json | PASS | refused-again: the site is deleted through the Panel and nothing of it is left serving (not listed, no domain or site row, no account, no home, no vhost in nginx, no pool file, no socket, the page and the static file no longer served, `nginx -t` passes)
+check | set4-arch/run-b/steps/10-m6-site-refused/section.json | PASS | refused-again: PHP-FPM is still active after the delete
+check | set4-arch/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): the answer is 502 SITE_WEB_SERVER_REFUSED with a reason
+check | set4-arch/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): `vars` are the domain and `sudo nginx -t`, `details` is one line of nginx's own, and the sentence is the documented one for the reason
+check | set4-arch/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): what the answer says was removed is gone on the guest (vhost, system account, files, PHP pool) and no domain or site row is left; it claims no more than is true
+check | set4-arch/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): nginx still runs as the same process after the refusal (reloaded, not restarted) and `nginx -t` passes
+note | set4-arch/run-b/steps/10-m6-site-refused/section.json | item 6 (owner-moved-file): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it
+note | set4-arch/run-b/steps/10-m6-site-refused/section.json | refused-again: the certificate-validation directory of the deleted site is still there
+note | set4-arch/run-b/steps/10-m6-site-refused/section.json | item 6 (long-site-name): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it
+section | set4-arch/run-b/steps/11-m2-import | M2-import | passed | error=
+check | set4-arch/run-b/steps/11-m2-import/section.json | PASS | the preview of the set4 archive names its domain, its mailbox and its database
+check | set4-arch/run-b/steps/11-m2-import/section.json | PASS | S1: the preview of the set4 archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only
+check | set4-arch/run-b/steps/11-m2-import/section.json | PASS | item 2: the import of set3's fixture completes (200, active; the document root's files equal the archive's; the database is on the engine with its rows)
+check | set4-arch/run-b/steps/11-m2-import/section.json | PASS | item 5 (declared deviation): entries of the archive outside the site folder are counted in the files step's line and do not make the import partial
+check | set4-arch/run-b/steps/11-m2-import/section.json | PASS | item 2: the imported site serves the archive's own index page through the web server
+check | set4-arch/run-b/steps/11-m2-import/section.json | PASS | imported-site: `nginx -t` passes with the site's vhost
+check | set4-arch/run-b/steps/11-m2-import/section.json | PASS | imported-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params
+check | set4-arch/run-b/steps/11-m2-import/section.json | PASS | imported-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)
+check | set4-arch/run-b/steps/11-m2-import/section.json | PASS | imported-site: the page runs as the site's own account
+check | set4-arch/run-b/steps/11-m2-import/section.json | PASS | imported-site: a PHP script that does not exist answers 404
+check | set4-arch/run-b/steps/11-m2-import/section.json | PASS | imported-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)
+check | set4-arch/run-b/steps/11-m2-import/section.json | PASS | imported-site: a static file of the site is served as it is (200)
+check | set4-arch/run-b/steps/11-m2-import/section.json | PASS | imported-site (item 3): the PHP version recorded for the site is the installed one that runs the page
+check | set4-arch/run-b/steps/11-m2-import/section.json | PASS | imported-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists
+note | set4-arch/run-b/steps/11-m2-import/section.json | imported-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 404
+section | set4-arch/run-b/steps/12-m5-import-absolute | M5-import-absolute | passed | error=
+check | set4-arch/run-b/steps/12-m5-import-absolute/section.json | PASS | the preview of the absolute archive names its domain, its mailbox and its database
+check | set4-arch/run-b/steps/12-m5-import-absolute/section.json | PASS | S1: the preview of the absolute archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only
+check | set4-arch/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: the member named by an absolute path is listed in the import result as a step of its own (`member:<name>`, not ok) with the documented reason
+check | set4-arch/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: the import answers 200 with status `partial`
+check | set4-arch/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5 (declared deviation): a result that misses only refused entries keeps `domain_status: active`, and the domain's row is `active`
+check | set4-arch/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: `imported` and `not_imported` are the steps' own results; the member is in `not_imported` and every chosen part is in `imported`
+check | set4-arch/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: the message is the documented one (every chosen part imported, the domain in service, the entries refused by their names)
+check | set4-arch/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: the rest is imported: the document root's files equal the archive's site files, the database is on the engine with its rows
+check | set4-arch/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: nothing was written for the member anywhere on the server
+check | set4-arch/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: the imported site serves the archive's index page
+section | set4-arch/run-b/steps/14-m4-reload-stopped | M4-reload-stopped | passed | error=
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): the unit was stopped before the reload was asked
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx start (after the refused reload): the answer (success) matches what the service shows
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): Start brings the service back afterwards
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): the unit was stopped before the reload was asked
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb start (after the refused reload): the answer (success) matches what the service shows
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): Start brings the service back afterwards
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): the unit was stopped before the reload was asked
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql start (after the refused reload): the answer (success) matches what the service shows
+check | set4-arch/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): Start brings the service back afterwards
+## set4-debian13/run-a: overall=complete-for-review native_evidence=False outcome=set4-measured
+step | set4-debian13/run-a | preflight | passed | 
+step | set4-debian13/run-a | origin | passed | 
+step | set4-debian13/run-a | baseline-install | passed | 
+step | set4-debian13/run-a | owner-login | passed | 
+step | set4-debian13/run-a | license | passed | 
+step | set4-debian13/run-a | setup | observed | 
+step | set4-debian13/run-a | site | passed | 
+step | set4-debian13/run-a | M0-prepare | passed | 
+step | set4-debian13/run-a | M1-php-site | passed | 
+step | set4-debian13/run-a | M6-site-refused | passed | 
+step | set4-debian13/run-a | M2-import | passed | 
+step | set4-debian13/run-a | M5-import-absolute | passed | 
+step | set4-debian13/run-a | M10-postfix-stop | passed | 
+step | set4-debian13/run-a | M4-reload-stopped | passed | 
+step | set4-debian13/run-a | collect | passed | 
+section | set4-debian13/run-a/steps/08-m0-prepare | M0-prepare | passed | error=
+check | set4-debian13/run-a/steps/08-m0-prepare/section.json | PASS | the Panel's database names the owner's site and its subscription
+check | set4-debian13/run-a/steps/08-m0-prepare/section.json | PASS | lab isolation: celikpanel.net resolves to this guest's loopback only (its own fixture origin)
+check | set4-debian13/run-a/steps/08-m0-prepare/section.json | PASS | lab isolation: the two Let's Encrypt directory names resolve to this guest's loopback only
+check | set4-debian13/run-a/steps/08-m0-prepare/section.json | PASS | item 7: the package's /etc/nginx/snippets/fastcgi-php.conf has the SHA-256 the product's test pins
+check | set4-debian13/run-a/steps/08-m0-prepare/section.json | PASS | `nginx -t` passes before anything is measured
+section | set4-debian13/run-a/steps/09-m1-php-site | M1-php-site | passed | error=
+check | set4-debian13/run-a/steps/09-m1-php-site/section.json | PASS | item 1/8: a PHP site is created through the Panel (200 with the new domain's id)
+check | set4-debian13/run-a/steps/09-m1-php-site/section.json | PASS | php-site: `nginx -t` passes with the site's vhost
+check | set4-debian13/run-a/steps/09-m1-php-site/section.json | PASS | php-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params
+check | set4-debian13/run-a/steps/09-m1-php-site/section.json | PASS | php-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)
+check | set4-debian13/run-a/steps/09-m1-php-site/section.json | PASS | php-site: the page runs as the site's own account
+check | set4-debian13/run-a/steps/09-m1-php-site/section.json | PASS | php-site: a PHP script that does not exist answers 404
+check | set4-debian13/run-a/steps/09-m1-php-site/section.json | PASS | php-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)
+check | set4-debian13/run-a/steps/09-m1-php-site/section.json | PASS | php-site: a static file of the site is served as it is (200)
+check | set4-debian13/run-a/steps/09-m1-php-site/section.json | PASS | php-site (item 3): the PHP version recorded for the site is the installed one that runs the page
+check | set4-debian13/run-a/steps/09-m1-php-site/section.json | PASS | php-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists
+check | set4-debian13/run-a/steps/09-m1-php-site/section.json | PASS | php-site: the site is deleted through the Panel and nothing of it is left serving (not listed, no domain or site row, no account, no home, no vhost in nginx, no pool file, no socket, the page and the static file no longer served, `nginx -t` passes)
+check | set4-debian13/run-a/steps/09-m1-php-site/section.json | PASS | php-site: PHP-FPM is still active after the delete
+note | set4-debian13/run-a/steps/09-m1-php-site/section.json | php-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 200
+note | set4-debian13/run-a/steps/09-m1-php-site/section.json | php-site: the certificate-validation directory of the deleted site is still there
+section | set4-debian13/run-a/steps/10-m6-site-refused | M6-site-refused | passed | error=
+check | set4-debian13/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): after the owner moved /etc/nginx/fastcgi.conf away, `nginx -t` still passes (the refusal can only come with a new vhost)
+check | set4-debian13/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): the answer is 502 SITE_WEB_SERVER_REFUSED with a reason
+check | set4-debian13/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): `vars` are the domain and `sudo nginx -t`, `details` is one line of nginx's own, and the sentence is the documented one for the reason
+check | set4-debian13/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): what the answer says was removed is gone on the guest (vhost, system account, files, PHP pool) and no domain or site row is left; it claims no more than is true
+check | set4-debian13/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): nginx still runs as the same process after the refusal (reloaded, not restarted) and `nginx -t` passes
+check | set4-debian13/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): the owner put the file back and `nginx -t` passes
+check | set4-debian13/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): after the correction the same site is created (200), as the sentence says
+check | set4-debian13/run-a/steps/10-m6-site-refused/section.json | PASS | refused-again: the site is deleted through the Panel and nothing of it is left serving (not listed, no domain or site row, no account, no home, no vhost in nginx, no pool file, no socket, the page and the static file no longer served, `nginx -t` passes)
+check | set4-debian13/run-a/steps/10-m6-site-refused/section.json | PASS | refused-again: PHP-FPM is still active after the delete
+check | set4-debian13/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): the answer is 502 SITE_WEB_SERVER_REFUSED with a reason
+check | set4-debian13/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): `vars` are the domain and `sudo nginx -t`, `details` is one line of nginx's own, and the sentence is the documented one for the reason
+check | set4-debian13/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): what the answer says was removed is gone on the guest (vhost, system account, files, PHP pool) and no domain or site row is left; it claims no more than is true
+check | set4-debian13/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): nginx still runs as the same process after the refusal (reloaded, not restarted) and `nginx -t` passes
+note | set4-debian13/run-a/steps/10-m6-site-refused/section.json | item 6 (owner-moved-file): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it
+note | set4-debian13/run-a/steps/10-m6-site-refused/section.json | refused-again: the certificate-validation directory of the deleted site is still there
+note | set4-debian13/run-a/steps/10-m6-site-refused/section.json | item 6 (long-site-name): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it
+section | set4-debian13/run-a/steps/11-m2-import | M2-import | passed | error=
+check | set4-debian13/run-a/steps/11-m2-import/section.json | PASS | the preview of the set4 archive names its domain, its mailbox and its database
+check | set4-debian13/run-a/steps/11-m2-import/section.json | PASS | S1: the preview of the set4 archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only
+check | set4-debian13/run-a/steps/11-m2-import/section.json | PASS | item 2: the import of set3's fixture completes (200, active; the document root's files equal the archive's; the database is on the engine with its rows)
+check | set4-debian13/run-a/steps/11-m2-import/section.json | PASS | item 5 (declared deviation): entries of the archive outside the site folder are counted in the files step's line and do not make the import partial
+check | set4-debian13/run-a/steps/11-m2-import/section.json | PASS | item 2: the imported site serves the archive's own index page through the web server
+check | set4-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site: `nginx -t` passes with the site's vhost
+check | set4-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params
+check | set4-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)
+check | set4-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site: the page runs as the site's own account
+check | set4-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site: a PHP script that does not exist answers 404
+check | set4-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)
+check | set4-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site: a static file of the site is served as it is (200)
+check | set4-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site (item 3): the PHP version recorded for the site is the installed one that runs the page
+check | set4-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists
+note | set4-debian13/run-a/steps/11-m2-import/section.json | imported-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 404
+section | set4-debian13/run-a/steps/12-m5-import-absolute | M5-import-absolute | passed | error=
+check | set4-debian13/run-a/steps/12-m5-import-absolute/section.json | PASS | the preview of the absolute archive names its domain, its mailbox and its database
+check | set4-debian13/run-a/steps/12-m5-import-absolute/section.json | PASS | S1: the preview of the absolute archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only
+check | set4-debian13/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: the member named by an absolute path is listed in the import result as a step of its own (`member:<name>`, not ok) with the documented reason
+check | set4-debian13/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: the import answers 200 with status `partial`
+check | set4-debian13/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5 (declared deviation): a result that misses only refused entries keeps `domain_status: active`, and the domain's row is `active`
+check | set4-debian13/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: `imported` and `not_imported` are the steps' own results; the member is in `not_imported` and every chosen part is in `imported`
+check | set4-debian13/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: the message is the documented one (every chosen part imported, the domain in service, the entries refused by their names)
+check | set4-debian13/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: the rest is imported: the document root's files equal the archive's site files, the database is on the engine with its rows, the mailbox exists
+check | set4-debian13/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: nothing was written for the member anywhere on the server
+check | set4-debian13/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: the imported site serves the archive's index page
+section | set4-debian13/run-a/steps/13-m10-postfix-stop | M10-postfix-stop | passed | error=
+check | set4-debian13/run-a/steps/13-m10-postfix-stop/section.json | PASS | item 10: `postfix check` refuses main.cf (the owner's line)
+check | set4-debian13/run-a/steps/13-m10-postfix-stop/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses): the answer (success) matches what the service shows
+check | set4-debian13/run-a/steps/13-m10-postfix-stop/section.json | PASS | item 10: Stop answers 200 success and the master is gone
+check | set4-debian13/run-a/steps/13-m10-postfix-stop/section.json | PASS | item 10: the unit ended `failed`, which it was not before the stop (set3's observation)
+check | set4-debian13/run-a/steps/13-m10-postfix-stop/section.json | PASS | item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`
+check | set4-debian13/run-a/steps/13-m10-postfix-stop/section.json | PASS | item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`
+check | set4-debian13/run-a/steps/13-m10-postfix-stop/section.json | PASS | item 10: the note's sentence is the documented one for its reason
+check | set4-debian13/run-a/steps/13-m10-postfix-stop/section.json | PASS | item 10: no `reset-failed` was issued: the unit is still `failed` after the answer and 8 seconds later, and the product's journal names no reset-failed
+check | set4-debian13/run-a/steps/13-m10-postfix-stop/section.json | PASS | S8 postfix start (after the owner's correction): the answer (success) matches what the service shows
+check | set4-debian13/run-a/steps/13-m10-postfix-stop/section.json | PASS | item 10: after main.cf is restored, Start answers success, the master runs and no unit is `failed`
+check | set4-debian13/run-a/steps/13-m10-postfix-stop/section.json | PASS | item 10: mail is accepted on 25 and 587 answers at the end
+section | set4-debian13/run-a/steps/14-m4-reload-stopped | M4-reload-stopped | passed | error=
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): the unit was stopped before the reload was asked
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx start (after the refused reload): the answer (success) matches what the service shows
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): Start brings the service back afterwards
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): the unit was stopped before the reload was asked
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb start (after the refused reload): the answer (success) matches what the service shows
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): Start brings the service back afterwards
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): the unit was stopped before the reload was asked
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql start (after the refused reload): the answer (success) matches what the service shows
+check | set4-debian13/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): Start brings the service back afterwards
+## set4-debian13/run-b: overall=complete-for-review native_evidence=False outcome=set4-measured
+step | set4-debian13/run-b | preflight | passed | 
+step | set4-debian13/run-b | origin | passed | 
+step | set4-debian13/run-b | baseline-install | passed | 
+step | set4-debian13/run-b | owner-login | passed | 
+step | set4-debian13/run-b | license | passed | 
+step | set4-debian13/run-b | setup | observed | 
+step | set4-debian13/run-b | site | passed | 
+step | set4-debian13/run-b | M0-prepare | passed | 
+step | set4-debian13/run-b | M1-php-site | passed | 
+step | set4-debian13/run-b | M6-site-refused | passed | 
+step | set4-debian13/run-b | M2-import | passed | 
+step | set4-debian13/run-b | M5-import-absolute | passed | 
+step | set4-debian13/run-b | M10-postfix-stop | passed | 
+step | set4-debian13/run-b | M4-reload-stopped | passed | 
+step | set4-debian13/run-b | collect | passed | 
+section | set4-debian13/run-b/steps/08-m0-prepare | M0-prepare | passed | error=
+check | set4-debian13/run-b/steps/08-m0-prepare/section.json | PASS | the Panel's database names the owner's site and its subscription
+check | set4-debian13/run-b/steps/08-m0-prepare/section.json | PASS | lab isolation: celikpanel.net resolves to this guest's loopback only (its own fixture origin)
+check | set4-debian13/run-b/steps/08-m0-prepare/section.json | PASS | lab isolation: the two Let's Encrypt directory names resolve to this guest's loopback only
+check | set4-debian13/run-b/steps/08-m0-prepare/section.json | PASS | item 7: the package's /etc/nginx/snippets/fastcgi-php.conf has the SHA-256 the product's test pins
+check | set4-debian13/run-b/steps/08-m0-prepare/section.json | PASS | `nginx -t` passes before anything is measured
+section | set4-debian13/run-b/steps/09-m1-php-site | M1-php-site | passed | error=
+check | set4-debian13/run-b/steps/09-m1-php-site/section.json | PASS | item 1/8: a PHP site is created through the Panel (200 with the new domain's id)
+check | set4-debian13/run-b/steps/09-m1-php-site/section.json | PASS | php-site: `nginx -t` passes with the site's vhost
+check | set4-debian13/run-b/steps/09-m1-php-site/section.json | PASS | php-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params
+check | set4-debian13/run-b/steps/09-m1-php-site/section.json | PASS | php-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)
+check | set4-debian13/run-b/steps/09-m1-php-site/section.json | PASS | php-site: the page runs as the site's own account
+check | set4-debian13/run-b/steps/09-m1-php-site/section.json | PASS | php-site: a PHP script that does not exist answers 404
+check | set4-debian13/run-b/steps/09-m1-php-site/section.json | PASS | php-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)
+check | set4-debian13/run-b/steps/09-m1-php-site/section.json | PASS | php-site: a static file of the site is served as it is (200)
+check | set4-debian13/run-b/steps/09-m1-php-site/section.json | PASS | php-site (item 3): the PHP version recorded for the site is the installed one that runs the page
+check | set4-debian13/run-b/steps/09-m1-php-site/section.json | PASS | php-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists
+check | set4-debian13/run-b/steps/09-m1-php-site/section.json | PASS | php-site: the site is deleted through the Panel and nothing of it is left serving (not listed, no domain or site row, no account, no home, no vhost in nginx, no pool file, no socket, the page and the static file no longer served, `nginx -t` passes)
+check | set4-debian13/run-b/steps/09-m1-php-site/section.json | PASS | php-site: PHP-FPM is still active after the delete
+note | set4-debian13/run-b/steps/09-m1-php-site/section.json | php-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 200
+note | set4-debian13/run-b/steps/09-m1-php-site/section.json | php-site: the certificate-validation directory of the deleted site is still there
+section | set4-debian13/run-b/steps/10-m6-site-refused | M6-site-refused | passed | error=
+check | set4-debian13/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): after the owner moved /etc/nginx/fastcgi.conf away, `nginx -t` still passes (the refusal can only come with a new vhost)
+check | set4-debian13/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): the answer is 502 SITE_WEB_SERVER_REFUSED with a reason
+check | set4-debian13/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): `vars` are the domain and `sudo nginx -t`, `details` is one line of nginx's own, and the sentence is the documented one for the reason
+check | set4-debian13/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): what the answer says was removed is gone on the guest (vhost, system account, files, PHP pool) and no domain or site row is left; it claims no more than is true
+check | set4-debian13/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): nginx still runs as the same process after the refusal (reloaded, not restarted) and `nginx -t` passes
+check | set4-debian13/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): the owner put the file back and `nginx -t` passes
+check | set4-debian13/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): after the correction the same site is created (200), as the sentence says
+check | set4-debian13/run-b/steps/10-m6-site-refused/section.json | PASS | refused-again: the site is deleted through the Panel and nothing of it is left serving (not listed, no domain or site row, no account, no home, no vhost in nginx, no pool file, no socket, the page and the static file no longer served, `nginx -t` passes)
+check | set4-debian13/run-b/steps/10-m6-site-refused/section.json | PASS | refused-again: PHP-FPM is still active after the delete
+check | set4-debian13/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): the answer is 502 SITE_WEB_SERVER_REFUSED with a reason
+check | set4-debian13/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): `vars` are the domain and `sudo nginx -t`, `details` is one line of nginx's own, and the sentence is the documented one for the reason
+check | set4-debian13/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): what the answer says was removed is gone on the guest (vhost, system account, files, PHP pool) and no domain or site row is left; it claims no more than is true
+check | set4-debian13/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): nginx still runs as the same process after the refusal (reloaded, not restarted) and `nginx -t` passes
+note | set4-debian13/run-b/steps/10-m6-site-refused/section.json | item 6 (owner-moved-file): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it
+note | set4-debian13/run-b/steps/10-m6-site-refused/section.json | refused-again: the certificate-validation directory of the deleted site is still there
+note | set4-debian13/run-b/steps/10-m6-site-refused/section.json | item 6 (long-site-name): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it
+section | set4-debian13/run-b/steps/11-m2-import | M2-import | passed | error=
+check | set4-debian13/run-b/steps/11-m2-import/section.json | PASS | the preview of the set4 archive names its domain, its mailbox and its database
+check | set4-debian13/run-b/steps/11-m2-import/section.json | PASS | S1: the preview of the set4 archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only
+check | set4-debian13/run-b/steps/11-m2-import/section.json | PASS | item 2: the import of set3's fixture completes (200, active; the document root's files equal the archive's; the database is on the engine with its rows)
+check | set4-debian13/run-b/steps/11-m2-import/section.json | PASS | item 5 (declared deviation): entries of the archive outside the site folder are counted in the files step's line and do not make the import partial
+check | set4-debian13/run-b/steps/11-m2-import/section.json | PASS | item 2: the imported site serves the archive's own index page through the web server
+check | set4-debian13/run-b/steps/11-m2-import/section.json | PASS | imported-site: `nginx -t` passes with the site's vhost
+check | set4-debian13/run-b/steps/11-m2-import/section.json | PASS | imported-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params
+check | set4-debian13/run-b/steps/11-m2-import/section.json | PASS | imported-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)
+check | set4-debian13/run-b/steps/11-m2-import/section.json | PASS | imported-site: the page runs as the site's own account
+check | set4-debian13/run-b/steps/11-m2-import/section.json | PASS | imported-site: a PHP script that does not exist answers 404
+check | set4-debian13/run-b/steps/11-m2-import/section.json | PASS | imported-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)
+check | set4-debian13/run-b/steps/11-m2-import/section.json | PASS | imported-site: a static file of the site is served as it is (200)
+check | set4-debian13/run-b/steps/11-m2-import/section.json | PASS | imported-site (item 3): the PHP version recorded for the site is the installed one that runs the page
+check | set4-debian13/run-b/steps/11-m2-import/section.json | PASS | imported-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists
+note | set4-debian13/run-b/steps/11-m2-import/section.json | imported-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 404
+section | set4-debian13/run-b/steps/12-m5-import-absolute | M5-import-absolute | passed | error=
+check | set4-debian13/run-b/steps/12-m5-import-absolute/section.json | PASS | the preview of the absolute archive names its domain, its mailbox and its database
+check | set4-debian13/run-b/steps/12-m5-import-absolute/section.json | PASS | S1: the preview of the absolute archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only
+check | set4-debian13/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: the member named by an absolute path is listed in the import result as a step of its own (`member:<name>`, not ok) with the documented reason
+check | set4-debian13/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: the import answers 200 with status `partial`
+check | set4-debian13/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5 (declared deviation): a result that misses only refused entries keeps `domain_status: active`, and the domain's row is `active`
+check | set4-debian13/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: `imported` and `not_imported` are the steps' own results; the member is in `not_imported` and every chosen part is in `imported`
+check | set4-debian13/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: the message is the documented one (every chosen part imported, the domain in service, the entries refused by their names)
+check | set4-debian13/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: the rest is imported: the document root's files equal the archive's site files, the database is on the engine with its rows, the mailbox exists
+check | set4-debian13/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: nothing was written for the member anywhere on the server
+check | set4-debian13/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: the imported site serves the archive's index page
+section | set4-debian13/run-b/steps/13-m10-postfix-stop | M10-postfix-stop | passed | error=
+check | set4-debian13/run-b/steps/13-m10-postfix-stop/section.json | PASS | item 10: `postfix check` refuses main.cf (the owner's line)
+check | set4-debian13/run-b/steps/13-m10-postfix-stop/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses): the answer (success) matches what the service shows
+check | set4-debian13/run-b/steps/13-m10-postfix-stop/section.json | PASS | item 10: Stop answers 200 success and the master is gone
+check | set4-debian13/run-b/steps/13-m10-postfix-stop/section.json | PASS | item 10: the unit ended `failed`, which it was not before the stop (set3's observation)
+check | set4-debian13/run-b/steps/13-m10-postfix-stop/section.json | PASS | item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`
+check | set4-debian13/run-b/steps/13-m10-postfix-stop/section.json | PASS | item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`
+check | set4-debian13/run-b/steps/13-m10-postfix-stop/section.json | PASS | item 10: the note's sentence is the documented one for its reason
+check | set4-debian13/run-b/steps/13-m10-postfix-stop/section.json | PASS | item 10: no `reset-failed` was issued: the unit is still `failed` after the answer and 8 seconds later, and the product's journal names no reset-failed
+check | set4-debian13/run-b/steps/13-m10-postfix-stop/section.json | PASS | S8 postfix start (after the owner's correction): the answer (success) matches what the service shows
+check | set4-debian13/run-b/steps/13-m10-postfix-stop/section.json | PASS | item 10: after main.cf is restored, Start answers success, the master runs and no unit is `failed`
+check | set4-debian13/run-b/steps/13-m10-postfix-stop/section.json | PASS | item 10: mail is accepted on 25 and 587 answers at the end
+section | set4-debian13/run-b/steps/14-m4-reload-stopped | M4-reload-stopped | passed | error=
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): the unit was stopped before the reload was asked
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx start (after the refused reload): the answer (success) matches what the service shows
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): Start brings the service back afterwards
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): the unit was stopped before the reload was asked
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb start (after the refused reload): the answer (success) matches what the service shows
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): Start brings the service back afterwards
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): the unit was stopped before the reload was asked
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql start (after the refused reload): the answer (success) matches what the service shows
+check | set4-debian13/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): Start brings the service back afterwards
+## set4-ubuntu/run-a: overall=failed native_evidence=False outcome=set4-measured
+step | set4-ubuntu/run-a | preflight | passed | 
+step | set4-ubuntu/run-a | origin | passed | 
+step | set4-ubuntu/run-a | baseline-install | passed | 
+step | set4-ubuntu/run-a | owner-login | passed | 
+step | set4-ubuntu/run-a | license | passed | 
+step | set4-ubuntu/run-a | setup | observed | 
+step | set4-ubuntu/run-a | site | passed | 
+step | set4-ubuntu/run-a | M0-prepare | passed | 
+step | set4-ubuntu/run-a | M1-php-site | passed | 
+step | set4-ubuntu/run-a | M6-site-refused | passed | 
+step | set4-ubuntu/run-a | M2-import | passed | 
+step | set4-ubuntu/run-a | M5-import-absolute | passed | 
+step | set4-ubuntu/run-a | M10-postfix-stop | failed | item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`; item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`; item 10: the note's sentence is 
+step | set4-ubuntu/run-a | M4-reload-stopped | passed | 
+step | set4-ubuntu/run-a | collect | passed | 
+section | set4-ubuntu/run-a/steps/08-m0-prepare | M0-prepare | passed | error=
+check | set4-ubuntu/run-a/steps/08-m0-prepare/section.json | PASS | the Panel's database names the owner's site and its subscription
+check | set4-ubuntu/run-a/steps/08-m0-prepare/section.json | PASS | lab isolation: celikpanel.net resolves to this guest's loopback only (its own fixture origin)
+check | set4-ubuntu/run-a/steps/08-m0-prepare/section.json | PASS | lab isolation: the two Let's Encrypt directory names resolve to this guest's loopback only
+check | set4-ubuntu/run-a/steps/08-m0-prepare/section.json | PASS | item 7: the package's /etc/nginx/snippets/fastcgi-php.conf has the SHA-256 the product's test pins
+check | set4-ubuntu/run-a/steps/08-m0-prepare/section.json | PASS | `nginx -t` passes before anything is measured
+section | set4-ubuntu/run-a/steps/09-m1-php-site | M1-php-site | passed | error=
+check | set4-ubuntu/run-a/steps/09-m1-php-site/section.json | PASS | item 1/8: a PHP site is created through the Panel (200 with the new domain's id)
+check | set4-ubuntu/run-a/steps/09-m1-php-site/section.json | PASS | php-site: `nginx -t` passes with the site's vhost
+check | set4-ubuntu/run-a/steps/09-m1-php-site/section.json | PASS | php-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params
+check | set4-ubuntu/run-a/steps/09-m1-php-site/section.json | PASS | php-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)
+check | set4-ubuntu/run-a/steps/09-m1-php-site/section.json | PASS | php-site: the page runs as the site's own account
+check | set4-ubuntu/run-a/steps/09-m1-php-site/section.json | PASS | php-site: a PHP script that does not exist answers 404
+check | set4-ubuntu/run-a/steps/09-m1-php-site/section.json | PASS | php-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)
+check | set4-ubuntu/run-a/steps/09-m1-php-site/section.json | PASS | php-site: a static file of the site is served as it is (200)
+check | set4-ubuntu/run-a/steps/09-m1-php-site/section.json | PASS | php-site (item 3): the PHP version recorded for the site is the installed one that runs the page
+check | set4-ubuntu/run-a/steps/09-m1-php-site/section.json | PASS | php-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists
+check | set4-ubuntu/run-a/steps/09-m1-php-site/section.json | PASS | php-site: the site is deleted through the Panel and nothing of it is left serving (not listed, no domain or site row, no account, no home, no vhost in nginx, no pool file, no socket, the page and the static file no longer served, `nginx -t` passes)
+check | set4-ubuntu/run-a/steps/09-m1-php-site/section.json | PASS | php-site: PHP-FPM is still active after the delete
+note | set4-ubuntu/run-a/steps/09-m1-php-site/section.json | php-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 200
+note | set4-ubuntu/run-a/steps/09-m1-php-site/section.json | php-site: the certificate-validation directory of the deleted site is still there
+section | set4-ubuntu/run-a/steps/10-m6-site-refused | M6-site-refused | passed | error=
+check | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): after the owner moved /etc/nginx/fastcgi.conf away, `nginx -t` still passes (the refusal can only come with a new vhost)
+check | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): the answer is 502 SITE_WEB_SERVER_REFUSED with a reason
+check | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): `vars` are the domain and `sudo nginx -t`, `details` is one line of nginx's own, and the sentence is the documented one for the reason
+check | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): what the answer says was removed is gone on the guest (vhost, system account, files, PHP pool) and no domain or site row is left; it claims no more than is true
+check | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): nginx still runs as the same process after the refusal (reloaded, not restarted) and `nginx -t` passes
+check | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): the owner put the file back and `nginx -t` passes
+check | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): after the correction the same site is created (200), as the sentence says
+check | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | PASS | refused-again: the site is deleted through the Panel and nothing of it is left serving (not listed, no domain or site row, no account, no home, no vhost in nginx, no pool file, no socket, the page and the static file no longer served, `nginx -t` passes)
+check | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | PASS | refused-again: PHP-FPM is still active after the delete
+check | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): the answer is 502 SITE_WEB_SERVER_REFUSED with a reason
+check | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): `vars` are the domain and `sudo nginx -t`, `details` is one line of nginx's own, and the sentence is the documented one for the reason
+check | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): what the answer says was removed is gone on the guest (vhost, system account, files, PHP pool) and no domain or site row is left; it claims no more than is true
+check | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): nginx still runs as the same process after the refusal (reloaded, not restarted) and `nginx -t` passes
+note | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | item 6 (owner-moved-file): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it
+note | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | refused-again: the certificate-validation directory of the deleted site is still there
+note | set4-ubuntu/run-a/steps/10-m6-site-refused/section.json | item 6 (long-site-name): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it
+section | set4-ubuntu/run-a/steps/11-m2-import | M2-import | passed | error=
+check | set4-ubuntu/run-a/steps/11-m2-import/section.json | PASS | the preview of the set4 archive names its domain, its mailbox and its database
+check | set4-ubuntu/run-a/steps/11-m2-import/section.json | PASS | S1: the preview of the set4 archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only
+check | set4-ubuntu/run-a/steps/11-m2-import/section.json | PASS | item 2: the import of set3's fixture completes (200, active; the document root's files equal the archive's; the database is on the engine with its rows)
+check | set4-ubuntu/run-a/steps/11-m2-import/section.json | PASS | item 5 (declared deviation): entries of the archive outside the site folder are counted in the files step's line and do not make the import partial
+check | set4-ubuntu/run-a/steps/11-m2-import/section.json | PASS | item 2: the imported site serves the archive's own index page through the web server
+check | set4-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site: `nginx -t` passes with the site's vhost
+check | set4-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params
+check | set4-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)
+check | set4-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site: the page runs as the site's own account
+check | set4-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site: a PHP script that does not exist answers 404
+check | set4-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)
+check | set4-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site: a static file of the site is served as it is (200)
+check | set4-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site (item 3): the PHP version recorded for the site is the installed one that runs the page
+check | set4-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists
+note | set4-ubuntu/run-a/steps/11-m2-import/section.json | imported-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 404
+section | set4-ubuntu/run-a/steps/12-m5-import-absolute | M5-import-absolute | passed | error=
+check | set4-ubuntu/run-a/steps/12-m5-import-absolute/section.json | PASS | the preview of the absolute archive names its domain, its mailbox and its database
+check | set4-ubuntu/run-a/steps/12-m5-import-absolute/section.json | PASS | S1: the preview of the absolute archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only
+check | set4-ubuntu/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: the member named by an absolute path is listed in the import result as a step of its own (`member:<name>`, not ok) with the documented reason
+check | set4-ubuntu/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: the import answers 200 with status `partial`
+check | set4-ubuntu/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5 (declared deviation): a result that misses only refused entries keeps `domain_status: active`, and the domain's row is `active`
+check | set4-ubuntu/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: `imported` and `not_imported` are the steps' own results; the member is in `not_imported` and every chosen part is in `imported`
+check | set4-ubuntu/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: the message is the documented one (every chosen part imported, the domain in service, the entries refused by their names)
+check | set4-ubuntu/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: the rest is imported: the document root's files equal the archive's site files, the database is on the engine with its rows, the mailbox exists
+check | set4-ubuntu/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: nothing was written for the member anywhere on the server
+check | set4-ubuntu/run-a/steps/12-m5-import-absolute/section.json | PASS | item 5: the imported site serves the archive's index page
+section | set4-ubuntu/run-a/steps/13-m10-postfix-stop | M10-postfix-stop | failed | error=
+check | set4-ubuntu/run-a/steps/13-m10-postfix-stop/section.json | PASS | item 10: `postfix check` refuses main.cf (the owner's line)
+check | set4-ubuntu/run-a/steps/13-m10-postfix-stop/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses): the answer (success) matches what the service shows
+check | set4-ubuntu/run-a/steps/13-m10-postfix-stop/section.json | PASS | item 10: Stop answers 200 success and the master is gone
+check | set4-ubuntu/run-a/steps/13-m10-postfix-stop/section.json | PASS | item 10: the unit ended `failed`, which it was not before the stop (set3's observation)
+check | set4-ubuntu/run-a/steps/13-m10-postfix-stop/section.json | FAIL | item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`
+check | set4-ubuntu/run-a/steps/13-m10-postfix-stop/section.json | FAIL | item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`
+check | set4-ubuntu/run-a/steps/13-m10-postfix-stop/section.json | FAIL | item 10: the note's sentence is the documented one for its reason
+check | set4-ubuntu/run-a/steps/13-m10-postfix-stop/section.json | PASS | item 10: no `reset-failed` was issued: the unit is still `failed` after the answer and 8 seconds later, and the product's journal names no reset-failed
+check | set4-ubuntu/run-a/steps/13-m10-postfix-stop/section.json | PASS | S8 postfix start (after the owner's correction): the answer (success) matches what the service shows
+check | set4-ubuntu/run-a/steps/13-m10-postfix-stop/section.json | PASS | item 10: after main.cf is restored, Start answers success, the master runs and no unit is `failed`
+check | set4-ubuntu/run-a/steps/13-m10-postfix-stop/section.json | PASS | item 10: mail is accepted on 25 and 587 answers at the end
+section | set4-ubuntu/run-a/steps/14-m4-reload-stopped | M4-reload-stopped | passed | error=
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): the unit was stopped before the reload was asked
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx start (after the refused reload): the answer (success) matches what the service shows
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): Start brings the service back afterwards
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): the unit was stopped before the reload was asked
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb start (after the refused reload): the answer (success) matches what the service shows
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): Start brings the service back afterwards
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): the unit was stopped before the reload was asked
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql start (after the refused reload): the answer (success) matches what the service shows
+check | set4-ubuntu/run-a/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): Start brings the service back afterwards
+## set4-ubuntu/run-b: overall=failed native_evidence=False outcome=set4-measured
+step | set4-ubuntu/run-b | preflight | passed | 
+step | set4-ubuntu/run-b | origin | passed | 
+step | set4-ubuntu/run-b | baseline-install | passed | 
+step | set4-ubuntu/run-b | owner-login | passed | 
+step | set4-ubuntu/run-b | license | passed | 
+step | set4-ubuntu/run-b | setup | observed | 
+step | set4-ubuntu/run-b | site | passed | 
+step | set4-ubuntu/run-b | M0-prepare | passed | 
+step | set4-ubuntu/run-b | M1-php-site | passed | 
+step | set4-ubuntu/run-b | M6-site-refused | passed | 
+step | set4-ubuntu/run-b | M2-import | passed | 
+step | set4-ubuntu/run-b | M5-import-absolute | passed | 
+step | set4-ubuntu/run-b | M10-postfix-stop | failed | item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`; item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`; item 10: the note's sentence is 
+step | set4-ubuntu/run-b | M4-reload-stopped | passed | 
+step | set4-ubuntu/run-b | collect | passed | 
+section | set4-ubuntu/run-b/steps/08-m0-prepare | M0-prepare | passed | error=
+check | set4-ubuntu/run-b/steps/08-m0-prepare/section.json | PASS | the Panel's database names the owner's site and its subscription
+check | set4-ubuntu/run-b/steps/08-m0-prepare/section.json | PASS | lab isolation: celikpanel.net resolves to this guest's loopback only (its own fixture origin)
+check | set4-ubuntu/run-b/steps/08-m0-prepare/section.json | PASS | lab isolation: the two Let's Encrypt directory names resolve to this guest's loopback only
+check | set4-ubuntu/run-b/steps/08-m0-prepare/section.json | PASS | item 7: the package's /etc/nginx/snippets/fastcgi-php.conf has the SHA-256 the product's test pins
+check | set4-ubuntu/run-b/steps/08-m0-prepare/section.json | PASS | `nginx -t` passes before anything is measured
+section | set4-ubuntu/run-b/steps/09-m1-php-site | M1-php-site | passed | error=
+check | set4-ubuntu/run-b/steps/09-m1-php-site/section.json | PASS | item 1/8: a PHP site is created through the Panel (200 with the new domain's id)
+check | set4-ubuntu/run-b/steps/09-m1-php-site/section.json | PASS | php-site: `nginx -t` passes with the site's vhost
+check | set4-ubuntu/run-b/steps/09-m1-php-site/section.json | PASS | php-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params
+check | set4-ubuntu/run-b/steps/09-m1-php-site/section.json | PASS | php-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)
+check | set4-ubuntu/run-b/steps/09-m1-php-site/section.json | PASS | php-site: the page runs as the site's own account
+check | set4-ubuntu/run-b/steps/09-m1-php-site/section.json | PASS | php-site: a PHP script that does not exist answers 404
+check | set4-ubuntu/run-b/steps/09-m1-php-site/section.json | PASS | php-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)
+check | set4-ubuntu/run-b/steps/09-m1-php-site/section.json | PASS | php-site: a static file of the site is served as it is (200)
+check | set4-ubuntu/run-b/steps/09-m1-php-site/section.json | PASS | php-site (item 3): the PHP version recorded for the site is the installed one that runs the page
+check | set4-ubuntu/run-b/steps/09-m1-php-site/section.json | PASS | php-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists
+check | set4-ubuntu/run-b/steps/09-m1-php-site/section.json | PASS | php-site: the site is deleted through the Panel and nothing of it is left serving (not listed, no domain or site row, no account, no home, no vhost in nginx, no pool file, no socket, the page and the static file no longer served, `nginx -t` passes)
+check | set4-ubuntu/run-b/steps/09-m1-php-site/section.json | PASS | php-site: PHP-FPM is still active after the delete
+note | set4-ubuntu/run-b/steps/09-m1-php-site/section.json | php-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 200
+note | set4-ubuntu/run-b/steps/09-m1-php-site/section.json | php-site: the certificate-validation directory of the deleted site is still there
+section | set4-ubuntu/run-b/steps/10-m6-site-refused | M6-site-refused | passed | error=
+check | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): after the owner moved /etc/nginx/fastcgi.conf away, `nginx -t` still passes (the refusal can only come with a new vhost)
+check | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): the answer is 502 SITE_WEB_SERVER_REFUSED with a reason
+check | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): `vars` are the domain and `sudo nginx -t`, `details` is one line of nginx's own, and the sentence is the documented one for the reason
+check | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): what the answer says was removed is gone on the guest (vhost, system account, files, PHP pool) and no domain or site row is left; it claims no more than is true
+check | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): nginx still runs as the same process after the refusal (reloaded, not restarted) and `nginx -t` passes
+check | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): the owner put the file back and `nginx -t` passes
+check | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (owner-moved-file): after the correction the same site is created (200), as the sentence says
+check | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | PASS | refused-again: the site is deleted through the Panel and nothing of it is left serving (not listed, no domain or site row, no account, no home, no vhost in nginx, no pool file, no socket, the page and the static file no longer served, `nginx -t` passes)
+check | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | PASS | refused-again: PHP-FPM is still active after the delete
+check | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): the answer is 502 SITE_WEB_SERVER_REFUSED with a reason
+check | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): `vars` are the domain and `sudo nginx -t`, `details` is one line of nginx's own, and the sentence is the documented one for the reason
+check | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): what the answer says was removed is gone on the guest (vhost, system account, files, PHP pool) and no domain or site row is left; it claims no more than is true
+check | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | PASS | item 6 (long-site-name): nginx still runs as the same process after the refusal (reloaded, not restarted) and `nginx -t` passes
+note | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | item 6 (owner-moved-file): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it
+note | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | refused-again: the certificate-validation directory of the deleted site is still there
+note | set4-ubuntu/run-b/steps/10-m6-site-refused/section.json | item 6 (long-site-name): the certificate-validation directory the Agent prepared for the refused site is left on the server; the answer does not mention it
+section | set4-ubuntu/run-b/steps/11-m2-import | M2-import | passed | error=
+check | set4-ubuntu/run-b/steps/11-m2-import/section.json | PASS | the preview of the set4 archive names its domain, its mailbox and its database
+check | set4-ubuntu/run-b/steps/11-m2-import/section.json | PASS | S1: the preview of the set4 archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only
+check | set4-ubuntu/run-b/steps/11-m2-import/section.json | PASS | item 2: the import of set3's fixture completes (200, active; the document root's files equal the archive's; the database is on the engine with its rows)
+check | set4-ubuntu/run-b/steps/11-m2-import/section.json | PASS | item 5 (declared deviation): entries of the archive outside the site folder are counted in the files step's line and do not make the import partial
+check | set4-ubuntu/run-b/steps/11-m2-import/section.json | PASS | item 2: the imported site serves the archive's own index page through the web server
+check | set4-ubuntu/run-b/steps/11-m2-import/section.json | PASS | imported-site: `nginx -t` passes with the site's vhost
+check | set4-ubuntu/run-b/steps/11-m2-import/section.json | PASS | imported-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params
+check | set4-ubuntu/run-b/steps/11-m2-import/section.json | PASS | imported-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)
+check | set4-ubuntu/run-b/steps/11-m2-import/section.json | PASS | imported-site: the page runs as the site's own account
+check | set4-ubuntu/run-b/steps/11-m2-import/section.json | PASS | imported-site: a PHP script that does not exist answers 404
+check | set4-ubuntu/run-b/steps/11-m2-import/section.json | PASS | imported-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)
+check | set4-ubuntu/run-b/steps/11-m2-import/section.json | PASS | imported-site: a static file of the site is served as it is (200)
+check | set4-ubuntu/run-b/steps/11-m2-import/section.json | PASS | imported-site (item 3): the PHP version recorded for the site is the installed one that runs the page
+check | set4-ubuntu/run-b/steps/11-m2-import/section.json | PASS | imported-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists
+note | set4-ubuntu/run-b/steps/11-m2-import/section.json | imported-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 404
+section | set4-ubuntu/run-b/steps/12-m5-import-absolute | M5-import-absolute | passed | error=
+check | set4-ubuntu/run-b/steps/12-m5-import-absolute/section.json | PASS | the preview of the absolute archive names its domain, its mailbox and its database
+check | set4-ubuntu/run-b/steps/12-m5-import-absolute/section.json | PASS | S1: the preview of the absolute archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only
+check | set4-ubuntu/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: the member named by an absolute path is listed in the import result as a step of its own (`member:<name>`, not ok) with the documented reason
+check | set4-ubuntu/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: the import answers 200 with status `partial`
+check | set4-ubuntu/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5 (declared deviation): a result that misses only refused entries keeps `domain_status: active`, and the domain's row is `active`
+check | set4-ubuntu/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: `imported` and `not_imported` are the steps' own results; the member is in `not_imported` and every chosen part is in `imported`
+check | set4-ubuntu/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: the message is the documented one (every chosen part imported, the domain in service, the entries refused by their names)
+check | set4-ubuntu/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: the rest is imported: the document root's files equal the archive's site files, the database is on the engine with its rows, the mailbox exists
+check | set4-ubuntu/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: nothing was written for the member anywhere on the server
+check | set4-ubuntu/run-b/steps/12-m5-import-absolute/section.json | PASS | item 5: the imported site serves the archive's index page
+section | set4-ubuntu/run-b/steps/13-m10-postfix-stop | M10-postfix-stop | failed | error=
+check | set4-ubuntu/run-b/steps/13-m10-postfix-stop/section.json | PASS | item 10: `postfix check` refuses main.cf (the owner's line)
+check | set4-ubuntu/run-b/steps/13-m10-postfix-stop/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses): the answer (success) matches what the service shows
+check | set4-ubuntu/run-b/steps/13-m10-postfix-stop/section.json | PASS | item 10: Stop answers 200 success and the master is gone
+check | set4-ubuntu/run-b/steps/13-m10-postfix-stop/section.json | PASS | item 10: the unit ended `failed`, which it was not before the stop (set3's observation)
+check | set4-ubuntu/run-b/steps/13-m10-postfix-stop/section.json | FAIL | item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`
+check | set4-ubuntu/run-b/steps/13-m10-postfix-stop/section.json | FAIL | item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`
+check | set4-ubuntu/run-b/steps/13-m10-postfix-stop/section.json | FAIL | item 10: the note's sentence is the documented one for its reason
+check | set4-ubuntu/run-b/steps/13-m10-postfix-stop/section.json | PASS | item 10: no `reset-failed` was issued: the unit is still `failed` after the answer and 8 seconds later, and the product's journal names no reset-failed
+check | set4-ubuntu/run-b/steps/13-m10-postfix-stop/section.json | PASS | S8 postfix start (after the owner's correction): the answer (success) matches what the service shows
+check | set4-ubuntu/run-b/steps/13-m10-postfix-stop/section.json | PASS | item 10: after main.cf is restored, Start answers success, the master runs and no unit is `failed`
+check | set4-ubuntu/run-b/steps/13-m10-postfix-stop/section.json | PASS | item 10: mail is accepted on 25 and 587 answers at the end
+section | set4-ubuntu/run-b/steps/14-m4-reload-stopped | M4-reload-stopped | passed | error=
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): the unit was stopped before the reload was asked
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 nginx start (after the refused reload): the answer (success) matches what the service shows
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (nginx): Start brings the service back afterwards
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): the unit was stopped before the reload was asked
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 mariadb start (after the refused reload): the answer (success) matches what the service shows
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (mariadb): Start brings the service back afterwards
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql stop (set4, before the reload): the answer (success) matches what the service shows
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql reload (while stopped): the answer (failed, SERVICE_ACTION_FAILED/not_running) matches what the service shows
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql reload (while stopped): answers 409 SERVICE_ACTION_FAILED (not_running)
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): the unit was stopped before the reload was asked
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): the journal shows nothing was sent to the unit: no line of the unit and no line of systemd about it since the reload was asked, and systemd's own record of the unit is unchanged
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | S8 postgresql start (after the refused reload): the answer (success) matches what the service shows
+check | set4-ubuntu/run-b/steps/14-m4-reload-stopped/section.json | PASS | item 4 (postgresql): Start brings the service back afterwards
+## update-alpha81/upd1-arch-defective/run-a: overall=complete-for-review native_evidence=False outcome=recovered-automatically
+step | update-alpha81/upd1-arch-defective/run-a | preflight | passed | 
+step | update-alpha81/upd1-arch-defective/run-a | origin | passed | 
+step | update-alpha81/upd1-arch-defective/run-a | baseline-install | passed | 
+step | update-alpha81/upd1-arch-defective/run-a | owner-login | passed | 
+step | update-alpha81/upd1-arch-defective/run-a | license | passed | 
+step | update-alpha81/upd1-arch-defective/run-a | setup | observed | 
+step | update-alpha81/upd1-arch-defective/run-a | seed | passed | 
+step | update-alpha81/upd1-arch-defective/run-a | pre-state | passed | 
+step | update-alpha81/upd1-arch-defective/run-a | arm | passed | 
+step | update-alpha81/upd1-arch-defective/run-a | owner-start | passed | 
+step | update-alpha81/upd1-arch-defective/run-a | track | passed | 
+step | update-alpha81/upd1-arch-defective/run-a | owner-continuation (required) | skipped | 
+step | update-alpha81/upd1-arch-defective/run-a | terminal | passed | 
+step | update-alpha81/upd1-arch-defective/run-a | post-return-facts | passed | 
+step | update-alpha81/upd1-arch-defective/run-a | set4-update-check-after-the-return | passed | 
+step | update-alpha81/upd1-arch-defective/run-a | collect | passed | 
+step | update-alpha81/upd1-arch-defective/run-a | verdicts | passed | 
+## update-alpha81/upd1-arch-defective/run-b: overall=complete-for-review native_evidence=False outcome=recovered-automatically
+step | update-alpha81/upd1-arch-defective/run-b | preflight | passed | 
+step | update-alpha81/upd1-arch-defective/run-b | origin | passed | 
+step | update-alpha81/upd1-arch-defective/run-b | baseline-install | passed | 
+step | update-alpha81/upd1-arch-defective/run-b | owner-login | passed | 
+step | update-alpha81/upd1-arch-defective/run-b | license | passed | 
+step | update-alpha81/upd1-arch-defective/run-b | setup | observed | 
+step | update-alpha81/upd1-arch-defective/run-b | seed | passed | 
+step | update-alpha81/upd1-arch-defective/run-b | pre-state | passed | 
+step | update-alpha81/upd1-arch-defective/run-b | arm | passed | 
+step | update-alpha81/upd1-arch-defective/run-b | owner-start | passed | 
+step | update-alpha81/upd1-arch-defective/run-b | track | passed | 
+step | update-alpha81/upd1-arch-defective/run-b | owner-continuation (required) | skipped | 
+step | update-alpha81/upd1-arch-defective/run-b | terminal | passed | 
+step | update-alpha81/upd1-arch-defective/run-b | post-return-facts | passed | 
+step | update-alpha81/upd1-arch-defective/run-b | set4-update-check-after-the-return | passed | 
+step | update-alpha81/upd1-arch-defective/run-b | collect | passed | 
+step | update-alpha81/upd1-arch-defective/run-b | verdicts | passed | 
+## update-alpha81/upd1-debian13-good/run-a: overall=failed native_evidence=False outcome=update-verified
+step | update-alpha81/upd1-debian13-good/run-a | preflight | passed | 
+step | update-alpha81/upd1-debian13-good/run-a | origin | passed | 
+step | update-alpha81/upd1-debian13-good/run-a | baseline-install | passed | 
+step | update-alpha81/upd1-debian13-good/run-a | owner-login | passed | 
+step | update-alpha81/upd1-debian13-good/run-a | license | passed | 
+step | update-alpha81/upd1-debian13-good/run-a | setup | observed | 
+step | update-alpha81/upd1-debian13-good/run-a | seed | passed | 
+step | update-alpha81/upd1-debian13-good/run-a | set4-php-site-before-the-update | passed | 
+step | update-alpha81/upd1-debian13-good/run-a | pre-state | passed | 
+step | update-alpha81/upd1-debian13-good/run-a | arm | passed | 
+step | update-alpha81/upd1-debian13-good/run-a | owner-start | passed | 
+step | update-alpha81/upd1-debian13-good/run-a | track | passed | 
+step | update-alpha81/upd1-debian13-good/run-a | owner-continuation (required) | skipped | 
+step | update-alpha81/upd1-debian13-good/run-a | terminal | passed | 
+step | update-alpha81/upd1-debian13-good/run-a | deferred-mail-watch | observed | 
+step | update-alpha81/upd1-debian13-good/run-a | post-update-facts | passed | 
+step | update-alpha81/upd1-debian13-good/run-a | set4-php-site-after-the-update | failed | the save did not change the vhost file (nothing was rendered again)
+step | update-alpha81/upd1-debian13-good/run-a | collect | passed | 
+step | update-alpha81/upd1-debian13-good/run-a | verdicts | passed | 
+## update-alpha81/upd1-debian13-good/run-b: overall=complete-for-review native_evidence=False outcome=update-verified
+step | update-alpha81/upd1-debian13-good/run-b | preflight | passed | 
+step | update-alpha81/upd1-debian13-good/run-b | origin | passed | 
+step | update-alpha81/upd1-debian13-good/run-b | baseline-install | passed | 
+step | update-alpha81/upd1-debian13-good/run-b | owner-login | passed | 
+step | update-alpha81/upd1-debian13-good/run-b | license | passed | 
+step | update-alpha81/upd1-debian13-good/run-b | setup | observed | 
+step | update-alpha81/upd1-debian13-good/run-b | seed | passed | 
+step | update-alpha81/upd1-debian13-good/run-b | set4-php-site-before-the-update | passed | 
+step | update-alpha81/upd1-debian13-good/run-b | pre-state | passed | 
+step | update-alpha81/upd1-debian13-good/run-b | arm | passed | 
+step | update-alpha81/upd1-debian13-good/run-b | owner-start | passed | 
+step | update-alpha81/upd1-debian13-good/run-b | track | passed | 
+step | update-alpha81/upd1-debian13-good/run-b | owner-continuation (required) | skipped | 
+step | update-alpha81/upd1-debian13-good/run-b | terminal | passed | 
+step | update-alpha81/upd1-debian13-good/run-b | deferred-mail-watch | observed | 
+step | update-alpha81/upd1-debian13-good/run-b | post-update-facts | passed | 
+step | update-alpha81/upd1-debian13-good/run-b | set4-php-site-after-the-update | passed | 
+step | update-alpha81/upd1-debian13-good/run-b | collect | passed | 
+step | update-alpha81/upd1-debian13-good/run-b | verdicts | passed | 
+## update-alpha81/upd1-ubuntu-good/run-a: overall=complete-for-review native_evidence=False outcome=update-verified
+step | update-alpha81/upd1-ubuntu-good/run-a | preflight | passed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | origin | passed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | baseline-install | passed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | owner-login | passed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | license | passed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | setup | observed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | seed | passed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | set4-php-site-before-the-update | passed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | pre-state | passed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | arm | passed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | owner-start | passed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | track | passed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | owner-continuation (required) | skipped | 
+step | update-alpha81/upd1-ubuntu-good/run-a | terminal | passed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | deferred-mail-watch | observed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | post-update-facts | passed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | set4-php-site-after-the-update | passed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | collect | passed | 
+step | update-alpha81/upd1-ubuntu-good/run-a | verdicts | passed | 
+## update-candidate-baseline/upd1-arch-defective/run-a: overall=complete-for-review native_evidence=False outcome=recovered-automatically
+step | update-candidate-baseline/upd1-arch-defective/run-a | preflight | passed | 
+step | update-candidate-baseline/upd1-arch-defective/run-a | origin | passed | 
+step | update-candidate-baseline/upd1-arch-defective/run-a | baseline-install | passed | 
+step | update-candidate-baseline/upd1-arch-defective/run-a | owner-login | passed | 
+step | update-candidate-baseline/upd1-arch-defective/run-a | license | passed | 
+step | update-candidate-baseline/upd1-arch-defective/run-a | setup | observed | 
+step | update-candidate-baseline/upd1-arch-defective/run-a | seed | passed | 
+step | update-candidate-baseline/upd1-arch-defective/run-a | pre-state | passed | 
+step | update-candidate-baseline/upd1-arch-defective/run-a | arm | passed | 
+step | update-candidate-baseline/upd1-arch-defective/run-a | owner-start | passed | 
+step | update-candidate-baseline/upd1-arch-defective/run-a | track | passed | 
+step | update-candidate-baseline/upd1-arch-defective/run-a | owner-continuation (required) | skipped | 
+step | update-candidate-baseline/upd1-arch-defective/run-a | terminal | passed | 
+step | update-candidate-baseline/upd1-arch-defective/run-a | set4-update-check-after-the-return | passed | 
+step | update-candidate-baseline/upd1-arch-defective/run-a | collect | passed | 
+step | update-candidate-baseline/upd1-arch-defective/run-a | verdicts | passed | 

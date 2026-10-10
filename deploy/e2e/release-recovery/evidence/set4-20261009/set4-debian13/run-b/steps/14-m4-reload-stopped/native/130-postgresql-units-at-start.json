@@ -1,0 +1,58 @@
+{
+  "at": "2026-10-09T12:53:33Z",
+  "is_active": {
+    "postgresql.service": "active",
+    "postgresql@17-main.service": "active"
+  },
+  "is_failed": {
+    "postgresql.service": "active",
+    "postgresql@17-main.service": "active"
+  },
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "units": {
+    "postgresql.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 12:47:16 UTC",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "active",
+      "ExecMainPID": "14852",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 12:47:16 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postgresql.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "Fri 2026-10-09 12:47:16 UTC",
+      "InvocationID": "168a004e1a3c4612a609e92f562adabd",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 12:47:16 UTC",
+      "SubState": "exited",
+      "Type": "oneshot"
+    },
+    "postgresql@17-main.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 12:47:20 UTC",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "active",
+      "ExecMainPID": "15721",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 12:47:18 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/bin/pg_ctlcluster ; argv[]=/usr/bin/pg_ctlcluster --skip-systemctl-redirect 17-main reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+      "FragmentPath": "/usr/lib/systemd/system/postgresql@.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "Fri 2026-10-09 12:47:18 UTC",
+      "InvocationID": "fc5934c67b3144ecabe2aeccec3491e4",
+      "LoadState": "loaded",
+      "MainPID": "15721",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 12:47:20 UTC",
+      "SubState": "running",
+      "Type": "forking"
+    }
+  }
+}

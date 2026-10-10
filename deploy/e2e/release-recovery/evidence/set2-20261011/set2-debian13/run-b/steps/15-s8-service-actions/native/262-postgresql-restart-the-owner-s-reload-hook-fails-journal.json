@@ -1,0 +1,34 @@
+{
+  "at": "2026-10-09T04:05:09Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791518705",
+      "-n",
+      "400",
+      "-u",
+      "postgresql.service",
+      "-u",
+      "postgresql@17-main.service"
+    ],
+    "at": "2026-10-09T04:05:09Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T04:05:05.470228+00:00 dns-debian13 systemd[1]: postgresql.service: Deactivated successfully.\n2026-10-09T04:05:05.470424+00:00 dns-debian13 systemd[1]: Stopped postgresql.service - PostgreSQL RDBMS.\n2026-10-09T04:05:05.470479+00:00 dns-debian13 systemd[1]: Stopping postgresql.service - PostgreSQL RDBMS...\n2026-10-09T04:05:05.471308+00:00 dns-debian13 systemd[1]: Stopping postgresql@17-main.service - PostgreSQL Cluster 17-main...\n2026-10-09T04:05:05.635362+00:00 dns-debian13 systemd[1]: postgresql@17-main.service: Deactivated successfully.\n2026-10-09T04:05:05.635719+00:00 dns-debian13 systemd[1]: Stopped postgresql@17-main.service - PostgreSQL Cluster 17-main.\n2026-10-09T04:05:05.637685+00:00 dns-debian13 systemd[1]: Starting postgresql@17-main.service - PostgreSQL Cluster 17-main...\n2026-10-09T04:05:07.842124+00:00 dns-debian13 systemd[1]: Started postgresql@17-main.service - PostgreSQL Cluster 17-main.\n2026-10-09T04:05:07.844207+00:00 dns-debian13 systemd[1]: Starting postgresql.service - PostgreSQL RDBMS...\n2026-10-09T04:05:07.861983+00:00 dns-debian13 systemd[1]: Finished postgresql.service - PostgreSQL RDBMS.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791518705,
+  "units": [
+    "postgresql.service",
+    "postgresql@17-main.service"
+  ]
+}

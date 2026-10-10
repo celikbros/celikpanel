@@ -1,0 +1,5 @@
+run copy (pristine, before any overlay) against commit 67b62cc0fa4a6b8edd33e6a1bf4a55a982ceaaed tree a3167582da96fe38caa44b58dbc46cecf42a4600
+files in the copy: 3562
+files of the copy whose blob id and path are NOT in the commit: 0
+files of the commit not in the copy: 61572
+of those, outside the three excluded evidence folders: 0

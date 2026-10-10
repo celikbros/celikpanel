@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { screenCatalogueFiles } from './locale-catalogue.mjs';
 
 // Register R-060: the critical-boot payload had 31 bytes of headroom, and 38%
@@ -61,9 +61,13 @@ const eagerModules = [
   'src/components/LicenseOnboarding.tsx',
   'src/auth/usePanelSession.ts',
   'src/components/RecoveryAccess.tsx',
+  'src/components/AccessHold.tsx',
+  'src/components/UpdateReloadNotice.tsx',
+  'src/lib/accessGuidance.ts',
   'src/lib/accessObservation.ts',
   'src/lib/recoveryObservation.ts',
   'src/lib/recoveryShell.ts',
+  'src/lib/panelHandover.ts',
   'src/router.tsx',
   'src/router-core.ts',
   'src/router-history.ts',
@@ -74,6 +78,8 @@ const eagerModules = [
   'src/theme/ThemeProvider.tsx',
   'src/lib/api.ts',
   'src/lib/apiError.ts',
+  'src/lib/remote.ts',
+  'src/lib/requestIdentity.ts',
   'src/lib/componentCensus.ts',
   'src/lib/systemUpdateAuthSignal.ts',
   'src/lib/systemUpdateLease.ts',
@@ -83,6 +89,7 @@ const eagerModules = [
   'src/components/BrandMark.tsx',
   'src/components/Login.tsx',
   'src/components/PanelAddressHint.tsx',
+  'src/components/AddressLink.tsx',
   'src/components/Layout.tsx',
   'src/components/PageHeader.tsx',
   'src/components/pageHeaderSlot.ts',
@@ -264,10 +271,15 @@ test('the eager module list still matches what the application imports staticall
   assert.ok(seen.size > 20, `the import walk found only ${seen.size} modules, so it is not walking`);
 
   // The lazily loaded routes are reached through import() and never appear.
+  // A module is named by its path under the web root, so a checkout whose own
+  // path holds a directory called `src` names its modules the same way.
+  const webDir = fileURLToPath(web);
   const reached = [...seen]
-    .map((file) => file.replaceAll('\\', '/').slice(file.replaceAll('\\', '/').indexOf('/src/') + 1))
+    .map((file) => relative(webDir, file).replaceAll('\\', '/'))
     .filter((path) => !path.endsWith('.css'))
     .sort();
+  const outside = reached.filter((path) => !path.startsWith('src/'));
+  assert.deepEqual(outside, [], `the import walk left web/src: ${outside.join(', ')}`);
 
   const unknown = reached.filter((path) => !known.has(path));
   assert.deepEqual(

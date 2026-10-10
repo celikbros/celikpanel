@@ -1,0 +1,18 @@
+{
+  "at": "2026-10-09T10:48:00Z",
+  "body": "<h1>set4-import.test</h1>\n<p>imported by the set2 fixture</p>\n",
+  "body_sha256": "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe",
+  "bytes": 62,
+  "headers": {
+    "content-length": "62",
+    "content-type": "text/html",
+    "server": "nginx"
+  },
+  "host": "set4-import.test",
+  "mode": "read-http",
+  "owner_action": false,
+  "path": "/index.html",
+  "schema": "celikpanel/set4-native/v1",
+  "status": 200,
+  "status_line": "HTTP/1.1 200 OK"
+}

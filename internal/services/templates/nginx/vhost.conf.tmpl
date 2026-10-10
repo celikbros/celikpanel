@@ -12,8 +12,30 @@
         try_files $uri $uri/ /index.php?$query_string;
     }
 
+    {{- /* The PHP hand-off is written out here (12 Oct 2026). It used to be
+        `include snippets/fastcgi-php.conf;`, a file that Debian's and Ubuntu's
+        nginx packages ship (nginx-common) and Arch's does not: there nginx
+        refused the vhost ("open() /etc/nginx/snippets/fastcgi-php.conf failed")
+        and no PHP site could be created. The six directives below are that
+        file's directives, in its order, and nothing else of it; `fastcgi.conf`
+        and `fastcgi_params` are nginx's own files and every package ships them
+        in /etc/nginx. For a site that was generated with the include, a
+        re-render is the same configuration with the include expanded
+        (TestPHPVhostIsTheDebianSnippetWrittenOut pins that). An owner who had
+        edited the package's snippet file: that file is no longer read by a
+        site's vhost.
+        PHP devri burada açık yazılır. Eskiden `include
+        snippets/fastcgi-php.conf;` idi; bu dosyayı Debian ve Ubuntu'nun nginx
+        paketleri getirir, Arch'ınki getirmez: orada nginx sanal konağı reddediyor
+        ve hiçbir PHP sitesi oluşturulamıyordu. Aşağıdaki altı yönerge o dosyanın
+        yönergeleridir, aynı sırayla. */}}
     location ~ \.php$ {
-        include snippets/fastcgi-php.conf;
+        fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+        try_files $fastcgi_script_name =404;
+        set $path_info $fastcgi_path_info;
+        fastcgi_param PATH_INFO $path_info;
+        fastcgi_index index.php;
+        include fastcgi.conf;
         fastcgi_pass unix:{{.PHPSocket}};
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;

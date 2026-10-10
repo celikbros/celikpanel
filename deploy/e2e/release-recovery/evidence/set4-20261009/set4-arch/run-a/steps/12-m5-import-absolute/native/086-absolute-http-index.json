@@ -1,0 +1,18 @@
+{
+  "at": "2026-10-09T10:36:37Z",
+  "body": "<h1>set4-absolute.test</h1>\n<p>imported by the set2 fixture</p>\n",
+  "body_sha256": "4356e006d113cdde4a2cf2fa8ebd2dee74fb95099c81620b39e7481ec005dd1c",
+  "bytes": 64,
+  "headers": {
+    "content-length": "64",
+    "content-type": "text/html",
+    "server": "nginx/1.30.5"
+  },
+  "host": "set4-absolute.test",
+  "mode": "read-http",
+  "owner_action": false,
+  "path": "/index.html",
+  "schema": "celikpanel/set4-native/v1",
+  "status": 200,
+  "status_line": "HTTP/1.1 200 OK"
+}

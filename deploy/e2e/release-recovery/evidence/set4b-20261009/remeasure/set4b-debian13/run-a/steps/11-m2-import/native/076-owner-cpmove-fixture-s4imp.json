@@ -1,0 +1,66 @@
+{
+  "action": "owner-cpmove-fixture",
+  "at": "2026-10-09T15:54:55Z",
+  "bytes": 2506,
+  "database": "s4imp_app",
+  "directory": {
+    "mode": "0700",
+    "uid": 0
+  },
+  "docroot_expected": {
+    "assets/site.css": [
+      34,
+      "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+    ],
+    "index.html": [
+      62,
+      "acbeadcba2040962420445fdad7dfc0fbea97e1c6706b6c0762b7c40e08273fe"
+    ]
+  },
+  "domain": "set4-import.test",
+  "hostile": null,
+  "hostile_members": [],
+  "lab_action": false,
+  "mailbox_shadow": "the sha512-crypt hash (openssl passwd -6) of a password the lab chose; neither is recorded",
+  "members": [
+    {
+      "bytes": 50,
+      "name": "cpmove-s4imp/cp/s4imp"
+    },
+    {
+      "bytes": 62,
+      "name": "cpmove-s4imp/homedir/public_html/index.html"
+    },
+    {
+      "bytes": 34,
+      "name": "cpmove-s4imp/homedir/public_html/assets/site.css"
+    },
+    {
+      "bytes": 124,
+      "name": "cpmove-s4imp/homedir/etc/set4-import.test/shadow"
+    },
+    {
+      "bytes": 15,
+      "name": "cpmove-s4imp/homedir/etc/set4-import.test/quota"
+    },
+    {
+      "bytes": 46,
+      "name": "cpmove-s4imp/va/set4-import.test"
+    },
+    {
+      "bytes": 29,
+      "name": "cpmove-s4imp/mysql/s4imp_app.create"
+    },
+    {
+      "bytes": 7388,
+      "name": "cpmove-s4imp/mysql/s4imp_app.sql"
+    }
+  ],
+  "mode": "owner-cpmove-fixture",
+  "owner_action": true,
+  "path": "/var/lib/celikpanel-imports/cpmove-s4imp.tar.gz",
+  "public_html_directory_member": true,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "sha256": "b13f279b7936a3e39d7392a695c381c2908c6ef5a5c5fe56f90d34b80de3134c",
+  "user": "s4imp"
+}

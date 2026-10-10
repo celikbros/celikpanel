@@ -304,12 +304,21 @@ test('a previously failed target is named before Start, and Start stays with the
             { ...updateCheck, previous_attempt: attempt },
         );
         const notes = renderer.root.findAll((node) => node.type === 'div' && node.props.role === 'note');
-        const notice = notes.find((node) => textOf(node).includes('panelUpdate.previousAttempt.title'));
+        // 12 Oct 2026: a version that was tried here and rolled back says so in
+        // its heading, names what the server runs now, the recorded cause, and
+        // what starting it again does.
+        const notice = notes.find((node) => textOf(node).includes('panelUpdate.previousAttempt.rolledBackTitle'));
         assert.ok(notice, 'previous-attempt notice is shown');
         const text = textOf(notice);
+        assert.doesNotMatch(text, /panelUpdate\.previousAttempt\.title/);
         assert.match(text, /panelUpdate\.previousAttempt\.recovered/);
         assert.match(text, /v0\.1\.0-alpha\.52/);
+        assert.match(text, /"current":"v0\.1\.0-alpha\.51"/);
         assert.match(text, /panelUpdate\.previousAttempt\.cause .*recovery\.reason\.candidate_panel_startup_check_failed/);
+        assert.doesNotMatch(text, /previousAttempt\.noCause/);
+        assert.match(text, /panelUpdate\.previousAttempt\.again:v0\.1\.0-alpha\.52/);
+        const order = ['rolledBackTitle', 'recovered', 'cause', 'again'].map((part) => text.indexOf(`panelUpdate.previousAttempt.${part}`));
+        assert.deepEqual(order, [...order].sort((a, b) => a - b), 'what happened, the cause, then what starting again does');
         const all = renderer.root.findAll(() => true);
         const noticeIndex = all.indexOf(notice);
         const startIndex = all.indexOf(renderer.root.findByProps({ id: 'panel-update-start-button' }));
@@ -320,6 +329,24 @@ test('a previously failed target is named before Start, and Start stays with the
         assert.equal(starts, 1);
     } finally {
         if (renderer) act(() => renderer.unmount());
+        globalThis.fetch = originalFetch;
+        delete globalThis.__nextPanelReadiness;
+        delete globalThis.__panelUpdateOperation;
+    }
+    // A return for which the server recorded no typed cause (the measured
+    // case: the candidate's migration failed) says that, instead of nothing.
+    try {
+        renderer = await mountCheckedCard(async () => ({ ready: true }), async () => ({ kind: 'accepted' }),
+            { ...updateCheck, previous_attempt: { request_id: 'e'.repeat(32), phase: 'recovered', finished_at: '2026-10-09T07:52:52Z' } });
+        const text = textOf(renderer.root);
+        assert.match(text, /panelUpdate\.previousAttempt\.rolledBackTitle/);
+        assert.match(text, /panelUpdate\.previousAttempt\.noCause/);
+        assert.match(text, /panelUpdate\.previousAttempt\.again/);
+        assert.doesNotMatch(text, /previousAttempt\.cause/);
+        assert.equal(renderer.root.findByProps({ id: 'panel-update-start-button' }).props.disabled, false);
+    } finally {
+        if (renderer) act(() => renderer.unmount());
+        renderer = null;
         globalThis.fetch = originalFetch;
         delete globalThis.__nextPanelReadiness;
         delete globalThis.__panelUpdateOperation;
@@ -340,6 +367,10 @@ test('a previously failed target is named before Start, and Start stays with the
                 assert.match(text, /panelUpdate\.previousAttempt\.failed/);
                 assert.match(text, /"current":"v0\.1\.0-alpha\.51"/);
                 assert.doesNotMatch(text, /previousAttempt\.cause|private_detail/);
+                // No rollback was recorded for it, so none is claimed.
+                assert.match(text, /panelUpdate\.previousAttempt\.title/);
+                assert.match(text, /panelUpdate\.previousAttempt\.noCause/);
+                assert.doesNotMatch(text, /previousAttempt\.rolledBackTitle|previousAttempt\.again/);
             }
             assert.equal(renderer.root.findByProps({ id: 'panel-update-start-button' }).props.disabled, false);
         } finally {

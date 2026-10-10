@@ -1,0 +1,107 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "C7 inspect the archive of set2-import-drop.test (ImportPage preview)",
+  "request": {
+    "body": {
+      "path": "/var/lib/celikpanel-imports/cpmove-s2impdrop.tar.gz"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18454"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18454"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "99de7f6b4922d92908ef37a69050bb24"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/import/cpanel/inspect"
+  },
+  "response": {
+    "elapsed_seconds": 0.009,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 04:17:15 GMT"
+      ],
+      [
+        "Content-Length",
+        "510"
+      ]
+    ],
+    "json": {
+      "databases": [
+        {
+          "dump_bytes": 7402,
+          "name": "s2impdrop_app"
+        }
+      ],
+      "dns_zones": {},
+      "domains": [
+        "set2-import-drop.test"
+      ],
+      "forwarders": [
+        {
+          "destination": "info@set2-import-drop.test",
+          "source": "sales@set2-import-drop.test"
+        }
+      ],
+      "mail_accounts": [
+        {
+          "crypt_hash": "[REDACTED fixture crypt_hash]",
+          "domain": "set2-import-drop.test",
+          "quota_mb": 256,
+          "user": "info"
+        }
+      ],
+      "main_domain": "set2-import-drop.test",
+      "public_html": true,
+      "site_bytes": 16777317,
+      "username": "s2impdrop"
+    },
+    "status": 200,
+    "text": null
+  }
+}

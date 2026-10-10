@@ -1,0 +1,21 @@
+{
+  "checks": {
+    "checks": 9,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T08:16:03Z",
+    "notes": [],
+    "started_at": "2026-10-09T08:15:44Z",
+    "substeps": {
+      "backup": "passed",
+      "section": "passed"
+    },
+    "title": "manual backup",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T08:16:03Z",
+  "name": "C4-backup",
+  "started_at": "2026-10-09T08:15:44Z",
+  "verdict": "passed"
+}

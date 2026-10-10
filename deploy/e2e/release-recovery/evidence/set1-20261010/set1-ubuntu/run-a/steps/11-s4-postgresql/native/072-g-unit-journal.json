@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-08T21:48:14Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791496092",
+      "-n",
+      "400",
+      "-u",
+      "postgresql@16-main.service"
+    ],
+    "at": "2026-10-08T21:48:14Z",
+    "returncode": 0,
+    "seconds": 0.006,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-08T21:48:12.998665+00:00 dns-ubuntu systemd[1]: Reloading postgresql@16-main.service - PostgreSQL Cluster 16-main...\n2026-10-08T21:48:13.019305+00:00 dns-ubuntu systemctl[47125]: Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.\n2026-10-08T21:48:13.020502+00:00 dns-ubuntu systemd[1]: postgresql@16-main.service: Control process exited, code=exited, status=5/NOTINSTALLED\n2026-10-08T21:48:13.020517+00:00 dns-ubuntu systemd[1]: Reload failed for postgresql@16-main.service - PostgreSQL Cluster 16-main.\n2026-10-08T21:48:13.057704+00:00 dns-ubuntu systemd[1]: Reloading postgresql@16-main.service - PostgreSQL Cluster 16-main...\n2026-10-08T21:48:13.066673+00:00 dns-ubuntu systemctl[47129]: Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.\n2026-10-08T21:48:13.067762+00:00 dns-ubuntu systemd[1]: postgresql@16-main.service: Control process exited, code=exited, status=5/NOTINSTALLED\n2026-10-08T21:48:13.067773+00:00 dns-ubuntu systemd[1]: Reload failed for postgresql@16-main.service - PostgreSQL Cluster 16-main.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791496092,
+  "units": [
+    "postgresql@16-main.service"
+  ]
+}

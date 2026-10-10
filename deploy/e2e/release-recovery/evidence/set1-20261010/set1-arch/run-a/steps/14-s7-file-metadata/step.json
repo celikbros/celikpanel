@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 6,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-08T21:58:18Z",
+    "notes": [],
+    "started_at": "2026-10-08T21:58:17Z",
+    "substeps": {
+      "/etc/my.cnf": "passed",
+      "/var/lib/postgres/data/pg_hba.conf": "passed",
+      "/var/lib/postgres/data/postgresql.conf": "passed"
+    },
+    "title": "owner, group and mode of the files the Panel wrote",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-08T21:58:18Z",
+  "name": "S7-file-metadata",
+  "started_at": "2026-10-08T21:58:17Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,8 @@
+﻿2026-10-09T03:03:44Z start free_bytes=149615169536 free_GiB=139.3
+2026-10-09T03:27:50Z before set2-ubuntu and rid-ubuntu (run-a) free_bytes=144288800768 free_GiB=134.4
+2026-10-09T03:30:56Z before set2-debian13 (run-a) free_bytes=141201661952 free_GiB=131.5
+2026-10-09T03:51:23Z before set2-debian13 and set2-ubuntu (run-b) free_bytes=136657809408 free_GiB=127.3
+2026-10-09T04:05:23Z before rid-ubuntu (run-b) and rid-debian13 (run-a) free_bytes=129908367360 free_GiB=121
+2026-10-09T04:14:42Z before rid-arch (run-a) free_bytes=129895690240 free_GiB=121
+2026-10-09T04:24:31Z before rid-arch (run-b) free_bytes=128602451968 free_GiB=119.8
+2026-10-09T04:40:49Z end (all cells staged, all overlays of this run removed) free_bytes=125430153216 free_GiB=116.8

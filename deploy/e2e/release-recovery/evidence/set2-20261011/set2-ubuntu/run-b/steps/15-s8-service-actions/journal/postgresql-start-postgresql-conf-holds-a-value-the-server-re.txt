@@ -1,0 +1,9 @@
+2026-10-09T04:12:17.216487+00:00 dns-ubuntu systemd[1]: Starting postgresql@16-main.service - PostgreSQL Cluster 16-main...
+2026-10-09T04:12:17.365608+00:00 dns-ubuntu postgresql@16-main[73892]: Error: /usr/lib/postgresql/16/bin/pg_ctl /usr/lib/postgresql/16/bin/pg_ctl start -D /var/lib/postgresql/16/main -l /var/log/postgresql/postgresql-16-main.log -s -o  -c config_file="/etc/postgresql/16/main/postgresql.conf"  exited with status 1:
+2026-10-09T04:12:17.365608+00:00 dns-ubuntu postgresql@16-main[73892]: 2026-10-09 04:12:17.275 GMT [73897] LOG:  invalid value for parameter "work_mem": "eight-megabytes"
+2026-10-09T04:12:17.365608+00:00 dns-ubuntu postgresql@16-main[73892]: 2026-10-09 04:12:17.275 UTC [73897] FATAL:  configuration file "/etc/postgresql/16/main/postgresql.conf" contains errors
+2026-10-09T04:12:17.365608+00:00 dns-ubuntu postgresql@16-main[73892]: pg_ctl: could not start server
+2026-10-09T04:12:17.365608+00:00 dns-ubuntu postgresql@16-main[73892]: Examine the log output.
+2026-10-09T04:12:17.368119+00:00 dns-ubuntu systemd[1]: postgresql@16-main.service: Can't open PID file /run/postgresql/16-main.pid (yet?) after start: No such file or directory
+2026-10-09T04:12:17.368526+00:00 dns-ubuntu systemd[1]: postgresql@16-main.service: Failed with result 'protocol'.
+2026-10-09T04:12:17.372675+00:00 dns-ubuntu systemd[1]: Failed to start postgresql@16-main.service - PostgreSQL Cluster 16-main.

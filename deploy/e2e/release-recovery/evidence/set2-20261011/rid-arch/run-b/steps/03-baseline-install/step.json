@@ -1,0 +1,123 @@
+{
+  "checks": {
+    "collected": {
+      "artifacts": {
+        "current-worker-baseline-result.json": {
+          "bytes": 2146,
+          "path": "/var/tmp/cp-release-drill-rid-arch-b/current-worker-baseline-arch-current-worker-baseline-result.json",
+          "sha256": "d69e04ffbdcf77a1ce966752ac115f44941c016911fb7d862011019a0f69fc8a"
+        },
+        "current-worker-baseline.log": {
+          "bytes": 6546,
+          "path": "/var/tmp/cp-release-drill-rid-arch-b/current-worker-baseline-arch-current-worker-baseline.log",
+          "sha256": "aada0d516dce6bb08148ff61f33be4e9ee9f1096d41c95713844684dc71ab937"
+        }
+      },
+      "node": "arch"
+    },
+    "installer_restart_notice": {
+      "banner": "RESTART THIS SERVER NOW / BU SUNUCUYU SIMDI YENIDEN BASLATIN",
+      "state": "required",
+      "text": "RESTART THIS SERVER NOW / BU SUNUCUYU SIMDI YENIDEN BASLATIN\n    This server is running kernel 7.1.8-arch1-3, whose modules are no longer on disk:\n    the prerequisite step upgraded the kernel and replaced them. Until this server\n    is restarted it cannot load nftables or WireGuard, so turning the firewall on\n    or installing the VPN will fail. Everything else is installed and running.\n        reboot\n\n    Bu sunucu, modulleri artik diskte olmayan 7.1.8-arch1-3 cekirdegiyle calisiyor:\n    on gereksinim adimi cekirdegi yukseltti ve modulleri degistirdi. Sunucu\n    yeniden baslatilana kadar nftables veya WireGuard yuklenemez; guvenlik\n    duvarini acmak veya VPN kurmak hata verir. Geri kalan her sey kurulu.\n        reboot"
+    },
+    "origin_after_restart": {
+      "addresses": [
+        "127.0.0.1"
+      ],
+      "boot_id": "41e5ca6d-9736-41c2-97c8-1c256cf649c7",
+      "getent_outcome": "found",
+      "getent_returncode": 0,
+      "getent_status": "ok",
+      "getent_stdout": "127.0.0.1       localhost\n",
+      "http": "200",
+      "loopback_only": true,
+      "ok": true,
+      "unit": {
+        "ActiveState": "active",
+        "NRestarts": "0",
+        "UnitFileState": "enabled"
+      }
+    },
+    "owner_restart_seconds": 41.74356817199987,
+    "start": {
+      "action": "started",
+      "archive_sha256": "795ac99bde17490b5ca13b1685e197fc7314410839292b0e92d3e611a0d9f8d0",
+      "credentials": "[REDACTED]",
+      "node": "arch",
+      "source_commit": "c00645036feb4210a04b357ffffc15cc215d010a",
+      "unit": "celikpanel-lab-current-worker-baseline.service",
+      "version": "v0.1.0-alpha.81"
+    },
+    "status": {
+      "installation": {
+        "archive_sha256": "795ac99bde17490b5ca13b1685e197fc7314410839292b0e92d3e611a0d9f8d0",
+        "credentials": "[REDACTED]",
+        "enrollment_exit": 0,
+        "error_type": null,
+        "finished_at": "2026-10-09T04:27:34.810593+00:00",
+        "foundation": {
+          "commit": "c00645036feb4210a04b357ffffc15cc215d010a",
+          "sequence": 81,
+          "sha256": "ca95f32b6ba170400df359c03a081302f4901040d4a4c17eafd1ce4e992bcaeb",
+          "version": "v0.1.0-alpha.81"
+        },
+        "https_curl_exit": 0,
+        "https_http_code": "200",
+        "https_trust_validation": "not-claimed-self-signed-bootstrap",
+        "identity": {
+          "cell_id": "release-recovery__70d2360b46b09c79",
+          "node": "arch",
+          "nonce": "70d2360b46b09c795825b8829c1b37ac52062c4a437dd9778db565639a8c296e",
+          "schema": "celikpanel-release-recovery-lab/v1",
+          "vm_uuid": "12903967-c621-55ab-ac5d-0573ddef7580"
+        },
+        "install_exit": 0,
+        "installed_artifacts": {
+          "agent": "1291ea814b407616799e026fd898271ca082260f581c8baaf969749a872a7a10",
+          "panel": "4674f56ff19173b0320b9c3304509ff3883a95aa4043cfc3202335bcf71d9c38"
+        },
+        "installer_log_bytes": 6546,
+        "installer_log_sha256": "aada0d516dce6bb08148ff61f33be4e9ee9f1096d41c95713844684dc71ab937",
+        "intent_sha256": "b83dfcd9a2355bfb1f8f9c3a1250a7d1f53a5c828657d9313b6a2f4d4ed09dcb",
+        "provenance": "unpublished-local-build-with-isolated-fixture-trust-not-production-release-admission",
+        "public_key_sha256": "6a934f2c400c988632868d622a49dfefb773fcf63db3776f6a1594d5fccbb41c",
+        "running_artifacts": {
+          "agent": "1291ea814b407616799e026fd898271ca082260f581c8baaf969749a872a7a10",
+          "panel": "4674f56ff19173b0320b9c3304509ff3883a95aa4043cfc3202335bcf71d9c38"
+        },
+        "schema": "celikpanel/current-worker-baseline-result/v1",
+        "sequence": 81,
+        "sequence_floor_sha256": "6903b4d1c3570faee8afdb177bd9bb33572803b0c5de6aceb913675b183f8b66",
+        "services": {
+          "agent": {
+            "ActiveState": "active",
+            "InvocationID": "f0753e364879499ba5e3bcb6dbe54e40",
+            "MainPID": "7897",
+            "SubState": "running"
+          },
+          "panel": {
+            "ActiveState": "active",
+            "InvocationID": "b9659347f28f4069a8ae20af96d7029e",
+            "MainPID": "8102",
+            "SubState": "running"
+          }
+        },
+        "source_commit": "c00645036feb4210a04b357ffffc15cc215d010a",
+        "started_at": "2026-10-09T04:26:08.616544+00:00",
+        "verified": true,
+        "version": "v0.1.0-alpha.81"
+      },
+      "node": "arch",
+      "unit": {
+        "ActiveState": "inactive",
+        "ExecMainStatus": "0",
+        "Result": "success",
+        "SubState": "dead"
+      }
+    }
+  },
+  "finished_at": "2026-10-09T04:28:34Z",
+  "name": "baseline-install",
+  "started_at": "2026-10-09T04:26:05Z",
+  "verdict": "passed"
+}

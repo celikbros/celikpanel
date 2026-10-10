@@ -1,0 +1,23 @@
+##### nginx.service
+2026-10-09T21:55:37.083435+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T21:55:37.111212+00:00 dns-arch nginx[3749]: 2026/10/09 21:55:37 [warn] 3749#3749: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T21:55:37.115682+00:00 dns-arch nginx[3749]: 2026/10/09 21:55:37 [notice] 3749#3749: signal process started
+2026-10-09T21:55:37.118363+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+2026-10-09T21:55:37.346774+00:00 dns-arch systemd[1]: Reloading nginx web server...
+2026-10-09T21:55:37.371858+00:00 dns-arch nginx[3762]: 2026/10/09 21:55:37 [warn] 3762#3762: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T21:55:37.375769+00:00 dns-arch nginx[3762]: 2026/10/09 21:55:37 [notice] 3762#3762: signal process started
+2026-10-09T21:55:37.378263+00:00 dns-arch systemd[1]: Reloaded nginx web server.
+##### celikpanel-agent.service and celikpanel-panel.service
+2026-10-09T21:55:35.475035+00:00 dns-arch panel[418]: 2026/10/09 21:55:35 http: TLS handshake error from 127.0.0.1:51538: EOF
+2026-10-09T21:55:36.793424+00:00 dns-arch useradd[3725]: new group: name=set4_a_long_site_name_an_owner_c, GID=1003
+2026-10-09T21:55:36.793538+00:00 dns-arch useradd[3725]: new user: name=set4_a_long_site_name_an_owner_c, UID=1003, GID=1003, home=/var/www/celikpanel/subscriptions/2/sites/5, shell=/bin/bash, from=none
+2026-10-09T21:55:36.894806+00:00 dns-arch chpasswd[3726]: pam_unix(chpasswd:chauthtok): password changed for set4_a_long_site_name_an_owner_c
+2026-10-09T21:55:36.956283+00:00 dns-arch php-fpm[3731]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful
+2026-10-09T21:55:37.165360+00:00 dns-arch php-fpm[3752]: [NOTICE] configuration file /etc/php/php-fpm.conf test is successful
+2026-10-09T21:55:37.261506+00:00 dns-arch userdel[3757]: delete user 'set4_a_long_site_name_an_owner_c'
+2026-10-09T21:55:37.263075+00:00 dns-arch userdel[3757]: removed group 'set4_a_long_site_name_an_owner_c' owned by 'set4_a_long_site_name_an_owner_c'
+2026-10-09T21:55:37.263096+00:00 dns-arch userdel[3757]: removed shadow group 'set4_a_long_site_name_an_owner_c' owned by 'set4_a_long_site_name_an_owner_c'
+2026-10-09T21:55:37.327075+00:00 dns-arch agent[407]: 2026/10/09 21:55:37 CreateSite set4-a-long-site-name-an-owner-could-plausibly-choose.test: nginx vhost activation: nginx validation failed: nginx validation failed: 2026/10/09 21:55:37 [warn] 3739#3739: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T21:55:37.327075+00:00 dns-arch agent[407]: 2026/10/09 21:55:37 [emerg] 3739#3739: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64
+2026-10-09T21:55:37.327075+00:00 dns-arch agent[407]: nginx: configuration file /etc/nginx/nginx.conf test failed: exit status 1; rollback restored and reloaded the previous vhost
+2026-10-09T21:55:37.397897+00:00 dns-arch panel[418]: 2026/10/09 21:55:37 [502][domain] set4-a-long-site-name-an-owner-could-plausibly-choose.test: SITE_WEB_SERVER_REFUSED removed: 2026/10/09 21:55:37 [emerg] 3739#3739: could not build server_names_hash, you should increase server_names_hash_bucket_size: 64

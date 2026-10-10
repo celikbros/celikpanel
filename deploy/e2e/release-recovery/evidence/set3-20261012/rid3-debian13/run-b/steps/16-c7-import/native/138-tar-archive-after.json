@@ -1,0 +1,67 @@
+{
+  "at": "2026-10-09T08:31:03Z",
+  "databases_v2": [
+    {
+      "name": "s2imptar_app",
+      "server_id": 1
+    }
+  ],
+  "docroot": {
+    "bytes": 100,
+    "exists": true,
+    "file_list": {
+      "assets/site.css": [
+        34,
+        "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+      ],
+      "index.html": [
+        66,
+        "28f8aaac03799998f25ee227702b33b13d8cd65e71096a8e670e4d843230a94c"
+      ]
+    },
+    "files": 2,
+    "mode": "0750",
+    "names": [
+      "index.html",
+      "assets/site.css"
+    ],
+    "newest_mtime": 1791534662,
+    "non_regular": [],
+    "owner_uid": 5002,
+    "root": "/var/www/celikpanel/subscriptions/2/sites/3/public_html",
+    "sha256": "c600275c986eacd74a00b12f52d5d98bb811dd07b12a8218332e8c482cbf2d88"
+  },
+  "domain": "set2-import-tar.test",
+  "email_accounts": [
+    {
+      "address": "info@set2-import-tar.test",
+      "quota_mb": 256
+    }
+  ],
+  "email_forwardings": [
+    {
+      "destination": "info@set2-import-tar.test",
+      "source": "sales@set2-import-tar.test"
+    }
+  ],
+  "escapes": [],
+  "lab_action": false,
+  "mode": "read-imported",
+  "owner_action": false,
+  "rows": [
+    {
+      "id": 3,
+      "name": "set2-import-tar.test",
+      "status": "active",
+      "subscription_id": 2
+    }
+  ],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "site_account": {
+    "home": "/var/www/celikpanel/subscriptions/2/sites/3",
+    "uid": 5002
+  },
+  "site_home_entries": [
+    "public_html"
+  ]
+}

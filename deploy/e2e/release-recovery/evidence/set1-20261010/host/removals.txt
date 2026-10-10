@@ -1,0 +1,7 @@
+2026-10-08T21:30:53Z removed /var/tmp/cp-release-drill-set1-d13-a/cells/6d71747c84713ebea486716c/arch/overlay.qcow2 bytes=155385856 (evidence staged at set1-20261010/set1-debian13/run-a, driver SHA256SUMS verified)
+2026-10-08T21:30:53Z removed /var/tmp/cp-release-drill-set1-d13-a/cells/6d71747c84713ebea486716c/debian13/overlay.qcow2 bytes=1728774144 (evidence staged at set1-20261010/set1-debian13/run-a, driver SHA256SUMS verified)
+2026-10-08T21:49:18Z removed /var/tmp/cp-release-drill-set1-ub-a/cells/2d20ebf6b7e51fda71720843/ubuntu/overlay.qcow2 bytes=1666842624 (evidence staged at set1-20261010/set1-ubuntu/run-a, driver SHA256SUMS verified)
+2026-10-08T21:58:50Z removed /var/tmp/cp-release-drill-set1-arch-a/cells/4fe6e2ca4e026b4109a98b24/arch/overlay.qcow2 bytes=1973026816 (evidence staged at set1-20261010/set1-arch/run-a, driver SHA256SUMS verified)
+2026-10-08T21:58:50Z removed /var/tmp/cp-release-drill-set1-arch-a/cells/4fe6e2ca4e026b4109a98b24/debian13/overlay.qcow2 bytes=28442624 (evidence staged at set1-20261010/set1-arch/run-a, driver SHA256SUMS verified)
+2026-10-08T22:09:47Z removed /var/tmp/cp-release-drill-set1-d13-b/cells/d9be9e45c3f2411c478ec947/arch/overlay.qcow2 bytes=165150720 (evidence staged at set1-20261010/set1-debian13/run-b, driver SHA256SUMS verified)
+2026-10-08T22:09:47Z removed /var/tmp/cp-release-drill-set1-d13-b/cells/d9be9e45c3f2411c478ec947/debian13/overlay.qcow2 bytes=1733951488 (evidence staged at set1-20261010/set1-debian13/run-b, driver SHA256SUMS verified)

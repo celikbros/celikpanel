@@ -1,0 +1,24 @@
+{
+  "checks": {
+    "checks": 14,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-08T21:48:33Z",
+    "notes": [
+      "with Postfix stopped root's `postqueue -j` still reads the queue directly, so the queue is known; the Panel's answer is judged against that"
+    ],
+    "started_at": "2026-10-08T21:48:24Z",
+    "substeps": {
+      "catch-all": "passed",
+      "end": "passed",
+      "queue": "passed"
+    },
+    "title": "catch-all and mail queue",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-08T21:48:33Z",
+  "name": "S6-catchall-queue",
+  "started_at": "2026-10-08T21:48:24Z",
+  "verdict": "passed"
+}

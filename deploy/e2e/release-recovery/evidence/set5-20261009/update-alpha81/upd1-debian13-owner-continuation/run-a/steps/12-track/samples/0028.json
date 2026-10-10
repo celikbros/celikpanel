@@ -1,0 +1,114 @@
+{
+  "agreement": {
+    "known_sources": [
+      "cli"
+    ],
+    "phase": {
+      "cli": "recovery_required"
+    },
+    "reasons": [],
+    "sources": [
+      "cli",
+      "shell"
+    ],
+    "verdict": "single-source"
+  },
+  "cli": {
+    "boot_id": "a811b224-310d-4fe7-be03-1544905068cc",
+    "captured_at": "2026-10-09T19:15:29.979748Z",
+    "en": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "The update was applied, but the new version's panel did not come up, and completing the update was retried to its limit. Read the panel log on the server: sudo journalctl -u celikpanel-panel -n 50. Retrying repeats the same start until that cause is fixed. There is no supported return to the previous version from this point. Automatic recovery used all three attempts without finishing, so the server may be between versions. The server owner must act: read sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50, fix the cause it names, then run the one-time same-operation retry command shown there. Checking status does not retry recovery. Automatic certificate renewal (Certbot) was stopped for this update; the same recovery journal says whether it was returned to how it was before the update or stays stopped until this operation finishes.\nRequest: 91edfc70ddbff085a35083a5b9bfcf4f\nRecorded at: 2026-10-09T19:15:12Z\nThis is a recorded observation; current service health was not checked.\nRecorded state (for support): phase=recovery_required reason=recovery_incomplete proof=none previous_failure=recovery_failed automatic_recovery=paused_retry_limit first_failure_code=panel_start_unverified renewal_before_update=on\n"
+    },
+    "json": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "{\"automatic_recovery\":\"paused_retry_limit\",\"schema\":\"celikpanel-recovery-status/v1\",\"request_id\":\"91edfc70ddbff085a35083a5b9bfcf4f\",\"observation\":\"known\",\"phase\":\"recovery_required\",\"terminal_proof\":\"none\",\"reason\":\"recovery_incomplete\",\"observed_at\":\"2026-10-09T19:15:12Z\",\"previous_failure\":\"recovery_failed\",\"first_failure_code\":\"panel_start_unverified\",\"renewal_before_update\":\"on\"}\n"
+    },
+    "tr": {
+      "returncode": 0,
+      "status": "ok",
+      "stderr": "",
+      "stdout": "Güncelleme uygulandı, ancak yeni sürümün paneli açılmadı ve güncellemenin tamamlanması sınırına kadar yeniden denendi. Sunucudaki panel günlüğünü okuyun: sudo journalctl -u celikpanel-panel -n 50. Bu neden giderilene kadar yeniden deneme aynı başlatmayı tekrarlar. Bu noktadan önceki sürüme desteklenen bir dönüş yok. Otomatik kurtarma üç denemenin hepsini kullandı ve tamamlanamadı; sunucu iki sürüm arasında kalmış olabilir. Sunucu sahibinin işlem yapması gerekiyor: sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50 çıktısını okuyun, belirtilen nedeni giderin ve orada aynı işlem için gösterilen tek seferlik yeniden deneme komutunu çalıştırın. Durum sorgusu kurtarmayı yeniden başlatmaz. Otomatik sertifika yenileme (Certbot) bu güncelleme için durduruldu; aynı kurtarma günlüğü, güncellemeden önceki hâline döndürülüp döndürülmediğini ya da bu işlem bitene kadar durdurulmuş kalacağını söyler.\nİşlem: 91edfc70ddbff085a35083a5b9bfcf4f\nKayıt zamanı: 2026-10-09T19:15:12Z\nBu kaydedilmiş bir gözlemdir; güncel hizmet sağlığı kontrol edilmedi.\nKayıtlı durum (destek için): phase=recovery_required reason=recovery_incomplete proof=none previous_failure=recovery_failed automatic_recovery=paused_retry_limit first_failure_code=panel_start_unverified renewal_before_update=on\n"
+    }
+  },
+  "guidance_api": null,
+  "guidance_cli": {
+    "actionable": true,
+    "keys": [
+      "recovery.automatic.pausedTitle",
+      "recovery.automatic.cause.panel_start_unverified",
+      "recovery.automatic.pausedHelp",
+      "recovery.automatic.renewal",
+      "recovery.automatic.inspect",
+      "recovery.automatic.resume",
+      "recovery.previousFailure",
+      "recovery.reason.recovery_failed"
+    ],
+    "missing_keys": [],
+    "no_actor_or_action": false,
+    "observation": {
+      "automatic_recovery": "paused_retry_limit",
+      "failure_code": null,
+      "first_failure_code": "panel_start_unverified",
+      "observation": "known",
+      "observed_at": "2026-10-09T19:15:12Z",
+      "panel_state": "ready",
+      "phase": "recovery_required",
+      "previous_failure": "recovery_failed",
+      "reason": "recovery_incomplete",
+      "renewal_before_update": "on",
+      "request_id": "91edfc70ddbff085a35083a5b9bfcf4f",
+      "terminal_proof": "none",
+      "waiting_for": null
+    },
+    "observation_unavailable": false,
+    "texts": {
+      "en": [
+        "Last recorded state: automatic recovery paused",
+        "The update was applied, but the new version's panel did not come up, and completing the update was retried to its limit. The server owner should read the panel log on the server with sudo journalctl -u celikpanel-panel -n 50. Retrying repeats the same start until that cause is fixed. There is no supported return to the previous version from this point.",
+        "All three automatic recovery attempts were used without a verified result. Automatic recovery will not start another attempt. The server owner must act.",
+        "Automatic certificate renewal (Certbot) was stopped for this update. The recovery log says whether it was returned to how it was before the update or stays stopped until this operation finishes.",
+        "On this server, open a terminal and inspect the recovery log:",
+        "sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50",
+        "Resolve the reported cause, then use the one-time retry command shown in that log for this operation. It continues the existing recovery. This page checks for its result; checking or reloading does not restart recovery.",
+        "Previously recorded failure: Recovery failed"
+      ],
+      "tr": [
+        "Son kayıt: otomatik kurtarma durdu",
+        "Güncelleme uygulandı, ancak yeni sürümün paneli açılmadı ve güncellemenin tamamlanması sınırına kadar yeniden denendi. Sunucu sahibi sunucudaki panel günlüğünü sudo journalctl -u celikpanel-panel -n 50 ile okumalı. Bu neden giderilene kadar yeniden deneme aynı başlatmayı tekrarlar. Bu noktadan önceki sürüme desteklenen bir dönüş yok.",
+        "Üç otomatik kurtarma denemesi de doğrulanmış sonuç alınamadan kullanıldı. Otomatik kurtarma yeni deneme başlatmayacak. Sunucu sahibinin işlem yapması gerekiyor.",
+        "Otomatik sertifika yenileme (Certbot) bu güncelleme için durduruldu. Kurtarma günlüğü, güncellemeden önceki hâline döndürülüp döndürülmediğini ya da bu işlem bitene kadar durdurulmuş kalacağını söyler.",
+        "Bu sunucuda terminal açıp kurtarma günlüğünü inceleyin:",
+        "sudo journalctl -u celikpanel-release-recovery.service --no-pager -n 50",
+        "Bildirilen nedeni giderdikten sonra günlükte bu işlem için gösterilen tek seferlik yeniden deneme komutunu kullanın. Komut mevcut kurtarmayı sürdürür. Bu sayfa sonucu kontrol eder; kontrol etmek veya sayfayı yenilemek kurtarmayı yeniden başlatmaz.",
+        "Önceden kaydedilmiş hata: Kurtarma başarısız oldu"
+      ]
+    }
+  },
+  "index": 27,
+  "observed": {
+    "automatic_recovery": "paused_retry_limit",
+    "first_failure_code": "panel_start_unverified",
+    "observation": "known",
+    "observed_at": "2026-10-09T19:15:12Z",
+    "phase": "recovery_required",
+    "previous_failure": "recovery_failed",
+    "reason": "recovery_incomplete",
+    "renewal_before_update": "on",
+    "request_id": "91edfc70ddbff085a35083a5b9bfcf4f",
+    "schema": "celikpanel-recovery-status/v1",
+    "terminal_proof": "none"
+  },
+  "panel_error": "PanelError",
+  "shell_fetch": {
+    "error": "TimeoutError",
+    "note": "only a browser-saved copy of the shell can show while the Panel is down"
+  },
+  "t": 1791573313.7225337,
+  "update_card": null,
+  "utc": "2026-10-09T19:15:13Z"
+}

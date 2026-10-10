@@ -1,0 +1,46 @@
+{
+  "at": "2026-10-09T22:18:36Z",
+  "is_active": {
+    "nginx.service": "inactive"
+  },
+  "is_failed": {
+    "nginx.service": "inactive"
+  },
+  "journal": {
+    "nginx.service": []
+  },
+  "journal_product": [
+    "2026-10-09T22:18:32.380740+00:00 dns-debian13 panel[5364]: 2026/10/09 22:18:32 http: TLS handshake error from 127.0.0.1:36454: EOF",
+    "2026-10-09T22:18:32.451122+00:00 dns-debian13 agent[5167]: 2026/10/09 22:18:32 ERROR service reload nginx: failed not_running: nginx.service is inactive (dead); nothing was reloaded",
+    "2026-10-09T22:18:32.474436+00:00 dns-debian13 cron[33457]: (CRON) DEATH (can't lock /var/run/crond.pid, otherpid may be 29469: Resource temporarily unavailable)",
+    "2026-10-09T22:18:33.584366+00:00 dns-debian13 panel[5364]: 2026/10/09 22:18:33 [409][service action] reload nginx: SERVICE_ACTION_FAILED not_running: nginx.service is inactive (dead); nothing was reloaded"
+  ],
+  "journal_systemd_manager": [],
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "since_epoch": 1791584310,
+  "units": {
+    "nginx.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 22:11:39 UTC",
+      "ActiveExitTimestamp": "Fri 2026-10-09 22:18:26 UTC",
+      "ActiveState": "inactive",
+      "ExecMainPID": "7193",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 22:11:39 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; master_process on; -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 22:17:57 UTC] ; stop_time=[Fri 2026-10-09 22:17:57 UTC] ; pid=32309 ; code=exited ; status=0 }",
+      "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+      "InactiveEnterTimestamp": "Fri 2026-10-09 22:18:26 UTC",
+      "InactiveExitTimestamp": "Fri 2026-10-09 22:11:39 UTC",
+      "InvocationID": "f175c0db0e0f4db88dc1533f79998b47",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 22:18:26 UTC",
+      "SubState": "dead",
+      "Type": "forking"
+    }
+  }
+}

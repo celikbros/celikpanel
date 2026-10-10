@@ -1,0 +1,15 @@
+driver SHA256SUMS verified on the staged copy (166 files)
+token-digest sweep at staging: host-side files changed 0, driver files changed 0, places {"learned_value": 0, "migration_directory": 0, "named_field": 0}
+token-digest count after the sweep: 0 file(s) would change, values known: 0
+driver SHA256SUMS verified again after the sweep
+2026-10-09T18:12:34Z removed /var/tmp/cp-release-drill-s5-arch-good-a/cells/a55279cd36f5a5fe8d01f6f3/arch/overlay.qcow2 bytes=1803943936 (overlay disk of this run's lab, on this lab's tmpfs mount (RAM); evidence staged at set5-20261009/update-alpha81/upd1-arch-good/run-a, checksums verified)
+2026-10-09T18:12:34Z removed /var/tmp/cp-release-drill-s5-arch-good-a/cells/a55279cd36f5a5fe8d01f6f3/debian13/overlay.qcow2 bytes=26148864 (overlay disk of this run's lab, on this lab's tmpfs mount (RAM); evidence staged at set5-20261009/update-alpha81/upd1-arch-good/run-a, checksums verified)
+2026-10-09T18:12:34Z released the tmpfs mount /var/tmp/cp-release-drill-s5-arch-good-a/cells/a55279cd36f5a5fe8d01f6f3/arch (it held 452K after the overlay was removed; its remaining files were put back on the disk)
+2026-10-09T18:12:34Z released the tmpfs mount /var/tmp/cp-release-drill-s5-arch-good-a/cells/a55279cd36f5a5fe8d01f6f3/debian13 (it held 448K after the overlay was removed; its remaining files were put back on the disk)
+2026-10-09T18:12:34Z removed /var/tmp/cp-release-drill-s5-arch-good-a/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 (this lab's hard link to the cached base image /var/tmp/cp-v3n28/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2; the cached file stays, link count now 5)
+2026-10-09T18:12:34Z removed /var/tmp/cp-release-drill-s5-arch-good-a/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 (this lab's hard link to the cached base image /var/tmp/cp-v3n28/images/debian-13-genericcloud-amd64-20260826-2582.qcow2; the cached file stays, link count now 5)
+182
+overall: complete-for-review | native_evidence: False | outcome: update-verified | final: None succeeded
+  step owner-continuation (required) skipped | None
+  finding: arch: web_mail was not attempted on the published v0.1.0-alpha.81 baseline (it accepts the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform
+  finding: arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']

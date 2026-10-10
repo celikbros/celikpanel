@@ -319,7 +319,16 @@ export function PanelUpdateCard({ activation = false }: { activation?: boolean }
                             <div className="flex items-start gap-2">
                                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
                                 <div>
-                                    <p className="font-semibold text-fg">{t(previousAttempt.phase === 'failed' && previousStopped ? 'panelUpdate.previousAttempt.stoppedTitle' : 'panelUpdate.previousAttempt.title')}</p>
+                                    {/* The offered version already ended here
+                                        (12 Oct 2026). Said before Start, in
+                                        this order: that it was tried and what
+                                        the server runs now, the cause the
+                                        server recorded or that it recorded
+                                        none, what starting it again does. The
+                                        button below is never blocked by it. */}
+                                    <p className="font-semibold text-fg">{t(previousAttempt.phase === 'failed' && previousStopped ? 'panelUpdate.previousAttempt.stoppedTitle'
+                                        : previousAttempt.phase === 'recovered' ? 'panelUpdate.previousAttempt.rolledBackTitle'
+                                            : 'panelUpdate.previousAttempt.title')}</p>
                                     <p className="mt-1 text-fg-muted">
                                         {t(previousAttempt.phase === 'recovered' ? 'panelUpdate.previousAttempt.recovered'
                                             : previousStopped ? 'panelUpdate.previousAttempt.stopped'
@@ -329,10 +338,15 @@ export function PanelUpdateCard({ activation = false }: { activation?: boolean }
                                             time: new Date(previousAttempt.finished_at).toLocaleString(locale === 'tr' ? 'tr-TR' : 'en-US'),
                                         })}
                                     </p>
-                                    {previousAttempt.failure_code && !previousStopped && (
+                                    {!previousStopped && (
                                         <p className="mt-1 text-fg-muted">
-                                            {t('panelUpdate.previousAttempt.cause', { cause: t(`recovery.reason.${previousAttempt.failure_code}`) })}
+                                            {previousAttempt.failure_code
+                                                ? t('panelUpdate.previousAttempt.cause', { cause: t(`recovery.reason.${previousAttempt.failure_code}`) })
+                                                : t('panelUpdate.previousAttempt.noCause')}
                                         </p>
+                                    )}
+                                    {previousAttempt.phase === 'recovered' && (
+                                        <p className="mt-1 text-fg-muted">{t('panelUpdate.previousAttempt.again', { version: target.version })}</p>
                                     )}
                                 </div>
                             </div>

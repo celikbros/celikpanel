@@ -1,0 +1,66 @@
+2026-10-09T04:19:34.655079+00:00 dns-debian13 panel[36227]: 2026/10/09 04:19:34 http: TLS handshake error from 127.0.0.1:51906: EOF
+2026-10-09T04:19:35.310918+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Sent signal SIGKILL to main process 36227 (panel) on client request.
+2026-10-09T04:19:35.330150+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Main process exited, code=killed, status=9/KILL
+2026-10-09T04:19:35.330307+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Failed with result 'signal'.
+2026-10-09T04:19:35.332075+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Consumed 421ms CPU time, 81.6M memory peak.
+2026-10-09T04:19:38.455318+00:00 dns-debian13 systemd[1]: celikpanel-panel.service: Scheduled restart job, restart counter is at 1.
+2026-10-09T04:19:38.468545+00:00 dns-debian13 systemd[1]: Starting celikpanel-panel.service - CelikPanel web panel...
+2026-10-09T04:19:38.514012+00:00 dns-debian13 systemd[1]: Started celikpanel-panel.service - CelikPanel web panel.
+2026-10-09T04:19:38.680660+00:00 dns-debian13 sudo[37661]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_seq
+2026-10-09T04:19:38.681007+00:00 dns-debian13 sudo[37661]: pam_unix(sudo:session): session opened for user postgres(uid=104) by (uid=0)
+2026-10-09T04:19:38.725906+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:38 Starting CelikPanel Backend...
+2026-10-09T04:19:38.732206+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:38 ACCEPTANCE FIXTURE — NOT FOR PRODUCTION: this panel was built with the acceptance_license test tag; it never contacts the license service and accepts only the acceptance fixture license on a disposable acceptance guest (guest: verified)
+2026-10-09T04:19:38.744320+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:38 [request-identity] 1 request(s) were running when the Panel stopped; their outcome is reported as unknown
+2026-10-09T04:19:38.745118+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:38 Panel startup listener active on :2083 (HTTPS; application gated)
+2026-10-09T04:19:38.745910+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:38 Connected to Agent RPC; preparing normal management access
+2026-10-09T04:19:38.765392+00:00 dns-debian13 sudo[37661]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T04:19:38.794217+00:00 dns-debian13 sudo[37667]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/pg_dump --no-owner --no-privileges --dbname set1_owner_test_con
+2026-10-09T04:19:38.794509+00:00 dns-debian13 sudo[37667]: pam_unix(sudo:session): session opened for user postgres(uid=104) by (uid=0)
+2026-10-09T04:19:38.870700+00:00 dns-debian13 sudo[37667]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T04:19:38.956548+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:38 certificate startup reconcile: restored 5 hosted vhosts with one nginx validation and reload
+2026-10-09T04:19:39.053055+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:39 http: TLS handshake error from 127.0.0.1:51926: EOF
+2026-10-09T04:19:39.053529+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:39 http: TLS handshake error from 127.0.0.1:51938: EOF
+2026-10-09T04:19:40.064367+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:40 http: TLS handshake error from 127.0.0.1:51964: EOF
+2026-10-09T04:19:40.064367+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:40 http: TLS handshake error from 127.0.0.1:51954: EOF
+2026-10-09T04:19:41.078426+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:41 http: TLS handshake error from 127.0.0.1:44034: EOF
+2026-10-09T04:19:41.078426+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:41 http: TLS handshake error from 127.0.0.1:44050: EOF
+2026-10-09T04:19:42.096287+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:42 http: TLS handshake error from 127.0.0.1:44056: EOF
+2026-10-09T04:19:42.096287+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:42 http: TLS handshake error from 127.0.0.1:44060: EOF
+2026-10-09T04:19:42.872118+00:00 dns-debian13 postfix/postfix-script[37959]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T04:19:43.108098+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:43 http: TLS handshake error from 127.0.0.1:44076: EOF
+2026-10-09T04:19:43.108098+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:43 http: TLS handshake error from 127.0.0.1:44082: EOF
+2026-10-09T04:19:43.221590+00:00 dns-debian13 postfix/postfix-script[38070]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T04:19:43.499383+00:00 dns-debian13 postfix/postfix-script[38100]: the Postfix mail system is running: PID: 28496
+2026-10-09T04:19:43.598974+00:00 dns-debian13 postfix/postfix-script[38119]: refreshing the Postfix mail system
+2026-10-09T04:19:44.074053+00:00 dns-debian13 postfix/postfix-script[38139]: the Postfix mail system is running: PID: 28496
+2026-10-09T04:19:44.120067+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:44 http: TLS handshake error from 127.0.0.1:44106: EOF
+2026-10-09T04:19:44.120796+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:44 http: TLS handshake error from 127.0.0.1:44098: EOF
+2026-10-09T04:19:45.150104+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:45 http: TLS handshake error from 127.0.0.1:44124: EOF
+2026-10-09T04:19:45.150104+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:45 http: TLS handshake error from 127.0.0.1:44134: EOF
+2026-10-09T04:19:45.175826+00:00 dns-debian13 sudo[38176]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_seq
+2026-10-09T04:19:45.176222+00:00 dns-debian13 sudo[38176]: pam_unix(sudo:session): session opened for user postgres(uid=104) by (uid=0)
+2026-10-09T04:19:45.207139+00:00 dns-debian13 sudo[38176]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T04:19:45.216616+00:00 dns-debian13 sudo[38180]:     root : PWD=/ ; USER=postgres ; COMMAND=/usr/bin/psql --set ON_ERROR_STOP=on --dbname set1_owner_test_con
+2026-10-09T04:19:45.216979+00:00 dns-debian13 sudo[38180]: pam_unix(sudo:session): session opened for user postgres(uid=104) by (uid=0)
+2026-10-09T04:19:45.249620+00:00 dns-debian13 sudo[38180]: pam_unix(sudo:session): session closed for user postgres
+2026-10-09T04:19:46.166789+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:46 http: TLS handshake error from 127.0.0.1:44154: EOF
+2026-10-09T04:19:46.167577+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:46 http: TLS handshake error from 127.0.0.1:44138: EOF
+2026-10-09T04:19:46.274729+00:00 dns-debian13 postfix/postfix-script[38344]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T04:19:46.373984+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:46 certificate startup reconcile: mail SNI reconciled from 0 active secure-mail certificates; TLSA left unchanged: automatic DANE/TLSA updates are disabled: safe TTL-aware certificate rollover and explicit panel record ownership are not available in this release
+2026-10-09T04:19:47.181669+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:47 http: TLS handshake error from 127.0.0.1:44172: EOF
+2026-10-09T04:19:47.181669+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:47 http: TLS handshake error from 127.0.0.1:44178: EOF
+2026-10-09T04:19:48.198025+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:48 http: TLS handshake error from 127.0.0.1:44198: EOF
+2026-10-09T04:19:48.198378+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:48 http: TLS handshake error from 127.0.0.1:44194: EOF
+2026-10-09T04:19:49.211370+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:49 http: TLS handshake error from 127.0.0.1:44228: EOF
+2026-10-09T04:19:49.211370+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:49 http: TLS handshake error from 127.0.0.1:44218: EOF
+2026-10-09T04:19:50.225351+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:50 http: TLS handshake error from 127.0.0.1:44252: EOF
+2026-10-09T04:19:50.225864+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:50 http: TLS handshake error from 127.0.0.1:44238: EOF
+2026-10-09T04:19:50.703252+00:00 dns-debian13 postfix/postfix-script[38565]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-09T04:19:50.863717+00:00 dns-debian13 postfix/postfix-script[38614]: refreshing the Postfix mail system
+2026-10-09T04:19:51.245448+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:51 http: TLS handshake error from 127.0.0.1:35534: EOF
+2026-10-09T04:19:51.245448+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:51 http: TLS handshake error from 127.0.0.1:35526: EOF
+2026-10-09T04:19:51.331022+00:00 dns-debian13 postfix/postfix-script[38634]: the Postfix mail system is running: PID: 28496
+2026-10-09T04:19:51.403429+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:51 milter chain: milters="inet:localhost:11332" maps=hash
+2026-10-09T04:19:51.406810+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:51 Panel ready on :2083 (HTTPS)
+2026-10-09T04:19:52.263498+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:52 http: TLS handshake error from 127.0.0.1:35556: EOF
+2026-10-09T04:19:52.263498+00:00 dns-debian13 panel[37652]: 2026/10/09 04:19:52 http: TLS handshake error from 127.0.0.1:35562: EOF

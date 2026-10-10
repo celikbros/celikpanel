@@ -1,0 +1,61 @@
+{
+  "at": "2026-10-09T07:10:12Z",
+  "lab_action": false,
+  "mariadb": {
+    "databases": [
+      "s2_srvcon",
+      "s2_srvsent",
+      "s2_srvseq",
+      "s2impcon_app",
+      "s2impseq_app",
+      "s2imptar_app",
+      "set1_owner_test_con",
+      "set1_owner_test_seq"
+    ],
+    "returncode": 0,
+    "stderr": "",
+    "users": [
+      "celikpanel_admin@localhost",
+      "mariadb.sys@localhost",
+      "mysql@localhost",
+      "root@localhost",
+      "s2_srvconu@localhost",
+      "s2_srvsentu@localhost",
+      "s2_srvsequ@localhost",
+      "set1_owner_test_con_user@localhost",
+      "set1_owner_test_seq_user@localhost"
+    ]
+  },
+  "mode": "read-engines",
+  "owner_action": false,
+  "postgresql": {
+    "databases": [
+      "s2_srvcon",
+      "s2_srvsent",
+      "s2_srvseq",
+      "set1_owner_test_con",
+      "set1_owner_test_seq"
+    ],
+    "returncode": 0,
+    "roles": [
+      "celikpanel_admin",
+      "postgres",
+      "s2_srvsentu",
+      "set1_owner_test_con_user",
+      "set1_owner_test_seq_user"
+    ],
+    "stderr": ""
+  },
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "seed_tables": {
+    "s2impcon_app": {
+      "checksum": [
+        "632373810"
+      ],
+      "max_id": "300",
+      "rows": "300",
+      "sum_id": "45150",
+      "table_exists": true
+    }
+  }
+}

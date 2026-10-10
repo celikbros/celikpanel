@@ -1,0 +1,52 @@
+{
+  "at": "2026-10-09T07:11:23Z",
+  "databases_v2": [],
+  "docroot": {
+    "bytes": 106,
+    "exists": true,
+    "file_list": {
+      "assets/site.css": [
+        34,
+        "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+      ],
+      "index.html": [
+        72,
+        "594dc61c5a2907256ae76e89192ab7cc44b851921bde68b0946330a49fa3ef99"
+      ]
+    },
+    "files": 2,
+    "mode": "0750",
+    "names": [
+      "index.html",
+      "assets/site.css"
+    ],
+    "newest_mtime": 1791529883,
+    "non_regular": [],
+    "owner_uid": 5007,
+    "root": "/var/www/celikpanel/subscriptions/2/sites/8/public_html",
+    "sha256": "fa4d726878f7fc3377dd8998becebf60df9a3cdc503383d878db584c3e51b592"
+  },
+  "domain": "set3-hostile-absolute.test",
+  "email_accounts": [],
+  "email_forwardings": [],
+  "escapes": [],
+  "lab_action": false,
+  "mode": "read-imported",
+  "owner_action": false,
+  "rows": [
+    {
+      "id": 8,
+      "name": "set3-hostile-absolute.test",
+      "status": "active",
+      "subscription_id": 2
+    }
+  ],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "site_account": {
+    "home": "/var/www/celikpanel/subscriptions/2/sites/8",
+    "uid": 5007
+  },
+  "site_home_entries": [
+    "public_html"
+  ]
+}

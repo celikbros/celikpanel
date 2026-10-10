@@ -1,0 +1,51 @@
+{
+  "at": "2026-10-09T03:50:39Z",
+  "databases_v2": [
+    {
+      "name": "s2impseq_app",
+      "server_id": 1
+    }
+  ],
+  "docroot": {
+    "bytes": 639,
+    "exists": true,
+    "files": 1,
+    "mode": "2750",
+    "names": [
+      "index.php"
+    ],
+    "newest_mtime": 1791517836,
+    "owner_uid": 5002,
+    "root": "/var/www/celikpanel/subscriptions/2/sites/2/public_html",
+    "sha256": "51e602e2c1cdf210a44d190cdefcaa4f8645a5e112b67dae3617d9f729373670"
+  },
+  "domain": "set2-import-seq.test",
+  "email_accounts": [
+    {
+      "address": "info@set2-import-seq.test",
+      "quota_mb": 256
+    }
+  ],
+  "email_forwardings": [
+    {
+      "destination": "info@set2-import-seq.test",
+      "source": "sales@set2-import-seq.test"
+    }
+  ],
+  "lab_action": false,
+  "mode": "read-imported",
+  "owner_action": false,
+  "rows": [
+    {
+      "id": 2,
+      "name": "set2-import-seq.test",
+      "status": "pending",
+      "subscription_id": 2
+    }
+  ],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "site_account": {
+    "home": "/var/www/celikpanel/subscriptions/2/sites/2",
+    "uid": 5002
+  }
+}

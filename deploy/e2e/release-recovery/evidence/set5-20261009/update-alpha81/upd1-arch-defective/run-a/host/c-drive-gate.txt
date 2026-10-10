@@ -1,0 +1,2 @@
+2026-10-09T18:33:20Z before upd1-arch-defective run-a (lab prepare) free_GiB=41.59 free_bytes=44652646400 (Get-PSDrive C reading of 2026-10-09T18:33:04Z, 16s old) allowed=yes
+2026-10-09T18:33:23Z before upd1-arch-defective run-a (guest start) free_GiB=41.59 free_bytes=44652646400 (Get-PSDrive C reading of 2026-10-09T18:33:04Z, 19s old) allowed=yes

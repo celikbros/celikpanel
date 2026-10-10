@@ -1,0 +1,68 @@
+{
+  "action": "lab-kill-panel",
+  "after": {
+    "celikpanel-agent.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 04:07:47 UTC",
+      "ActiveState": "active",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 04:07:47 UTC",
+      "MainPID": "7248",
+      "NRestarts": "0",
+      "SubState": "running"
+    },
+    "celikpanel-panel.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 04:31:45 UTC",
+      "ActiveState": "active",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 04:31:45 UTC",
+      "MainPID": "62139",
+      "NRestarts": "1",
+      "SubState": "running"
+    }
+  },
+  "at": "2026-10-09T04:31:45Z",
+  "before": {
+    "celikpanel-agent.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 04:07:47 UTC",
+      "ActiveState": "active",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 04:07:47 UTC",
+      "MainPID": "7248",
+      "NRestarts": "0",
+      "SubState": "running"
+    },
+    "celikpanel-panel.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 04:31:17 UTC",
+      "ActiveState": "active",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 04:31:17 UTC",
+      "MainPID": "59473",
+      "NRestarts": "0",
+      "SubState": "running"
+    }
+  },
+  "issued_epoch": 1791520302.8546145,
+  "lab_action": true,
+  "mode": "lab-kill-panel",
+  "owner_action": false,
+  "result": {
+    "argv": [
+      "systemctl",
+      "kill",
+      "--signal=SIGKILL",
+      "--kill-whom=main",
+      "celikpanel-panel.service"
+    ],
+    "at": "2026-10-09T04:31:42Z",
+    "returncode": 0,
+    "seconds": 0.006,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "returned_epoch": 1791520305.9838412,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "unit_policy": [
+    "Restart=on-failure",
+    "RestartUSec=3s",
+    "TimeoutStopUSec=30s",
+    "NRestarts=1",
+    "KillMode=control-group"
+  ]
+}

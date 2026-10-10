@@ -1,0 +1,5 @@
+refs/upd1/baseline 7fbbeaa6be50dd60aa225be02b71314c2e29aafb tree=69c73fae0fd79473f3f1f2b631e47b351156c9ae test(fixture): upd1 baseline labelled v0.1.0-alpha.81 (unpublished, disposable)
+refs/upd1/defective 52208d415f61041dd9ec27bdb9cbe0b2d5c7eac4 tree=14bfa1e2cd9ee62a862eb469c35f2e275cde6e62 test(fixture): upd1 defective candidate - migrate-only fails (unpublished, disposable)
+refs/upd1/good dc0841af9eb9023ead02393a70bf59968a74ae2f tree=47ab6fd9a7a1d8c2024667104db4f1f0c6817ea7 test(fixture): upd1 good candidate labelled v0.1.0-alpha.82 (unpublished, disposable)
+refs/upd1/real-start a574cecdbec1c58e2a21bb838d49afbe3c0af37e tree=2d4dc43642b856b8949ec48278a5a07451c91392 test(fixture): upd3 real-start candidate - exits before its listener (unpublished, disposable)
+refs/upd1/start-check b640eaeda3806f9f61b9de39cb9045e77dc8253a tree=ca1cb6a034d9be7030cb1dd1c5612df7f4008fb2 test(fixture): upd3 start-check candidate - shared panel TLS preparation fails (unpublished, disposable)

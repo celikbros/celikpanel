@@ -1,0 +1,40 @@
+{
+  "candidate": {
+    "commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+    "sha256": "d2fcf5c98c194c36bec9dd0fe2442eecb6390ba3824842f879a77f9b5debebc5",
+    "version": "v0.1.0-alpha.81"
+  },
+  "cell": "set4-arch",
+  "cell_kind": "set4-final-round",
+  "local_port": 18443,
+  "native_evidence": false,
+  "rule": "the driver calls only the Panel's HTTP API as the logged-in owner; every native fact is a read-only SSH inspection; owner actions on the guest are recorded as such; no certificate authority and no licence service is contacted",
+  "schema": "celikpanel/set4-plan/v1",
+  "setup": {
+    "components": [
+      "mariadb",
+      "nginx",
+      "php-fpm",
+      "postgresql"
+    ],
+    "dns_mode": "external",
+    "purpose": "web"
+  },
+  "steps": [
+    "preflight",
+    "origin",
+    "baseline-install",
+    "owner-login",
+    "license",
+    "setup",
+    "site",
+    "M0-prepare",
+    "M1-php-site",
+    "M6-site-refused",
+    "M2-import",
+    "M5-import-absolute",
+    "M4-reload-stopped",
+    "collect"
+  ],
+  "work_root": "/var/tmp/cp-release-drill-dry-set4-arch"
+}

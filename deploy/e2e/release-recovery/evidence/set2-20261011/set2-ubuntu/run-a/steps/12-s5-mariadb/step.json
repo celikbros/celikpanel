@@ -1,0 +1,25 @@
+{
+  "checks": {
+    "checks": 21,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T03:45:47Z",
+    "notes": [],
+    "started_at": "2026-10-09T03:45:38Z",
+    "substeps": {
+      "a": "passed",
+      "b": "passed",
+      "c": "passed",
+      "d": "passed",
+      "e": "passed",
+      "end": "passed"
+    },
+    "title": "the MariaDB option file",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T03:45:47Z",
+  "name": "S5-mariadb",
+  "started_at": "2026-10-09T03:45:38Z",
+  "verdict": "passed"
+}

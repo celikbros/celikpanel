@@ -1,0 +1,34 @@
+{
+  "at": "2026-10-09T07:26:03Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791530760",
+      "-n",
+      "400",
+      "-u",
+      "postfix.service",
+      "-u",
+      "postfix@-.service"
+    ],
+    "at": "2026-10-09T07:26:03Z",
+    "returncode": 0,
+    "seconds": 0.007,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T07:26:01.244245+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...\n2026-10-09T07:26:01.616399+00:00 dns-debian13 postfix[41836]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf\n2026-10-09T07:26:01.616358+00:00 dns-debian13 postfix/postfix-script[41836]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf\n2026-10-09T07:26:01.723123+00:00 dns-debian13 postfix/master[41862]: daemon started -- version 3.10.13, configuration /etc/postfix\n2026-10-09T07:26:01.724706+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791530760,
+  "units": [
+    "postfix.service",
+    "postfix@-.service"
+  ]
+}

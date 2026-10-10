@@ -1,0 +1,26 @@
+{
+  "at": "2026-10-09T07:18:49Z",
+  "config_peer_blocks": 2,
+  "interfaces": [
+    "wg0"
+  ],
+  "interfaces_rc": 0,
+  "interfaces_stderr": "",
+  "lab_action": false,
+  "mode": "read-wireguard",
+  "owner_action": false,
+  "peer_count": 2,
+  "peers": {
+    "wg0": [
+      "V7oU3W3HN/G6Hh50wbwYfKdCAPtT5Ua5ZgEt32SB/Bg=",
+      "ue8EG2ij6jw2dOiFEUkw3ZeBxzpb26FqEuzsz2Y7NnE="
+    ]
+  },
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "unit": [
+    "LoadState=loaded",
+    "ActiveState=active",
+    "SubState=exited"
+  ],
+  "wg": "/usr/bin/wg"
+}

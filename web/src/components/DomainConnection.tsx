@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Copy, Globe, RefreshCw, ShieldCheck, AlertTriangle, Check } from 'lucide-react';
 import { showToast } from './Toast';
 import { useI18n } from '../i18n';
-import { StatusDot } from './ui';
+import { Checking, CouldNotCheck, RemoteGate, StatusDot } from './ui';
+import { decodeList, useRemote } from '../lib/remote';
 import { HelpButton } from './HelpDrawer';
 
 // The screen that answers "what do I do at my registrar?" — and then checks.
@@ -81,39 +82,95 @@ function CopyField({ label, value }: { label: string; value: string }) {
     );
 }
 
+const connectionStatuses = ['delegated', 'delegated_mismatch', 'a_record', 'elsewhere', 'unresolved', 'unknown'] as const;
+
+// The answer as this card uses it. Every list is a list here: the server
+// writes a list it never filled as `null` (all of them when `status` is
+// `unknown`), and reading `.length` of that took the whole domain page down.
+// A status this card has no words for is not guessed at; the answer is then
+// unknown.
+// Bu kartın kullandığı biçimiyle yanıt. Her liste burada listedir: sunucu hiç
+// doldurmadığı listeyi `null` yazar (`status` `unknown` iken hepsini) ve onun
+// `.length`ini okumak bütün alan adı sayfasını düşürüyordu. Kartın sözü
+// olmayan bir durum tahmin edilmez; yanıt o zaman bilinmeyendir.
+function decodeConnection(raw: unknown): Connection {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('shape');
+    const body = raw as Connection;
+    if (!connectionStatuses.includes(body.status) || typeof body.server_ip !== 'string') throw new Error('field');
+    return {
+        ...body,
+        nameservers: decodeList<string>(body.nameservers ?? null),
+        live_nameservers: decodeList<string>(body.live_nameservers ?? null),
+        live_ips: decodeList<string>(body.live_ips ?? null),
+        resolver_observations: decodeList<NonNullable<Connection['resolver_observations']>[number]>(body.resolver_observations ?? null)
+            .map((observation) => ({
+                ...observation,
+                nameservers: decodeList<string>(observation.nameservers ?? null),
+                ips: decodeList<string>(observation.ips ?? null),
+            })),
+        nameserver_facts: decodeList<NonNullable<Connection['nameserver_facts']>[number]>(body.nameserver_facts ?? null)
+            .map((fact) => ({ ...fact, ips: decodeList<string>(fact.ips ?? null) })),
+    };
+}
+
 export function DomainConnection({ domainId, domainName }: { domainId: number; domainName: string }) {
     const { t } = useI18n();
-    const [c, setC] = useState<Connection | null>(null);
-    const [busy, setBusy] = useState(true);
+    const connection = useRemote(`/api/v1/domains/${domainId}/connection`, decodeConnection, { init: { cache: 'no-store' } });
+    const recheck = () => void connection.retry();
 
-    const load = useCallback(async () => {
-        setBusy(true);
-        try {
-            const res = await fetch(`/api/v1/domains/${domainId}/connection`, { cache: 'no-store' });
-            if (res.ok) setC(await res.json());
-        } catch {
-            /* the card simply stays quiet if the check cannot run */
-        } finally {
-            setBusy(false);
-        }
-    }, [domainId]);
-
-    useEffect(() => {
-        load();
-    }, [load]);
-
-    if (!c && busy) {
-        return <div className="rounded-xl border border-border bg-surface p-5 text-sm text-fg-muted">{t('common.loading')}</div>;
+    // Two different things can be unknown here, and neither is "this domain
+    // does not point here":
+    //   - the card's own read failed: the frame stays, with the read again;
+    //   - the read succeeded and the server says it could not ask the public
+    //     resolvers (`status: unknown`): the card says exactly that.
+    // Burada iki ayrı şey bilinmeyebilir ve hiçbiri "bu alan adı burayı
+    // göstermiyor" değildir: kartın kendi okuması başarısız olabilir ya da
+    // okuma başarılıdır ve sunucu genel çözümleyicilere soramadığını söyler.
+    // The card keeps one least height in every state: the height it has for a
+    // connected domain. The rest of the Overview then does not move when the
+    // answer arrives, in either direction and in either language.
+    // Kart her durumda tek bir en az yüksekliği korur: bağlı bir alan adı için
+    // sahip olduğu yükseklik. Yanıt geldiğinde Genel Bakış'ın geri kalanı hiçbir
+    // yönde ve hiçbir dilde yerinden oynamaz.
+    const height = 'min-h-[27.25rem] sm:min-h-[15.5rem]';
+    const frame = `${height} rounded-xl border border-border bg-surface p-5`;
+    if (connection.remote.state === 'loading') {
+        return <section className={frame}><Checking label={t('conn.checking')} /></section>;
     }
-    if (!c) return null;
-
-    const externalDNS = c.dns_management_mode === 'external';
-    const connected = c.status === 'delegated' || c.status === 'a_record';
-    const stable = connected && !c.propagation_pending;
-    const tone = stable ? 'border-success/40 bg-success/5' : 'border-warning-mark/60 bg-warning-mark/10';
+    if (connection.remote.state === 'unknown' && !connection.remote.previous) {
+        return (
+            <section className={frame}>
+                <CouldNotCheck text={t('conn.readFailed')} onRetry={recheck} busy={connection.reading} />
+            </section>
+        );
+    }
 
     return (
-        <section className={`rounded-xl border ${tone} p-5`}>
+        <RemoteGate
+            remote={connection.remote}
+            checking={t('conn.checking')}
+            failed={t('conn.readFailed')}
+            onRetry={recheck}
+            busy={connection.reading}
+        >
+            {({ value: c }) => {
+    const externalDNS = c.dns_management_mode === 'external';
+    const notChecked = c.status === 'unknown';
+    const connected = c.status === 'delegated' || c.status === 'a_record';
+    const stable = connected && !c.propagation_pending;
+    const tone = stable
+        ? 'border-success/40 bg-success/5'
+        : notChecked ? 'border-border bg-surface' : 'border-warning-mark/60 bg-warning-mark/10';
+    // What the public resolvers answered, in the face for literal values; or,
+    // in words, that there is no answer or that they could not be asked.
+    // Genel çözümleyicilerin yanıtı, harfi değerlerin yazı yüzüyle; ya da
+    // sözle, yanıt olmadığı ya da onlara sorulamadığı.
+    const observed = (values: string[]) => (values.length
+        ? <p className="break-words font-mono text-xs text-fg">{values.join(', ')}</p>
+        : <p className="text-xs text-fg-muted">{t(notChecked ? 'conn.notChecked' : 'conn.none')}</p>);
+
+    return (
+        <section className={`${height} rounded-xl border ${tone} p-5`}>
             <div className="mb-3 flex flex-wrap items-center gap-2">
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <Globe className="h-4.5 w-4.5" />
@@ -122,7 +179,7 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
                     <h3 className="text-sm font-semibold text-fg">{t('conn.title')}</h3>
                     <p className="flex items-center gap-1.5 text-xs">
                         <StatusDot ok={stable} />
-                        <span className={stable ? 'text-success' : 'text-warning'}>
+                        <span className={stable ? 'text-success' : notChecked ? 'text-fg-muted' : 'text-warning'}>
                             {c.propagation_pending
                                 ? t('conn.status.propagating')
                                 : t(`conn.status.${c.status}` as Parameters<typeof t>[0])}
@@ -132,11 +189,11 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
                 <div className="ml-auto flex items-center gap-2">
                     <HelpButton serviceId="domain-connection" name={domainName} />
                     <button
-                        onClick={load}
-                        disabled={busy}
+                        onClick={recheck}
+                        disabled={connection.reading}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-surface px-2.5 py-1.5 text-xs font-medium text-fg transition-colors hover:bg-surface-2 disabled:opacity-50"
                     >
-                        <RefreshCw className={`h-3.5 w-3.5 ${busy ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`h-3.5 w-3.5 ${connection.reading ? 'animate-spin' : ''}`} />
                         {t('conn.recheck')}
                     </button>
                 </div>
@@ -147,13 +204,11 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
             <div className="mb-4 grid gap-2 sm:grid-cols-2">
                 <div className="rounded-lg border border-border bg-surface p-3">
                     <p className="mb-1 text-xs text-fg-subtle">{t('conn.liveNs')}</p>
-                    <p className="font-mono text-xs text-fg">
-                        {c.live_nameservers.length ? c.live_nameservers.join(', ') : t('conn.none')}
-                    </p>
+                    {observed(c.live_nameservers)}
                 </div>
                 <div className="rounded-lg border border-border bg-surface p-3">
                     <p className="mb-1 text-xs text-fg-subtle">{t('conn.liveIp')}</p>
-                    <p className="font-mono text-xs text-fg">{c.live_ips.length ? c.live_ips.join(', ') : t('conn.none')}</p>
+                    {observed(c.live_ips)}
                 </div>
             </div>
 
@@ -185,7 +240,13 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
                 </p>
             ) : (
                 <>
-                    <p className="mb-3 text-sm text-fg-muted">{t('conn.intro')}</p>
+                    {/* Not checked is not "does not point here": say what is
+                        not known, then offer the values for the case that the
+                        domain is not connected yet.
+                        Kontrol edilemedi, "burayı göstermiyor" değildir: neyin
+                        bilinmediğini söyle, sonra alan adı henüz bağlı değilse
+                        diye değerleri sun. */}
+                    <p className="mb-3 max-w-[75ch] text-sm text-fg-muted">{t(notChecked ? 'conn.unknownHelp' : 'conn.intro')}</p>
 
                     {/* Route A is offered ONLY when this server's nameserver
                         names actually answer for this server. Otherwise the
@@ -194,7 +255,17 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
                         sunucusu adları gerçekten bu sunucu adına cevap
                         verdiğinde sunulur. Aksi hâlde talimat alan adını
                         bozardı — ve bunu söyleyen panel olurdu. */}
-                    {!externalDNS && !c.nameservers_usable && (
+                    {!externalDNS && !c.nameservers_usable && notChecked && (
+                        // The names could not be verified either. They are
+                        // not called broken, and delegating to them is not
+                        // offered until they are known to answer.
+                        // Adlar da doğrulanamadı. Bozuk denmez; yanıt
+                        // verdikleri bilinene dek onlara devir de sunulmaz.
+                        <p className="mb-3 max-w-[75ch] rounded-lg bg-surface-2/60 p-2.5 text-xs leading-relaxed text-fg-muted">
+                            {t('conn.routeAUnknown')}
+                        </p>
+                    )}
+                    {!externalDNS && !c.nameservers_usable && !notChecked && (
                         <div className="mb-3 rounded-xl border border-danger/40 bg-danger/5 p-4">
                             <h4 className="mb-1 text-sm font-semibold text-fg">{t('conn.nsBroken.title')}</h4>
                             <p className="text-xs leading-relaxed text-fg-muted">{t('conn.nsBroken.desc')}</p>
@@ -212,7 +283,7 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
                     )}
 
                     {/* Route A — full delegation. / A yolu — tam devir. */}
-                    {!externalDNS && <div className={`mb-3 rounded-xl border border-border bg-surface p-4 ${!c.nameservers_usable ? 'opacity-50' : ''}`}>
+                    {!externalDNS && (c.nameservers_usable || !notChecked) && <div className={`mb-3 rounded-xl border border-border bg-surface p-4 ${!c.nameservers_usable ? 'opacity-50' : ''}`}>
                         <h4 className="mb-1 text-sm font-semibold text-fg">{t('conn.routeA.title')}</h4>
                         <p className="mb-3 text-xs leading-relaxed text-fg-muted">{t('conn.routeA.desc')}</p>
                         {/* Glue is only this domain's business when the
@@ -260,22 +331,31 @@ export function DomainConnection({ domainId, domainName }: { domainId: number; d
             )}
 
             {/* SSL is the most common reason someone lands here, so say plainly
-                whether it can work yet. / İnsanların buraya en sık geliş sebebi
-                SSL'dir; bu yüzden şimdilik çalışıp çalışamayacağını düz söyle. */}
+                whether it can work yet - or that this is not known.
+                / İnsanların buraya en sık geliş sebebi SSL'dir; bu yüzden
+                şimdilik çalışıp çalışamayacağını, ya da bunun bilinmediğini
+                düz söyle. */}
             <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed text-fg-muted">
-                {c.ssl_ready && !c.propagation_pending ? (
+                {notChecked ? (
+                    <Globe className="mt-0.5 h-4 w-4 shrink-0 text-fg-subtle" />
+                ) : c.ssl_ready && !c.propagation_pending ? (
                     <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success" />
                 ) : (
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                 )}
                 <span>
-                    {c.ssl_ready
-                        ? c.propagation_pending
-                            ? t('conn.sslPropagating')
-                            : t('conn.sslReady')
-                        : t('conn.sslBlocked')}
+                    {notChecked
+                        ? t('conn.sslUnknown')
+                        : c.ssl_ready
+                            ? c.propagation_pending
+                                ? t('conn.sslPropagating')
+                                : t('conn.sslReady')
+                            : t('conn.sslBlocked')}
                 </span>
             </p>
         </section>
+    );
+            }}
+        </RemoteGate>
     );
 }

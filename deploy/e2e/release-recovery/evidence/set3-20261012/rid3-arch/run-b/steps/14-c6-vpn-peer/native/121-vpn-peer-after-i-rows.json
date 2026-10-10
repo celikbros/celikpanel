@@ -1,0 +1,501 @@
+{
+  "at": "2026-10-09T08:16:30Z",
+  "lab_action": false,
+  "mode": "read-panel-state",
+  "owner_action": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "state": {
+    "audit_counts": {
+      "auth.login": 1,
+      "backup.create:full": 2,
+      "database.admin_account.provision:mariadb": 2,
+      "database.admin_account.provision:postgresql": 2,
+      "database.admin_account.reveal:mariadb": 5,
+      "database.admin_account.reveal:postgresql": 5,
+      "domain.create": 1,
+      "entitlement.grant:vpn": 1,
+      "server.setup.child:certbot": 1,
+      "server.setup.child:cron": 1,
+      "server.setup.child:mariadb": 1,
+      "server.setup.child:nginx": 1,
+      "server.setup.child:php-fpm": 1,
+      "server.setup.child:postgresql": 1,
+      "server.setup.draft": 1,
+      "server.setup.guidance": 1,
+      "server.setup.start:web": 1,
+      "service.install:wireguard": 1,
+      "subscription.bootstrap": 1,
+      "vpn.peer.add:set2 laptop": 1,
+      "vpn.peer.delivery_ack:set2 laptop": 1
+    },
+    "audit_logs": [
+      {
+        "action": "auth.login",
+        "created_at": "2026-10-09 08:11:47",
+        "id": 1,
+        "resource_id": null,
+        "resource_type": null
+      },
+      {
+        "action": "server.setup.guidance",
+        "created_at": "2026-10-09 08:11:47",
+        "id": 2,
+        "resource_id": null,
+        "resource_type": "guided"
+      },
+      {
+        "action": "server.setup.draft",
+        "created_at": "2026-10-09 08:11:47",
+        "id": 3,
+        "resource_id": null,
+        "resource_type": null
+      },
+      {
+        "action": "server.setup.start:web",
+        "created_at": "2026-10-09 08:11:48",
+        "id": 4,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "server.setup.child:mariadb",
+        "created_at": "2026-10-09 08:12:07",
+        "id": 5,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "server.setup.child:nginx",
+        "created_at": "2026-10-09 08:12:15",
+        "id": 6,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "server.setup.child:php-fpm",
+        "created_at": "2026-10-09 08:12:21",
+        "id": 7,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "server.setup.child:postgresql",
+        "created_at": "2026-10-09 08:12:43",
+        "id": 8,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "server.setup.child:cron",
+        "created_at": "2026-10-09 08:12:48",
+        "id": 9,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "server.setup.child:certbot",
+        "created_at": "2026-10-09 08:12:55",
+        "id": 10,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "subscription.bootstrap",
+        "created_at": "2026-10-09 08:15:06",
+        "id": 11,
+        "resource_id": 2,
+        "resource_type": "subscription"
+      },
+      {
+        "action": "domain.create",
+        "created_at": "2026-10-09 08:15:06",
+        "id": 12,
+        "resource_id": 1,
+        "resource_type": "domain"
+      },
+      {
+        "action": "database.admin_account.reveal:mariadb",
+        "created_at": "2026-10-09 08:15:23",
+        "id": 13,
+        "resource_id": 1,
+        "resource_type": "database_server"
+      },
+      {
+        "action": "database.admin_account.reveal:mariadb",
+        "created_at": "2026-10-09 08:15:24",
+        "id": 14,
+        "resource_id": 1,
+        "resource_type": "database_server"
+      },
+      {
+        "action": "database.admin_account.provision:mariadb",
+        "created_at": "2026-10-09 08:15:25",
+        "id": 15,
+        "resource_id": 1,
+        "resource_type": "database_server"
+      },
+      {
+        "action": "database.admin_account.reveal:mariadb",
+        "created_at": "2026-10-09 08:15:25",
+        "id": 16,
+        "resource_id": 1,
+        "resource_type": "database_server"
+      },
+      {
+        "action": "database.admin_account.reveal:mariadb",
+        "created_at": "2026-10-09 08:15:26",
+        "id": 17,
+        "resource_id": 1,
+        "resource_type": "database_server"
+      },
+      {
+        "action": "database.admin_account.provision:mariadb",
+        "created_at": "2026-10-09 08:15:26",
+        "id": 18,
+        "resource_id": 1,
+        "resource_type": "database_server"
+      },
+      {
+        "action": "database.admin_account.reveal:mariadb",
+        "created_at": "2026-10-09 08:15:26",
+        "id": 19,
+        "resource_id": 1,
+        "resource_type": "database_server"
+      },
+      {
+        "action": "database.admin_account.reveal:postgresql",
+        "created_at": "2026-10-09 08:15:27",
+        "id": 20,
+        "resource_id": 2,
+        "resource_type": "database_server"
+      },
+      {
+        "action": "database.admin_account.reveal:postgresql",
+        "created_at": "2026-10-09 08:15:28",
+        "id": 21,
+        "resource_id": 2,
+        "resource_type": "database_server"
+      },
+      {
+        "action": "database.admin_account.provision:postgresql",
+        "created_at": "2026-10-09 08:15:29",
+        "id": 22,
+        "resource_id": 2,
+        "resource_type": "database_server"
+      },
+      {
+        "action": "database.admin_account.reveal:postgresql",
+        "created_at": "2026-10-09 08:15:29",
+        "id": 23,
+        "resource_id": 2,
+        "resource_type": "database_server"
+      },
+      {
+        "action": "database.admin_account.reveal:postgresql",
+        "created_at": "2026-10-09 08:15:30",
+        "id": 24,
+        "resource_id": 2,
+        "resource_type": "database_server"
+      },
+      {
+        "action": "database.admin_account.provision:postgresql",
+        "created_at": "2026-10-09 08:15:30",
+        "id": 25,
+        "resource_id": 2,
+        "resource_type": "database_server"
+      },
+      {
+        "action": "database.admin_account.reveal:postgresql",
+        "created_at": "2026-10-09 08:15:30",
+        "id": 26,
+        "resource_id": 2,
+        "resource_type": "database_server"
+      },
+      {
+        "action": "backup.create:full",
+        "created_at": "2026-10-09 08:15:54",
+        "id": 27,
+        "resource_id": 1,
+        "resource_type": "domain"
+      },
+      {
+        "action": "backup.create:full",
+        "created_at": "2026-10-09 08:16:03",
+        "id": 28,
+        "resource_id": 1,
+        "resource_type": "domain"
+      },
+      {
+        "action": "service.install:wireguard",
+        "created_at": "2026-10-09 08:16:23",
+        "id": 29,
+        "resource_id": null,
+        "resource_type": "service"
+      },
+      {
+        "action": "entitlement.grant:vpn",
+        "created_at": "2026-10-09 08:16:27",
+        "id": 30,
+        "resource_id": 2,
+        "resource_type": "subscription"
+      },
+      {
+        "action": "vpn.peer.add:set2 laptop",
+        "created_at": "2026-10-09 08:16:29",
+        "id": 31,
+        "resource_id": 1,
+        "resource_type": "vpn_peer"
+      },
+      {
+        "action": "vpn.peer.delivery_ack:set2 laptop",
+        "created_at": "2026-10-09 08:16:29",
+        "id": 32,
+        "resource_id": 1,
+        "resource_type": "vpn_peer"
+      }
+    ],
+    "audit_max_id": 32,
+    "database_servers": [
+      {
+        "admin_username": "celikpanel_admin",
+        "host": "localhost",
+        "id": 1,
+        "port": 3306,
+        "sealed_bytes": 99,
+        "status": "active",
+        "type": "mariadb"
+      },
+      {
+        "admin_username": "celikpanel_admin",
+        "host": "localhost",
+        "id": 2,
+        "port": 5432,
+        "sealed_bytes": 99,
+        "status": "active",
+        "type": "postgresql"
+      }
+    ],
+    "database_user_grants": [
+      {
+        "database_id": 1,
+        "id": 1,
+        "privileges": "ALL",
+        "user_id": 1
+      },
+      {
+        "database_id": 2,
+        "id": 2,
+        "privileges": "ALL",
+        "user_id": 2
+      },
+      {
+        "database_id": 3,
+        "id": 3,
+        "privileges": "ALL",
+        "user_id": 3
+      },
+      {
+        "database_id": 4,
+        "id": 4,
+        "privileges": "ALL",
+        "user_id": 4
+      },
+      {
+        "database_id": 5,
+        "id": 5,
+        "privileges": "ALL",
+        "user_id": 5
+      },
+      {
+        "database_id": 6,
+        "id": 6,
+        "privileges": "ALL",
+        "user_id": 6
+      },
+      {
+        "database_id": 7,
+        "id": 7,
+        "privileges": "ALL",
+        "user_id": 7
+      },
+      {
+        "database_id": 8,
+        "id": 8,
+        "privileges": "ALL",
+        "user_id": 3
+      },
+      {
+        "database_id": 9,
+        "id": 9,
+        "privileges": "ALL",
+        "user_id": 3
+      },
+      {
+        "database_id": 10,
+        "id": 10,
+        "privileges": "ALL",
+        "user_id": 8
+      }
+    ],
+    "database_users": [
+      {
+        "id": 1,
+        "sealed_bytes": 79,
+        "server_id": 1,
+        "subscription_id": 2,
+        "username": "set1_owner_test_seq_user"
+      },
+      {
+        "id": 2,
+        "sealed_bytes": 79,
+        "server_id": 1,
+        "subscription_id": 2,
+        "username": "set1_owner_test_con_user"
+      },
+      {
+        "id": 3,
+        "sealed_bytes": 79,
+        "server_id": 2,
+        "subscription_id": 2,
+        "username": "set1_owner_test_seq_user"
+      },
+      {
+        "id": 4,
+        "sealed_bytes": 79,
+        "server_id": 2,
+        "subscription_id": 2,
+        "username": "set1_owner_test_con_user"
+      },
+      {
+        "id": 5,
+        "sealed_bytes": 67,
+        "server_id": 1,
+        "subscription_id": 2,
+        "username": "s2_srvsequ"
+      },
+      {
+        "id": 6,
+        "sealed_bytes": 67,
+        "server_id": 1,
+        "subscription_id": 2,
+        "username": "s2_srvconu"
+      },
+      {
+        "id": 7,
+        "sealed_bytes": 79,
+        "server_id": 1,
+        "subscription_id": 2,
+        "username": "s2_srvsentu"
+      },
+      {
+        "id": 8,
+        "sealed_bytes": 79,
+        "server_id": 2,
+        "subscription_id": 2,
+        "username": "s2_srvsentu"
+      }
+    ],
+    "databases_v2": [
+      {
+        "domain_id": 1,
+        "id": 1,
+        "name": "set1_owner_test_seq",
+        "server_id": 1,
+        "subscription_id": 2
+      },
+      {
+        "domain_id": 1,
+        "id": 2,
+        "name": "set1_owner_test_con",
+        "server_id": 1,
+        "subscription_id": 2
+      },
+      {
+        "domain_id": 1,
+        "id": 3,
+        "name": "set1_owner_test_seq",
+        "server_id": 2,
+        "subscription_id": 2
+      },
+      {
+        "domain_id": 1,
+        "id": 4,
+        "name": "set1_owner_test_con",
+        "server_id": 2,
+        "subscription_id": 2
+      },
+      {
+        "domain_id": null,
+        "id": 5,
+        "name": "s2_srvseq",
+        "server_id": 1,
+        "subscription_id": 2
+      },
+      {
+        "domain_id": null,
+        "id": 6,
+        "name": "s2_srvcon",
+        "server_id": 1,
+        "subscription_id": 2
+      },
+      {
+        "domain_id": null,
+        "id": 7,
+        "name": "s2_srvsent",
+        "server_id": 1,
+        "subscription_id": 2
+      },
+      {
+        "domain_id": null,
+        "id": 8,
+        "name": "s2_srvseq",
+        "server_id": 2,
+        "subscription_id": 2
+      },
+      {
+        "domain_id": null,
+        "id": 9,
+        "name": "s2_srvcon",
+        "server_id": 2,
+        "subscription_id": 2
+      },
+      {
+        "domain_id": null,
+        "id": 10,
+        "name": "s2_srvsent",
+        "server_id": 2,
+        "subscription_id": 2
+      }
+    ],
+    "domains": [
+      {
+        "id": 1,
+        "name": "set1-owner.test",
+        "status": "active",
+        "subscription_id": 2
+      }
+    ],
+    "email_accounts": [],
+    "email_forwardings": [],
+    "ssl_certificates": [],
+    "subscription_entitlements": [
+      {
+        "product_id": "vpn",
+        "status": "active",
+        "subscription_id": 2
+      }
+    ],
+    "vpn_peers": [
+      {
+        "desired_state": "active",
+        "id": 1,
+        "ip": "10.8.0.2",
+        "name": "set2 laptop",
+        "provisioning_state": "issued",
+        "public_key": "lscgQOrHKKOSaT0NN6HfkoxG7Cn7/CVEyhsIplvsTA8=",
+        "subscription_id": 2,
+        "sync_state": "applied"
+      }
+    ]
+  }
+}

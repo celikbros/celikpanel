@@ -1,0 +1,32 @@
+{
+  "checks": {
+    "appended_lines": 9,
+    "asked_with": "getent -s files ahosts NAME and getent -s files hosts NAME (the hosts file only; no DNS question is sent)",
+    "at": "2026-10-09T19:47:50Z",
+    "boot_id": "021ed0e7-c8bb-4df8-a898-c119d998feac",
+    "certbot_program": null,
+    "file": "name-pinning.json",
+    "loopback_only": {
+      "acme-staging-v02.api.letsencrypt.org": true,
+      "acme-v02.api.letsencrypt.org": true,
+      "acme.zerossl.com": true,
+      "dv.acme-v02.api.pki.goog": true
+    },
+    "names": [
+      "acme-v02.api.letsencrypt.org",
+      "acme-staging-v02.api.letsencrypt.org",
+      "acme.zerossl.com",
+      "dv.acme-v02.api.pki.goog"
+    ],
+    "origin_name_mapped_yet": false,
+    "origin_name_note": "celikpanel.net is mapped by the origin step, before the baseline is installed",
+    "product_paths_present": [],
+    "refused": null,
+    "uptime_seconds": 57.91,
+    "what": "lab preparation, not an owner action"
+  },
+  "finished_at": "2026-10-09T19:47:49Z",
+  "name": "set5-name-pinning",
+  "started_at": "2026-10-09T19:47:49Z",
+  "verdict": "passed"
+}

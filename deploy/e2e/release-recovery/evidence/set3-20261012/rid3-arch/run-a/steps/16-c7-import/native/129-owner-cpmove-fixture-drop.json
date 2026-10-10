@@ -1,0 +1,74 @@
+{
+  "action": "owner-cpmove-fixture",
+  "at": "2026-10-09T07:30:34Z",
+  "bytes": 16785574,
+  "database": "s2impdrop_app",
+  "directory": {
+    "mode": "0700",
+    "uid": 0
+  },
+  "docroot_expected": {
+    "assets/blob.bin": [
+      16777216,
+      "dca4639d86219026da87dcea8c0d08b91f4af6e8660a73ab9edb2aa51a8c9a82"
+    ],
+    "assets/site.css": [
+      34,
+      "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+    ],
+    "index.html": [
+      67,
+      "69634f91c87df2962caa99003392257fdaa60d5dd0aca530ff2ec8c69cab94e3"
+    ]
+  },
+  "domain": "set2-import-drop.test",
+  "hostile": null,
+  "hostile_members": [],
+  "lab_action": false,
+  "mailbox_shadow": "the sha512-crypt hash (openssl passwd -6) of a password the lab chose; neither is recorded",
+  "members": [
+    {
+      "bytes": 59,
+      "name": "cpmove-s2impdrop/cp/s2impdrop"
+    },
+    {
+      "bytes": 67,
+      "name": "cpmove-s2impdrop/homedir/public_html/index.html"
+    },
+    {
+      "bytes": 34,
+      "name": "cpmove-s2impdrop/homedir/public_html/assets/site.css"
+    },
+    {
+      "bytes": 124,
+      "name": "cpmove-s2impdrop/homedir/etc/set2-import-drop.test/shadow"
+    },
+    {
+      "bytes": 15,
+      "name": "cpmove-s2impdrop/homedir/etc/set2-import-drop.test/quota"
+    },
+    {
+      "bytes": 56,
+      "name": "cpmove-s2impdrop/va/set2-import-drop.test"
+    },
+    {
+      "bytes": 33,
+      "name": "cpmove-s2impdrop/mysql/s2impdrop_app.create"
+    },
+    {
+      "bytes": 7402,
+      "name": "cpmove-s2impdrop/mysql/s2impdrop_app.sql"
+    },
+    {
+      "bytes": 16777216,
+      "name": "cpmove-s2impdrop/homedir/public_html/assets/blob.bin"
+    }
+  ],
+  "mode": "owner-cpmove-fixture",
+  "owner_action": true,
+  "path": "/var/lib/celikpanel-imports/cpmove-s2impdrop.tar.gz",
+  "public_html_directory_member": true,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "sha256": "80b094313f439fc398fa63fb60eb5d59eca0a3dee2a157eb28c7ada5dd3585d6",
+  "user": "s2impdrop"
+}

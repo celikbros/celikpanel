@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 5,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T11:25:33Z",
+    "notes": [],
+    "started_at": "2026-10-09T11:25:30Z",
+    "substeps": {
+      "item 7": "passed",
+      "lab isolation": "passed",
+      "section": "passed"
+    },
+    "title": "the platform, the lab's isolation, the nginx package's PHP snippet (item 7)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T11:25:33Z",
+  "name": "M0-prepare",
+  "started_at": "2026-10-09T11:25:30Z",
+  "verdict": "passed"
+}

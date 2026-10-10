@@ -1,0 +1,51 @@
+{
+  "at": "2026-10-09T12:20:37Z",
+  "is_active": {
+    "nginx.service": "active"
+  },
+  "is_failed": {
+    "nginx.service": "active"
+  },
+  "journal": {
+    "nginx.service": [
+      "2026-10-09T12:20:35.714678+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+      "2026-10-09T12:20:35.748196+00:00 dns-debian13 nginx[41675]: 2026/10/09 12:20:35 [notice] 41675#41675: signal process started",
+      "2026-10-09T12:20:35.749167+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+    ]
+  },
+  "journal_product": [
+    "2026-10-09T12:20:35.660106+00:00 dns-debian13 panel[37518]: 2026/10/09 12:20:35 http: TLS handshake error from 127.0.0.1:39766: EOF",
+    "2026-10-09T12:20:36.143353+00:00 dns-debian13 panel[37518]: 2026/10/09 12:20:36 http: TLS handshake error from 127.0.0.1:39786: EOF"
+  ],
+  "journal_systemd_manager": [
+    "2026-10-09T12:20:35.714678+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...",
+    "2026-10-09T12:20:35.749167+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server."
+  ],
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "since_epoch": 1791548434,
+  "units": {
+    "nginx.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 12:10:22 UTC",
+      "ActiveExitTimestamp": "",
+      "ActiveState": "active",
+      "ExecMainPID": "5855",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 12:10:22 UTC",
+      "ExecMainStatus": "0",
+      "ExecReload": "{ path=/usr/sbin/nginx ; argv[]=/usr/sbin/nginx -g daemon on; master_process on; -s reload ; ignore_errors=no ; start_time=[Fri 2026-10-09 12:20:35 UTC] ; stop_time=[Fri 2026-10-09 12:20:35 UTC] ; pid=41675 ; code=exited ; status=0 }",
+      "FragmentPath": "/usr/lib/systemd/system/nginx.service",
+      "InactiveEnterTimestamp": "",
+      "InactiveExitTimestamp": "Fri 2026-10-09 12:10:22 UTC",
+      "InvocationID": "39f820541a6b49129c935b7f39026f80",
+      "LoadState": "loaded",
+      "MainPID": "5855",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 12:20:35 UTC",
+      "SubState": "running",
+      "Type": "forking"
+    }
+  }
+}

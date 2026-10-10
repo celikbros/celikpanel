@@ -1,0 +1,74 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "service operation poll",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18464"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/service/operation?request_id=2471cd22256fafc39089df457b94a0fb"
+  },
+  "response": {
+    "elapsed_seconds": 0.007,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 07:18:28 GMT"
+      ],
+      [
+        "Content-Length",
+        "240"
+      ]
+    ],
+    "json": {
+      "operation": {
+        "id": "33fe29fa8b13955c47e6d3550589dd29",
+        "kind": "service_install",
+        "phase": "installing",
+        "request_id": "2471cd22256fafc39089df457b94a0fb",
+        "service_id": "wireguard",
+        "started_at": "2026-10-09T07:18:23.730939147Z",
+        "status": "running"
+      }
+    },
+    "status": 200,
+    "text": null
+  }
+}

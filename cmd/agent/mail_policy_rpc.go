@@ -1,111 +1,331 @@
 package main
 
 import (
-	"fmt"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"log"
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 
+	"github.com/alicelik/celikpanel/internal/hostcmd"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Server-wide mail policy — the Plesk "server-wide mail settings" core:
-// message size limit and DNSBL protection for incoming mail. The recipient
-// restrictions are written as one managed set (the standard safe baseline
-// plus one reject_rbl_client per zone) rather than patched, so re-applying
-// always converges and nothing manual can half-survive.
+// message size limit, DNSBL protection for incoming mail and an outgoing rate
+// limit. These are the server owner's Postfix values, so (8 Oct 2026; D-022,
+// D-024, D-025 invariants 1 and 2):
 //
-// Sunucu geneli posta politikası — Plesk'in "sunucu geneli posta ayarları"
-// çekirdeği: mesaj boyutu sınırı ve gelen posta için DNSBL koruması. Alıcı
-// kısıtları yamalanmak yerine tek yönetilen set olarak yazılır (standart
-// güvenli taban artı zone başına bir reject_rbl_client); böylece yeniden
-// uygulamak her zaman yakınsar.
+//   - a read that fails is an error, never zeros. Before this a failed
+//     `postconf` read answered "0 MB, no DNSBL, no limit" with success, the
+//     form filled itself with defaults and one Save wrote them to main.cf;
+//   - a read returns a version of the exact values it saw, and a write must
+//     carry it back. A write without it, or after the values changed on the
+//     server, changes nothing;
+//   - a write touches only the values that differ from the server's, in one
+//     `postconf -e`, and never rebuilds the recipient restrictions (see
+//     mail_policy_restrictions.go);
+//   - every accepted save ends with the verified reload, also one that writes
+//     nothing (10 Oct 2026). Postfix cannot be asked which values its running
+//     master holds, and the Agent keeps no record of an earlier "not
+//     reloaded", so a save cannot tell "already in effect" from "written
+//     before and never taken". An owner who corrected main.cf after "not
+//     reloaded" and presses Save gets the reload, or the reason again.
+//
+// Sunucu geneli posta politikası: mesaj boyutu sınırı, gelen posta için DNSBL
+// koruması ve giden hız sınırı. Bunlar sunucu sahibinin Postfix değerleridir:
+// başarısız okuma sıfır değil hatadır; okuma gördüğü değerlerin sürümünü
+// döndürür ve yazma onu geri taşır; yazma yalnız sunucudakinden farklı olan
+// değerlere dokunur ve alıcı kısıtlarını baştan kurmaz.
 
 type MailPolicy = transport.MailPolicy
 
 type MailPolicyResponse = transport.MailPolicyResponse
 
+const (
+	mailPolicyMebibyte     = 1024 * 1024
+	mailPolicyMaxSizeMB    = 200
+	mailPolicyMaxRate      = 10000
+	mailPolicyRateUnit     = "60s"
+	mailPolicyNotInstalled = "postfix is not installed"
+)
+
+// The Postfix values the policy is read from, in the order the version is
+// computed over.
+// Politikanın okunduğu Postfix değerleri; sürüm bu sırayla hesaplanır.
+var mailPolicyParameters = []string{
+	"message_size_limit",
+	"smtpd_recipient_restrictions",
+	"smtpd_client_message_rate_limit",
+	"anvil_rate_time_unit",
+}
+
+// Swapped by tests. Production reads and writes through postconf and makes the
+// running Postfix take the change through mail_service_verify.go: its own
+// check, its own reload command, and a master that is still running afterwards.
+// A stopped Postfix is left stopped. `systemctl reload-or-restart postfix` was
+// the reload until 10 Oct 2026; on Ubuntu that unit is a wrapper whose job
+// succeeds whatever happened to the daemon.
+// Testlerde değiştirilir. Üretimde çalışan Postfix değişikliği kendi denetimi,
+// kendi yeniden yükleme komutu ve sonrasında hâlâ çalışan ana süreçle alır.
+var (
+	mailPolicyLookPath = exec.LookPath
+	mailPolicyPostconf = func(args ...string) ([]byte, error) {
+		return exec.Command("postconf", args...).Output()
+	}
+	mailPolicyReload = func() (string, error) {
+		return applyPostfixVerified(runMailTLSCommand, mailServiceReload)
+	}
+)
+
+// mailPolicyMu makes read, compare and write one step for the Panel's own
+// requests. An owner editing main.cf by hand at the same instant is outside it.
+// mailPolicyMu, Panel'in kendi istekleri için oku-karşılaştır-yaz adımını tek
+// adım yapar.
+var mailPolicyMu sync.Mutex
+
+var errMailPolicyUnreadable = errors.New("the current Postfix mail policy could not be read")
+
+type mailPolicyNative struct {
+	values    map[string]string
+	sizeBytes int
+	rate      int
+	version   string
+}
+
+// readMailPolicyNative reads every value or none. A value is known only when
+// postconf succeeded and printed a line for it; the two numbers must also be
+// numbers. Anything else is an unknown state, logged here and reported as one
+// fixed error.
+// readMailPolicyNative ya bütün değerleri okur ya hiçbirini. Değer, yalnız
+// postconf başarılı olup onun için bir satır yazdıysa bilinir.
+func readMailPolicyNative() (mailPolicyNative, error) {
+	native := mailPolicyNative{values: map[string]string{}}
+	digest := sha256.New()
+	for _, name := range mailPolicyParameters {
+		out, err := mailPolicyPostconf("-h", name)
+		if err != nil {
+			log.Printf("mail policy: postconf -h %s failed: %s", name, hostcmd.Diagnostic(out, err))
+			return mailPolicyNative{}, errMailPolicyUnreadable
+		}
+		if !strings.HasSuffix(string(out), "\n") {
+			log.Printf("mail policy: postconf -h %s printed no value line", name)
+			return mailPolicyNative{}, errMailPolicyUnreadable
+		}
+		value := strings.TrimSpace(string(out))
+		native.values[name] = value
+		digest.Write([]byte(name))
+		digest.Write([]byte{0})
+		digest.Write([]byte(value))
+		digest.Write([]byte{0})
+	}
+	var err error
+	if native.sizeBytes, err = strconv.Atoi(native.values["message_size_limit"]); err != nil || native.sizeBytes < 0 {
+		log.Printf("mail policy: message_size_limit is not a number")
+		return mailPolicyNative{}, errMailPolicyUnreadable
+	}
+	if native.rate, err = strconv.Atoi(native.values["smtpd_client_message_rate_limit"]); err != nil || native.rate < 0 {
+		log.Printf("mail policy: smtpd_client_message_rate_limit is not a number")
+		return mailPolicyNative{}, errMailPolicyUnreadable
+	}
+	native.version = "mp1-" + hex.EncodeToString(digest.Sum(nil))
+	return native, nil
+}
+
+func (n mailPolicyNative) policy() MailPolicy {
+	restrictions := parseRecipientRestrictions(n.values["smtpd_recipient_restrictions"])
+	zones := restrictions.zones
+	if zones == nil {
+		zones = []string{}
+	}
+	return MailPolicy{
+		MessageSizeMB:     n.sizeBytes / mailPolicyMebibyte,
+		DNSBLZones:        zones,
+		OutboundRateLimit: n.rate,
+		Version:           n.version,
+		DNSBLLocked:       restrictions.lock,
+	}
+}
+
+func refuseMailPolicy(resp *MailPolicyResponse, code, reason, text string) error {
+	*resp = MailPolicyResponse{Error: text, Code: code, Reason: reason}
+	return nil
+}
+
 func (a *Agent) GetMailPolicy(_ *transport.Empty, resp *MailPolicyResponse) error {
-	if _, err := exec.LookPath("postconf"); err != nil {
-		resp.Error = "postfix is not installed"
+	if _, err := mailPolicyLookPath("postconf"); err != nil {
+		resp.Error = mailPolicyNotInstalled
 		return nil
 	}
-	if out, err := exec.Command("postconf", "-h", "message_size_limit").Output(); err == nil {
-		if b, err := strconv.Atoi(strings.TrimSpace(string(out))); err == nil {
-			resp.Policy.MessageSizeMB = b / (1024 * 1024)
-		}
+	native, err := readMailPolicyNative()
+	if err != nil {
+		return refuseMailPolicy(resp, transport.MailPolicyUnreadable, "", err.Error())
 	}
-	if out, err := exec.Command("postconf", "-h", "smtpd_recipient_restrictions").Output(); err == nil {
-		for _, part := range strings.Split(string(out), ",") {
-			part = strings.TrimSpace(part)
-			if zone, ok := strings.CutPrefix(part, "reject_rbl_client "); ok {
-				resp.Policy.DNSBLZones = append(resp.Policy.DNSBLZones, strings.TrimSpace(zone))
-			}
-		}
-	}
-	if out, err := exec.Command("postconf", "-h", "smtpd_client_message_rate_limit").Output(); err == nil {
-		if n, err := strconv.Atoi(strings.TrimSpace(string(out))); err == nil {
-			resp.Policy.OutboundRateLimit = n
-		}
-	}
+	resp.Policy = native.policy()
 	return nil
 }
 
 func (a *Agent) SetMailPolicy(req *MailPolicy, resp *MailPolicyResponse) error {
-	if _, err := exec.LookPath("postconf"); err != nil {
-		resp.Error = "postfix is not installed"
+	if _, err := mailPolicyLookPath("postconf"); err != nil {
+		resp.Error = mailPolicyNotInstalled
 		return nil
 	}
-	if req.MessageSizeMB < 1 || req.MessageSizeMB > 200 {
-		req.MessageSizeMB = 25
+	mailPolicyMu.Lock()
+	defer mailPolicyMu.Unlock()
+
+	// The pre-image comes first: a write is never built from a failed read.
+	// Önce ön görüntü: başarısız okumadan asla yazı kurulmaz.
+	native, err := readMailPolicyNative()
+	if err != nil {
+		return refuseMailPolicy(resp, transport.MailPolicyUnreadable, "", err.Error())
+	}
+	if req.Version == "" {
+		return refuseMailPolicy(resp, transport.MailPolicyVersionRequired, "",
+			"the mail policy request carried no version of the settings it was built from")
+	}
+	if req.Version != native.version {
+		return refuseMailPolicy(resp, transport.MailPolicyChanged, "",
+			"the Postfix mail policy is not the one the request was built from")
 	}
 
-	// Baseline: locals and authenticated users pass, open relay stays shut.
-	// DNSBL rejections come after, so our own users are never DNSBL-blocked.
-	// Taban: yereller ve kimlikli kullanıcılar geçer, açık aktarım kapalı
-	// kalır. DNSBL retleri sonra gelir; kendi kullanıcımız asla takılmaz.
-	restrictions := []string{"permit_mynetworks", "permit_sasl_authenticated", "reject_unauth_destination"}
+	// Only what differs from the server is written, so a value the form
+	// cannot express exactly (a limit that is not a whole number of MiB, a
+	// larger rate the owner set) survives a save that did not change it.
+	// Yalnız sunucudakinden farklı olan yazılır.
+	var assignments []string
+	if req.MessageSizeMB != native.sizeBytes/mailPolicyMebibyte {
+		if req.MessageSizeMB < 1 || req.MessageSizeMB > mailPolicyMaxSizeMB {
+			return refuseMailPolicy(resp, transport.MailPolicyInvalid, transport.MailPolicyInvalidSize,
+				"message_size_mb must be between 1 and 200")
+		}
+		assignments = append(assignments, "message_size_limit="+strconv.Itoa(req.MessageSizeMB*mailPolicyMebibyte))
+	}
+
 	var zones []string
-	for _, z := range req.DNSBLZones {
-		z = strings.ToLower(strings.TrimSpace(z))
-		if z == "" || strings.ContainsAny(z, " \t,;") || !strings.Contains(z, ".") {
+	for _, zone := range req.DNSBLZones {
+		zone = strings.ToLower(strings.TrimSpace(zone))
+		if zone == "" {
 			continue
 		}
-		zones = append(zones, z)
-		restrictions = append(restrictions, "reject_rbl_client "+z)
+		if !validDNSBLZone(zone) {
+			return refuseMailPolicy(resp, transport.MailPolicyInvalid, transport.MailPolicyInvalidZone,
+				"a DNSBL zone is not a plain host name")
+		}
+		zones = append(zones, zone)
+	}
+	restrictions, changed, lock := planRecipientRestrictions(native.values["smtpd_recipient_restrictions"], zones)
+	if lock != "" {
+		return refuseMailPolicy(resp, transport.MailPolicyRestrictionsUnmanaged, lock,
+			"the recipient restrictions on this server are not rewritten by the panel")
+	}
+	if changed {
+		assignments = append(assignments, "smtpd_recipient_restrictions="+restrictions)
 	}
 
-	// Outbound rate: 0 keeps postfix's own default (unlimited); a positive
-	// value caps messages per minute per sending client. Clamped to a sane
-	// range so a typo cannot set it to millions (useless) or negative.
-	// Giden hız: 0, postfix'in kendi varsayılanını (sınırsız) korur; pozitif
-	// değer, gönderen istemci başına dakikadaki mesajı sınırlar. Bir yazım
-	// hatası milyonlara (işe yaramaz) ya da negatife çekemesin diye makul
-	// aralığa sıkıştırılır.
-	rate := req.OutboundRateLimit
-	if rate < 0 {
-		rate = 0
-	}
-	if rate > 10000 {
-		rate = 10000
-	}
-
-	settings := [][2]string{
-		{"message_size_limit", strconv.Itoa(req.MessageSizeMB * 1024 * 1024)},
-		{"smtpd_recipient_restrictions", strings.Join(restrictions, ", ")},
-		{"smtpd_client_message_rate_limit", strconv.Itoa(rate)},
-		// Rate windows are counted per minute so the ceiling reads naturally.
-		// Hız pencereleri dakika başına sayılır; tavan doğal okunur.
-		{"anvil_rate_time_unit", "60s"},
-	}
-	for _, s := range settings {
-		if out, err := exec.Command("postconf", "-e", s[0]+"="+s[1]).CombinedOutput(); err != nil {
-			resp.Error = fmt.Sprintf("postconf %s: %s", s[0], strings.TrimSpace(string(out)))
-			return nil
+	// Outbound rate: 0 leaves Postfix without a limit; a positive value caps
+	// messages per minute per sending client, so the window is set with it.
+	// Giden hız: 0 sınırsız bırakır; pozitif değer gönderen istemci başına
+	// dakikadaki mesajı sınırlar, bu yüzden pencere onunla birlikte ayarlanır.
+	if req.OutboundRateLimit != native.rate {
+		if req.OutboundRateLimit < 0 || req.OutboundRateLimit > mailPolicyMaxRate {
+			return refuseMailPolicy(resp, transport.MailPolicyInvalid, transport.MailPolicyInvalidRate,
+				"outbound_rate_limit must be between 0 and 10000")
+		}
+		assignments = append(assignments, "smtpd_client_message_rate_limit="+strconv.Itoa(req.OutboundRateLimit))
+		if req.OutboundRateLimit > 0 && native.values["anvil_rate_time_unit"] != mailPolicyRateUnit {
+			assignments = append(assignments, "anvil_rate_time_unit="+mailPolicyRateUnit)
 		}
 	}
-	_ = exec.Command("systemctl", "reload-or-restart", "postfix").Run()
 
-	resp.Policy = MailPolicy{MessageSizeMB: req.MessageSizeMB, DNSBLZones: zones, OutboundRateLimit: rate}
+	wrote := len(assignments) > 0
+	if wrote {
+		// One postconf edits main.cf once, so the save is whole or absent.
+		// Tek postconf main.cf'i bir kez düzenler; kayıt ya tamdır ya yoktur.
+		if out, err := mailPolicyPostconf(append([]string{"-e"}, assignments...)...); err != nil {
+			log.Printf("mail policy: postconf -e failed: %s", hostcmd.Diagnostic(out, err))
+			return refuseMailPolicy(resp, transport.MailPolicyWriteFailed, "",
+				"the Postfix mail policy could not be written")
+		}
+	}
+	// The verified reload follows every accepted save, also one that wrote
+	// nothing (10 Oct 2026). Until then an unchanged save answered
+	// "unchanged" without asking Postfix anything: after "not reloaded" the
+	// owner corrected main.cf, pressed Save, and Postfix went on running the
+	// settings from before. Whether a running master already holds the file
+	// cannot be read from Postfix, and nothing here remembers the earlier
+	// outcome, so the reload is asked for each time. It is Postfix's own check
+	// and reload command; a stopped Postfix is still left stopped.
+	// Doğrulanmış yeniden yükleme, hiçbir şey yazmayan kayıt dahil kabul edilen
+	// her kaydı izler. Çalışan ana sürecin dosyayı zaten tutup tutmadığı
+	// Postfix'ten okunamaz ve burada önceki sonuç hatırlanmaz; bu yüzden
+	// yeniden yükleme her seferinde istenir. Durmuş Postfix yine durmuş kalır.
+	applied, err := mailPolicyReload()
+	if err != nil {
+		// main.cf holds the values and Postfix was not seen to take them.
+		// After a write that is a failure after a change, not something to
+		// log and call saved (9 Oct 2026; D-024): the answer carries what is
+		// written now, so the screen shows it. A refusal by Postfix's own
+		// check, a reload that failed and a master that stopped are verified
+		// failures; a command that could not be run or did not answer leaves
+		// the outcome unknown, and is said as unknown. Unwritten says that
+		// this request itself changed nothing in main.cf.
+		// main.cf değerleri tutuyor ve Postfix'in onları aldığı görülmedi.
+		// Yazıdan sonra bu, günlüğe yazıp "kaydedildi" denecek bir şey değil,
+		// bir değişiklik sonrası hatadır; sonucu bilinmeyen durum da
+		// bilinmeyen olarak söylenir. Unwritten, bu isteğin main.cf'te
+		// hiçbir şeyi değiştirmediğini söyler.
+		subject := "the mail policy was written to main.cf"
+		if !wrote {
+			subject = "the mail policy in main.cf was already the requested one"
+		}
+		log.Printf("mail policy: %s; the postfix reload failed: %v", subject, err)
+		answer := MailPolicyResponse{
+			Error:     subject + ", but Postfix could not be reloaded",
+			Code:      transport.MailPolicyNotReloaded,
+			Unwritten: !wrote,
+		}
+		var failure *mailServiceError
+		if errors.As(err, &failure) {
+			answer.Reason, answer.Stage = failure.detail, failure.stage
+			if failure.unknown {
+				answer.Code = transport.MailPolicyReloadUnknown
+				answer.Error = subject + ", but whether Postfix took it could not be established"
+			}
+		} else {
+			answer.Code = transport.MailPolicyReloadUnknown
+			answer.Error = subject + ", but whether Postfix took it could not be established"
+			answer.Reason = hostcmd.Bounded(strings.Join(strings.Fields(err.Error()), " "), 300)
+		}
+		if fresh, readErr := readMailPolicyNative(); readErr == nil {
+			answer.Policy = fresh.policy()
+		}
+		*resp = answer
+		return nil
+	}
+	switch {
+	case wrote:
+		resp.Applied = applied
+	case applied == mailServiceReloaded:
+		resp.Applied = transport.MailPolicyAppliedUnchangedReloaded
+	default:
+		// Nothing to write, and a stopped Postfix has nothing to reload.
+		// Yazılacak bir şey yok; durmuş Postfix'in yeniden yükleyeceği de yok.
+		resp.Applied = transport.MailPolicyAppliedUnchanged
+	}
+
+	// The answer is what the server holds now, with the version the next save
+	// needs. If it cannot be read back the save still happened; the screen
+	// reloads and reports the unreadable state itself.
+	// Yanıt, sunucunun şimdi tuttuğu değerdir.
+	if fresh, err := readMailPolicyNative(); err == nil {
+		resp.Policy = fresh.policy()
+	} else {
+		resp.Policy = MailPolicy{
+			MessageSizeMB: req.MessageSizeMB, DNSBLZones: zones, OutboundRateLimit: req.OutboundRateLimit,
+		}
+	}
 	return nil
 }

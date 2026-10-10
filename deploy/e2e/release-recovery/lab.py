@@ -292,8 +292,15 @@ def prepare(args):
     fixture.initialize_work_root(root)
     for pin in pins.values():
         target = root / "images" / pin.filename
-        run(["cp", "--reflink=auto", "--", str(cache / pin.filename), str(target)])
-        target.chmod(0o444)
+        if os.environ.get("CELIKPANEL_LAB_LINK_BASE_IMAGES") == "1":
+            # set5 (opt-in): a hard link to the cached base image instead of a copy of it. The cache and the lab are
+            # on one filesystem, the cached file is read-only, QEMU opens it only as a backing file, and it is
+            # verified against the reviewed pin just below exactly as a copy is. Nothing is chmod'ed here: the
+            # verification refuses a writable image.
+            os.link(cache / pin.filename, target)
+        else:
+            run(["cp", "--reflink=auto", "--", str(cache / pin.filename), str(target)])
+            target.chmod(0o444)
     if ubuntu:
         fixture.verify_image(fixture.validate_work_root(root), pins["ubuntu"])
     else:

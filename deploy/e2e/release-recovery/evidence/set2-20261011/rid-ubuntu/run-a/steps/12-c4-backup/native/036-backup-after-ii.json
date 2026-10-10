@@ -1,0 +1,83 @@
+{
+  "archives": 2,
+  "at": "2026-10-09T03:45:01Z",
+  "directory": "/var/backups/celikpanel/subscriptions/2/domains/1",
+  "entries": [
+    {
+      "bytes": 201463249,
+      "kind": "file",
+      "manifest": {
+        "created_at": "2026-10-09T03:44:43.941779498Z",
+        "databases": 4,
+        "domain_id": 1,
+        "job_key": "request:cb281a7de57eec6d18a289762d170036",
+        "keys": [
+          "created_at",
+          "databases",
+          "domain_id",
+          "files",
+          "job_key",
+          "origin",
+          "subscription_id",
+          "type",
+          "version"
+        ],
+        "origin": "manual",
+        "subscription_id": 2,
+        "type": "full",
+        "version": 2
+      },
+      "mode": "0600",
+      "mtime": 1791517491,
+      "name": "full-20261009T034447.899358506Z-0b5fd21aaa67f7e7.cpbak"
+    },
+    {
+      "bytes": 201463240,
+      "kind": "file",
+      "manifest": {
+        "created_at": "2026-10-09T03:44:52.775615815Z",
+        "databases": 4,
+        "domain_id": 1,
+        "job_key": "request:250a2d4e048ce348f16109071ebefae5",
+        "keys": [
+          "created_at",
+          "databases",
+          "domain_id",
+          "files",
+          "job_key",
+          "origin",
+          "subscription_id",
+          "type",
+          "version"
+        ],
+        "origin": "manual",
+        "subscription_id": 2,
+        "type": "full",
+        "version": 2
+      },
+      "mode": "0600",
+      "mtime": 1791517500,
+      "name": "full-20261009T034457.098924685Z-a8c91d9e157a20d9.cpbak"
+    }
+  ],
+  "epoch": 1791517501.3099926,
+  "exists": true,
+  "lab_action": false,
+  "manifests_read": 2,
+  "mode": "read-backups",
+  "origins": {
+    "manual": 2
+  },
+  "owner_action": false,
+  "partial_files": [],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "tree": [
+    "d 4096 /var/backups/celikpanel",
+    "d 4096 /var/backups/celikpanel/subscriptions",
+    "d 4096 /var/backups/celikpanel/subscriptions/2",
+    "d 4096 /var/backups/celikpanel/subscriptions/2/domains",
+    "d 4096 /var/backups/celikpanel/subscriptions/2/domains/1",
+    "f 201463240 /var/backups/celikpanel/subscriptions/2/domains/1/full-20261009T034457.098924685Z-a8c91d9e157a20d9.cpbak",
+    "f 201463249 /var/backups/celikpanel/subscriptions/2/domains/1/full-20261009T034447.899358506Z-0b5fd21aaa67f7e7.cpbak"
+  ]
+}

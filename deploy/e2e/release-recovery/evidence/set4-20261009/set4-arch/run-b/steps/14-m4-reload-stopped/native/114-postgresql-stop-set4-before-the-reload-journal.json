@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T12:43:13Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791549791",
+      "-n",
+      "400",
+      "-u",
+      "postgresql.service"
+    ],
+    "at": "2026-10-09T12:43:13Z",
+    "returncode": 0,
+    "seconds": 0.003,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T12:43:11.800389+00:00 dns-arch systemd[1]: Stopping PostgreSQL database server...\n2026-10-09T12:43:11.800858+00:00 dns-arch postgres[1783]: 2026-10-09 12:43:11.800 UTC [1783] LOG:  received fast shutdown request\n2026-10-09T12:43:11.820399+00:00 dns-arch postgres[1783]: 2026-10-09 12:43:11.820 UTC [1783] LOG:  aborting any active transactions\n2026-10-09T12:43:11.823722+00:00 dns-arch postgres[1783]: 2026-10-09 12:43:11.823 UTC [1783] LOG:  background worker \"logical replication launcher\" (PID 1793) exited with exit code 1\n2026-10-09T12:43:11.823974+00:00 dns-arch postgres[1788]: 2026-10-09 12:43:11.823 UTC [1788] LOG:  shutting down\n2026-10-09T12:43:11.835355+00:00 dns-arch postgres[1788]: 2026-10-09 12:43:11.835 UTC [1788] LOG:  checkpoint starting: shutdown immediate\n2026-10-09T12:43:12.056556+00:00 dns-arch postgres[1788]: 2026-10-09 12:43:12.056 UTC [1788] LOG:  checkpoint complete: wrote 46 buffers (0.3%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.003 s, sync=0.163 s, total=0.233 s; sync files=15, longest=0.014 s, average=0.011 s; distance=337 kB, estimate=337 kB; lsn=0/17BA828, redo lsn=0/17BA828\n2026-10-09T12:43:12.095979+00:00 dns-arch postgres[1783]: 2026-10-09 12:43:12.095 UTC [1783] LOG:  database system is shut down\n2026-10-09T12:43:12.098330+00:00 dns-arch systemd[1]: postgresql.service: Deactivated successfully.\n2026-10-09T12:43:12.098634+00:00 dns-arch systemd[1]: Stopped PostgreSQL database server.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791549791,
+  "units": [
+    "postgresql.service"
+  ]
+}

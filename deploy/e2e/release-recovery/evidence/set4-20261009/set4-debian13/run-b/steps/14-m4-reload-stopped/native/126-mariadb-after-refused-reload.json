@@ -1,0 +1,44 @@
+{
+  "at": "2026-10-09T12:53:29Z",
+  "is_active": {
+    "mariadb.service": "inactive"
+  },
+  "is_failed": {
+    "mariadb.service": "inactive"
+  },
+  "journal": {
+    "mariadb.service": []
+  },
+  "journal_product": [
+    "2026-10-09T12:53:25.932309+00:00 dns-debian13 panel[5217]: 2026/10/09 12:53:25 http: TLS handshake error from 127.0.0.1:52162: EOF",
+    "2026-10-09T12:53:26.027078+00:00 dns-debian13 agent[5026]: 2026/10/09 12:53:26 ERROR service reload mariadb: failed not_running: mariadb.service is inactive (dead); nothing was reloaded",
+    "2026-10-09T12:53:27.086376+00:00 dns-debian13 panel[5217]: 2026/10/09 12:53:27 [409][service action] reload mariadb: SERVICE_ACTION_FAILED not_running: mariadb.service is inactive (dead); nothing was reloaded"
+  ],
+  "journal_systemd_manager": [],
+  "mode": "read-units",
+  "owner_action": false,
+  "schema": "celikpanel/set4-native/v1",
+  "since_epoch": 1791550404,
+  "units": {
+    "mariadb.service": {
+      "ActiveEnterTimestamp": "Fri 2026-10-09 12:46:04 UTC",
+      "ActiveExitTimestamp": "Fri 2026-10-09 12:53:19 UTC",
+      "ActiveState": "inactive",
+      "ExecMainPID": "6585",
+      "ExecMainStartTimestamp": "Fri 2026-10-09 12:46:04 UTC",
+      "ExecMainStatus": "0",
+      "FragmentPath": "/usr/lib/systemd/system/mariadb.service",
+      "InactiveEnterTimestamp": "Fri 2026-10-09 12:53:20 UTC",
+      "InactiveExitTimestamp": "Fri 2026-10-09 12:46:04 UTC",
+      "InvocationID": "71a545abc7bf43b7b7a45bb22ec9ec99",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "ReloadResult": "success",
+      "Result": "success",
+      "StateChangeTimestamp": "Fri 2026-10-09 12:53:20 UTC",
+      "SubState": "dead",
+      "Type": "notify"
+    }
+  }
+}

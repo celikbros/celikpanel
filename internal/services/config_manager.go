@@ -3,7 +3,6 @@ package services
 import (
 	"bufio"
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -17,7 +16,7 @@ var mysqlServerConfigPath = "/etc/mysql/mariadb.conf.d/50-server.cnf"
 func NewConfigManager() *ConfigManager { return &ConfigManager{} }
 
 func phpINIPath(phpVersion string) string {
-	return filepath.Join(phpEtcDir, phpVersion, "fpm", "php.ini")
+	return phpLayoutFor(phpVersion).iniPath()
 }
 
 type PHPSettings struct {

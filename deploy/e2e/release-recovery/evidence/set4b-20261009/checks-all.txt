@@ -1,0 +1,184 @@
+## diagnostic/set4b-diag-ubuntu/run-a: overall=inconclusive native_evidence=False outcome=set4b-measured
+step | diagnostic/set4b-diag-ubuntu/run-a | preflight | passed | 
+step | diagnostic/set4b-diag-ubuntu/run-a | origin | passed | 
+step | diagnostic/set4b-diag-ubuntu/run-a | baseline-install | passed | 
+step | diagnostic/set4b-diag-ubuntu/run-a | owner-login | passed | 
+step | diagnostic/set4b-diag-ubuntu/run-a | license | passed | 
+step | diagnostic/set4b-diag-ubuntu/run-a | setup | observed | 
+step | diagnostic/set4b-diag-ubuntu/run-a | site | passed | 
+step | diagnostic/set4b-diag-ubuntu/run-a | M0-prepare | passed | 
+step | diagnostic/set4b-diag-ubuntu/run-a | D10-what-the-agent-reads | inconclusive | TypeError: Set4bTrial.snap4b() got multiple values for argument 'label'
+step | diagnostic/set4b-diag-ubuntu/run-a | collect | passed | 
+section | diagnostic/set4b-diag-ubuntu/run-a/steps/08-m0-prepare | M0-prepare | passed | error=
+check | diagnostic/set4b-diag-ubuntu/run-a/steps/08-m0-prepare/section.json | PASS | the Panel's database names the owner's site and its subscription
+check | diagnostic/set4b-diag-ubuntu/run-a/steps/08-m0-prepare/section.json | PASS | lab isolation: celikpanel.net resolves to this guest's loopback only (its own fixture origin)
+check | diagnostic/set4b-diag-ubuntu/run-a/steps/08-m0-prepare/section.json | PASS | lab isolation: the two Let's Encrypt directory names resolve to this guest's loopback only
+check | diagnostic/set4b-diag-ubuntu/run-a/steps/08-m0-prepare/section.json | PASS | item 7: the package's /etc/nginx/snippets/fastcgi-php.conf has the SHA-256 the product's test pins
+check | diagnostic/set4b-diag-ubuntu/run-a/steps/08-m0-prepare/section.json | PASS | `nginx -t` passes before anything is measured
+section | diagnostic/set4b-diag-ubuntu/run-a/steps/09-d10-what-the-agent-reads | D10-what-the-agent-reads | inconclusive | error=TypeError: Set4bTrial.snap4b() got multiple values for argument 'label'
+check | diagnostic/set4b-diag-ubuntu/run-a/steps/09-d10-what-the-agent-reads/section.json | PASS | measured: the Agent's reading command for postfix.service was run and answered (exit status recorded)
+check | diagnostic/set4b-diag-ubuntu/run-a/steps/09-d10-what-the-agent-reads/section.json | PASS | measured: the Agent's reading command for postfix@-.service was run and answered (exit status recorded)
+check | diagnostic/set4b-diag-ubuntu/run-a/steps/09-d10-what-the-agent-reads/section.json | PASS | `postfix check` refuses main.cf (the owner's line)
+## diagnostic/set4b-diag-ubuntu/run-b: overall=complete-for-review native_evidence=False outcome=set4b-measured
+step | diagnostic/set4b-diag-ubuntu/run-b | preflight | passed | 
+step | diagnostic/set4b-diag-ubuntu/run-b | origin | passed | 
+step | diagnostic/set4b-diag-ubuntu/run-b | baseline-install | passed | 
+step | diagnostic/set4b-diag-ubuntu/run-b | owner-login | passed | 
+step | diagnostic/set4b-diag-ubuntu/run-b | license | passed | 
+step | diagnostic/set4b-diag-ubuntu/run-b | setup | observed | 
+step | diagnostic/set4b-diag-ubuntu/run-b | site | passed | 
+step | diagnostic/set4b-diag-ubuntu/run-b | M0-prepare | passed | 
+step | diagnostic/set4b-diag-ubuntu/run-b | D10-what-the-agent-reads | passed | 
+step | diagnostic/set4b-diag-ubuntu/run-b | collect | passed | 
+section | diagnostic/set4b-diag-ubuntu/run-b/steps/08-m0-prepare | M0-prepare | passed | error=
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/08-m0-prepare/section.json | PASS | the Panel's database names the owner's site and its subscription
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/08-m0-prepare/section.json | PASS | lab isolation: celikpanel.net resolves to this guest's loopback only (its own fixture origin)
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/08-m0-prepare/section.json | PASS | lab isolation: the two Let's Encrypt directory names resolve to this guest's loopback only
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/08-m0-prepare/section.json | PASS | item 7: the package's /etc/nginx/snippets/fastcgi-php.conf has the SHA-256 the product's test pins
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/08-m0-prepare/section.json | PASS | `nginx -t` passes before anything is measured
+section | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads | D10-what-the-agent-reads | passed | error=
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | measured: the Agent's reading command for postfix.service was run and answered (exit status recorded)
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | measured: the Agent's reading command for postfix@-.service was run and answered (exit status recorded)
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | `postfix check` refuses main.cf (the owner's line)
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | measured: the owner's own stop was sampled (more than 50 samples of the two units)
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | S8 postfix start (after the owner's correction (p1)): the answer (success) matches what the service shows
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses (p2a)): the answer (success) matches what the service shows
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | S8 postfix start (after the owner's correction (p2a)): the answer (success) matches what the service shows
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses (p2b)): the answer (success) matches what the service shows
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | S8 postfix start (after the owner's correction (p2b)): the answer (success) matches what the service shows
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses (p2c)): the answer (success) matches what the service shows
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | S8 postfix start (after the owner's correction (p2c)): the answer (success) matches what the service shows
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses (p3)): the answer (success) matches what the service shows
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | S8 postfix start (after the owner's correction (p3)): the answer (success) matches what the service shows
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses (p4)): the answer (success) matches what the service shows
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | S8 postfix start (after the owner's correction (p4)): the answer (success) matches what the service shows
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | measured: the kernel trace shows the programs the Agent started in every Stop through the Panel
+check | diagnostic/set4b-diag-ubuntu/run-b/steps/09-d10-what-the-agent-reads/section.json | PASS | measured: systemd's own moment for the unit's end was read in every Stop through the Panel
+## remeasure/set4b-debian13/run-a: overall=complete-for-review native_evidence=False outcome=set4b-measured
+step | remeasure/set4b-debian13/run-a | preflight | passed | 
+step | remeasure/set4b-debian13/run-a | origin | passed | 
+step | remeasure/set4b-debian13/run-a | baseline-install | passed | 
+step | remeasure/set4b-debian13/run-a | owner-login | passed | 
+step | remeasure/set4b-debian13/run-a | license | passed | 
+step | remeasure/set4b-debian13/run-a | setup | observed | 
+step | remeasure/set4b-debian13/run-a | site | passed | 
+step | remeasure/set4b-debian13/run-a | M0-prepare | passed | 
+step | remeasure/set4b-debian13/run-a | M10-postfix-stop | passed | 
+step | remeasure/set4b-debian13/run-a | R10-postfix-stop-repeated | passed | 
+step | remeasure/set4b-debian13/run-a | M2-import | passed | 
+step | remeasure/set4b-debian13/run-a | collect | passed | 
+section | remeasure/set4b-debian13/run-a/steps/08-m0-prepare | M0-prepare | passed | error=
+check | remeasure/set4b-debian13/run-a/steps/08-m0-prepare/section.json | PASS | the Panel's database names the owner's site and its subscription
+check | remeasure/set4b-debian13/run-a/steps/08-m0-prepare/section.json | PASS | lab isolation: celikpanel.net resolves to this guest's loopback only (its own fixture origin)
+check | remeasure/set4b-debian13/run-a/steps/08-m0-prepare/section.json | PASS | lab isolation: the two Let's Encrypt directory names resolve to this guest's loopback only
+check | remeasure/set4b-debian13/run-a/steps/08-m0-prepare/section.json | PASS | item 7: the package's /etc/nginx/snippets/fastcgi-php.conf has the SHA-256 the product's test pins
+check | remeasure/set4b-debian13/run-a/steps/08-m0-prepare/section.json | PASS | `nginx -t` passes before anything is measured
+section | remeasure/set4b-debian13/run-a/steps/09-m10-postfix-stop | M10-postfix-stop | passed | error=
+check | remeasure/set4b-debian13/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: `postfix check` refuses main.cf (the owner's line)
+check | remeasure/set4b-debian13/run-a/steps/09-m10-postfix-stop/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses): the answer (success) matches what the service shows
+check | remeasure/set4b-debian13/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: Stop answers 200 success and the master is gone
+check | remeasure/set4b-debian13/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: the unit ended `failed`, which it was not before the stop (set3's observation)
+check | remeasure/set4b-debian13/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`
+check | remeasure/set4b-debian13/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`
+check | remeasure/set4b-debian13/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: the note's sentence is the documented one for its reason
+check | remeasure/set4b-debian13/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: no `reset-failed` was issued: the unit is still `failed` after the answer and 8 seconds later, and the product's journal names no reset-failed
+check | remeasure/set4b-debian13/run-a/steps/09-m10-postfix-stop/section.json | PASS | S8 postfix start (after the owner's correction): the answer (success) matches what the service shows
+check | remeasure/set4b-debian13/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: after main.cf is restored, Start answers success, the master runs and no unit is `failed`
+check | remeasure/set4b-debian13/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: mail is accepted on 25 and 587 answers at the end
+section | remeasure/set4b-debian13/run-a/steps/10-r10-postfix-stop-repeated | R10-postfix-stop-repeated | passed | error=
+check | remeasure/set4b-debian13/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses (r1)): the answer (success) matches what the service shows
+check | remeasure/set4b-debian13/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | S8 postfix start (after the owner's correction (r1)): the answer (success) matches what the service shows
+check | remeasure/set4b-debian13/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses (r2)): the answer (success) matches what the service shows
+check | remeasure/set4b-debian13/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | S8 postfix start (after the owner's correction (r2)): the answer (success) matches what the service shows
+check | remeasure/set4b-debian13/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses (r3)): the answer (success) matches what the service shows
+check | remeasure/set4b-debian13/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | S8 postfix start (after the owner's correction (r3)): the answer (success) matches what the service shows
+check | remeasure/set4b-debian13/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | r1: Stop answers 200 success with the note, and the note names the unit systemd shows as failed
+check | remeasure/set4b-debian13/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | r1: the unit is still `failed` afterwards (no reset-failed), and Start works after the correction
+check | remeasure/set4b-debian13/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | r2: Stop answers 200 success with the note, and the note names the unit systemd shows as failed
+check | remeasure/set4b-debian13/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | r2: the unit is still `failed` afterwards (no reset-failed), and Start works after the correction
+check | remeasure/set4b-debian13/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | r3: Stop answers 200 success with the note, and the note names the unit systemd shows as failed
+check | remeasure/set4b-debian13/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | r3: the unit is still `failed` afterwards (no reset-failed), and Start works after the correction
+section | remeasure/set4b-debian13/run-a/steps/11-m2-import | M2-import | passed | error=
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | the preview of the set4 archive names its domain, its mailbox and its database
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | S1: the preview of the set4 archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | item 2: the import of set3's fixture completes (200, active; the document root's files equal the archive's; the database is on the engine with its rows)
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | item 5 (declared deviation): entries of the archive outside the site folder are counted in the files step's line and do not make the import partial
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | item 2: the imported site serves the archive's own index page through the web server
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site: `nginx -t` passes with the site's vhost
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site: the page runs as the site's own account
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site: a PHP script that does not exist answers 404
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site: a static file of the site is served as it is (200)
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site (item 3): the PHP version recorded for the site is the installed one that runs the page
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | imported-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | item 3: the import asked for no DNS (`do_dns: false`) and `imported` does not name `dns`
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | item 3: the `dns` step ended without an error, carries `state: left_to_owner` and is listed under `left_out`
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | item 3: every step of the answer is in exactly one of `imported`, `not_imported` and `left_out`
+check | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | PASS | item 3: the import is still `active` (a part left to the owner on purpose does not make it partial)
+note | remeasure/set4b-debian13/run-a/steps/11-m2-import/section.json | imported-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 404
+## remeasure/set4b-ubuntu/run-a: overall=complete-for-review native_evidence=False outcome=set4b-measured
+step | remeasure/set4b-ubuntu/run-a | preflight | passed | 
+step | remeasure/set4b-ubuntu/run-a | origin | passed | 
+step | remeasure/set4b-ubuntu/run-a | baseline-install | passed | 
+step | remeasure/set4b-ubuntu/run-a | owner-login | passed | 
+step | remeasure/set4b-ubuntu/run-a | license | passed | 
+step | remeasure/set4b-ubuntu/run-a | setup | observed | 
+step | remeasure/set4b-ubuntu/run-a | site | passed | 
+step | remeasure/set4b-ubuntu/run-a | M0-prepare | passed | 
+step | remeasure/set4b-ubuntu/run-a | M10-postfix-stop | passed | 
+step | remeasure/set4b-ubuntu/run-a | R10-postfix-stop-repeated | passed | 
+step | remeasure/set4b-ubuntu/run-a | M2-import | passed | 
+step | remeasure/set4b-ubuntu/run-a | collect | passed | 
+section | remeasure/set4b-ubuntu/run-a/steps/08-m0-prepare | M0-prepare | passed | error=
+check | remeasure/set4b-ubuntu/run-a/steps/08-m0-prepare/section.json | PASS | the Panel's database names the owner's site and its subscription
+check | remeasure/set4b-ubuntu/run-a/steps/08-m0-prepare/section.json | PASS | lab isolation: celikpanel.net resolves to this guest's loopback only (its own fixture origin)
+check | remeasure/set4b-ubuntu/run-a/steps/08-m0-prepare/section.json | PASS | lab isolation: the two Let's Encrypt directory names resolve to this guest's loopback only
+check | remeasure/set4b-ubuntu/run-a/steps/08-m0-prepare/section.json | PASS | item 7: the package's /etc/nginx/snippets/fastcgi-php.conf has the SHA-256 the product's test pins
+check | remeasure/set4b-ubuntu/run-a/steps/08-m0-prepare/section.json | PASS | `nginx -t` passes before anything is measured
+section | remeasure/set4b-ubuntu/run-a/steps/09-m10-postfix-stop | M10-postfix-stop | passed | error=
+check | remeasure/set4b-ubuntu/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: `postfix check` refuses main.cf (the owner's line)
+check | remeasure/set4b-ubuntu/run-a/steps/09-m10-postfix-stop/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses): the answer (success) matches what the service shows
+check | remeasure/set4b-ubuntu/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: Stop answers 200 success and the master is gone
+check | remeasure/set4b-ubuntu/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: the unit ended `failed`, which it was not before the stop (set3's observation)
+check | remeasure/set4b-ubuntu/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`
+check | remeasure/set4b-ubuntu/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`
+check | remeasure/set4b-ubuntu/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: the note's sentence is the documented one for its reason
+check | remeasure/set4b-ubuntu/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: no `reset-failed` was issued: the unit is still `failed` after the answer and 8 seconds later, and the product's journal names no reset-failed
+check | remeasure/set4b-ubuntu/run-a/steps/09-m10-postfix-stop/section.json | PASS | S8 postfix start (after the owner's correction): the answer (success) matches what the service shows
+check | remeasure/set4b-ubuntu/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: after main.cf is restored, Start answers success, the master runs and no unit is `failed`
+check | remeasure/set4b-ubuntu/run-a/steps/09-m10-postfix-stop/section.json | PASS | item 10: mail is accepted on 25 and 587 answers at the end
+section | remeasure/set4b-ubuntu/run-a/steps/10-r10-postfix-stop-repeated | R10-postfix-stop-repeated | passed | error=
+check | remeasure/set4b-ubuntu/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses (r1)): the answer (success) matches what the service shows
+check | remeasure/set4b-ubuntu/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | S8 postfix start (after the owner's correction (r1)): the answer (success) matches what the service shows
+check | remeasure/set4b-ubuntu/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses (r2)): the answer (success) matches what the service shows
+check | remeasure/set4b-ubuntu/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | S8 postfix start (after the owner's correction (r2)): the answer (success) matches what the service shows
+check | remeasure/set4b-ubuntu/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses (r3)): the answer (success) matches what the service shows
+check | remeasure/set4b-ubuntu/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | S8 postfix start (after the owner's correction (r3)): the answer (success) matches what the service shows
+check | remeasure/set4b-ubuntu/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | r1: Stop answers 200 success with the note, and the note names the unit systemd shows as failed
+check | remeasure/set4b-ubuntu/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | r1: the unit is still `failed` afterwards (no reset-failed), and Start works after the correction
+check | remeasure/set4b-ubuntu/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | r2: Stop answers 200 success with the note, and the note names the unit systemd shows as failed
+check | remeasure/set4b-ubuntu/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | r2: the unit is still `failed` afterwards (no reset-failed), and Start works after the correction
+check | remeasure/set4b-ubuntu/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | r3: Stop answers 200 success with the note, and the note names the unit systemd shows as failed
+check | remeasure/set4b-ubuntu/run-a/steps/10-r10-postfix-stop-repeated/section.json | PASS | r3: the unit is still `failed` afterwards (no reset-failed), and Start works after the correction
+section | remeasure/set4b-ubuntu/run-a/steps/11-m2-import | M2-import | passed | error=
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | the preview of the set4 archive names its domain, its mailbox and its database
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | S1: the preview of the set4 archive holds no hash-shaped value; a mailbox is its address, its quota and `has_password` only
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | item 2: the import of set3's fixture completes (200, active; the document root's files equal the archive's; the database is on the engine with its rows)
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | item 5 (declared deviation): entries of the archive outside the site folder are counted in the files step's line and do not make the import partial
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | item 2: the imported site serves the archive's own index page through the web server
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site: `nginx -t` passes with the site's vhost
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site: the vhost names no file under snippets/ and its PHP location is the six directives, then the socket, SCRIPT_FILENAME and fastcgi_params
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site: the PHP page asked for through the web server was executed by PHP-FPM (the marker and 6 * 7 = 42, no source text, server API fpm-fcgi)
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site: the page runs as the site's own account
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site: a PHP script that does not exist answers 404
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site: PATH_INFO reaches PHP for a request the vhost's PHP location takes (/set4-probe.php/tail.php: PATH_INFO=/tail.php, SCRIPT_NAME=/set4-probe.php)
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site: a static file of the site is served as it is (200)
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site (item 3): the PHP version recorded for the site is the installed one that runs the page
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | imported-site (item 3): the recorded socket is named after that version, and it is the pool's `listen`, the vhost's `fastcgi_pass` and a socket that exists
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | item 3: the import asked for no DNS (`do_dns: false`) and `imported` does not name `dns`
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | item 3: the `dns` step ended without an error, carries `state: left_to_owner` and is listed under `left_out`
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | item 3: every step of the answer is in exactly one of `imported`, `not_imported` and `left_out`
+check | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | PASS | item 3: the import is still `active` (a part left to the owner on purpose does not make it partial)
+note | remeasure/set4b-ubuntu/run-a/steps/11-m2-import/section.json | imported-site: a request whose path does not end in .php (/set4-probe.php/extra/info) did not reach the probe page: status 404

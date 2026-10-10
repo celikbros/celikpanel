@@ -4,10 +4,12 @@ import {
     Play, Pause, Save, X, Info, AlertTriangle,
 } from 'lucide-react';
 import { showToast } from './Toast';
-import { apiErrorText, readApiError } from '../lib/apiError';
+import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
-import { Button, EmptyState, Spinner, inputClass } from './ui';
+import { Button, CouldNotCheck, KnownEmpty, inputClass } from './ui';
+import type { Observed } from '../lib/remote';
+import { CurrentGate, StaleNotice, isStaleWrite, readCurrent } from './CurrentSettings';
 
 interface CronJob {
     id: string;
@@ -35,6 +37,17 @@ const schedulePresets: { labelKey: TranslationKey; value: string }[] = [
     { labelKey: 'cron.preset.monthly', value: '0 0 1 * *' },
 ];
 
+// The causes of an unreadable crontab the server verifies itself (10 Oct 2026).
+// Each is a rule the server owner set, not something that broke: the notice is
+// drawn on the neutral surface, never as a warning. Any other answer gets the sentence
+// that names no cause.
+// Sunucunun kendisinin doğruladığı okunamayan-crontab nedenleri. Her biri
+// sunucu sahibinin koyduğu bir kuraldır, bozulan bir şey değil.
+const unreadableCauses: Record<string, TranslationKey> = {
+    cron_allow: 'cron.unknown.cron_allow',
+    cron_deny: 'cron.unknown.cron_deny',
+};
+
 // Real crontab management through the agent: add, edit, enable/disable and
 // delete the domain user's scheduled tasks, with human-readable presets.
 //
@@ -59,15 +72,40 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
     // bir bildirim yerine sahibin sonraki adımıyla ekranda kalır ve yalnız
     // başarılı bir okumayla temizlenir.
     const [blocked, setBlocked] = useState('');
+    // The crontab the list was read from; every change carries it back, so a
+    // change built from an older list is refused instead of written.
+    // Listenin okunduğu crontab; her değişiklik onu geri taşır.
+    const [version, setVersion] = useState('');
+    // The list could not be read. That is not "no tasks": nothing is listed,
+    // nothing can be added, and the screen says so with a way to try again.
+    // Liste okunamadı. Bu "görev yok" değildir.
+    const [unknown, setUnknown] = useState(false);
+    // What the server said when it could not read the list: the cause it
+    // verified, when it verified one, and the line crontab itself printed.
+    // Sunucunun listeyi okuyamadığında söylediği: doğruladığı neden ve
+    // crontab'ın kendi yazdığı satır.
+    const [unreadable, setUnreadable] = useState<ApiError | null>(null);
+    // The answer that listed the tasks, kept as the proof of an empty list.
+    // Görevleri listeleyen yanıt; boş listenin kanıtı olarak tutulur.
+    const [listed, setListed] = useState<Observed<CronJob[]> | null>(null);
+    // The server refused a change because the crontab changed after this list
+    // loaded. The form keeps what was typed; the notice says how to go on.
+    // Sunucu, liste yüklendikten sonra crontab değiştiği için reddetti.
+    const [stale, setStale] = useState(false);
 
-    // failureText reads the coded API error once. The cron-missing answer also
-    // becomes the on-screen explanation.
-    // failureText kodlu API hatasını bir kez okur.
-    const failureText = async (res: Response) => {
+    // refused reads the coded API error once. A stale change becomes the
+    // on-screen reload notice and the cron-missing answer the on-screen
+    // explanation; everything else is the error toast.
+    // refused kodlu API hatasını bir kez okur.
+    const refused = async (res: Response) => {
         const error = await readApiError(res);
+        if (isStaleWrite(error)) {
+            setStale(true);
+            return;
+        }
         const text = apiErrorText(error, t);
         if (error.code === 'CRON_NOT_INSTALLED') setBlocked(text);
-        return text;
+        showToast('error', text);
     };
 
     useEffect(() => {
@@ -76,22 +114,20 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
 
     const loadJobs = async () => {
         setLoading(true);
-        try {
-            const res = await fetch(`/api/v1/domains/${domainId}/cron`);
-            if (!res.ok) {
-                const text = await failureText(res);
-                setJobs([]);
-                if (res.status !== 409) showToast('error', text);
-                return;
-            }
-            const data = await res.json();
-            setJobs(data.jobs || []);
-            setBlocked('');
-        } catch {
-            showToast('error', t('common.error'));
-        } finally {
-            setLoading(false);
-        }
+        const next = await readCurrent<{ jobs?: CronJob[] | null; version?: string }>(`/api/v1/domains/${domainId}/cron`);
+        const missing = next.state === 'unknown' && next.error.code === 'CRON_NOT_INSTALLED';
+        // The list is proven empty only by an answer that carries it: `jobs` as a
+        // list, or the `null` the server writes for a list with no rows.
+        // Liste, ancak onu taşıyan yanıtla boş sayılır.
+        const list = next.state === 'known' && (next.value.jobs === null || Array.isArray(next.value.jobs)) ? next.value.jobs ?? [] : null;
+        setJobs(list ?? []);
+        setListed(list ? { value: list, observedAt: Date.now() } : null);
+        setVersion(next.state === 'known' && list ? next.value.version || '' : '');
+        setBlocked(missing ? apiErrorText(next.error, t) : '');
+        setUnknown((next.state === 'unknown' && !missing) || (next.state === 'known' && list === null));
+        setUnreadable(next.state === 'unknown' && !missing ? next.error : null);
+        setStale(false);
+        setLoading(false);
     };
 
     const resetForm = () => {
@@ -115,12 +151,12 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(
                     editingJob
-                        ? { id: editingJob.id, schedule, command, enabled: editingJob.enabled, comment }
-                        : { schedule, command, comment },
+                        ? { id: editingJob.id, schedule, command, enabled: editingJob.enabled, comment, version }
+                        : { schedule, command, comment, version },
                 ),
             });
             if (!res.ok) {
-                showToast('error', await failureText(res));
+                await refused(res);
                 return;
             }
             const data = await res.json();
@@ -141,10 +177,10 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
             const res = await fetch(`/api/v1/domains/${domainId}/cron`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...job, enabled: !job.enabled }),
+                body: JSON.stringify({ ...job, enabled: !job.enabled, version }),
             });
             if (!res.ok) {
-                showToast('error', await failureText(res));
+                await refused(res);
                 return;
             }
             const data = await res.json();
@@ -160,11 +196,12 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
         if (readOnly) return;
         if (!confirm(`${t('cron.deleteConfirm')}\n${job.command}`)) return;
         try {
-            const res = await fetch(`/api/v1/domains/${domainId}/cron?id=${encodeURIComponent(job.id)}`, {
-                method: 'DELETE',
-            });
+            const res = await fetch(
+                `/api/v1/domains/${domainId}/cron?id=${encodeURIComponent(job.id)}&version=${encodeURIComponent(version)}`,
+                { method: 'DELETE' },
+            );
             if (!res.ok) {
-                showToast('error', await failureText(res));
+                await refused(res);
                 return;
             }
             const data = await res.json();
@@ -196,8 +233,10 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
 
     return (
         <div className="space-y-5">
-            {/* Add / edit form */}
-            {!readOnly && showForm && (
+            {/* Add / edit form. Withdrawn while the list is unknown: a task
+                cannot be saved against a crontab that was not read.
+                Liste bilinmezken form geri çekilir. */}
+            {!readOnly && showForm && !unknown && (
                 <div className="rounded-xl border border-border bg-surface-2/50 p-4">
                     <div className="mb-4 flex items-center justify-between">
                         <h3 className="text-sm font-semibold text-fg">
@@ -258,7 +297,7 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
 
                         <div className="flex justify-end gap-2">
                             <Button onClick={resetForm}>{t('cron.cancel')}</Button>
-                            <Button variant="primary" icon={Save} onClick={submitForm} disabled={saving || !command.trim()}>
+                            <Button variant="primary" icon={Save} onClick={submitForm} disabled={saving || loading || stale || !command.trim()}>
                                 {saving ? t('cron.saving') : editingJob ? t('cron.update') : t('cron.save')}
                             </Button>
                         </div>
@@ -275,7 +314,7 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
                             guidance below says who installs it. Refresh re-reads.
                             Cron yokken yeni görev kaydedilemez; aşağıdaki
                             yönlendirme onu kimin kuracağını söyler. */}
-                        {!readOnly && !showForm && !blocked && (
+                        {!readOnly && !showForm && !blocked && !loading && !unknown && (
                             <Button variant="primary" icon={Plus} onClick={() => setShowForm(true)}>
                                 {t('cron.add')}
                             </Button>
@@ -305,12 +344,17 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
                     )}
                 </div>
 
+                {stale && <StaleNotice textKey="cron.stale" actionKey="cron.reload" onReload={loadJobs} busy={loading} />}
+
+                {/* Reading and "could not read" come before any list: neither
+                    is "no scheduled tasks".
+                    Okunuyor ve "okunamadı", her listeden önce gelir. */}
                 {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <Spinner />
-                    </div>
-                ) : blocked && jobs.length === 0 ? null : jobs.length === 0 ? (
-                    <EmptyState icon={Clock} title={t('cron.empty')} hint={t('cron.emptyHint')} />
+                    <CurrentGate state="loading" unknownKey="cron.unknown" onRetry={loadJobs} />
+                ) : unknown ? (
+                    <CronUnreadable error={unreadable} onRetry={loadJobs} />
+                ) : !listed ? null : blocked && jobs.length === 0 ? null : jobs.length === 0 ? (
+                    <KnownEmpty of={listed} icon={Clock} title={t('cron.empty')} hint={t('cron.emptyHint')} />
                 ) : (
                     <div className="space-y-2">
                         {jobs.map((job) => (
@@ -373,5 +417,66 @@ export function DomainCronManager({ domainId, readOnly = false }: DomainCronMana
                 {t('cron.formatNote')}
             </p>
         </div>
+    );
+}
+
+// Why the list could not be read, in the order D-024 asks for: the reason, who
+// acts, the action, how work resumes, and then the read again.
+//
+// A cause the server verified (the user is not in /etc/cron.allow, or is in
+// /etc/cron.deny) is the server owner's rule. It is said on the neutral
+// surface with the plain mark, not the attention one: nothing failed, and Retry
+// is how the list comes back once the owner has changed the rule. Every other answer is the ordinary
+// could-not-check notice, which names no cause, followed by the line the
+// server's crontab program printed when it printed one. That line is the
+// program's own, so it is in the mono face.
+//
+// Listenin neden okunamadığı, D-024 sırasıyla. Sunucunun doğruladığı neden
+// sunucu sahibinin kuralıdır: yansız yüzeyde söylenir, hiçbir şey başarısız
+// olmamıştır. Diğer her yanıt, neden adlandırmayan olağan bildirimdir; ardından
+// crontab programının yazdığı satır gelir.
+function CronUnreadable({ error, onRetry }: { error: ApiError | null; onRetry: () => void }) {
+    const { t } = useI18n();
+    const cause = error?.code === 'CURRENT_SETTINGS_UNREADABLE' ? unreadableCauses[error.detail ?? ''] : undefined;
+    if (cause) {
+        return (
+            <div
+                role="status"
+                data-cron-unreadable={error?.detail}
+                className="flex items-start gap-2 rounded-lg border border-border-strong bg-surface-2 p-3 text-sm leading-relaxed text-fg"
+            >
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" />
+                <div className="min-w-0">
+                    <p className="max-w-[75ch] break-words">{t(cause)}</p>
+                    <div className="mt-2">
+                        <Button type="button" onClick={onRetry}>
+                            {t('common.retry')}
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    const said = error?.code === 'CURRENT_SETTINGS_UNREADABLE' ? error.vars?.detail : undefined;
+    if (!said) return <CouldNotCheck text={t('cron.unknown')} onRetry={onRetry} />;
+    // The sentence around the program's line comes from the catalogue; the
+    // line itself is set apart in the mono face.
+    // Satırın çevresindeki cümle katalogdandır; satırın kendisi mono yazılır.
+    const mark = String.fromCharCode(1);
+    const [lead, tail = ''] = t('cron.unknown.said', { detail: mark }).split(mark);
+    return (
+        <CouldNotCheck
+            text={
+                <>
+                    {t('cron.unknown')}
+                    <span data-cron-said className="mt-1.5 block text-xs text-fg-muted">
+                        {lead}
+                        <span className="break-words font-mono text-fg">{said}</span>
+                        {tail}
+                    </span>
+                </>
+            }
+            onRetry={onRetry}
+        />
     );
 }

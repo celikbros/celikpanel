@@ -100,6 +100,8 @@ const (
 	errCodeDNSSECStatusUnavailable        = "DNSSEC_STATUS_UNAVAILABLE"
 	errCodeWebServerRequired              = "WEB_SERVER_REQUIRED"
 	errCodePHPRequired                    = "PHP_REQUIRED"
+	errCodePHPVersionNotInstalled         = "PHP_VERSION_NOT_INSTALLED"
+	errCodeSiteWebServerRefused           = "SITE_WEB_SERVER_REFUSED"
 	errCodeNoSubscription                 = "NO_SUBSCRIPTION"
 	errCodeQuotaDomains                   = "QUOTA_DOMAINS_EXCEEDED"
 	errCodeQuotaDisk                      = "QUOTA_DISK_EXCEEDED"
@@ -131,6 +133,47 @@ const (
 	// Yerel cron, sahibinkiler dahil sunucudaki her görevi çalıştırır; panel
 	// onu asla kaldırmaz (D-022).
 	errCodeNativeCronRemovalRefused = "NATIVE_CRON_REMOVAL_REFUSED"
+	// The owner's current settings are not overwritten from a page that did
+	// not read them: the state could not be read, the write did not say which
+	// state it was built from, or that state has changed since. See
+	// current_settings_errors.go (8 Oct 2026; D-022, D-024).
+	// Sahibin geçerli ayarları, onları okumamış bir sayfadan ezilmez.
+	errCodeCurrentSettingsUnreadable = "CURRENT_SETTINGS_UNREADABLE"
+	errCodeSettingsVersionRequired   = "SETTINGS_VERSION_REQUIRED"
+	errCodeSettingsChanged           = "SETTINGS_CHANGED"
+	// The same schedule and command already exist in the crontab.
+	// Aynı zamanlama ve komut crontab'da zaten var.
+	errCodeCronJobDuplicate = "CRON_JOB_DUPLICATE"
+	// The DNSBL change needs a rewrite of the owner's
+	// smtpd_recipient_restrictions that the Panel will not make; Reason says
+	// why. MAIL_POLICY_INVALID: a requested value is outside what the Panel
+	// writes; Reason names it.
+	// DNSBL değişikliği, sahibin smtpd_recipient_restrictions değerinin Panel'in
+	// yapmayacağı bir yeniden yazımını gerektiriyor.
+	errCodeMailPolicyRestrictionsUnmanaged = "MAIL_POLICY_RESTRICTIONS_UNMANAGED"
+	errCodeMailPolicyInvalid               = "MAIL_POLICY_INVALID"
+	// The same task stands on two lines of the crontab; a change cannot say
+	// which one it means (9 Oct 2026).
+	// Aynı görev crontab'da iki satırda duruyor.
+	errCodeCronJobAmbiguous = "CRON_JOB_AMBIGUOUS"
+	// The mail policy was written to main.cf, but Postfix could not be
+	// reloaded, so it still runs with the previous values. A verified failure
+	// after a change: `mutation_applied` is true (9 Oct 2026).
+	// Posta politikası main.cf'e yazıldı ancak Postfix yeniden yüklenemedi;
+	// önceki değerlerle çalışmayı sürdürüyor.
+	errCodeMailPolicyNotReloaded = "MAIL_POLICY_NOT_RELOADED"
+	// The mail policy was written to main.cf, but whether Postfix took it
+	// could not be established: a command that checks or reloads Postfix could
+	// not be run or did not answer. Unknown, not a verified failure and never
+	// a success; `mutation_applied` is true (10 Oct 2026).
+	// Posta politikası main.cf'e yazıldı, ancak Postfix'in onu alıp almadığı
+	// belirlenemedi. Bilinmeyen sonuç; doğrulanmış hata ya da başarı değildir.
+	errCodeMailPolicyReloadUnknown = "MAIL_POLICY_RELOAD_UNKNOWN"
+	// The mail queue could not be read, so what it holds is unknown. It is
+	// never answered as an empty queue (9 Oct 2026).
+	// Posta kuyruğu okunamadı; ne tuttuğu bilinmiyor. Asla boş kuyruk diye
+	// yanıtlanmaz.
+	errCodeMailQueueUnreadable = "MAIL_QUEUE_UNREADABLE"
 	// A directory above the hosting base that CelikPanel did not create keeps
 	// the web server or the site users from reaching site files; the site was
 	// refused before any change (native finding P3; D-022, D-024).
@@ -239,6 +282,13 @@ const (
 	// gizlemek, operatörü sessizce kaydetmeyi reddeden bir editöre bakar
 	// hâlde bırakır.
 	errCodeConfigInvalid = "CONFIG_INVALID"
+	// The new configuration file was installed, the service could not reload
+	// with it, and the previous file was put back (reason `restored`) or could
+	// not be (reason `not_restored`). A verified failure, with the first line
+	// the service's side said in `vars.detail` (9 Oct 2026).
+	// Yeni yapılandırma dosyası kuruldu, hizmet onunla yeniden yüklenemedi ve
+	// önceki dosya geri kondu (`restored`) ya da konamadı (`not_restored`).
+	errCodeConfigReloadFailed = "CONFIG_RELOAD_FAILED"
 )
 
 type agentRPCPlatformErrorClassification struct {
@@ -327,6 +377,21 @@ var hostMutationBusyMessages = map[string]string{
 }
 
 const hostMutationBusyGenericMessage = "another server change or package-manager task is still running; wait and try again"
+
+// hostMutationBusyReasonForMessage gives a stored busy refusal its typed
+// reason back. A failed operation row keeps only the code and the sentence
+// above, so the reason is read from that sentence here, next to the map that
+// wrote it; the wizard then selects its headline by reason and no longer
+// parses English text. The generic sentence and any other text have no reason.
+// Kayitli mesgul reddinin tipli nedenini, cumleyi yazan eslemeden geri okur.
+func hostMutationBusyReasonForMessage(message string) string {
+	for reason, sentence := range hostMutationBusyMessages {
+		if message == sentence {
+			return reason
+		}
+	}
+	return ""
+}
 
 func classifyHostMutationError(err error) (agentRPCPlatformErrorClassification, bool) {
 	if !isPureWrappedError(err, errHostMutationBusy) {

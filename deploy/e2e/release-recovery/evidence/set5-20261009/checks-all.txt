@@ -1,0 +1,234 @@
+## update-alpha81/upd1-debian13-good/run-a: by set3's criteria PASS; overall=complete-for-review native_evidence=False outcome=update-verified
+step | update-alpha81/upd1-debian13-good/run-a | set5-name-pinning (added by set5) | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/01-set5-name-pinning/step.json
+step | update-alpha81/upd1-debian13-good/run-a | preflight | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/02-preflight/step.json
+step | update-alpha81/upd1-debian13-good/run-a | origin | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/03-origin/step.json
+step | update-alpha81/upd1-debian13-good/run-a | baseline-install | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/04-baseline-install/step.json
+step | update-alpha81/upd1-debian13-good/run-a | owner-login | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/05-owner-login/step.json
+step | update-alpha81/upd1-debian13-good/run-a | license | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/06-license/step.json
+step | update-alpha81/upd1-debian13-good/run-a | setup | observed |  | update-alpha81/upd1-debian13-good/run-a/steps/07-setup/step.json
+step | update-alpha81/upd1-debian13-good/run-a | seed | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/08-seed/step.json
+step | update-alpha81/upd1-debian13-good/run-a | set4-php-site-before-the-update (added by set5) | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/09-set4-php-site-before-the-update/step.json
+step | update-alpha81/upd1-debian13-good/run-a | pre-state | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/10-pre-state/step.json
+step | update-alpha81/upd1-debian13-good/run-a | arm | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/11-arm/step.json
+step | update-alpha81/upd1-debian13-good/run-a | owner-start | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/12-owner-start/step.json
+step | update-alpha81/upd1-debian13-good/run-a | track | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/13-track/step.json
+step | update-alpha81/upd1-debian13-good/run-a | owner-continuation (required) | skipped |  | update-alpha81/upd1-debian13-good/run-a/steps/14-owner-continuation-required/step.json
+step | update-alpha81/upd1-debian13-good/run-a | terminal | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/15-terminal/step.json
+step | update-alpha81/upd1-debian13-good/run-a | deferred-mail-watch | observed |  | update-alpha81/upd1-debian13-good/run-a/steps/16-deferred-mail-watch/step.json
+step | update-alpha81/upd1-debian13-good/run-a | post-update-facts | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/17-post-update-facts/step.json
+step | update-alpha81/upd1-debian13-good/run-a | set4-php-site-after-the-update (added by set5) | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/18-set4-php-site-after-the-update/step.json
+step | update-alpha81/upd1-debian13-good/run-a | collect | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/19-collect/step.json
+step | update-alpha81/upd1-debian13-good/run-a | verdicts | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/20-verdicts/step.json
+step | update-alpha81/upd1-debian13-good/run-a | M10-postfix-stop (added by set5) | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/21-m10-postfix-stop/step.json
+step | update-alpha81/upd1-debian13-good/run-a | set5-name-pinning-at-the-end (added by set5) | passed |  | update-alpha81/upd1-debian13-good/run-a/steps/22-set5-name-pinning-at-the-end/step.json
+section | update-alpha81/upd1-debian13-good/run-a/steps/21-m10-postfix-stop/section.json | M10-postfix-stop | passed | error=
+check | update-alpha81/upd1-debian13-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: `postfix check` refuses main.cf (the owner's line)
+check | update-alpha81/upd1-debian13-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses): the answer (success) matches what the service shows
+check | update-alpha81/upd1-debian13-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: Stop answers 200 success and the master is gone
+check | update-alpha81/upd1-debian13-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: the unit ended `failed`, which it was not before the stop (set3's observation)
+check | update-alpha81/upd1-debian13-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`
+check | update-alpha81/upd1-debian13-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`
+check | update-alpha81/upd1-debian13-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: the note's sentence is the documented one for its reason
+check | update-alpha81/upd1-debian13-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: no `reset-failed` was issued: the unit is still `failed` after the answer and 8 seconds later, and the product's journal names no reset-failed
+check | update-alpha81/upd1-debian13-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | S8 postfix start (after the owner's correction): the answer (success) matches what the service shows
+check | update-alpha81/upd1-debian13-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: after main.cf is restored, Start answers success, the master runs and no unit is `failed`
+check | update-alpha81/upd1-debian13-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: mail is accepted on 25 and 587 answers at the end
+## update-alpha81/upd1-ubuntu-good/run-a: by set3's criteria PASS; overall=complete-for-review native_evidence=False outcome=update-verified
+step | update-alpha81/upd1-ubuntu-good/run-a | set5-name-pinning (added by set5) | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/01-set5-name-pinning/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | preflight | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/02-preflight/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | origin | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/03-origin/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | baseline-install | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/04-baseline-install/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | owner-login | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/05-owner-login/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | license | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/06-license/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | setup | observed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/07-setup/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | seed | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/08-seed/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | set4-php-site-before-the-update (added by set5) | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/09-set4-php-site-before-the-update/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | pre-state | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/10-pre-state/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | arm | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/11-arm/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | owner-start | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/12-owner-start/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | track | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/13-track/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | owner-continuation (required) | skipped |  | update-alpha81/upd1-ubuntu-good/run-a/steps/14-owner-continuation-required/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | terminal | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/15-terminal/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | deferred-mail-watch | observed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/16-deferred-mail-watch/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | post-update-facts | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/17-post-update-facts/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | set4-php-site-after-the-update (added by set5) | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/18-set4-php-site-after-the-update/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | collect | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/19-collect/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | verdicts | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/20-verdicts/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | M10-postfix-stop (added by set5) | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/21-m10-postfix-stop/step.json
+step | update-alpha81/upd1-ubuntu-good/run-a | set5-name-pinning-at-the-end (added by set5) | passed |  | update-alpha81/upd1-ubuntu-good/run-a/steps/22-set5-name-pinning-at-the-end/step.json
+section | update-alpha81/upd1-ubuntu-good/run-a/steps/21-m10-postfix-stop/section.json | M10-postfix-stop | passed | error=
+check | update-alpha81/upd1-ubuntu-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: `postfix check` refuses main.cf (the owner's line)
+check | update-alpha81/upd1-ubuntu-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | S8 postfix stop (main.cf holds a line Postfix refuses): the answer (success) matches what the service shows
+check | update-alpha81/upd1-ubuntu-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: Stop answers 200 success and the master is gone
+check | update-alpha81/upd1-ubuntu-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: the unit ended `failed`, which it was not before the stop (set3's observation)
+check | update-alpha81/upd1-ubuntu-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: the answer carries a `note` with code SERVICE_ACTION_NOTE and reason `unit_marked_failed` or `unit_marked_failed_config`
+check | update-alpha81/upd1-ubuntu-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: the note names the failed unit systemd shows as failed, its result and the command `sudo systemctl reset-failed <failed_unit>`
+check | update-alpha81/upd1-ubuntu-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: the note's sentence is the documented one for its reason
+check | update-alpha81/upd1-ubuntu-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: no `reset-failed` was issued: the unit is still `failed` after the answer and 8 seconds later, and the product's journal names no reset-failed
+check | update-alpha81/upd1-ubuntu-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | S8 postfix start (after the owner's correction): the answer (success) matches what the service shows
+check | update-alpha81/upd1-ubuntu-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: after main.cf is restored, Start answers success, the master runs and no unit is `failed`
+check | update-alpha81/upd1-ubuntu-good/run-a/steps/21-m10-postfix-stop/section.json | PASS | item 10: mail is accepted on 25 and 587 answers at the end
+## update-alpha81/upd1-arch-good/run-a: by set3's criteria PASS; overall=complete-for-review native_evidence=False outcome=update-verified
+step | update-alpha81/upd1-arch-good/run-a | set5-name-pinning (added by set5) | passed |  | update-alpha81/upd1-arch-good/run-a/steps/01-set5-name-pinning/step.json
+step | update-alpha81/upd1-arch-good/run-a | preflight | passed |  | update-alpha81/upd1-arch-good/run-a/steps/02-preflight/step.json
+step | update-alpha81/upd1-arch-good/run-a | origin | passed |  | update-alpha81/upd1-arch-good/run-a/steps/03-origin/step.json
+step | update-alpha81/upd1-arch-good/run-a | baseline-install | passed |  | update-alpha81/upd1-arch-good/run-a/steps/04-baseline-install/step.json
+step | update-alpha81/upd1-arch-good/run-a | owner-login | passed |  | update-alpha81/upd1-arch-good/run-a/steps/05-owner-login/step.json
+step | update-alpha81/upd1-arch-good/run-a | license | passed |  | update-alpha81/upd1-arch-good/run-a/steps/06-license/step.json
+step | update-alpha81/upd1-arch-good/run-a | setup | observed |  | update-alpha81/upd1-arch-good/run-a/steps/07-setup/step.json
+step | update-alpha81/upd1-arch-good/run-a | seed | passed |  | update-alpha81/upd1-arch-good/run-a/steps/08-seed/step.json
+step | update-alpha81/upd1-arch-good/run-a | pre-state | passed |  | update-alpha81/upd1-arch-good/run-a/steps/09-pre-state/step.json
+step | update-alpha81/upd1-arch-good/run-a | arm | passed |  | update-alpha81/upd1-arch-good/run-a/steps/10-arm/step.json
+step | update-alpha81/upd1-arch-good/run-a | owner-start | passed |  | update-alpha81/upd1-arch-good/run-a/steps/11-owner-start/step.json
+step | update-alpha81/upd1-arch-good/run-a | track | passed |  | update-alpha81/upd1-arch-good/run-a/steps/12-track/step.json
+step | update-alpha81/upd1-arch-good/run-a | owner-continuation (required) | skipped |  | update-alpha81/upd1-arch-good/run-a/steps/13-owner-continuation-required/step.json
+step | update-alpha81/upd1-arch-good/run-a | terminal | passed |  | update-alpha81/upd1-arch-good/run-a/steps/14-terminal/step.json
+step | update-alpha81/upd1-arch-good/run-a | post-update-facts | passed |  | update-alpha81/upd1-arch-good/run-a/steps/15-post-update-facts/step.json
+step | update-alpha81/upd1-arch-good/run-a | collect | passed |  | update-alpha81/upd1-arch-good/run-a/steps/16-collect/step.json
+step | update-alpha81/upd1-arch-good/run-a | verdicts | passed |  | update-alpha81/upd1-arch-good/run-a/steps/17-verdicts/step.json
+step | update-alpha81/upd1-arch-good/run-a | set5-name-pinning-at-the-end (added by set5) | passed |  | update-alpha81/upd1-arch-good/run-a/steps/18-set5-name-pinning-at-the-end/step.json
+## update-alpha81/upd1-debian13-defective/run-a: by set3's criteria PASS; overall=complete-for-review native_evidence=False outcome=recovered-automatically
+step | update-alpha81/upd1-debian13-defective/run-a | set5-name-pinning (added by set5) | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/01-set5-name-pinning/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | preflight | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/02-preflight/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | origin | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/03-origin/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | baseline-install | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/04-baseline-install/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | owner-login | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/05-owner-login/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | license | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/06-license/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | setup | observed |  | update-alpha81/upd1-debian13-defective/run-a/steps/07-setup/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | seed | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/08-seed/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | pre-state | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/09-pre-state/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | arm | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/10-arm/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | owner-start | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/11-owner-start/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | track | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/12-track/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | owner-continuation (required) | skipped |  | update-alpha81/upd1-debian13-defective/run-a/steps/13-owner-continuation-required/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | terminal | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/14-terminal/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | deferred-mail-watch | observed |  | update-alpha81/upd1-debian13-defective/run-a/steps/15-deferred-mail-watch/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | post-return-facts | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/16-post-return-facts/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | collect | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/17-collect/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | verdicts | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/18-verdicts/step.json
+step | update-alpha81/upd1-debian13-defective/run-a | set5-name-pinning-at-the-end (added by set5) | passed |  | update-alpha81/upd1-debian13-defective/run-a/steps/19-set5-name-pinning-at-the-end/step.json
+## update-alpha81/upd1-ubuntu-defective/run-a: by set3's criteria PASS; overall=complete-for-review native_evidence=False outcome=recovered-automatically
+step | update-alpha81/upd1-ubuntu-defective/run-a | set5-name-pinning (added by set5) | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/01-set5-name-pinning/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | preflight | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/02-preflight/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | origin | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/03-origin/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | baseline-install | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/04-baseline-install/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | owner-login | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/05-owner-login/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | license | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/06-license/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | setup | observed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/07-setup/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | seed | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/08-seed/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | pre-state | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/09-pre-state/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | arm | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/10-arm/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | owner-start | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/11-owner-start/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | track | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/12-track/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | owner-continuation (required) | skipped |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/13-owner-continuation-required/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | terminal | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/14-terminal/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | deferred-mail-watch | observed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/15-deferred-mail-watch/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | post-return-facts | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/16-post-return-facts/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | collect | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/17-collect/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | verdicts | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/18-verdicts/step.json
+step | update-alpha81/upd1-ubuntu-defective/run-a | set5-name-pinning-at-the-end (added by set5) | passed |  | update-alpha81/upd1-ubuntu-defective/run-a/steps/19-set5-name-pinning-at-the-end/step.json
+## update-alpha81/upd1-arch-defective/run-a: by set3's criteria PASS; overall=complete-for-review native_evidence=False outcome=recovered-automatically
+step | update-alpha81/upd1-arch-defective/run-a | set5-name-pinning (added by set5) | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/01-set5-name-pinning/step.json
+step | update-alpha81/upd1-arch-defective/run-a | preflight | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/02-preflight/step.json
+step | update-alpha81/upd1-arch-defective/run-a | origin | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/03-origin/step.json
+step | update-alpha81/upd1-arch-defective/run-a | baseline-install | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/04-baseline-install/step.json
+step | update-alpha81/upd1-arch-defective/run-a | owner-login | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/05-owner-login/step.json
+step | update-alpha81/upd1-arch-defective/run-a | license | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/06-license/step.json
+step | update-alpha81/upd1-arch-defective/run-a | setup | observed |  | update-alpha81/upd1-arch-defective/run-a/steps/07-setup/step.json
+step | update-alpha81/upd1-arch-defective/run-a | seed | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/08-seed/step.json
+step | update-alpha81/upd1-arch-defective/run-a | pre-state | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/09-pre-state/step.json
+step | update-alpha81/upd1-arch-defective/run-a | arm | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/10-arm/step.json
+step | update-alpha81/upd1-arch-defective/run-a | owner-start | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/11-owner-start/step.json
+step | update-alpha81/upd1-arch-defective/run-a | track | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/12-track/step.json
+step | update-alpha81/upd1-arch-defective/run-a | owner-continuation (required) | skipped |  | update-alpha81/upd1-arch-defective/run-a/steps/13-owner-continuation-required/step.json
+step | update-alpha81/upd1-arch-defective/run-a | terminal | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/14-terminal/step.json
+step | update-alpha81/upd1-arch-defective/run-a | post-return-facts | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/15-post-return-facts/step.json
+step | update-alpha81/upd1-arch-defective/run-a | collect | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/16-collect/step.json
+step | update-alpha81/upd1-arch-defective/run-a | verdicts | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/17-verdicts/step.json
+step | update-alpha81/upd1-arch-defective/run-a | set5-name-pinning-at-the-end (added by set5) | passed |  | update-alpha81/upd1-arch-defective/run-a/steps/18-set5-name-pinning-at-the-end/step.json
+## update-alpha81/upd1-debian13-startcheck/run-a: by set3's criteria PASS; overall=complete-for-review native_evidence=False outcome=recovered-automatically
+step | update-alpha81/upd1-debian13-startcheck/run-a | set5-name-pinning (added by set5) | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/01-set5-name-pinning/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | preflight | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/02-preflight/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | origin | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/03-origin/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | baseline-install | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/04-baseline-install/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | owner-login | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/05-owner-login/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | license | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/06-license/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | setup | observed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/07-setup/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | seed | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/08-seed/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | pre-state | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/09-pre-state/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | arm | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/10-arm/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | owner-start | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/11-owner-start/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | track | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/12-track/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | owner-continuation (required) | skipped |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/13-owner-continuation-required/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | terminal | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/14-terminal/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | deferred-mail-watch | observed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/15-deferred-mail-watch/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | post-return-facts | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/16-post-return-facts/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | collect | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/17-collect/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | verdicts | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/18-verdicts/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | set5-name-pinning-at-the-end (added by set5) | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/19-set5-name-pinning-at-the-end/step.json
+step | update-alpha81/upd1-debian13-startcheck/run-a | kind-expectation | passed |  | update-alpha81/upd1-debian13-startcheck/run-a/steps/20-kind-expectation/step.json
+## update-alpha81/upd1-debian13-owner-continuation/run-a: by set3's criteria PASS; overall=complete-for-review native_evidence=False outcome=recovered-after-owner-continuation
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | set5-name-pinning (added by set5) | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/01-set5-name-pinning/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | preflight | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/02-preflight/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | origin | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/03-origin/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | baseline-install | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/04-baseline-install/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | owner-login | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/05-owner-login/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | license | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/06-license/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | setup | observed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/07-setup/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | seed | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/08-seed/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | pre-state | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/09-pre-state/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | arm | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/10-arm/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | owner-start | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/11-owner-start/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | track | observed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/12-track/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | owner-continuation (required) | observed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/13-owner-continuation-required/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | track-after-owner-continuation | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/14-track-after-owner-continuation/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | terminal | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/15-terminal/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | deferred-mail-watch | observed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/16-deferred-mail-watch/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | collect | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/17-collect/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | verdicts | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/18-verdicts/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | set5-name-pinning-at-the-end (added by set5) | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/19-set5-name-pinning-at-the-end/step.json
+step | update-alpha81/upd1-debian13-owner-continuation/run-a | kind-expectation | passed |  | update-alpha81/upd1-debian13-owner-continuation/run-a/steps/20-kind-expectation/step.json
+## update-alpha81/upd1-ubuntu-owner-continuation/run-a: by set3's criteria PASS; overall=complete-for-review native_evidence=False outcome=recovered-after-owner-continuation
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | set5-name-pinning (added by set5) | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/01-set5-name-pinning/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | preflight | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/02-preflight/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | origin | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/03-origin/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | baseline-install | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/04-baseline-install/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | owner-login | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/05-owner-login/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | license | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/06-license/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | setup | observed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/07-setup/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | seed | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/08-seed/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | pre-state | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/09-pre-state/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | arm | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/10-arm/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | owner-start | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/11-owner-start/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | track | observed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/12-track/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | owner-continuation (required) | observed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/13-owner-continuation-required/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | track-after-owner-continuation | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/14-track-after-owner-continuation/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | terminal | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/15-terminal/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | deferred-mail-watch | observed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/16-deferred-mail-watch/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | collect | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/17-collect/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | verdicts | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/18-verdicts/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | set5-name-pinning-at-the-end (added by set5) | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/19-set5-name-pinning-at-the-end/step.json
+step | update-alpha81/upd1-ubuntu-owner-continuation/run-a | kind-expectation | passed |  | update-alpha81/upd1-ubuntu-owner-continuation/run-a/steps/20-kind-expectation/step.json
+## update-alpha81/upd1-debian13-mgmt-off-reboot/run-a: by set3's criteria PASS; overall=complete-for-review native_evidence=False outcome=update-verified
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | set5-name-pinning (added by set5) | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/01-set5-name-pinning/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | preflight | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/02-preflight/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | origin | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/03-origin/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | baseline-install | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/04-baseline-install/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | owner-login | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/05-owner-login/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | license | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/06-license/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | setup | observed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/07-setup/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | seed | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/08-seed/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | pre-state | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/09-pre-state/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | arm | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/10-arm/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | owner-start | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/11-owner-start/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | track | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/12-track/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | owner-continuation (required) | skipped |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/13-owner-continuation-required/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | terminal | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/14-terminal/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | management-off | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/15-management-off/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | owner-reboot | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/16-owner-reboot/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | management-off-measure | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/17-management-off-measure/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | management-return | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/18-management-return/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | collect | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/19-collect/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | verdicts | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/20-verdicts/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | set5-name-pinning-at-the-end (added by set5) | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/21-set5-name-pinning-at-the-end/step.json
+step | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | kind-expectation | passed |  | update-alpha81/upd1-debian13-mgmt-off-reboot/run-a/steps/22-kind-expectation/step.json

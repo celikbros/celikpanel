@@ -1,0 +1,36 @@
+{
+  "action": "owner-systemctl",
+  "at": "2026-10-08T21:48:29Z",
+  "mode": "owner-systemctl",
+  "owner_action": true,
+  "result": {
+    "argv": [
+      "systemctl",
+      "start",
+      "postfix.service"
+    ],
+    "at": "2026-10-08T21:48:29Z",
+    "returncode": 0,
+    "seconds": 0.583,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "unit": "postfix.service",
+  "units": {
+    "postfix.service": {
+      "ActiveEnterTimestamp": "Thu 2026-10-08 21:48:29 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "Thu 2026-10-08 21:48:29 UTC",
+      "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+      "LoadState": "loaded",
+      "MainPID": "0",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "exited"
+    }
+  },
+  "verb": "start"
+}

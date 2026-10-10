@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 5,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T14:17:04Z",
+    "notes": [],
+    "started_at": "2026-10-09T14:17:02Z",
+    "substeps": {
+      "item 7": "passed",
+      "lab isolation": "passed",
+      "section": "passed"
+    },
+    "title": "the platform and the lab's isolation",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T14:17:04Z",
+  "name": "M0-prepare",
+  "started_at": "2026-10-09T14:17:02Z",
+  "verdict": "passed"
+}

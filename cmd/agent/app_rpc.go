@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -64,6 +65,36 @@ func unitDir() (string, error) {
 	return "/etc/systemd/system", nil
 }
 
+// appUnitAccountExists reports whether a system account exists. Swapped by
+// tests.
+var appUnitAccountExists = func(name string) bool {
+	_, err := user.Lookup(name)
+	return err == nil
+}
+
+// appUnitAccount is the account an application unit runs as on this host
+// (12 Oct 2026). The Panel asks for `www-data`, which is the web server's
+// account on Debian and Ubuntu only: on Arch it is `http`, on the RHEL family
+// `nginx`, and a unit with `User=www-data` cannot start there. When the
+// account that was asked for is that one and does not exist, the web server's
+// account that does exist is used, in the order the rest of the product reads
+// it (hosting_layout.go). Anything else is written as asked.
+//
+// appUnitAccount, bir uygulama unit'inin bu sunucuda çalıştığı hesaptır. Panel
+// `www-data` ister; bu yalnız Debian ve Ubuntu'da web sunucusunun hesabıdır.
+// İstenen hesap o ise ve yoksa, var olan web sunucusu hesabı kullanılır.
+func appUnitAccount(requested string) string {
+	if requested != "www-data" || appUnitAccountExists(requested) {
+		return requested
+	}
+	for _, name := range []string{"nginx", "http"} {
+		if appUnitAccountExists(name) {
+			return name
+		}
+	}
+	return requested
+}
+
 var appUnitNameRe = regexp.MustCompile(`^celikapp-[0-9]+$`)
 
 // appUnitName builds and validates the unit name for a site.
@@ -118,7 +149,7 @@ func (a *Agent) ApplyAppUnit(req *AppApplyRequest, resp *AppApplyResponse) error
 	fmt.Fprintf(&b, "[Unit]\nDescription=CelikPanel app: %s\nAfter=network.target\n\n", sanitizeUnitValue(req.Description))
 	fmt.Fprintf(&b, "[Service]\n")
 	if !systemdUserMode && req.RunAsUser != "" {
-		fmt.Fprintf(&b, "User=%s\n", sanitizeUnitValue(req.RunAsUser))
+		fmt.Fprintf(&b, "User=%s\n", sanitizeUnitValue(appUnitAccount(req.RunAsUser)))
 	}
 	fmt.Fprintf(&b, "WorkingDirectory=%s\n", req.WorkDir)
 	fmt.Fprintf(&b, "Environment=PORT=%d\n", req.Port)

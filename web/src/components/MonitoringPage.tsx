@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Activity } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { PageHeader } from './PageHeader';
-import { Spinner } from './ui';
+import { RemoteGate } from './ui';
+import { decodeListIn, useRemote } from '../lib/remote';
 
 // Server monitoring (operator request, 23 Jul: "we should have a monitoring
 // page"). The dashboard strip answers "how is it NOW"; this page answers
@@ -28,40 +29,30 @@ interface Sample {
 }
 
 const RANGES = [1, 6, 24, 48] as const;
+const REFRESH_MS = 60_000;
+
+// An answer without the samples is not "no samples yet".
+// Örnekleri taşımayan yanıt "henüz örnek yok" değildir.
+const decodeSamples = (raw: unknown) => decodeListIn<Sample>(raw, 'samples');
 
 export function MonitoringPage() {
     const { t } = useI18n();
     const [hours, setHours] = useState<number>(24);
-    const [samples, setSamples] = useState<Sample[]>([]);
-    const [loading, setLoading] = useState(true);
+    // One address per range. The page reads again every minute; a read that
+    // fails keeps the charts it had, under a notice that says when they were
+    // read, instead of wiping them into "no samples yet".
+    // Aralık başına bir adres. Sayfa her dakika yeniden okur; başarısız okuma,
+    // grafikleri "henüz örnek yok"a çevirmek yerine ne zaman okunduklarını
+    // söyleyen bir bildirimin altında tutar.
+    const history = useRemote(`/api/v1/metrics/history?hours=${hours}`, decodeSamples);
+    const refresh = history.retry;
 
     useEffect(() => {
-        let alive = true;
-        const load = () => {
-            fetch(`/api/v1/metrics/history?hours=${hours}`)
-                .then((r) => (r.ok ? r.json() : null))
-                .then((d) => {
-                    if (alive) setSamples(d?.samples ?? []);
-                })
-                .catch(() => {})
-                .finally(() => alive && setLoading(false));
-        };
-        setLoading(true);
-        load();
-        const timer = setInterval(load, 60_000);
-        return () => {
-            alive = false;
-            clearInterval(timer);
-        };
-    }, [hours]);
+        const timer = setInterval(() => void refresh(), REFRESH_MS);
+        return () => clearInterval(timer);
+    }, [refresh]);
 
     const pct = (used: number, total: number) => (total > 0 ? (used / total) * 100 : 0);
-    const cpuSeries = samples.map((s) => s.cpu);
-    const memSeries = samples.map((s) => pct(s.mem_used, s.mem_total));
-    const diskSeries = samples.map((s) => pct(s.disk_used, s.disk_total));
-    const loadSeries = samples.map((s) => s.load1);
-
-    const last = samples[samples.length - 1];
     const fmtGB = (n: number) => `${(n / 1024 ** 3).toFixed(1)} GB`;
 
     return (
@@ -76,6 +67,8 @@ export function MonitoringPage() {
                 {RANGES.map((h) => (
                     <button
                         key={h}
+                        type="button"
+                        aria-pressed={hours === h}
                         onClick={() => setHours(h)}
                         className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                             hours === h ? 'bg-primary text-primary-fg' : 'text-fg-muted hover:bg-surface-2'
@@ -86,47 +79,63 @@ export function MonitoringPage() {
                 ))}
             </div>
 
-            {loading ? (
-                <div className="flex items-center justify-center py-16">
-                    <Spinner />
-                </div>
-            ) : samples.length < 2 ? (
-                <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface p-10 text-center">
-                    <Activity className="h-8 w-8 text-fg-subtle" />
-                    <p className="text-sm text-fg-muted">{t('monitoring.empty')}</p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                    <MetricChart
-                        title={t('monitoring.cpu')}
-                        series={cpuSeries}
-                        max={100}
-                        current={last ? `${last.cpu.toFixed(0)}%` : ''}
-                        stroke="var(--color-primary, #3b82f6)"
-                    />
-                    <MetricChart
-                        title={t('monitoring.memory')}
-                        series={memSeries}
-                        max={100}
-                        current={last ? `${pct(last.mem_used, last.mem_total).toFixed(0)}% · ${fmtGB(last.mem_used)} / ${fmtGB(last.mem_total)}` : ''}
-                        stroke="#8b5cf6"
-                    />
-                    <MetricChart
-                        title={t('monitoring.disk')}
-                        series={diskSeries}
-                        max={100}
-                        current={last ? `${pct(last.disk_used, last.disk_total).toFixed(0)}% · ${fmtGB(last.disk_used)} / ${fmtGB(last.disk_total)}` : ''}
-                        stroke="#f59e0b"
-                    />
-                    <MetricChart
-                        title={t('monitoring.load')}
-                        series={loadSeries}
-                        max={Math.max(1, ...loadSeries) * 1.15}
-                        current={last ? last.load1.toFixed(2) : ''}
-                        stroke="#10b981"
-                    />
-                </div>
-            )}
+            <RemoteGate
+                remote={history.remote}
+                checking={t('monitoring.checking')}
+                failed={t('monitoring.unknown')}
+                onRetry={() => void history.retry()}
+                busy={history.reading}
+                className="py-3"
+            >
+                {({ value: samples }) => {
+                    // "Not enough samples yet" is the server's answer: it sent
+                    // fewer than two.
+                    // "Henüz yeterli örnek yok" sunucunun yanıtıdır: ikiden az
+                    // örnek gönderdi.
+                    if (samples.length < 2) {
+                        return (
+                            <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface p-10 text-center">
+                                <Activity className="h-8 w-8 text-fg-subtle" />
+                                <p className="text-sm text-fg-muted">{t('monitoring.empty')}</p>
+                            </div>
+                        );
+                    }
+                    const last = samples[samples.length - 1];
+                    const loadSeries = samples.map((s) => s.load1);
+                    return (
+                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                            <MetricChart
+                                title={t('monitoring.cpu')}
+                                series={samples.map((s) => s.cpu)}
+                                max={100}
+                                current={`${last.cpu.toFixed(0)}%`}
+                                stroke="var(--color-primary, #3b82f6)"
+                            />
+                            <MetricChart
+                                title={t('monitoring.memory')}
+                                series={samples.map((s) => pct(s.mem_used, s.mem_total))}
+                                max={100}
+                                current={`${pct(last.mem_used, last.mem_total).toFixed(0)}% · ${fmtGB(last.mem_used)} / ${fmtGB(last.mem_total)}`}
+                                stroke="#8b5cf6"
+                            />
+                            <MetricChart
+                                title={t('monitoring.disk')}
+                                series={samples.map((s) => pct(s.disk_used, s.disk_total))}
+                                max={100}
+                                current={`${pct(last.disk_used, last.disk_total).toFixed(0)}% · ${fmtGB(last.disk_used)} / ${fmtGB(last.disk_total)}`}
+                                stroke="#f59e0b"
+                            />
+                            <MetricChart
+                                title={t('monitoring.load')}
+                                series={loadSeries}
+                                max={Math.max(1, ...loadSeries) * 1.15}
+                                current={last.load1.toFixed(2)}
+                                stroke="#10b981"
+                            />
+                        </div>
+                    );
+                }}
+            </RemoteGate>
         </div>
     );
 }

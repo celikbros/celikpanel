@@ -1,0 +1,14 @@
+2026-10-09T07:13:34Z W2 waiting for cell-set3-ub
+2026-10-09T07:22:04Z W2 start cell-rid3-arch (C: 93.7 GiB)
+2026-10-09T07:33:19Z W2 end cell-rid3-arch rc=1
+2026-10-09T07:33:24Z W2 staged cell-rid3-arch rc=0 overall: failed | native_evidence: False | outcome: request-identity-measured
+2026-10-09T07:33:24Z W2 start c2-arch-good (C: 90.5 GiB)
+2026-10-09T07:42:25Z W2 end c2-arch-good rc=0
+2026-10-09T07:42:27Z W2 staged c2-arch-good rc=0 overall: complete-for-review | native_evidence: False | outcome: update-verified
+2026-10-09T07:42:27Z W2 start c2-arch-def (C: 90.5 GiB)
+2026-10-09T07:53:04Z W2 end c2-arch-def rc=0
+2026-10-09T07:53:07Z W2 staged c2-arch-def rc=0 overall: complete-for-review | native_evidence: False | outcome: recovered-automatically
+2026-10-09T07:53:07Z W2 start c2-d13-mr (C: 89.5 GiB)
+2026-10-09T08:08:20Z W2 end c2-d13-mr rc=0
+2026-10-09T08:08:24Z W2 staged c2-d13-mr rc=0 overall: complete-for-review | native_evidence: False | outcome: update-verified
+2026-10-09T08:08:24Z W2 worker done

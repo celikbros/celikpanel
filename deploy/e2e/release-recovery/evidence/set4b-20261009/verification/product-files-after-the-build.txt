@@ -1,0 +1,33 @@
+# 2026-10-09T15:58:01Z working tree (HEAD 2e796418de87e15b53baeb0b875ce66bca5c5f01) against the candidate de34e44859d49039972ae2e1f9f42ba12d9e1595
+same      cmd/agent/mail_service_verify.go
+same      cmd/agent/mail_service_verify_test.go
+same      cmd/agent/service_action_verify.go
+same      cmd/agent/set4_corrections_test.go
+same      cmd/panel/import_handlers.go
+same      cmd/panel/service_action_outcome.go
+same      cmd/panel/set2_corrections_test.go
+same      cmd/panel/set3_corrections_test.go
+same      cmd/panel/set4_corrections_test.go
+not in the candidate (as at HEAD there, or new since) deploy/e2e/release-recovery/guest_set4b_native.py
+not in the candidate (as at HEAD there, or new since) deploy/e2e/release-recovery/run-set4b.sh
+not in the candidate (as at HEAD there, or new since) deploy/e2e/release-recovery/set4b_trial.py
+not in the candidate (as at HEAD there, or new since) deploy/e2e/release-recovery/test_set4b_trial.py
+DIFFERENT docs/OPERATION-GUIDANCE.md
+DIFFERENT docs/OPERATION-GUIDANCE.tr.md
+DIFFERENT docs/RESILIENCE-CONTRACT.md
+DIFFERENT docs/RESILIENCE-CONTRACT.tr.md
+same      internal/transport/rpc.go
+same      web/src/components/ImportPage.tsx
+same      web/src/components/ServiceActionNotice.tsx
+same      web/src/i18n/screens/en.ts
+same      web/src/i18n/screens/server/en.ts
+same      web/src/i18n/screens/server/tr.ts
+same      web/src/i18n/screens/tr.ts
+same      web/tests/set3-corrections.test.mjs
+DIFFERENT web/tests/set4-corrections.test.mjs
+DIFFERENT web/tools/browser-inspect/README.md
+same      web/tools/browser-inspect/run.mjs
+DIFFERENT web/tools/browser-inspect/scenarios-batch7.mjs
+# same=18 different=7 not-in-candidate=4
+# product files (cmd/, internal/, web/src) that differ from the candidate:
+none

@@ -1,0 +1,68 @@
+{
+  "baseline": {
+    "archive": "/var/tmp/cp-pair-accept/dist/2159bb202d7bf69fe650c95910c6506a47f730c9-acceptance-license/celikpanel-v0.1.0-alpha.81-acceptance-license.tar.gz",
+    "commit": "2159bb202d7bf69fe650c95910c6506a47f730c9",
+    "dist_json": "/var/tmp/cp-pair-accept/dist/2159bb202d7bf69fe650c95910c6506a47f730c9-acceptance-license/dist.json",
+    "license_mode": "acceptance-fixture",
+    "product_web_src": "/var/tmp/cp-pair-accept/dist/2159bb202d7bf69fe650c95910c6506a47f730c9-acceptance-license/product-web-src",
+    "sequence": 81,
+    "sha256": "c81bf6b337c0460054e0ab96aa21d853dc2c8ff8945563207b3c2a8865768b0b",
+    "tree": "a7563a6c342f8e0ad4fd714a3e40a770614b9647",
+    "version": "v0.1.0-alpha.81"
+  },
+  "clone": "/var/tmp/cp-upd1-build/20261009t213352z/repo",
+  "defective": {
+    "archive": "/var/tmp/cp-pair-accept/dist/47f8edc4ed3fa0bbb018962548fe0166f62d7454-acceptance-license/celikpanel-v0.1.0-alpha.82-acceptance-license.tar.gz",
+    "commit": "47f8edc4ed3fa0bbb018962548fe0166f62d7454",
+    "defect": "cmd/panel --migrate-only exits 1 after migrating the isolated copy",
+    "dist_json": "/var/tmp/cp-pair-accept/dist/47f8edc4ed3fa0bbb018962548fe0166f62d7454-acceptance-license/dist.json",
+    "license_mode": "acceptance-fixture",
+    "parent": "ecfe39e5b6ab707ba5b7d1c025f225f3147f67a3",
+    "product_web_src": "/var/tmp/cp-pair-accept/dist/47f8edc4ed3fa0bbb018962548fe0166f62d7454-acceptance-license/product-web-src",
+    "sequence": 82,
+    "sha256": "96149792adee5227b34b4058bb65f034a4e3941fd65f107584a33adbce0600d5",
+    "tree": "a56bb27ddc410f76e7facccf3f18772d755341e2",
+    "version": "v0.1.0-alpha.82"
+  },
+  "good": {
+    "archive": "/var/tmp/cp-pair-accept/dist/ecfe39e5b6ab707ba5b7d1c025f225f3147f67a3-acceptance-license/celikpanel-v0.1.0-alpha.82-acceptance-license.tar.gz",
+    "commit": "ecfe39e5b6ab707ba5b7d1c025f225f3147f67a3",
+    "dist_json": "/var/tmp/cp-pair-accept/dist/ecfe39e5b6ab707ba5b7d1c025f225f3147f67a3-acceptance-license/dist.json",
+    "license_mode": "acceptance-fixture",
+    "parent": "2159bb202d7bf69fe650c95910c6506a47f730c9",
+    "product_web_src": "/var/tmp/cp-pair-accept/dist/ecfe39e5b6ab707ba5b7d1c025f225f3147f67a3-acceptance-license/product-web-src",
+    "sequence": 82,
+    "sha256": "ad92e753d73a0ce6e57d7b340f25f757d49f22d426137030d8b1b7b25590f6ae",
+    "tree": "cb300df44c808aced7d614bb64e8235bb02bec50",
+    "version": "v0.1.0-alpha.82"
+  },
+  "provenance": "unpublished disposable fixture commits over the source HEAD; acceptance-license panel (D-027 fixture); signed only by the per-lab fixture key at run time; not a release",
+  "realstart": {
+    "archive": "/var/tmp/cp-pair-accept/dist/28a3f803fad474795b91de8bbaf32853be5f84df-acceptance-license/celikpanel-v0.1.0-alpha.82-acceptance-license.tar.gz",
+    "commit": "28a3f803fad474795b91de8bbaf32853be5f84df",
+    "defect": "cmd/panel main() exits before its listener; the start check never reaches it",
+    "dist_json": "/var/tmp/cp-pair-accept/dist/28a3f803fad474795b91de8bbaf32853be5f84df-acceptance-license/dist.json",
+    "license_mode": "acceptance-fixture",
+    "parent": "ecfe39e5b6ab707ba5b7d1c025f225f3147f67a3",
+    "product_web_src": "/var/tmp/cp-pair-accept/dist/28a3f803fad474795b91de8bbaf32853be5f84df-acceptance-license/product-web-src",
+    "sequence": 82,
+    "sha256": "5dffe8736579df6163822a9f30dbd8a82e9c2e4cdec3520c6ea7e5da6a6d455d",
+    "tree": "d0efa75552e846f13cd02f70a1c238fd99705bbc",
+    "version": "v0.1.0-alpha.82"
+  },
+  "schema": "celikpanel/upd1-artifacts/v1",
+  "source_head": "72b879eeaf88477133cc01bae6a615e292c00181",
+  "startcheck": {
+    "archive": "/var/tmp/cp-pair-accept/dist/11093fa2ae0cc5f947ff6ab0c217b63d3f7e1335-acceptance-license/celikpanel-v0.1.0-alpha.82-acceptance-license.tar.gz",
+    "commit": "11093fa2ae0cc5f947ff6ab0c217b63d3f7e1335",
+    "defect": "cmd/panel configurePanelHTTPTLS (shared by --check-startup-readiness and the real start) always fails",
+    "dist_json": "/var/tmp/cp-pair-accept/dist/11093fa2ae0cc5f947ff6ab0c217b63d3f7e1335-acceptance-license/dist.json",
+    "license_mode": "acceptance-fixture",
+    "parent": "ecfe39e5b6ab707ba5b7d1c025f225f3147f67a3",
+    "product_web_src": "/var/tmp/cp-pair-accept/dist/11093fa2ae0cc5f947ff6ab0c217b63d3f7e1335-acceptance-license/product-web-src",
+    "sequence": 82,
+    "sha256": "1a837c0018bead5a2504fa300d52008663200eb9b6d113617c492fcf8151e2b4",
+    "tree": "d0973c8c7d045647e7cd615f6ceedefcd6c18ba7",
+    "version": "v0.1.0-alpha.82"
+  }
+}

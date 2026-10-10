@@ -1,0 +1,3 @@
+2026-10-09T10:36:50.751989+00:00 dns-arch systemd[1]: Starting nginx web server...
+2026-10-09T10:36:50.778071+00:00 dns-arch nginx[4426]: 2026/10/09 10:36:50 [warn] 4426#4426: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026-10-09T10:36:50.784589+00:00 dns-arch systemd[1]: Started nginx web server.

@@ -1,0 +1,2 @@
+2026-10-09T18:02:29Z before upd1-arch-good run-a (lab prepare) free_GiB=41.9 free_bytes=44987621376 (Get-PSDrive C reading of 2026-10-09T18:01:59Z, 30s old) allowed=yes
+2026-10-09T18:02:32Z before upd1-arch-good run-a (guest start) free_GiB=41.9 free_bytes=44994711552 (Get-PSDrive C reading of 2026-10-09T18:02:29Z, 3s old) allowed=yes

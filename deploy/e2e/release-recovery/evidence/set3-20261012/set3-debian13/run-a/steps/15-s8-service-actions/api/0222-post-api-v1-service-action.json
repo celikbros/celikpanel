@@ -1,0 +1,84 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S8 postgresql start (after the owner's correction)",
+  "request": {
+    "body": {
+      "action": "start",
+      "name": "postgresql"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18461"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18461"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "de8bf9ae16a91efb089f8c4fd501a421"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/service/action"
+  },
+  "response": {
+    "elapsed_seconds": 3.64,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 07:27:28 GMT"
+      ],
+      [
+        "Content-Length",
+        "94"
+      ]
+    ],
+    "json": {
+      "applied": "started",
+      "outcome": "verified",
+      "success": true,
+      "unit": "postgresql@17-main.service"
+    },
+    "status": 200,
+    "text": null
+  }
+}

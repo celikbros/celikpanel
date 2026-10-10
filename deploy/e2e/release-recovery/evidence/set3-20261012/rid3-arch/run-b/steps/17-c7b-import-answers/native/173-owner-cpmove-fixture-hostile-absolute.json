@@ -1,0 +1,71 @@
+{
+  "action": "owner-cpmove-fixture",
+  "at": "2026-10-09T08:17:30Z",
+  "bytes": 2594,
+  "database": "s3hab_app",
+  "directory": {
+    "mode": "0700",
+    "uid": 0
+  },
+  "docroot_expected": {
+    "assets/site.css": [
+      34,
+      "0bf4d668930b5ab1d543ab1d43785e7cbe4b5f29d95ed3593ea5e9953f7cca59"
+    ],
+    "index.html": [
+      72,
+      "594dc61c5a2907256ae76e89192ab7cc44b851921bde68b0946330a49fa3ef99"
+    ]
+  },
+  "domain": "set3-hostile-absolute.test",
+  "hostile": "absolute",
+  "hostile_members": [
+    {
+      "name": "/etc/set3-escape-absolute.txt",
+      "type": "file"
+    }
+  ],
+  "lab_action": false,
+  "mailbox_shadow": "the sha512-crypt hash (openssl passwd -6) of a password the lab chose; neither is recorded",
+  "members": [
+    {
+      "bytes": 60,
+      "name": "cpmove-s3hab/cp/s3hab"
+    },
+    {
+      "bytes": 72,
+      "name": "cpmove-s3hab/homedir/public_html/index.html"
+    },
+    {
+      "bytes": 34,
+      "name": "cpmove-s3hab/homedir/public_html/assets/site.css"
+    },
+    {
+      "bytes": 124,
+      "name": "cpmove-s3hab/homedir/etc/set3-hostile-absolute.test/shadow"
+    },
+    {
+      "bytes": 15,
+      "name": "cpmove-s3hab/homedir/etc/set3-hostile-absolute.test/quota"
+    },
+    {
+      "bytes": 66,
+      "name": "cpmove-s3hab/va/set3-hostile-absolute.test"
+    },
+    {
+      "bytes": 29,
+      "name": "cpmove-s3hab/mysql/s3hab_app.create"
+    },
+    {
+      "bytes": 7388,
+      "name": "cpmove-s3hab/mysql/s3hab_app.sql"
+    }
+  ],
+  "mode": "owner-cpmove-fixture",
+  "owner_action": true,
+  "path": "/var/lib/celikpanel-imports/cpmove-s3hab.tar.gz",
+  "public_html_directory_member": true,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "sha256": "091dbe8c8e252fe548cd92380364572740cf536af9210c45886b7da84e763c84",
+  "user": "s3hab"
+}

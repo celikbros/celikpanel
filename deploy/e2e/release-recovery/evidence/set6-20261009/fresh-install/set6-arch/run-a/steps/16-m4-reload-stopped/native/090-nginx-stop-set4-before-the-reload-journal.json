@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T21:55:54Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791582952",
+      "-n",
+      "400",
+      "-u",
+      "nginx.service"
+    ],
+    "at": "2026-10-09T21:55:54Z",
+    "returncode": 0,
+    "seconds": 0.004,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T21:55:52.513085+00:00 dns-arch systemd[1]: Stopping nginx web server...\n2026-10-09T21:55:52.529328+00:00 dns-arch systemd[1]: nginx.service: Deactivated successfully.\n2026-10-09T21:55:52.530113+00:00 dns-arch systemd[1]: Stopped nginx web server.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791582952,
+  "units": [
+    "nginx.service"
+  ]
+}

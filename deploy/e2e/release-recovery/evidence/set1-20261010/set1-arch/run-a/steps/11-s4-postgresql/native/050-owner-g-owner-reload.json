@@ -1,0 +1,36 @@
+{
+  "action": "owner-systemctl",
+  "at": "2026-10-08T21:58:05Z",
+  "mode": "owner-systemctl",
+  "owner_action": true,
+  "result": {
+    "argv": [
+      "systemctl",
+      "reload",
+      "postgresql.service"
+    ],
+    "at": "2026-10-08T21:58:05Z",
+    "returncode": 0,
+    "seconds": 0.065,
+    "status": "ok",
+    "stderr": "",
+    "stdout": ""
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "unit": "postgresql.service",
+  "units": {
+    "postgresql.service": {
+      "ActiveEnterTimestamp": "Thu 2026-10-08 21:55:07 UTC",
+      "ActiveState": "active",
+      "DropInPaths": "",
+      "ExecMainStartTimestamp": "Thu 2026-10-08 21:55:06 UTC",
+      "FragmentPath": "/usr/lib/systemd/system/postgresql.service",
+      "LoadState": "loaded",
+      "MainPID": "1874",
+      "NRestarts": "0",
+      "Result": "success",
+      "SubState": "running"
+    }
+  },
+  "verb": "reload"
+}

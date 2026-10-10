@@ -1,0 +1,26 @@
+{
+  "25": {
+    "banner": "220 mail-debian13.upd1-infra.test ESMTP Postfix (Debian)",
+    "ehlo": "250",
+    "ehlo_last_line": "250 CHUNKING",
+    "mail": "250",
+    "mail_last_line": "250 2.1.0 Ok",
+    "ok": true,
+    "port": 25,
+    "rcpt": "250",
+    "rcpt_last_line": "250 2.1.5 Ok",
+    "rset": "250",
+    "rset_last_line": "250 2.0.0 Ok"
+  },
+  "587": {
+    "banner": "220 mail-debian13.upd1-infra.test ESMTP Postfix (Debian)",
+    "ehlo": "250",
+    "ehlo_last_line": "250 CHUNKING",
+    "ok": true,
+    "port": 587
+  },
+  "at": "2026-10-09T23:01:15Z",
+  "mode": "read-smtp",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1"
+}

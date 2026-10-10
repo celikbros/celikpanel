@@ -102,11 +102,11 @@ func (a *Agent) ConfigureMailSubmission(req *ServiceMutationRequest, resp *Confi
 		if recoverDovecot {
 			if ctx.Err() != nil {
 				recoverySkipped = true
-			} else if out, err := runMailTLSMutationCommand(ctx, "systemctl", "restart", "dovecot"); err != nil {
+			} else if _, err := applyDovecotVerified(mailServiceLeaseRunner(ctx), mailServiceRestart); err != nil {
 				rollbackErrs = append(rollbackErrs, mailSubmissionCommandError(
 					ctx,
 					"restore dovecot after failed mail submission configuration",
-					out,
+					nil,
 					err,
 				))
 			}
@@ -224,11 +224,17 @@ service auth {
 		return fail(rollback(err, false))
 	}
 
-	if out, err := runMailTLSMutationCommand(ctx, "systemctl", "restart", "dovecot"); err != nil {
-		return fail(rollback(mailSubmissionCommandError(ctx, "dovecot restart", out, err), true))
+	// Both restarts are judged by the daemon, not by systemctl's exit status:
+	// Dovecot must be running with one main process across two readings, and
+	// Postfix's own check, status and master process must agree (10 Oct 2026;
+	// mail_service_verify.go).
+	// İki yeniden başlatma da systemctl çıkış durumuyla değil, hizmetin
+	// kendisiyle değerlendirilir.
+	if _, err := applyDovecotVerified(mailServiceLeaseRunner(ctx), mailServiceRestart); err != nil {
+		return fail(rollback(mailSubmissionCommandError(ctx, "dovecot restart", nil, err), true))
 	}
-	if out, err := runMailTLSMutationCommand(ctx, "systemctl", "restart", "postfix"); err != nil {
-		return fail(rollback(mailSubmissionCommandError(ctx, "postfix restart", out, err), true))
+	if _, err := applyPostfixVerified(mailServiceLeaseRunner(ctx), mailServiceRestart); err != nil {
+		return fail(rollback(mailSubmissionCommandError(ctx, "postfix restart", nil, err), true))
 	}
 	if err := mailSubmissionLeaseError(ctx); err != nil {
 		return fail(rollback(err, true))

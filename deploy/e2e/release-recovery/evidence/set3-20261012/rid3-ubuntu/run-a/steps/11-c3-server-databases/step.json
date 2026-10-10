@@ -1,0 +1,27 @@
+{
+  "checks": {
+    "checks": 22,
+    "error": null,
+    "failed": [
+      "O10 (mariadb): its replay is the first answer byte for byte, marked as a replay, and one database was created",
+      "O10 (postgresql): its replay is the first answer byte for byte, marked as a replay, and one database was created"
+    ],
+    "finished_at": "2026-10-09T07:17:45Z",
+    "notes": [],
+    "started_at": "2026-10-09T07:17:32Z",
+    "substeps": {
+      "O10": "failed",
+      "O14": "passed",
+      "server-database-mariadb": "passed",
+      "server-database-postgresql": "passed"
+    },
+    "title": "a database on a database server (MariaDB and PostgreSQL)",
+    "unknown": [],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-09T07:17:45Z",
+  "name": "C3-server-databases",
+  "reason": "O10 (mariadb): its replay is the first answer byte for byte, marked as a replay, and one database was created; O10 (postgresql): its replay is the first answer byte for byte, marked as a replay, and one database was created",
+  "started_at": "2026-10-09T07:17:32Z",
+  "verdict": "failed"
+}

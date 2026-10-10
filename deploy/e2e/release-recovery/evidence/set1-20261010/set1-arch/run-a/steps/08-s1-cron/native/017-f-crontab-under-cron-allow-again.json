@@ -1,0 +1,99 @@
+{
+  "account": {
+    "gid": 1002,
+    "home": "/var/www/celikpanel/subscriptions/2/sites/1",
+    "uid": 1002
+  },
+  "cron_allow": {
+    "exists": true,
+    "gid": 0,
+    "group": "root",
+    "inode": 88830,
+    "mode": "0640",
+    "mtime_ns": 1791496659419198820,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/cron.allow",
+    "sha256": "53175bcc0524f37b47062fafdda28e3f8eb91d519ca0a184ca71bbebe72f969a",
+    "size": 5,
+    "text": "root\n",
+    "type": "regular",
+    "uid": 0
+  },
+  "cron_deny": {
+    "exists": true,
+    "gid": 0,
+    "group": "root",
+    "inode": 86991,
+    "mode": "0644",
+    "mtime_ns": 1758528337000000000,
+    "nlink": 1,
+    "owner": "root",
+    "path": "/etc/cron.deny",
+    "sha256": "ae6e533ecdfc1bd2dd80a9e25acb0260cbe9f00c4e4abee93d552b3660f263fc",
+    "size": 74,
+    "text": "# without this file, only users listed in /etc/cron.allow can use crontab\n",
+    "type": "regular",
+    "uid": 0
+  },
+  "crontab_binary": "/usr/sbin/crontab",
+  "crontab_package": "/usr/bin/crontab is owned by cronie 1.7.2-2",
+  "list": {
+    "argv": [
+      "/usr/sbin/crontab",
+      "-u",
+      "set1_owner_test",
+      "-l"
+    ],
+    "at": "2026-10-08T21:57:40Z",
+    "returncode": 0,
+    "seconds": 0.003,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "# set1 owner note: keep this line\n17 3 * * * /usr/bin/true set1-owner-job\n"
+  },
+  "list_sha256": "c3e1e91abab07c9f999835ad8038092e9c8bf36768b978074dcea9afb89ce263",
+  "mode": "read-crontab",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "spool": [
+    {
+      "exists": true,
+      "gid": 969,
+      "group": "celikpanel",
+      "inode": 88827,
+      "mode": "0600",
+      "mtime_ns": 1791496658647226297,
+      "nlink": 1,
+      "owner": "set1_owner_test",
+      "path": "/var/spool/cron/set1_owner_test",
+      "sha256": "c3e1e91abab07c9f999835ad8038092e9c8bf36768b978074dcea9afb89ce263",
+      "size": 74,
+      "text": "# set1 owner note: keep this line\n17 3 * * * /usr/bin/true set1-owner-job\n",
+      "type": "regular",
+      "uid": 1002
+    }
+  ],
+  "spool_directories": [
+    {
+      "error": "FileNotFoundError",
+      "exists": false,
+      "path": "/var/spool/cron/crontabs"
+    },
+    {
+      "exists": true,
+      "gid": 0,
+      "group": "root",
+      "inode": 87017,
+      "mode": "0755",
+      "mtime_ns": 1791496658659193055,
+      "nlink": 1,
+      "owner": "root",
+      "path": "/var/spool/cron",
+      "size": 30,
+      "type": "directory",
+      "uid": 0
+    }
+  ],
+  "user": "set1_owner_test"
+}

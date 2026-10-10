@@ -1,0 +1,3 @@
+2026-10-09T22:36:57.260638+00:00 dns-ubuntu systemd[1]: Stopping nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:36:57.282821+00:00 dns-ubuntu systemd[1]: nginx.service: Deactivated successfully.
+2026-10-09T22:36:57.283356+00:00 dns-ubuntu systemd[1]: Stopped nginx.service - A high performance web server and a reverse proxy server.

@@ -1,0 +1,34 @@
+7c42665ada71930c6a57448368fea3723ee3c379d3126ddfe56cf169b720542c  /var/tmp/cp-set3-run/overlay-d/harness.diff
+b29b22b44fbcbe0c805087e16294dfa704647cdbaf0e9ad07aa8ee96b76f996c  deploy/e2e/release-recovery/owner_update_trial.py
+b869a137fbcb9f81d2bc171e18fbe50fd9e2912f1b7c237261af26d89c393767  deploy/e2e/release-recovery/build-upd1-artifacts.sh
+13af448b6164f275ae7dc6b28e988439bc2290782bf01a2829866fe528d0438e  deploy/e2e/release-recovery/settings_writes_trial.py
+6322d651f0febaa322c33f35a209b67a28a09d6db2b973cc645ce4bf84ee588c  deploy/e2e/release-recovery/guest_settings_native.py
+62cc2cc3ab9a343e92129c011b206f3417d7341218ed4f0c8fbdb6a39423079b  deploy/e2e/release-recovery/request_identity_trial.py
+eb82ef6cc4ff7ee634523be8f13d2f3a115b6414984c47cd967497df26f7944a  deploy/e2e/release-recovery/guest_request_identity_native.py
+b5815c30124bf1346dfac89ba0954f0cefc3deae5a16594fa29a2b711d173728  deploy/e2e/release-recovery/run-set2.sh
+16efbb138a72c0df2fd391b35f0fe04891e87d1cd6d9875d739106d549121d32  deploy/e2e/release-recovery/test_settings_writes_trial.py
+c741f939c1ddbac09624b317d05bb95e8d9881d81e405a7ccae9f38200c0a061  deploy/e2e/release-recovery/test_request_identity_trial.py
+e51b2065d6472fba11b6e1f75c4bf75c8377f4339c542487e14a7998fba5b78d  deploy/e2e/release-recovery/test_owner_update_trial.py
+0dbb5fc07ffe59b638aafcbad568ed851fd642e7623e5c0d217c0712413741d9  deploy/e2e/release-recovery/guest_schema_ledger.py
+1328
+differs:       1 < ./deploy/e2e/release-recovery/build-upd1-artifacts.sh
+differs:       1 > ./deploy/e2e/release-recovery/build-upd1-artifacts.sh
+differs:       1 < ./deploy/e2e/release-recovery/guest_request_identity_native.py
+differs:       1 > ./deploy/e2e/release-recovery/guest_request_identity_native.py
+differs:       1 > ./deploy/e2e/release-recovery/guest_schema_ledger.py
+differs:       1 < ./deploy/e2e/release-recovery/guest_settings_native.py
+differs:       1 > ./deploy/e2e/release-recovery/guest_settings_native.py
+differs:       1 < ./deploy/e2e/release-recovery/owner_update_trial.py
+differs:       1 > ./deploy/e2e/release-recovery/owner_update_trial.py
+differs:       1 < ./deploy/e2e/release-recovery/request_identity_trial.py
+differs:       1 > ./deploy/e2e/release-recovery/request_identity_trial.py
+differs:       1 < ./deploy/e2e/release-recovery/run-set2.sh
+differs:       1 > ./deploy/e2e/release-recovery/run-set2.sh
+differs:       1 < ./deploy/e2e/release-recovery/settings_writes_trial.py
+differs:       1 > ./deploy/e2e/release-recovery/settings_writes_trial.py
+differs:       1 < ./deploy/e2e/release-recovery/test_owner_update_trial.py
+differs:       1 > ./deploy/e2e/release-recovery/test_owner_update_trial.py
+differs:       1 < ./deploy/e2e/release-recovery/test_request_identity_trial.py
+differs:       1 > ./deploy/e2e/release-recovery/test_request_identity_trial.py
+differs:       1 < ./deploy/e2e/release-recovery/test_settings_writes_trial.py
+differs:       1 > ./deploy/e2e/release-recovery/test_settings_writes_trial.py

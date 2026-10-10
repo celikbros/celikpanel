@@ -1,0 +1,43 @@
+{
+  "at": "2026-10-09T03:41:13Z",
+  "domain": "set1-owner.test",
+  "lookups": [
+    {
+      "map": "hash:/etc/postfix/virtual",
+      "query": {
+        "argv": [
+          "postmap",
+          "-q",
+          "@set1-owner.test",
+          "hash:/etc/postfix/virtual"
+        ],
+        "at": "2026-10-09T03:41:13Z",
+        "returncode": 0,
+        "seconds": 0.004,
+        "status": "ok",
+        "stderr": "",
+        "stdout": "owner@set1-owner.test\n"
+      },
+      "source": {
+        "exists": true,
+        "gid": 989,
+        "group": "celikpanel",
+        "inode": 271056,
+        "mode": "0644",
+        "mtime_ns": 1791517272498318867,
+        "nlink": 1,
+        "owner": "root",
+        "path": "/etc/postfix/virtual",
+        "sha256": "a78e7a07a232899051cae73e1b8709d75f8e80ea5b06cdb56200f8f4468c5311",
+        "size": 39,
+        "text": "@set1-owner.test owner@set1-owner.test\n",
+        "type": "regular",
+        "uid": 0
+      }
+    }
+  ],
+  "mode": "read-catchall",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "virtual_alias_maps": "hash:/etc/postfix/virtual"
+}

@@ -392,6 +392,34 @@ svg.lucide {
     color: rgb(var(--fg));
 }
 
+/* One scrim at most (browser inspection, 2026-10-08). The access hold and the
+   reload line cover whatever is open, including a dialogue or an operation
+   overlay that already dims the page. Two stacked scrims left the page under
+   them unreadable, although the hold says that what is on it is kept. While
+   one of these two layers is drawn it is the only scrim: every scrim under it
+   is cleared, so the page stays dim and legible. The layer still covers and
+   blocks everything beneath it. A browser without :has() draws both scrims.
+   En fazla tek karartma: erisim bekletmesi ya da yeniden yukleme katmani
+   cizilirken altindaki karartmalar kaldirilir; sayfa los ama okunur kalir. */
+body:has([data-top-layer]) [class*="bg-scrim"]:not([data-top-layer] *, [data-top-layer]),
+body:has([data-top-layer="reload"]) [data-top-layer="hold"] [class*="bg-scrim"] {
+    background-color: transparent;
+}
+
+/* After dark the page is already navy, and a navy scrim at the strength the
+   light theme needs took the small muted text under these two layers down to
+   about 1.5:1 (inspection, 2026-10-08): the hold says that what is on the page
+   is kept, and the page could not be read. Here the scrim is drawn at half
+   strength, which leaves that text near 3.5:1 while the dialogue still stands
+   clear of the page. :where() keeps this below the rule above, so a hold under
+   the reload line is still cleared.
+   Karanlikta sayfa zaten laciverttir; acik temanin gerektirdigi guçteki
+   karartma, bu iki katmanin altindaki kucuk soluk metni yaklasik 1,5:1'e
+   indiriyordu. Burada karartma yari guçte cizilir. */
+:where(.dark) [data-top-layer] [class*="bg-scrim"] {
+    background-color: rgb(var(--scrim) / 0.5);
+}
+
 /* The focus ring is a drawn part of this system, not a browser default.
    Odak halkasi bu sistemin cizdigi bir parcadir, tarayici varsayilani degil. */
 :focus-visible {
@@ -435,4 +463,31 @@ html {
 /* Small-height windows and software keyboards need the whole form viewport. */
 @media (max-height: 36rem) {
     .setup-actions { position: static; }
+}
+
+/* Row actions on a phone. A data table may be wider than a phone and scroll
+   sideways inside its frame; what a row can do (delete, unban, revoke) must
+   not be the part that is off screen. The cell that holds a row's actions, and
+   the header cell above it, carry `row-actions`: below the `sm` breakpoint it
+   stays at the table's trailing edge while the other columns scroll under it.
+   The ground it stands on is the table's: `--row-ground` on the frame when
+   that is not the card surface. Wider screens are unchanged.
+   Telefonda satır eylemleri. Veri tablosu telefondan geniş olabilir ve
+   çerçevesinde yana kayar; satırın eylemi ekran dışında kalan kısım olamaz.
+   Eylem hücresi ve üstündeki başlık hücresi `row-actions` taşır: `sm` altında
+   diğer sütunlar altından kayarken tablonun son kenarında durur. */
+@media (max-width: 639px) {
+    .row-actions {
+        position: sticky;
+        inset-inline-end: 0;
+        z-index: 1;
+        background-color: rgb(var(--row-ground, var(--surface)));
+        box-shadow: -1px 0 0 rgb(var(--border));
+        padding-inline: 0.5rem;
+        /* A named action keeps its words on one line ("Yasağı kaldır" broke
+           into two in this cell at 390 px): the cell takes the width of its
+           label and the other columns scroll under it.
+           Adı olan eylem tek satırda kalır; hücre etiketinin genişliğini alır. */
+        white-space: nowrap;
+    }
 }

@@ -1,0 +1,214 @@
+### Corrections after the set4 native measurement (invariants 2, 3 and 6, 2026-10-09)
+
+D-025 invariants 2 (unknown is not absent, empty or success), 3 (the unsafe
+action is stopped at its own boundary) and 6 (the screen renders the
+authoritative state); D-022, D-024. No P0 item is closed or advanced. Source:
+the `set4` run of 2026-10-09 (UTC) on disposable QEMU/KVM guests (evidence
+`deploy/e2e/release-recovery/evidence/set4-20261009/`), which found one product
+failure (its item 10 on Ubuntu 24.04) and two misstatements (its observations 5
+and 6), and the `set4b` measurement of the same day (evidence
+`deploy/e2e/release-recovery/evidence/set4b-20261009/`), which first measured
+what the Agent reads around that Stop and then measured the correction.
+Nothing here was observed on an installed server. 2026-10-09 is the calendar
+date; the dates 2026-10-10 to 2026-10-12 of the entries above are labels of
+rounds.
+
+- **Measured.**
+
+  - *Item 10, Ubuntu 24.04: the Stop was answered before Postfix had stopped,
+    and the unit was read while systemd was still stopping it.* On a guest
+    with the product as set4 measured it, five Stops out of five through the
+    Panel, with a main.cf that `postfix check` refuses, answered `200
+    {"applied":"stopped","outcome":"verified","success":true}` without a
+    `note`, and `postfix@-.service` ended `failed` (`Result=exit-code`) each
+    time. `strace` on the Agent (two of the five) shows what it read. Before
+    the stop both units answered `LoadState=loaded`, `ActiveState=active`,
+    `Result=success`, so the instance unit was counted as not failed. After
+    `systemctl stop postfix`, `postconf -h queue_directory` exited 0 and wrote
+    "/usr/sbin/postconf: warning: /etc/postfix/main.cf: #comment after other
+    text is not allowed: # raised for the campa..." to its error stream and
+    then `/var/spool/postfix` to its output. The Agent reads both streams as
+    one buffer and took the buffer whole as the directory: it opened a path
+    made of the warning line, a line break and
+    `/var/spool/postfix/pid/master.pid`, the kernel answered "no such file",
+    and that was read as "no master ever started here". The master was looked
+    for once and taken as gone 29 to 82 ms after the stop command had
+    returned. The Agent then read the two units once: `postfix.service`
+    `inactive`, `postfix@-.service` `ActiveState=deactivating`,
+    `Result=success`. Not failed, so no note.
+
+  - *The moments, on one clock.* A kernel trace of the programs the Agent
+    started and systemd's own state timestamps (three Stops without `strace`):
+    `systemctl stop postfix` returned 1 to 3 ms after `postfix@-.service` left
+    `active`; the Agent's reading of that unit started 82 to 102 ms after it
+    left `active`; the master ended 1008 to 1057 ms after, and the unit became
+    `failed` 2 to 4 ms after the master ended. So the answer was given about
+    0.9 seconds before Postfix had stopped. The owner's own `systemctl stop
+    postfix` on the same guest, sampled every 10 ms: it returned after 24 ms;
+    the unit showed `deactivating (stop)`, `Result=success`, until its stop
+    command (`postmulti -i - -p stop`, which refuses main.cf and exits 1 after
+    Postfix's own one-second pause) ended 1028 ms after the command was sent;
+    the master ended 3 ms later and the unit became `failed (failed)`,
+    `Result=exit-code`, 3 ms after that.
+
+  - *What set4's record inferred, and what was measured instead.* set4's
+    README read the journal's timestamps as "the unit was read once, before
+    systemd marked it failed (the mark comes 4 ms after the master ends)", and
+    said that this was an inference. The single reading is right; the cause is
+    not a window of 4 ms. The unit was read about 0.9 seconds before the mark,
+    because the master had been taken as gone at the first look.
+
+  - *Debian 13.* The same Stop gave the note in set4, twice. There
+    `postfix.service` runs the daemon itself, and `systemctl stop postfix`
+    returns after that unit's whole stop, so the single reading saw `failed`.
+    Whether the master lookup misread postconf's answer there too was not
+    measured before the correction; the code and the warning are the same.
+
+  - *Observation 5 of set4.* After an automatic return the update check
+    carries one time, `previous_attempt.finished_at`; the card put it into a
+    sentence that said "was started here on {time}". In the cell where both
+    are known the owner's start was at 12:06:13Z and `finished_at` is
+    12:07:43Z.
+
+  - *Observation 6 of set4.* An import with `do_dns: false` on a server in
+    external DNS mode answered `imported: [domain, files, dns, ...]` on the
+    three platforms: the `dns` step ended `ok` with "external DNS ownership
+    preserved; ..." and every `ok` step was listed as imported.
+
+- **Changed.**
+
+  - *The queue directory is one line of postconf's answer*
+    (`cmd/agent/mail_service_verify.go`, `postfixQueueDirectory`,
+    `postconfOnePath`). A line that begins with the name postconf was started
+    under, `: ` and `warning`, `error`, `fatal` or `panic` is postconf's own
+    message and is left out; exactly one other line must remain and it must be
+    a clean absolute path. Anything else (no line, two lines, a relative path)
+    is not a directory and nothing is claimed. Both readers of the master use
+    it (`postfixMaster`, `postfixMasterProcess`).
+
+  - *"No master.pid" is a statement only where its directory exists*
+    (`postfixMasterProcess`). A missing file used to mean "no master ever
+    started with this queue directory" for any path. It means that only when
+    `<queue_directory>/pid` is an existing directory; otherwise the master was
+    not looked for, and with a refused main.cf the Stop is unknown, as it
+    already was when the process could not be looked for.
+
+  - *The unit is read once it has settled*
+    (`cmd/agent/service_action_verify.go`, `noteStopLeftUnitFailed`). While
+    systemd shows a watched unit as `activating`, `deactivating` or
+    `reloading`, it is read again: at most 30 readings 500 ms apart for all
+    the units of one stop together, the interval and bound every other
+    verification in that file uses. Only `systemctl show` is sent meanwhile.
+    A unit that ended `failed` is reported as before (`unit_marked_failed`),
+    with Postfix's own line when its check prints one.
+
+  - *A unit that did not settle is said as that*
+    (`transport.ServiceActionNoticeUnitNotSettled`,
+    `cmd/panel/service_action_outcome.go`, `ServiceActionNotice.tsx`). When
+    the bound ends with the unit still between two states, or the unit cannot
+    be read after the stop although it was read before it, the success
+    carries `note` with `reason` `unit_not_settled` (and `vars.state`) or
+    `unit_state_not_read`. Staying silent would read as "the unit was looked
+    at and is clean". The note claims neither a mark nor its absence; its
+    command is `systemctl status <unit>`, which changes nothing. The Stop
+    itself stays `verified`: the service's own process was seen to be gone.
+
+  - *The update card's sentence names the time as the attempt's end*
+    (`web/src/i18n/screens/server/en.ts`, `tr.ts`,
+    `panelUpdate.previousAttempt.recovered`). Text only; the card and what it
+    passes are unchanged.
+
+  - *An import step that imported nothing is neither imported nor failed*
+    (`cmd/panel/import_handlers.go`, `web/src/components/ImportPage.tsx`).
+    Such a step keeps `ok: true` and carries `state` (`left_to_owner`,
+    `not_chosen`, `none_in_archive`, `none_imported`); the answer lists it
+    under `left_out`. It applies to `dns` in every DNS mode when the archive's
+    records were not imported, to `mail` and `forwarders` when none came in,
+    and to `files` when the site folder of the archive is empty. `ok`, and
+    with it `status` and `IMPORT_PARTIAL`, are decided as before: only a step
+    that failed makes an import partial.
+
+- **API changes (for the release notes).**
+
+  - `POST /api/v1/service/action`: a Stop of Postfix is answered when its
+    master process has ended (on Ubuntu 24.04 with a refused main.cf about one
+    second later than before). A successful Stop may carry `note` with
+    `reason` `unit_not_settled` or `unit_state_not_read` and `vars`
+    `pending_unit`, `command`, `state`; and a Stop may take up to about 15
+    seconds longer while a unit is between two states.
+
+  - `POST /api/v1/import/cpanel/apply`: `steps[].state` (optional) and the
+    list `left_out` are new; `imported` no longer names a part whose step
+    carries a `state`. `status`, `code`, `not_imported` and every `detail` are
+    unchanged.
+
+  - `GET /api/v1/panel/update/check`: unchanged.
+
+- **Not changed, and why.**
+
+  - Other readings of a postconf value from a buffer that may hold both
+    streams (`cmd/agent/mail_tls_rpc.go` `snapshotMailTLSState`,
+    `cmd/agent/mail_tls_sync_commit.go`, `cmd/agent/mail_stack_rpc.go`
+    `postconfExpandedContext`): seen in the source while this was corrected,
+    not measured, not changed here. Whether their runners mix the two streams
+    was not established.
+
+  - Instance units behind another wrapper (`postgresql@<version>-<cluster>`)
+    are judged by `verifyWrapperAction`, which already reads them until they
+    settle; they are not among the units the note reads.
+
+  - The sentences of an attempt that failed without a return or stopped before
+    changing anything say "tried on {time}" with the same time, and stay.
+
+  - The import page has no list of the parts that were left out, and a step's
+    `detail` stays the server's English.
+
+- **Schema or version transition.**
+
+  - No database schema and no persisted state. `ServiceActionResult.Notice`
+    gains one value, transferred by name; a Panel that does not know it gives
+    no note for it, which is the answer it gave before. `steps[].state` and
+    `left_out` are additive; a page that does not know `state` lists such a
+    step as imported, as before.
+
+- **Recovery behaviour.**
+
+  - Nothing retries by itself. The wait for a unit is bounded and sends
+    nothing to the unit; a Stop is never followed by `reset-failed`. A Stop
+    whose master cannot be looked for and whose configuration Postfix refuses
+    stays unknown and is not repeated.
+
+- **Evidence.**
+
+  - Component tests. Agent: `set4_corrections_test.go` (the bytes postconf
+    printed, as `strace` recorded them, give the directory; the measured
+    sequence on a host whose master lives 1009 ms after the stop and whose
+    unit is `deactivating` until 1013 ms: the Stop is answered after the
+    master has ended, with the note; a unit that settles later, one that ends
+    cleanly, one that never settles within the bound (the note
+    `unit_not_settled`, 29 readings, nothing but readings after the stop), one
+    that cannot be read; an answer of postconf that is not one path stays
+    unknown; Debian's shape gives the note at the first reading with no wait).
+    Panel: `set4_corrections_test.go` (the two notes, the import's three
+    lists, the handler's steps), `set2_corrections_test.go`,
+    `set3_corrections_test.go`. Screens: `web/tests/set4-corrections.test.mjs`,
+    `set3-corrections.test.mjs`, and a real Chrome against the loopback mock
+    (`web/tools/browser-inspect`, scenarios `stopnote`, `updaterolledback`,
+    `importentries`, `importleftout`; desktop and phone, English and Turkish).
+
+  - Native, before the correction: `set4b-20261009/diagnostic/` (the record
+    above; its `run-a` stopped at a defect of the driver before the first Stop
+    and holds only the readings before it).
+
+  - {{CONTRACT_EVIDENCE_EN}}
+
+- **Open.**
+
+  - {{CONTRACT_OPEN_EN}}
+
+  - The other readings of a postconf value named above are to be measured with
+    a main.cf that makes postconf warn, and corrected if they take the warning
+    into a value.
+
+  - No guest held a unit between two states for the whole wait; the two new
+    notes have no native record.

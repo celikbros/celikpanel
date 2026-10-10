@@ -1,0 +1,90 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S8 postgresql reload (the owner's reload hook fails)",
+  "request": {
+    "body": {
+      "action": "reload",
+      "name": "postgresql"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18461"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18461"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "45325091bfd5c0964c2231e94812d469"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/service/action"
+  },
+  "response": {
+    "elapsed_seconds": 1.655,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 07:27:05 GMT"
+      ],
+      [
+        "Content-Length",
+        "847"
+      ]
+    ],
+    "json": {
+      "code": "SERVICE_ACTION_FAILED",
+      "error": "The unit reported the reload as failed, but PostgreSQL itself re-read its configuration files after it: the settings in the files on disk are in effect now, except those that need a restart. A step of the unit's own reload command failed after the server had been signalled. The server owner runs the command shown to see which step, and corrects it so that the next reload is reported as it went; the reload does not need to be repeated for these settings.",
+      "reason": "reload_reread",
+      "vars": {
+        "action": "reload",
+        "command": "sudo systemctl status postgresql@17-main.service",
+        "detail": "the reload of postgresql@17-main.service was reported as failed (exit-code), but PostgreSQL re-read its configuration files after it: pg_conf_load_time() moved",
+        "owner_unit": "postgresql@17-main.service",
+        "unit": "postgresql"
+      }
+    },
+    "status": 502,
+    "text": null
+  }
+}

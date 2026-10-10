@@ -1,0 +1,2 @@
+step | diagnostic/set4b-diag-ubuntu/run-a | D10-what-the-agent-reads | inconclusive | TypeError: Set4bTrial.snap4b() got multiple values for argument 'label'
+section-error | diagnostic/set4b-diag-ubuntu/run-a/steps/09-d10-what-the-agent-reads/section.json | D10-what-the-agent-reads | TypeError: Set4bTrial.snap4b() got multiple values for argument 'label'

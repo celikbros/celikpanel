@@ -1,0 +1,25 @@
+{
+  "checks": {
+    "checks": 10,
+    "error": null,
+    "failed": [
+      "item 5: `imported` and `not_imported` are the steps' own results; the member is in `not_imported` and every chosen part is in `imported`"
+    ],
+    "finished_at": "2026-10-09T21:55:50Z",
+    "notes": [],
+    "started_at": "2026-10-09T21:55:46Z",
+    "substeps": {
+      "S1": "passed",
+      "item 5": "failed",
+      "section": "passed"
+    },
+    "title": "an archive with a member named by an absolute path",
+    "unknown": [],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-09T21:55:50Z",
+  "name": "M5-import-absolute",
+  "reason": "item 5: `imported` and `not_imported` are the steps' own results; the member is in `not_imported` and every chosen part is in `imported`",
+  "started_at": "2026-10-09T21:55:46Z",
+  "verdict": "failed"
+}

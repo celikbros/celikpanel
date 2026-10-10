@@ -1,0 +1,2868 @@
+{
+  "actions": [
+    {
+      "action": "stop",
+      "answer": {
+        "applied": "stopped",
+        "outcome": "verified",
+        "success": true
+      },
+      "at": "2026-10-09T15:53:49Z",
+      "code": null,
+      "daemon_after": {
+        "asked": "the master's PID file and /proc (`postfix status` exit 1)",
+        "conf_load_time": null,
+        "exec_reload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 0,
+        "real_unit": "postfix@-.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "postfix.service": {
+            "ActiveState": "failed",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "exit-code",
+            "SubState": "failed"
+          },
+          "postfix@-.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "daemon_before": {
+        "asked": "the master's PID file and /proc (`postfix status` exit 1)",
+        "conf_load_time": null,
+        "exec_reload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 31429,
+        "real_unit": "postfix@-.service",
+        "reload_result": "success",
+        "running": true,
+        "units": {
+          "postfix.service": {
+            "ActiveState": "active",
+            "LoadState": "loaded",
+            "MainPID": "31429",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "running"
+          },
+          "postfix@-.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "journal_lines": [
+        "2026-10-09T15:53:47.595564+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...",
+        "2026-10-09T15:53:47.642271+00:00 dns-debian13 postfix[31716]: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+        "2026-10-09T15:53:47.642245+00:00 dns-debian13 postfix[31716]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+        "2026-10-09T15:53:48.644184+00:00 dns-debian13 systemd[1]: postfix.service: Control process exited, code=exited, status=1/FAILURE",
+        "2026-10-09T15:53:48.645020+00:00 dns-debian13 postfix/master[31429]: terminating on signal 15",
+        "2026-10-09T15:53:48.652272+00:00 dns-debian13 systemd[1]: postfix.service: Failed with result 'exit-code'.",
+        "2026-10-09T15:53:48.652615+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance).",
+        "2026-10-09T15:53:48.645020+00:00 dns-debian13 postfix/master[31429]: terminating on signal 15"
+      ],
+      "matches": true,
+      "reason": null,
+      "refused_while_busy": [],
+      "reload_evidence": [],
+      "said": "success",
+      "service": "postfix",
+      "situation": "main.cf holds a line Postfix refuses (r1)",
+      "status": 200,
+      "truth_action_took_effect": true,
+      "vars": null
+    },
+    {
+      "action": "start",
+      "answer": {
+        "applied": "started",
+        "outcome": "verified",
+        "success": true
+      },
+      "at": "2026-10-09T15:54:04Z",
+      "code": null,
+      "daemon_after": {
+        "asked": "the master's PID file and /proc (`postfix status` exit 0)",
+        "conf_load_time": null,
+        "exec_reload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 32219,
+        "real_unit": "postfix@-.service",
+        "reload_result": "success",
+        "running": true,
+        "units": {
+          "postfix.service": {
+            "ActiveState": "active",
+            "LoadState": "loaded",
+            "MainPID": "32219",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "running"
+          },
+          "postfix@-.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "daemon_before": {
+        "asked": "the master's PID file and /proc (`postfix status` exit 1)",
+        "conf_load_time": null,
+        "exec_reload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 0,
+        "real_unit": "postfix@-.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "postfix.service": {
+            "ActiveState": "failed",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "exit-code",
+            "SubState": "failed"
+          },
+          "postfix@-.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "journal_lines": [
+        "2026-10-09T15:54:03.412442+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...",
+        "2026-10-09T15:54:03.736193+00:00 dns-debian13 postfix[32193]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+        "2026-10-09T15:54:03.736168+00:00 dns-debian13 postfix/postfix-script[32193]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+        "2026-10-09T15:54:03.836077+00:00 dns-debian13 postfix/master[32219]: daemon started -- version 3.10.13, configuration /etc/postfix",
+        "2026-10-09T15:54:03.844135+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).",
+        "2026-10-09T15:54:02.534000+00:00 dns-debian13 postfix/postfix-script[31957]: the Postfix mail system is not running",
+        "2026-10-09T15:54:03.278819+00:00 dns-debian13 postfix/postfix-script[32069]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+        "2026-10-09T15:54:03.370784+00:00 dns-debian13 postfix/postfix-script[32098]: the Postfix mail system is not running",
+        "2026-10-09T15:54:03.736168+00:00 dns-debian13 postfix/postfix-script[32193]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+        "2026-10-09T15:54:03.836077+00:00 dns-debian13 postfix/master[32219]: daemon started -- version 3.10.13, configuration /etc/postfix",
+        "2026-10-09T15:54:03.909303+00:00 dns-debian13 postfix/postfix-script[32237]: the Postfix mail system is running: PID: 32219",
+        "2026-10-09T15:54:05.628368+00:00 dns-debian13 postfix/postfix-script[32307]: the Postfix mail system is running: PID: 32219"
+      ],
+      "matches": true,
+      "reason": null,
+      "refused_while_busy": [],
+      "reload_evidence": [],
+      "said": "success",
+      "service": "postfix",
+      "situation": "after the owner's correction (r1)",
+      "status": 200,
+      "truth_action_took_effect": true,
+      "vars": null
+    },
+    {
+      "action": "stop",
+      "answer": {
+        "applied": "stopped",
+        "outcome": "verified",
+        "success": true
+      },
+      "at": "2026-10-09T15:54:13Z",
+      "code": null,
+      "daemon_after": {
+        "asked": "the master's PID file and /proc (`postfix status` exit 1)",
+        "conf_load_time": null,
+        "exec_reload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 0,
+        "real_unit": "postfix@-.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "postfix.service": {
+            "ActiveState": "failed",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "exit-code",
+            "SubState": "failed"
+          },
+          "postfix@-.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "daemon_before": {
+        "asked": "the master's PID file and /proc (`postfix status` exit 1)",
+        "conf_load_time": null,
+        "exec_reload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 32219,
+        "real_unit": "postfix@-.service",
+        "reload_result": "success",
+        "running": true,
+        "units": {
+          "postfix.service": {
+            "ActiveState": "active",
+            "LoadState": "loaded",
+            "MainPID": "32219",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "running"
+          },
+          "postfix@-.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "journal_lines": [
+        "2026-10-09T15:54:10.578310+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...",
+        "2026-10-09T15:54:10.636182+00:00 dns-debian13 postfix[32449]: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+        "2026-10-09T15:54:10.636149+00:00 dns-debian13 postfix[32449]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+        "2026-10-09T15:54:11.642401+00:00 dns-debian13 systemd[1]: postfix.service: Control process exited, code=exited, status=1/FAILURE",
+        "2026-10-09T15:54:11.646352+00:00 dns-debian13 postfix/master[32219]: terminating on signal 15",
+        "2026-10-09T15:54:11.651190+00:00 dns-debian13 systemd[1]: postfix.service: Failed with result 'exit-code'.",
+        "2026-10-09T15:54:11.651674+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance).",
+        "2026-10-09T15:54:11.646352+00:00 dns-debian13 postfix/master[32219]: terminating on signal 15"
+      ],
+      "matches": true,
+      "reason": null,
+      "refused_while_busy": [],
+      "reload_evidence": [],
+      "said": "success",
+      "service": "postfix",
+      "situation": "main.cf holds a line Postfix refuses (r2)",
+      "status": 200,
+      "truth_action_took_effect": true,
+      "vars": null
+    },
+    {
+      "action": "start",
+      "answer": {
+        "applied": "started",
+        "outcome": "verified",
+        "success": true
+      },
+      "at": "2026-10-09T15:54:27Z",
+      "code": null,
+      "daemon_after": {
+        "asked": "the master's PID file and /proc (`postfix status` exit 0)",
+        "conf_load_time": null,
+        "exec_reload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 32950,
+        "real_unit": "postfix@-.service",
+        "reload_result": "success",
+        "running": true,
+        "units": {
+          "postfix.service": {
+            "ActiveState": "active",
+            "LoadState": "loaded",
+            "MainPID": "32950",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "running"
+          },
+          "postfix@-.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "daemon_before": {
+        "asked": "the master's PID file and /proc (`postfix status` exit 1)",
+        "conf_load_time": null,
+        "exec_reload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 0,
+        "real_unit": "postfix@-.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "postfix.service": {
+            "ActiveState": "failed",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "exit-code",
+            "SubState": "failed"
+          },
+          "postfix@-.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "journal_lines": [
+        "2026-10-09T15:54:26.310299+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...",
+        "2026-10-09T15:54:26.705221+00:00 dns-debian13 postfix[32924]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+        "2026-10-09T15:54:26.705184+00:00 dns-debian13 postfix/postfix-script[32924]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+        "2026-10-09T15:54:26.805586+00:00 dns-debian13 postfix/master[32950]: daemon started -- version 3.10.13, configuration /etc/postfix",
+        "2026-10-09T15:54:26.807572+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).",
+        "2026-10-09T15:54:25.557735+00:00 dns-debian13 postfix/postfix-script[32689]: the Postfix mail system is not running",
+        "2026-10-09T15:54:26.187078+00:00 dns-debian13 postfix/postfix-script[32800]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+        "2026-10-09T15:54:26.275898+00:00 dns-debian13 postfix/postfix-script[32829]: the Postfix mail system is not running",
+        "2026-10-09T15:54:26.705184+00:00 dns-debian13 postfix/postfix-script[32924]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+        "2026-10-09T15:54:26.805586+00:00 dns-debian13 postfix/master[32950]: daemon started -- version 3.10.13, configuration /etc/postfix",
+        "2026-10-09T15:54:26.887813+00:00 dns-debian13 postfix/postfix-script[32967]: the Postfix mail system is running: PID: 32950",
+        "2026-10-09T15:54:29.257954+00:00 dns-debian13 postfix/postfix-script[33038]: the Postfix mail system is running: PID: 32950"
+      ],
+      "matches": true,
+      "reason": null,
+      "refused_while_busy": [],
+      "reload_evidence": [],
+      "said": "success",
+      "service": "postfix",
+      "situation": "after the owner's correction (r2)",
+      "status": 200,
+      "truth_action_took_effect": true,
+      "vars": null
+    },
+    {
+      "action": "stop",
+      "answer": {
+        "applied": "stopped",
+        "outcome": "verified",
+        "success": true
+      },
+      "at": "2026-10-09T15:54:39Z",
+      "code": null,
+      "daemon_after": {
+        "asked": "the master's PID file and /proc (`postfix status` exit 1)",
+        "conf_load_time": null,
+        "exec_reload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 0,
+        "real_unit": "postfix@-.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "postfix.service": {
+            "ActiveState": "failed",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "exit-code",
+            "SubState": "failed"
+          },
+          "postfix@-.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "daemon_before": {
+        "asked": "the master's PID file and /proc (`postfix status` exit 1)",
+        "conf_load_time": null,
+        "exec_reload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 32950,
+        "real_unit": "postfix@-.service",
+        "reload_result": "success",
+        "running": true,
+        "units": {
+          "postfix.service": {
+            "ActiveState": "active",
+            "LoadState": "loaded",
+            "MainPID": "32950",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "running"
+          },
+          "postfix@-.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "journal_lines": [
+        "2026-10-09T15:54:37.609116+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...",
+        "2026-10-09T15:54:37.658708+00:00 dns-debian13 postfix[33181]: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+        "2026-10-09T15:54:37.658999+00:00 dns-debian13 postfix[33181]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+        "2026-10-09T15:54:38.662091+00:00 dns-debian13 systemd[1]: postfix.service: Control process exited, code=exited, status=1/FAILURE",
+        "2026-10-09T15:54:38.662282+00:00 dns-debian13 postfix/master[32950]: terminating on signal 15",
+        "2026-10-09T15:54:38.665219+00:00 dns-debian13 systemd[1]: postfix.service: Failed with result 'exit-code'.",
+        "2026-10-09T15:54:38.666032+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance).",
+        "2026-10-09T15:54:38.662282+00:00 dns-debian13 postfix/master[32950]: terminating on signal 15"
+      ],
+      "matches": true,
+      "reason": null,
+      "refused_while_busy": [],
+      "reload_evidence": [],
+      "said": "success",
+      "service": "postfix",
+      "situation": "main.cf holds a line Postfix refuses (r3)",
+      "status": 200,
+      "truth_action_took_effect": true,
+      "vars": null
+    },
+    {
+      "action": "start",
+      "answer": {
+        "applied": "started",
+        "outcome": "verified",
+        "success": true
+      },
+      "at": "2026-10-09T15:54:53Z",
+      "code": null,
+      "daemon_after": {
+        "asked": "the master's PID file and /proc (`postfix status` exit 0)",
+        "conf_load_time": null,
+        "exec_reload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 33683,
+        "real_unit": "postfix@-.service",
+        "reload_result": "success",
+        "running": true,
+        "units": {
+          "postfix.service": {
+            "ActiveState": "active",
+            "LoadState": "loaded",
+            "MainPID": "33683",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "running"
+          },
+          "postfix@-.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "daemon_before": {
+        "asked": "the master's PID file and /proc (`postfix status` exit 1)",
+        "conf_load_time": null,
+        "exec_reload": "{ path=postfix ; argv[]=postfix reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "pid": 0,
+        "real_unit": "postfix@-.service",
+        "reload_result": "success",
+        "running": false,
+        "units": {
+          "postfix.service": {
+            "ActiveState": "failed",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "exit-code",
+            "SubState": "failed"
+          },
+          "postfix@-.service": {
+            "ActiveState": "inactive",
+            "LoadState": "loaded",
+            "MainPID": "0",
+            "ReloadResult": "success",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "journal_lines": [
+        "2026-10-09T15:54:52.305277+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...",
+        "2026-10-09T15:54:52.733204+00:00 dns-debian13 postfix[33657]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+        "2026-10-09T15:54:52.733160+00:00 dns-debian13 postfix/postfix-script[33657]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+        "2026-10-09T15:54:52.829627+00:00 dns-debian13 postfix/master[33683]: daemon started -- version 3.10.13, configuration /etc/postfix",
+        "2026-10-09T15:54:52.831539+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).",
+        "2026-10-09T15:54:51.596498+00:00 dns-debian13 postfix/postfix-script[33421]: the Postfix mail system is not running",
+        "2026-10-09T15:54:52.196279+00:00 dns-debian13 postfix/postfix-script[33532]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+        "2026-10-09T15:54:52.270080+00:00 dns-debian13 postfix/postfix-script[33561]: the Postfix mail system is not running",
+        "2026-10-09T15:54:52.733160+00:00 dns-debian13 postfix/postfix-script[33657]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf",
+        "2026-10-09T15:54:52.829627+00:00 dns-debian13 postfix/master[33683]: daemon started -- version 3.10.13, configuration /etc/postfix",
+        "2026-10-09T15:54:52.913156+00:00 dns-debian13 postfix/postfix-script[33700]: the Postfix mail system is running: PID: 33683",
+        "2026-10-09T15:54:54.413462+00:00 dns-debian13 postfix/postfix-script[33770]: the Postfix mail system is running: PID: 33683"
+      ],
+      "matches": true,
+      "reason": null,
+      "refused_while_busy": [],
+      "reload_evidence": [],
+      "said": "success",
+      "service": "postfix",
+      "situation": "after the owner's correction (r3)",
+      "status": 200,
+      "truth_action_took_effect": true,
+      "vars": null
+    }
+  ],
+  "calls": [
+    {
+      "at": "2026-10-09T15:53:49Z",
+      "json": {
+        "applied": "stopped",
+        "note": {
+          "code": "SERVICE_ACTION_NOTE",
+          "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+          "reason": "unit_marked_failed_config",
+          "vars": {
+            "command": "sudo systemctl reset-failed postfix.service",
+            "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+            "failed_unit": "postfix.service",
+            "result": "exit-code",
+            "unit": "postfix"
+          }
+        },
+        "outcome": "verified",
+        "success": true
+      },
+      "label": "S8 postfix stop (main.cf holds a line Postfix refuses (r1))",
+      "request": {
+        "body": {
+          "action": "stop",
+          "name": "postfix"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/action"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T15:54:04Z",
+      "json": {
+        "applied": "started",
+        "outcome": "verified",
+        "success": true
+      },
+      "label": "S8 postfix start (after the owner's correction (r1))",
+      "request": {
+        "body": {
+          "action": "start",
+          "name": "postfix"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/action"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T15:54:13Z",
+      "json": {
+        "applied": "stopped",
+        "note": {
+          "code": "SERVICE_ACTION_NOTE",
+          "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+          "reason": "unit_marked_failed_config",
+          "vars": {
+            "command": "sudo systemctl reset-failed postfix.service",
+            "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+            "failed_unit": "postfix.service",
+            "result": "exit-code",
+            "unit": "postfix"
+          }
+        },
+        "outcome": "verified",
+        "success": true
+      },
+      "label": "S8 postfix stop (main.cf holds a line Postfix refuses (r2))",
+      "request": {
+        "body": {
+          "action": "stop",
+          "name": "postfix"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/action"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T15:54:27Z",
+      "json": {
+        "applied": "started",
+        "outcome": "verified",
+        "success": true
+      },
+      "label": "S8 postfix start (after the owner's correction (r2))",
+      "request": {
+        "body": {
+          "action": "start",
+          "name": "postfix"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/action"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T15:54:39Z",
+      "json": {
+        "applied": "stopped",
+        "note": {
+          "code": "SERVICE_ACTION_NOTE",
+          "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+          "reason": "unit_marked_failed_config",
+          "vars": {
+            "command": "sudo systemctl reset-failed postfix.service",
+            "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+            "failed_unit": "postfix.service",
+            "result": "exit-code",
+            "unit": "postfix"
+          }
+        },
+        "outcome": "verified",
+        "success": true
+      },
+      "label": "S8 postfix stop (main.cf holds a line Postfix refuses (r3))",
+      "request": {
+        "body": {
+          "action": "stop",
+          "name": "postfix"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/action"
+      },
+      "status": 200,
+      "text": null
+    },
+    {
+      "at": "2026-10-09T15:54:53Z",
+      "json": {
+        "applied": "started",
+        "outcome": "verified",
+        "success": true
+      },
+      "label": "S8 postfix start (after the owner's correction (r3))",
+      "request": {
+        "body": {
+          "action": "start",
+          "name": "postfix"
+        },
+        "method": "POST",
+        "path": "/api/v1/service/action"
+      },
+      "status": 200,
+      "text": null
+    }
+  ],
+  "checks": [
+    {
+      "detail": {
+        "after": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "postfix.service": {
+              "ActiveState": "failed",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "exit-code",
+              "SubState": "failed"
+            },
+            "postfix@-.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "answer": {
+          "applied": "stopped",
+          "outcome": "verified",
+          "success": true
+        },
+        "before": {
+          "pid": 31429,
+          "running": true,
+          "units": {
+            "postfix.service": {
+              "ActiveState": "active",
+              "LoadState": "loaded",
+              "MainPID": "31429",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "running"
+            },
+            "postfix@-.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "code": null,
+        "reason": null,
+        "reload_evidence": [],
+        "status": 200,
+        "truth_action_took_effect": true,
+        "vars": null
+      },
+      "name": "S8 postfix stop (main.cf holds a line Postfix refuses (r1)): the answer (success) matches what the service shows",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "pid": 32219,
+          "running": true,
+          "units": {
+            "postfix.service": {
+              "ActiveState": "active",
+              "LoadState": "loaded",
+              "MainPID": "32219",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "running"
+            },
+            "postfix@-.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "answer": {
+          "applied": "started",
+          "outcome": "verified",
+          "success": true
+        },
+        "before": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "postfix.service": {
+              "ActiveState": "failed",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "exit-code",
+              "SubState": "failed"
+            },
+            "postfix@-.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "code": null,
+        "reason": null,
+        "reload_evidence": [],
+        "status": 200,
+        "truth_action_took_effect": true,
+        "vars": null
+      },
+      "name": "S8 postfix start (after the owner's correction (r1)): the answer (success) matches what the service shows",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "postfix.service": {
+              "ActiveState": "failed",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "exit-code",
+              "SubState": "failed"
+            },
+            "postfix@-.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "answer": {
+          "applied": "stopped",
+          "outcome": "verified",
+          "success": true
+        },
+        "before": {
+          "pid": 32219,
+          "running": true,
+          "units": {
+            "postfix.service": {
+              "ActiveState": "active",
+              "LoadState": "loaded",
+              "MainPID": "32219",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "running"
+            },
+            "postfix@-.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "code": null,
+        "reason": null,
+        "reload_evidence": [],
+        "status": 200,
+        "truth_action_took_effect": true,
+        "vars": null
+      },
+      "name": "S8 postfix stop (main.cf holds a line Postfix refuses (r2)): the answer (success) matches what the service shows",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "pid": 32950,
+          "running": true,
+          "units": {
+            "postfix.service": {
+              "ActiveState": "active",
+              "LoadState": "loaded",
+              "MainPID": "32950",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "running"
+            },
+            "postfix@-.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "answer": {
+          "applied": "started",
+          "outcome": "verified",
+          "success": true
+        },
+        "before": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "postfix.service": {
+              "ActiveState": "failed",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "exit-code",
+              "SubState": "failed"
+            },
+            "postfix@-.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "code": null,
+        "reason": null,
+        "reload_evidence": [],
+        "status": 200,
+        "truth_action_took_effect": true,
+        "vars": null
+      },
+      "name": "S8 postfix start (after the owner's correction (r2)): the answer (success) matches what the service shows",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "postfix.service": {
+              "ActiveState": "failed",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "exit-code",
+              "SubState": "failed"
+            },
+            "postfix@-.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "answer": {
+          "applied": "stopped",
+          "outcome": "verified",
+          "success": true
+        },
+        "before": {
+          "pid": 32950,
+          "running": true,
+          "units": {
+            "postfix.service": {
+              "ActiveState": "active",
+              "LoadState": "loaded",
+              "MainPID": "32950",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "running"
+            },
+            "postfix@-.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "code": null,
+        "reason": null,
+        "reload_evidence": [],
+        "status": 200,
+        "truth_action_took_effect": true,
+        "vars": null
+      },
+      "name": "S8 postfix stop (main.cf holds a line Postfix refuses (r3)): the answer (success) matches what the service shows",
+      "ok": true
+    },
+    {
+      "detail": {
+        "after": {
+          "pid": 33683,
+          "running": true,
+          "units": {
+            "postfix.service": {
+              "ActiveState": "active",
+              "LoadState": "loaded",
+              "MainPID": "33683",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "running"
+            },
+            "postfix@-.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "answer": {
+          "applied": "started",
+          "outcome": "verified",
+          "success": true
+        },
+        "before": {
+          "pid": 0,
+          "running": false,
+          "units": {
+            "postfix.service": {
+              "ActiveState": "failed",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "exit-code",
+              "SubState": "failed"
+            },
+            "postfix@-.service": {
+              "ActiveState": "inactive",
+              "LoadState": "loaded",
+              "MainPID": "0",
+              "ReloadResult": "success",
+              "Result": "success",
+              "SubState": "dead"
+            }
+          }
+        },
+        "code": null,
+        "reason": null,
+        "reload_evidence": [],
+        "status": 200,
+        "truth_action_took_effect": true,
+        "vars": null
+      },
+      "name": "S8 postfix start (after the owner's correction (r3)): the answer (success) matches what the service shows",
+      "ok": true
+    },
+    {
+      "detail": {
+        "note": {
+          "code": "SERVICE_ACTION_NOTE",
+          "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+          "reason": "unit_marked_failed_config",
+          "vars": {
+            "command": "sudo systemctl reset-failed postfix.service",
+            "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+            "failed_unit": "postfix.service",
+            "result": "exit-code",
+            "unit": "postfix"
+          }
+        },
+        "status": 200,
+        "units_after": {
+          "postfix.service": {
+            "ActiveState": "failed",
+            "Result": "exit-code",
+            "SubState": "failed"
+          },
+          "postfix@-.service": {
+            "ActiveState": "inactive",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "name": "r1: Stop answers 200 success with the note, and the note names the unit systemd shows as failed",
+      "ok": true
+    },
+    {
+      "detail": {
+        "failed_later": [
+          "postfix.service"
+        ],
+        "restored": {
+          "answer": {
+            "applied": "started",
+            "outcome": "verified",
+            "success": true
+          },
+          "master_running": true,
+          "status": 200
+        }
+      },
+      "name": "r1: the unit is still `failed` afterwards (no reset-failed), and Start works after the correction",
+      "ok": true
+    },
+    {
+      "detail": {
+        "note": {
+          "code": "SERVICE_ACTION_NOTE",
+          "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+          "reason": "unit_marked_failed_config",
+          "vars": {
+            "command": "sudo systemctl reset-failed postfix.service",
+            "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+            "failed_unit": "postfix.service",
+            "result": "exit-code",
+            "unit": "postfix"
+          }
+        },
+        "status": 200,
+        "units_after": {
+          "postfix.service": {
+            "ActiveState": "failed",
+            "Result": "exit-code",
+            "SubState": "failed"
+          },
+          "postfix@-.service": {
+            "ActiveState": "inactive",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "name": "r2: Stop answers 200 success with the note, and the note names the unit systemd shows as failed",
+      "ok": true
+    },
+    {
+      "detail": {
+        "failed_later": [
+          "postfix.service"
+        ],
+        "restored": {
+          "answer": {
+            "applied": "started",
+            "outcome": "verified",
+            "success": true
+          },
+          "master_running": true,
+          "status": 200
+        }
+      },
+      "name": "r2: the unit is still `failed` afterwards (no reset-failed), and Start works after the correction",
+      "ok": true
+    },
+    {
+      "detail": {
+        "note": {
+          "code": "SERVICE_ACTION_NOTE",
+          "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+          "reason": "unit_marked_failed_config",
+          "vars": {
+            "command": "sudo systemctl reset-failed postfix.service",
+            "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+            "failed_unit": "postfix.service",
+            "result": "exit-code",
+            "unit": "postfix"
+          }
+        },
+        "status": 200,
+        "units_after": {
+          "postfix.service": {
+            "ActiveState": "failed",
+            "Result": "exit-code",
+            "SubState": "failed"
+          },
+          "postfix@-.service": {
+            "ActiveState": "inactive",
+            "Result": "success",
+            "SubState": "dead"
+          }
+        }
+      },
+      "name": "r3: Stop answers 200 success with the note, and the note names the unit systemd shows as failed",
+      "ok": true
+    },
+    {
+      "detail": {
+        "failed_later": [
+          "postfix.service"
+        ],
+        "restored": {
+          "answer": {
+            "applied": "started",
+            "outcome": "verified",
+            "success": true
+          },
+          "master_running": true,
+          "status": 200
+        }
+      },
+      "name": "r3: the unit is still `failed` afterwards (no reset-failed), and Start works after the correction",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T15:54:54Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/029-postfix-main.cf-before-typo.json",
+      "label": "postfix-main.cf-before-typo",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/030-owner-r1-typo-main-cf.json",
+      "label": "owner-r1-typo-main-cf",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/031-r1-armed.json",
+      "label": "r1-armed",
+      "mode": "diag-arm",
+      "owner_action": false
+    },
+    {
+      "file": "native/032-r1-agent-view-before.json",
+      "label": "r1-agent-view-before",
+      "mode": "read-agent-view",
+      "owner_action": false
+    },
+    {
+      "file": "native/033-postfix-stop-main-cf-holds-a-line-postfix-refuses-r1-before.json",
+      "label": "postfix-stop-main-cf-holds-a-line-postfix-refuses-r1-before",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/034-postfix-stop-main-cf-holds-a-line-postfix-refuses-r1-after.json",
+      "label": "postfix-stop-main-cf-holds-a-line-postfix-refuses-r1-after",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/035-postfix-stop-main-cf-holds-a-line-postfix-refuses-r1-journal.json",
+      "label": "postfix-stop-main-cf-holds-a-line-postfix-refuses-r1-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/036-postfix-stop-main-cf-holds-a-line-postfix-refuses-r1-journal-postfix.json",
+      "label": "postfix-stop-main-cf-holds-a-line-postfix-refuses-r1-journal-postfix",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/037-r1-collected.json",
+      "label": "r1-collected",
+      "mode": "diag-collect",
+      "owner_action": false
+    },
+    {
+      "file": "native/038-r1-agent-view-after.json",
+      "label": "r1-agent-view-after",
+      "mode": "read-agent-view",
+      "owner_action": false
+    },
+    {
+      "file": "native/039-r1-postfix-units-later.json",
+      "label": "r1-postfix-units-later",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/040-owner-r1-typo-removed.json",
+      "label": "owner-r1-typo-removed",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/041-postfix-start-after-the-owner-s-correction-r1-before.json",
+      "label": "postfix-start-after-the-owner-s-correction-r1-before",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/042-postfix-start-after-the-owner-s-correction-r1-after.json",
+      "label": "postfix-start-after-the-owner-s-correction-r1-after",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/043-postfix-start-after-the-owner-s-correction-r1-journal.json",
+      "label": "postfix-start-after-the-owner-s-correction-r1-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/044-postfix-start-after-the-owner-s-correction-r1-journal-postfix.json",
+      "label": "postfix-start-after-the-owner-s-correction-r1-journal-postfix",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/045-owner-r2-typo-main-cf.json",
+      "label": "owner-r2-typo-main-cf",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/046-r2-armed.json",
+      "label": "r2-armed",
+      "mode": "diag-arm",
+      "owner_action": false
+    },
+    {
+      "file": "native/047-r2-agent-view-before.json",
+      "label": "r2-agent-view-before",
+      "mode": "read-agent-view",
+      "owner_action": false
+    },
+    {
+      "file": "native/048-postfix-stop-main-cf-holds-a-line-postfix-refuses-r2-before.json",
+      "label": "postfix-stop-main-cf-holds-a-line-postfix-refuses-r2-before",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/049-postfix-stop-main-cf-holds-a-line-postfix-refuses-r2-after.json",
+      "label": "postfix-stop-main-cf-holds-a-line-postfix-refuses-r2-after",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/050-postfix-stop-main-cf-holds-a-line-postfix-refuses-r2-journal.json",
+      "label": "postfix-stop-main-cf-holds-a-line-postfix-refuses-r2-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/051-postfix-stop-main-cf-holds-a-line-postfix-refuses-r2-journal-postfix.json",
+      "label": "postfix-stop-main-cf-holds-a-line-postfix-refuses-r2-journal-postfix",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/052-r2-collected.json",
+      "label": "r2-collected",
+      "mode": "diag-collect",
+      "owner_action": false
+    },
+    {
+      "file": "native/053-r2-agent-view-after.json",
+      "label": "r2-agent-view-after",
+      "mode": "read-agent-view",
+      "owner_action": false
+    },
+    {
+      "file": "native/054-r2-postfix-units-later.json",
+      "label": "r2-postfix-units-later",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/055-owner-r2-typo-removed.json",
+      "label": "owner-r2-typo-removed",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/056-postfix-start-after-the-owner-s-correction-r2-before.json",
+      "label": "postfix-start-after-the-owner-s-correction-r2-before",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/057-postfix-start-after-the-owner-s-correction-r2-after.json",
+      "label": "postfix-start-after-the-owner-s-correction-r2-after",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/058-postfix-start-after-the-owner-s-correction-r2-journal.json",
+      "label": "postfix-start-after-the-owner-s-correction-r2-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/059-postfix-start-after-the-owner-s-correction-r2-journal-postfix.json",
+      "label": "postfix-start-after-the-owner-s-correction-r2-journal-postfix",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/060-owner-r3-typo-main-cf.json",
+      "label": "owner-r3-typo-main-cf",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/061-r3-armed.json",
+      "label": "r3-armed",
+      "mode": "diag-arm",
+      "owner_action": false
+    },
+    {
+      "file": "native/062-r3-agent-view-before.json",
+      "label": "r3-agent-view-before",
+      "mode": "read-agent-view",
+      "owner_action": false
+    },
+    {
+      "file": "native/063-postfix-stop-main-cf-holds-a-line-postfix-refuses-r3-before.json",
+      "label": "postfix-stop-main-cf-holds-a-line-postfix-refuses-r3-before",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/064-postfix-stop-main-cf-holds-a-line-postfix-refuses-r3-after.json",
+      "label": "postfix-stop-main-cf-holds-a-line-postfix-refuses-r3-after",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/065-postfix-stop-main-cf-holds-a-line-postfix-refuses-r3-journal.json",
+      "label": "postfix-stop-main-cf-holds-a-line-postfix-refuses-r3-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/066-postfix-stop-main-cf-holds-a-line-postfix-refuses-r3-journal-postfix.json",
+      "label": "postfix-stop-main-cf-holds-a-line-postfix-refuses-r3-journal-postfix",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/067-r3-collected.json",
+      "label": "r3-collected",
+      "mode": "diag-collect",
+      "owner_action": false
+    },
+    {
+      "file": "native/068-r3-agent-view-after.json",
+      "label": "r3-agent-view-after",
+      "mode": "read-agent-view",
+      "owner_action": false
+    },
+    {
+      "file": "native/069-r3-postfix-units-later.json",
+      "label": "r3-postfix-units-later",
+      "mode": "read-units",
+      "owner_action": false
+    },
+    {
+      "file": "native/070-owner-r3-typo-removed.json",
+      "label": "owner-r3-typo-removed",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/071-postfix-start-after-the-owner-s-correction-r3-before.json",
+      "label": "postfix-start-after-the-owner-s-correction-r3-before",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/072-postfix-start-after-the-owner-s-correction-r3-after.json",
+      "label": "postfix-start-after-the-owner-s-correction-r3-after",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/073-postfix-start-after-the-owner-s-correction-r3-journal.json",
+      "label": "postfix-start-after-the-owner-s-correction-r3-journal",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/074-postfix-start-after-the-owner-s-correction-r3-journal-postfix.json",
+      "label": "postfix-start-after-the-owner-s-correction-r3-journal-postfix",
+      "mode": "read-journal",
+      "owner_action": false
+    },
+    {
+      "file": "native/075-owner-typo-removed-at-the-end.json",
+      "label": "owner-typo-removed-at-the-end",
+      "mode": "owner-edit",
+      "owner_action": true
+    }
+  ],
+  "node": "debian13",
+  "notes": [],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T15:53:43Z",
+      "label": "r1-typo-main-cf",
+      "mode": "owner-edit"
+    },
+    {
+      "at": "2026-10-09T15:54:00Z",
+      "label": "r1-typo-removed",
+      "mode": "owner-edit"
+    },
+    {
+      "at": "2026-10-09T15:54:06Z",
+      "label": "r2-typo-main-cf",
+      "mode": "owner-edit"
+    },
+    {
+      "at": "2026-10-09T15:54:23Z",
+      "label": "r2-typo-removed",
+      "mode": "owner-edit"
+    },
+    {
+      "at": "2026-10-09T15:54:33Z",
+      "label": "r3-typo-main-cf",
+      "mode": "owner-edit"
+    },
+    {
+      "at": "2026-10-09T15:54:49Z",
+      "label": "r3-typo-removed",
+      "mode": "owner-edit"
+    },
+    {
+      "at": "2026-10-09T15:54:55Z",
+      "label": "typo-removed-at-the-end",
+      "mode": "owner-edit"
+    }
+  ],
+  "runs": [
+    {
+      "answer": {
+        "applied": "stopped",
+        "note": {
+          "code": "SERVICE_ACTION_NOTE",
+          "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+          "reason": "unit_marked_failed_config",
+          "vars": {
+            "command": "sudo systemctl reset-failed postfix.service",
+            "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+            "failed_unit": "postfix.service",
+            "result": "exit-code",
+            "unit": "postfix"
+          }
+        },
+        "outcome": "verified",
+        "success": true
+      },
+      "failed_later": [
+        "postfix.service"
+      ],
+      "files": {
+        "agent_view_after": "native/038-r1-agent-view-after.json",
+        "agent_view_before": "native/032-r1-agent-view-before.json",
+        "armed": "native/031-r1-armed.json",
+        "collected": "native/037-r1-collected.json"
+      },
+      "instruments": {
+        "kernel_trace": true,
+        "sampler": false,
+        "strace": false
+      },
+      "label": "r1",
+      "master_running_after": false,
+      "note": {
+        "code": "SERVICE_ACTION_NOTE",
+        "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+        "reason": "unit_marked_failed_config",
+        "vars": {
+          "command": "sudo systemctl reset-failed postfix.service",
+          "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+          "failed_unit": "postfix.service",
+          "result": "exit-code",
+          "unit": "postfix"
+        }
+      },
+      "note_given": true,
+      "restored": {
+        "answer": {
+          "applied": "started",
+          "outcome": "verified",
+          "success": true
+        },
+        "master_running": true,
+        "status": 200
+      },
+      "status": 200,
+      "timeline": {
+        "agent_last_systemctl": {
+          "ended": 696.457752,
+          "mono": 696.451428,
+          "pid": 31803,
+          "program": "systemctl"
+        },
+        "agent_programs": [
+          {
+            "ended": 693.106427,
+            "mono": 693.100136,
+            "pid": 31697,
+            "program": "systemctl"
+          },
+          {
+            "ended": 693.121276,
+            "mono": 693.107038,
+            "pid": 31698,
+            "program": "agent"
+          },
+          {
+            "ended": 693.121153,
+            "mono": 693.112488,
+            "pid": 31703,
+            "program": "systemctl"
+          },
+          {
+            "ended": 693.153261,
+            "mono": 693.137277,
+            "pid": 31704,
+            "program": "agent"
+          },
+          {
+            "ended": 693.153115,
+            "mono": 693.142914,
+            "pid": 31709,
+            "program": "systemctl"
+          },
+          {
+            "ended": 694.240324,
+            "mono": 693.167596,
+            "pid": 31710,
+            "program": "agent"
+          },
+          {
+            "ended": 694.238871,
+            "mono": 693.172806,
+            "pid": 31715,
+            "program": "systemctl"
+          },
+          {
+            "ended": 694.271934,
+            "mono": 694.25928,
+            "pid": 31751,
+            "program": "agent"
+          },
+          {
+            "ended": 694.271787,
+            "mono": 694.26519,
+            "pid": 31756,
+            "program": "postconf"
+          },
+          {
+            "ended": 694.302574,
+            "mono": 694.287414,
+            "pid": 31757,
+            "program": "agent"
+          },
+          {
+            "ended": 694.302042,
+            "mono": 694.293336,
+            "pid": 31762,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.335144,
+            "mono": 694.322058,
+            "pid": 31763,
+            "program": "agent"
+          },
+          {
+            "ended": 695.333638,
+            "mono": 694.328677,
+            "pid": 31768,
+            "program": "postfix"
+          },
+          {
+            "ended": 695.389524,
+            "mono": 695.38176,
+            "pid": 31770,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.391023,
+            "mono": 695.390011,
+            "pid": 31771,
+            "program": "cron"
+          },
+          {
+            "ended": 695.392447,
+            "mono": 695.391421,
+            "pid": 31772,
+            "program": "cron"
+          },
+          {
+            "ended": 695.393947,
+            "mono": 695.392988,
+            "pid": 31773,
+            "program": "cron"
+          },
+          {
+            "ended": 695.395305,
+            "mono": 695.394334,
+            "pid": 31774,
+            "program": "cron"
+          },
+          {
+            "ended": 695.40458,
+            "mono": 695.396152,
+            "pid": 31775,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.407253,
+            "mono": 695.405366,
+            "pid": 31776,
+            "program": "dovecot"
+          },
+          {
+            "ended": 695.417121,
+            "mono": 695.40792,
+            "pid": 31777,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.448508,
+            "mono": 695.417939,
+            "pid": 31778,
+            "program": "mariadbd"
+          },
+          {
+            "ended": 695.460593,
+            "mono": 695.449972,
+            "pid": 31779,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.463878,
+            "mono": 695.461432,
+            "pid": 31780,
+            "program": "nginx"
+          },
+          {
+            "ended": 695.466744,
+            "mono": 695.464406,
+            "pid": 31781,
+            "program": "nginx"
+          },
+          {
+            "ended": 695.475886,
+            "mono": 695.46736,
+            "pid": 31782,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.485376,
+            "mono": 695.476742,
+            "pid": 31783,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.493601,
+            "mono": 695.485978,
+            "pid": 31784,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.502489,
+            "mono": 695.494275,
+            "pid": 31785,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.523673,
+            "mono": 695.50314,
+            "pid": 31786,
+            "program": "rspamd"
+          },
+          {
+            "ended": 695.531916,
+            "mono": 695.524352,
+            "pid": 31787,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.54235,
+            "mono": 695.534634,
+            "pid": 31788,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.940228,
+            "mono": 695.542941,
+            "pid": 31789,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.94887,
+            "mono": 695.941086,
+            "pid": 31790,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.957259,
+            "mono": 695.949353,
+            "pid": 31791,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.966199,
+            "mono": 695.957869,
+            "pid": 31792,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.973296,
+            "mono": 695.966727,
+            "pid": 31793,
+            "program": "dpkg-query"
+          },
+          {
+            "ended": 695.981982,
+            "mono": 695.97392,
+            "pid": 31794,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.991134,
+            "mono": 695.982604,
+            "pid": 31795,
+            "program": "systemctl"
+          },
+          {
+            "ended": 695.999212,
+            "mono": 695.991556,
+            "pid": 31796,
+            "program": "systemctl"
+          },
+          {
+            "ended": 696.008225,
+            "mono": 696.000145,
+            "pid": 31797,
+            "program": "systemctl"
+          },
+          {
+            "ended": 696.016284,
+            "mono": 696.009761,
+            "pid": 31798,
+            "program": "systemctl"
+          },
+          {
+            "ended": 696.022569,
+            "mono": 696.017374,
+            "pid": 31799,
+            "program": "dpkg-query"
+          },
+          {
+            "ended": 696.029811,
+            "mono": 696.023926,
+            "pid": 31800,
+            "program": "systemctl"
+          },
+          {
+            "ended": 696.435533,
+            "mono": 696.030447,
+            "pid": 31801,
+            "program": "systemctl"
+          },
+          {
+            "ended": 696.447104,
+            "mono": 696.436085,
+            "pid": 31802,
+            "program": "systemctl"
+          },
+          {
+            "ended": 696.457752,
+            "mono": 696.451428,
+            "pid": 31803,
+            "program": "systemctl"
+          },
+          {
+            "ended": 696.464889,
+            "mono": 696.459156,
+            "pid": 31804,
+            "program": "dpkg-query"
+          }
+        ],
+        "agent_stop_command": null,
+        "left_active_mono": null,
+        "master_ended_mono": 694.230228,
+        "settled_mono": null,
+        "state_at_collect": {
+          "ActiveState": "inactive",
+          "Result": "success",
+          "SubState": "dead"
+        },
+        "unit": "postfix@-.service"
+      },
+      "units_after": {
+        "postfix.service": {
+          "ActiveState": "failed",
+          "Result": "exit-code",
+          "SubState": "failed"
+        },
+        "postfix@-.service": {
+          "ActiveState": "inactive",
+          "Result": "success",
+          "SubState": "dead"
+        }
+      }
+    },
+    {
+      "answer": {
+        "applied": "stopped",
+        "note": {
+          "code": "SERVICE_ACTION_NOTE",
+          "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+          "reason": "unit_marked_failed_config",
+          "vars": {
+            "command": "sudo systemctl reset-failed postfix.service",
+            "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+            "failed_unit": "postfix.service",
+            "result": "exit-code",
+            "unit": "postfix"
+          }
+        },
+        "outcome": "verified",
+        "success": true
+      },
+      "failed_later": [
+        "postfix.service"
+      ],
+      "files": {
+        "agent_view_after": "native/053-r2-agent-view-after.json",
+        "agent_view_before": "native/047-r2-agent-view-before.json",
+        "armed": "native/046-r2-armed.json",
+        "collected": "native/052-r2-collected.json"
+      },
+      "instruments": {
+        "kernel_trace": true,
+        "sampler": false,
+        "strace": false
+      },
+      "label": "r2",
+      "master_running_after": false,
+      "note": {
+        "code": "SERVICE_ACTION_NOTE",
+        "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+        "reason": "unit_marked_failed_config",
+        "vars": {
+          "command": "sudo systemctl reset-failed postfix.service",
+          "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+          "failed_unit": "postfix.service",
+          "result": "exit-code",
+          "unit": "postfix"
+        }
+      },
+      "note_given": true,
+      "restored": {
+        "answer": {
+          "applied": "started",
+          "outcome": "verified",
+          "success": true
+        },
+        "master_running": true,
+        "status": 200
+      },
+      "status": 200,
+      "timeline": {
+        "agent_last_systemctl": {
+          "ended": 719.839368,
+          "mono": 719.832157,
+          "pid": 32502,
+          "program": "systemctl"
+        },
+        "agent_programs": [
+          {
+            "ended": 716.076705,
+            "mono": 716.068532,
+            "pid": 32430,
+            "program": "systemctl"
+          },
+          {
+            "ended": 716.097525,
+            "mono": 716.078136,
+            "pid": 32431,
+            "program": "agent"
+          },
+          {
+            "ended": 716.096554,
+            "mono": 716.085812,
+            "pid": 32436,
+            "program": "systemctl"
+          },
+          {
+            "ended": 716.131233,
+            "mono": 716.112655,
+            "pid": 32437,
+            "program": "agent"
+          },
+          {
+            "ended": 716.130576,
+            "mono": 716.12077,
+            "pid": 32442,
+            "program": "systemctl"
+          },
+          {
+            "ended": 717.238066,
+            "mono": 716.149249,
+            "pid": 32443,
+            "program": "agent"
+          },
+          {
+            "ended": 717.237888,
+            "mono": 716.15515,
+            "pid": 32448,
+            "program": "systemctl"
+          },
+          {
+            "ended": 717.276951,
+            "mono": 717.258641,
+            "pid": 32451,
+            "program": "agent"
+          },
+          {
+            "ended": 717.276786,
+            "mono": 717.267242,
+            "pid": 32456,
+            "program": "postconf"
+          },
+          {
+            "ended": 717.311053,
+            "mono": 717.295253,
+            "pid": 32457,
+            "program": "agent"
+          },
+          {
+            "ended": 717.310936,
+            "mono": 717.301285,
+            "pid": 32462,
+            "program": "systemctl"
+          },
+          {
+            "ended": 718.340802,
+            "mono": 717.328215,
+            "pid": 32463,
+            "program": "agent"
+          },
+          {
+            "ended": 718.339568,
+            "mono": 717.334574,
+            "pid": 32468,
+            "program": "postfix"
+          },
+          {
+            "ended": 718.414999,
+            "mono": 718.402295,
+            "pid": 32469,
+            "program": "systemctl"
+          },
+          {
+            "ended": 718.419395,
+            "mono": 718.417817,
+            "pid": 32470,
+            "program": "cron"
+          },
+          {
+            "ended": 718.421719,
+            "mono": 718.419973,
+            "pid": 32471,
+            "program": "cron"
+          },
+          {
+            "ended": 718.424132,
+            "mono": 718.422404,
+            "pid": 32472,
+            "program": "cron"
+          },
+          {
+            "ended": 718.426688,
+            "mono": 718.424884,
+            "pid": 32473,
+            "program": "cron"
+          },
+          {
+            "ended": 718.445683,
+            "mono": 718.427864,
+            "pid": 32474,
+            "program": "systemctl"
+          },
+          {
+            "ended": 718.451262,
+            "mono": 718.447104,
+            "pid": 32475,
+            "program": "dovecot"
+          },
+          {
+            "ended": 718.466176,
+            "mono": 718.452579,
+            "pid": 32476,
+            "program": "systemctl"
+          },
+          {
+            "ended": 718.494922,
+            "mono": 718.467059,
+            "pid": 32477,
+            "program": "mariadbd"
+          },
+          {
+            "ended": 718.50477,
+            "mono": 718.495603,
+            "pid": 32478,
+            "program": "systemctl"
+          },
+          {
+            "ended": 718.507916,
+            "mono": 718.505342,
+            "pid": 32479,
+            "program": "nginx"
+          },
+          {
+            "ended": 718.511278,
+            "mono": 718.508571,
+            "pid": 32480,
+            "program": "nginx"
+          },
+          {
+            "ended": 718.520676,
+            "mono": 718.511983,
+            "pid": 32481,
+            "program": "systemctl"
+          },
+          {
+            "ended": 718.530019,
+            "mono": 718.521379,
+            "pid": 32482,
+            "program": "systemctl"
+          },
+          {
+            "ended": 718.539664,
+            "mono": 718.530917,
+            "pid": 32483,
+            "program": "systemctl"
+          },
+          {
+            "ended": 718.549533,
+            "mono": 718.540651,
+            "pid": 32484,
+            "program": "systemctl"
+          },
+          {
+            "ended": 718.570842,
+            "mono": 718.550275,
+            "pid": 32485,
+            "program": "rspamd"
+          },
+          {
+            "ended": 718.580421,
+            "mono": 718.571618,
+            "pid": 32486,
+            "program": "systemctl"
+          },
+          {
+            "ended": 718.589639,
+            "mono": 718.583441,
+            "pid": 32487,
+            "program": "systemctl"
+          },
+          {
+            "ended": 719.164864,
+            "mono": 718.5906,
+            "pid": 32488,
+            "program": "systemctl"
+          },
+          {
+            "ended": 719.17934,
+            "mono": 719.166102,
+            "pid": 32489,
+            "program": "systemctl"
+          },
+          {
+            "ended": 719.194248,
+            "mono": 719.180514,
+            "pid": 32490,
+            "program": "systemctl"
+          },
+          {
+            "ended": 719.212603,
+            "mono": 719.19643,
+            "pid": 32491,
+            "program": "systemctl"
+          },
+          {
+            "ended": 719.227523,
+            "mono": 719.213688,
+            "pid": 32492,
+            "program": "dpkg-query"
+          },
+          {
+            "ended": 719.242822,
+            "mono": 719.230079,
+            "pid": 32493,
+            "program": "systemctl"
+          },
+          {
+            "ended": 719.256925,
+            "mono": 719.243584,
+            "pid": 32494,
+            "program": "systemctl"
+          },
+          {
+            "ended": 719.272541,
+            "mono": 719.25773,
+            "pid": 32495,
+            "program": "systemctl"
+          },
+          {
+            "ended": 719.287196,
+            "mono": 719.273522,
+            "pid": 32496,
+            "program": "systemctl"
+          },
+          {
+            "ended": 719.301184,
+            "mono": 719.289551,
+            "pid": 32497,
+            "program": "systemctl"
+          },
+          {
+            "ended": 719.310988,
+            "mono": 719.302488,
+            "pid": 32498,
+            "program": "dpkg-query"
+          },
+          {
+            "ended": 719.32623,
+            "mono": 719.313362,
+            "pid": 32499,
+            "program": "systemctl"
+          },
+          {
+            "ended": 719.816459,
+            "mono": 719.327181,
+            "pid": 32500,
+            "program": "systemctl"
+          },
+          {
+            "ended": 719.828075,
+            "mono": 719.817456,
+            "pid": 32501,
+            "program": "systemctl"
+          },
+          {
+            "ended": 719.839368,
+            "mono": 719.832157,
+            "pid": 32502,
+            "program": "systemctl"
+          },
+          {
+            "ended": 719.846096,
+            "mono": 719.840136,
+            "pid": 32503,
+            "program": "dpkg-query"
+          }
+        ],
+        "agent_stop_command": null,
+        "left_active_mono": null,
+        "master_ended_mono": 717.234084,
+        "settled_mono": null,
+        "state_at_collect": {
+          "ActiveState": "inactive",
+          "Result": "success",
+          "SubState": "dead"
+        },
+        "unit": "postfix@-.service"
+      },
+      "units_after": {
+        "postfix.service": {
+          "ActiveState": "failed",
+          "Result": "exit-code",
+          "SubState": "failed"
+        },
+        "postfix@-.service": {
+          "ActiveState": "inactive",
+          "Result": "success",
+          "SubState": "dead"
+        }
+      }
+    },
+    {
+      "answer": {
+        "applied": "stopped",
+        "note": {
+          "code": "SERVICE_ACTION_NOTE",
+          "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+          "reason": "unit_marked_failed_config",
+          "vars": {
+            "command": "sudo systemctl reset-failed postfix.service",
+            "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+            "failed_unit": "postfix.service",
+            "result": "exit-code",
+            "unit": "postfix"
+          }
+        },
+        "outcome": "verified",
+        "success": true
+      },
+      "failed_later": [
+        "postfix.service"
+      ],
+      "files": {
+        "agent_view_after": "native/068-r3-agent-view-after.json",
+        "agent_view_before": "native/062-r3-agent-view-before.json",
+        "armed": "native/061-r3-armed.json",
+        "collected": "native/067-r3-collected.json"
+      },
+      "instruments": {
+        "kernel_trace": true,
+        "sampler": false,
+        "strace": false
+      },
+      "label": "r3",
+      "master_running_after": false,
+      "note": {
+        "code": "SERVICE_ACTION_NOTE",
+        "error": "The service was stopped and is not running. systemd now shows its unit as failed, which it was not before the stop. That mark is systemd's own record of how the unit's stop went (with the result exit-code: a command of the unit exited with an error), and CelikPanel leaves it as it is. The service's own check refuses its configuration at present, and the unit's stop command reads the same file; the service will not start until that is corrected. Start can be used from this state. To clear the mark without starting the service, the server owner runs the command shown.",
+        "reason": "unit_marked_failed_config",
+        "vars": {
+          "command": "sudo systemctl reset-failed postfix.service",
+          "detail": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign",
+          "failed_unit": "postfix.service",
+          "result": "exit-code",
+          "unit": "postfix"
+        }
+      },
+      "note_given": true,
+      "restored": {
+        "answer": {
+          "applied": "started",
+          "outcome": "verified",
+          "success": true
+        },
+        "master_running": true,
+        "status": 200
+      },
+      "status": 200,
+      "timeline": {
+        "agent_last_systemctl": {
+          "ended": 746.484315,
+          "mono": 746.477894,
+          "pid": 33234,
+          "program": "systemctl"
+        },
+        "agent_programs": [
+          {
+            "ended": 743.118152,
+            "mono": 743.111644,
+            "pid": 33161,
+            "program": "systemctl"
+          },
+          {
+            "ended": 743.135233,
+            "mono": 743.118788,
+            "pid": 33162,
+            "program": "agent"
+          },
+          {
+            "ended": 743.135119,
+            "mono": 743.125871,
+            "pid": 33167,
+            "program": "systemctl"
+          },
+          {
+            "ended": 743.16543,
+            "mono": 743.149966,
+            "pid": 33168,
+            "program": "agent"
+          },
+          {
+            "ended": 743.164822,
+            "mono": 743.15598,
+            "pid": 33173,
+            "program": "systemctl"
+          },
+          {
+            "ended": 744.253681,
+            "mono": 743.179328,
+            "pid": 33174,
+            "program": "agent"
+          },
+          {
+            "ended": 744.25346,
+            "mono": 743.186067,
+            "pid": 33180,
+            "program": "systemctl"
+          },
+          {
+            "ended": 744.291188,
+            "mono": 744.275682,
+            "pid": 33183,
+            "program": "agent"
+          },
+          {
+            "ended": 744.290528,
+            "mono": 744.282847,
+            "pid": 33188,
+            "program": "postconf"
+          },
+          {
+            "ended": 744.324372,
+            "mono": 744.306761,
+            "pid": 33189,
+            "program": "agent"
+          },
+          {
+            "ended": 744.323688,
+            "mono": 744.313713,
+            "pid": 33194,
+            "program": "systemctl"
+          },
+          {
+            "ended": 745.353229,
+            "mono": 744.339528,
+            "pid": 33195,
+            "program": "agent"
+          },
+          {
+            "ended": 745.35147,
+            "mono": 744.346303,
+            "pid": 33200,
+            "program": "postfix"
+          },
+          {
+            "ended": 745.407878,
+            "mono": 745.39946,
+            "pid": 33201,
+            "program": "systemctl"
+          },
+          {
+            "ended": 745.409573,
+            "mono": 745.408494,
+            "pid": 33202,
+            "program": "cron"
+          },
+          {
+            "ended": 745.410936,
+            "mono": 745.409992,
+            "pid": 33203,
+            "program": "cron"
+          },
+          {
+            "ended": 745.412225,
+            "mono": 745.411285,
+            "pid": 33204,
+            "program": "cron"
+          },
+          {
+            "ended": 745.413456,
+            "mono": 745.412542,
+            "pid": 33205,
+            "program": "cron"
+          },
+          {
+            "ended": 745.422755,
+            "mono": 745.414301,
+            "pid": 33206,
+            "program": "systemctl"
+          },
+          {
+            "ended": 745.425343,
+            "mono": 745.423322,
+            "pid": 33207,
+            "program": "dovecot"
+          },
+          {
+            "ended": 745.438021,
+            "mono": 745.42585,
+            "pid": 33208,
+            "program": "systemctl"
+          },
+          {
+            "ended": 745.470983,
+            "mono": 745.439004,
+            "pid": 33209,
+            "program": "mariadbd"
+          },
+          {
+            "ended": 745.480207,
+            "mono": 745.471627,
+            "pid": 33210,
+            "program": "systemctl"
+          },
+          {
+            "ended": 745.483699,
+            "mono": 745.480975,
+            "pid": 33211,
+            "program": "nginx"
+          },
+          {
+            "ended": 745.486472,
+            "mono": 745.484293,
+            "pid": 33212,
+            "program": "nginx"
+          },
+          {
+            "ended": 745.495647,
+            "mono": 745.487162,
+            "pid": 33213,
+            "program": "systemctl"
+          },
+          {
+            "ended": 745.505407,
+            "mono": 745.496386,
+            "pid": 33214,
+            "program": "systemctl"
+          },
+          {
+            "ended": 745.515738,
+            "mono": 745.506275,
+            "pid": 33215,
+            "program": "systemctl"
+          },
+          {
+            "ended": 745.525693,
+            "mono": 745.516518,
+            "pid": 33216,
+            "program": "systemctl"
+          },
+          {
+            "ended": 745.545162,
+            "mono": 745.526372,
+            "pid": 33217,
+            "program": "rspamd"
+          },
+          {
+            "ended": 745.55378,
+            "mono": 745.545897,
+            "pid": 33218,
+            "program": "systemctl"
+          },
+          {
+            "ended": 745.564867,
+            "mono": 745.55778,
+            "pid": 33219,
+            "program": "systemctl"
+          },
+          {
+            "ended": 745.970048,
+            "mono": 745.565623,
+            "pid": 33220,
+            "program": "systemctl"
+          },
+          {
+            "ended": 745.979177,
+            "mono": 745.97069,
+            "pid": 33221,
+            "program": "systemctl"
+          },
+          {
+            "ended": 745.987584,
+            "mono": 745.97999,
+            "pid": 33222,
+            "program": "systemctl"
+          },
+          {
+            "ended": 745.997126,
+            "mono": 745.988131,
+            "pid": 33223,
+            "program": "systemctl"
+          },
+          {
+            "ended": 746.003354,
+            "mono": 745.997545,
+            "pid": 33224,
+            "program": "dpkg-query"
+          },
+          {
+            "ended": 746.01228,
+            "mono": 746.004175,
+            "pid": 33225,
+            "program": "systemctl"
+          },
+          {
+            "ended": 746.020845,
+            "mono": 746.012764,
+            "pid": 33226,
+            "program": "systemctl"
+          },
+          {
+            "ended": 746.029512,
+            "mono": 746.021335,
+            "pid": 33227,
+            "program": "systemctl"
+          },
+          {
+            "ended": 746.038792,
+            "mono": 746.030252,
+            "pid": 33228,
+            "program": "systemctl"
+          },
+          {
+            "ended": 746.046192,
+            "mono": 746.040274,
+            "pid": 33229,
+            "program": "systemctl"
+          },
+          {
+            "ended": 746.052174,
+            "mono": 746.046769,
+            "pid": 33230,
+            "program": "dpkg-query"
+          },
+          {
+            "ended": 746.059438,
+            "mono": 746.053414,
+            "pid": 33231,
+            "program": "systemctl"
+          },
+          {
+            "ended": 746.464221,
+            "mono": 746.060332,
+            "pid": 33232,
+            "program": "systemctl"
+          },
+          {
+            "ended": 746.475162,
+            "mono": 746.465265,
+            "pid": 33233,
+            "program": "systemctl"
+          },
+          {
+            "ended": 746.484315,
+            "mono": 746.477894,
+            "pid": 33234,
+            "program": "systemctl"
+          },
+          {
+            "ended": 746.491074,
+            "mono": 746.485003,
+            "pid": 33235,
+            "program": "dpkg-query"
+          }
+        ],
+        "agent_stop_command": null,
+        "left_active_mono": null,
+        "master_ended_mono": 744.247442,
+        "settled_mono": null,
+        "state_at_collect": {
+          "ActiveState": "inactive",
+          "Result": "success",
+          "SubState": "dead"
+        },
+        "unit": "postfix@-.service"
+      },
+      "units_after": {
+        "postfix.service": {
+          "ActiveState": "failed",
+          "Result": "exit-code",
+          "SubState": "failed"
+        },
+        "postfix@-.service": {
+          "ActiveState": "inactive",
+          "Result": "success",
+          "SubState": "dead"
+        }
+      }
+    }
+  ],
+  "section": "R10-postfix-stop-repeated",
+  "started_at": "2026-10-09T15:53:42Z",
+  "substeps": {
+    "S8 postfix start": "passed",
+    "S8 postfix stop": "passed",
+    "r1": "passed",
+    "r2": "passed",
+    "r3": "passed"
+  },
+  "summary": [
+    {
+      "agent_programs": [
+        "systemctl",
+        "agent",
+        "systemctl",
+        "agent",
+        "systemctl",
+        "agent",
+        "systemctl",
+        "agent",
+        "postconf",
+        "agent",
+        "systemctl",
+        "agent",
+        "postfix",
+        "systemctl",
+        "cron",
+        "cron",
+        "cron",
+        "cron",
+        "systemctl",
+        "dovecot",
+        "systemctl",
+        "mariadbd",
+        "systemctl",
+        "nginx",
+        "nginx",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "rspamd",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "dpkg-query",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "dpkg-query",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "dpkg-query"
+      ],
+      "label": "r1",
+      "last_systemctl_started_after_the_unit_settled_ms": null,
+      "note_reason": "unit_marked_failed_config",
+      "status": 200,
+      "unit_settled_after_the_master_ended_ms": null,
+      "units_after": {
+        "postfix.service": {
+          "ActiveState": "failed",
+          "Result": "exit-code",
+          "SubState": "failed"
+        },
+        "postfix@-.service": {
+          "ActiveState": "inactive",
+          "Result": "success",
+          "SubState": "dead"
+        }
+      }
+    },
+    {
+      "agent_programs": [
+        "systemctl",
+        "agent",
+        "systemctl",
+        "agent",
+        "systemctl",
+        "agent",
+        "systemctl",
+        "agent",
+        "postconf",
+        "agent",
+        "systemctl",
+        "agent",
+        "postfix",
+        "systemctl",
+        "cron",
+        "cron",
+        "cron",
+        "cron",
+        "systemctl",
+        "dovecot",
+        "systemctl",
+        "mariadbd",
+        "systemctl",
+        "nginx",
+        "nginx",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "rspamd",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "dpkg-query",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "dpkg-query",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "dpkg-query"
+      ],
+      "label": "r2",
+      "last_systemctl_started_after_the_unit_settled_ms": null,
+      "note_reason": "unit_marked_failed_config",
+      "status": 200,
+      "unit_settled_after_the_master_ended_ms": null,
+      "units_after": {
+        "postfix.service": {
+          "ActiveState": "failed",
+          "Result": "exit-code",
+          "SubState": "failed"
+        },
+        "postfix@-.service": {
+          "ActiveState": "inactive",
+          "Result": "success",
+          "SubState": "dead"
+        }
+      }
+    },
+    {
+      "agent_programs": [
+        "systemctl",
+        "agent",
+        "systemctl",
+        "agent",
+        "systemctl",
+        "agent",
+        "systemctl",
+        "agent",
+        "postconf",
+        "agent",
+        "systemctl",
+        "agent",
+        "postfix",
+        "systemctl",
+        "cron",
+        "cron",
+        "cron",
+        "cron",
+        "systemctl",
+        "dovecot",
+        "systemctl",
+        "mariadbd",
+        "systemctl",
+        "nginx",
+        "nginx",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "rspamd",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "dpkg-query",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "dpkg-query",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "systemctl",
+        "dpkg-query"
+      ],
+      "label": "r3",
+      "last_systemctl_started_after_the_unit_settled_ms": null,
+      "note_reason": "unit_marked_failed_config",
+      "status": 200,
+      "unit_settled_after_the_master_ended_ms": null,
+      "units_after": {
+        "postfix.service": {
+          "ActiveState": "failed",
+          "Result": "exit-code",
+          "SubState": "failed"
+        },
+        "postfix@-.service": {
+          "ActiveState": "inactive",
+          "Result": "success",
+          "SubState": "dead"
+        }
+      }
+    }
+  ],
+  "title": "the same Stop three more times, each beside when the unit settled",
+  "verdict": "passed"
+}

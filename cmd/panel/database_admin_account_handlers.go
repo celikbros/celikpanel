@@ -149,6 +149,20 @@ func (p *Panel) handleProvisionDatabaseAdminAccount(w http.ResponseWriter, r *ht
 	if !ok {
 		return
 	}
+	// One change of this account at a time per server (D-029). Each call sets
+	// a new password on the engine and then records it; two calls that
+	// interleave could leave the engine on one password and the Panel holding
+	// the other. The row is read again under the lock so the record this call
+	// writes is built from the state the previous call left.
+	// Sunucu başına bu hesabın tek değişikliği (D-029). İç içe geçen iki çağrı
+	// motoru bir parolada, Panel'i ötekinde bırakabilirdi.
+	unlock := databaseAdminAccountLocks.lock(server.ID)
+	defer unlock()
+	server, err := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB()).GetByID(r.Context(), server.ID)
+	if err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
+		return
+	}
 	if !databaseEngineIsOnThisMachine(server.Host) {
 		writeClientError(w, http.StatusConflict,
 			"CelikPanel can only open an account for itself on a database engine "+
@@ -266,6 +280,15 @@ func (p *Panel) handleRemoveDatabaseAdminAccount(w http.ResponseWriter, r *http.
 	if !ok {
 		return
 	}
+	// Never interleaved with opening or re-keying the same account (D-029).
+	// Aynı hesabın açılması ya da yeniden anahtarlanmasıyla iç içe geçmez.
+	unlock := databaseAdminAccountLocks.lock(server.ID)
+	defer unlock()
+	server, err := repositories.NewPostgresDatabaseServerRepository(p.db.GetDB()).GetByID(r.Context(), server.ID)
+	if err != nil {
+		writeClientError(w, http.StatusNotFound, "invalid request")
+		return
+	}
 	if strings.TrimSpace(server.AdminUsername) == "" {
 		writeClientError(w, http.StatusNotFound,
 			"CelikPanel has not opened an account of its own on this database server.")
@@ -317,10 +340,14 @@ func (p *Panel) handleRemoveDatabaseAdminAccount(w http.ResponseWriter, r *http.
 // oldugunu sorar. Bilerek en-iyi-caba ve bilerek susledigi seyi dusurmesine
 // izin verilmez.
 func (p *Panel) recordEngineVersion(server *core.DatabaseServer) {
-	current := strings.ToLower(strings.TrimSpace(server.Version))
-	if current != "" && current != "unknown" {
-		return
-	}
+	// The running engine is asked whenever the Panel can ask it, whatever the
+	// service scan had recorded (11 Oct 2026): one method on every platform.
+	// The scan's value came from a program on disk, and on two platforms it
+	// was not the server's version (Ubuntu 24.04: the client's "15.1"; Arch:
+	// the column name "VERSION()"). A version that cannot be read stays as it
+	// was.
+	// Panel sorabildigi her durumda calisan motora sorar; her platformda tek
+	// yontem. Okunamayan surum oldugu gibi kalir.
 	driver, err := p.dbDriverFor(server)
 	if err != nil {
 		return

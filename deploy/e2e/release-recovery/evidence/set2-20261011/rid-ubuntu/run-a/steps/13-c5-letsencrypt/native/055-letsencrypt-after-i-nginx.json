@@ -1,0 +1,30 @@
+{
+  "at": "2026-10-09T03:45:09Z",
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791517501",
+      "-n",
+      "2000",
+      "-u",
+      "nginx.service"
+    ],
+    "at": "2026-10-09T03:45:09Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T03:45:03.111929+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...\n2026-10-09T03:45:03.118343+00:00 dns-ubuntu nginx[45492]: 2026/10/09 03:45:03 [notice] 45492#45492: signal process started\n2026-10-09T03:45:03.119679+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.\n2026-10-09T03:45:04.004790+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...\n2026-10-09T03:45:04.010065+00:00 dns-ubuntu nginx[45499]: 2026/10/09 03:45:04 [notice] 45499#45499: signal process started\n2026-10-09T03:45:04.011040+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.\n2026-10-09T03:45:07.776808+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...\n2026-10-09T03:45:07.784099+00:00 dns-ubuntu nginx[46186]: 2026/10/09 03:45:07 [notice] 46186#46186: signal process started\n2026-10-09T03:45:07.785182+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.\n2026-10-09T03:45:08.251989+00:00 dns-ubuntu systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...\n2026-10-09T03:45:08.259367+00:00 dns-ubuntu nginx[46193]: 2026/10/09 03:45:08 [notice] 46193#46193: signal process started\n2026-10-09T03:45:08.261364+00:00 dns-ubuntu systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.\n"
+  },
+  "lab_action": false,
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "units": [
+    "nginx.service"
+  ]
+}

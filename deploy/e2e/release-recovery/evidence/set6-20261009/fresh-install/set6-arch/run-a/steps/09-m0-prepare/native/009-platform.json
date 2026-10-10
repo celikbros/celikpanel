@@ -1,0 +1,93 @@
+{
+  "at": "2026-10-09T21:55:05Z",
+  "etc_php_directories": [
+    "/etc/php/conf.d",
+    "/etc/php/php-fpm.d"
+  ],
+  "kernel": "7.2.9-arch1-1",
+  "mode": "read-platform",
+  "nginx_directory": [
+    "conf.d",
+    "fastcgi.conf",
+    "fastcgi_params",
+    "koi-utf",
+    "koi-win",
+    "mime.types",
+    "modules.d",
+    "nginx.conf",
+    "scgi_params",
+    "sites-available",
+    "sites-enabled",
+    "uwsgi_params",
+    "win-utf"
+  ],
+  "nginx_fastcgi_conf": {
+    "exists": true,
+    "group": "root",
+    "kind": "file",
+    "mode": "0644",
+    "owner": "root",
+    "owner_package": {
+      "answer": "/etc/nginx/fastcgi.conf is owned by nginx 1.30.5-1",
+      "asked": "pacman -Qo /etc/nginx/fastcgi.conf",
+      "exists": true,
+      "path": "/etc/nginx/fastcgi.conf",
+      "returncode": 0
+    },
+    "path": "/etc/nginx/fastcgi.conf",
+    "sha256": "b2c3d480a58f61f3a7dc61850b461e892e36f236317765a4f2f6d558c928fa57"
+  },
+  "nginx_fastcgi_params": {
+    "exists": true,
+    "group": "root",
+    "kind": "file",
+    "mode": "0644",
+    "owner": "root",
+    "path": "/etc/nginx/fastcgi_params",
+    "sha256": "f37852d0113de30fa6bfc3d9b180ef99383c06739530dd482a8538503afd5a58"
+  },
+  "nginx_php_snippet": {
+    "error": "FileNotFoundError",
+    "exists": false,
+    "owner_package": {
+      "exists": false,
+      "path": "/etc/nginx/snippets/fastcgi-php.conf"
+    },
+    "path": "/etc/nginx/snippets/fastcgi-php.conf",
+    "sha256": null
+  },
+  "nginx_snippets_directory": {
+    "error": "FileNotFoundError",
+    "exists": false,
+    "path": "/etc/nginx/snippets"
+  },
+  "nginx_test": {
+    "at": "2026-10-09T21:55:05Z",
+    "output": "2026/10/09 21:55:05 [warn] 2912#2912: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size\nnginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+    "returncode": 0,
+    "status": "ok"
+  },
+  "nginx_version": "nginx version: nginx/1.30.5",
+  "os_release": {
+    "BUILD_ID": "rolling",
+    "ID": "arch",
+    "PRETTY_NAME": "Arch Linux"
+  },
+  "owner_action": false,
+  "package_manager": "pacman",
+  "packages": {
+    "certbot": "5.8.0-1",
+    "mariadb": "13.0.2-2",
+    "nginx": "1.30.5-1",
+    "php": "8.5.11-1",
+    "php-fpm": "8.5.11-1",
+    "postgresql": "18.6-2",
+    "systemd": "262-1"
+  },
+  "php_fpm_programs": {
+    "php-fpm": [
+      "PHP 8.5.11 (fpm-fcgi) (built: Sep 23 2026 17:41:29) (NTS)"
+    ]
+  },
+  "schema": "celikpanel/set4-native/v1"
+}

@@ -1,0 +1,90 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "mail policy save: the change with the version",
+  "request": {
+    "body": {
+      "dnsbl_zones": [],
+      "message_size_mb": 9,
+      "outbound_rate_limit": 37,
+      "version": "mp1-d66482b5c93bee71398427c4cd13255aa7a00375dcd7942d90e3a015bd30f0cc"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18551"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18551"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "dda36e2013387151dc953f3412970741"
+      ]
+    ],
+    "method": "PUT",
+    "path": "/api/v1/mail/policy"
+  },
+  "response": {
+    "elapsed_seconds": 2.429,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 11:47:47 GMT"
+      ],
+      [
+        "Content-Length",
+        "192"
+      ]
+    ],
+    "json": {
+      "applied": "reloaded",
+      "policy": {
+        "dnsbl_zones": [],
+        "message_size_mb": 9,
+        "outbound_rate_limit": 37,
+        "version": "mp1-5b786b06cee5ee2104d7c2048495b719821b157c70faefdaf46602a04d673aa9"
+      },
+      "success": true
+    },
+    "status": 200,
+    "text": null
+  }
+}

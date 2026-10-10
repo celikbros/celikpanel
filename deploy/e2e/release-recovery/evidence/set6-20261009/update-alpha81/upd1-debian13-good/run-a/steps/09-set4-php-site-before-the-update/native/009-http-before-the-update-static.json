@@ -1,0 +1,18 @@
+{
+  "at": "2026-10-09T22:56:51Z",
+  "body": "set4 static file served by the web server\n",
+  "body_sha256": "027f7a0fc431eed3894f237433bd0db7888d8959469abe66602efa29d4bda904",
+  "bytes": 42,
+  "headers": {
+    "content-length": "42",
+    "content-type": "text/plain",
+    "server": "nginx"
+  },
+  "host": "set4-upd-php.test",
+  "mode": "read-http",
+  "owner_action": false,
+  "path": "/set4-static.txt",
+  "schema": "celikpanel/set4-native/v1",
+  "status": 200,
+  "status_line": "HTTP/1.1 200 OK"
+}

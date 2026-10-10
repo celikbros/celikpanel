@@ -1,0 +1,20 @@
+# set4b: Windows power events of the host since 2026-10-09T13:20Z (Get-WinEvent, System log; Kernel-Power 42/107/506/507, Power-Troubleshooter 1). Times in UTC.
+2026-10-09T13:57:28Z id=506 Sistem modern bekleme konumuna giriyor neden: Idle Timeout. 
+2026-10-09T14:07:45Z id=507 Sistem modern bekleme konumundan çıkıyor neden: Input Mouse. 
+2026-10-09T14:17:15Z id=506 Sistem modern bekleme konumuna giriyor neden: Idle Timeout. 
+2026-10-09T14:21:38Z id=507 Sistem modern bekleme konumundan çıkıyor neden: Input Keyboard. 
+2026-10-09T14:32:46Z id=506 Sistem modern bekleme konumuna giriyor neden: Idle Timeout. 
+2026-10-09T14:37:54Z id=507 Sistem modern bekleme konumundan çıkıyor neden: Input Keyboard. 
+2026-10-09T14:39:00Z id=506 Sistem modern bekleme konumuna giriyor neden: Lid. 
+2026-10-09T14:39:13Z id=507 Sistem modern bekleme konumundan çıkıyor neden: Austerity Battery Drain Budget Exceeded. 
+2026-10-09T14:39:13Z id=506 Sistem modern bekleme konumuna giriyor neden: Austerity Battery Drain Budget Exceeded. 
+2026-10-09T15:06:52Z id=507 Sistem modern bekleme konumundan çıkıyor neden: Sleep, Hibernate, or Shutdown. 
+2026-10-09T15:06:57Z id=42 Sistem uyku durumuna giriyor. Uyku Nedeni: Hibernate from Sleep - Standby Battery Budget Exceeded
+2026-10-09T15:07:01Z id=107 Sistem uyku durumundan sürdürüldü.
+2026-10-09T15:22:33Z id=506 Sistem modern bekleme konumuna giriyor neden: Sleep, Hibernate, or Shutdown. 
+2026-10-09T15:22:34Z id=507 Sistem modern bekleme konumundan çıkıyor neden: Lid. 
+2026-10-09T15:22:35Z id=1 Sistem düşük güç durumundan çıktı. Uykuya Geçiş Saati: ‎2026‎-‎10‎-‎09T15:06:52.659711000Z Uyanma Saati: ‎2026‎-‎10‎-‎09T15:22:33.925173700Z Uyandırma Kaynağı: 
+2026-10-09T15:23:08Z id=506 Sistem modern bekleme konumuna giriyor neden: Idle Timeout. 
+2026-10-09T15:23:35Z id=507 Sistem modern bekleme konumundan çıkıyor neden: Input Mouse. 
+2026-10-09T15:32:13Z id=506 Sistem modern bekleme konumuna giriyor neden: Idle Timeout. 
+2026-10-09T15:39:03Z id=507 Sistem modern bekleme konumundan çıkıyor neden: Input Keyboard. 

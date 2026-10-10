@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/alicelik/celikpanel/internal/core"
@@ -41,6 +44,24 @@ func (a *Agent) GetServices(args *transport.Empty, reply *[]core.Service) error 
 	return nil
 }
 
+// configAuthorize decides which path the configuration editor may touch.
+// Swapped by tests; production is configWriteAllowed.
+// configAuthorize, yapılandırma düzenleyicisinin hangi yola dokunabileceğine
+// karar verir. Testlerde değiştirilir.
+var configAuthorize = configWriteAllowed
+
+// The largest file the configuration editor writes. A native configuration
+// file is far below it; a larger body is not a configuration file.
+// Yapılandırma düzenleyicisinin yazdığı en büyük dosya.
+const configMaxBytes = 1 << 20
+
+// configVersion identifies the exact bytes a read returned.
+// configVersion, bir okumanın döndürdüğü baytları tanımlar.
+func configVersion(content []byte) string {
+	sum := sha256.Sum256(content)
+	return "cf1-" + hex.EncodeToString(sum[:])
+}
+
 func (a *Agent) GetConfig(args *transport.GetConfigArgs, reply *transport.ConfigResponse) error {
 	if args == nil || reply == nil {
 		return errors.New(`config read requires a path and response`)
@@ -50,7 +71,7 @@ func (a *Agent) GetConfig(args *transport.GetConfigArgs, reply *transport.Config
 	// The agent runs as root, so reads and writes must share the same
 	// catalogue-derived path boundary. Otherwise this RPC becomes an arbitrary
 	// root file reader for any caller that reaches the panel endpoint.
-	path, err := configWriteAllowed(args.Path)
+	path, err := configAuthorize(args.Path)
 	if err != nil {
 		log.Printf(`config read REFUSED %s: %v`, args.Path, err)
 		if reply.Error = configRPCError(err); reply.Error != nil {
@@ -59,19 +80,25 @@ func (a *Agent) GetConfig(args *transport.GetConfigArgs, reply *transport.Config
 		return err
 	}
 
+	// A file that cannot be read is an unknown state, never an empty file: an
+	// editor that opened on "nothing" was one Save away from replacing the
+	// owner's configuration with it (9 Oct 2026).
+	// Okunamayan dosya boş dosya değil, bilinmeyen durumdur.
 	content, err := secureReadConfig(path)
 	if err != nil {
-		err = fmt.Errorf("failed to read file: %w", err)
 		if reply.Error = configRPCError(err); reply.Error != nil {
 			return nil
 		}
-		return err
+		log.Printf("config read FAILED %s: %v", path, err)
+		reply.Error = configRPCError(configUnreadable())
+		return nil
 	}
 
 	reply.Content = string(content)
+	reply.Version = configVersion(content)
 
 	// Try to parse if it's an Nginx file
-	if strings.Contains(args.Path, "nginx") {
+	if strings.Contains(args.Path, "nginx") && a.parser != nil {
 		parsed, _ := a.parser.Parse(string(content))
 		reply.Parsed = fmt.Sprintf("%v", parsed)
 	}
@@ -95,7 +122,7 @@ func (a *Agent) UpdateConfig(args *transport.UpdateConfigArgs, reply *transport.
 	// yalnız tarayıcının bir katalog bileşeni için bulduğu dosyaları kabul
 	// eder. Önceki denetim, "/etc/../root/.ssh/authorized_keys"in geçtiği
 	// çıplak bir önek sınavıydı.
-	path, err := configWriteAllowed(args.Path)
+	path, err := configAuthorize(args.Path)
 	if err != nil {
 		log.Printf("config write REFUSED %s: %v", args.Path, err)
 		if reply.Error = configRPCError(err); reply.Error != nil {
@@ -105,25 +132,106 @@ func (a *Agent) UpdateConfig(args *transport.UpdateConfigArgs, reply *transport.
 	}
 	a.configMu.Lock()
 	defer a.configMu.Unlock()
-	log.Printf("Updating config %s", path)
 
 	reload := a.configReload
 	if reload == nil {
 		if a.systemdMgr == nil {
 			reload = func(string) error { return errors.New("systemd manager unavailable") }
 		} else {
-			reload = a.systemdMgr.Reload
+			reload = func(unit string) error {
+				// Postfix is reloaded by its own command and the outcome is
+				// verified (mail_service_verify.go, 10 Oct 2026): on Ubuntu
+				// `systemctl reload postfix` reloads a wrapper unit and exits
+				// 0 whatever happened to the daemon. A stopped Postfix is left
+				// stopped and reads the file when it starts.
+				// Postfix kendi komutuyla yeniden yüklenir ve sonuç doğrulanır.
+				if unit == "postfix" {
+					_, err := applyPostfixVerified(runMailTLSCommand, mailServiceReload)
+					return err
+				}
+				return a.systemdMgr.Reload(unit)
+			}
 		}
 	}
-	if err := applyConfigUpdate(path, []byte(args.Content), configValidator(path), reload); err != nil {
+	outcome, err := updateManagedConfig(path, []byte(args.Content), args.Version, reload)
+	if err != nil {
+		log.Printf("config write %s not applied: %v", path, err)
 		if reply.Error = configRPCError(err); reply.Error != nil {
 			return nil
 		}
 		return err
 	}
-
+	*reply = outcome
 	reply.Success = true
 	return nil
+}
+
+// updateManagedConfig is every write of the configuration editor. In order,
+// and before anything is written (9 Oct 2026; D-022, D-025 invariants 1-4):
+//
+//  1. the pre-image: the file is read with its owner and mode. A file that
+//     cannot be read is unknown, and an unknown file is never written over;
+//  2. the version: the write says which bytes it was built from, and those
+//     must still be the bytes on the server;
+//  3. the shape: an empty body, a NUL byte or a body larger than a
+//     configuration file is refused. A form that never loaded could only
+//     produce the first, and it replaced the owner's file with nothing;
+//  4. no change, no write: identical content is answered without touching the
+//     file or the service.
+//
+// A database configuration file then goes through its own validated,
+// backed-up and reload-checked path (db_config.go); every other managed file
+// keeps the existing write-validate-restore path.
+//
+// updateManagedConfig, yapılandırma düzenleyicisinin her yazısıdır. Sırayla ve
+// herhangi bir şey yazılmadan önce: ön görüntü (okunamayan dosya bilinmeyendir
+// ve üstüne yazılmaz), sürüm (yazı hangi baytlardan kurulduğunu söyler), biçim
+// (boş gövde, NUL ya da aşırı büyük gövde reddedilir), değişiklik yoksa yazı
+// yok.
+func updateManagedConfig(path string, content []byte, version string, reload func(string) error) (transport.UpdateConfigResponse, error) {
+	data, metadata, err := readDNSFileForSnapshot(path)
+	if err != nil {
+		if errors.Is(err, errConfigPathRefused) {
+			return transport.UpdateConfigResponse{}, err
+		}
+		log.Printf("config write: the current %s could not be read: %v", path, err)
+		return transport.UpdateConfigResponse{}, configUnreadable()
+	}
+	if version == "" {
+		return transport.UpdateConfigResponse{}, configVersionRequired()
+	}
+	if version != configVersion(data) {
+		return transport.UpdateConfigResponse{}, configChanged()
+	}
+	switch {
+	case len(bytes.TrimSpace(content)) == 0:
+		return transport.UpdateConfigResponse{}, configInvalid(transport.ConfigInvalidEmpty,
+			"the new content is empty; a configuration file is not replaced with nothing")
+	case len(content) > configMaxBytes:
+		return transport.UpdateConfigResponse{}, configInvalid(transport.ConfigInvalidShape,
+			"the new content is larger than a configuration file the panel writes")
+	case bytes.IndexByte(content, 0) >= 0:
+		return transport.UpdateConfigResponse{}, configInvalid(transport.ConfigInvalidShape,
+			"the new content holds a NUL byte, which no configuration file does")
+	}
+	if bytes.Equal(content, data) {
+		return transport.UpdateConfigResponse{Version: configVersion(data), Unchanged: true}, nil
+	}
+
+	if target, ok := dbConfigTargetFor(path); ok {
+		pre := dnsFileSnapshot{
+			Path: path, Exists: true, Mode: uint32(metadata.Mode.Perm()),
+			OwnerKnown: metadata.OwnerKnown, UID: metadata.UID, GID: metadata.GID,
+			SHA256: digestDNSBytes(data), Data: data,
+		}
+		return applyDatabaseConfigUpdate(target, pre, content, reload)
+	}
+
+	log.Printf("Updating config %s", path)
+	if err := applyConfigUpdate(path, content, configValidator(path), reload); err != nil {
+		return transport.UpdateConfigResponse{}, err
+	}
+	return transport.UpdateConfigResponse{Version: configVersion(content)}, nil
 }
 
 // applyConfigUpdate atomically publishes one file, validates it and reloads
@@ -281,13 +389,11 @@ func (a *Agent) serviceActionContext(ctx context.Context, serviceName, action st
 		reply.Error = "systemd client failed security validation"
 		return nil
 	}
-	out, err := runServiceMutationCombinedOutput(ctx, systemctl, action, name)
-	if err != nil {
-		log.Printf("ERROR service %s %s: %v: %s", action, name, err, strings.TrimSpace(string(out)))
-		reply.Error = firstLine(fmt.Sprintf("%v: %s", err, strings.TrimSpace(string(out))))
-		return nil
-	}
-	reply.Success = true
+	// The answer is what was observed, never systemctl's exit status alone:
+	// that status is the named unit's job result, and on some platforms the
+	// named unit is a wrapper (service_action_verify.go, 10 Oct 2026).
+	// Yanıt gözlenendir; yalnız systemctl çıkış durumu değildir.
+	*reply = verifiedServiceAction(serviceActionRunner(ctx, systemctl), service.ID, name, action)
 	return nil
 }
 

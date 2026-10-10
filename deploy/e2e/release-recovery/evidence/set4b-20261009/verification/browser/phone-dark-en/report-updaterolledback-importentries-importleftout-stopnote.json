@@ -1,0 +1,722 @@
+{
+  "config": {
+    "vp": "phone",
+    "locale": "en",
+    "theme": "dark"
+  },
+  "states": {
+    "141a-import-only-refused-archive-entries": {
+      "path": "/import",
+      "visibility": "visible",
+      "main": "Home\n/\nImport\nImport from cPanel\nMigrate a cPanel account from a cpmove or backup archive\n1\nSource\n2\nPreview\n3\nResult\nold.example was imported in part\nThe import has ended. Everything you chose was imported, and old.example is in service. The archive entries listed as not imported were refused by their names; nothing was written for them.\nNot imported\nArchive entry /etc/set3-escape-absolute.txt\nArchive entry /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache\n44 more archive entries\nImported\nDomain and site\nWebsite files\nMail accounts\nDatabase olduser_shop\nNothing more is needed for old.example. If one of these entries is a file the site needs, add it with the site’s file manager. Importing the archive again refuses the same entries.\nOpen old.example\nOpen Domains\nEach step\nDomain and site\n: Imported\nold.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html\nWebsite files\n: Imported\n412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported\nArchive entry /etc/set3-escape-absolute.txt\n: Not imported\nNot imported: the archive names this entry with an absolute path, and an import writes only inside the site’s own folder. Nothing was written for it.\nArchive entry /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache\n: Not imported\nNot imported: the archive names this entry with an absolute path, and an import writes only inside the site’s own folder. Nothing was written for it.\n44 more archive entries\n: Not imported\nnot imported: 44 more entries of the archive were refused by their names in the same way; 46 in all\nMail accounts\n: Imported\n1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)\nForwarders\n: Nothing imported, nothing failed\n0 forwarders\nDNS records\n: Nothing imported, nothing failed\npanel DNS template created; archive DNS import was not selected\nDatabase olduser_shop\n: Imported\ncreated exclusively and dump imported (db USERS are not migrated; repoint app configs)\nImport another",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"server1\n\n203.0.113.10\n\nAD\nHome\n/\nImport\n\" inHold=false",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "importResult": {
+        "kind": "partial",
+        "text": "old.example was imported in part The import has ended. Everything you chose was imported, and old.example is in service. The archive entries listed as not imported were refused by their names; nothing was written for them. Not imported Archive entry /etc/set3-escape-absolute.txt Archive entry /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache 44 more archive entries Imported Domain and site Website files Mail accounts Database olduser_shop Nothing more is needed for old.example. If one of these entries is a file the site needs, add it with the site’s file manager. Importing the archive again refuses the same entries. Open old.example Open Domains Each step Domain and site : Imported old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Website files : Imported 412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported Archive entry /etc/set3-escape-absolute.txt : Not imported Not imported: the archive names this entry with an absolute path, and an import writes only inside the site’s own folder. Nothing was written for it. Archive entry /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache : Not imported Not imported: the archive names this entry with an absolute path, and an import writes only inside the site’s own folder. Nothing was written for it. 44 more archive entries : Not imported not imported: 44 more entries of the archive were refused by their names in the same way; 46 in all Mail accounts : Imported 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Forwarders : Nothing imported, nothing failed 0 forwarders DNS records : Nothing imported, nothing failed panel DNS template created; archive DNS import was not selected Database olduser_shop : Imported created exclusively and dump imported (db USERS are not migrated; repoint app configs) Import another",
+        "alert": "old.example was imported in part The import has ended. Everything you chose was imported, and old.example is in service. The archive entries listed as not imported were refused by their names; nothing was written for them. Not imported Archive entry /etc/set3-escape-absolute.txt Archive entry /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache 44 more archive entries Imported Domain and site Website files Mail accounts Database olduser_shop Nothing more is needed for old.example. If one of these entries is a file the site needs, add it with the site’s file manager. Importing the archive again refuses the same entries. Open old.example Open Domains",
+        "alertSurface": {
+          "background": "rgba(245, 179, 1, 0.2)",
+          "redder": false
+        }
+      },
+      "serviceAction": null,
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": null,
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "Open old.example",
+        "Open Domains",
+        "Import another"
+      ],
+      "mainText": "Home / Import Import from cPanel Migrate a cPanel account from a cpmove or backup archive 1 Source 2 Preview 3 Result old.example was imported in part The import has ended. Everything you chose was imported, and old.example is in service. The archive entries listed as not imported were refused by their names; nothing was written for them. Not imported Archive entry /etc/set3-escape-absolute.txt Archive entry /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache 44 more archive entries Imported Domain and site Website files Mail accounts Database olduser_shop Nothing more is needed for old.example. If one of these entries is a file the site needs, add it with the site’s file manager. Importing the archive again refuses the same entries. Open old.example Open Domains Each step Domain and site : Imported old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Website files : Imported 412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported Archive entry /etc/set3-escape-absolute.txt : Not imported Not imported: the archive names this entry with an absolute path, and an import writes only inside the site’s own folder. Nothing was written for it. Archive entry /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache : Not imported Not imported: the archive names this entry with an absolute path, and an import writes only inside the site’s own folder. Nothing was written for it. 44 more archive entries : Not imported not imported: 44 more entries of the archive were refused by their names in the same way; 46 in all Mail accounts : Imported 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Forwarders : Nothing imported, nothing failed 0 forwarders DNS records : Nothing imported, nothing failed panel DNS template created; archive DNS import was not selected Database olduser_shop : Imported created exclusively and dump imported (db USERS are not migrated; repoint app configs) Import another",
+      "pageOverflowsSideways": false
+    },
+    "141b-import-refused-archive-entries-steps": {
+      "path": "/import",
+      "visibility": "visible",
+      "main": "Home\n/\nImport\nImport from cPanel\nMigrate a cPanel account from a cpmove or backup archive\n1\nSource\n2\nPreview\n3\nResult\nold.example was imported in part\nThe import has ended. Everything you chose was imported, and old.example is in service. The archive entries listed as not imported were refused by their names; nothing was written for them.\nNot imported\nArchive entry /etc/set3-escape-absolute.txt\nArchive entry /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache\n44 more archive entries\nImported\nDomain and site\nWebsite files\nMail accounts\nDatabase olduser_shop\nNothing more is needed for old.example. If one of these entries is a file the site needs, add it with the site’s file manager. Importing the archive again refuses the same entries.\nOpen old.example\nOpen Domains\nEach step\nDomain and site\n: Imported\nold.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html\nWebsite files\n: Imported\n412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported\nArchive entry /etc/set3-escape-absolute.txt\n: Not imported\nNot imported: the archive names this entry with an absolute path, and an import writes only inside the site’s own folder. Nothing was written for it.\nArchive entry /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache\n: Not imported\nNot imported: the archive names this entry with an absolute path, and an import writes only inside the site’s own folder. Nothing was written for it.\n44 more archive entries\n: Not imported\nnot imported: 44 more entries of the archive were refused by their names in the same way; 46 in all\nMail accounts\n: Imported\n1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)\nForwarders\n: Nothing imported, nothing failed\n0 forwarders\nDNS records\n: Nothing imported, nothing failed\npanel DNS template created; archive DNS import was not selected\nDatabase olduser_shop\n: Imported\ncreated exclusively and dump imported (db USERS are not migrated; repoint app configs)\nImport another",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"server1\n\n203.0.113.10\n\nAD\nHome\n/\nImport\n\" inHold=false",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "importResult": {
+        "kind": "partial",
+        "text": "old.example was imported in part The import has ended. Everything you chose was imported, and old.example is in service. The archive entries listed as not imported were refused by their names; nothing was written for them. Not imported Archive entry /etc/set3-escape-absolute.txt Archive entry /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache 44 more archive entries Imported Domain and site Website files Mail accounts Database olduser_shop Nothing more is needed for old.example. If one of these entries is a file the site needs, add it with the site’s file manager. Importing the archive again refuses the same entries. Open old.example Open Domains Each step Domain and site : Imported old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Website files : Imported 412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported Archive entry /etc/set3-escape-absolute.txt : Not imported Not imported: the archive names this entry with an absolute path, and an import writes only inside the site’s own folder. Nothing was written for it. Archive entry /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache : Not imported Not imported: the archive names this entry with an absolute path, and an import writes only inside the site’s own folder. Nothing was written for it. 44 more archive entries : Not imported not imported: 44 more entries of the archive were refused by their names in the same way; 46 in all Mail accounts : Imported 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Forwarders : Nothing imported, nothing failed 0 forwarders DNS records : Nothing imported, nothing failed panel DNS template created; archive DNS import was not selected Database olduser_shop : Imported created exclusively and dump imported (db USERS are not migrated; repoint app configs) Import another",
+        "alert": "old.example was imported in part The import has ended. Everything you chose was imported, and old.example is in service. The archive entries listed as not imported were refused by their names; nothing was written for them. Not imported Archive entry /etc/set3-escape-absolute.txt Archive entry /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache 44 more archive entries Imported Domain and site Website files Mail accounts Database olduser_shop Nothing more is needed for old.example. If one of these entries is a file the site needs, add it with the site’s file manager. Importing the archive again refuses the same entries. Open old.example Open Domains",
+        "alertSurface": {
+          "background": "rgba(245, 179, 1, 0.2)",
+          "redder": false
+        }
+      },
+      "serviceAction": null,
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": null,
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "Open old.example",
+        "Open Domains",
+        "Import another"
+      ],
+      "mainText": "Home / Import Import from cPanel Migrate a cPanel account from a cpmove or backup archive 1 Source 2 Preview 3 Result old.example was imported in part The import has ended. Everything you chose was imported, and old.example is in service. The archive entries listed as not imported were refused by their names; nothing was written for them. Not imported Archive entry /etc/set3-escape-absolute.txt Archive entry /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache 44 more archive entries Imported Domain and site Website files Mail accounts Database olduser_shop Nothing more is needed for old.example. If one of these entries is a file the site needs, add it with the site’s file manager. Importing the archive again refuses the same entries. Open old.example Open Domains Each step Domain and site : Imported old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Website files : Imported 412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported Archive entry /etc/set3-escape-absolute.txt : Not imported Not imported: the archive names this entry with an absolute path, and an import writes only inside the site’s own folder. Nothing was written for it. Archive entry /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache : Not imported Not imported: the archive names this entry with an absolute path, and an import writes only inside the site’s own folder. Nothing was written for it. 44 more archive entries : Not imported not imported: 44 more entries of the archive were refused by their names in the same way; 46 in all Mail accounts : Imported 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Forwarders : Nothing imported, nothing failed 0 forwarders DNS records : Nothing imported, nothing failed panel DNS template created; archive DNS import was not selected Database olduser_shop : Imported created exclusively and dump imported (db USERS are not migrated; repoint app configs) Import another",
+      "pageOverflowsSideways": false,
+      "stepRows": [
+        {
+          "label": "Domain and site",
+          "said": "Imported",
+          "detail": "old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html",
+          "tone": "text-success",
+          "iconColor": "rgb(53, 184, 119)",
+          "iconVisible": true
+        },
+        {
+          "label": "Website files",
+          "said": "Imported",
+          "detail": "412 files, 48234496 bytes. 1530 other entries of the archive are outside the site folder (homedir/public_html) and are not copied by this step: homedir/mail (1502), homedir/etc (11), mysql (2), cp (1), homedir (14). The databases, mailboxes, forwarders and DNS records are read from their own entries by their own steps; mailbox contents and the other folders of the home directory are not imported",
+          "tone": "text-success",
+          "iconColor": "rgb(53, 184, 119)",
+          "iconVisible": true
+        },
+        {
+          "label": "Archive entry /etc/set3-escape-absolute.txt",
+          "said": "Not imported",
+          "detail": "Not imported: the archive names this entry with an absolute path, and an import writes only inside the site’s own folder. Nothing was written for it.",
+          "tone": "text-danger",
+          "iconColor": "rgb(245, 145, 136)",
+          "iconVisible": true
+        },
+        {
+          "label": "Archive entry /var/lib/another-application/releases/2026-10-09/shared/storage/framework/cache/data/9f/4c/9f4c1e0d2b7a48c7b3f1a0e5d6c7b8a9f0e1d2c3.cache",
+          "said": "Not imported",
+          "detail": "Not imported: the archive names this entry with an absolute path, and an import writes only inside the site’s own folder. Nothing was written for it.",
+          "tone": "text-danger",
+          "iconColor": "rgb(245, 145, 136)",
+          "iconVisible": true
+        },
+        {
+          "label": "44 more archive entries",
+          "said": "Not imported",
+          "detail": "not imported: 44 more entries of the archive were refused by their names in the same way; 46 in all",
+          "tone": "text-danger",
+          "iconColor": "rgb(245, 145, 136)",
+          "iconVisible": true
+        },
+        {
+          "label": "Mail accounts",
+          "said": "Imported",
+          "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+          "tone": "text-success",
+          "iconColor": "rgb(53, 184, 119)",
+          "iconVisible": true
+        },
+        {
+          "label": "Forwarders",
+          "said": "Nothing imported, nothing failed",
+          "detail": "0 forwarders",
+          "tone": "text-fg-muted",
+          "iconColor": "rgb(185, 203, 230)",
+          "iconVisible": true
+        },
+        {
+          "label": "DNS records",
+          "said": "Nothing imported, nothing failed",
+          "detail": "panel DNS template created; archive DNS import was not selected",
+          "tone": "text-fg-muted",
+          "iconColor": "rgb(185, 203, 230)",
+          "iconVisible": true
+        },
+        {
+          "label": "Database olduser_shop",
+          "said": "Imported",
+          "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+          "tone": "text-success",
+          "iconColor": "rgb(53, 184, 119)",
+          "iconVisible": true
+        }
+      ]
+    },
+    "144a-import-complete-dns-left-to-the-owner": {
+      "path": "/import",
+      "visibility": "visible",
+      "main": "Home\n/\nImport\nImport from cPanel\nMigrate a cPanel account from a cpmove or backup archive\n1\nSource\n2\nPreview\n3\nResult\nImport finished\nEvery part you chose was imported, and old.example is in service.\nEach step\nDomain and site\n: Imported\nold.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html\nWebsite files\n: Imported\n412 files, 48234496 bytes\nMail accounts\n: Imported\n1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)\nForwarders\n: Nothing imported, nothing failed\n0 forwarders\nDNS records\n: Nothing imported, nothing failed\nexternal DNS ownership preserved; verify provider records before publishing the site\nDatabase olduser_shop\n: Imported\ncreated exclusively and dump imported (db USERS are not migrated; repoint app configs)\nImport another",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"server1\n\n203.0.113.10\n\nAD\nHome\n/\nImport\n\" inHold=false",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "importResult": {
+        "kind": "complete",
+        "text": "Import finished Every part you chose was imported, and old.example is in service. Each step Domain and site : Imported old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Website files : Imported 412 files, 48234496 bytes Mail accounts : Imported 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Forwarders : Nothing imported, nothing failed 0 forwarders DNS records : Nothing imported, nothing failed external DNS ownership preserved; verify provider records before publishing the site Database olduser_shop : Imported created exclusively and dump imported (db USERS are not migrated; repoint app configs) Import another",
+        "alert": null,
+        "alertSurface": null
+      },
+      "serviceAction": null,
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": null,
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "Import another"
+      ],
+      "mainText": "Home / Import Import from cPanel Migrate a cPanel account from a cpmove or backup archive 1 Source 2 Preview 3 Result Import finished Every part you chose was imported, and old.example is in service. Each step Domain and site : Imported old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Website files : Imported 412 files, 48234496 bytes Mail accounts : Imported 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Forwarders : Nothing imported, nothing failed 0 forwarders DNS records : Nothing imported, nothing failed external DNS ownership preserved; verify provider records before publishing the site Database olduser_shop : Imported created exclusively and dump imported (db USERS are not migrated; repoint app configs) Import another",
+      "pageOverflowsSideways": false
+    },
+    "144b-import-complete-dns-left-to-the-owner-steps": {
+      "path": "/import",
+      "visibility": "visible",
+      "main": "Home\n/\nImport\nImport from cPanel\nMigrate a cPanel account from a cpmove or backup archive\n1\nSource\n2\nPreview\n3\nResult\nImport finished\nEvery part you chose was imported, and old.example is in service.\nEach step\nDomain and site\n: Imported\nold.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html\nWebsite files\n: Imported\n412 files, 48234496 bytes\nMail accounts\n: Imported\n1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)\nForwarders\n: Nothing imported, nothing failed\n0 forwarders\nDNS records\n: Nothing imported, nothing failed\nexternal DNS ownership preserved; verify provider records before publishing the site\nDatabase olduser_shop\n: Imported\ncreated exclusively and dump imported (db USERS are not migrated; repoint app configs)\nImport another",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"server1\n\n203.0.113.10\n\nAD\nHome\n/\nImport\n\" inHold=false",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "importResult": {
+        "kind": "complete",
+        "text": "Import finished Every part you chose was imported, and old.example is in service. Each step Domain and site : Imported old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Website files : Imported 412 files, 48234496 bytes Mail accounts : Imported 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Forwarders : Nothing imported, nothing failed 0 forwarders DNS records : Nothing imported, nothing failed external DNS ownership preserved; verify provider records before publishing the site Database olduser_shop : Imported created exclusively and dump imported (db USERS are not migrated; repoint app configs) Import another",
+        "alert": null,
+        "alertSurface": null
+      },
+      "serviceAction": null,
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": null,
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "Import another"
+      ],
+      "mainText": "Home / Import Import from cPanel Migrate a cPanel account from a cpmove or backup archive 1 Source 2 Preview 3 Result Import finished Every part you chose was imported, and old.example is in service. Each step Domain and site : Imported old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html Website files : Imported 412 files, 48234496 bytes Mail accounts : Imported 1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1) Forwarders : Nothing imported, nothing failed 0 forwarders DNS records : Nothing imported, nothing failed external DNS ownership preserved; verify provider records before publishing the site Database olduser_shop : Imported created exclusively and dump imported (db USERS are not migrated; repoint app configs) Import another",
+      "pageOverflowsSideways": false,
+      "stepRows": [
+        {
+          "label": "Domain and site",
+          "said": "Imported",
+          "detail": "old.example (id 9, site 4) → /var/www/celikpanel/subscriptions/3/sites/9/public_html",
+          "tone": "text-success",
+          "iconColor": "rgb(53, 184, 119)",
+          "iconVisible": true
+        },
+        {
+          "label": "Website files",
+          "said": "Imported",
+          "detail": "412 files, 48234496 bytes",
+          "tone": "text-success",
+          "iconColor": "rgb(53, 184, 119)",
+          "iconVisible": true
+        },
+        {
+          "label": "Mail accounts",
+          "said": "Imported",
+          "detail": "1 accounts imported with original passwords (mailbox CONTENTS are not migrated in v1)",
+          "tone": "text-success",
+          "iconColor": "rgb(53, 184, 119)",
+          "iconVisible": true
+        },
+        {
+          "label": "Forwarders",
+          "said": "Nothing imported, nothing failed",
+          "detail": "0 forwarders",
+          "tone": "text-fg-muted",
+          "iconColor": "rgb(185, 203, 230)",
+          "iconVisible": true
+        },
+        {
+          "label": "DNS records",
+          "said": "Nothing imported, nothing failed",
+          "detail": "external DNS ownership preserved; verify provider records before publishing the site",
+          "tone": "text-fg-muted",
+          "iconColor": "rgb(185, 203, 230)",
+          "iconVisible": true
+        },
+        {
+          "label": "Database olduser_shop",
+          "said": "Imported",
+          "detail": "created exclusively and dump imported (db USERS are not migrated; repoint app configs)",
+          "tone": "text-success",
+          "iconColor": "rgb(53, 184, 119)",
+          "iconVisible": true
+        }
+      ]
+    },
+    "142a-postfix-stop-left-the-unit-marked-failed": {
+      "path": "/services/postfix",
+      "visibility": "visible",
+      "main": "Components\nPostfix\nRunning\nHelp\nStart\nStop\nRestart\npostfix was stopped and is not running. systemd now shows postfix@-.service as failed (result: exit-code), which it was not before the stop. That mark is systemd’s own record of how the unit’s stop went, and CelikPanel leaves it as it is. postfix refuses its own configuration at present (its line is below), and the unit’s stop command reads the same file; it will not start until that is corrected. To clear the mark without starting, run sudo systemctl reset-failed postfix@-.service on the server.\nThe service said: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\nClose\nMail queue\nMail logs\nACTIVE\n1\nDEFERRED\n1\nHOLD\n0\nCORRUPT\n0\nRefresh\nFlush queue\nDelete all\nID\tSender\tSize\tArrival\tStatus\n4F2C1A0B7D\tshop@example.com\t2.0 KB\t2026-10-09 10:00\ndeferred\n9D3E7C11A2\tinfo@example.com\t512 B\t2026-10-09 10:02\nactive\nServer mail policy\nApplies to all incoming mail on this server.\nMaximum message size (MB)\nDNSBL zones (comma-separated)\nReject senders listed on DNS blackhole lists\nLocal and authenticated senders are never blocked; the check applies to outside connections only.\nLimit outgoing mail rate\nCaps how fast one account can send, so a compromised mailbox cannot blast spam and get the server (and its domains) suspended.\nMax messages per minute, per sender\nSave policy",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"server1\n\n203.0.113.10\n\nAD\nComponents\nPos\" inHold=false",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "importResult": null,
+      "serviceAction": {
+        "tone": "note",
+        "role": "status",
+        "text": "postfix was stopped and is not running. systemd now shows postfix@-.service as failed (result: exit-code), which it was not before the stop. That mark is systemd’s own record of how the unit’s stop went, and CelikPanel leaves it as it is. postfix refuses its own configuration at present (its line is below), and the unit’s stop command reads the same file; it will not start until that is corrected. To clear the mark without starting, run sudo systemctl reset-failed postfix@-.service on the server. The service said: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign Close",
+        "inView": true,
+        "surface": {
+          "background": "rgba(245, 179, 1, 0.2)",
+          "redder": false
+        },
+        "code": "sudo systemctl reset-failed postfix@-.service"
+      },
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": {
+        "text": "Stop",
+        "sentence": null,
+        "line": null,
+        "lineFace": null,
+        "surface": {
+          "background": "rgb(20, 44, 84)",
+          "redder": false
+        },
+        "inView": false,
+        "box": {
+          "top": -44,
+          "bottom": -10,
+          "width": 77
+        },
+        "measure": 0
+      },
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "Components",
+        "Help",
+        "Stop",
+        "Restart",
+        "Close",
+        "Mail queue",
+        "Mail logs",
+        "Refresh",
+        "Flush queue",
+        "Delete all",
+        "Save policy"
+      ],
+      "mainText": "Components Postfix Running Help Start Stop Restart postfix was stopped and is not running. systemd now shows postfix@-.service as failed (result: exit-code), which it was not before the stop. That mark is systemd’s own record of how the unit’s stop went, and CelikPanel leaves it as it is. postfix refuses its own configuration at present (its line is below), and the unit’s stop command reads the same file; it will not start until that is corrected. To clear the mark without starting, run sudo systemctl reset-failed postfix@-.service on the server. The service said: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign Close Mail queue Mail logs ACTIVE 1 DEFERRED 1 HOLD 0 CORRUPT 0 Refresh Flush queue Delete all ID Sender Size Arrival Status 4F2C1A0B7D shop@example.com 2.0 KB 2026-10-09 10:00 deferred 9D3E7C11A2 info@example.com 512 B 2026-10-09 10:02 active Server mail policy Applies to all incoming mail on this server. Maximum message size (MB) DNSBL zones (comma-separated) Reject senders listed on DNS blackhole lists Local and authenticated senders are never blocked; the check applies to outside connections only. Limit outgoing mail rate Caps how fast one account can send, so a compromised mailbox cannot blast spam and get the server (and its domains) suspended. Max messages per minute, per sender Save policy",
+      "pageOverflowsSideways": false
+    },
+    "142b-stop-left-the-unit-marked-failed-without-a-line": {
+      "path": "/services/redis",
+      "visibility": "visible",
+      "main": "Components\nRedis\nRunning\nHelp\nStart\nStop\nRestart\nredis-server was stopped and is not running. systemd now shows redis-server.service as failed (result: timeout), which it was not before the stop. That mark is systemd’s own record of how the unit’s stop went (with the result exit-code, a command of the unit exited with an error), and CelikPanel leaves it as it is. Start can be used from this state. To clear the mark without starting, run sudo systemctl reset-failed redis-server.service on the server.\nClose\nOverview\nKIND\nService (has its own daemon)\nSYSTEMD UNIT\nredis-server\nPACKAGES\nredis\nOPEN PORTS\nNone — local only, nothing is exposed to the internet\nConfiguration files\n/etc/redis/redis.conf\nLogs\nRefresh\nNo log entries\nsystemd has nothing recorded for redis-server yet.",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"server1\n\n203.0.113.10\n\nAD\nComponents\nRed\" inHold=false",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "importResult": null,
+      "serviceAction": {
+        "tone": "note",
+        "role": "status",
+        "text": "redis-server was stopped and is not running. systemd now shows redis-server.service as failed (result: timeout), which it was not before the stop. That mark is systemd’s own record of how the unit’s stop went (with the result exit-code, a command of the unit exited with an error), and CelikPanel leaves it as it is. Start can be used from this state. To clear the mark without starting, run sudo systemctl reset-failed redis-server.service on the server. Close",
+        "inView": true,
+        "surface": {
+          "background": "rgba(245, 179, 1, 0.2)",
+          "redder": false
+        },
+        "code": "sudo systemctl reset-failed redis-server.service"
+      },
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": {
+        "text": "Stop",
+        "sentence": null,
+        "line": null,
+        "lineFace": null,
+        "surface": {
+          "background": "rgb(20, 44, 84)",
+          "redder": false
+        },
+        "inView": false,
+        "box": {
+          "top": -44,
+          "bottom": -10,
+          "width": 77
+        },
+        "measure": 0
+      },
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "Components",
+        "Help",
+        "Stop",
+        "Restart",
+        "Close",
+        "/etc/redis/redis.conf",
+        "Refresh"
+      ],
+      "mainText": "Components Redis Running Help Start Stop Restart redis-server was stopped and is not running. systemd now shows redis-server.service as failed (result: timeout), which it was not before the stop. That mark is systemd’s own record of how the unit’s stop went (with the result exit-code, a command of the unit exited with an error), and CelikPanel leaves it as it is. Start can be used from this state. To clear the mark without starting, run sudo systemctl reset-failed redis-server.service on the server. Close Overview KIND Service (has its own daemon) SYSTEMD UNIT redis-server PACKAGES redis OPEN PORTS None — local only, nothing is exposed to the internet Configuration files /etc/redis/redis.conf Logs Refresh No log entries systemd has nothing recorded for redis-server yet.",
+      "pageOverflowsSideways": false
+    },
+    "142c-postfix-stop-the-unit-had-not-settled": {
+      "path": "/services/postfix",
+      "visibility": "visible",
+      "main": "Components\nPostfix\nRunning\nHelp\nStart\nStop\nRestart\npostfix was stopped and is not running. systemd had not finished stopping postfix@-.service when CelikPanel stopped waiting for it (its state was still deactivating), so how that stop ended was not read; the unit may end marked as failed. To see it as systemd shows it now, run systemctl status postfix@-.service on the server. Nothing more is sent to the unit, and nothing looks again by itself.\nClose\nMail queue\nMail logs\nACTIVE\n1\nDEFERRED\n1\nHOLD\n0\nCORRUPT\n0\nRefresh\nFlush queue\nDelete all\nID\tSender\tSize\tArrival\tStatus\n4F2C1A0B7D\tshop@example.com\t2.0 KB\t2026-10-09 10:00\ndeferred\n9D3E7C11A2\tinfo@example.com\t512 B\t2026-10-09 10:02\nactive\nServer mail policy\nApplies to all incoming mail on this server.\nMaximum message size (MB)\nDNSBL zones (comma-separated)\nReject senders listed on DNS blackhole lists\nLocal and authenticated senders are never blocked; the check applies to outside connections only.\nLimit outgoing mail rate\nCaps how fast one account can send, so a compromised mailbox cannot blast spam and get the server (and its domains) suspended.\nMax messages per minute, per sender\nSave policy",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"server1\n\n203.0.113.10\n\nAD\nComponents\nPos\" inHold=false",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "importResult": null,
+      "serviceAction": {
+        "tone": "note",
+        "role": "status",
+        "text": "postfix was stopped and is not running. systemd had not finished stopping postfix@-.service when CelikPanel stopped waiting for it (its state was still deactivating), so how that stop ended was not read; the unit may end marked as failed. To see it as systemd shows it now, run systemctl status postfix@-.service on the server. Nothing more is sent to the unit, and nothing looks again by itself. Close",
+        "inView": true,
+        "surface": {
+          "background": "rgba(245, 179, 1, 0.2)",
+          "redder": false
+        },
+        "code": "systemctl status postfix@-.service"
+      },
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": {
+        "text": "Stop",
+        "sentence": null,
+        "line": null,
+        "lineFace": null,
+        "surface": {
+          "background": "rgb(20, 44, 84)",
+          "redder": false
+        },
+        "inView": false,
+        "box": {
+          "top": -44,
+          "bottom": -10,
+          "width": 77
+        },
+        "measure": 0
+      },
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "Components",
+        "Help",
+        "Stop",
+        "Restart",
+        "Close",
+        "Mail queue",
+        "Mail logs",
+        "Refresh",
+        "Flush queue",
+        "Delete all",
+        "Save policy"
+      ],
+      "mainText": "Components Postfix Running Help Start Stop Restart postfix was stopped and is not running. systemd had not finished stopping postfix@-.service when CelikPanel stopped waiting for it (its state was still deactivating), so how that stop ended was not read; the unit may end marked as failed. To see it as systemd shows it now, run systemctl status postfix@-.service on the server. Nothing more is sent to the unit, and nothing looks again by itself. Close Mail queue Mail logs ACTIVE 1 DEFERRED 1 HOLD 0 CORRUPT 0 Refresh Flush queue Delete all ID Sender Size Arrival Status 4F2C1A0B7D shop@example.com 2.0 KB 2026-10-09 10:00 deferred 9D3E7C11A2 info@example.com 512 B 2026-10-09 10:02 active Server mail policy Applies to all incoming mail on this server. Maximum message size (MB) DNSBL zones (comma-separated) Reject senders listed on DNS blackhole lists Local and authenticated senders are never blocked; the check applies to outside connections only. Limit outgoing mail rate Caps how fast one account can send, so a compromised mailbox cannot blast spam and get the server (and its domains) suspended. Max messages per minute, per sender Save policy",
+      "pageOverflowsSideways": false
+    },
+    "142d-postfix-stop-the-unit-could-not-be-read": {
+      "path": "/services/postfix",
+      "visibility": "visible",
+      "main": "Components\nPostfix\nRunning\nHelp\nStart\nStop\nRestart\npostfix was stopped and is not running. The state of postfix@-.service could not be read from systemd after the stop, so it is not known whether the unit ended marked as failed. To see it as systemd shows it now, run systemctl status postfix@-.service on the server. Nothing more is sent to the unit, and nothing looks again by itself.\nClose\nMail queue\nMail logs\nACTIVE\n1\nDEFERRED\n1\nHOLD\n0\nCORRUPT\n0\nRefresh\nFlush queue\nDelete all\nID\tSender\tSize\tArrival\tStatus\n4F2C1A0B7D\tshop@example.com\t2.0 KB\t2026-10-09 10:00\ndeferred\n9D3E7C11A2\tinfo@example.com\t512 B\t2026-10-09 10:02\nactive\nServer mail policy\nApplies to all incoming mail on this server.\nMaximum message size (MB)\nDNSBL zones (comma-separated)\nReject senders listed on DNS blackhole lists\nLocal and authenticated senders are never blocked; the check applies to outside connections only.\nLimit outgoing mail rate\nCaps how fast one account can send, so a compromised mailbox cannot blast spam and get the server (and its domains) suspended.\nMax messages per minute, per sender\nSave policy",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"server1\n\n203.0.113.10\n\nAD\nComponents\nPos\" inHold=false",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "importResult": null,
+      "serviceAction": {
+        "tone": "note",
+        "role": "status",
+        "text": "postfix was stopped and is not running. The state of postfix@-.service could not be read from systemd after the stop, so it is not known whether the unit ended marked as failed. To see it as systemd shows it now, run systemctl status postfix@-.service on the server. Nothing more is sent to the unit, and nothing looks again by itself. Close",
+        "inView": true,
+        "surface": {
+          "background": "rgba(245, 179, 1, 0.2)",
+          "redder": false
+        },
+        "code": "systemctl status postfix@-.service"
+      },
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": {
+        "text": "Stop",
+        "sentence": null,
+        "line": null,
+        "lineFace": null,
+        "surface": {
+          "background": "rgba(20, 44, 84, 1)",
+          "redder": false
+        },
+        "inView": false,
+        "box": {
+          "top": -44,
+          "bottom": -10,
+          "width": 77
+        },
+        "measure": 0
+      },
+      "updateCard": null,
+      "toasts": [],
+      "enabledButtons": [
+        "Components",
+        "Help",
+        "Stop",
+        "Restart",
+        "Close",
+        "Mail queue",
+        "Mail logs",
+        "Refresh",
+        "Flush queue",
+        "Delete all",
+        "Save policy"
+      ],
+      "mainText": "Components Postfix Running Help Start Stop Restart postfix was stopped and is not running. The state of postfix@-.service could not be read from systemd after the stop, so it is not known whether the unit ended marked as failed. To see it as systemd shows it now, run systemctl status postfix@-.service on the server. Nothing more is sent to the unit, and nothing looks again by itself. Close Mail queue Mail logs ACTIVE 1 DEFERRED 1 HOLD 0 CORRUPT 0 Refresh Flush queue Delete all ID Sender Size Arrival Status 4F2C1A0B7D shop@example.com 2.0 KB 2026-10-09 10:00 deferred 9D3E7C11A2 info@example.com 512 B 2026-10-09 10:02 active Server mail policy Applies to all incoming mail on this server. Maximum message size (MB) DNSBL zones (comma-separated) Reject senders listed on DNS blackhole lists Local and authenticated senders are never blocked; the check applies to outside connections only. Limit outgoing mail rate Caps how fast one account can send, so a compromised mailbox cannot blast spam and get the server (and its domains) suspended. Max messages per minute, per sender Save policy",
+      "pageOverflowsSideways": false
+    },
+    "143a-update-card-version-rolled-back-with-a-recorded-cause": {
+      "path": "/settings?section=updates",
+      "visibility": "visible",
+      "main": "Home\n/\nSettings\nSettings\nManage access, security, software updates and server infrastructure.\nAccount security\nServer setup\nPanel HTTPS\nLicense\nCelikPanel updates\nServer security\nDNS infrastructure\nSystem databases\nCelikPanel updates\nThe panel and agent apply only a signed package that matches the verified operating system and architecture.\nCheck for updates\nAlpha release: Make sure you have a current backup first. The operation restarts the panel and agent and may cause a short interruption. An update never starts automatically.\nCurrent version\nv0.1.0-alpha.81\nCurrent commit\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nTarget version\nv0.1.0-alpha.82\nTarget platform\nlinux/amd64\nSequence\n82\nPackage size\n65870672 bytes\nSHA-256\ncccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\nThis version was already tried on this server and rolled back\nv0.1.0-alpha.82 was started here, and that attempt ended on 10/9/2026, 11:06:32 AM. The update did not complete, and the server was returned to v0.1.0-alpha.81, which it runs now.\nRecorded cause: The new version's panel failed its start check.\nStarting it again runs the same update. If the cause was on this server and has been corrected, the result can differ; otherwise expect the same one. A corrected version, when it is published, is offered here as a newer version. The button below still starts v0.1.0-alpha.82.\nA signed update is available.\nStart signed update to v0.1.0-alpha.82\nA signed update is available.",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"server1\n\n203.0.113.10\n\nAD\nHome\n/\nSetting\" inHold=false",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "importResult": null,
+      "serviceAction": null,
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": null,
+      "updateCard": {
+        "previous": {
+          "text": "This version was already tried on this server and rolled back v0.1.0-alpha.82 was started here, and that attempt ended on 10/9/2026, 11:06:32 AM. The update did not complete, and the server was returned to v0.1.0-alpha.81, which it runs now. Recorded cause: The new version's panel failed its start check. Starting it again runs the same update. If the cause was on this server and has been corrected, the result can differ; otherwise expect the same one. A corrected version, when it is published, is offered here as a newer version. The button below still starts v0.1.0-alpha.82.",
+          "heading": "This version was already tried on this server and rolled back",
+          "lines": [
+            "This version was already tried on this server and rolled back",
+            "v0.1.0-alpha.82 was started here, and that attempt ended on 10/9/2026, 11:06:32 AM. The update did not complete, and the server was returned to v0.1.0-alpha.81, which it runs now.",
+            "Recorded cause: The new version's panel failed its start check.",
+            "Starting it again runs the same update. If the cause was on this server and has been corrected, the result can differ; otherwise expect the same one. A corrected version, when it is published, is offered here as a newer version. The button below still starts v0.1.0-alpha.82."
+          ],
+          "surface": {
+            "background": "rgba(245, 179, 1, 0.2)",
+            "redder": false
+          },
+          "box": {
+            "top": 490,
+            "bottom": 848,
+            "width": 316
+          }
+        },
+        "start": {
+          "label": "Start signed update to v0.1.0-alpha.82",
+          "disabled": false,
+          "box": {
+            "top": 918,
+            "bottom": 952,
+            "width": 292
+          }
+        },
+        "target": "Current version v0.1.0-alpha.81 Current commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa Target version v0.1.0-alpha.82 Target platform linux/amd64 Sequence 82 Package size 65870672 bytes SHA-256 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "toasts": [],
+      "enabledButtons": [
+        "Account security",
+        "Server setup",
+        "Panel HTTPS",
+        "License",
+        "CelikPanel updates",
+        "Server security",
+        "DNS infrastructure",
+        "System databases",
+        "Check for updates",
+        "Start signed update to v0.1.0-alpha.82"
+      ],
+      "mainText": "Home / Settings Settings Manage access, security, software updates and server infrastructure. Account security Server setup Panel HTTPS License CelikPanel updates Server security DNS infrastructure System databases CelikPanel updates The panel and agent apply only a signed package that matches the verified operating system and architecture. Check for updates Alpha release: Make sure you have a current backup first. The operation restarts the panel and agent and may cause a short interruption. An update never starts automatically. Current version v0.1.0-alpha.81 Current commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa Target version v0.1.0-alpha.82 Target platform linux/amd64 Sequence 82 Package size 65870672 bytes SHA-256 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc This version was already tried on this server and rolled back v0.1.0-alpha.82 was started here, and that attempt ended on 10/9/2026, 11:06:32 AM. The update did not complete, and the server was returned to v0.1.0-alpha.81, which it runs now. Recorded cause: The new version's panel failed its start check. Starting it again runs the same update. If the cause was on this server and has been corrected, the result can differ; otherwise expect the same one. A corrected version, when it is published, is offered here as a newer version. The button below still starts v0.1.0-alpha.82. A signed update is available. Start signed update to v0.1.0-alpha.82 A signed update is available.",
+      "pageOverflowsSideways": false
+    },
+    "143b-update-card-version-rolled-back-no-cause-recorded": {
+      "path": "/settings?section=updates",
+      "visibility": "visible",
+      "main": "Home\n/\nSettings\nSettings\nManage access, security, software updates and server infrastructure.\nAccount security\nServer setup\nPanel HTTPS\nLicense\nCelikPanel updates\nServer security\nDNS infrastructure\nSystem databases\nCelikPanel updates\nThe panel and agent apply only a signed package that matches the verified operating system and architecture.\nCheck for updates\nAlpha release: Make sure you have a current backup first. The operation restarts the panel and agent and may cause a short interruption. An update never starts automatically.\nCurrent version\nv0.1.0-alpha.81\nCurrent commit\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nTarget version\nv0.1.0-alpha.82\nTarget platform\nlinux/amd64\nSequence\n82\nPackage size\n65870672 bytes\nSHA-256\ncccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\nThis version was already tried on this server and rolled back\nv0.1.0-alpha.82 was started here, and that attempt ended on 10/9/2026, 10:52:52 AM. The update did not complete, and the server was returned to v0.1.0-alpha.81, which it runs now.\nThe server recorded no more specific cause for that attempt.\nStarting it again runs the same update. If the cause was on this server and has been corrected, the result can differ; otherwise expect the same one. A corrected version, when it is published, is offered here as a newer version. The button below still starts v0.1.0-alpha.82.\nA signed update is available.\nStart signed update to v0.1.0-alpha.82\nA signed update is available.",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"server1\n\n203.0.113.10\n\nAD\nHome\n/\nSetting\" inHold=false",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "importResult": null,
+      "serviceAction": null,
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": null,
+      "updateCard": {
+        "previous": {
+          "text": "This version was already tried on this server and rolled back v0.1.0-alpha.82 was started here, and that attempt ended on 10/9/2026, 10:52:52 AM. The update did not complete, and the server was returned to v0.1.0-alpha.81, which it runs now. The server recorded no more specific cause for that attempt. Starting it again runs the same update. If the cause was on this server and has been corrected, the result can differ; otherwise expect the same one. A corrected version, when it is published, is offered here as a newer version. The button below still starts v0.1.0-alpha.82.",
+          "heading": "This version was already tried on this server and rolled back",
+          "lines": [
+            "This version was already tried on this server and rolled back",
+            "v0.1.0-alpha.82 was started here, and that attempt ended on 10/9/2026, 10:52:52 AM. The update did not complete, and the server was returned to v0.1.0-alpha.81, which it runs now.",
+            "The server recorded no more specific cause for that attempt.",
+            "Starting it again runs the same update. If the cause was on this server and has been corrected, the result can differ; otherwise expect the same one. A corrected version, when it is published, is offered here as a newer version. The button below still starts v0.1.0-alpha.82."
+          ],
+          "surface": {
+            "background": "rgba(245, 179, 1, 0.2)",
+            "redder": false
+          },
+          "box": {
+            "top": 490,
+            "bottom": 848,
+            "width": 316
+          }
+        },
+        "start": {
+          "label": "Start signed update to v0.1.0-alpha.82",
+          "disabled": false,
+          "box": {
+            "top": 918,
+            "bottom": 952,
+            "width": 292
+          }
+        },
+        "target": "Current version v0.1.0-alpha.81 Current commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa Target version v0.1.0-alpha.82 Target platform linux/amd64 Sequence 82 Package size 65870672 bytes SHA-256 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "toasts": [],
+      "enabledButtons": [
+        "Account security",
+        "Server setup",
+        "Panel HTTPS",
+        "License",
+        "CelikPanel updates",
+        "Server security",
+        "DNS infrastructure",
+        "System databases",
+        "Check for updates",
+        "Start signed update to v0.1.0-alpha.82"
+      ],
+      "mainText": "Home / Settings Settings Manage access, security, software updates and server infrastructure. Account security Server setup Panel HTTPS License CelikPanel updates Server security DNS infrastructure System databases CelikPanel updates The panel and agent apply only a signed package that matches the verified operating system and architecture. Check for updates Alpha release: Make sure you have a current backup first. The operation restarts the panel and agent and may cause a short interruption. An update never starts automatically. Current version v0.1.0-alpha.81 Current commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa Target version v0.1.0-alpha.82 Target platform linux/amd64 Sequence 82 Package size 65870672 bytes SHA-256 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc This version was already tried on this server and rolled back v0.1.0-alpha.82 was started here, and that attempt ended on 10/9/2026, 10:52:52 AM. The update did not complete, and the server was returned to v0.1.0-alpha.81, which it runs now. The server recorded no more specific cause for that attempt. Starting it again runs the same update. If the cause was on this server and has been corrected, the result can differ; otherwise expect the same one. A corrected version, when it is published, is offered here as a newer version. The button below still starts v0.1.0-alpha.82. A signed update is available. Start signed update to v0.1.0-alpha.82 A signed update is available.",
+      "pageOverflowsSideways": false
+    },
+    "143c-update-card-no-earlier-attempt": {
+      "path": "/settings?section=updates",
+      "visibility": "visible",
+      "main": "Home\n/\nSettings\nSettings\nManage access, security, software updates and server infrastructure.\nAccount security\nServer setup\nPanel HTTPS\nLicense\nCelikPanel updates\nServer security\nDNS infrastructure\nSystem databases\nCelikPanel updates\nThe panel and agent apply only a signed package that matches the verified operating system and architecture.\nCheck for updates\nAlpha release: Make sure you have a current backup first. The operation restarts the panel and agent and may cause a short interruption. An update never starts automatically.\nCurrent version\nv0.1.0-alpha.81\nCurrent commit\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nTarget version\nv0.1.0-alpha.82\nTarget platform\nlinux/amd64\nSequence\n82\nPackage size\n65870672 bytes\nSHA-256\ncccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\nA signed update is available.\nStart signed update to v0.1.0-alpha.82\nA signed update is available.",
+      "hold": null,
+      "holdRect": null,
+      "dialogs": [],
+      "inert": false,
+      "horizontalOverflow": 0,
+      "clipped": [],
+      "active": "body \"server1\n\n203.0.113.10\n\nAD\nHome\n/\nSetting\" inHold=false",
+      "viewport": {
+        "w": 390,
+        "h": 844
+      },
+      "importResult": null,
+      "serviceAction": null,
+      "dialogOpen": false,
+      "dialogBanner": null,
+      "dialogCreateEnabled": null,
+      "mainBanner": null,
+      "updateCard": {
+        "previous": null,
+        "start": {
+          "label": "Start signed update to v0.1.0-alpha.82",
+          "disabled": false,
+          "box": {
+            "top": 711,
+            "bottom": 745,
+            "width": 292
+          }
+        },
+        "target": "Current version v0.1.0-alpha.81 Current commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa Target version v0.1.0-alpha.82 Target platform linux/amd64 Sequence 82 Package size 65870672 bytes SHA-256 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "toasts": [],
+      "enabledButtons": [
+        "Account security",
+        "Server setup",
+        "Panel HTTPS",
+        "License",
+        "CelikPanel updates",
+        "Server security",
+        "DNS infrastructure",
+        "System databases",
+        "Check for updates",
+        "Start signed update to v0.1.0-alpha.82"
+      ],
+      "mainText": "Home / Settings Settings Manage access, security, software updates and server infrastructure. Account security Server setup Panel HTTPS License CelikPanel updates Server security DNS infrastructure System databases CelikPanel updates The panel and agent apply only a signed package that matches the verified operating system and architecture. Check for updates Alpha release: Make sure you have a current backup first. The operation restarts the panel and agent and may cause a short interruption. An update never starts automatically. Current version v0.1.0-alpha.81 Current commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa Target version v0.1.0-alpha.82 Target platform linux/amd64 Sequence 82 Package size 65870672 bytes SHA-256 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc A signed update is available. Start signed update to v0.1.0-alpha.82 A signed update is available.",
+      "pageOverflowsSideways": false
+    }
+  },
+  "errors": []
+}

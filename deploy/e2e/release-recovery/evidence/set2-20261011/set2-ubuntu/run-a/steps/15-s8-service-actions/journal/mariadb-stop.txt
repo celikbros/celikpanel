@@ -1,0 +1,11 @@
+2026-10-09T03:46:27.511589+00:00 dns-ubuntu systemd[1]: Stopping mariadb.service - MariaDB 10.11.14 database server...
+2026-10-09T03:46:27.512147+00:00 dns-ubuntu mariadbd[60473]: 2026-10-09  3:46:27 0 [Note] /usr/sbin/mariadbd (initiated by: unknown): Normal shutdown
+2026-10-09T03:46:27.512566+00:00 dns-ubuntu mariadbd[60473]: 2026-10-09  3:46:27 0 [Note] InnoDB: FTS optimize thread exiting.
+2026-10-09T03:46:27.521242+00:00 dns-ubuntu mariadbd[60473]: 2026-10-09  3:46:27 0 [Note] InnoDB: Starting shutdown...
+2026-10-09T03:46:27.531526+00:00 dns-ubuntu mariadbd[60473]: 2026-10-09  3:46:27 0 [Note] InnoDB: Dumping buffer pool(s) to /var/lib/mysql/ib_buffer_pool
+2026-10-09T03:46:27.531526+00:00 dns-ubuntu mariadbd[60473]: 2026-10-09  3:46:27 0 [Note] InnoDB: Buffer pool(s) dump completed at 261009  3:46:27
+2026-10-09T03:46:27.736696+00:00 dns-ubuntu mariadbd[60473]: 2026-10-09  3:46:27 0 [Note] InnoDB: Removed temporary tablespace data file: "./ibtmp1"
+2026-10-09T03:46:27.736696+00:00 dns-ubuntu mariadbd[60473]: 2026-10-09  3:46:27 0 [Note] InnoDB: Shutdown completed; log sequence number 46846; transaction id 15
+2026-10-09T03:46:27.753270+00:00 dns-ubuntu mariadbd[60473]: 2026-10-09  3:46:27 0 [Note] /usr/sbin/mariadbd: Shutdown complete
+2026-10-09T03:46:27.758364+00:00 dns-ubuntu systemd[1]: mariadb.service: Deactivated successfully.
+2026-10-09T03:46:27.758775+00:00 dns-ubuntu systemd[1]: Stopped mariadb.service - MariaDB 10.11.14 database server.

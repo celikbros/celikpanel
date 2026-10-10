@@ -599,6 +599,9 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 			writeServerError(w, agentMutationBusy())
 			return
 		}
+		if err == nil && writeCertificateIssueFailure(w, currentCaller(r), domain.Name, activeCount > 0, &agentResp) {
+			return
+		}
 		writeAgentError(w, err, agentResp.Error)
 		return
 	}

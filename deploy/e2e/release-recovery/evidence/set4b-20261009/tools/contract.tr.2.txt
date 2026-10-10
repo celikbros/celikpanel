@@ -1,0 +1,107 @@
+- **Değişen.**
+
+  - *Kuyruk dizini, postconf yanıtının tek bir satırıdır*
+    (`cmd/agent/mail_service_verify.go`, `postfixQueueDirectory`,
+    `postconfOnePath`). postconf'un başlatıldığı adla, ardından `: ` ve
+    `warning`, `error`, `fatal` ya da `panic` ile başlayan satır postconf'un
+    kendi iletisidir ve dışarıda bırakılır; geriye tam olarak bir satır
+    kalmalı ve o satır temiz bir mutlak yol olmalıdır. Başka her şey (satır
+    yok, iki satır, göreli yol) bir dizin değildir ve hiçbir şey ileri
+    sürülmez. Ana süreci okuyan iki işlev de bunu kullanır (`postfixMaster`,
+    `postfixMasterProcess`).
+
+  - *"master.pid yok", ancak dizini varsa bir şey söyler*
+    (`postfixMasterProcess`). Eksik dosya eskiden her yol için "bu kuyruk
+    diziniyle hiç ana süreç başlamadı" demekti. Artık yalnızca
+    `<queue_directory>/pid` var olan bir dizinse bunu söyler; değilse ana
+    sürece bakılamamıştır ve reddedilen bir main.cf ile Durdur, süreç
+    aranamadığında zaten olduğu gibi, bilinmeyen sonuçtur.
+
+  - *Birim, durulduğunda okunur* (`cmd/agent/service_action_verify.go`,
+    `noteStopLeftUnitFailed`). systemd izlenen bir birimi `activating`,
+    `deactivating` ya da `reloading` gösterdiği sürece birim yeniden okunur:
+    bir durdurmanın bütün birimleri için toplam en çok 30 okuma, 500 ms
+    arayla; o dosyadaki diğer bütün doğrulamaların kullandığı aralık ve
+    sınır. Bu sırada yalnızca `systemctl show` gönderilir. `failed` olarak
+    biten birim eskisi gibi bildirilir (`unit_marked_failed`); Postfix'in
+    denetimi bir satır yazıyorsa o satırla birlikte.
+
+  - *Durulmayan birim öyle söylenir*
+    (`transport.ServiceActionNoticeUnitNotSettled`,
+    `cmd/panel/service_action_outcome.go`, `ServiceActionNotice.tsx`). Sınır,
+    birim hâlâ iki durum arasındayken dolarsa ya da birim durdurmadan önce
+    okunduğu halde sonra okunamazsa başarı, `reason` değeri `unit_not_settled`
+    (ve `vars.state`) ya da `unit_state_not_read` olan bir `note` taşır.
+    Susmak "birime bakıldı ve temiz" diye okunurdu. Not, bir işaret olduğunu
+    da olmadığını da ileri sürmez; komutu hiçbir şeyi değiştirmeyen
+    `systemctl status <unit>` komutudur. Durdur'un kendisi `verified` kalır:
+    hizmetin kendi sürecinin gittiği görülmüştür.
+
+  - *Güncelleme kartının cümlesi zamanı denemenin bitişi olarak adlandırır*
+    (`web/src/i18n/screens/server/en.ts`, `tr.ts`,
+    `panelUpdate.previousAttempt.recovered`). Yalnızca metin; kart ve cümleye
+    verdiği değer değişmedi.
+
+  - *Hiçbir şey içe aktarmayan adım ne içe aktarılmıştır ne de başarısızdır*
+    (`cmd/panel/import_handlers.go`, `web/src/components/ImportPage.tsx`).
+    Böyle bir adım `ok: true` kalır ve `state` taşır (`left_to_owner`,
+    `not_chosen`, `none_in_archive`, `none_imported`); yanıt onu `left_out`
+    altında listeler. Arşivin kayıtları içe aktarılmadığında her DNS kipinde
+    `dns` için, hiçbiri aktarılmadığında `mail` ve `forwarders` için, arşivin
+    site klasörü boş olduğunda `files` için geçerlidir. `ok`, onunla birlikte
+    `status` ve `IMPORT_PARTIAL` eskisi gibi belirlenir: içe aktarımı yalnızca
+    başarısız olan bir adım kısmi yapar.
+
+- **API değişiklikleri (sürüm notları için).**
+
+  - `POST /api/v1/service/action`: Postfix'in durdurulması, ana süreci
+    bittiğinde yanıtlanır (Ubuntu 24.04 üzerinde reddedilen bir main.cf ile
+    eskisinden yaklaşık bir saniye sonra). Başarılı bir Durdur, `reason`
+    değeri `unit_not_settled` ya da `unit_state_not_read` olan ve `vars`
+    içinde `pending_unit`, `command`, `state` taşıyan bir `note` taşıyabilir;
+    bir birim iki durum arasındayken Durdur yaklaşık 15 saniyeye kadar daha
+    uzun sürebilir.
+
+  - `POST /api/v1/import/cpanel/apply`: `steps[].state` (isteğe bağlı) ve
+    `left_out` listesi yenidir; `imported`, adımı `state` taşıyan bir parçayı
+    artık adlandırmaz. `status`, `code`, `not_imported` ve her `detail`
+    değişmedi.
+
+  - `GET /api/v1/panel/update/check`: değişmedi.
+
+- **Değişmeyen ve nedeni.**
+
+  - İki akışı birden tutabilen bir arabellekten postconf değeri okuyan diğer
+    yerler (`cmd/agent/mail_tls_rpc.go` `snapshotMailTLSState`,
+    `cmd/agent/mail_tls_sync_commit.go`, `cmd/agent/mail_stack_rpc.go`
+    `postconfExpandedContext`): bu düzeltme yapılırken kaynakta görüldü,
+    ölçülmedi, burada değiştirilmedi. Çalıştırıcılarının iki akışı karıştırıp
+    karıştırmadığı saptanmadı.
+
+  - Başka bir sarmalayıcının arkasındaki örnek birimler
+    (`postgresql@<version>-<cluster>`), onları zaten durulana dek okuyan
+    `verifyWrapperAction` ile değerlendirilir; notun okuduğu birimler arasında
+    değildirler.
+
+  - Geri döndürülmeden başarısız olan ya da hiçbir şeyi değiştirmeden duran
+    bir denemenin cümleleri aynı zamanla "{time} tarihinde denendi" der ve
+    olduğu gibi kalır.
+
+  - İçe aktarım sayfasında dışarıda bırakılan parçaların bir listesi yoktur
+    ve bir adımın `detail` satırı sunucunun İngilizcesi olarak kalır.
+
+- **Şema ya da sürüm geçişi.**
+
+  - Veritabanı şeması ve kalıcı durum yok. `ServiceActionResult.Notice`, adıyla
+    aktarılan bir değer daha kazanır; onu bilmeyen bir Panel bu değer için not
+    vermez; bu, daha önce verdiği yanıttır. `steps[].state` ve `left_out`
+    eklemelidir; `state` alanını bilmeyen bir sayfa böyle bir adımı eskisi gibi
+    içe aktarılmış diye listeler.
+
+- **Kurtarma davranışı.**
+
+  - Hiçbir şey kendiliğinden yeniden denemez. Bir birim için bekleme
+    sınırlıdır ve birime hiçbir şey göndermez; bir Durdur'un ardından hiçbir
+    zaman `reset-failed` gelmez. Ana süreci aranamayan ve yapılandırmasını
+    Postfix'in reddettiği bir Durdur bilinmeyen sonuç olarak kalır ve
+    yinelenmez.

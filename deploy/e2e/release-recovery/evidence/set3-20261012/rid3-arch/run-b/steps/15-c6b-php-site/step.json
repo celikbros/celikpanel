@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 5,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T08:16:36Z",
+    "notes": [
+      "OWNER ACTION for this reading: the server owner placed /etc/nginx/snippets/fastcgi-php.conf by hand (the text Debian's nginx package ships). Every result of C6b, C7 and C7b in this run is a result WITH that file; without it the PHP site cannot be created on this platform (the first run)."
+    ],
+    "started_at": "2026-10-09T08:16:31Z",
+    "substeps": {
+      "P5": "passed"
+    },
+    "title": "a PHP site: created, served by PHP-FPM through the web server, deleted (set3, P5)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T08:16:36Z",
+  "name": "C6b-php-site",
+  "started_at": "2026-10-09T08:16:31Z",
+  "verdict": "passed"
+}

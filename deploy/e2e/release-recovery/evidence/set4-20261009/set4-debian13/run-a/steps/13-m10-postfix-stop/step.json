@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "checks": 11,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T10:48:37Z",
+    "notes": [],
+    "started_at": "2026-10-09T10:48:08Z",
+    "substeps": {
+      "S8 postfix start": "passed",
+      "S8 postfix stop": "passed",
+      "item 10": "passed"
+    },
+    "title": "Postfix stopped through the Panel while `postfix check` refuses main.cf (item 10)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T10:48:37Z",
+  "name": "M10-postfix-stop",
+  "started_at": "2026-10-09T10:48:08Z",
+  "verdict": "passed"
+}

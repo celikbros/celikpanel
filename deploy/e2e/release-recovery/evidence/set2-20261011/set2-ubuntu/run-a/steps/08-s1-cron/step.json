@@ -1,0 +1,25 @@
+{
+  "checks": {
+    "checks": 35,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T03:44:29Z",
+    "notes": [],
+    "started_at": "2026-10-09T03:44:22Z",
+    "substeps": {
+      "a": "passed",
+      "b": "passed",
+      "c": "passed",
+      "d": "passed",
+      "e": "passed",
+      "f": "passed"
+    },
+    "title": "scheduled tasks: the owner's crontab",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T03:44:29Z",
+  "name": "S1-cron",
+  "started_at": "2026-10-09T03:44:22Z",
+  "verdict": "passed"
+}

@@ -1,0 +1,29 @@
+{
+  "checks": {
+    "checks": 21,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T10:37:24Z",
+    "notes": [],
+    "started_at": "2026-10-09T10:36:37Z",
+    "substeps": {
+      "S8 mariadb reload": "passed",
+      "S8 mariadb start": "passed",
+      "S8 mariadb stop": "passed",
+      "S8 nginx reload": "passed",
+      "S8 nginx start": "passed",
+      "S8 nginx stop": "passed",
+      "S8 postgresql reload": "passed",
+      "S8 postgresql start": "passed",
+      "S8 postgresql stop": "passed",
+      "item 4": "passed"
+    },
+    "title": "Reload of a stopped nginx, MariaDB and PostgreSQL (item 4)",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T10:37:24Z",
+  "name": "M4-reload-stopped",
+  "started_at": "2026-10-09T10:36:37Z",
+  "verdict": "passed"
+}

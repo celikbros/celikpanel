@@ -1,0 +1,13 @@
+driver SHA256SUMS verified on the staged copy (301 files)
+digest sweep at staging: host-side files changed 0, driver files changed 0, places {"learned_value": 0, "migration_directory": 0, "named_field": 0}, inside base64 text 0
+count after the sweep: 0 file(s) would change, 0 inside base64 text, values known: 0
+driver SHA256SUMS verified again after the sweep
+2026-10-09T23:01:43Z removed /var/tmp/cp-release-drill-s6-d13-good-a/cells/d037899324d4da18b686d503/arch/overlay.qcow2 bytes=149028864 allocated=67575808 (overlay disk of this run's lab, on the WSL disk; evidence staged at set6-20261009/update-alpha81/upd1-debian13-good/run-a, checksums verified)
+2026-10-09T23:01:43Z removed /var/tmp/cp-release-drill-s6-d13-good-a/cells/d037899324d4da18b686d503/debian13/overlay.qcow2 bytes=1785200640 allocated=1715380224 (overlay disk of this run's lab, on the WSL disk; evidence staged at set6-20261009/update-alpha81/upd1-debian13-good/run-a, checksums verified)
+2026-10-09T23:01:43Z removed /var/tmp/cp-release-drill-s6-d13-good-a/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 (this lab's hard link to the cached base image /var/tmp/cp-v3n28/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2; the cached file stays, link count now 5)
+2026-10-09T23:01:43Z removed /var/tmp/cp-release-drill-s6-d13-good-a/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 (this lab's hard link to the cached base image /var/tmp/cp-v3n28/images/debian-13-genericcloud-amd64-20260826-2582.qcow2; the cached file stays, link count now 5)
+316
+overall: complete-for-review | native_evidence: False | outcome: update-verified | final: None succeeded
+  step owner-continuation (required) skipped | None
+  section M10-postfix-stop passed | checks: 11 | failed: [] | unknown: [] | error: None
+  finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']

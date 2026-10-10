@@ -1,0 +1,8 @@
+##### mariadb.service (journalctl -u mariadb.service --since @1791583649)
+(no lines)
+##### systemd (PID 1) lines naming the unit
+(no lines)
+##### celikpanel-agent.service and celikpanel-panel.service
+2026-10-09T22:07:31.746755+00:00 dns-arch panel[420]: 2026/10/09 22:07:31 http: TLS handshake error from 127.0.0.1:41488: EOF
+2026-10-09T22:07:31.814654+00:00 dns-arch agent[410]: 2026/10/09 22:07:31 ERROR service reload mariadb: failed not_running: mariadb.service is inactive (dead); nothing was reloaded
+2026-10-09T22:07:33.041212+00:00 dns-arch panel[420]: 2026/10/09 22:07:33 [409][service action] reload mariadb: SERVICE_ACTION_FAILED not_running: mariadb.service is inactive (dead); nothing was reloaded

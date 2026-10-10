@@ -95,10 +95,66 @@ func (p *Panel) serverSetupExecutionActive(ctx context.Context) (bool, error) {
 	return count != 0, err
 }
 
+// serverSetupExecutionMutating reports whether a setup execution holds, or is
+// about to make, a change on this host. A service action, an install and a
+// removal are refused (`409 server_setup_busy`) while it does.
+//
+// The rule (11 Oct 2026): an execution is mutating while its row is `running`,
+// except when the step it is at is the public address check (`access_dns`).
+// That step only asks public resolvers whether a hostname resolves here; it
+// starts no ACME order and edits nothing (server_setup_access_dns.go). A setup
+// that waits for a DNS record is `waiting`, and every 20 s the runner claims
+// the row (`running`) to ask the resolvers again
+// (claimServerSetupDNSRetry). Measured on Debian 13 and Ubuntu 24.04: during
+// those moments a Stop or a Start on the Services page was refused, although
+// nothing was being changed and the wait itself can last until the owner's
+// DNS record exists.
+//
+// A row that cannot be read as an execution counts as mutating: the refusal
+// is the safe answer. The other DNS waits (`primary_dns`,
+// `infrastructure_dns`) are not exempted here; their re-check can publish
+// native DNS records.
+//
+// serverSetupExecutionMutating, bir kurulum yürütmesinin bu sunucuda bir
+// değişiklik tutup tutmadığını söyler. Kural: satır `running` iken yürütme
+// değişiklik yapıyor sayılır; bulunduğu adım yalnızca genel adres denetimi
+// (`access_dns`) ise sayılmaz, çünkü o adım yalnızca genel çözümleyicilere
+// sorar ve hiçbir şeyi değiştirmez. Okunamayan satır değişiklik yapıyor sayılır.
 func (p *Panel) serverSetupExecutionMutating(ctx context.Context) (bool, error) {
-	var count int
-	err := p.db.GetDB().QueryRowContext(ctx, `SELECT COUNT(*) FROM server_setup_executions WHERE status='running'`).Scan(&count)
-	return count != 0, err
+	rows, err := p.db.GetDB().QueryContext(ctx, `SELECT execution_json FROM server_setup_executions WHERE status='running'`)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var raw string
+		if err := rows.Scan(&raw); err != nil {
+			return false, err
+		}
+		if !serverSetupOnlyChecksPublicAddress(raw) {
+			return true, nil
+		}
+	}
+	return false, rows.Err()
+}
+
+// serverSetupOnlyChecksPublicAddress reports whether the step a running
+// execution is at is the public address check: the first step that has not
+// succeeded, which is the step the runner works on (advanceServerSetupExecution).
+func serverSetupOnlyChecksPublicAddress(raw string) bool {
+	var execution serverSetupExecution
+	if err := json.Unmarshal([]byte(raw), &execution); err != nil || len(execution.Steps) == 0 {
+		return false
+	}
+	for _, step := range execution.Steps {
+		if step.Kind == "verify" || step.Status == "succeeded" {
+			continue
+		}
+		return step.Kind == "access_dns"
+	}
+	// Every step succeeded and the row is still running: the final
+	// verification is being recorded. Not exempted.
+	return false
 }
 
 func (p *Panel) latestServerSetupExecution(ctx context.Context) (*serverSetupExecution, error) {
@@ -1016,7 +1072,8 @@ func (p *Panel) runServerSetupStep(ctx context.Context, plan serverSetupPlan, st
 		case serviceOperationFailed:
 			if op.Error != nil {
 				return false, &serverSetupChildFailure{Code: op.Error.Code, Message: op.Error.Message,
-					Component: op.Error.Component, Step: op.Error.Step, Detail: op.Error.Detail}
+					Component: op.Error.Component, Step: op.Error.Step, Detail: op.Error.Detail,
+					Reason: op.Error.Reason}
 			}
 			return false, errors.New("setup child failed")
 		default:
@@ -1298,8 +1355,9 @@ func validateServerSetupExecution(plan serverSetupPlan, execution serverSetupExe
 
 // serverSetupChildFailure carries a child's code and message and, for an
 // install failure, the component, install step and bounded host line that the
-// wizard shows as the cause and next action (D-024).
-type serverSetupChildFailure struct{ Code, Message, Component, Step, Detail string }
+// wizard shows as the cause and next action (D-024). Reason is the typed
+// cause of a HOST_MUTATION_BUSY refusal, when known.
+type serverSetupChildFailure struct{ Code, Message, Component, Step, Detail, Reason string }
 
 func (e *serverSetupChildFailure) Error() string { return e.Code + ": " + e.Message }
 
@@ -1307,7 +1365,8 @@ func serverSetupFailureForStep(step serverSetupExecutionStep, cause error) *serv
 	var child *serverSetupChildFailure
 	if errors.As(cause, &child) {
 		return &serviceOperationError{Code: child.Code, Message: child.Message,
-			Component: child.Component, Step: child.Step, Detail: child.Detail}
+			Component: child.Component, Step: child.Step, Detail: child.Detail,
+			Reason: child.Reason}
 	}
 	switch {
 	case errors.Is(cause, errServerSetupHostRestartRequired):
@@ -1336,7 +1395,8 @@ func serverSetupFailureForStep(step serverSetupExecutionStep, cause error) *serv
 	// code (upd8 F1: 05-firewall showed only server_setup_firewall_failed).
 	// Ajan ana makine meşgul olduğu için reddettiyse tipli neden korunur.
 	if classification, ok := classifyHostMutationError(cause); ok {
-		return &serviceOperationError{Code: classification.Code, Message: classification.Message}
+		return &serviceOperationError{Code: classification.Code, Message: classification.Message,
+			Reason: classification.Reason}
 	}
 	switch step.Kind {
 	case "infrastructure_dns":

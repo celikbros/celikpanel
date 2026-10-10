@@ -39,7 +39,7 @@ export const enSetupDNS = {
     "setup.guide.accessDNSPrepared": "Setup has a reviewed record plan for {zone}. Check that the registrar delegates it to {primary} and {secondary}, with matching host (glue) addresses, and that both DNS servers answer for the zone.",
     "setup.guide.accessDNSProvider": "Create or correct this record at the DNS provider or primary that manages it. You do not need to create a website in Domains.",
     "setup.guide.accessDNSChecks": "For both authoritative servers, check DNS access on TCP/UDP 53, delegation, matching A/AAAA records and transferred zone contents. Existing records must be preserved; a missing AAAA record does not require adding IPv6.",
-    "setup.guide.accessDNSResume": "This prerequisite is checked automatically. After it passes, the same setup continues. To change the reviewed names or addresses, use Edit setup plan below.",
+    "setup.guide.accessDNSResume": "This prerequisite is checked automatically. After it passes, the same setup continues. To change the reviewed names or addresses, use Edit plan below.",
     "setup.guide.infrastructureDNS": "Preparing the reviewed infrastructure records in {zone}. Existing matching records are retained; this does not create a customer website or mailbox.",
     "setup.guide.infrastructureDNSWaiting": "DNS publication is waiting for its required DNS service or peer verification. Check the reported requirement before changing existing records.",
     "setup.guide.infrastructureDNSPeer": "If the secondary {peer} ({peerIP}) has not been configured, start its DNS setup now. If it is already configured, check its transfer relationship and DNS connectivity.",

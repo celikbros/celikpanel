@@ -37,6 +37,20 @@ The report also preserves the evidence limits: the first Debian trial lacked `di
 prevented complete database comparison, TLS issuance/renewal and native DNS peer
 transfer were not tested, and other independent workloads remain unmeasured.
 
+### Three evidence directory names carry round labels, not dates
+
+`evidence/set1-20261010`, `evidence/set2-20261011` and `evidence/set3-20261012` are named
+with labels that were raised by one per round of work instead of being read from the clock;
+the days 10, 11 and 12 October 2026 had not come when they were written. The runs happened
+on 2026-10-08 21:18-22:15 UTC (set1), 2026-10-09 03:29-04:49 UTC (set2) and 2026-10-09
+07:00-08:46 UTC (set3), from the raw timestamps inside each directory, and were committed on
+2026-10-09 (`7a64bda91`, `c523bbfd2`, `dd1710256`; local time, UTC+3). Each directory's own
+`README.md` already gives the real date in its title. The names are not changed: every file
+in them is listed in a sealed `SHA256SUMS`, other documents cite them, and the directories
+are the identifiers of the rounds. The label mapping is in the erratum at the top of
+[OPERATION-GUIDANCE.md](../../../docs/OPERATION-GUIDANCE.md). [RESULTS.md](RESULTS.md) is the
+record of the four trials of 2026-09-14 and does not list these directories.
+
 ## Boundary and prerequisites
 
 - Run on a Linux QEMU host with the dependencies and pinned base-image cache

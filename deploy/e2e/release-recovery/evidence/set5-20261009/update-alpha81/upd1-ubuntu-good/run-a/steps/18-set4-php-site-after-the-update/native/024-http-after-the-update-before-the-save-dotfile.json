@@ -1,0 +1,18 @@
+{
+  "at": "2026-10-09T17:46:45Z",
+  "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.24.0 (Ubuntu)</center>\r\n</body>\r\n</html>\r\n",
+  "body_sha256": "2de2499f4e5f896995ee7ebaa527a39b75f520f98e12110ec6c156a2433dbe75",
+  "bytes": 162,
+  "headers": {
+    "content-length": "162",
+    "content-type": "text/html",
+    "server": "nginx/1.24.0 (Ubuntu)"
+  },
+  "host": "set4-upd-php.test",
+  "mode": "read-http",
+  "owner_action": false,
+  "path": "/.env",
+  "schema": "celikpanel/set4-native/v1",
+  "status": 403,
+  "status_line": "HTTP/1.1 403 Forbidden"
+}

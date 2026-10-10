@@ -1,0 +1,18 @@
+##### nginx.service
+2026-10-09T22:17:39.998927+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:17:40.031525+00:00 dns-debian13 nginx[31274]: 2026/10/09 22:17:40 [notice] 31274#31274: signal process started
+2026-10-09T22:17:40.035711+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-09T22:17:40.215934+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-09T22:17:40.239031+00:00 dns-debian13 nginx[31296]: 2026/10/09 22:17:40 [notice] 31296#31296: signal process started
+2026-10-09T22:17:40.240578+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+##### celikpanel-agent.service and celikpanel-panel.service
+2026-10-09T22:17:38.848287+00:00 dns-debian13 panel[5364]: 2026/10/09 22:17:38 http: TLS handshake error from 127.0.0.1:36518: EOF
+2026-10-09T22:17:39.814538+00:00 dns-debian13 useradd[31253]: new group: name=set4_refused_test, GID=5002
+2026-10-09T22:17:39.814653+00:00 dns-debian13 useradd[31253]: new user: name=set4_refused_test, UID=5002, GID=5002, home=/var/www/celikpanel/subscriptions/2/sites/3, shell=/bin/bash, from=none
+2026-10-09T22:17:39.881220+00:00 dns-debian13 chpasswd[31258]: pam_unix(chpasswd:chauthtok): password changed for set4_refused_test
+2026-10-09T22:17:40.153781+00:00 dns-debian13 userdel[31287]: delete user 'set4_refused_test'
+2026-10-09T22:17:40.153872+00:00 dns-debian13 userdel[31287]: removed group 'set4_refused_test' owned by 'set4_refused_test'
+2026-10-09T22:17:40.153892+00:00 dns-debian13 userdel[31287]: removed shadow group 'set4_refused_test' owned by 'set4_refused_test'
+2026-10-09T22:17:40.200382+00:00 dns-debian13 agent[5167]: 2026/10/09 22:17:40 CreateSite set4-refused.test: nginx vhost activation: nginx validation failed: nginx validation failed: 2026/10/09 22:17:39 [emerg] 31271#31271: open() "/etc/nginx/fastcgi.conf" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31
+2026-10-09T22:17:40.200382+00:00 dns-debian13 agent[5167]: nginx: configuration file /etc/nginx/nginx.conf test failed: exit status 1; rollback restored and reloaded the previous vhost
+2026-10-09T22:17:40.258855+00:00 dns-debian13 panel[5364]: 2026/10/09 22:17:40 [502][domain] set4-refused.test: SITE_WEB_SERVER_REFUSED removed: 2026/10/09 22:17:39 [emerg] 31271#31271: open() "/etc/nginx/fastcgi.conf" failed (2: No such file or directory) in /etc/nginx/sites-enabled/set4-refused.test.conf:31

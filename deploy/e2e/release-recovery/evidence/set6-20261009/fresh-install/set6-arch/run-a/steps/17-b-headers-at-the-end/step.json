@@ -1,0 +1,20 @@
+{
+  "checks": {
+    "checks": 5,
+    "error": null,
+    "failed": [],
+    "finished_at": "2026-10-09T21:56:36Z",
+    "notes": [],
+    "started_at": "2026-10-09T21:56:35Z",
+    "substeps": {
+      "B": "passed"
+    },
+    "title": "the Panel's own response headers again, after every section",
+    "unknown": [],
+    "verdict": "passed"
+  },
+  "finished_at": "2026-10-09T21:56:36Z",
+  "name": "B-headers-at-the-end",
+  "started_at": "2026-10-09T21:56:35Z",
+  "verdict": "passed"
+}

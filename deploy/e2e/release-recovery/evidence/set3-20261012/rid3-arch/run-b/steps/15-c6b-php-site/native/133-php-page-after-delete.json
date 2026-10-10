@@ -1,0 +1,16 @@
+{
+  "at": "2026-10-09T08:16:37Z",
+  "body": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>nginx/1.30.5</center>\r\n</body>\r\n</html>\r\n",
+  "bytes": 153,
+  "headers": {
+    "content-type": "text/html",
+    "server": "nginx/1.30.5"
+  },
+  "host": "set3-php.test",
+  "lab_action": false,
+  "mode": "read-http",
+  "owner_action": false,
+  "path": "/set3-probe.php",
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "status": 403
+}

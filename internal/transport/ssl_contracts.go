@@ -32,7 +32,28 @@ type IssueLetsEncryptResponse struct {
 	DNSNames    []string  `json:"dns_names,omitempty"`
 	LineageName string    `json:"lineage_name"`
 	Error       string    `json:"error,omitempty"`
+	// Failure is set when certbot itself ran and did not issue (11 Oct 2026):
+	// one of the CertificateFailure* kinds. FailureDetail is one bounded line
+	// of certbot's own words. An Agent older than these leaves them empty.
+	// certbot çalışıp sertifika çıkarmadığında doldurulur.
+	Failure       string `json:"failure,omitempty"`
+	FailureDetail string `json:"failure_detail,omitempty"`
 }
+
+// Why a certbot run did not issue a certificate. Only what certbot's own
+// output states is a kind of its own; the rest is CertificateFailureTool.
+const (
+	// The certificate authority could not be reached: no order was placed.
+	CertificateFailureAuthorityUnreachable = "authority_unreachable"
+	// The authority reached this server's names and refused the validation.
+	CertificateFailureValidation = "validation"
+	// The authority refused the order because of one of its limits.
+	CertificateFailureRateLimited = "rate_limited"
+	// certbot did not finish within the Agent's limit and was stopped.
+	CertificateFailureTimeout = "timeout"
+	// certbot exited with an error that is none of the above.
+	CertificateFailureTool = "tool"
+)
 
 type RenewCertRequest struct {
 	ExpectedBuildCommit string `json:"expected_build_commit"`

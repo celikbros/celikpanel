@@ -1,0 +1,11 @@
+run | steps | largest gap between a step's end and the next step's start (s) | longest step (s), name | host sampler samples | largest gap between two host samples (s), starting at (UTC) | first step start - last step end (UTC)
+update-alpha81/upd1-debian13-good/run-a | 22 | 0 | 344, setup | 49 | 5.0 at 17:24:12 | 2026-10-09T17:14:53Z - 2026-10-09T17:26:10Z
+update-alpha81/upd1-ubuntu-good/run-a | 22 | 1 | 659, setup | 51 | 5.0 at 17:43:49 | 2026-10-09T17:27:22Z - 2026-10-09T17:47:25Z
+update-alpha81/upd1-arch-good/run-a | 18 | 0 | 172, setup | 35 | 5.0 at 18:11:53 | 2026-10-09T18:03:30Z - 2026-10-09T18:12:17Z
+update-alpha81/upd1-debian13-defective/run-a | 19 | 0 | 369, setup | 69 | 10.1 at 17:59:20 | 2026-10-09T17:49:01Z - 2026-10-09T18:02:00Z
+update-alpha81/upd1-ubuntu-defective/run-a | 19 | 0 | 641, setup | 59 | 10.5 at 18:30:21 | 2026-10-09T18:12:58Z - 2026-10-09T18:32:52Z
+update-alpha81/upd1-arch-defective/run-a | 18 | 0 | 171, setup | 45 | 5.0 at 18:40:56 | 2026-10-09T18:34:21Z - 2026-10-09T18:43:56Z
+update-alpha81/upd1-debian13-startcheck/run-a | 20 | 0 | 357, setup | 69 | 10.5 at 18:55:26 | 2026-10-09T18:45:14Z - 2026-10-09T18:57:59Z
+update-alpha81/upd1-debian13-owner-continuation/run-a | 20 | 0 | 432, track | 125 | 5.8 at 19:11:26 | 2026-10-09T18:59:28Z - 2026-10-09T19:17:58Z
+update-alpha81/upd1-ubuntu-owner-continuation/run-a | 20 | 0 | 702, setup | 118 | 9.3 at 19:41:20 | 2026-10-09T19:18:58Z - 2026-10-09T19:46:12Z
+update-alpha81/upd1-debian13-mgmt-off-reboot/run-a | 22 | 0 | 368, setup | 76 | 5.8 at 19:57:28 | 2026-10-09T19:47:49Z - 2026-10-09T20:01:13Z

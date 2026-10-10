@@ -1,0 +1,90 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S2h save while Postfix is stopped",
+  "request": {
+    "body": {
+      "dnsbl_zones": [],
+      "message_size_mb": 30,
+      "outbound_rate_limit": 47,
+      "version": "mp1-5f2c0bcc7deeb8776def80077947a51865c0863080cabd44ae30f811aa6bad59"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18461"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18461"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "0161ec8f2649506e7d7ce0847842dc45"
+      ]
+    ],
+    "method": "PUT",
+    "path": "/api/v1/mail/policy"
+  },
+  "response": {
+    "elapsed_seconds": 2.628,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 07:23:56 GMT"
+      ],
+      [
+        "Content-Length",
+        "196"
+      ]
+    ],
+    "json": {
+      "applied": "not_running",
+      "policy": {
+        "dnsbl_zones": [],
+        "message_size_mb": 30,
+        "outbound_rate_limit": 47,
+        "version": "mp1-69eb8961242bac79f0f1ef4b3e86c4f334d199e45965e4fdec8c4cd87e6490a7"
+      },
+      "success": true
+    },
+    "status": 200,
+    "text": null
+  }
+}

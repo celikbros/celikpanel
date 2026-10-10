@@ -1,0 +1,83 @@
+{
+  "at": "2026-10-09T04:10:54Z",
+  "epoch": 1791519054.6043208,
+  "mode": "read-service",
+  "owner_action": false,
+  "postfix": {
+    "master_alive": false,
+    "master_pid": 65479,
+    "status": {
+      "argv": [
+        "postfix",
+        "status"
+      ],
+      "at": "2026-10-09T04:10:54Z",
+      "returncode": 1,
+      "seconds": 0.025,
+      "status": "ok",
+      "stderr": "postfix/postlog: the Postfix mail system is not running\n",
+      "stdout": ""
+    }
+  },
+  "schema": "celikpanel/set1-native/v1",
+  "units": {
+    "postfix.service": {
+      "is_active": "inactive",
+      "properties": {
+        "ActiveEnterTimestamp": "Fri 2026-10-09 04:10:44 UTC",
+        "ActiveState": "inactive",
+        "ConsistsOf": "postfix@-.service",
+        "DropInPaths": "",
+        "ExecMainPID": "65483",
+        "ExecMainStartTimestamp": "Fri 2026-10-09 04:10:44 UTC",
+        "ExecReload": "{ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "ExecStart": "{ path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; start_time=[Fri 2026-10-09 04:10:44 UTC] ; stop_time=[Fri 2026-10-09 04:10:44 UTC] ; pid=65483 ; code=exited ; status=0 }",
+        "FragmentPath": "/usr/lib/systemd/system/postfix.service",
+        "InactiveEnterTimestamp": "Fri 2026-10-09 04:10:48 UTC",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "NRestarts": "0",
+        "PartOf": "",
+        "PropagatesReloadTo": "postfix@-.service",
+        "ReloadPropagatedFrom": "",
+        "ReloadResult": "success",
+        "RemainAfterExit": "yes",
+        "Result": "success",
+        "SubState": "dead",
+        "Type": "oneshot",
+        "WantedBy": "multi-user.target",
+        "Wants": "postfix@-.service"
+      },
+      "returncode": 0
+    },
+    "postfix@-.service": {
+      "is_active": "inactive",
+      "properties": {
+        "ActiveEnterTimestamp": "Fri 2026-10-09 04:10:44 UTC",
+        "ActiveState": "inactive",
+        "ConsistsOf": "",
+        "DropInPaths": "",
+        "ExecMainPID": "0",
+        "ExecMainStartTimestamp": "",
+        "ExecReload": "{ path=/usr/sbin/postmulti ; argv[]=/usr/sbin/postmulti -i - -p reload ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "ExecStart": "{ path=/usr/sbin/postmulti ; argv[]=/usr/sbin/postmulti -i - -p start ; ignore_errors=no ; start_time=[Fri 2026-10-09 04:10:43 UTC] ; stop_time=[Fri 2026-10-09 04:10:44 UTC] ; pid=65231 ; code=exited ; status=0 }",
+        "FragmentPath": "/usr/lib/systemd/system/postfix@.service",
+        "InactiveEnterTimestamp": "Fri 2026-10-09 04:10:48 UTC",
+        "LoadState": "loaded",
+        "MainPID": "0",
+        "NRestarts": "0",
+        "PartOf": "postfix.service",
+        "PropagatesReloadTo": "",
+        "ReloadPropagatedFrom": "postfix.service",
+        "ReloadResult": "success",
+        "RemainAfterExit": "no",
+        "Result": "success",
+        "SubState": "dead",
+        "Type": "forking",
+        "WantedBy": "postfix.service",
+        "Wants": "network-online.target"
+      },
+      "returncode": 0
+    }
+  }
+}

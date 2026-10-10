@@ -1,0 +1,90 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "AddDomainModal create (website)",
+  "request": {
+    "body": {
+      "domain": "upd1-owner.test",
+      "project_type": "static",
+      "ssl_type": "none"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18651"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18651"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "f5309fe451e059007b9a1dbd7ec7482f"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/domains/create"
+  },
+  "response": {
+    "elapsed_seconds": 1.094,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 22:56:47 GMT"
+      ],
+      [
+        "Content-Length",
+        "246"
+      ]
+    ],
+    "json": {
+      "DocumentRoot": "/var/www/celikpanel/subscriptions/2/sites/1/public_html",
+      "Domain": "upd1-owner.test",
+      "DomainID": 1,
+      "FTPPassword": "[REDACTED]",
+      "FTPUser": "upd1_owner_test",
+      "PHPVersion": "",
+      "ProjectType": "static",
+      "SiteID": 1,
+      "TempDomain": ""
+    },
+    "status": 200,
+    "text": null
+  }
+}

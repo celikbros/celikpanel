@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { KeyRound, Eye, RefreshCw, Trash2, Copy, Check } from 'lucide-react';
 import { useI18n } from '../i18n';
 import { showToast } from './Toast';
-import { Button, Dialog } from './ui';
+import { Button, Dialog, ResultUnknown } from './ui';
+import { useLostAnswer } from '../lib/lostAnswer';
+import type { Remote } from '../lib/remote';
+import { apiErrorText, readApiError } from '../lib/apiError';
 
 // R-065. CelikPanel opens an account of its own on a database engine and
 // connects as that, so the operator's own root is never touched. That is only
@@ -32,12 +35,36 @@ export interface DatabaseAccountServer {
 export function DatabaseAccountStrip({
     server,
     onChanged,
+    current,
 }: {
     server: DatabaseAccountServer;
-    onChanged: () => void;
+    /** Reads the server list again and says what it now knows. It only reads. */
+    onChanged: () => Promise<Remote<unknown>>;
+    /**
+     * The row shown is the server's current answer. While the list is being
+     * read again after a change here, or after that read failed, the row may
+     * describe an account that no longer exists, and every control below acts
+     * on what the row says - so none of them is offered until it is current.
+     * Gösterilen satır sunucunun güncel yanıtıdır. Buradaki bir değişiklikten
+     * sonra liste yeniden okunurken ya da o okuma başarısız olduktan sonra
+     * satır artık var olmayan bir hesabı anlatıyor olabilir; aşağıdaki her
+     * denetim satırın söylediğine göre işlem yapar, bu yüzden satır güncel
+     * olana dek hiçbiri sunulmaz.
+     */
+    current: boolean;
 }) {
     const { t } = useI18n();
-    const [busy, setBusy] = useState(false);
+    const [working, setBusy] = useState(false);
+    // Opening and re-keying the account carry an identity the server keeps
+    // (D-029): a lost answer has been asked for once more before this strip
+    // hears of it, and the engine was given at most one new password. When
+    // there is still no result the server list is read again; nothing here
+    // acts on the row until that read answers.
+    // Hesabı açma ve yeniden anahtarlama, sunucunun sakladığı bir kimlik taşır
+    // (D-029). Sonuç yine yoksa sunucu listesi yeniden okunur; o okuma
+    // yanıtlanana dek buradaki hiçbir denetim satır üzerinde işlem yapmaz.
+    const answer = useLostAnswer(() => onChanged());
+    const busy = working || !current || answer.holding;
     const [password, setPassword] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
 
@@ -46,19 +73,30 @@ export function DatabaseAccountStrip({
     const provision = async (rotating: boolean) => {
         setBusy(true);
         try {
-            const res = await fetch(`${API_BASE}/database-servers/${server.id}/admin-account`, {
+            const res = await answer.send(`${API_BASE}/database-servers/${server.id}/admin-account`, {
                 method: 'POST',
             });
-            if (!res.ok) {
+            // No result of its own: the notice is up and the list is being
+            // read again.
+            // Kendi sonucu yok: bildirim açıldı, liste yeniden okunuyor.
+            if (!res) return;
+            answer.settle();
+            // The answer was lost and asked for again (D-029): the server says
+            // the account was already opened or re-keyed by this same request.
+            // Nothing of that answer is missing here - the password is read
+            // with "Show password" - so it is the success it was.
+            // Yanıt kayboldu ve yeniden soruldu (D-029): sunucu, hesabın bu aynı
+            // istekle zaten açıldığını ya da yeniden anahtarlandığını söylüyor.
+            const problem = res.ok ? null : await readApiError(res);
+            if (problem && !(problem.code === 'REQUEST_COMPLETED_RESULT_NOT_RETAINED' && !problem.reason)) {
                 // The engine's refusal is written by the panel and is the
                 // whole point of showing it; a generic failure would send the
                 // administrator back to guessing.
                 // Motorun reddini panel yazar ve onu gostermek isin ozudur.
-                const body = await res.json().catch(() => null);
-                throw new Error(body?.error || t('common.error'));
+                throw new Error(problem.code?.startsWith('REQUEST_') ? apiErrorText(problem, t) : problem.message || t('common.error'));
             }
             showToast('success', t(rotating ? 'databases.account.rotated' : 'databases.account.opened'));
-            onChanged();
+            void onChanged();
         } catch (error) {
             showToast('error', error instanceof Error ? error.message : t('common.error'));
         } finally {
@@ -90,7 +128,7 @@ export function DatabaseAccountStrip({
             });
             if (!res.ok) throw new Error();
             showToast('success', t('databases.account.removed'));
-            onChanged();
+            void onChanged();
         } catch {
             showToast('error', t('common.error'));
         } finally {
@@ -116,6 +154,8 @@ export function DatabaseAccountStrip({
         // Engelleyen durum. Sekmelerin altindaki her sey bu dogruyken
         // basarisiz olacak.
         return (
+            <>
+            <ResultUnknown answer={answer} className="mb-4" />
             <div className="mb-4 rounded-xl border border-warning-mark/60 bg-warning-mark/20 px-4 py-3">
                 <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
                     <div className="min-w-0 flex-1">
@@ -138,16 +178,18 @@ export function DatabaseAccountStrip({
                             disabled={busy}
                             onClick={() => provision(false)}
                         >
-                            {busy ? t('databases.account.opening') : t('databases.account.open')}
+                            {working ? t('databases.account.opening') : t('databases.account.open')}
                         </Button>
                     )}
                 </div>
             </div>
+            </>
         );
     }
 
     return (
         <>
+            <ResultUnknown answer={answer} className="mb-4" />
             <div className="mb-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-1">
                 <p className="flex min-w-0 items-center gap-2 text-sm text-fg-muted">
                     <KeyRound className="h-4 w-4 shrink-0 text-fg-subtle" aria-hidden="true" />

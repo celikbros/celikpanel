@@ -1,0 +1,128 @@
+{
+  "checks": {
+    "catalogue_of_the_installed_baseline": {
+      "panelUpdate.previousAttempt.again": true,
+      "panelUpdate.previousAttempt.cause": true,
+      "panelUpdate.previousAttempt.noCause": true,
+      "panelUpdate.previousAttempt.recovered": true,
+      "panelUpdate.previousAttempt.rolledBackTitle": true,
+      "panelUpdate.previousAttempt.stoppedTitle": true,
+      "panelUpdate.previousAttempt.title": true
+    },
+    "catalogue_texts_of_the_installed_baseline": {
+      "panelUpdate.previousAttempt.again": {
+        "en": "Starting it again runs the same update. If the cause was on this server and has been corrected, the result can differ; otherwise expect the same one. A corrected version, when it is published, is offered here as a newer version. The button below still starts v0.1.0-alpha.82.",
+        "tr": "Yeniden başlatmak aynı güncellemeyi çalıştırır. Neden bu sunucudaysa ve giderildiyse sonuç değişebilir; değilse aynı sonucu bekleyin. Düzeltilmiş bir sürüm yayımlandığında burada daha yeni bir sürüm olarak sunulur. Aşağıdaki düğme v0.1.0-alpha.82 sürümünü yine başlatır."
+      },
+      "panelUpdate.previousAttempt.cause": {
+        "en": "Recorded cause: {cause}.",
+        "tr": "Kaydedilen neden: {cause}."
+      },
+      "panelUpdate.previousAttempt.noCause": {
+        "en": "The server recorded no more specific cause for that attempt.",
+        "tr": "Sunucu o deneme için daha belirli bir neden kaydetmedi."
+      },
+      "panelUpdate.previousAttempt.recovered": {
+        "en": "v0.1.0-alpha.82 was started here on 2026-10-09T12:07:43Z. The update did not complete, and the server was returned to v0.1.0-alpha.81, which it runs now.",
+        "tr": "v0.1.0-alpha.82 burada 2026-10-09T12:07:43Z tarihinde başlatıldı. Güncelleme tamamlanmadı ve sunucu v0.1.0-alpha.81 sürümüne döndürüldü; şu an onu çalıştırıyor."
+      },
+      "panelUpdate.previousAttempt.rolledBackTitle": {
+        "en": "This version was already tried on this server and rolled back",
+        "tr": "Bu sürüm bu sunucuda daha önce denendi ve geri alındı"
+      },
+      "panelUpdate.previousAttempt.stoppedTitle": {
+        "en": "An earlier update to this version stopped before changing the installed version",
+        "tr": "Bu sürüme yapılan önceki güncelleme kurulu sürümü değiştirmeden durdu"
+      },
+      "panelUpdate.previousAttempt.title": {
+        "en": "This version already failed on this server",
+        "tr": "Bu sürüm bu sunucuda daha önce başarısız oldu"
+      }
+    },
+    "heading_key_exists_in_the_served_build_catalogue": true,
+    "heading_key_the_candidate_card_would_choose_for_this_answer": "panelUpdate.previousAttempt.rolledBackTitle",
+    "previous_attempt": {
+      "finished_at": "2026-10-09T12:07:43Z",
+      "phase": "recovered",
+      "request_id": "06acf6c45f86201439f599fd34127534"
+    },
+    "served_web_build": {
+      "at": "2026-10-09T12:07:52Z",
+      "mode": "read-spa",
+      "needles": [
+        "This version was already tried on this server and rolled back",
+        "Bu sürüm bu sunucuda daha önce denendi ve geri alındı",
+        "The server recorded no more specific cause for that attempt.",
+        "Starting it again runs the same update."
+      ],
+      "owner_action": false,
+      "panel_process": {
+        "cwd": "/opt/celikpanel",
+        "exe": "/opt/celikpanel/bin/panel"
+      },
+      "panel_unit": {
+        "ActiveState": "active",
+        "ExecStart": "{ path=/opt/celikpanel/bin/panel ; argv[]=/opt/celikpanel/bin/panel $CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG $CELIKPANEL_PANEL_DEMO_FLAG ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+        "MainPID": "19057",
+        "WorkingDirectory": "/opt/celikpanel"
+      },
+      "schema": "celikpanel/set4-native/v1",
+      "web_builds": [
+        {
+          "dist": "/root/celikpanel-release-recovery-lab/current-worker-baseline-source/web/dist",
+          "files_containing": {
+            "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 1,
+            "Starting it again runs the same update.": 1,
+            "The server recorded no more specific cause for that attempt.": 1,
+            "This version was already tried on this server and rolled back": 1
+          },
+          "files_read": 111,
+          "index_sha256": "406a9bf2f51b85ef9076fa63e1955d014b4630ffe55ad7e345938f4e6a9b4035",
+          "real_path": "/root/celikpanel-release-recovery-lab/current-worker-baseline-source/web/dist"
+        }
+      ]
+    },
+    "update_check": {
+      "body": {
+        "available": true,
+        "current_commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+        "current_version": "v0.1.0-alpha.81",
+        "previous_attempt": {
+          "finished_at": "2026-10-09T12:07:43Z",
+          "phase": "recovered",
+          "request_id": "06acf6c45f86201439f599fd34127534"
+        },
+        "supported": true,
+        "target": {
+          "arch": "amd64",
+          "archive_sha256": "ea8f81c844c6bf0e08ffb6c628448bac2da56d1060b2f5cd32f19f6947eecf01",
+          "archive_size": "65895628",
+          "commit": "52208d415f61041dd9ec27bdb9cbe0b2d5c7eac4",
+          "os": "linux",
+          "published_at": "2026-10-09T11:59:59Z",
+          "sequence": "82",
+          "version": "v0.1.0-alpha.82"
+        }
+      },
+      "http": 200,
+      "raw_bytes": 541,
+      "raw_sha256": "13dc8199e0f544699635041b9fd19c79f2640b76c3760f2cc095cceebea96eba"
+    },
+    "version": {
+      "body": {
+        "agent_commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+        "agent_matches": true,
+        "commit": "7fbbeaa6be50dd60aa225be02b71314c2e29aafb",
+        "hostname": "dns-arch",
+        "ipv4": "192.0.2.11",
+        "schema_version": 43,
+        "version": "v0.1.0-alpha.81"
+      },
+      "http": 200
+    }
+  },
+  "finished_at": "2026-10-09T12:07:52Z",
+  "name": "set4-update-check-after-the-return",
+  "started_at": "2026-10-09T12:07:51Z",
+  "verdict": "passed"
+}

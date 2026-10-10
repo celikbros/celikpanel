@@ -1,0 +1,75 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "php-site: delete the site (Domains page)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18511"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18511"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "ba1f18bef266893fa507eb04883c399e"
+      ]
+    ],
+    "method": "DELETE",
+    "path": "/api/v1/domains/2"
+  },
+  "response": {
+    "elapsed_seconds": 0.45,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 10:36:01 GMT"
+      ],
+      [
+        "Content-Length",
+        "46"
+      ]
+    ],
+    "json": {
+      "domain": "set4-php.test",
+      "status": "deleted"
+    },
+    "status": 200,
+    "text": null
+  }
+}

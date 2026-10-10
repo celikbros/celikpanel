@@ -1,0 +1,1048 @@
+{
+ "set1-arch/run-a": {
+  "S1-cron": {
+   "cron_faults": [
+    {
+     "applied": {
+      "created": "/etc/cron.allow",
+      "kind": "cron-allow"
+     },
+     "kind": "cron-allow",
+     "list_code": null,
+     "list_status": 200,
+     "native": "crontab",
+     "native_again": "crontab",
+     "returncode": 0,
+     "stderr": "",
+     "stderr_again": ""
+    },
+    {
+     "add_status": 502,
+     "applied": {
+      "kind": "spool-relocated",
+      "moved": [
+       "/var/spool/cron",
+       "/var/spool/cron.set1-moved-aside"
+      ],
+      "symlink": [
+       "/var/spool/cron",
+       "/mnt/set1-data-volume/cron-spool"
+      ]
+     },
+     "kind": "spool-relocated",
+     "list_code": "CURRENT_SETTINGS_UNREADABLE",
+     "list_status": 502,
+     "native": "failed",
+     "native_again": "failed",
+     "returncode": 1,
+     "stderr": "/var/spool/cron: No such file or directory\n/var/spool/cron: mkdir: File exists\n",
+     "stderr_again": "/var/spool/cron: No such file or directory\n/var/spool/cron: mkdir: File exists\n"
+    }
+   ],
+   "no_crontab_answer": {
+    "crontab_binary": "/usr/sbin/crontab",
+    "package": "/usr/bin/crontab is owned by cronie 1.7.2-2",
+    "returncode": 1,
+    "stderr": "no crontab for set1_owner_test\n",
+    "stdout": ""
+   },
+   "owner_actions": [
+    "d-crontab-edit",
+    "f-fault-cron-allow",
+    "f-restore-cron-allow",
+    "f-fault-spool-relocated",
+    "f-restore-spool-relocated"
+   ]
+  },
+  "S3-backup-schedule": {
+   "next_run_prune": {
+    "listed": 0,
+    "retention": 14,
+    "scheduled_files_or_full": 0,
+    "would_keep": [],
+    "would_prune": []
+   },
+   "owner_actions": []
+  },
+  "S4-postgresql": {
+   "hba_local_rules_removed": [
+    "local   all             all                                     trust",
+    "local   replication     all                                     trust"
+   ],
+   "owner_actions": [
+    "f-postgresql.conf-note",
+    "g-reload-hook",
+    "g-reload-hook-removed",
+    "g-owner-reload"
+   ],
+   "reload_failed": {
+    "backups_after": 2,
+    "backups_before": 1,
+    "error": "The service could not reload with the new file, and CelikPanel could not put the previous file back with certainty. The server owner checks the file on the server; the copy named below holds the other version. Then reload the service (sudo systemctl reload <service>) and reload this page.",
+    "file_is_previous": true,
+    "named_copy": "/var/lib/postgres/data/postgresql.conf.celikpanel-backup-20261008T215803Z",
+    "named_copy_exists": true,
+    "named_copy_holds": "the previous file (the one now in place)",
+    "postmaster_pid": [
+     1874,
+     1874
+    ],
+    "reason": "not_restored",
+    "vars": {
+     "detail": "Failed to reload set1-owner-pooler.service: Access denied",
+     "name": "/var/lib/postgres/data/postgresql.conf.celikpanel-backup-20261008T215803Z"
+    },
+    "work_mem_after": "8MB"
+   },
+   "reload_hook": {
+    "applied": {
+     "dropin": "/etc/systemd/system/postgresql.service.d/set1-owner-reload-hook.conf",
+     "script": "/usr/local/sbin/set1-owner-reload-hook",
+     "unit": "postgresql.service"
+    },
+    "exec_reload": "ExecReload={ path=/usr/local/sbin/set1-owner-reload-hook ; argv[]=/usr/local/sbin/set1-owner-reload-hook ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n",
+    "realism": "an owner's own unit drop-in; no failure of the packaged unit's reload was found that an owner causes"
+   },
+   "unit": "postgresql.service",
+   "work_mem_edit": "commented-default"
+  },
+  "S5-mariadb": {
+   "adjusted_value": {
+    "mariadbd_resulting_max_connections": "10",
+    "mariadbd_returncode_on_the_file_now": 0,
+    "mariadbd_stderr_lines": [
+     "2026-10-08 21:58:12 0 [Warning] Buffered warning: option 'max_connections': unsigned value 0 adjusted to 10"
+    ],
+    "panel_answer": null,
+    "panel_applied": "restart_required",
+    "panel_daemon_check": "accepted",
+    "panel_status": 200,
+    "value": "plenty",
+    "written": true
+   },
+   "file": "/etc/my.cnf",
+   "option_edit": {
+    "how": "added-new-group",
+    "value": "173"
+   },
+   "owner_actions": [
+    "e-option-file-note"
+   ]
+  },
+  "S7-file-metadata": {
+   "files": {
+    "/etc/my.cnf": {
+     "after": {
+      "gid": 0,
+      "group": "root",
+      "inode": 88907,
+      "mode": "0644",
+      "owner": "root",
+      "uid": 0
+     },
+     "backups": [
+      {
+       "group": "root",
+       "mode": "0644",
+       "owner": "root",
+       "path": "/etc/my.cnf.celikpanel-backup-20261008T215808Z"
+      },
+      {
+       "group": "root",
+       "mode": "0644",
+       "owner": "root",
+       "path": "/etc/my.cnf.celikpanel-backup-20261008T215812Z"
+      },
+      {
+       "group": "root",
+       "mode": "0644",
+       "owner": "root",
+       "path": "/etc/my.cnf.celikpanel-backup-20261008T215813Z"
+      }
+     ],
+     "before": {
+      "gid": 0,
+      "group": "root",
+      "inode": 80986,
+      "mode": "0644",
+      "owner": "root",
+      "uid": 0
+     },
+     "content_or_inode_changed": true,
+     "equal": true
+    },
+    "/var/lib/postgres/data/pg_hba.conf": {
+     "after": {
+      "gid": 967,
+      "group": "postgres",
+      "inode": 88864,
+      "mode": "0600",
+      "owner": "postgres",
+      "uid": 967
+     },
+     "backups": [
+      {
+       "group": "postgres",
+       "mode": "0600",
+       "owner": "postgres",
+       "path": "/var/lib/postgres/data/pg_hba.conf.celikpanel-backup-20261008T215754Z"
+      }
+     ],
+     "before": {
+      "gid": 967,
+      "group": "postgres",
+      "inode": 85979,
+      "mode": "0600",
+      "owner": "postgres",
+      "uid": 967
+     },
+     "content_or_inode_changed": true,
+     "equal": true
+    },
+    "/var/lib/postgres/data/postgresql.conf": {
+     "after": {
+      "gid": 967,
+      "group": "postgres",
+      "inode": 88881,
+      "mode": "0600",
+      "owner": "postgres",
+      "uid": 967
+     },
+     "backups": [
+      {
+       "group": "postgres",
+       "mode": "0600",
+       "owner": "postgres",
+       "path": "/var/lib/postgres/data/postgresql.conf.celikpanel-backup-20261008T215747Z"
+      },
+      {
+       "group": "postgres",
+       "mode": "0600",
+       "owner": "postgres",
+       "path": "/var/lib/postgres/data/postgresql.conf.celikpanel-backup-20261008T215803Z"
+      }
+     ],
+     "before": {
+      "gid": 967,
+      "group": "postgres",
+      "inode": 85975,
+      "mode": "0600",
+      "owner": "postgres",
+      "uid": 967
+     },
+     "content_or_inode_changed": true,
+     "equal": true
+    }
+   },
+   "owner_actions": []
+  }
+ },
+ "set1-debian13/run-a": {
+  "S1-cron": {
+   "cron_faults": [
+    {
+     "applied": {
+      "created": "/etc/cron.allow",
+      "kind": "cron-allow"
+     },
+     "kind": "cron-allow",
+     "list_code": "CURRENT_SETTINGS_UNREADABLE",
+     "list_status": 502,
+     "native": "failed",
+     "returncode": 1,
+     "stderr": "The user set1_owner_test cannot use this program (crontab)\n"
+    }
+   ],
+   "no_crontab_answer": {
+    "crontab_binary": "/usr/bin/crontab",
+    "package": "cron: /usr/bin/crontab",
+    "returncode": 1,
+    "stderr": "no crontab for set1_owner_test\n",
+    "stdout": ""
+   },
+   "owner_actions": [
+    "d-crontab-edit",
+    "f-fault-cron-allow",
+    "f-restore-cron-allow"
+   ]
+  },
+  "S2-mail-policy": {
+   "not_reloaded_answer_carries_policy": false,
+   "owner_actions": [
+    "b-owner-restrictions-main-cf",
+    "b-owner-restrictions-reload-postfix",
+    "e-owner-macro-main-cf",
+    "e-owner-macro-reload-postfix",
+    "e-owner-plain-list-again-main-cf",
+    "e-owner-plain-list-again-reload-postfix",
+    "f-owner-typo-main-cf",
+    "f-owner-removes-typo-main-cf",
+    "f-owner-removes-typo-reload-postfix"
+   ],
+   "read_under_typo": {
+    "answer": null,
+    "status": 200,
+    "version": "mp1-96d5c35c7c8de3358a96aea4965b2e47688e02447ff17617ebc3fb86e8902f34"
+   },
+   "restrictions_layout": {
+    "after_panel_save": "smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf, reject_rbl_client dnsbl.set1-lab.test",
+    "after_zone_removed": "smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf",
+    "owner_wrote": "smtpd_recipient_restrictions =\n    permit_mynetworks,\n    permit_sasl_authenticated,\n    reject_unauth_destination,\n    reject_unknown_sender_domain,\n    check_policy_service unix:private/policyd-spf"
+   }
+  },
+  "S3-backup-schedule": {
+   "next_run_prune": {
+    "listed": 0,
+    "retention": 14,
+    "scheduled_files_or_full": 0,
+    "would_keep": [],
+    "would_prune": []
+   },
+   "owner_actions": []
+  },
+  "S4-postgresql": {
+   "hba_local_rules_removed": [
+    "local   all             postgres                                peer",
+    "local   all             all                                     peer",
+    "local   replication     all                                     peer"
+   ],
+   "owner_actions": [
+    "f-postgresql.conf-note",
+    "g-reload-hook",
+    "g-reload-hook-removed",
+    "g-owner-reload"
+   ],
+   "reload_failed": {
+    "backups_after": 2,
+    "backups_before": 1,
+    "error": "The service could not reload with the new file, and CelikPanel could not put the previous file back with certainty. The server owner checks the file on the server; the copy named below holds the other version. Then reload the service (sudo systemctl reload <service>) and reload this page.",
+    "file_is_previous": true,
+    "named_copy": "/etc/postgresql/17/main/postgresql.conf.celikpanel-backup-20261008T212730Z",
+    "named_copy_exists": true,
+    "named_copy_holds": "the previous file (the one now in place)",
+    "postmaster_pid": [
+     15887,
+     15887
+    ],
+    "reason": "not_restored",
+    "vars": {
+     "detail": "Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.",
+     "name": "/etc/postgresql/17/main/postgresql.conf.celikpanel-backup-20261008T212730Z"
+    },
+    "work_mem_after": "8MB"
+   },
+   "reload_hook": {
+    "applied": {
+     "dropin": "/etc/systemd/system/postgresql@17-main.service.d/set1-owner-reload-hook.conf",
+     "script": "/usr/local/sbin/set1-owner-reload-hook",
+     "unit": "postgresql@17-main.service"
+    },
+    "exec_reload": "ExecReload={ path=/usr/local/sbin/set1-owner-reload-hook ; argv[]=/usr/local/sbin/set1-owner-reload-hook ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n",
+    "realism": "an owner's own unit drop-in; no failure of the packaged unit's reload was found that an owner causes"
+   },
+   "unit": "postgresql@17-main.service",
+   "work_mem_edit": "commented-default"
+  },
+  "S5-mariadb": {
+   "file": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+   "option_edit": {
+    "how": "commented-default",
+    "value": "173"
+   },
+   "owner_actions": [
+    "e-option-file-note"
+   ]
+  },
+  "S6-catchall-queue": {
+   "owner_actions": [
+    "queue-stop-postfix",
+    "queue-start-postfix",
+    "queue-typo-main-cf",
+    "queue-typo-removed"
+   ],
+   "queue_postfix_stopped": {
+    "answer": null,
+    "native_returncode": 0,
+    "native_stderr": "postqueue: warning: Mail system is down -- accessing queue directly (Connect to the Postfix showq service: Connection refused)\n",
+    "native_stdout": "",
+    "status": 200
+   },
+   "queue_typo": {
+    "answer": {
+     "code": "MAIL_QUEUE_UNREADABLE",
+     "error": "The mail queue could not be read from Postfix, so it is not shown. This does not mean the queue is empty. Nothing was changed. Try again; if it keeps failing, the server owner checks that Postfix is running (sudo systemctl status postfix)."
+    },
+    "native_returncode": 69,
+    "native_stderr": "postqueue: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n",
+    "status": 502
+   }
+  },
+  "S7-file-metadata": {
+   "files": {
+    "/etc/mysql/mariadb.conf.d/50-server.cnf": {
+     "after": {
+      "gid": 0,
+      "group": "root",
+      "inode": 135500,
+      "mode": "0644",
+      "owner": "root",
+      "uid": 0
+     },
+     "backups": [
+      {
+       "group": "root",
+       "mode": "0644",
+       "owner": "root",
+       "path": "/etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261008T212734Z"
+      },
+      {
+       "group": "root",
+       "mode": "0644",
+       "owner": "root",
+       "path": "/etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261008T212736Z"
+      }
+     ],
+     "before": {
+      "gid": 0,
+      "group": "root",
+      "inode": 134506,
+      "mode": "0644",
+      "owner": "root",
+      "uid": 0
+     },
+     "content_or_inode_changed": true,
+     "equal": true
+    },
+    "/etc/postfix/main.cf": {
+     "after": {
+      "gid": 989,
+      "group": "celikpanel",
+      "inode": 271033,
+      "mode": "0644",
+      "owner": "root",
+      "uid": 0
+     },
+     "backups": [],
+     "before": {
+      "gid": 989,
+      "group": "celikpanel",
+      "inode": 269850,
+      "mode": "0644",
+      "owner": "root",
+      "uid": 0
+     },
+     "content_or_inode_changed": true,
+     "equal": true
+    },
+    "/etc/postgresql/17/main/pg_hba.conf": {
+     "after": {
+      "gid": 106,
+      "group": "postgres",
+      "inode": 271059,
+      "mode": "0640",
+      "owner": "postgres",
+      "uid": 104
+     },
+     "backups": [
+      {
+       "group": "postgres",
+       "mode": "0640",
+       "owner": "postgres",
+       "path": "/etc/postgresql/17/main/pg_hba.conf.celikpanel-backup-20261008T212724Z"
+      }
+     ],
+     "before": {
+      "gid": 106,
+      "group": "postgres",
+      "inode": 263951,
+      "mode": "0640",
+      "owner": "postgres",
+      "uid": 104
+     },
+     "content_or_inode_changed": true,
+     "equal": true
+    },
+    "/etc/postgresql/17/main/postgresql.conf": {
+     "after": {
+      "gid": 106,
+      "group": "postgres",
+      "inode": 271058,
+      "mode": "0644",
+      "owner": "postgres",
+      "uid": 104
+     },
+     "backups": [
+      {
+       "group": "postgres",
+       "mode": "0644",
+       "owner": "postgres",
+       "path": "/etc/postgresql/17/main/postgresql.conf.celikpanel-backup-20261008T212720Z"
+      },
+      {
+       "group": "postgres",
+       "mode": "0644",
+       "owner": "postgres",
+       "path": "/etc/postgresql/17/main/postgresql.conf.celikpanel-backup-20261008T212730Z"
+      }
+     ],
+     "before": {
+      "gid": 106,
+      "group": "postgres",
+      "inode": 264924,
+      "mode": "0644",
+      "owner": "postgres",
+      "uid": 104
+     },
+     "content_or_inode_changed": true,
+     "equal": true
+    }
+   },
+   "owner_actions": []
+  }
+ },
+ "set1-debian13/run-b": {
+  "S1-cron": {
+   "cron_faults": [
+    {
+     "add_status": 502,
+     "applied": {
+      "created": "/etc/cron.allow",
+      "kind": "cron-allow"
+     },
+     "kind": "cron-allow",
+     "list_code": "CURRENT_SETTINGS_UNREADABLE",
+     "list_status": 502,
+     "native": "failed",
+     "native_again": "failed",
+     "returncode": 1,
+     "stderr": "The user set1_owner_test cannot use this program (crontab)\n",
+     "stderr_again": "The user set1_owner_test cannot use this program (crontab)\n"
+    }
+   ],
+   "no_crontab_answer": {
+    "crontab_binary": "/usr/bin/crontab",
+    "package": "cron: /usr/bin/crontab",
+    "returncode": 1,
+    "stderr": "no crontab for set1_owner_test\n",
+    "stdout": ""
+   },
+   "owner_actions": [
+    "d-crontab-edit",
+    "f-fault-cron-allow",
+    "f-restore-cron-allow"
+   ]
+  },
+  "S2-mail-policy": {
+   "not_reloaded_answer_carries_policy": false,
+   "owner_actions": [
+    "b-owner-restrictions-main-cf",
+    "b-owner-restrictions-reload-postfix",
+    "e-owner-macro-main-cf",
+    "e-owner-macro-reload-postfix",
+    "e-owner-plain-list-again-main-cf",
+    "e-owner-plain-list-again-reload-postfix",
+    "f-owner-typo-main-cf",
+    "f-owner-removes-typo-main-cf",
+    "f-owner-removes-typo-reload-postfix"
+   ],
+   "read_under_typo": {
+    "answer": null,
+    "status": 200,
+    "version": "mp1-96d5c35c7c8de3358a96aea4965b2e47688e02447ff17617ebc3fb86e8902f34"
+   },
+   "restrictions_layout": {
+    "after_panel_save": "smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf, reject_rbl_client dnsbl.set1-lab.test",
+    "after_zone_removed": "smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf",
+    "owner_wrote": "smtpd_recipient_restrictions =\n    permit_mynetworks,\n    permit_sasl_authenticated,\n    reject_unauth_destination,\n    reject_unknown_sender_domain,\n    check_policy_service unix:private/policyd-spf"
+   }
+  },
+  "S3-backup-schedule": {
+   "next_run_prune": {
+    "listed": 0,
+    "retention": 14,
+    "scheduled_files_or_full": 0,
+    "would_keep": [],
+    "would_prune": []
+   },
+   "owner_actions": []
+  },
+  "S4-postgresql": {
+   "hba_local_rules_removed": [
+    "local   all             postgres                                peer",
+    "local   all             all                                     peer",
+    "local   replication     all                                     peer"
+   ],
+   "owner_actions": [
+    "f-postgresql.conf-note",
+    "g-reload-hook",
+    "g-reload-hook-removed",
+    "g-owner-reload"
+   ],
+   "reload_failed": {
+    "backups_after": 2,
+    "backups_before": 1,
+    "error": "The service could not reload with the new file, and CelikPanel could not put the previous file back with certainty. The server owner checks the file on the server; the copy named below holds the other version. Then reload the service (sudo systemctl reload <service>) and reload this page.",
+    "file_is_previous": true,
+    "named_copy": "/etc/postgresql/17/main/postgresql.conf.celikpanel-backup-20261008T220904Z",
+    "named_copy_exists": true,
+    "named_copy_holds": "the previous file (the one now in place)",
+    "postmaster_pid": [
+     16173,
+     16173
+    ],
+    "reason": "not_restored",
+    "vars": {
+     "detail": "Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.",
+     "name": "/etc/postgresql/17/main/postgresql.conf.celikpanel-backup-20261008T220904Z"
+    },
+    "work_mem_after": "8MB"
+   },
+   "reload_hook": {
+    "applied": {
+     "dropin": "/etc/systemd/system/postgresql@17-main.service.d/set1-owner-reload-hook.conf",
+     "script": "/usr/local/sbin/set1-owner-reload-hook",
+     "unit": "postgresql@17-main.service"
+    },
+    "exec_reload": "ExecReload={ path=/usr/local/sbin/set1-owner-reload-hook ; argv[]=/usr/local/sbin/set1-owner-reload-hook ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n",
+    "realism": "an owner's own unit drop-in; no failure of the packaged unit's reload was found that an owner causes"
+   },
+   "unit": "postgresql@17-main.service",
+   "work_mem_edit": "commented-default"
+  },
+  "S5-mariadb": {
+   "adjusted_value": {
+    "mariadbd_resulting_max_connections": "10",
+    "mariadbd_returncode_on_the_file_now": 0,
+    "mariadbd_stderr_lines": [
+     "2026-10-08 22:09:13 0 [Warning] Buffered warning: option 'max_connections': unsigned value 0 adjusted to 10"
+    ],
+    "panel_answer": null,
+    "panel_applied": "restart_required",
+    "panel_daemon_check": "accepted",
+    "panel_status": 200,
+    "value": "plenty",
+    "written": true
+   },
+   "file": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+   "option_edit": {
+    "how": "commented-default",
+    "value": "173"
+   },
+   "owner_actions": [
+    "e-option-file-note"
+   ]
+  },
+  "S6-catchall-queue": {
+   "owner_actions": [
+    "queue-stop-postfix",
+    "queue-start-postfix",
+    "queue-typo-main-cf",
+    "queue-typo-removed"
+   ],
+   "queue_postfix_stopped": {
+    "answer": null,
+    "native_returncode": 0,
+    "native_stderr": "postqueue: warning: Mail system is down -- accessing queue directly (Connect to the Postfix showq service: Connection refused)\n",
+    "native_stdout": "",
+    "status": 200
+   },
+   "queue_typo": {
+    "answer": {
+     "code": "MAIL_QUEUE_UNREADABLE",
+     "error": "The mail queue could not be read from Postfix, so it is not shown. This does not mean the queue is empty. Nothing was changed. Try again; if it keeps failing, the server owner checks that Postfix is running (sudo systemctl status postfix)."
+    },
+    "native_returncode": 69,
+    "native_stderr": "postqueue: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n",
+    "status": 502
+   }
+  },
+  "S7-file-metadata": {
+   "files": {
+    "/etc/mysql/mariadb.conf.d/50-server.cnf": {
+     "after": {
+      "gid": 0,
+      "group": "root",
+      "inode": 135499,
+      "mode": "0644",
+      "owner": "root",
+      "uid": 0
+     },
+     "backups": [
+      {
+       "group": "root",
+       "mode": "0644",
+       "owner": "root",
+       "path": "/etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261008T220908Z"
+      },
+      {
+       "group": "root",
+       "mode": "0644",
+       "owner": "root",
+       "path": "/etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261008T220913Z"
+      },
+      {
+       "group": "root",
+       "mode": "0644",
+       "owner": "root",
+       "path": "/etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261008T220914Z"
+      }
+     ],
+     "before": {
+      "gid": 0,
+      "group": "root",
+      "inode": 134504,
+      "mode": "0644",
+      "owner": "root",
+      "uid": 0
+     },
+     "content_or_inode_changed": true,
+     "equal": true
+    },
+    "/etc/postfix/main.cf": {
+     "after": {
+      "gid": 989,
+      "group": "celikpanel",
+      "inode": 264322,
+      "mode": "0644",
+      "owner": "root",
+      "uid": 0
+     },
+     "backups": [],
+     "before": {
+      "gid": 989,
+      "group": "celikpanel",
+      "inode": 269851,
+      "mode": "0644",
+      "owner": "root",
+      "uid": 0
+     },
+     "content_or_inode_changed": true,
+     "equal": true
+    },
+    "/etc/postgresql/17/main/pg_hba.conf": {
+     "after": {
+      "gid": 106,
+      "group": "postgres",
+      "inode": 271059,
+      "mode": "0640",
+      "owner": "postgres",
+      "uid": 104
+     },
+     "backups": [
+      {
+       "group": "postgres",
+       "mode": "0640",
+       "owner": "postgres",
+       "path": "/etc/postgresql/17/main/pg_hba.conf.celikpanel-backup-20261008T220857Z"
+      }
+     ],
+     "before": {
+      "gid": 106,
+      "group": "postgres",
+      "inode": 263951,
+      "mode": "0640",
+      "owner": "postgres",
+      "uid": 104
+     },
+     "content_or_inode_changed": true,
+     "equal": true
+    },
+    "/etc/postgresql/17/main/postgresql.conf": {
+     "after": {
+      "gid": 106,
+      "group": "postgres",
+      "inode": 271058,
+      "mode": "0644",
+      "owner": "postgres",
+      "uid": 104
+     },
+     "backups": [
+      {
+       "group": "postgres",
+       "mode": "0644",
+       "owner": "postgres",
+       "path": "/etc/postgresql/17/main/postgresql.conf.celikpanel-backup-20261008T220853Z"
+      },
+      {
+       "group": "postgres",
+       "mode": "0644",
+       "owner": "postgres",
+       "path": "/etc/postgresql/17/main/postgresql.conf.celikpanel-backup-20261008T220904Z"
+      }
+     ],
+     "before": {
+      "gid": 106,
+      "group": "postgres",
+      "inode": 264924,
+      "mode": "0644",
+      "owner": "postgres",
+      "uid": 104
+     },
+     "content_or_inode_changed": true,
+     "equal": true
+    }
+   },
+   "owner_actions": []
+  }
+ },
+ "set1-ubuntu/run-a": {
+  "S1-cron": {
+   "cron_faults": [
+    {
+     "add_status": 502,
+     "applied": {
+      "created": "/etc/cron.allow",
+      "kind": "cron-allow"
+     },
+     "kind": "cron-allow",
+     "list_code": "CURRENT_SETTINGS_UNREADABLE",
+     "list_status": 502,
+     "native": "failed",
+     "native_again": "failed",
+     "returncode": 1,
+     "stderr": "The user set1_owner_test cannot use this program (crontab)\n",
+     "stderr_again": "The user set1_owner_test cannot use this program (crontab)\n"
+    }
+   ],
+   "no_crontab_answer": {
+    "crontab_binary": "/usr/bin/crontab",
+    "package": "cron: /usr/bin/crontab",
+    "returncode": 1,
+    "stderr": "no crontab for set1_owner_test\n",
+    "stdout": ""
+   },
+   "owner_actions": [
+    "d-crontab-edit",
+    "f-fault-cron-allow",
+    "f-restore-cron-allow"
+   ]
+  },
+  "S2-mail-policy": {
+   "not_reloaded_answer_carries_policy": true,
+   "owner_actions": [
+    "b-owner-restrictions-main-cf",
+    "b-owner-restrictions-reload-postfix",
+    "e-owner-macro-main-cf",
+    "e-owner-macro-reload-postfix",
+    "e-owner-plain-list-again-main-cf",
+    "e-owner-plain-list-again-reload-postfix",
+    "f-owner-typo-main-cf",
+    "f-owner-removes-typo-main-cf",
+    "f-owner-removes-typo-reload-postfix"
+   ],
+   "read_under_typo": {
+    "answer": null,
+    "status": 200,
+    "version": "mp1-96d5c35c7c8de3358a96aea4965b2e47688e02447ff17617ebc3fb86e8902f34"
+   },
+   "restrictions_layout": {
+    "after_panel_save": "smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf, reject_rbl_client dnsbl.set1-lab.test",
+    "after_zone_removed": "smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination, reject_unknown_sender_domain, check_policy_service unix:private/policyd-spf",
+    "owner_wrote": "smtpd_recipient_restrictions =\n    permit_mynetworks,\n    permit_sasl_authenticated,\n    reject_unauth_destination,\n    reject_unknown_sender_domain,\n    check_policy_service unix:private/policyd-spf"
+   }
+  },
+  "S3-backup-schedule": {
+   "next_run_prune": {
+    "listed": 0,
+    "retention": 14,
+    "scheduled_files_or_full": 0,
+    "would_keep": [],
+    "would_prune": []
+   },
+   "owner_actions": []
+  },
+  "S4-postgresql": {
+   "hba_local_rules_removed": [
+    "local   all             postgres                                peer",
+    "local   all             all                                     peer",
+    "local   replication     all                                     peer"
+   ],
+   "owner_actions": [
+    "f-postgresql.conf-note",
+    "g-reload-hook",
+    "g-reload-hook-removed",
+    "g-owner-reload"
+   ],
+   "reload_failed": {
+    "backups_after": 2,
+    "backups_before": 1,
+    "error": "The service could not reload with the new file, and CelikPanel could not put the previous file back with certainty. The server owner checks the file on the server; the copy named below holds the other version. Then reload the service (sudo systemctl reload <service>) and reload this page.",
+    "file_is_previous": true,
+    "named_copy": "/etc/postgresql/16/main/postgresql.conf.celikpanel-backup-20261008T214812Z",
+    "named_copy_exists": true,
+    "named_copy_holds": "the previous file (the one now in place)",
+    "postmaster_pid": [
+     21536,
+     21536
+    ],
+    "reason": "not_restored",
+    "vars": {
+     "detail": "Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.",
+     "name": "/etc/postgresql/16/main/postgresql.conf.celikpanel-backup-20261008T214812Z"
+    },
+    "work_mem_after": "8MB"
+   },
+   "reload_hook": {
+    "applied": {
+     "dropin": "/etc/systemd/system/postgresql@16-main.service.d/set1-owner-reload-hook.conf",
+     "script": "/usr/local/sbin/set1-owner-reload-hook",
+     "unit": "postgresql@16-main.service"
+    },
+    "exec_reload": "ExecReload={ path=/usr/local/sbin/set1-owner-reload-hook ; argv[]=/usr/local/sbin/set1-owner-reload-hook ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n",
+    "realism": "an owner's own unit drop-in; no failure of the packaged unit's reload was found that an owner causes"
+   },
+   "unit": "postgresql@16-main.service",
+   "work_mem_edit": "commented-default"
+  },
+  "S5-mariadb": {
+   "file": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+   "option_edit": {
+    "how": "commented-default",
+    "value": "173"
+   },
+   "owner_actions": [
+    "e-option-file-note"
+   ]
+  },
+  "S6-catchall-queue": {
+   "owner_actions": [
+    "queue-stop-postfix",
+    "queue-start-postfix",
+    "queue-typo-main-cf",
+    "queue-typo-removed"
+   ],
+   "queue_postfix_stopped": {
+    "answer": null,
+    "native_returncode": 0,
+    "native_stderr": "postqueue: warning: Mail system is down -- accessing queue directly (Connect to the Postfix showq service: Connection refused)\n",
+    "native_stdout": "",
+    "status": 200
+   },
+   "queue_typo": {
+    "answer": {
+     "code": "MAIL_QUEUE_UNREADABLE",
+     "error": "The mail queue could not be read from Postfix, so it is not shown. This does not mean the queue is empty. Nothing was changed. Try again; if it keeps failing, the server owner checks that Postfix is running (sudo systemctl status postfix)."
+    },
+    "native_returncode": 69,
+    "native_stderr": "postqueue: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n",
+    "status": 502
+   }
+  },
+  "S7-file-metadata": {
+   "files": {
+    "/etc/mysql/mariadb.conf.d/50-server.cnf": {
+     "after": {
+      "gid": 0,
+      "group": "root",
+      "inode": 262726,
+      "mode": "0644",
+      "owner": "root",
+      "uid": 0
+     },
+     "backups": [
+      {
+       "group": "root",
+       "mode": "0644",
+       "owner": "root",
+       "path": "/etc/mysql/mariadb.conf.d/50-server.cnf.celikpanel-backup-20261008T214818Z"
+      }
+     ],
+     "before": {
+      "gid": 0,
+      "group": "root",
+      "inode": 262716,
+      "mode": "0644",
+      "owner": "root",
+      "uid": 0
+     },
+     "content_or_inode_changed": true,
+     "equal": true
+    },
+    "/etc/postfix/main.cf": {
+     "after": {
+      "gid": 988,
+      "group": "celikpanel",
+      "inode": 527284,
+      "mode": "0644",
+      "owner": "root",
+      "uid": 0
+     },
+     "backups": [],
+     "before": {
+      "gid": 988,
+      "group": "celikpanel",
+      "inode": 532336,
+      "mode": "0644",
+      "owner": "root",
+      "uid": 0
+     },
+     "content_or_inode_changed": true,
+     "equal": true
+    },
+    "/etc/postgresql/16/main/pg_hba.conf": {
+     "after": {
+      "gid": 114,
+      "group": "postgres",
+      "inode": 533931,
+      "mode": "0640",
+      "owner": "postgres",
+      "uid": 111
+     },
+     "backups": [
+      {
+       "group": "postgres",
+       "mode": "0640",
+       "owner": "postgres",
+       "path": "/etc/postgresql/16/main/pg_hba.conf.celikpanel-backup-20261008T214805Z"
+      }
+     ],
+     "before": {
+      "gid": 114,
+      "group": "postgres",
+      "inode": 526913,
+      "mode": "0640",
+      "owner": "postgres",
+      "uid": 111
+     },
+     "content_or_inode_changed": true,
+     "equal": true
+    },
+    "/etc/postgresql/16/main/postgresql.conf": {
+     "after": {
+      "gid": 114,
+      "group": "postgres",
+      "inode": 533930,
+      "mode": "0644",
+      "owner": "postgres",
+      "uid": 111
+     },
+     "backups": [
+      {
+       "group": "postgres",
+       "mode": "0644",
+       "owner": "postgres",
+       "path": "/etc/postgresql/16/main/postgresql.conf.celikpanel-backup-20261008T214759Z"
+      },
+      {
+       "group": "postgres",
+       "mode": "0644",
+       "owner": "postgres",
+       "path": "/etc/postgresql/16/main/postgresql.conf.celikpanel-backup-20261008T214812Z"
+      }
+     ],
+     "before": {
+      "gid": 114,
+      "group": "postgres",
+      "inode": 527887,
+      "mode": "0644",
+      "owner": "postgres",
+      "uid": 111
+     },
+     "content_or_inode_changed": true,
+     "equal": true
+    }
+   },
+   "owner_actions": []
+  }
+ }
+}

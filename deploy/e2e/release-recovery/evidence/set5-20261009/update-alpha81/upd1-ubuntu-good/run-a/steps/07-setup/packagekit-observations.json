@@ -1,0 +1,3860 @@
+[
+  {
+    "after": {
+      "at": "2026-10-09T17:33:18.869387Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=",
+        "ActiveState=inactive",
+        "SubState=dead"
+      ],
+      "packagekitd": [],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:33:18.582995Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=",
+        "ActiveState=inactive",
+        "SubState=dead"
+      ],
+      "packagekitd": [],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:33:17Z",
+    "label": "setup-a01-before-start",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:33:17Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:33:24.612343Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/http",
+          "comm": "http",
+          "pid": 10457,
+          "ppid": "10447"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/http",
+          "comm": "http",
+          "pid": 10459,
+          "ppid": "10447"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/https",
+          "comm": "https",
+          "pid": 10512,
+          "ppid": "10456"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/gpgv",
+          "comm": "gpgv",
+          "pid": 10514,
+          "ppid": "10447"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/gpgv",
+          "comm": "gpgv",
+          "pid": 10555,
+          "ppid": "10514"
+        },
+        {
+          "cmdline": "/bin/sh /usr/bin/apt-key --quiet --readonly --keyring /usr/share/keyrings/ubuntu-archive-keyring.gpg verify --status-fd 3 /tmp/apt.sig.G9TciG /tmp/apt.data.40Qbsy",
+          "comm": "apt-key",
+          "pid": 10556,
+          "ppid": "10555"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [
+        {
+          "line": "3: POSIX  ADVISORY  WRITE 10447 fd:01:81132 0 EOF",
+          "owner": 10447,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/apt/lists/lock",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 10447
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=",
+        "ActiveState=inactive",
+        "SubState=dead"
+      ],
+      "packagekitd": [],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:33:24.275045Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=",
+        "ActiveState=inactive",
+        "SubState=dead"
+      ],
+      "packagekitd": [],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:33:22Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:33:23Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:33:35.217712Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 10.4,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:33:34.916243Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 10.1,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:33:33Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:33:33Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:33:46.794023Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "1: POSIX  ADVISORY  WRITE 11761 fd:01:84085 0 EOF",
+          "owner": 11761,
+          "owner_comm": "dpkg",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "2: POSIX  ADVISORY  WRITE 11669 fd:01:84605 0 EOF",
+          "owner": 11669,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "3: POSIX  ADVISORY  WRITE 11669 fd:01:84084 0 EOF",
+          "owner": 11669,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "1: POSIX  ADVISORY  WRITE 11761 fd:01:84085 0 EOF",
+          "owner": 11761,
+          "owner_comm": "dpkg",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "2: POSIX  ADVISORY  WRITE 11669 fd:01:84605 0 EOF",
+          "owner": 11669,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "3: POSIX  ADVISORY  WRITE 11669 fd:01:84084 0 EOF",
+          "owner": 11669,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 11669
+        },
+        {
+          "comm": "dpkg",
+          "pid": 11761
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 22.0,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:33:46.429592Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "1: POSIX  ADVISORY  WRITE 11761 fd:01:84085 0 EOF",
+          "owner": 11761,
+          "owner_comm": "dpkg",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "2: POSIX  ADVISORY  WRITE 11669 fd:01:84605 0 EOF",
+          "owner": 11669,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "3: POSIX  ADVISORY  WRITE 11669 fd:01:84084 0 EOF",
+          "owner": 11669,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "1: POSIX  ADVISORY  WRITE 11761 fd:01:84085 0 EOF",
+          "owner": 11761,
+          "owner_comm": "dpkg",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "2: POSIX  ADVISORY  WRITE 11669 fd:01:84605 0 EOF",
+          "owner": 11669,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "3: POSIX  ADVISORY  WRITE 11669 fd:01:84084 0 EOF",
+          "owner": 11669,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 11669
+        },
+        {
+          "comm": "dpkg",
+          "pid": 11761
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 21.6,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:33:44Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:33:45Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:33:58.957829Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 34.1,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:33:58.643642Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 33.8,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:33:57Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:33:57Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:34:09.580357Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/http",
+          "comm": "http",
+          "pid": 18707,
+          "ppid": "18702"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "4: POSIX  ADVISORY  WRITE 18702 fd:01:84605 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "5: POSIX  ADVISORY  WRITE 18702 fd:01:84085 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "6: POSIX  ADVISORY  WRITE 18702 fd:01:84084 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "4: POSIX  ADVISORY  WRITE 18702 fd:01:84605 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "5: POSIX  ADVISORY  WRITE 18702 fd:01:84085 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "6: POSIX  ADVISORY  WRITE 18702 fd:01:84084 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 18702
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 44.8,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:34:09.282394Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/http",
+          "comm": "http",
+          "pid": 18707,
+          "ppid": "18702"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "4: POSIX  ADVISORY  WRITE 18702 fd:01:84605 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "5: POSIX  ADVISORY  WRITE 18702 fd:01:84085 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "6: POSIX  ADVISORY  WRITE 18702 fd:01:84084 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "4: POSIX  ADVISORY  WRITE 18702 fd:01:84605 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "5: POSIX  ADVISORY  WRITE 18702 fd:01:84085 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "6: POSIX  ADVISORY  WRITE 18702 fd:01:84084 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 18702
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 44.5,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:34:08Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:34:08Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:34:20.238340Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 55.4,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:34:19.885957Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/bin/python3 /usr/lib/update-notifier/apt-check --human-readable",
+          "comm": "apt-check",
+          "pid": 19459,
+          "ppid": "19445"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "6: POSIX  ADVISORY  WRITE 18702 fd:01:84605 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "7: POSIX  ADVISORY  WRITE 18702 fd:01:84084 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "6: POSIX  ADVISORY  WRITE 18702 fd:01:84605 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "7: POSIX  ADVISORY  WRITE 18702 fd:01:84084 0 EOF",
+          "owner": 18702,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 18702
+        },
+        {
+          "comm": "apt-get",
+          "pid": 19420
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 55.1,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:34:18Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:34:18Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:34:31.427945Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "2: POSIX  ADVISORY  WRITE 20285 fd:01:84085 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "3: POSIX  ADVISORY  WRITE 20285 fd:01:84084 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "2: POSIX  ADVISORY  WRITE 20285 fd:01:84085 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "3: POSIX  ADVISORY  WRITE 20285 fd:01:84084 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 20285
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 66.6,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:34:31.136801Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "2: POSIX  ADVISORY  WRITE 20285 fd:01:84085 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "3: POSIX  ADVISORY  WRITE 20285 fd:01:84084 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "2: POSIX  ADVISORY  WRITE 20285 fd:01:84085 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "3: POSIX  ADVISORY  WRITE 20285 fd:01:84084 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 20285
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 66.3,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:34:29Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:34:30Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:34:41.997058Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/bin/perl /usr/share/debconf/frontend /var/lib/dpkg/info/postfix.postinst configure",
+          "comm": "frontend",
+          "pid": 20549,
+          "ppid": "20453"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "4: POSIX  ADVISORY  WRITE 20285 fd:01:84605 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "6: POSIX  ADVISORY  WRITE 20453 fd:01:84085 0 EOF",
+          "owner": 20453,
+          "owner_comm": "dpkg",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "7: POSIX  ADVISORY  WRITE 20285 fd:01:84084 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "4: POSIX  ADVISORY  WRITE 20285 fd:01:84605 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "6: POSIX  ADVISORY  WRITE 20453 fd:01:84085 0 EOF",
+          "owner": 20453,
+          "owner_comm": "dpkg",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "7: POSIX  ADVISORY  WRITE 20285 fd:01:84084 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 20285
+        },
+        {
+          "comm": "dpkg",
+          "pid": 20453
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 77.2,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:34:41.721940Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/bin/perl /usr/share/debconf/frontend /var/lib/dpkg/info/postfix.postinst configure",
+          "comm": "frontend",
+          "pid": 20549,
+          "ppid": "20453"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "4: POSIX  ADVISORY  WRITE 20285 fd:01:84605 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "6: POSIX  ADVISORY  WRITE 20453 fd:01:84085 0 EOF",
+          "owner": 20453,
+          "owner_comm": "dpkg",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "7: POSIX  ADVISORY  WRITE 20285 fd:01:84084 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "4: POSIX  ADVISORY  WRITE 20285 fd:01:84605 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "6: POSIX  ADVISORY  WRITE 20453 fd:01:84085 0 EOF",
+          "owner": 20453,
+          "owner_comm": "dpkg",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "7: POSIX  ADVISORY  WRITE 20285 fd:01:84084 0 EOF",
+          "owner": 20285,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 20285
+        },
+        {
+          "comm": "dpkg",
+          "pid": 20453
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 76.9,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:34:40Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:34:40Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:34:52.927120Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 88.1,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:34:52.646764Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 87.8,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:34:51Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:34:51Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:35:03.878843Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/bin/perl /usr/share/debconf/frontend /usr/bin/ucf --three-way /usr/share/dovecot/dovecot.conf /etc/dovecot/dovecot.conf",
+          "comm": "frontend",
+          "pid": 22553,
+          "ppid": "22448"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "2: POSIX  ADVISORY  WRITE 22441 fd:01:84085 0 EOF",
+          "owner": 22441,
+          "owner_comm": "dpkg",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "3: POSIX  ADVISORY  WRITE 22244 fd:01:84605 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "4: POSIX  ADVISORY  WRITE 22244 fd:01:84084 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "2: POSIX  ADVISORY  WRITE 22441 fd:01:84085 0 EOF",
+          "owner": 22441,
+          "owner_comm": "dpkg",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "3: POSIX  ADVISORY  WRITE 22244 fd:01:84605 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "4: POSIX  ADVISORY  WRITE 22244 fd:01:84084 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 22244
+        },
+        {
+          "comm": "dpkg",
+          "pid": 22441
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 99.1,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:35:03.583246Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "2: POSIX  ADVISORY  WRITE 22441 fd:01:84085 0 EOF",
+          "owner": 22441,
+          "owner_comm": "dpkg",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "3: POSIX  ADVISORY  WRITE 22244 fd:01:84605 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "4: POSIX  ADVISORY  WRITE 22244 fd:01:84084 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "2: POSIX  ADVISORY  WRITE 22441 fd:01:84085 0 EOF",
+          "owner": 22441,
+          "owner_comm": "dpkg",
+          "path": "/var/lib/dpkg/lock",
+          "waiting": false
+        },
+        {
+          "line": "3: POSIX  ADVISORY  WRITE 22244 fd:01:84605 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "4: POSIX  ADVISORY  WRITE 22244 fd:01:84084 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 22244
+        },
+        {
+          "comm": "dpkg",
+          "pid": 22441
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 98.8,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:35:02Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:35:02Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:35:14.508914Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/bin/python3 /usr/lib/update-notifier/apt-check --human-readable",
+          "comm": "apt-check",
+          "pid": 25856,
+          "ppid": "25811"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "2: POSIX  ADVISORY  WRITE 22244 fd:01:84605 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "3: POSIX  ADVISORY  WRITE 22244 fd:01:84084 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "2: POSIX  ADVISORY  WRITE 22244 fd:01:84605 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "3: POSIX  ADVISORY  WRITE 22244 fd:01:84084 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 22244
+        },
+        {
+          "comm": "apt-get",
+          "pid": 25731
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 109.7,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:35:14.211190Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/bin/perl /usr/share/debconf/frontend /usr/sbin/needrestart -m u",
+          "comm": "frontend",
+          "pid": 25741,
+          "ppid": "25740"
+        },
+        {
+          "cmdline": "/usr/bin/perl /usr/sbin/needrestart -m u",
+          "comm": "needrestart",
+          "pid": 25750,
+          "ppid": "25741"
+        }
+      ],
+      "general_lock_lines": [
+        {
+          "line": "5: POSIX  ADVISORY  WRITE 22244 fd:01:84605 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "6: POSIX  ADVISORY  WRITE 22244 fd:01:84084 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "lock_lines": [
+        {
+          "line": "5: POSIX  ADVISORY  WRITE 22244 fd:01:84605 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/cache/apt/archives/lock",
+          "waiting": false
+        },
+        {
+          "line": "6: POSIX  ADVISORY  WRITE 22244 fd:01:84084 0 EOF",
+          "owner": 22244,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/dpkg/lock-frontend",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 22244
+        },
+        {
+          "comm": "apt-get",
+          "pid": 25731
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 109.4,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:35:12Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:35:13Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:35:27.890606Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 123.1,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:35:25.564789Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 120.7,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:35:23Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:35:24Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:35:40.585251Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/https",
+          "comm": "https",
+          "pid": 27123,
+          "ppid": "27112"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/gpgv",
+          "comm": "gpgv",
+          "pid": 27372,
+          "ppid": "27112"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/gpgv",
+          "comm": "gpgv",
+          "pid": 27434,
+          "ppid": "27372"
+        },
+        {
+          "cmdline": "/bin/sh /usr/bin/apt-key --quiet --readonly --keyring /usr/share/keyrings/ubuntu-pro-esm-apps.gpg verify --status-fd 3 /tmp/apt.sig.yxVYuP /tmp/apt.data.PgeIVy",
+          "comm": "apt-key",
+          "pid": 27435,
+          "ppid": "27434"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 27104
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 135.8,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:35:40.260098Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/http",
+          "comm": "http",
+          "pid": 27113,
+          "ppid": "27104"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/http",
+          "comm": "http",
+          "pid": 27114,
+          "ppid": "27104"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/https",
+          "comm": "https",
+          "pid": 27123,
+          "ppid": "27112"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/gpgv",
+          "comm": "gpgv",
+          "pid": 27126,
+          "ppid": "27104"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/gpgv",
+          "comm": "gpgv",
+          "pid": 27277,
+          "ppid": "27126"
+        },
+        {
+          "cmdline": "/bin/sh /usr/bin/apt-key --quiet --readonly --keyring /usr/share/keyrings/ubuntu-archive-keyring.gpg verify --status-fd 3 /tmp/apt.sig.0lIsT9 /tmp/apt.data.9IIoCh",
+          "comm": "apt-key",
+          "pid": 27278,
+          "ppid": "27277"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [
+        {
+          "line": "1: POSIX  ADVISORY  WRITE 27104 fd:01:81132 0 EOF",
+          "owner": 27104,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/apt/lists/lock",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 27104
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 135.4,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:35:39Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:35:39Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:35:51.225855Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 146.4,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:35:50.946942Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 146.1,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:35:49Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:35:50Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:36:03.701824Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 158.9,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:36:03.405104Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 158.6,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:36:00Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:36:02Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:36:16.322869Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 171.5,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:36:16.041085Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 171.2,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:36:14Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:36:15Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:36:26.987241Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 182.2,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:36:26.660407Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 181.8,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:36:25Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:36:25Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:36:37.571128Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 33256
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 192.8,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:36:37.292181Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 33256
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 192.5,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:36:36Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:36:36Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:36:48.774077Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 204.0,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:36:48.397509Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 203.6,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:36:47Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:36:47Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:36:59.533238Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 214.7,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:36:59.184484Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 214.4,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:36:57Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:36:58Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:37:11.839776Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/http",
+          "comm": "http",
+          "pid": 36258,
+          "ppid": "36230"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/http",
+          "comm": "http",
+          "pid": 36274,
+          "ppid": "36230"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/gpgv",
+          "comm": "gpgv",
+          "pid": 36288,
+          "ppid": "36230"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/https",
+          "comm": "https",
+          "pid": 36303,
+          "ppid": "36244"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/gpgv",
+          "comm": "gpgv",
+          "pid": 36444,
+          "ppid": "36288"
+        },
+        {
+          "cmdline": "/bin/sh /usr/bin/apt-key --quiet --readonly --keyring /usr/share/keyrings/ubuntu-archive-keyring.gpg verify --status-fd 3 /tmp/apt.sig.8BqrBu /tmp/apt.data.UXpa93",
+          "comm": "apt-key",
+          "pid": 36445,
+          "ppid": "36444"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [
+        {
+          "line": "5: POSIX  ADVISORY  WRITE 36230 fd:01:81132 0 EOF",
+          "owner": 36230,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/apt/lists/lock",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 36230
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 227.0,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:37:11.511018Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/http",
+          "comm": "http",
+          "pid": 36258,
+          "ppid": "36230"
+        },
+        {
+          "cmdline": "/usr/lib/apt/methods/http",
+          "comm": "http",
+          "pid": 36274,
+          "ppid": "36230"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [
+        {
+          "line": "4: POSIX  ADVISORY  WRITE 36230 fd:01:81132 0 EOF",
+          "owner": 36230,
+          "owner_comm": "apt-get",
+          "path": "/var/lib/apt/lists/lock",
+          "waiting": false
+        }
+      ],
+      "other_package_processes": [
+        {
+          "comm": "apt-get",
+          "pid": 36230
+        }
+      ],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 226.7,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "busy",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:37:08Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:37:10Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:37:23.243024Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 238.4,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:37:22.751984Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 237.9,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:37:21Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "panel",
+      "body": {
+        "code": "HOST_MUTATION_BUSY",
+        "ready": false,
+        "reason": "panel_operation_active"
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:37:22Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:37:33.833727Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 249.0,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:37:33.548054Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 248.7,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:37:32Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:37:32Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:37:44.453147Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 259.6,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:37:44.158984Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 259.3,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:37:42Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:37:43Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:37:55.392925Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 270.6,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:37:55.092290Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 270.3,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:37:53Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:37:54Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:38:05.999045Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 281.2,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:38:05.707503Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 280.9,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:38:04Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:38:04Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:38:16.979922Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 292.2,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:38:16.676401Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 291.9,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:38:15Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:38:15Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:38:27.920503Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 303.1,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:38:27.602596Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 302.8,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:38:26Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:38:26Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:38:38.518993Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 313.7,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:38:38.233869Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 313.4,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:38:37Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:38:37Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:38:49.118782Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 324.3,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:38:48.831128Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 324.0,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:38:47Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:38:47Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:39:00.029818Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 335.2,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:38:59.731769Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 334.9,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:38:58Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:38:58Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:39:10.649135Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 345.8,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:39:10.345826Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 345.5,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:39:09Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:39:09Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:39:21.568642Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 356.8,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:39:21.283522Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 356.5,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:39:19Z",
+    "label": "setup-a01-poll",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:39:20Z"
+    }
+  },
+  {
+    "after": {
+      "at": "2026-10-09T17:39:27.545761Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 362.7,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "before": {
+      "at": "2026-10-09T17:39:27.220081Z",
+      "context_processes": [
+        {
+          "cmdline": "/usr/bin/python3 /usr/share/unattended-upgrades/unattended-upgrade-shutdown --wait-for-signal",
+          "comm": "unattended-upgr",
+          "pid": 889,
+          "ppid": "1"
+        }
+      ],
+      "general_lock_lines": [],
+      "lock_lines": [],
+      "other_package_processes": [],
+      "packagekit_unit": [
+        "ExecMainStartTimestamp=Fri 2026-10-09 17:33:24 UTC",
+        "ActiveState=active",
+        "SubState=running"
+      ],
+      "packagekitd": [
+        {
+          "apt_backend": true,
+          "aptcc_backend": false,
+          "backend_pathnames": [
+            "/usr/lib/x86_64-linux-gnu/packagekit-backend/libpk_backend_apt.so"
+          ],
+          "children": [],
+          "etime_s": 362.4,
+          "grep_c_aptcc": 0,
+          "holds_or_waits": [],
+          "maps_read": true,
+          "pid": 10665,
+          "rule_idle": true
+        }
+      ],
+      "rule": "idle",
+      "unparsed_lock_lines": []
+    },
+    "host_utc": "2026-10-09T17:39:25Z",
+    "label": "setup-a01-end",
+    "readiness": {
+      "answered_by": "agent",
+      "body": {
+        "ready": true
+      },
+      "http": 200,
+      "utc": "2026-10-09T17:39:26Z"
+    }
+  }
+]

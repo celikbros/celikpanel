@@ -162,6 +162,29 @@ export async function readSavedDomainDeletionState(
     }
 }
 
+// What one read of a domain's saved deletion marker established. `known` with
+// `saved: null` is the server's own "no marker" (204), or a marker this screen
+// has no reviewed words for. `unknown` is a read that failed, was refused or
+// dropped: it is never "no deletion is waiting".
+// Bir alan adının kayıtlı silme işaretinin tek okumasının saptadığı. `unknown`
+// başarısız, reddedilmiş ya da kopmuş okumadır; "bekleyen silme yok" değildir.
+export type SavedDomainDeletionRead =
+    | { state: 'known'; saved: { reason: string; detail: string } | null }
+    | { state: 'unknown' };
+
+// readSavedDomainDeletion only reads; it never retries or starts a deletion.
+// readSavedDomainDeletion yalnız okur; silmeyi yeniden denemez ya da başlatmaz.
+export async function readSavedDomainDeletion(domainId: number): Promise<SavedDomainDeletionRead> {
+    try {
+        const response = await fetch(`/api/v1/domains/${domainId}/deletion-status`);
+        if (response.status === 204) return { state: 'known', saved: null };
+        if (response.status !== 200) return { state: 'unknown' };
+        return { state: 'known', saved: await readSavedDomainDeletionState(response) };
+    } catch {
+        return { state: 'unknown' };
+    }
+}
+
 export async function readSavedDomainDeletionStatus(response: Response): Promise<string | null> {
     const state = await readSavedDomainDeletionState(response);
     return state === null ? null : state.reason;

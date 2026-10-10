@@ -1,0 +1,8 @@
+2026-10-09T03:43:07.080048+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-09T03:43:07.128056+00:00 dns-debian13 postfix[43762]: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T03:43:07.128028+00:00 dns-debian13 postfix[43762]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-09T03:43:08.131532+00:00 dns-debian13 systemd[1]: postfix.service: Control process exited, code=exited, status=1/FAILURE
+2026-10-09T03:43:08.131908+00:00 dns-debian13 postfix/master[42248]: terminating on signal 15
+2026-10-09T03:43:08.134533+00:00 dns-debian13 systemd[1]: postfix.service: Failed with result 'exit-code'.
+2026-10-09T03:43:08.135060+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-09T03:43:08.131908+00:00 dns-debian13 postfix/master[42248]: terminating on signal 15

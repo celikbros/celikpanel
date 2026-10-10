@@ -1,0 +1,75 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "refused-again: delete the site (Domains page)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18631"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18631"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "f5f5ceff9c24dab15367b8f8bf8457ed"
+      ]
+    ],
+    "method": "DELETE",
+    "path": "/api/v1/domains/4"
+  },
+  "response": {
+    "elapsed_seconds": 0.254,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 22:36:05 GMT"
+      ],
+      [
+        "Content-Length",
+        "50"
+      ]
+    ],
+    "json": {
+      "domain": "set4-refused.test",
+      "status": "deleted"
+    },
+    "status": 200,
+    "text": null
+  }
+}

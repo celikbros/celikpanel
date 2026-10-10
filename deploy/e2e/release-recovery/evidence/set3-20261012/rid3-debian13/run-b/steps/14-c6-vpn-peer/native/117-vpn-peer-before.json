@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-09T08:30:53Z",
+  "config_peer_blocks": 0,
+  "interfaces": [
+    "wg0"
+  ],
+  "interfaces_rc": 0,
+  "interfaces_stderr": "",
+  "lab_action": false,
+  "mode": "read-wireguard",
+  "owner_action": false,
+  "peer_count": 0,
+  "peers": {
+    "wg0": []
+  },
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "unit": [
+    "LoadState=loaded",
+    "ActiveState=active",
+    "SubState=exited"
+  ],
+  "wg": "/usr/bin/wg"
+}

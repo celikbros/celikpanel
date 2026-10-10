@@ -6,6 +6,180 @@ Büyük yön kararlarının **neden**inin kalıcı kaydı — soru her yeniden
 gündeme geldiğinde sıfırdan türetmek istemediğimiz gerekçeler. Kod kararları
 git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
+> **Tarihler üzerine düzeltme notu (9 Ekim 2026'da kaydedildi).** D-029'un tarih satırı
+> ("10 Ekim 2026") ve içindeki "2026-10-10 kaydı" atfı takvim tarihi değildir. D-029,
+> 2026-10-09 günü saat 05:57'de işlendi (`faa5ef085`, yerel saat, UTC+3). İş turları,
+> saatten okunmadan her turda bir artırılarak 2026-10-10, 2026-10-11 ve 2026-10-12
+> diye etiketlendi; turların hepsi 2026-10-09 günü işlendi (2026-10-10: 00:45-05:57;
+> 2026-10-11: 08:05-09:12; 2026-10-12: 09:12-13:06). Kayıtlar birbirine bu etiketlerle
+> atıf yaptığı için etiketler kalır. Eşleşme, işlemler ve aynı etiketleri taşıyan üç kanıt
+> dizini (`set1-20261010`, `set2-20261011`, `set3-20261012`; 2026-10-08 ve 2026-10-09
+> günlerinde çalıştılar) [OPERATION-GUIDANCE.tr.md](OPERATION-GUIDANCE.tr.md) başındaki
+> düzeltme notundadır. Bu dosyada etkilenen tek kayıt D-029'dur. Bu nottan sonra yazılan
+> kayıtlar saat tarihini kullanır; D-029 dışında 10, 11 veya 12 Ekim 2026 tarihli bir
+> kayıt gerçektir.
+
+---
+
+## D-030 · Panelin güvenli bağlantı kuralı yalnız Panelin kendi ana makine adını kapsar
+
+*10 Ekim 2026 (saat tarihi) · Sahip kararı; kaynakta ve bir bileşen testiyle, gerçek sistem okuması bekliyor*
+
+Panel, HTTPS üzerinde `Strict-Transport-Security: max-age=31536000;
+includeSubDomains` gönderiyordu. Paneli bir adda açmış olan tarayıcı bu yüzden
+o adın altındaki her adda bir yıl boyunca düz HTTP'yi reddediyordu. O adlar
+Panelin değildir: sahibi onları başka yerde, sertifikasız ya da hiç CelikPanel
+üzerinden olmadan sunuyor olabilir (D-022). Barındırılan siteler hiçbir zaman
+`includeSubDomains` ya da `preload` taşımadı; bir test bunu orada zaten
+yasaklıyordu. Panelin kendi başlığını kapsayan bir karar kaydı yoktu.
+
+Sahip 10 Ekim 2026'da kuralın Panelin kendi ana makine adıyla sınırlanmasına ve
+değişikliğin v0.1.0-alpha.82'ye girmesine karar verdi. Panel artık HTTPS
+üzerinde `Strict-Transport-Security: max-age=31536000` gönderir, düz HTTP
+üzerinde hiçbir şey göndermez. `preload` eklenmez.
+
+Sahibin gördüğü: Panelin kendisinde hiçbir şey değişmez. Tarayıcı, Panelin ana
+makinesi için tuttuğu kuralı Panele bir sonraki girişinde okuduğuyla
+değiştirir; yani geniş kural o tarayıcı için o girişte sona erer. Paneli bir
+daha açmayan tarayıcı eski kuralı bir yılı dolana kadar tutar; sahibi onu o
+tarayıcının kendi ayarlarından silebilir. Bu bir tarayıcıda ölçülmedi; başlığın
+tanımı böyledir (RFC 6797, bölüm 8.1).
+
+Değişmeyenler: başlığın süresi, Panelin diğer güvenlik başlıkları, barındırılan
+sitelerin başlıkları.
+
+---
+
+## D-029 · Durum değiştiren her istek tek bir kimlik taşır; yineleme asla iki kez çalışmaz
+
+*10 Ekim 2026 · Sahibin yürürlükteki yönü üzerine planlayıcı kararı (D-024: kaybolan yanıt asla ikinci bir değişiklik başlatmaz; D-025 ilke 4); birinci grup kaynakta ve bileşen testleriyle, gerçek sistem denemesi bekliyor*
+
+Gerçek tarayıcıda yapılan bir inceleme şunu ölçtü: durum değiştiren bir istek
+gönderilirken bağlantı sıfırlanırsa Chrome POST'u kendiliğinden yeniden
+gönderir; tek tıklama Panel'e üç kez ulaştı. Ardından `7a64bda91` kaynağının
+salt-okur dökümü, durum değiştiren yaklaşık 115 rotayı sınıflandırdı: 12'si iki
+kez çalıştığında zararlı, 7'si sınıflandırılamadı, yaklaşık 38'i durumu doğru
+bırakıp yanlış bildiriyor, yaklaşık 58'i güvenli. Gövdesinde istek kimliği
+taşıyan ve işlem satırı tutan alt sistemler (bileşen kurulumu, posta profili
+kurulumu, panel sertifikası, sunucu kurulumu, DNS motoru geçişi, panel
+güncellemesi) güvenliydi.
+
+Birincinin altında ikinci bir tehlike vardı. İşleyicilerin çoğu bağlantının
+bağlamını Agent çağrısına ve sonrasındaki veritabanı yazımlarına veriyordu.
+Sıfırlama bu bağlamı iptal eder: Panel dönerken Agent çalışmayı sürdürüyor,
+sunucu değişiyor ama Panel bunu kaydetmiyordu; yineleme de bu yarım kalmış ilk
+denemeye karşı çalışıyordu.
+
+**Karar.** Kendini zaten adlandırmayan her durum değiştiren istek için tek
+düzenek.
+
+- *Kimlik.* `X-CelikPanel-Request-Id` başlığı: 32 küçük harfli onaltılık
+  karakter; ürünün mevcut işlem kimliği biçimi. Web arayüzünün tek fetch
+  yakalayıcısı bunu, gövdesinde `request_id` taşımayan, GET olmayan her `/api/`
+  çağrısına ekler; kullanıcı eylemi başına tek kimlik, yeni tıklama yeni
+  kimliktir. Başka bir kökene asla gönderilmez.
+- *Koruma.* Kimlik doğrulama zincirinin içinde, yönlendiricinin önünde;
+  `request_identities` tablosuna dayanır (göç 43). Satır; kimliği, işlemi yapan
+  kullanıcıyı, yöntemi ve rota kalıbını, yöntem + yol + sorgu + gövdenin
+  SHA-256'sını (gövdenin kendisini asla), `running`, `done` ya da `interrupted`
+  durumunu, yanıtın durum kodunu ve saklanıyorsa içerik türüyle gövdesini,
+  oluşturulma ve bitiş zamanlarını tutar. Satırlar 24 saat yaşar ve saatlik
+  süpürmeyle silinir.
+- *İlk geliş.* Satır `running` olarak yazılır ve işleyici, bağlantının iptal
+  edemeyeceği, rotanın kendi süre sınırıyla sınırlı bir bağlamda çalışır.
+  Yanıtı önce saklanır, sonra gönderilir. Satırı yazılamayan işleyici hiç
+  başlamaz.
+- *Yineleme.* Aynı kullanıcı ve aynı özetle gelen aynı kimlik, satırdan baytı
+  baytına yanıtlanır. İlk geliş hâlâ sürüyorsa yineleme onu en çok 20 saniye
+  bekler; sonra aynı kimlikle `409 REQUEST_IN_PROGRESS` yanıtını alır.
+- *Yeniden kullanım.* Aynı kimlik başka gövde, yol, sorgu ya da kullanıcıyla
+  gelirse `409 REQUEST_ID_REUSED`; hiçbir şey çalışmaz ve ilk yanıt
+  gösterilmez.
+- *Yarıda kalan.* Panel açılırken `running` bulunan ya da işleyicisi
+  beklenmedik biçimde duran satır `interrupted` olur. Yinelemesi, sonraki
+  adımla birlikte (mevcut durumu kontrol edin) `409 REQUEST_OUTCOME_UNKNOWN`
+  alır; istek o kimlikle bir daha asla çalıştırılmaz.
+- *Gizli bilgiler.* Tek seferlik gizli bilgi taşıyan yanıt ve 64 KiB'tan büyük
+  her yanıt saklanmaz: yalnızca durum kodu saklanır. Yinelemesi `409
+  REQUEST_COMPLETED_RESULT_NOT_RETAINED` alır (değişiklik yapıldı; tek seferlik
+  sonucu yalnızca bir kez gösterildi); ilk deneme hatayla bittiyse aynı kod
+  `failed` gerekçesiyle gelir.
+- *Sarılmayanlar.* Gövdesinde `request_id` taşıyan ve işlem satırı tutan
+  rotalar; bu grupta, ayar sürümü taşıyan rotalar.
+
+**Birinci grubun kapsamı.** Zararlı rotalardan tam sekizi; her biri doğrulanmış
+sonucuyla:
+
+| Rota (POST) | İki kez çalışınca ya da sıfırlamayla kesilince | Süre sınırı |
+|---|---|---|
+| `domains/{id}/backups/restore` | Agent'ta kilit yoktu: iki ya da üç geri yükleme aynı belge köküne açılıyor ve aynı veritabanını yan yana içe aktarıyordu | 40 dk |
+| `import/cpanel/apply` | ilk içe aktarım iki adım arasında, site yarı aktarılmış hâlde duruyordu (alan adı oluşturulmuş; dosyalar, posta, DNS ya da veritabanları değil); yineleme de "alan adı zaten var" diye reddediliyordu | 2 sa |
+| yeniden düzenlemeli `domains/{id}/ssl/letsencrypt` | her geliş, sertifika otoritesinin yinelenen sertifika payından bir düzenleme daha zorluyordu | 25 dk |
+| `domains/{id}/backups` | iş anahtarı gönderilmiyordu; Agent iş kilidi almıyor ve her geliş için bir arşiv üretiyordu | 35 dk |
+| `database-servers/{id}/admin-account` | her gelişte yeni parola; iç içe geçen iki geliş ya da motorla kayıt arasındaki bir sıfırlama, motoru bir parolada, Panel'i ötekinde bırakıyordu | 12 dk |
+| `vpn/peers` | her gelişte yeni anahtarlar ve yeni adres | 10 dk |
+| `database-servers/{id}/databases` | MariaDB ikinci `CREATE DATABASE IF NOT EXISTS` komutunu kabul eder; yineleme sonra mevcut kayıtta başarısız oluyor ve telafisi, ilk isteğin oluşturup kaydettiği veritabanını siliyordu | 15 dk |
+| `domains/{id}/databases` | Agent'ın oluşturması ile Panel'in kaydı arasındaki bir sıfırlama, motorda Panel'in listelemediği bir veritabanı bırakıyordu | 15 dk |
+
+Korumanın yanında: Agent, bir alan adının geri yüklemesi sürerken ikincisini
+hiçbir şey okumadan ve yazmadan reddeder (`409 BACKUP_RESTORE_IN_PROGRESS`);
+böylece iki geri yükleme başlık olmadan da iç içe geçemez. Elle alınan yedek,
+istek kimliğini Agent'ın iş anahtarı olarak taşır. Bir veritabanı sunucusunun
+kendi hesabındaki değişiklikler sırayla çalışır. Yönetici hesabı ve VPN eşi
+yanıtları hiç saklanmaz; veritabanı rotasının yanıtı, o isteğin ürettiği bir
+parola taşıyorsa saklanmaz.
+
+Bu sekiz rotada başlıksız istek, işleyiciden önce `428 REQUEST_ID_REQUIRED` ile
+reddedilir: güncellemeden önce açılmış bir sayfa bunları korumasız
+çalıştıramamalıdır. Bu sekizinde web arayüzü kaybolan yanıtı kısa bir
+beklemeden sonra aynı kimlikle bir kez daha ister ve o yanıtı kullanır. Panel'in
+kendisinin gönderdiği ret, durum kodu ne olursa olsun, kaybolan yanıt değildir.
+İkinci soru da yanıt getirmezse ekran sonucun bilinmediğini ve yanıtın yeniden
+sorulduğunu söyler, durumu yeniden okur ve o okuma yanıtlanana dek değiştiren
+denetimlerini kapalı tutar. Diğer her rota, başlık olsun olmasın, eskisi gibi
+davranır.
+
+**Bilerek henüz kapsanmayanlar.** Dökümün bulduğu diğer zararlı rotalar (hizmet
+ve uygulama yeniden başlatma, planlar, kayıtlar); durumu doğru bırakıp yanlış
+bildiren yaklaşık 38 rota; dökümün sınıflandıramadığı 7 rota; sürüm belirteci
+taşıyan rotalar. Koruma geneldir; bunların her biri, kötü sonucun kendi
+doğrulamasıyla sonraki bir gruptur.
+
+**Sonuçlar.**
+
+- Güncelleme sırasında açık olan sayfa, yeniden yüklenene dek sekiz rotada
+  reddedilir. Sürüm notları bunu söyler. Web arayüzü olmayan bir istemci
+  başlığı kendisi gönderir.
+- Sayfadan ayrılmak ya da sayfayı kapatmak bu sekiz değişikliği artık iptal
+  etmez: kabul edilen bir geri yükleme, içe aktarım, sertifika düzenleme, yedek
+  ya da veritabanı değişikliği sonuna ya da süre sınırına kadar çalışır.
+- Tek seferlik gizli bilgiler saklanmaz; bu yüzden gizli bilgi taşıyan kayıp
+  bir yanıt yeniden gösterilemez: yapılandırması ulaşmayan VPN eşi mevcut
+  teslim alındısıyla iptal edilir ve yeni bir eş oluşturulur; üretilmiş
+  veritabanı parolası yeniden belirlenir. Ekranlar bunu yerinde söyler. Panel'de
+  bir veritabanı kullanıcısının parolasını belirleyen bir denetim henüz yoktur;
+  o yüzden bu, motorda yapılır.
+- Tablo sahibin verisi değildir. Eski bir Panel, 43. girdiyi taşıyan defterde
+  açılmayı reddeder; geri dönüş, önceki her göçte olduğu gibi güncelleme
+  öncesi anlık görüntünün geri yüklenmesidir ve tablonun geri yüklemede
+  kaybolması zararsızdır: unutulmuş bir kimliğin yinelemesi o zaman ilk
+  geliştir.
+- Elle alınan yedek artık, zamanlanmış yedeğin hep yaptığı gibi, bu işin daha
+  önce yayımladığı arşivi bulmak için alan adının mevcut arşivlerinin
+  bildirimlerini okur.
+
+**Kanıt durumu.** Korumanın, sekiz rotanın her birinin ürünün yönlendiricisi
+üzerinden sahte bir Agent ile (art arda üç ve aynı anda üç gönderim: tek etki,
+aynı yanıt), bağlantıdan ayrılmış bağlamın, Agent'ın geri yükleme kilidinin ve
+yedek iş anahtarının bileşen testleri; başlığın, ikinci sormanın ve metinlerin
+web testleri. Korumanın sözleşmesini tutan yerel bir sahte sunucuya karşı
+gerçek bir Chrome: bağlantı gerçekten sıfırlandığında tek tıklama tek kimlikle
+en çok 10 kez ulaştı ve her değişiklik bir kez yapıldı (dayanıklılık
+sözleşmesi, 2026-10-10 kaydı). Henüz ölçülmedi: gerçek bir Panel'e karşı isteği
+yeniden gönderen gerçek bir tarayıcı, sekizden birinin ortasında Panel'in
+yeniden başlaması ve gerçek hizmetler. Kurulu sunuculara dokunulmadı; karar onların güncellenmesine
+yetki vermez.
+
 ---
 
 ## D-028 · Boş çift PowerDNS birincili, ölçülen kapsam içinde sunuluyor

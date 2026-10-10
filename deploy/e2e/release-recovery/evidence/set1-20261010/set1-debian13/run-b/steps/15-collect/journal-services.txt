@@ -1,0 +1,239 @@
+2026-10-08T22:02:11.513987+00:00 dns-debian13 systemd[1]: Starting mariadb.service - MariaDB 11.8.6 database server...
+2026-10-08T22:02:11.600258+00:00 dns-debian13 (mariadbd)[7003]: mariadb.service: Referenced but unset environment variable evaluates to an empty string: MYSQLD_OPTS, _WSREP_NEW_CLUSTER
+2026-10-08T22:02:11.639268+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] Starting MariaDB 11.8.6-MariaDB-0+deb13u1 from Debian source revision 9bfea48ce1214cc4470f6f6f8a4e30352cef84e7 server_uid ewHC0iXTbxcy4rWctYmifQ9FJtc= as process 7003
+2026-10-08T22:02:11.661556+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: Compressed tables use zlib 1.3.1
+2026-10-08T22:02:11.662440+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-08T22:02:11.662526+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-08T22:02:11.662684+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: Using io_uring
+2026-10-08T22:02:11.663079+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: innodb_buffer_pool_size_max=128m, innodb_buffer_pool_size=128m
+2026-10-08T22:02:11.669774+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: Initialized memory pressure event listener
+2026-10-08T22:02:11.669774+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-08T22:02:11.670496+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: File system buffers for log disabled (block size=512 bytes)
+2026-10-08T22:02:11.681752+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: End of log at LSN=45482
+2026-10-08T22:02:11.739539+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: Opened 3 undo tablespaces
+2026-10-08T22:02:11.739539+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+2026-10-08T22:02:11.739804+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-08T22:02:11.739804+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-08T22:02:11.740298+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: log sequence number 45482; transaction id 14
+2026-10-08T22:02:11.740298+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] Plugin 'FEEDBACK' is disabled.
+2026-10-08T22:02:11.740432+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] Plugin 'wsrep-provider' is disabled.
+2026-10-08T22:02:11.740772+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+2026-10-08T22:02:11.745184+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] InnoDB: Buffer pool(s) load completed at 261008 22:02:11
+2026-10-08T22:02:11.948502+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] Server socket created on IP: '127.0.0.1', port: '3306'.
+2026-10-08T22:02:11.953396+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] mariadbd: Event Scheduler: Loaded 0 events
+2026-10-08T22:02:11.960004+00:00 dns-debian13 mariadbd[7003]: 2026-10-08 22:02:11 0 [Note] /usr/sbin/mariadbd: ready for connections.
+2026-10-08T22:02:11.960004+00:00 dns-debian13 mariadbd[7003]: Version: '11.8.6-MariaDB-0+deb13u1 from Debian'  socket: '/run/mysqld/mysqld.sock'  port: 3306  -- Please help get to 10k stars at https://github.com/MariaDB/Server
+2026-10-08T22:02:12.034710+00:00 dns-debian13 systemd[1]: Started mariadb.service - MariaDB 11.8.6 database server.
+2026-10-08T22:02:12.036057+00:00 dns-debian13 /etc/mysql/debian-start[7021]: Upgrading MariaDB tables if necessary.
+2026-10-08T22:02:12.076526+00:00 dns-debian13 /etc/mysql/debian-start[7032]: Checking for insecure root accounts.
+2026-10-08T22:03:22.712592+00:00 dns-debian13 systemd[1]: Starting postgresql@17-main.service - PostgreSQL Cluster 17-main...
+2026-10-08T22:03:24.924407+00:00 dns-debian13 systemd[1]: Started postgresql@17-main.service - PostgreSQL Cluster 17-main.
+2026-10-08T22:03:43.576727+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:03:43.950134+00:00 dns-debian13 postfix[16909]: updating /etc/localtime => /var/spool/postfix//etc/localtime
+2026-10-08T22:03:43.950134+00:00 dns-debian13 postfix[16909]: updating /etc/services => /var/spool/postfix//etc/services
+2026-10-08T22:03:43.950134+00:00 dns-debian13 postfix[16909]: updating /etc/resolv.conf => /var/spool/postfix//etc/resolv.conf
+2026-10-08T22:03:43.950134+00:00 dns-debian13 postfix[16909]: updating /etc/hosts => /var/spool/postfix//etc/hosts
+2026-10-08T22:03:43.950134+00:00 dns-debian13 postfix[16909]: updating /etc/host.conf => /var/spool/postfix//etc/host.conf
+2026-10-08T22:03:43.950134+00:00 dns-debian13 postfix[16909]: updating /etc/nsswitch.conf => /var/spool/postfix//etc/nsswitch.conf
+2026-10-08T22:03:43.955397+00:00 dns-debian13 postfix[16912]: '/usr/lib/x86_64-linux-gnu/libnss_resolve.so.2' -> 'lib/libnss_resolve.so.2'
+2026-10-08T22:03:43.955397+00:00 dns-debian13 postfix[16912]: '/usr/lib/x86_64-linux-gnu/libnss_myhostname.so.2' -> 'lib/libnss_myhostname.so.2'
+2026-10-08T22:03:44.014317+00:00 dns-debian13 postfix[16941]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-08T22:03:44.014294+00:00 dns-debian13 postfix/postfix-script[16941]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-08T22:03:44.102095+00:00 dns-debian13 postfix/master[16967]: daemon started -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:03:44.103055+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:03:49.682308+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:03:51.570409+00:00 dns-debian13 postfix[17279]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:03:51.570386+00:00 dns-debian13 postfix/postfix-script[17279]: refreshing the Postfix mail system
+2026-10-08T22:03:51.576816+00:00 dns-debian13 postfix/master[16967]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:03:51.580739+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:03:51.615404+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:03:51.711608+00:00 dns-debian13 postfix[17299]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:03:51.711544+00:00 dns-debian13 postfix/postfix-script[17299]: refreshing the Postfix mail system
+2026-10-08T22:03:51.719639+00:00 dns-debian13 postfix/master[16967]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:03:51.720529+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:04:09.666620+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:04:11.550096+00:00 dns-debian13 postfix[20471]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:04:11.550038+00:00 dns-debian13 postfix/postfix-script[20471]: refreshing the Postfix mail system
+2026-10-08T22:04:11.555391+00:00 dns-debian13 postfix/master[16967]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:04:11.557003+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:04:11.591401+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:04:11.668691+00:00 dns-debian13 postfix[20491]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:04:11.668660+00:00 dns-debian13 postfix/postfix-script[20491]: refreshing the Postfix mail system
+2026-10-08T22:04:11.673814+00:00 dns-debian13 postfix/master[16967]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:04:11.676605+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:04:40.827941+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:04:42.418984+00:00 dns-debian13 postfix[23977]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:04:42.418962+00:00 dns-debian13 postfix/postfix-script[23977]: refreshing the Postfix mail system
+2026-10-08T22:04:42.425397+00:00 dns-debian13 postfix/master[16967]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:04:42.428426+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:04:42.465203+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:04:42.550714+00:00 dns-debian13 postfix[23997]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:04:42.550682+00:00 dns-debian13 postfix/postfix-script[23997]: refreshing the Postfix mail system
+2026-10-08T22:04:42.556724+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:04:42.556820+00:00 dns-debian13 postfix/master[16967]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:04:43.808454+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:04:43.892677+00:00 dns-debian13 postfix[24181]: postfix/postlog: stopping the Postfix mail system
+2026-10-08T22:04:43.892609+00:00 dns-debian13 postfix/postfix-script[24181]: stopping the Postfix mail system
+2026-10-08T22:04:43.896291+00:00 dns-debian13 postfix/master[16967]: terminating on signal 15
+2026-10-08T22:04:43.902255+00:00 dns-debian13 systemd[1]: postfix.service: Deactivated successfully.
+2026-10-08T22:04:43.902535+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:04:43.902588+00:00 dns-debian13 systemd[1]: postfix.service: Consumed 1.143s CPU time, 6.6M memory peak.
+2026-10-08T22:04:43.908566+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:04:44.222597+00:00 dns-debian13 postfix[24302]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-08T22:04:44.222517+00:00 dns-debian13 postfix/postfix-script[24302]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-08T22:04:44.309749+00:00 dns-debian13 postfix/master[24328]: daemon started -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:04:44.312467+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:04:48.931077+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:04:49.024357+00:00 dns-debian13 postfix[24673]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:04:49.024519+00:00 dns-debian13 postfix/postfix-script[24673]: refreshing the Postfix mail system
+2026-10-08T22:04:49.030159+00:00 dns-debian13 postfix/master[24328]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:04:49.034461+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:04:56.876515+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:04:58.478180+00:00 dns-debian13 postfix[25252]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:04:58.478110+00:00 dns-debian13 postfix/postfix-script[25252]: refreshing the Postfix mail system
+2026-10-08T22:04:58.486481+00:00 dns-debian13 postfix/master[24328]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:04:58.487646+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:04:58.542348+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:04:58.645456+00:00 dns-debian13 postfix[25272]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:04:58.645428+00:00 dns-debian13 postfix/postfix-script[25272]: refreshing the Postfix mail system
+2026-10-08T22:04:58.652089+00:00 dns-debian13 postfix/master[24328]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:04:58.658614+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:05:05.650623+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:05:07.540817+00:00 dns-debian13 postfix[25678]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:05:07.540790+00:00 dns-debian13 postfix/postfix-script[25678]: refreshing the Postfix mail system
+2026-10-08T22:05:07.546616+00:00 dns-debian13 postfix/master[24328]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:05:07.548853+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:05:07.588649+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:05:07.669541+00:00 dns-debian13 postfix[25699]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:05:07.669511+00:00 dns-debian13 postfix/postfix-script[25699]: refreshing the Postfix mail system
+2026-10-08T22:05:07.675123+00:00 dns-debian13 postfix/master[24328]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:05:07.676632+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:05:23.700470+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:05:25.602794+00:00 dns-debian13 postfix[26542]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:05:25.603205+00:00 dns-debian13 postfix/postfix-script[26542]: refreshing the Postfix mail system
+2026-10-08T22:05:25.609991+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:05:25.610390+00:00 dns-debian13 postfix/master[24328]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:05:29.827721+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:05:31.418333+00:00 dns-debian13 postfix[26706]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:05:31.418312+00:00 dns-debian13 postfix/postfix-script[26706]: refreshing the Postfix mail system
+2026-10-08T22:05:31.424297+00:00 dns-debian13 postfix/master[24328]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:05:31.425741+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:05:31.461358+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:05:31.563513+00:00 dns-debian13 postfix[26726]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:05:31.563489+00:00 dns-debian13 postfix/postfix-script[26726]: refreshing the Postfix mail system
+2026-10-08T22:05:31.569867+00:00 dns-debian13 postfix/master[24328]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:05:31.570225+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:05:33.124425+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:05:33.206102+00:00 dns-debian13 postfix[26904]: postfix/postlog: stopping the Postfix mail system
+2026-10-08T22:05:33.206028+00:00 dns-debian13 postfix/postfix-script[26904]: stopping the Postfix mail system
+2026-10-08T22:05:33.208301+00:00 dns-debian13 postfix/master[24328]: terminating on signal 15
+2026-10-08T22:05:33.214528+00:00 dns-debian13 systemd[1]: postfix.service: Deactivated successfully.
+2026-10-08T22:05:33.214842+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:05:33.214904+00:00 dns-debian13 systemd[1]: postfix.service: Consumed 1.253s CPU time, 6.1M memory peak.
+2026-10-08T22:05:33.217100+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:05:33.508661+00:00 dns-debian13 postfix[26996]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-08T22:05:33.508633+00:00 dns-debian13 postfix/postfix-script[26996]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-08T22:05:33.608711+00:00 dns-debian13 postfix/master[27022]: daemon started -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:05:33.611012+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:05:39.008378+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:05:39.097626+00:00 dns-debian13 postfix[27372]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:05:39.097597+00:00 dns-debian13 postfix/postfix-script[27372]: refreshing the Postfix mail system
+2026-10-08T22:05:39.103412+00:00 dns-debian13 postfix/master[27022]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:05:39.104568+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:05:46.953183+00:00 dns-debian13 systemd[1]: Started cron.service - Regular background program processing daemon.
+2026-10-08T22:05:46.988395+00:00 dns-debian13 cron[27887]: (CRON) INFO (pidfile fd = 3)
+2026-10-08T22:05:46.992278+00:00 dns-debian13 cron[27887]: (CRON) INFO (Running @reboot jobs)
+2026-10-08T22:08:17.881546+00:00 dns-debian13 postfix/smtpd[29396]: connect from localhost[127.0.0.1]
+2026-10-08T22:08:17.893731+00:00 dns-debian13 postfix/smtpd[29396]: DA29A422CF: client=localhost[127.0.0.1]
+2026-10-08T22:08:17.893983+00:00 dns-debian13 postfix/smtpd[29396]: disconnect from localhost[127.0.0.1] ehlo=1 mail=1 rcpt=1 rset=1 quit=1 commands=5
+2026-10-08T22:08:17.894225+00:00 dns-debian13 postfix/cleanup[29400]: DA29A422CF: removed (canceled)
+2026-10-08T22:08:17.906015+00:00 dns-debian13 postfix/submission/smtpd[29401]: connect from localhost[127.0.0.1]
+2026-10-08T22:08:17.906954+00:00 dns-debian13 postfix/submission/smtpd[29401]: disconnect from localhost[127.0.0.1] ehlo=1 quit=1 commands=2
+2026-10-08T22:08:18.407397+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:08:20.596245+00:00 dns-debian13 postfix[29478]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:08:20.596101+00:00 dns-debian13 postfix/postfix-script[29478]: refreshing the Postfix mail system
+2026-10-08T22:08:20.602563+00:00 dns-debian13 postfix/master[27022]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:08:20.603352+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:08:22.131705+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:08:24.627419+00:00 dns-debian13 postfix[29780]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:08:24.627366+00:00 dns-debian13 postfix/postfix-script[29780]: refreshing the Postfix mail system
+2026-10-08T22:08:24.633697+00:00 dns-debian13 postfix/master[27022]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:08:24.636850+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:08:25.750745+00:00 dns-debian13 postfix/smtpd[29949]: connect from localhost[127.0.0.1]
+2026-10-08T22:08:25.762070+00:00 dns-debian13 postfix/smtpd[29949]: BA08E40882: client=localhost[127.0.0.1]
+2026-10-08T22:08:25.762590+00:00 dns-debian13 postfix/cleanup[29953]: BA08E40882: removed (canceled)
+2026-10-08T22:08:25.762718+00:00 dns-debian13 postfix/smtpd[29949]: disconnect from localhost[127.0.0.1] ehlo=1 mail=1 rcpt=1 rset=1 quit=1 commands=5
+2026-10-08T22:08:25.773586+00:00 dns-debian13 postfix/submission/smtpd[29954]: connect from localhost[127.0.0.1]
+2026-10-08T22:08:25.774464+00:00 dns-debian13 postfix/submission/smtpd[29954]: disconnect from localhost[127.0.0.1] ehlo=1 quit=1 commands=2
+2026-10-08T22:08:25.890836+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:08:27.487379+00:00 dns-debian13 postfix[29973]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:08:27.487343+00:00 dns-debian13 postfix/postfix-script[29973]: refreshing the Postfix mail system
+2026-10-08T22:08:27.493905+00:00 dns-debian13 postfix/master[27022]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:08:27.494554+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:08:28.554064+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:08:30.451541+00:00 dns-debian13 postfix[30149]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:08:30.451504+00:00 dns-debian13 postfix/postfix-script[30149]: refreshing the Postfix mail system
+2026-10-08T22:08:30.457450+00:00 dns-debian13 postfix/master[27022]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:08:30.460934+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:08:31.779543+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:08:33.362342+00:00 dns-debian13 postfix[30435]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:08:33.362319+00:00 dns-debian13 postfix/postfix-script[30435]: refreshing the Postfix mail system
+2026-10-08T22:08:33.368604+00:00 dns-debian13 postfix/master[27022]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:08:33.376496+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:08:34.482673+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:08:36.378000+00:00 dns-debian13 postfix[30611]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:08:36.377974+00:00 dns-debian13 postfix/postfix-script[30611]: refreshing the Postfix mail system
+2026-10-08T22:08:36.383491+00:00 dns-debian13 postfix/master[27022]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:08:36.384388+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:08:40.900272+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:08:42.471650+00:00 dns-debian13 postfix[30813]: postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-08T22:08:42.471606+00:00 dns-debian13 postfix[30813]: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign
+2026-10-08T22:08:43.473409+00:00 dns-debian13 systemd[1]: postfix.service: Control process exited, code=exited, status=1/FAILURE
+2026-10-08T22:08:43.473464+00:00 dns-debian13 systemd[1]: Reload failed for postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:08:46.746400+00:00 dns-debian13 systemd[1]: Reloading postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:08:48.342840+00:00 dns-debian13 postfix[30924]: postfix/postlog: refreshing the Postfix mail system
+2026-10-08T22:08:48.342802+00:00 dns-debian13 postfix/postfix-script[30924]: refreshing the Postfix mail system
+2026-10-08T22:08:48.348856+00:00 dns-debian13 postfix/master[27022]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:08:48.355670+00:00 dns-debian13 systemd[1]: Reloaded postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:08:49.229277+00:00 dns-debian13 postfix/smtpd[31075]: connect from localhost[127.0.0.1]
+2026-10-08T22:08:49.240816+00:00 dns-debian13 postfix/smtpd[31075]: 3AC3F422B9: client=localhost[127.0.0.1]
+2026-10-08T22:08:49.241165+00:00 dns-debian13 postfix/smtpd[31075]: disconnect from localhost[127.0.0.1] ehlo=1 mail=1 rcpt=1 rset=1 quit=1 commands=5
+2026-10-08T22:08:49.241300+00:00 dns-debian13 postfix/cleanup[31079]: 3AC3F422B9: removed (canceled)
+2026-10-08T22:08:49.252371+00:00 dns-debian13 postfix/submission/smtpd[31080]: connect from localhost[127.0.0.1]
+2026-10-08T22:08:49.253264+00:00 dns-debian13 postfix/submission/smtpd[31080]: disconnect from localhost[127.0.0.1] ehlo=1 quit=1 commands=2
+2026-10-08T22:08:53.244370+00:00 dns-debian13 systemd[1]: Reloading postgresql@17-main.service - PostgreSQL Cluster 17-main...
+2026-10-08T22:08:53.298781+00:00 dns-debian13 systemd[1]: Reloaded postgresql@17-main.service - PostgreSQL Cluster 17-main.
+2026-10-08T22:08:57.860606+00:00 dns-debian13 systemd[1]: Reloading postgresql@17-main.service - PostgreSQL Cluster 17-main...
+2026-10-08T22:08:57.923106+00:00 dns-debian13 systemd[1]: Reloaded postgresql@17-main.service - PostgreSQL Cluster 17-main.
+2026-10-08T22:09:01.998701+00:00 dns-debian13 CRON[32328]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+2026-10-08T22:09:01.999125+00:00 dns-debian13 CRON[32330]: (root) CMD (  [ -x /usr/lib/php/sessionclean ] && if [ ! -d /run/systemd/system ]; then /usr/lib/php/sessionclean; fi)
+2026-10-08T22:09:02.000698+00:00 dns-debian13 CRON[32328]: pam_unix(cron:session): session closed for user root
+2026-10-08T22:09:04.594259+00:00 dns-debian13 systemd[1]: Reloading postgresql@17-main.service - PostgreSQL Cluster 17-main...
+2026-10-08T22:09:04.623537+00:00 dns-debian13 systemctl[32608]: Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.
+2026-10-08T22:09:04.624602+00:00 dns-debian13 systemd[1]: postgresql@17-main.service: Control process exited, code=exited, status=5/NOTINSTALLED
+2026-10-08T22:09:04.624612+00:00 dns-debian13 systemd[1]: Reload failed for postgresql@17-main.service - PostgreSQL Cluster 17-main.
+2026-10-08T22:09:04.656311+00:00 dns-debian13 systemd[1]: Reloading postgresql@17-main.service - PostgreSQL Cluster 17-main...
+2026-10-08T22:09:04.693682+00:00 dns-debian13 systemctl[32612]: Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.
+2026-10-08T22:09:04.695450+00:00 dns-debian13 systemd[1]: postgresql@17-main.service: Control process exited, code=exited, status=5/NOTINSTALLED
+2026-10-08T22:09:04.695461+00:00 dns-debian13 systemd[1]: Reload failed for postgresql@17-main.service - PostgreSQL Cluster 17-main.
+2026-10-08T22:09:06.319618+00:00 dns-debian13 systemd[1]: Reloading postgresql@17-main.service - PostgreSQL Cluster 17-main...
+2026-10-08T22:09:06.384042+00:00 dns-debian13 systemd[1]: Reloaded postgresql@17-main.service - PostgreSQL Cluster 17-main.
+2026-10-08T22:09:19.264484+00:00 dns-debian13 postfix/trivial-rewrite[31078]: table hash:/etc/postfix/virtual(0,lock|utf8_request) has changed -- restarting
+2026-10-08T22:09:20.892513+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:09:20.959600+00:00 dns-debian13 postfix[34024]: postfix/postlog: stopping the Postfix mail system
+2026-10-08T22:09:20.959589+00:00 dns-debian13 postfix/postfix-script[34024]: stopping the Postfix mail system
+2026-10-08T22:09:20.961495+00:00 dns-debian13 postfix/master[27022]: terminating on signal 15
+2026-10-08T22:09:20.976393+00:00 dns-debian13 systemd[1]: postfix.service: Deactivated successfully.
+2026-10-08T22:09:20.976654+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:09:20.976845+00:00 dns-debian13 systemd[1]: postfix.service: Consumed 1.394s CPU time, 15.2M memory peak.
+2026-10-08T22:09:21.513280+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-08T22:09:21.829448+00:00 dns-debian13 postfix[34183]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-08T22:09:21.829428+00:00 dns-debian13 postfix/postfix-script[34183]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-08T22:09:21.921375+00:00 dns-debian13 postfix/master[34209]: daemon started -- version 3.10.13, configuration /etc/postfix
+2026-10-08T22:09:21.923034+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-08T22:09:26.683273+00:00 dns-debian13 postfix/smtpd[34313]: connect from localhost[127.0.0.1]
+2026-10-08T22:09:26.694592+00:00 dns-debian13 postfix/smtpd[34313]: A98B4422D4: client=localhost[127.0.0.1]
+2026-10-08T22:09:26.694925+00:00 dns-debian13 postfix/smtpd[34313]: disconnect from localhost[127.0.0.1] ehlo=1 mail=1 rcpt=1 rset=1 quit=1 commands=5
+2026-10-08T22:09:26.695169+00:00 dns-debian13 postfix/cleanup[34317]: A98B4422D4: removed (canceled)
+2026-10-08T22:09:26.705854+00:00 dns-debian13 postfix/submission/smtpd[34318]: connect from localhost[127.0.0.1]
+2026-10-08T22:09:26.706937+00:00 dns-debian13 postfix/submission/smtpd[34318]: disconnect from localhost[127.0.0.1] ehlo=1 quit=1 commands=2

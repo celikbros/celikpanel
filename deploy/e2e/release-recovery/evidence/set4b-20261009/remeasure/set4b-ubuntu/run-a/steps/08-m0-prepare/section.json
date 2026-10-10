@@ -1,0 +1,213 @@
+{
+  "calls": [],
+  "checks": [
+    {
+      "detail": {
+        "id": 1,
+        "name": "set1-owner.test",
+        "status": "active",
+        "subscription_id": 2
+      },
+      "name": "the Panel's database names the owner's site and its subscription",
+      "ok": true
+    },
+    {
+      "detail": {
+        "acme-staging-v02.api.letsencrypt.org": "::1             acme-staging-v02.api.letsencrypt.org",
+        "acme-v02.api.letsencrypt.org": "::1             acme-v02.api.letsencrypt.org",
+        "celikpanel.net": "127.0.0.1       celikpanel.net"
+      },
+      "name": "lab isolation: celikpanel.net resolves to this guest's loopback only (its own fixture origin)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "acme-staging-v02.api.letsencrypt.org": "::1             acme-staging-v02.api.letsencrypt.org",
+        "acme-v02.api.letsencrypt.org": "::1             acme-v02.api.letsencrypt.org",
+        "celikpanel.net": "127.0.0.1       celikpanel.net"
+      },
+      "name": "lab isolation: the two Let's Encrypt directory names resolve to this guest's loopback only",
+      "ok": true
+    },
+    {
+      "detail": {
+        "bytes": 423,
+        "equals_the_pinned_digest": true,
+        "exists": true,
+        "owner_package": {
+          "answer": "nginx-common: /etc/nginx/snippets/fastcgi-php.conf",
+          "asked": "dpkg -S /etc/nginx/snippets/fastcgi-php.conf",
+          "exists": true,
+          "path": "/etc/nginx/snippets/fastcgi-php.conf",
+          "returncode": 0
+        },
+        "path": "/etc/nginx/snippets/fastcgi-php.conf",
+        "pinned_in_the_product_test": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+        "sha256": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+        "snippets_directory": {
+          "exists": true,
+          "group": "root",
+          "kind": "directory",
+          "mode": "0755",
+          "owner": "root",
+          "path": "/etc/nginx/snippets"
+        }
+      },
+      "name": "item 7: the package's /etc/nginx/snippets/fastcgi-php.conf has the SHA-256 the product's test pins",
+      "ok": true
+    },
+    {
+      "detail": {
+        "at": "2026-10-09T15:39:36Z",
+        "output": "nginx: the configuration file /etc/nginx/nginx.conf syntax is ok\nnginx: configuration file /etc/nginx/nginx.conf test is successful\n",
+        "returncode": 0,
+        "status": "ok"
+      },
+      "name": "`nginx -t` passes before anything is measured",
+      "ok": true
+    }
+  ],
+  "finished_at": "2026-10-09T15:39:35Z",
+  "isolation": {
+    "acme_confirmed": true,
+    "before_the_acme_lines": {
+      "acme-staging-v02.api.letsencrypt.org": "",
+      "acme-v02.api.letsencrypt.org": "",
+      "celikpanel.net": "127.0.0.1       celikpanel.net"
+    },
+    "hosts_lines": [
+      "127.0.0.1 localhost",
+      "::1 ip6-localhost ip6-loopback",
+      "fe00::0 ip6-localnet",
+      "ff00::0 ip6-mcastprefix",
+      "ff02::1 ip6-allnodes",
+      "ff02::2 ip6-allrouters",
+      "ff02::3 ip6-allhosts",
+      "127.0.0.1 celikpanel.net # disposable CelikPanel worker fixture",
+      "127.0.0.1 acme-v02.api.letsencrypt.org",
+      "::1 acme-v02.api.letsencrypt.org",
+      "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+      "::1 acme-staging-v02.api.letsencrypt.org"
+    ],
+    "how": "`getent -s files hosts NAME`: the guest's own hosts file only, no DNS question is sent",
+    "loopback_only": {
+      "acme-staging-v02.api.letsencrypt.org": true,
+      "acme-v02.api.letsencrypt.org": true,
+      "celikpanel.net": true
+    },
+    "resolves": {
+      "acme-staging-v02.api.letsencrypt.org": "::1             acme-staging-v02.api.letsencrypt.org",
+      "acme-v02.api.letsencrypt.org": "::1             acme-v02.api.letsencrypt.org",
+      "celikpanel.net": "127.0.0.1       celikpanel.net"
+    }
+  },
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/006-panel-state-before.json",
+      "lab_action": false,
+      "label": "panel-state-before",
+      "mode": "read-panel-state",
+      "owner_action": false
+    },
+    {
+      "file": "native/007-isolation-before.json",
+      "label": "isolation-before",
+      "mode": "read-isolation",
+      "owner_action": false
+    },
+    {
+      "file": "native/008-lab-isolate-acme.json",
+      "lab_action": true,
+      "label": "lab-isolate-acme",
+      "mode": "lab-isolate-acme",
+      "owner_action": false
+    },
+    {
+      "file": "native/009-isolation.json",
+      "label": "isolation",
+      "mode": "read-isolation",
+      "owner_action": false
+    },
+    {
+      "file": "native/010-platform.json",
+      "label": "platform",
+      "mode": "read-platform",
+      "owner_action": false
+    }
+  ],
+  "nginx_php_snippet": {
+    "bytes": 423,
+    "equals_the_pinned_digest": true,
+    "exists": true,
+    "owner_package": {
+      "answer": "nginx-common: /etc/nginx/snippets/fastcgi-php.conf",
+      "asked": "dpkg -S /etc/nginx/snippets/fastcgi-php.conf",
+      "exists": true,
+      "path": "/etc/nginx/snippets/fastcgi-php.conf",
+      "returncode": 0
+    },
+    "path": "/etc/nginx/snippets/fastcgi-php.conf",
+    "pinned_in_the_product_test": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "sha256": "a9dd98bf9631d727f0a846a9c7f4fe6193468a714c782df26d5cc9a7756411f2",
+    "snippets_directory": {
+      "exists": true,
+      "group": "root",
+      "kind": "directory",
+      "mode": "0755",
+      "owner": "root",
+      "path": "/etc/nginx/snippets"
+    }
+  },
+  "node": "ubuntu",
+  "notes": [],
+  "owner_actions": [],
+  "owner_waited_for_idle": {
+    "at": "2026-10-09T15:39:33Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.3
+  },
+  "platform": {
+    "etc_php_directories": [
+      "/etc/php/8.3"
+    ],
+    "kernel": "6.8.0-138-generic",
+    "nginx_version": "nginx version: nginx/1.24.0 (Ubuntu)",
+    "os_release": {
+      "ID": "ubuntu",
+      "PRETTY_NAME": "Ubuntu 24.04.4 LTS",
+      "VERSION_CODENAME": "noble",
+      "VERSION_ID": "24.04"
+    },
+    "package_manager": "dpkg",
+    "packages": {
+      "certbot": "2.9.0-1",
+      "dovecot-core": "1:2.3.21+dfsg1-2ubuntu6.5",
+      "mariadb-server": "1:10.11.14-0ubuntu0.24.04.1",
+      "nginx": "1.24.0-2ubuntu7.18",
+      "nginx-common": "1.24.0-2ubuntu7.18",
+      "php-fpm": "2:8.3+93ubuntu2",
+      "php8.3-fpm": "8.3.6-0ubuntu0.24.04.11",
+      "postfix": "3.8.6-1ubuntu0.1",
+      "postgresql": "16+257build1.1",
+      "postgresql-16": "16.15-0ubuntu0.24.04.1",
+      "systemd": "255.4-1ubuntu8.17"
+    },
+    "php_fpm_programs": {
+      "php-fpm8.3": [
+        "PHP 8.3.6 (fpm-fcgi) (built: Sep  2 2026 12:56:02)"
+      ]
+    }
+  },
+  "section": "M0-prepare",
+  "started_at": "2026-10-09T15:39:33Z",
+  "substeps": {
+    "item 7": "passed",
+    "lab isolation": "passed",
+    "section": "passed"
+  },
+  "title": "the platform and the lab's isolation",
+  "verdict": "passed"
+}

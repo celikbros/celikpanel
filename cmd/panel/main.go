@@ -66,6 +66,12 @@ type Panel struct {
 	loginLimiter  *rateLimiter
 	demoMode      bool
 	startupGate   *panelHTTPStartupGate
+	// requestIdentities answers a re-sent state-changing request from the row
+	// of its first arrival instead of running it again (D-029). Handler tests
+	// that call a handler directly leave it nil.
+	// requestIdentities, yeniden gönderilen durum değiştiren isteği ikinci kez
+	// çalıştırmak yerine ilk gelişinin satırından yanıtlar (D-029).
+	requestIdentities *requestIdentityGuard
 	// webmailReadinessProbe is injectable only so handler tests never need a
 	// real Roundcube process. Production leaves it nil and uses the fixed,
 	// Unix-socket-backed probe.
@@ -879,8 +885,22 @@ func main() {
 	// activation restarts the panel and then verifies the published leaf over
 	// this listener. The closed gate serves a fixed recovery surface while
 	// ordinary application requests remain blocked until startup completes.
+	//
+	// A request a previous process left `running` did not finish under this
+	// one. It is marked before any application request is served, so a replay
+	// is told the outcome is unknown instead of waiting for work nobody runs
+	// (D-029). A failure here is not fatal: the guard treats a `running` row
+	// this process is not running the same way when the replay arrives.
+	// Önceki sürecin `running` bıraktığı istek bu süreçte bitmedi; herhangi bir
+	// uygulama isteğinden önce işaretlenir (D-029).
+	panel.requestIdentities = newRequestIdentityGuard(database.GetDB())
+	if interrupted, err := panel.requestIdentities.markInterruptedAtStart(context.Background()); err != nil {
+		log.Printf("[request-identity] interrupted requests could not be marked at start: %v", err)
+	} else if interrupted > 0 {
+		log.Printf("[request-identity] %d request(s) were running when the Panel stopped; their outcome is reported as unknown", interrupted)
+	}
 	applicationHandler := panel.requireRemoteDNSMachineAuth(csrfProtect(
-		panel.requireAuth(http.DefaultServeMux),
+		panel.requireAuth(panel.requestIdentities.wrap(http.DefaultServeMux)),
 	))
 	startupGate := newPanelHTTPStartupGate(applicationHandler)
 	panel.startupGate = startupGate
@@ -1136,9 +1156,14 @@ func main() {
 	// Purge expired sessions on startup and then hourly.
 	// Başlangıçta ve sonra saatlik olarak süresi dolmuş oturumları temizle.
 	_ = sessions.DeleteExpired(context.Background())
+	_, _ = panel.requestIdentities.sweepExpired(context.Background())
 	go func() {
 		for range time.Tick(time.Hour) {
 			_ = sessions.DeleteExpired(context.Background())
+			// Request identities are kept for 24 hours (D-029).
+			if _, err := panel.requestIdentities.sweepExpired(context.Background()); err != nil {
+				log.Printf("[request-identity] expired rows could not be removed: %v", err)
+			}
 		}
 	}()
 
@@ -1630,7 +1655,25 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 		// Başlat/durdur/yeniden başlat, sunucunun gerçek durumunu değiştirdi
 		// (ya da değiştiremedi) ve defterde HİÇ iz bırakmıyordu — operatör ne
 		// yaptığını gösteremiyordu, ben de yeniden kuramıyordum (25 Tem).
-		p.audit(r, "service."+req.Action+".failed:"+serviceName+" — "+auditReason(err.Error()), "service", 0)
+		// An outcome the Agent could not establish is recorded as that, not as
+		// a failure (10 Oct 2026; service_action_outcome.go).
+		// Agent'ın belirleyemediği sonuç hata diye değil, bilinmiyor diye yazılır.
+		outcome := "failed"
+		if reply.Outcome == transport.ServiceActionUnknown {
+			outcome = "unknown"
+		}
+		p.audit(r, "service."+req.Action+"."+outcome+":"+serviceName+" — "+auditReason(err.Error()), "service", 0)
+		if reply.Outcome != "" {
+			// The action may have changed real state; the cached scan is
+			// refreshed so the page does not keep showing the earlier one. The
+			// answer is the outcome either way.
+			if _, scanErr := p.scanManagedServices(r.Context()); scanErr != nil {
+				log.Printf("service scan after %s %s (%s): %v", req.Action, serviceName, outcome, scanErr)
+			}
+			if writeServiceActionOutcome(w, serviceName, req.Action, &reply) {
+				return
+			}
+		}
 		writeServerError(w, err)
 		return
 	}
@@ -1654,9 +1697,23 @@ func (p *Panel) handleServiceAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(reply)
+	json.NewEncoder(w).Encode(serviceActionSuccessAnswer(serviceName, req.Action, reply))
 }
 
+// handleConfig reads (GET ?path=) and writes (POST {path, content, version}) a
+// managed configuration file through the Agent.
+//
+// A read answers the file's content with the version of the exact bytes read,
+// or an error: a file that could not be read is never answered as empty. A
+// write must carry that version back and is refused, before anything is
+// written, when it carries none or when the file changed since (9 Oct 2026).
+// The audit entry names the path and the refusal's code, never the content or
+// the line a service said about it.
+//
+// handleConfig, yönetilen bir yapılandırma dosyasını Agent üzerinden okur ve
+// yazar. Okuma, dosyanın içeriğini okunan baytların sürümüyle ya da bir hatayla
+// yanıtlar; okunamayan dosya asla boş diye yanıtlanmaz. Yazı o sürümü geri
+// taşımak zorundadır.
 func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -1668,9 +1725,22 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Path    string `json:"path"`
 			Content string `json:"content"`
+			Version string `json:"version"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			writeClientError(w, http.StatusBadRequest, "invalid request")
+			return
+		}
+		if req.Path == "" {
+			writeClientError(w, http.StatusBadRequest, "path required")
+			return
+		}
+		// A page that never loaded the file cannot replace it. The Agent
+		// refuses it too.
+		// Dosyayı hiç yüklememiş bir sayfa onu değiştiremez.
+		if req.Version == "" {
+			p.audit(r, "config.write.refused:"+req.Path+" — "+errCodeSettingsVersionRequired, "config", 0)
+			writeSettingsVersionRequired(w, settingsResourceConfigFile)
 			return
 		}
 
@@ -1678,6 +1748,7 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 		err := p.callAgent("Agent.UpdateConfig", &transport.UpdateConfigArgs{
 			Path:    req.Path,
 			Content: req.Content,
+			Version: req.Version,
 		}, &reply)
 
 		if err != nil {
@@ -1689,11 +1760,15 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if reply.Error != nil {
-			p.audit(r, "config.write.failed:"+req.Path+" — "+auditReason(reply.Error.Message), "config", 0)
+			p.audit(r, "config.write.failed:"+req.Path+" — "+auditReason(string(reply.Error.Code)+" "+reply.Error.Reason), "config", 0)
 			writeConfigRPCError(w, reply.Error)
 			return
 		}
-		if !reply.Success {
+		// An Agent that does not answer with the version of what is on disk
+		// now is an older one that wrote without checking; the result cannot
+		// be confirmed.
+		// Diskteki dosyanın sürümüyle yanıt vermeyen Agent eski bir Agent'tır.
+		if !reply.Success || reply.Version == "" {
 			err := errors.New("agent did not confirm configuration update")
 			p.audit(r, "config.write.failed:"+req.Path+" — "+auditReason(err.Error()), "config", 0)
 			writeServerError(w, err)
@@ -1704,8 +1779,24 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 		// than a service restart, which has always been audited.
 		// Root'a ait bir dosyayı yazmak, her zaman denetlenen servis yeniden
 		// başlatmasından daha sessiz olmaması gereken son şeydir.
-		p.audit(r, "config.write:"+req.Path, "config", 0)
-		json.NewEncoder(w).Encode(map[string]bool{"success": reply.Success})
+		if reply.Unchanged {
+			p.audit(r, "config.write.unchanged:"+req.Path, "config", 0)
+		} else {
+			p.audit(r, "config.write:"+req.Path+" — "+auditReason(reply.Applied+" backup "+reply.Backup), "config", 0)
+		}
+		restart := reply.RestartRequired
+		if restart == nil {
+			restart = []string{}
+		}
+		json.NewEncoder(w).Encode(map[string]any{
+			"success":          true,
+			"version":          reply.Version,
+			"unchanged":        reply.Unchanged,
+			"backup":           reply.Backup,
+			"applied":          reply.Applied,
+			"daemon_check":     reply.DaemonCheck,
+			"restart_required": restart,
+		})
 		return
 	}
 
@@ -1724,8 +1815,18 @@ func (p *Panel) handleConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if reply.Error != nil {
-		p.audit(r, `config.read.failed:`+path+` — `+auditReason(reply.Error.Message), `config`, 0)
+		p.audit(r, `config.read.failed:`+path+` — `+auditReason(string(reply.Error.Code)), `config`, 0)
 		writeConfigRPCError(w, reply.Error)
+		return
+	}
+	// No version means the Agent is an older one whose writes are not
+	// protected; its answer is not offered as something a save can be built
+	// from.
+	// Sürüm yoksa Agent eskidir; yanıtı bir kaydın kurulabileceği şey diye
+	// sunulmaz.
+	if reply.Version == "" {
+		p.audit(r, `config.read.failed:`+path+` — no version`, `config`, 0)
+		writeCurrentSettingsUnreadable(w, settingsResourceConfigFile)
 		return
 	}
 

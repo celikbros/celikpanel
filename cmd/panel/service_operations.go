@@ -76,6 +76,9 @@ type serviceOperationError struct {
 	Component string `json:"component,omitempty"`
 	Step      string `json:"step,omitempty"`
 	Detail    string `json:"detail,omitempty"`
+	// Reason refines HOST_MUTATION_BUSY with a transport.HostMutationReason*
+	// code when the cause is known; empty otherwise and for every other code.
+	Reason string `json:"reason,omitempty"`
 }
 
 type serviceOperation struct {
@@ -1065,6 +1068,9 @@ func scanServiceOperation(scanner serviceOperationScanner) (serviceOperation, er
 	}
 	if errorCode.Valid || errorMessage.Valid {
 		op.Error = &serviceOperationError{Code: errorCode.String, Message: errorMessage.String}
+		if errorCode.String == errCodeHostMutationBusy {
+			op.Error.Reason = hostMutationBusyReasonForMessage(errorMessage.String)
+		}
 		if op.Status == serviceOperationFailed && op.Result != nil {
 			if guidance, ok := serviceFailureGuidanceFromResult(string(op.Result)); ok {
 				op.Error.Component, op.Error.Step, op.Error.Detail = guidance.Component, guidance.Step, guidance.Detail

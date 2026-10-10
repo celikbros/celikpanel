@@ -1,0 +1,12 @@
+source 72b879eea commit 72b879eeaf88477133cc01bae6a615e292c00181 tree a7563a6c342f8e0ad4fd714a3e40a770614b9647
+tag v0.1.0-alpha.81 commit a0beb7263d1f4ca72258f6b306f9111ba4e2a334 tree b1dffa78bcaca9e3514e5b2bc42f0e2cf47dca2f
+baseline a0beb7263d1f4ca72258f6b306f9111ba4e2a334 tree b1dffa78bcaca9e3514e5b2bc42f0e2cf47dca2f
+good 9cb2339f10a0445f26ad7ddcc6058a4c359133f3 tree f48cfe7b09245185bad982d39ffb4c2e1cad35a2
+files that differ between the source 72b879eea and this build's baseline: 21034
+files that differ between the source 72b879eea and the good candidate: deploy/release-sequence-policy 
+product files (cmd internal web) that differ between 72b879eea and the branch head 72b879eeaf88477133cc01bae6a615e292c00181: 0
+product commits between 67b62cc0f (set5's candidate) and 72b879eea (git log --oneline 67b62cc0f..72b879eea -- cmd internal web):
+72b879eea The Panel's secure-connection rule covers its own host name only (D-030)
+files of cmd internal web that differ between 67b62cc0f and 72b879eea:
+cmd/panel/security.go
+cmd/panel/security_test.go

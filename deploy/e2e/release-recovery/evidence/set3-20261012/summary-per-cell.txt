@@ -1,0 +1,471 @@
+== part2-alpha81/upd1-arch-defective/run-a  wrapper 2026-10-09T07:42:27Z - 2026-10-09T07:53:04Z  rc=0
+   overall=complete-for-review native_evidence=False outcome=recovered-automatically cell_kind=owner-update
+   harness=/var/tmp/cp-set3-run/harness-c (git archive cfa329676, overlay overlay-c d0effc106f757924)
+   step preflight                          passed        2026-10-09T07:43:28Z - 2026-10-09T07:43:33Z
+   step origin                             passed        2026-10-09T07:43:33Z - 2026-10-09T07:43:42Z
+   step baseline-install                   passed        2026-10-09T07:43:42Z - 2026-10-09T07:46:20Z
+   step owner-login                        passed        2026-10-09T07:46:20Z - 2026-10-09T07:46:21Z
+   step license                            passed        2026-10-09T07:46:21Z - 2026-10-09T07:46:21Z
+   step setup                              observed      2026-10-09T07:46:21Z - 2026-10-09T07:49:15Z
+   step seed                               passed        2026-10-09T07:49:15Z - 2026-10-09T07:49:18Z
+   step pre-state                          passed        2026-10-09T07:49:18Z - 2026-10-09T07:51:08Z
+   step arm                                passed        2026-10-09T07:51:08Z - 2026-10-09T07:51:10Z
+   step owner-start                        passed        2026-10-09T07:51:10Z - 2026-10-09T07:51:10Z
+   step track                              passed        2026-10-09T07:51:10Z - 2026-10-09T07:52:54Z
+   step owner-continuation (required)      skipped       2026-10-09T07:52:54Z - 2026-10-09T07:52:54Z
+   step terminal                           passed        2026-10-09T07:52:54Z - 2026-10-09T07:53:00Z
+   step post-return-facts                  passed        2026-10-09T07:53:00Z - 2026-10-09T07:53:01Z
+   step collect                            passed        2026-10-09T07:53:01Z - 2026-10-09T07:53:04Z
+   step verdicts                           passed        2026-10-09T07:53:04Z - 2026-10-09T07:53:04Z
+   finding: arch: web_mail was not attempted on the published v0.1.0-alpha.81 baseline (it accepts the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform
+   finding: arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']
+
+== part2-alpha81/upd1-arch-good/run-a  wrapper 2026-10-09T07:33:24Z - 2026-10-09T07:42:25Z  rc=0
+   overall=complete-for-review native_evidence=False outcome=update-verified cell_kind=owner-update
+   harness=/var/tmp/cp-set3-run/harness-c (git archive cfa329676, overlay overlay-c d0effc106f757924)
+   step preflight                          passed        2026-10-09T07:34:28Z - 2026-10-09T07:34:33Z
+   step origin                             passed        2026-10-09T07:34:33Z - 2026-10-09T07:34:45Z
+   step baseline-install                   passed        2026-10-09T07:34:45Z - 2026-10-09T07:36:45Z
+   step owner-login                        passed        2026-10-09T07:36:45Z - 2026-10-09T07:36:46Z
+   step license                            passed        2026-10-09T07:36:46Z - 2026-10-09T07:36:46Z
+   step setup                              observed      2026-10-09T07:36:46Z - 2026-10-09T07:39:38Z
+   step seed                               passed        2026-10-09T07:39:38Z - 2026-10-09T07:39:41Z
+   step pre-state                          passed        2026-10-09T07:39:41Z - 2026-10-09T07:41:09Z
+   step arm                                passed        2026-10-09T07:41:09Z - 2026-10-09T07:41:11Z
+   step owner-start                        passed        2026-10-09T07:41:11Z - 2026-10-09T07:41:11Z
+   step track                              passed        2026-10-09T07:41:11Z - 2026-10-09T07:42:11Z
+   step owner-continuation (required)      skipped       2026-10-09T07:42:11Z - 2026-10-09T07:42:11Z
+   step terminal                           passed        2026-10-09T07:42:11Z - 2026-10-09T07:42:18Z
+   step post-update-facts                  passed        2026-10-09T07:42:18Z - 2026-10-09T07:42:23Z
+   step collect                            passed        2026-10-09T07:42:23Z - 2026-10-09T07:42:25Z
+   step verdicts                           passed        2026-10-09T07:42:25Z - 2026-10-09T07:42:25Z
+   finding: arch: web_mail was not attempted on the published v0.1.0-alpha.81 baseline (it accepts the plan but fails at 05-mail_profile); mail is recorded as not provided on this platform
+   finding: arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['09-panel_certificate', '10-verify']
+
+== part2-alpha81/upd1-debian13-defective/run-a  wrapper 2026-10-09T07:40:43Z - 2026-10-09T07:53:54Z  rc=0
+   overall=complete-for-review native_evidence=False outcome=recovered-automatically cell_kind=owner-update
+   harness=/var/tmp/cp-set3-run/harness-c (git archive cfa329676, overlay overlay-c d0effc106f757924)
+   step preflight                          passed        2026-10-09T07:41:43Z - 2026-10-09T07:41:47Z
+   step origin                             passed        2026-10-09T07:41:47Z - 2026-10-09T07:41:56Z
+   step baseline-install                   passed        2026-10-09T07:41:56Z - 2026-10-09T07:42:46Z
+   step owner-login                        passed        2026-10-09T07:42:46Z - 2026-10-09T07:42:47Z
+   step license                            passed        2026-10-09T07:42:47Z - 2026-10-09T07:42:47Z
+   step setup                              observed      2026-10-09T07:42:47Z - 2026-10-09T07:48:39Z
+   step seed                               passed        2026-10-09T07:48:39Z - 2026-10-09T07:48:42Z
+   step pre-state                          passed        2026-10-09T07:48:42Z - 2026-10-09T07:50:09Z
+   step arm                                passed        2026-10-09T07:50:09Z - 2026-10-09T07:50:11Z
+   step owner-start                        passed        2026-10-09T07:50:11Z - 2026-10-09T07:50:11Z
+   step track                              passed        2026-10-09T07:50:11Z - 2026-10-09T07:52:26Z
+   step owner-continuation (required)      skipped       2026-10-09T07:52:26Z - 2026-10-09T07:52:26Z
+   step terminal                           passed        2026-10-09T07:52:26Z - 2026-10-09T07:52:34Z
+   step deferred-mail-watch                observed      2026-10-09T07:52:34Z - 2026-10-09T07:53:51Z
+   step post-return-facts                  passed        2026-10-09T07:53:51Z - 2026-10-09T07:53:52Z
+   step collect                            passed        2026-10-09T07:53:52Z - 2026-10-09T07:53:54Z
+   step verdicts                           passed        2026-10-09T07:53:54Z - 2026-10-09T07:53:54Z
+   finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+
+== part2-alpha81/upd1-debian13-good/run-a  wrapper 2026-10-09T07:27:38Z - 2026-10-09T07:40:40Z  rc=0
+   overall=complete-for-review native_evidence=False outcome=update-verified cell_kind=owner-update
+   harness=/var/tmp/cp-set3-run/harness-c (git archive cfa329676, overlay overlay-c d0effc106f757924)
+   step preflight                          passed        2026-10-09T07:28:44Z - 2026-10-09T07:28:50Z
+   step origin                             passed        2026-10-09T07:28:50Z - 2026-10-09T07:29:00Z
+   step baseline-install                   passed        2026-10-09T07:29:00Z - 2026-10-09T07:30:21Z
+   step owner-login                        passed        2026-10-09T07:30:21Z - 2026-10-09T07:30:21Z
+   step license                            passed        2026-10-09T07:30:21Z - 2026-10-09T07:30:22Z
+   step setup                              observed      2026-10-09T07:30:22Z - 2026-10-09T07:36:26Z
+   step seed                               passed        2026-10-09T07:36:26Z - 2026-10-09T07:36:29Z
+   step pre-state                          passed        2026-10-09T07:36:29Z - 2026-10-09T07:38:07Z
+   step arm                                passed        2026-10-09T07:38:07Z - 2026-10-09T07:38:08Z
+   step owner-start                        passed        2026-10-09T07:38:08Z - 2026-10-09T07:38:09Z
+   step track                              passed        2026-10-09T07:38:09Z - 2026-10-09T07:39:08Z
+   step owner-continuation (required)      skipped       2026-10-09T07:39:08Z - 2026-10-09T07:39:08Z
+   step terminal                           passed        2026-10-09T07:39:08Z - 2026-10-09T07:39:15Z
+   step deferred-mail-watch                observed      2026-10-09T07:39:15Z - 2026-10-09T07:40:31Z
+   step post-update-facts                  passed        2026-10-09T07:40:31Z - 2026-10-09T07:40:38Z
+   step collect                            passed        2026-10-09T07:40:38Z - 2026-10-09T07:40:39Z
+   step verdicts                           passed        2026-10-09T07:40:39Z - 2026-10-09T07:40:39Z
+   finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+
+== part2-alpha81/upd1-debian13-mgmt-off-reboot/run-a  wrapper 2026-10-09T07:53:07Z - 2026-10-09T08:08:20Z  rc=0
+   overall=complete-for-review native_evidence=False outcome=update-verified cell_kind=owner-update
+   harness=/var/tmp/cp-set3-run/harness-c (git archive cfa329676, overlay overlay-c d0effc106f757924)
+   step preflight                          passed        2026-10-09T07:54:09Z - 2026-10-09T07:54:13Z
+   step origin                             passed        2026-10-09T07:54:13Z - 2026-10-09T07:54:22Z
+   step baseline-install                   passed        2026-10-09T07:54:22Z - 2026-10-09T07:55:27Z
+   step owner-login                        passed        2026-10-09T07:55:27Z - 2026-10-09T07:55:28Z
+   step license                            passed        2026-10-09T07:55:28Z - 2026-10-09T07:55:28Z
+   step setup                              observed      2026-10-09T07:55:28Z - 2026-10-09T08:01:37Z
+   step seed                               passed        2026-10-09T08:01:37Z - 2026-10-09T08:01:40Z
+   step pre-state                          passed        2026-10-09T08:01:40Z - 2026-10-09T08:03:08Z
+   step arm                                passed        2026-10-09T08:03:08Z - 2026-10-09T08:03:09Z
+   step owner-start                        passed        2026-10-09T08:03:09Z - 2026-10-09T08:03:09Z
+   step track                              passed        2026-10-09T08:03:09Z - 2026-10-09T08:04:13Z
+   step owner-continuation (required)      skipped       2026-10-09T08:04:13Z - 2026-10-09T08:04:13Z
+   step terminal                           passed        2026-10-09T08:04:13Z - 2026-10-09T08:04:21Z
+   step management-off                     passed        2026-10-09T08:04:21Z - 2026-10-09T08:04:31Z
+   step owner-reboot                       passed        2026-10-09T08:04:31Z - 2026-10-09T08:04:47Z
+   step management-off-measure             passed        2026-10-09T08:04:47Z - 2026-10-09T08:07:55Z
+   step management-return                  passed        2026-10-09T08:07:55Z - 2026-10-09T08:08:18Z
+   step collect                            passed        2026-10-09T08:08:18Z - 2026-10-09T08:08:20Z
+   step verdicts                           passed        2026-10-09T08:08:20Z - 2026-10-09T08:08:20Z
+   step kind-expectation                   passed        2026-10-09T08:08:20Z - 2026-10-09T08:08:20Z
+   finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+
+== part2-alpha81/upd1-debian13-owner-continuation/run-a  wrapper 2026-10-09T08:08:04Z - 2026-10-09T08:28:28Z  rc=0
+   overall=complete-for-review native_evidence=False outcome=recovered-after-owner-continuation cell_kind=owner-update
+   harness=/var/tmp/cp-set3-run/harness-c (git archive cfa329676, overlay overlay-c d0effc106f757924)
+   step preflight                          passed        2026-10-09T08:09:06Z - 2026-10-09T08:09:10Z
+   step origin                             passed        2026-10-09T08:09:10Z - 2026-10-09T08:09:19Z
+   step baseline-install                   passed        2026-10-09T08:09:19Z - 2026-10-09T08:10:39Z
+   step owner-login                        passed        2026-10-09T08:10:39Z - 2026-10-09T08:10:41Z
+   step license                            passed        2026-10-09T08:10:41Z - 2026-10-09T08:10:41Z
+   step setup                              observed      2026-10-09T08:10:41Z - 2026-10-09T08:17:09Z
+   step seed                               passed        2026-10-09T08:17:09Z - 2026-10-09T08:17:12Z
+   step pre-state                          passed        2026-10-09T08:17:12Z - 2026-10-09T08:19:10Z
+   step arm                                passed        2026-10-09T08:19:10Z - 2026-10-09T08:19:12Z
+   step owner-start                        passed        2026-10-09T08:19:12Z - 2026-10-09T08:19:12Z
+   step track                              observed      2026-10-09T08:19:12Z - 2026-10-09T08:26:22Z
+   step owner-continuation (required)      observed      2026-10-09T08:26:22Z - 2026-10-09T08:27:10Z
+   step track-after-owner-continuation     passed        2026-10-09T08:27:10Z - 2026-10-09T08:27:12Z
+   step terminal                           passed        2026-10-09T08:27:12Z - 2026-10-09T08:27:19Z
+   step deferred-mail-watch                observed      2026-10-09T08:27:19Z - 2026-10-09T08:28:26Z
+   step collect                            passed        2026-10-09T08:28:26Z - 2026-10-09T08:28:28Z
+   step verdicts                           passed        2026-10-09T08:28:28Z - 2026-10-09T08:28:28Z
+   step kind-expectation                   passed        2026-10-09T08:28:28Z - 2026-10-09T08:28:28Z
+   finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+   finding: while the recovery budget was exhausted the Panel recovery-status API was unavailable; only the root CLI showed the exhausted state
+
+== part2-alpha81/upd1-debian13-startcheck/run-a  wrapper 2026-10-09T07:53:57Z - 2026-10-09T08:08:01Z  rc=0
+   overall=complete-for-review native_evidence=False outcome=recovered-automatically cell_kind=owner-update
+   harness=/var/tmp/cp-set3-run/harness-c (git archive cfa329676, overlay overlay-c d0effc106f757924)
+   step preflight                          passed        2026-10-09T07:54:58Z - 2026-10-09T07:55:02Z
+   step origin                             passed        2026-10-09T07:55:02Z - 2026-10-09T07:55:11Z
+   step baseline-install                   passed        2026-10-09T07:55:11Z - 2026-10-09T07:56:02Z
+   step owner-login                        passed        2026-10-09T07:56:02Z - 2026-10-09T07:56:03Z
+   step license                            passed        2026-10-09T07:56:03Z - 2026-10-09T07:56:03Z
+   step setup                              observed      2026-10-09T07:56:03Z - 2026-10-09T08:02:11Z
+   step seed                               passed        2026-10-09T08:02:11Z - 2026-10-09T08:02:14Z
+   step pre-state                          passed        2026-10-09T08:02:14Z - 2026-10-09T08:04:12Z
+   step arm                                passed        2026-10-09T08:04:12Z - 2026-10-09T08:04:14Z
+   step owner-start                        passed        2026-10-09T08:04:14Z - 2026-10-09T08:04:14Z
+   step track                              passed        2026-10-09T08:04:14Z - 2026-10-09T08:06:35Z
+   step owner-continuation (required)      skipped       2026-10-09T08:06:35Z - 2026-10-09T08:06:35Z
+   step terminal                           passed        2026-10-09T08:06:35Z - 2026-10-09T08:06:41Z
+   step deferred-mail-watch                observed      2026-10-09T08:06:41Z - 2026-10-09T08:07:58Z
+   step post-return-facts                  passed        2026-10-09T08:07:58Z - 2026-10-09T08:07:59Z
+   step collect                            passed        2026-10-09T08:07:59Z - 2026-10-09T08:08:01Z
+   step verdicts                           passed        2026-10-09T08:08:01Z - 2026-10-09T08:08:01Z
+   step kind-expectation                   passed        2026-10-09T08:08:01Z - 2026-10-09T08:08:01Z
+   finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+
+== part2-alpha81/upd1-ubuntu-defective/run-a  wrapper 2026-10-09T07:48:54Z - 2026-10-09T08:10:00Z  rc=0
+   overall=complete-for-review native_evidence=False outcome=recovered-automatically cell_kind=owner-update
+   harness=/var/tmp/cp-set3-run/harness-c (git archive cfa329676, overlay overlay-c d0effc106f757924)
+   step preflight                          passed        2026-10-09T07:49:18Z - 2026-10-09T07:49:22Z
+   step origin                             passed        2026-10-09T07:49:22Z - 2026-10-09T07:49:31Z
+   step baseline-install                   passed        2026-10-09T07:49:31Z - 2026-10-09T07:50:21Z
+   step owner-login                        passed        2026-10-09T07:50:21Z - 2026-10-09T07:50:22Z
+   step license                            passed        2026-10-09T07:50:22Z - 2026-10-09T07:50:22Z
+   step setup                              observed      2026-10-09T07:50:22Z - 2026-10-09T08:01:50Z
+   step seed                               passed        2026-10-09T08:01:50Z - 2026-10-09T08:04:50Z
+   step pre-state                          passed        2026-10-09T08:04:50Z - 2026-10-09T08:06:09Z
+   step arm                                passed        2026-10-09T08:06:09Z - 2026-10-09T08:06:12Z
+   step owner-start                        passed        2026-10-09T08:06:12Z - 2026-10-09T08:06:12Z
+   step track                              passed        2026-10-09T08:06:12Z - 2026-10-09T08:08:41Z
+   step owner-continuation (required)      skipped       2026-10-09T08:08:41Z - 2026-10-09T08:08:41Z
+   step terminal                           passed        2026-10-09T08:08:41Z - 2026-10-09T08:08:48Z
+   step deferred-mail-watch                observed      2026-10-09T08:08:48Z - 2026-10-09T08:09:55Z
+   step post-return-facts                  passed        2026-10-09T08:09:55Z - 2026-10-09T08:09:56Z
+   step collect                            passed        2026-10-09T08:09:56Z - 2026-10-09T08:09:59Z
+   step verdicts                           passed        2026-10-09T08:09:59Z - 2026-10-09T08:09:59Z
+   finding: ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']
+
+== part2-alpha81/upd1-ubuntu-good/run-a  wrapper 2026-10-09T07:28:10Z - 2026-10-09T07:48:51Z  rc=0
+   overall=complete-for-review native_evidence=False outcome=update-verified cell_kind=owner-update
+   harness=/var/tmp/cp-set3-run/harness-c (git archive cfa329676, overlay overlay-c d0effc106f757924)
+   step preflight                          passed        2026-10-09T07:28:36Z - 2026-10-09T07:28:41Z
+   step origin                             passed        2026-10-09T07:28:41Z - 2026-10-09T07:28:53Z
+   step baseline-install                   passed        2026-10-09T07:28:53Z - 2026-10-09T07:29:44Z
+   step owner-login                        passed        2026-10-09T07:29:44Z - 2026-10-09T07:29:45Z
+   step license                            passed        2026-10-09T07:29:45Z - 2026-10-09T07:29:45Z
+   step setup                              observed      2026-10-09T07:29:45Z - 2026-10-09T07:41:09Z
+   step seed                               passed        2026-10-09T07:41:09Z - 2026-10-09T07:44:10Z
+   step pre-state                          passed        2026-10-09T07:44:10Z - 2026-10-09T07:46:10Z
+   step arm                                passed        2026-10-09T07:46:10Z - 2026-10-09T07:46:13Z
+   step owner-start                        passed        2026-10-09T07:46:13Z - 2026-10-09T07:46:14Z
+   step track                              passed        2026-10-09T07:46:14Z - 2026-10-09T07:47:17Z
+   step owner-continuation (required)      skipped       2026-10-09T07:47:17Z - 2026-10-09T07:47:17Z
+   step terminal                           passed        2026-10-09T07:47:17Z - 2026-10-09T07:47:24Z
+   step deferred-mail-watch                observed      2026-10-09T07:47:24Z - 2026-10-09T07:48:41Z
+   step post-update-facts                  passed        2026-10-09T07:48:41Z - 2026-10-09T07:48:48Z
+   step collect                            passed        2026-10-09T07:48:48Z - 2026-10-09T07:48:50Z
+   step verdicts                           passed        2026-10-09T07:48:50Z - 2026-10-09T07:48:50Z
+   finding: ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']
+
+== part2-alpha81/upd1-ubuntu-owner-continuation/run-a  wrapper 2026-10-09T08:10:04Z - 2026-10-09T08:37:45Z  rc=0
+   overall=complete-for-review native_evidence=False outcome=recovered-after-owner-continuation cell_kind=owner-update
+   harness=/var/tmp/cp-set3-run/harness-c (git archive cfa329676, overlay overlay-c d0effc106f757924)
+   step preflight                          passed        2026-10-09T08:10:31Z - 2026-10-09T08:10:35Z
+   step origin                             passed        2026-10-09T08:10:35Z - 2026-10-09T08:10:46Z
+   step baseline-install                   passed        2026-10-09T08:10:46Z - 2026-10-09T08:11:37Z
+   step owner-login                        passed        2026-10-09T08:11:37Z - 2026-10-09T08:11:38Z
+   step license                            passed        2026-10-09T08:11:38Z - 2026-10-09T08:11:38Z
+   step setup                              observed      2026-10-09T08:11:38Z - 2026-10-09T08:23:16Z
+   step seed                               passed        2026-10-09T08:23:16Z - 2026-10-09T08:26:15Z
+   step pre-state                          passed        2026-10-09T08:26:15Z - 2026-10-09T08:28:05Z
+   step arm                                passed        2026-10-09T08:28:05Z - 2026-10-09T08:28:09Z
+   step owner-start                        passed        2026-10-09T08:28:09Z - 2026-10-09T08:28:10Z
+   step track                              observed      2026-10-09T08:28:10Z - 2026-10-09T08:35:36Z
+   step owner-continuation (required)      observed      2026-10-09T08:35:36Z - 2026-10-09T08:36:26Z
+   step track-after-owner-continuation     passed        2026-10-09T08:36:26Z - 2026-10-09T08:36:28Z
+   step terminal                           passed        2026-10-09T08:36:28Z - 2026-10-09T08:36:35Z
+   step deferred-mail-watch                observed      2026-10-09T08:36:35Z - 2026-10-09T08:37:42Z
+   step collect                            passed        2026-10-09T08:37:42Z - 2026-10-09T08:37:45Z
+   step verdicts                           passed        2026-10-09T08:37:45Z - 2026-10-09T08:37:45Z
+   step kind-expectation                   passed        2026-10-09T08:37:45Z - 2026-10-09T08:37:45Z
+   finding: ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-access_dns', '12-mail_certificate', '13-mail_enrollment', '14-verify']
+   finding: while the recovery budget was exhausted the Panel recovery-status API was unavailable; only the root CLI showed the exhausted state
+
+== rid3-arch/run-a  wrapper 2026-10-09T07:22:04Z - 2026-10-09T07:33:19Z  rc=1
+   overall=failed native_evidence=False outcome=request-identity-measured cell_kind=request-identity
+   harness=/var/tmp/cp-set3-run/harness-d (git archive cfa329676, overlay overlay-d 7c42665ada71930c)
+   step preflight                          passed        2026-10-09T07:23:08Z - 2026-10-09T07:23:13Z
+   step origin                             passed        2026-10-09T07:23:13Z - 2026-10-09T07:23:23Z
+   step baseline-install                   passed        2026-10-09T07:23:23Z - 2026-10-09T07:25:40Z
+   step owner-login                        passed        2026-10-09T07:25:40Z - 2026-10-09T07:25:41Z
+   step license                            passed        2026-10-09T07:25:41Z - 2026-10-09T07:25:41Z
+   step setup                              observed      2026-10-09T07:25:41Z - 2026-10-09T07:28:56Z
+   step site                               passed        2026-10-09T07:28:56Z - 2026-10-09T07:29:00Z
+   step C0-prepare                         passed        2026-10-09T07:29:00Z - 2026-10-09T07:29:05Z
+   step C1-domain-databases                passed        2026-10-09T07:29:05Z - 2026-10-09T07:29:18Z
+   step C2-admin-account                   passed        2026-10-09T07:29:18Z - 2026-10-09T07:29:26Z
+   step C3-server-databases                passed        2026-10-09T07:29:26Z - 2026-10-09T07:29:39Z
+   step C4-backup                          passed        2026-10-09T07:29:39Z - 2026-10-09T07:30:03Z
+   step C5-letsencrypt                     passed        2026-10-09T07:30:03Z - 2026-10-09T07:30:14Z
+   step C6-vpn-peer                        passed        2026-10-09T07:30:14Z - 2026-10-09T07:30:30Z
+   step C6b-php-site                       failed        2026-10-09T07:30:30Z - 2026-10-09T07:30:32Z  | P5: a PHP site is created from the Domains page (200 with the new domain's id)
+   step C7-import                          failed        2026-10-09T07:30:32Z - 2026-10-09T07:30:55Z  | P4: an archive that holds the directory member `homedir/public_html/` as tar writes it imports completely (200, active; the document root's files equal the archive's); import (i): three arrivals in a row of one identity left one native effect; import (ii): three arrivals at once of one identity left
+   step C7b-import-answers                 failed        2026-10-09T07:30:55Z - 2026-10-09T07:31:08Z  | P4 (dotdot): the files step refuses the archive; P4 (dotdot): the import answers 200 with status `partial`, code IMPORT_PARTIAL and the domain left `pending`; P4 (dotdot): `imported` and `not_imported` are the steps' own results and are true on the server (the domain row is `pending`; what is listed
+   step C8-restore                         passed        2026-10-09T07:31:08Z - 2026-10-09T07:33:17Z
+   step C9-identities                      passed        2026-10-09T07:33:17Z - 2026-10-09T07:33:18Z
+   step collect                            passed        2026-10-09T07:33:18Z - 2026-10-09T07:33:19Z
+   finding: arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-verify']
+   section C0-prepare             passed       checks=7 not passed=0 2026-10-09T07:29:00Z - 2026-10-09T07:29:05Z
+   section C1-domain-databases    passed       checks=18 not passed=0 2026-10-09T07:29:05Z - 2026-10-09T07:29:18Z
+   section C2-admin-account       passed       checks=18 not passed=0 2026-10-09T07:29:18Z - 2026-10-09T07:29:26Z
+   section C3-server-databases    passed       checks=22 not passed=0 2026-10-09T07:29:26Z - 2026-10-09T07:29:39Z
+   section C4-backup              passed       checks=9 not passed=0 2026-10-09T07:29:39Z - 2026-10-09T07:30:03Z
+   section C5-letsencrypt         passed       checks=11 not passed=0 2026-10-09T07:30:03Z - 2026-10-09T07:30:14Z
+   section C6-vpn-peer            passed       checks=8 not passed=0 2026-10-09T07:30:14Z - 2026-10-09T07:30:30Z
+   section C6b-php-site           failed       checks=1 not passed=1 2026-10-09T07:30:30Z - 2026-10-09T07:30:32Z
+   section C7-import              failed       checks=20 not passed=5 2026-10-09T07:30:32Z - 2026-10-09T07:30:55Z
+   section C7b-import-answers     failed       checks=17 not passed=8 2026-10-09T07:30:55Z - 2026-10-09T07:31:08Z
+   section C8-restore             passed       checks=24 not passed=0 2026-10-09T07:31:08Z - 2026-10-09T07:33:17Z
+   section C9-identities          passed       checks=9 not passed=0 2026-10-09T07:33:17Z - 2026-10-09T07:33:18Z
+
+== rid3-arch/run-b  wrapper 2026-10-09T08:08:28Z - 2026-10-09T08:19:56Z  rc=0
+   overall=complete-for-review native_evidence=False outcome=request-identity-measured cell_kind=request-identity
+   harness=/var/tmp/cp-set3-run/harness-e (git archive cfa329676, overlay overlay-e 975fb0926172a1cb)
+   step preflight                          passed        2026-10-09T08:09:31Z - 2026-10-09T08:09:36Z
+   step origin                             passed        2026-10-09T08:09:36Z - 2026-10-09T08:09:46Z
+   step baseline-install                   passed        2026-10-09T08:09:46Z - 2026-10-09T08:11:45Z
+   step owner-login                        passed        2026-10-09T08:11:45Z - 2026-10-09T08:11:46Z
+   step license                            passed        2026-10-09T08:11:46Z - 2026-10-09T08:11:47Z
+   step setup                              observed      2026-10-09T08:11:47Z - 2026-10-09T08:15:05Z
+   step site                               passed        2026-10-09T08:15:05Z - 2026-10-09T08:15:07Z
+   step C0-prepare                         passed        2026-10-09T08:15:07Z - 2026-10-09T08:15:13Z
+   step C1-domain-databases                passed        2026-10-09T08:15:13Z - 2026-10-09T08:15:23Z
+   step C2-admin-account                   passed        2026-10-09T08:15:23Z - 2026-10-09T08:15:31Z
+   step C3-server-databases                passed        2026-10-09T08:15:31Z - 2026-10-09T08:15:44Z
+   step C4-backup                          passed        2026-10-09T08:15:44Z - 2026-10-09T08:16:03Z
+   step C5-letsencrypt                     passed        2026-10-09T08:16:03Z - 2026-10-09T08:16:15Z
+   step C6-vpn-peer                        passed        2026-10-09T08:16:16Z - 2026-10-09T08:16:31Z
+   step C6b-php-site                       passed        2026-10-09T08:16:31Z - 2026-10-09T08:16:36Z
+   step C7-import                          passed        2026-10-09T08:16:36Z - 2026-10-09T08:17:25Z
+   step C7b-import-answers                 passed        2026-10-09T08:17:25Z - 2026-10-09T08:17:38Z
+   step C8-restore                         passed        2026-10-09T08:17:38Z - 2026-10-09T08:19:54Z
+   step C9-identities                      passed        2026-10-09T08:19:54Z - 2026-10-09T08:19:55Z
+   step collect                            passed        2026-10-09T08:19:55Z - 2026-10-09T08:19:56Z
+   finding: arch: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['10-panel_certificate', '11-verify']
+   section C0-prepare             passed       checks=7 not passed=0 2026-10-09T08:15:07Z - 2026-10-09T08:15:13Z
+   section C1-domain-databases    passed       checks=18 not passed=0 2026-10-09T08:15:13Z - 2026-10-09T08:15:23Z
+   section C2-admin-account       passed       checks=18 not passed=0 2026-10-09T08:15:23Z - 2026-10-09T08:15:31Z
+   section C3-server-databases    passed       checks=22 not passed=0 2026-10-09T08:15:31Z - 2026-10-09T08:15:44Z
+   section C4-backup              passed       checks=9 not passed=0 2026-10-09T08:15:44Z - 2026-10-09T08:16:03Z
+   section C5-letsencrypt         passed       checks=11 not passed=0 2026-10-09T08:16:03Z - 2026-10-09T08:16:15Z
+   section C6-vpn-peer            passed       checks=8 not passed=0 2026-10-09T08:16:16Z - 2026-10-09T08:16:31Z
+   section C6b-php-site           passed       checks=5 not passed=0 2026-10-09T08:16:31Z - 2026-10-09T08:16:36Z
+   section C7-import              passed       checks=20 not passed=0 2026-10-09T08:16:36Z - 2026-10-09T08:17:24Z
+   section C7b-import-answers     passed       checks=17 not passed=0 2026-10-09T08:17:25Z - 2026-10-09T08:17:38Z
+   section C8-restore             passed       checks=24 not passed=0 2026-10-09T08:17:38Z - 2026-10-09T08:19:54Z
+   section C9-identities          passed       checks=9 not passed=0 2026-10-09T08:19:54Z - 2026-10-09T08:19:55Z
+
+== rid3-debian13/run-a  wrapper 2026-10-09T06:59:21Z - 2026-10-09T07:13:43Z  rc=1
+   overall=failed native_evidence=False outcome=request-identity-measured cell_kind=request-identity
+   harness=/var/tmp/cp-set3-run/harness-a (git archive cfa329676, overlay overlay-a ee138249a3bc1502)
+   step preflight                          passed        2026-10-09T07:00:32Z - 2026-10-09T07:00:36Z
+   step origin                             passed        2026-10-09T07:00:36Z - 2026-10-09T07:00:46Z
+   step baseline-install                   passed        2026-10-09T07:00:46Z - 2026-10-09T07:01:20Z
+   step owner-login                        passed        2026-10-09T07:01:20Z - 2026-10-09T07:01:21Z
+   step license                            passed        2026-10-09T07:01:21Z - 2026-10-09T07:01:21Z
+   step setup                              observed      2026-10-09T07:01:21Z - 2026-10-09T07:08:07Z
+   step site                               passed        2026-10-09T07:08:07Z - 2026-10-09T07:08:12Z
+   step C0-prepare                         passed        2026-10-09T07:08:12Z - 2026-10-09T07:08:17Z
+   step C1-domain-databases                passed        2026-10-09T07:08:17Z - 2026-10-09T07:08:32Z
+   step C2-admin-account                   passed        2026-10-09T07:08:32Z - 2026-10-09T07:08:41Z
+   step C3-server-databases                failed        2026-10-09T07:08:41Z - 2026-10-09T07:08:58Z  | O10 (mariadb): its replay is the first answer byte for byte, marked as a replay, and one database was created; O10 (postgresql): its replay is the first answer byte for byte, marked as a replay, and one database was created
+   step C4-backup                          passed        2026-10-09T07:08:58Z - 2026-10-09T07:09:26Z
+   step C5-letsencrypt                     passed        2026-10-09T07:09:26Z - 2026-10-09T07:09:37Z
+   step C6-vpn-peer                        passed        2026-10-09T07:09:37Z - 2026-10-09T07:09:52Z
+   step C6b-php-site                       passed        2026-10-09T07:09:52Z - 2026-10-09T07:09:56Z
+   step C7-import                          passed        2026-10-09T07:09:56Z - 2026-10-09T07:10:43Z
+   step C7b-import-answers                 passed        2026-10-09T07:10:43Z - 2026-10-09T07:11:27Z
+   step C8-restore                         passed        2026-10-09T07:11:27Z - 2026-10-09T07:13:41Z
+   step C9-identities                      passed        2026-10-09T07:13:41Z - 2026-10-09T07:13:42Z
+   step collect                            passed        2026-10-09T07:13:42Z - 2026-10-09T07:13:43Z
+   finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['12-panel_certificate', '13-access_dns', '14-mail_certificate', '15-mail_enrollment', '16-verify']
+   section C0-prepare             passed       checks=7 not passed=0 2026-10-09T07:08:12Z - 2026-10-09T07:08:17Z
+   section C1-domain-databases    passed       checks=18 not passed=0 2026-10-09T07:08:17Z - 2026-10-09T07:08:32Z
+   section C2-admin-account       passed       checks=18 not passed=0 2026-10-09T07:08:32Z - 2026-10-09T07:08:41Z
+   section C3-server-databases    failed       checks=22 not passed=2 2026-10-09T07:08:41Z - 2026-10-09T07:08:58Z
+   section C4-backup              passed       checks=9 not passed=0 2026-10-09T07:08:58Z - 2026-10-09T07:09:26Z
+   section C5-letsencrypt         passed       checks=11 not passed=0 2026-10-09T07:09:26Z - 2026-10-09T07:09:37Z
+   section C6-vpn-peer            passed       checks=8 not passed=0 2026-10-09T07:09:37Z - 2026-10-09T07:09:52Z
+   section C6b-php-site           passed       checks=5 not passed=0 2026-10-09T07:09:52Z - 2026-10-09T07:09:56Z
+   section C7-import              passed       checks=20 not passed=0 2026-10-09T07:09:56Z - 2026-10-09T07:10:43Z
+   section C7b-import-answers     passed       checks=23 not passed=0 2026-10-09T07:10:43Z - 2026-10-09T07:11:27Z
+   section C8-restore             passed       checks=24 not passed=0 2026-10-09T07:11:27Z - 2026-10-09T07:13:41Z
+   section C9-identities          passed       checks=9 not passed=0 2026-10-09T07:13:41Z - 2026-10-09T07:13:42Z
+
+== rid3-debian13/run-b  wrapper 2026-10-09T08:19:57Z - 2026-10-09T08:34:39Z  rc=0
+   overall=complete-for-review native_evidence=False outcome=request-identity-measured cell_kind=request-identity
+   harness=/var/tmp/cp-set3-run/harness-e (git archive cfa329676, overlay overlay-e 975fb0926172a1cb)
+   step preflight                          passed        2026-10-09T08:20:59Z - 2026-10-09T08:21:04Z
+   step origin                             passed        2026-10-09T08:21:04Z - 2026-10-09T08:21:13Z
+   step baseline-install                   passed        2026-10-09T08:21:13Z - 2026-10-09T08:22:03Z
+   step owner-login                        passed        2026-10-09T08:22:03Z - 2026-10-09T08:22:04Z
+   step license                            passed        2026-10-09T08:22:04Z - 2026-10-09T08:22:04Z
+   step setup                              observed      2026-10-09T08:22:04Z - 2026-10-09T08:29:38Z
+   step site                               passed        2026-10-09T08:29:38Z - 2026-10-09T08:29:41Z
+   step C0-prepare                         passed        2026-10-09T08:29:41Z - 2026-10-09T08:29:44Z
+   step C1-domain-databases                passed        2026-10-09T08:29:44Z - 2026-10-09T08:29:52Z
+   step C2-admin-account                   passed        2026-10-09T08:29:52Z - 2026-10-09T08:29:58Z
+   step C3-server-databases                passed        2026-10-09T08:29:58Z - 2026-10-09T08:30:13Z
+   step C4-backup                          passed        2026-10-09T08:30:13Z - 2026-10-09T08:30:31Z
+   step C5-letsencrypt                     passed        2026-10-09T08:30:31Z - 2026-10-09T08:30:41Z
+   step C6-vpn-peer                        passed        2026-10-09T08:30:41Z - 2026-10-09T08:30:55Z
+   step C6b-php-site                       passed        2026-10-09T08:30:55Z - 2026-10-09T08:30:59Z
+   step C7-import                          passed        2026-10-09T08:30:59Z - 2026-10-09T08:31:45Z
+   step C7b-import-answers                 passed        2026-10-09T08:31:45Z - 2026-10-09T08:32:26Z
+   step C8-restore                         passed        2026-10-09T08:32:26Z - 2026-10-09T08:34:37Z
+   step C9-identities                      passed        2026-10-09T08:34:37Z - 2026-10-09T08:34:38Z
+   step collect                            passed        2026-10-09T08:34:38Z - 2026-10-09T08:34:39Z
+   finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['12-panel_certificate', '13-access_dns', '14-mail_certificate', '15-mail_enrollment', '16-verify']
+   section C0-prepare             passed       checks=7 not passed=0 2026-10-09T08:29:41Z - 2026-10-09T08:29:44Z
+   section C1-domain-databases    passed       checks=18 not passed=0 2026-10-09T08:29:44Z - 2026-10-09T08:29:52Z
+   section C2-admin-account       passed       checks=18 not passed=0 2026-10-09T08:29:52Z - 2026-10-09T08:29:58Z
+   section C3-server-databases    passed       checks=22 not passed=0 2026-10-09T08:29:58Z - 2026-10-09T08:30:13Z
+   section C4-backup              passed       checks=9 not passed=0 2026-10-09T08:30:13Z - 2026-10-09T08:30:31Z
+   section C5-letsencrypt         passed       checks=11 not passed=0 2026-10-09T08:30:31Z - 2026-10-09T08:30:41Z
+   section C6-vpn-peer            passed       checks=8 not passed=0 2026-10-09T08:30:41Z - 2026-10-09T08:30:55Z
+   section C6b-php-site           passed       checks=5 not passed=0 2026-10-09T08:30:55Z - 2026-10-09T08:30:59Z
+   section C7-import              passed       checks=20 not passed=0 2026-10-09T08:30:59Z - 2026-10-09T08:31:45Z
+   section C7b-import-answers     passed       checks=23 not passed=0 2026-10-09T08:31:45Z - 2026-10-09T08:32:26Z
+   section C8-restore             passed       checks=24 not passed=0 2026-10-09T08:32:26Z - 2026-10-09T08:34:37Z
+   section C9-identities          passed       checks=9 not passed=0 2026-10-09T08:34:37Z - 2026-10-09T08:34:38Z
+
+== rid3-ubuntu/run-a  wrapper 2026-10-09T06:59:19Z - 2026-10-09T07:28:08Z  rc=1
+   overall=failed native_evidence=False outcome=request-identity-measured cell_kind=request-identity
+   harness=/var/tmp/cp-set3-run/harness-a (git archive cfa329676, overlay overlay-a ee138249a3bc1502)
+   step preflight                          passed        2026-10-09T06:59:49Z - 2026-10-09T06:59:54Z
+   step origin                             passed        2026-10-09T06:59:54Z - 2026-10-09T07:00:05Z
+   step baseline-install                   passed        2026-10-09T07:00:05Z - 2026-10-09T07:00:55Z
+   step owner-login                        passed        2026-10-09T07:00:55Z - 2026-10-09T07:00:57Z
+   step license                            passed        2026-10-09T07:00:57Z - 2026-10-09T07:00:57Z
+   step setup                              observed      2026-10-09T07:00:57Z - 2026-10-09T07:14:06Z
+   step site                               passed        2026-10-09T07:14:06Z - 2026-10-09T07:17:09Z
+   step C0-prepare                         passed        2026-10-09T07:17:09Z - 2026-10-09T07:17:14Z
+   step C1-domain-databases                passed        2026-10-09T07:17:14Z - 2026-10-09T07:17:24Z
+   step C2-admin-account                   passed        2026-10-09T07:17:24Z - 2026-10-09T07:17:32Z
+   step C3-server-databases                failed        2026-10-09T07:17:32Z - 2026-10-09T07:17:45Z  | O10 (mariadb): its replay is the first answer byte for byte, marked as a replay, and one database was created; O10 (postgresql): its replay is the first answer byte for byte, marked as a replay, and one database was created
+   step C4-backup                          passed        2026-10-09T07:17:45Z - 2026-10-09T07:18:10Z
+   step C5-letsencrypt                     passed        2026-10-09T07:18:10Z - 2026-10-09T07:18:23Z
+   step C6-vpn-peer                        passed        2026-10-09T07:18:23Z - 2026-10-09T07:18:49Z
+   step C6b-php-site                       passed        2026-10-09T07:18:49Z - 2026-10-09T07:23:46Z
+   step C7-import                          passed        2026-10-09T07:23:46Z - 2026-10-09T07:24:40Z
+   step C7b-import-answers                 passed        2026-10-09T07:24:40Z - 2026-10-09T07:25:27Z
+   step C8-restore                         passed        2026-10-09T07:25:27Z - 2026-10-09T07:28:05Z
+   step C9-identities                      passed        2026-10-09T07:28:05Z - 2026-10-09T07:28:06Z
+   step collect                            passed        2026-10-09T07:28:06Z - 2026-10-09T07:28:08Z
+   finding: ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+   section C0-prepare             passed       checks=7 not passed=0 2026-10-09T07:17:09Z - 2026-10-09T07:17:14Z
+   section C1-domain-databases    passed       checks=18 not passed=0 2026-10-09T07:17:14Z - 2026-10-09T07:17:24Z
+   section C2-admin-account       passed       checks=18 not passed=0 2026-10-09T07:17:24Z - 2026-10-09T07:17:32Z
+   section C3-server-databases    failed       checks=22 not passed=2 2026-10-09T07:17:32Z - 2026-10-09T07:17:45Z
+   section C4-backup              passed       checks=9 not passed=0 2026-10-09T07:17:45Z - 2026-10-09T07:18:10Z
+   section C5-letsencrypt         passed       checks=11 not passed=0 2026-10-09T07:18:10Z - 2026-10-09T07:18:23Z
+   section C6-vpn-peer            passed       checks=8 not passed=0 2026-10-09T07:18:23Z - 2026-10-09T07:18:49Z
+   section C6b-php-site           passed       checks=5 not passed=0 2026-10-09T07:18:49Z - 2026-10-09T07:23:46Z
+   section C7-import              passed       checks=20 not passed=0 2026-10-09T07:23:46Z - 2026-10-09T07:24:40Z
+   section C7b-import-answers     passed       checks=23 not passed=0 2026-10-09T07:24:40Z - 2026-10-09T07:25:27Z
+   section C8-restore             passed       checks=24 not passed=0 2026-10-09T07:25:27Z - 2026-10-09T07:28:05Z
+   section C9-identities          passed       checks=9 not passed=0 2026-10-09T07:28:05Z - 2026-10-09T07:28:06Z
+
+== set3-debian13/run-a  wrapper 2026-10-09T07:13:53Z - 2026-10-09T07:27:30Z  rc=0
+   overall=complete-for-review native_evidence=False outcome=settings-writes-measured cell_kind=settings-writes
+   harness=/var/tmp/cp-set3-run/harness-d (git archive cfa329676, overlay overlay-d 7c42665ada71930c)
+   step preflight                          passed        2026-10-09T07:14:57Z - 2026-10-09T07:15:01Z
+   step origin                             passed        2026-10-09T07:15:01Z - 2026-10-09T07:15:10Z
+   step baseline-install                   passed        2026-10-09T07:15:10Z - 2026-10-09T07:16:16Z
+   step owner-login                        passed        2026-10-09T07:16:16Z - 2026-10-09T07:16:17Z
+   step license                            passed        2026-10-09T07:16:17Z - 2026-10-09T07:16:17Z
+   step setup                              observed      2026-10-09T07:16:17Z - 2026-10-09T07:23:01Z
+   step site                               passed        2026-10-09T07:23:01Z - 2026-10-09T07:23:04Z
+   step S1-cron                            passed        2026-10-09T07:23:04Z - 2026-10-09T07:23:09Z
+   step S2-mail-policy                     passed        2026-10-09T07:23:09Z - 2026-10-09T07:24:00Z
+   step S3-backup-schedule                 passed        2026-10-09T07:24:00Z - 2026-10-09T07:24:02Z
+   step S4-postgresql                      passed        2026-10-09T07:24:02Z - 2026-10-09T07:24:23Z
+   step S5-mariadb                         passed        2026-10-09T07:24:23Z - 2026-10-09T07:24:33Z
+   step S6-catchall-queue                  passed        2026-10-09T07:24:33Z - 2026-10-09T07:24:43Z
+   step S7-file-metadata                   passed        2026-10-09T07:24:43Z - 2026-10-09T07:24:44Z
+   step S8-service-actions                 passed        2026-10-09T07:24:44Z - 2026-10-09T07:27:28Z
+   step collect                            passed        2026-10-09T07:27:29Z - 2026-10-09T07:27:30Z
+   finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['12-panel_certificate', '13-access_dns', '14-mail_certificate', '15-mail_enrollment', '16-verify']
+   section S1-cron                passed       checks=35 not passed=0 2026-10-09T07:23:04Z - 2026-10-09T07:23:09Z
+   section S2-mail-policy         passed       checks=38 not passed=0 2026-10-09T07:23:09Z - 2026-10-09T07:24:00Z
+   section S3-backup-schedule     passed       checks=10 not passed=0 2026-10-09T07:24:00Z - 2026-10-09T07:24:02Z
+   section S4-postgresql          passed       checks=37 not passed=0 2026-10-09T07:24:02Z - 2026-10-09T07:24:23Z
+   section S5-mariadb             passed       checks=21 not passed=0 2026-10-09T07:24:23Z - 2026-10-09T07:24:33Z
+   section S6-catchall-queue      passed       checks=15 not passed=0 2026-10-09T07:24:33Z - 2026-10-09T07:24:43Z
+   section S7-file-metadata       passed       checks=9 not passed=0 2026-10-09T07:24:43Z - 2026-10-09T07:24:44Z
+   section S8-service-actions     passed       checks=65 not passed=0 2026-10-09T07:24:44Z - 2026-10-09T07:27:28Z
+
+== set3-ubuntu/run-a  wrapper 2026-10-09T06:59:17Z - 2026-10-09T07:22:02Z  rc=0
+   overall=complete-for-review native_evidence=False outcome=settings-writes-measured cell_kind=settings-writes
+   harness=/var/tmp/cp-set3-run/harness-a (git archive cfa329676, overlay overlay-a ee138249a3bc1502)
+   step preflight                          passed        2026-10-09T06:59:48Z - 2026-10-09T06:59:53Z
+   step origin                             passed        2026-10-09T06:59:53Z - 2026-10-09T07:00:04Z
+   step baseline-install                   passed        2026-10-09T07:00:04Z - 2026-10-09T07:00:55Z
+   step owner-login                        passed        2026-10-09T07:00:55Z - 2026-10-09T07:00:56Z
+   step license                            passed        2026-10-09T07:00:56Z - 2026-10-09T07:00:56Z
+   step setup                              observed      2026-10-09T07:00:56Z - 2026-10-09T07:14:07Z
+   step site                               passed        2026-10-09T07:14:07Z - 2026-10-09T07:17:09Z
+   step S1-cron                            passed        2026-10-09T07:17:09Z - 2026-10-09T07:17:16Z
+   step S2-mail-policy                     passed        2026-10-09T07:17:16Z - 2026-10-09T07:18:10Z
+   step S3-backup-schedule                 passed        2026-10-09T07:18:10Z - 2026-10-09T07:18:12Z
+   step S4-postgresql                      passed        2026-10-09T07:18:12Z - 2026-10-09T07:18:32Z
+   step S5-mariadb                         passed        2026-10-09T07:18:32Z - 2026-10-09T07:18:42Z
+   step S6-catchall-queue                  passed        2026-10-09T07:18:42Z - 2026-10-09T07:18:52Z
+   step S7-file-metadata                   passed        2026-10-09T07:18:52Z - 2026-10-09T07:18:54Z
+   step S8-service-actions                 passed        2026-10-09T07:18:54Z - 2026-10-09T07:22:01Z
+   step collect                            passed        2026-10-09T07:22:01Z - 2026-10-09T07:22:02Z
+   finding: ubuntu: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']
+   section S1-cron                passed       checks=35 not passed=0 2026-10-09T07:17:09Z - 2026-10-09T07:17:16Z
+   section S2-mail-policy         passed       checks=38 not passed=0 2026-10-09T07:17:16Z - 2026-10-09T07:18:10Z
+   section S3-backup-schedule     passed       checks=10 not passed=0 2026-10-09T07:18:10Z - 2026-10-09T07:18:12Z
+   section S4-postgresql          passed       checks=37 not passed=0 2026-10-09T07:18:12Z - 2026-10-09T07:18:32Z
+   section S5-mariadb             passed       checks=21 not passed=0 2026-10-09T07:18:32Z - 2026-10-09T07:18:42Z
+   section S6-catchall-queue      passed       checks=15 not passed=0 2026-10-09T07:18:42Z - 2026-10-09T07:18:52Z
+   section S7-file-metadata       passed       checks=9 not passed=0 2026-10-09T07:18:52Z - 2026-10-09T07:18:54Z
+   section S8-service-actions     passed       checks=65 not passed=0 2026-10-09T07:18:54Z - 2026-10-09T07:22:01Z
+

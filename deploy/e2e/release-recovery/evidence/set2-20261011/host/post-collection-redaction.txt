@@ -1,0 +1,25 @@
+# Post-collection redaction (2026-10-11)
+# Field: mail_accounts[].crypt_hash of the cPanel import preview (POST /api/v1/import/cpanel/inspect), fixture-fabricated.
+# Replaced in 30 places in 19 files by the literal: [REDACTED fixture crypt_hash]
+# Nothing else in these files was changed (same bytes, same line endings, same JSON layout).
+# Columns: path | sha256 before | sha256 after
+
+rid-arch/run-b/steps/15-c7-import/api/0082-post-api-v1-import-cpanel-inspect.json | 56221bbb4a758ad0c4e8e997493cfeecc9ee06b5da3abd8947c699f2685b6443 | 1a753227f76fadf8ab4d6ea3b5c19e63cbe5039065f14602d567d8b458ada552
+rid-arch/run-b/steps/15-c7-import/api/0083-post-api-v1-import-cpanel-inspect.json | e7a91f4caed62cb8bb7b20dc68183dc9627fef17e2a8ae4c6489274d8a6aab38 | bf9636486fb951cbc12356ef4a5af0bef6cfd25259acc7cf21a30c7e0c961d85
+rid-arch/run-b/steps/15-c7-import/api/0084-post-api-v1-import-cpanel-inspect.json | 171d53deb6dbf2ce43b12dab44ebf20adc7c05f7add4a9c4b61a4d499c8c64ca | 28d8b5fb8f2413115c903f76da0282e895b7a4ee5bf2098253c4ba5e9f31d213
+rid-arch/run-b/steps/15-c7-import/api/0085-post-api-v1-import-cpanel-inspect.json | 01a1e9bbf147bd3118dbdd77ff3d059131432e95037da5cfa89094a0ac2a6ee0 | 6a713f84bc1b0d9b36c7c6ae432a02f41993141a37b427c2b078bb868eeab8b0
+rid-arch/run-b/steps/15-c7-import/section.json | c5051323cb466165d4d3243754cad0b4dab1edf7bfac78857281cb434983ad94 | fa0b07798ce89ff6ea032570a4f62ce87eac6b12f91ca75ec0cea322a525d524
+rid-debian13/run-a/steps/15-c7-import/api/0134-post-api-v1-import-cpanel-inspect.json | 97aa961a89742ccba748612b46c8b52c6d153fd03ec2ccafac831d08f119d591 | 6516757b003cbb184bb0e462c31e391e7e046ea340b2051257676b476b38ade1
+rid-debian13/run-a/steps/15-c7-import/api/0135-post-api-v1-import-cpanel-inspect.json | 4a7ec9674c3bcf99582aad98dac1067a6b0e7ca877498305b341c5bbe9c4a33f | eb6d0eaba25890c49dae8a33a5a6406b503d73255bed6ac2228710998dbb0b13
+rid-debian13/run-a/steps/15-c7-import/api/0136-post-api-v1-import-cpanel-inspect.json | dde6610318a5256eee9f7efb15e97626bc40620609265a346663408a28099a5f | b261ea4c9a4e44243a6bf057d74d9169d33b11214d8c3bfc7946e492bf1db3ef
+rid-debian13/run-a/steps/15-c7-import/api/0137-post-api-v1-import-cpanel-inspect.json | 3d15b2a15555575b246495e0bdfd5bba7fcf36e975880ea82eee49896b3319c4 | 6cba522a7bee2650d70315873fed9318c08d185213a2cf9775a32e2c970c134f
+rid-debian13/run-a/steps/15-c7-import/section.json | b0ab2edd879caa4ba4b8e2a0255e7a6e5a7c8b0a26411ad6f285a0c50c734c98 | f5d0cc8677f597cec0617ad533ebb97b744fe5fceff1e866f201b2df282c58c2
+rid-ubuntu/run-a/steps/15-c7-import/api/0120-post-api-v1-import-cpanel-inspect.json | 81272397d5442242c198b1bc33b1ba67eb8ec38f7237be2e4f6a779e5de09ca1 | 314e0c28e31d45b36218fc7079c96d89e20165b6b0c2fc3def023478b83cd0cc
+rid-ubuntu/run-a/steps/15-c7-import/api/0121-post-api-v1-import-cpanel-inspect.json | 376daaadd889447f2e4b834c71c87ce0c544282812a125f7b01f7a430ce57227 | b2a1fcfdd0b2d49c86f6ab6fb1576dbe84802abddf7e7e36347afa6b833d144d
+rid-ubuntu/run-a/steps/15-c7-import/api/0122-post-api-v1-import-cpanel-inspect.json | ff5ff23727f66f5066c6eaf7aef690b400f3e18c67dc086f5f3ed63b187e7dbb | 75dbec6df34340377f2facf9c894f880cd71551de77f225978718420542ec26c
+rid-ubuntu/run-a/steps/15-c7-import/section.json | e4c3f8f79ceadaad6e9991d358d912b45838bba9c17c690768e69947a0a9aaa1 | b462c0a83cff5e4a232a732b846595bfc3711179adfaedff029f0c90010ec5bf
+rid-ubuntu/run-b/steps/15-c7-import/api/0128-post-api-v1-import-cpanel-inspect.json | cfbf907a08e3fac08390d90725b032e04cd92e2f915c826092ab401e8589f8af | a87495d7a44ef5d3f42575f199c4a95e5b60c430b7aecc954180382fa663d58b
+rid-ubuntu/run-b/steps/15-c7-import/api/0129-post-api-v1-import-cpanel-inspect.json | c37f280157cbbd35c2c2cf4b515ad114ebab634c225b1da036c1e3f07bde828a | 82148f3ec153c0f23a333f2d15f7e5d1fca67dc13a2034e5de209b09cc712729
+rid-ubuntu/run-b/steps/15-c7-import/api/0130-post-api-v1-import-cpanel-inspect.json | 4a3abcdadeb790e7853a1dbf01167f5d1428c8e28c3b84be4b59d0867173502e | 07746ea0eedc9898028af8381ea52333602f4feba5193c6769e43f245ed5e2c3
+rid-ubuntu/run-b/steps/15-c7-import/api/0131-post-api-v1-import-cpanel-inspect.json | 073ff8112242a687392ba64cb1a752ab34d4a9cf7a47d80187f1af6fc1a1c013 | 7c54fa0616daafb22b85bf938391128816ab7f566727568d2e0250b3b04edb99
+rid-ubuntu/run-b/steps/15-c7-import/section.json | 9f145ece29c579e061b4aedf38ceb6af2d471f0b85b2a1ca153e908067760896 | eee3f492fe4e7f351b75f1c924d75f1d27a37d9da9627367d617684fe4c4ea50

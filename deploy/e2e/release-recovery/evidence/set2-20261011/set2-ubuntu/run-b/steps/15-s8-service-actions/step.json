@@ -1,0 +1,49 @@
+{
+  "checks": {
+    "checks": 54,
+    "error": null,
+    "failed": [
+      "postgresql (reload hook): the answer does not say the server keeps its previous settings when the server did read its files again"
+    ],
+    "finished_at": "2026-10-09T04:12:25Z",
+    "notes": [],
+    "started_at": "2026-10-09T04:09:31Z",
+    "substeps": {
+      "S8 dovecot reload": "passed",
+      "S8 dovecot restart": "passed",
+      "S8 dovecot start": "passed",
+      "S8 dovecot stop": "passed",
+      "S8 mariadb reload": "passed",
+      "S8 mariadb restart": "passed",
+      "S8 mariadb start": "passed",
+      "S8 mariadb stop": "passed",
+      "S8 nginx reload": "passed",
+      "S8 nginx restart": "passed",
+      "S8 nginx start": "passed",
+      "S8 nginx stop": "passed",
+      "S8 postfix reload": "passed",
+      "S8 postfix restart": "passed",
+      "S8 postfix start": "passed",
+      "S8 postfix stop": "inconclusive",
+      "S8 postgresql reload": "passed",
+      "S8 postgresql restart": "passed",
+      "S8 postgresql start": "passed",
+      "S8 postgresql stop": "passed",
+      "dovecot": "passed",
+      "mariadb": "passed",
+      "nginx": "passed",
+      "postfix": "passed",
+      "postgresql": "failed"
+    },
+    "title": "service actions on the real units (the Services page's route)",
+    "unknown": [
+      "S8 postfix stop (main.cf holds a line Postfix refuses): the answer (unknown, SERVICE_ACTION_UNKNOWN/None) matches what the service shows"
+    ],
+    "verdict": "failed"
+  },
+  "finished_at": "2026-10-09T04:12:25Z",
+  "name": "S8-service-actions",
+  "reason": "postgresql (reload hook): the answer does not say the server keeps its previous settings when the server did read its files again",
+  "started_at": "2026-10-09T04:09:31Z",
+  "verdict": "failed"
+}

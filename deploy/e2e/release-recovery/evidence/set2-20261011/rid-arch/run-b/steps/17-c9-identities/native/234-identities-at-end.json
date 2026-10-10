@@ -1,0 +1,815 @@
+{
+  "at": "2026-10-09T04:35:34Z",
+  "columns": [
+    "id",
+    "actor_user_id",
+    "method",
+    "route",
+    "request_sha256",
+    "status",
+    "response_status",
+    "response_retained",
+    "response_content_type",
+    "response_body",
+    "created_at",
+    "finished_at",
+    "expires_at"
+  ],
+  "count": 31,
+  "lab_action": false,
+  "mode": "read-identities",
+  "needles_compared": 21,
+  "now_epoch": 1791520534,
+  "owner_action": false,
+  "rows": [
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 106,
+        "code": null,
+        "json_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "0ac72e87cdb0b7b1642725f0f32b174d498ae4f990c147cdc50b8c024128b0f2",
+        "stored": true
+      },
+      "created_at": 1791520331,
+      "expires_at": 1791606731,
+      "finished_at": 1791520331,
+      "id": "60e8094a350c5e926d21785c25ef9a41",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "e39f6addb56b73e20bbff0455cfb29c565a5ea79cfd23337f7503b3cf4e69150",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 106,
+        "code": null,
+        "json_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "e04935f12b92271fd107047b039a81ff70d3e6345a527cbc28e16f1b48bc4714",
+        "stored": true
+      },
+      "created_at": 1791520333,
+      "expires_at": 1791606733,
+      "finished_at": 1791520333,
+      "id": "27901298e951f87b7f34f70429b982e5",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "74abe5980160aba56e9ad51d3a7e1cc45106caed9757c0ff70860add3185b0a1",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 111,
+        "code": null,
+        "json_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "4e06e491c0f205b550bb5c89b06cf6a3c1aba182288323ba9948736e173f4d5b",
+        "stored": true
+      },
+      "created_at": 1791520335,
+      "expires_at": 1791606735,
+      "finished_at": 1791520335,
+      "id": "af426887486322e161ee082b1f9069b7",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "ccf6b5361ad85a66d7e1c8876fbf1f7288251f2c7ecc484a5330d73a41789606",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 111,
+        "code": null,
+        "json_keys": [
+          "id",
+          "name",
+          "status",
+          "type",
+          "user"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "405e19ffd581ddb2c555b3d91ed9bc9fbde035572f55baf4d917d014748409c7",
+        "stored": true
+      },
+      "created_at": 1791520337,
+      "expires_at": 1791606737,
+      "finished_at": 1791520337,
+      "id": "1beecf06cb2dacd33aba2942bf38abc0",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "2b1bdc758255d26b853cf1487dc9489ba837bae772caa0b6f5223fa73535a5e1",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791520341,
+      "expires_at": 1791606741,
+      "finished_at": 1791520341,
+      "id": "f779d7027fd4767b9c3ad259af45f01b",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "b3e477dcd06479b90e29c08b1c40035748b3863fe093b90369556ac14811d43d",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/admin-account",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791520342,
+      "expires_at": 1791606742,
+      "finished_at": 1791520342,
+      "id": "38cd5bcdbec1f07a718d6c550a510630",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "b3e477dcd06479b90e29c08b1c40035748b3863fe093b90369556ac14811d43d",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/admin-account",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791520344,
+      "expires_at": 1791606744,
+      "finished_at": 1791520344,
+      "id": "23f32055334598dcdb8b13f643a122d8",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "597605c8d90d6dd972e1ea1de4b5e441262af0a539e3a03058cf6f29e82ef062",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/admin-account",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791520346,
+      "expires_at": 1791606746,
+      "finished_at": 1791520346,
+      "id": "d851a3d001c7d22aacd552c6af250f17",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "597605c8d90d6dd972e1ea1de4b5e441262af0a539e3a03058cf6f29e82ef062",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/admin-account",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791520348,
+      "expires_at": 1791606748,
+      "finished_at": 1791520348,
+      "id": "993bbcbe1854e3acf30d600d1d1c4fbb",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "c6db5a16aa29310ce0afb35f3d0ec1bb95bde9424be35cdb1a1526c744680b63",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791520350,
+      "expires_at": 1791606750,
+      "finished_at": 1791520350,
+      "id": "dfc3d4467f63b6cf4b111c57b4153866",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "65cd3f2c8522b341dd8d88cb27e6b5b83276c681ced52cb9de172e21bd5c9903",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 98,
+        "code": null,
+        "json_keys": [
+          "created_at",
+          "id",
+          "name",
+          "user"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "1bb44b9da5bfbece0beddfac634152b236c40fec835a45730067b9217fc05a00",
+        "stored": true
+      },
+      "created_at": 1791520352,
+      "expires_at": 1791606752,
+      "finished_at": 1791520353,
+      "id": "11b6663222e0b4306619bd5027f0eee1",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "4ab4326b94064e0bdef07a60e6e32592eba2948a61bf60948d01b44db356e9b7",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 98,
+        "code": null,
+        "json_keys": [
+          "created_at",
+          "id",
+          "name",
+          "user"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "00a601b2bb197b000ff776d23cb52a111d9d28ad295481529e1c6e2381c75f0a",
+        "stored": true
+      },
+      "created_at": 1791520354,
+      "expires_at": 1791606754,
+      "finished_at": 1791520354,
+      "id": "86a7762e2b56265838313951642b23ae",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "ef032a8aa37dfc915a200fa1ebda9a4ce5a387f57ade9e18129d1168eaf8062b",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791520355,
+      "expires_at": 1791606755,
+      "finished_at": 1791520355,
+      "id": "cbe91d90d9802013930fabb68780a4f5",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "d4596ddb8eb767c74358aa91ce15cf98f6777c8a7b25040b5d93eed5ef3ac5c1",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/database-servers/{id}/databases",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 205,
+        "code": null,
+        "json_keys": [
+          "backup",
+          "success"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "15c0c8489cfbb8e736006922ceede2a522490fcfff483490424afac835d90673",
+        "stored": true
+      },
+      "created_at": 1791520356,
+      "expires_at": 1791606756,
+      "finished_at": 1791520364,
+      "id": "37dc37851d9dca7f1fdca14825931b71",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "45743cc03fbe5f46eebf21fdc77c641acb8b5235a179a609c50b1cff89c5ea76",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/backups",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 205,
+        "code": null,
+        "json_keys": [
+          "backup",
+          "success"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "1b37a5443a47858d9c7191d08b0b578acfa7fdaeabd8ad0ee48d02ac2492af8d",
+        "stored": true
+      },
+      "created_at": 1791520364,
+      "expires_at": 1791606764,
+      "finished_at": 1791520372,
+      "id": "823ba954dfcec3430604d990fb5c1a5f",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "45743cc03fbe5f46eebf21fdc77c641acb8b5235a179a609c50b1cff89c5ea76",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/backups",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 52,
+        "code": "INTERNAL",
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "50ee3acb90e021661ca90f66f6387be28cbe48925a965cdebb2b7c9c290b186c",
+        "stored": true
+      },
+      "created_at": 1791520374,
+      "expires_at": 1791606774,
+      "finished_at": 1791520375,
+      "id": "305d9f10be8772a0479076fce180c309",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "04ec7df2421ec83a68d2e41a7d1afaadadf7138b0fa6ca5271d57706baa030cd",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 500,
+      "route": "/api/v1/domains/{id}/ssl/letsencrypt",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 52,
+        "code": "INTERNAL",
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "50ee3acb90e021661ca90f66f6387be28cbe48925a965cdebb2b7c9c290b186c",
+        "stored": true
+      },
+      "created_at": 1791520379,
+      "expires_at": 1791606779,
+      "finished_at": 1791520379,
+      "id": "f95b98cb2c0f572048284266ca57cba9",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "04ec7df2421ec83a68d2e41a7d1afaadadf7138b0fa6ca5271d57706baa030cd",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 500,
+      "route": "/api/v1/domains/{id}/ssl/letsencrypt",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 52,
+        "code": "INTERNAL",
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "50ee3acb90e021661ca90f66f6387be28cbe48925a965cdebb2b7c9c290b186c",
+        "stored": true
+      },
+      "created_at": 1791520382,
+      "expires_at": 1791606782,
+      "finished_at": 1791520382,
+      "id": "d4fc4b92595f42dcae0226ef14c97c74",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "04ec7df2421ec83a68d2e41a7d1afaadadf7138b0fa6ca5271d57706baa030cd",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 500,
+      "route": "/api/v1/domains/{id}/ssl/letsencrypt",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791520396,
+      "expires_at": 1791606796,
+      "finished_at": 1791520397,
+      "id": "27fe9daeff529135804980e5923ae44f",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "655785f35344e04f25fbc1cfdb972f95b103451772628dd241947c2c4fa1670d",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/vpn/peers",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791520398,
+      "expires_at": 1791606798,
+      "finished_at": 1791520398,
+      "id": "79ae209524f7952f50ff02fddbbed3d8",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "136866f828c25170240e28e1c3a848d413aac87d758b68bdb977d4e45bbf8b9e",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 200,
+      "route": "/api/v1/vpn/peers",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 52,
+        "code": "INTERNAL",
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "50ee3acb90e021661ca90f66f6387be28cbe48925a965cdebb2b7c9c290b186c",
+        "stored": true
+      },
+      "created_at": 1791520401,
+      "expires_at": 1791606801,
+      "finished_at": 1791520402,
+      "id": "88029e595fb8be52eb258f9ce1d91bc8",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "68099b07ca0c655b8000006f74436c5b4b2f036aedd80ba9bc243bdc7a115281",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 500,
+      "route": "/api/v1/import/cpanel/apply",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 52,
+        "code": "INTERNAL",
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "50ee3acb90e021661ca90f66f6387be28cbe48925a965cdebb2b7c9c290b186c",
+        "stored": true
+      },
+      "created_at": 1791520406,
+      "expires_at": 1791606806,
+      "finished_at": 1791520408,
+      "id": "6a91efb5e362b6d8793027558aad4943",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "cc9b099b926bb6cd8a8df40351b3b7c89f3f3cd8580f13cbae305cbfbd08ed7e",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 500,
+      "route": "/api/v1/import/cpanel/apply",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 52,
+        "code": "INTERNAL",
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "50ee3acb90e021661ca90f66f6387be28cbe48925a965cdebb2b7c9c290b186c",
+        "stored": true
+      },
+      "created_at": 1791520411,
+      "expires_at": 1791606811,
+      "finished_at": 1791520413,
+      "id": "95092b393e24402e78e14a684869c853",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "6599a3f8fdedb52c4ab1d8d8c15e5ebbb85e7e270b407d153f395ab417954419",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 500,
+      "route": "/api/v1/import/cpanel/apply",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 52,
+        "code": "INTERNAL",
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "50ee3acb90e021661ca90f66f6387be28cbe48925a965cdebb2b7c9c290b186c",
+        "stored": true
+      },
+      "created_at": 1791520415,
+      "expires_at": 1791606815,
+      "finished_at": 1791520417,
+      "id": "4734e13582e1fd95f7137320a67db579",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "5115145a73d8e1ca8e2c8bb0b00cb407f8490ee85adbc762db67daa9c83a4b2f",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 500,
+      "route": "/api/v1/import/cpanel/apply",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 217,
+        "code": null,
+        "json_keys": [
+          "safety_backup",
+          "success"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "16e073ccc4bc58b5accc11eaa7ee3b2ea8a63f23743302b66c4193c5bd35cbc1",
+        "stored": true
+      },
+      "created_at": 1791520425,
+      "expires_at": 1791606825,
+      "finished_at": 1791520436,
+      "id": "797e4665e8f5fddae12739f09471709f",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "9383c0050ab7bd3f049b3958895d9e4b456297e52947e098e7a792e9a91812df",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/backups/restore",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 217,
+        "code": null,
+        "json_keys": [
+          "safety_backup",
+          "success"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "a88fe2f8497a7c1dd4b107829a842b90c2ef37de171f724e5ac2474613cc612a",
+        "stored": true
+      },
+      "created_at": 1791520441,
+      "expires_at": 1791606841,
+      "finished_at": 1791520452,
+      "id": "2197986211f7b04aa92de1832851e6b1",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "9383c0050ab7bd3f049b3958895d9e4b456297e52947e098e7a792e9a91812df",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/backups/restore",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 217,
+        "code": null,
+        "json_keys": [
+          "safety_backup",
+          "success"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "4c1d0f3bcdf468c68aebd2410cdb51a04e717d982e5c6da2ac0cf96255465067",
+        "stored": true
+      },
+      "created_at": 1791520456,
+      "expires_at": 1791606856,
+      "finished_at": 1791520466,
+      "id": "062731a565f85174eab240285a8caa5c",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "9383c0050ab7bd3f049b3958895d9e4b456297e52947e098e7a792e9a91812df",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/backups/restore",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 230,
+        "code": "BACKUP_RESTORE_IN_PROGRESS",
+        "json_keys": [
+          "code",
+          "error"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "ccd4d7ba96837600b028b7fd68edd25448c6b95d4a72053036817ad750c3e788",
+        "stored": true
+      },
+      "created_at": 1791520456,
+      "expires_at": 1791606856,
+      "finished_at": 1791520456,
+      "id": "568ea757665e9f11aeaca76532d653f4",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "9383c0050ab7bd3f049b3958895d9e4b456297e52947e098e7a792e9a91812df",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 409,
+      "route": "/api/v1/domains/{id}/backups/restore",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 217,
+        "code": null,
+        "json_keys": [
+          "safety_backup",
+          "success"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "18dd634ef513b58664e728f61929c891603e5cf94537224953f21e2b8e7b204a",
+        "stored": true
+      },
+      "created_at": 1791520470,
+      "expires_at": 1791606870,
+      "finished_at": 1791520480,
+      "id": "539aa1afe9e6dc276b9a042ca7590eed",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "9383c0050ab7bd3f049b3958895d9e4b456297e52947e098e7a792e9a91812df",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/backups/restore",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "bytes": 217,
+        "code": null,
+        "json_keys": [
+          "safety_backup",
+          "success"
+        ],
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "sha256": "f40e505ce9bbbba854c27acc58517996d1e96c5f67ed72be23d74dc5d2164227",
+        "stored": true
+      },
+      "created_at": 1791520486,
+      "expires_at": 1791606886,
+      "finished_at": 1791520496,
+      "id": "5bff12a823d9dbb7f6c11a81027dc6e8",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "9383c0050ab7bd3f049b3958895d9e4b456297e52947e098e7a792e9a91812df",
+      "response_content_type": "application/json",
+      "response_retained": 1,
+      "response_status": 200,
+      "route": "/api/v1/domains/{id}/backups/restore",
+      "status": "done"
+    },
+    {
+      "actor_user_id": 2,
+      "body": {
+        "sensitive_values_of_this_run_found": 0,
+        "sensitive_words_found": [],
+        "stored": false
+      },
+      "created_at": 1791520511,
+      "expires_at": 1791606911,
+      "finished_at": 1791520515,
+      "id": "eb91ec62c90f4328ff74e86f2e5ca358",
+      "lifetime_seconds": 86400,
+      "method": "POST",
+      "request_sha256": "9383c0050ab7bd3f049b3958895d9e4b456297e52947e098e7a792e9a91812df",
+      "response_content_type": "",
+      "response_retained": 0,
+      "response_status": 0,
+      "route": "/api/v1/domains/{id}/backups/restore",
+      "status": "interrupted"
+    }
+  ],
+  "rows_holding_a_sensitive_value_of_this_run": [],
+  "schema": "celikpanel/set2-request-identity-native/v1",
+  "states": {
+    "done": 30,
+    "interrupted": 1
+  }
+}

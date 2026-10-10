@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-08T21:27:31Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791494849",
+      "-n",
+      "400",
+      "-u",
+      "postgresql@17-main.service"
+    ],
+    "at": "2026-10-08T21:27:31Z",
+    "returncode": 0,
+    "seconds": 0.005,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-08T21:27:30.477402+00:00 dns-debian13 systemd[1]: Reloading postgresql@17-main.service - PostgreSQL Cluster 17-main...\n2026-10-08T21:27:30.511520+00:00 dns-debian13 systemctl[32240]: Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.\n2026-10-08T21:27:30.512518+00:00 dns-debian13 systemd[1]: postgresql@17-main.service: Control process exited, code=exited, status=5/NOTINSTALLED\n2026-10-08T21:27:30.512555+00:00 dns-debian13 systemd[1]: Reload failed for postgresql@17-main.service - PostgreSQL Cluster 17-main.\n2026-10-08T21:27:30.542757+00:00 dns-debian13 systemd[1]: Reloading postgresql@17-main.service - PostgreSQL Cluster 17-main...\n2026-10-08T21:27:30.565372+00:00 dns-debian13 systemctl[32244]: Failed to reload set1-owner-pooler.service: Unit set1-owner-pooler.service not found.\n2026-10-08T21:27:30.566024+00:00 dns-debian13 systemd[1]: postgresql@17-main.service: Control process exited, code=exited, status=5/NOTINSTALLED\n2026-10-08T21:27:30.566033+00:00 dns-debian13 systemd[1]: Reload failed for postgresql@17-main.service - PostgreSQL Cluster 17-main.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791494849,
+  "units": [
+    "postgresql@17-main.service"
+  ]
+}

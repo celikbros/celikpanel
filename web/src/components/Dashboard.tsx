@@ -12,11 +12,14 @@ import { api, type SystemStats } from '../lib/api';
 import { useI18n } from '../i18n';
 import { useAuth } from '../auth/AuthContext';
 import type { TranslationKey } from '../i18n/en';
-import { Button, Dialog, UsageBar, Card } from './ui';
+import { Button, Checking, CouldNotCheck, Dialog, Spinner, UsageBar, Card } from './ui';
 import { PageHeader } from './PageHeader';
 import { showToast } from './Toast';
 import { FirewallNoSSHAcknowledgement, readFirewallSSHReason } from './FirewallSSHNotice';
 import { apiErrorText, readApiError } from '../lib/apiError';
+import { countText, decodeList, lastKnown, mapRemote, useRemote, type Observed, type Remote } from '../lib/remote';
+import { decodeFirewallStatus, useFirewallStatus, type FirewallStatus } from '../lib/firewall';
+import { USERS_URL, decodeUsers } from '../lib/accounts';
 import { summarizeDashboardMailTruth } from '../lib/dashboardMailTruth';
 import { publishComponentCensus } from '../lib/componentCensus';
 import {
@@ -45,13 +48,6 @@ interface SvcLite {
     /** null = bu makinede hiç gözlenmedi; bu, yok demek değildir. */
     is_installed: boolean | null;
     kind?: 'service' | 'runtime' | 'tool';
-}
-interface FwState {
-    enabled: boolean;
-    tcp_ports?: number[];
-    udp_ports?: number[];
-    persistence_state?: 'disabled' | 'missing' | 'ready' | 'stale' | 'invalid' | 'unverified';
-    ssh_discovery_reason?: string;
 }
 interface HostMutationReadiness {
     ready: boolean;
@@ -83,6 +79,20 @@ interface Extras {
     mail_accounts: number;
     expiring_certs: { domain_name: string; days_left: number }[];
 }
+
+// An answer without the two counts is not "0 databases, 0 mailboxes".
+// İki sayıyı taşımayan yanıt "0 veritabanı, 0 posta kutusu" değildir.
+function decodeExtras(raw: unknown): Extras {
+    const body = raw as Partial<Extras> | null;
+    if (!body || typeof body.databases !== 'number' || typeof body.mail_accounts !== 'number') throw new Error('shape');
+    return {
+        databases: body.databases,
+        mail_accounts: body.mail_accounts,
+        expiring_certs: decodeList(body.expiring_certs ?? null),
+    };
+}
+
+const NO_DOMAINS: DomainLite[] = [];
 
 type Translate = ReturnType<typeof useI18n>['t'];
 
@@ -242,14 +252,44 @@ function AdminDashboard() {
     const [stats, setStats] = useState<SystemStats | null>(null);
     const [services, setServices] = useState<SvcLite[]>([]);
     const [mailProfiles, setMailProfiles] = useState<ManagedMailProfile[] | null>(null);
-    const [fw, setFw] = useState<FwState | null>(null);
-    const [domains, setDomains] = useState<DomainLite[]>([]);
+    // The firewall is read through the one reader of its address. It is "off"
+    // here only for an answer that says so: while it is read, and when it
+    // could not be read, `fw` is null, so nothing below says "off" and nothing
+    // offers to turn it on (9 Oct 2026). Before, any answer was stored as it
+    // came, and one without `enabled` - an Agent error sent with a 200 - drew
+    // "the firewall is off" with its button.
+    // Güvenlik duvarı, adresinin tek okuyucusundan okunur. Burada yalnız bunu
+    // söyleyen bir yanıt için "kapalı"dır: okunurken ve okunamadığında `fw`
+    // null'dır; aşağıda hiçbir şey "kapalı" demez ve açmayı önermez.
+    const firewall = useFirewallStatus();
+    // What the server answered to this page's own change is an answer too,
+    // and a newer one than the read before it.
+    // Sunucunun bu sayfanın kendi değişikliğine verdiği yanıt da bir yanıttır.
+    const [fwChanged, setFwChanged] = useState<Observed<FirewallStatus> | null>(null);
+    const fwKnown = firewall.remote.state === 'known' ? firewall.remote : null;
+    const fw: FirewallStatus | null = fwChanged && !(fwKnown && fwKnown.observedAt >= fwChanged.observedAt)
+        ? fwChanged.value
+        : fwKnown?.value ?? null;
+    // The stored component records: read, could not be read, or known.
+    // Kayıtlı bileşen kayıtları: okunuyor, okunamadı ya da biliniyor.
+    const [scanRead, setScanRead] = useState<'reading' | 'unread' | 'known'>('reading');
+    const [scanAttempt, setScanAttempt] = useState(0);
+    // The four counts under "Hosting" and the list of recent domains are drawn
+    // from three reads. Each count is a number only for an answer the server
+    // gave: "…" while it is read, "–" when it could not be read. A failed read
+    // is not "0 domains", and it does not take the section off the page.
+    // "Barındırma" altındaki dört sayı ve son alan adları üç okumadan çizilir.
+    // Her sayı yalnız sunucunun verdiği yanıt için sayıdır: okunurken "…",
+    // okunamayınca "–". Başarısız okuma "0 alan adı" değildir ve bölümü
+    // sayfadan almaz.
+    const domainList = useRemote('/api/v1/domains', decodeList<DomainLite>);
+    const usersRead = useRemote(USERS_URL, decodeUsers);
+    const extrasRead = useRemote('/api/v1/dashboard', decodeExtras);
+    const domains = lastKnown(domainList.remote)?.value ?? NO_DOMAINS;
+    const extras = lastKnown(extrasRead.remote)?.value ?? null;
     const [audit, setAudit] = useState<AuditLite[]>([]);
-    const [usersCount, setUsersCount] = useState(0);
     const [serviceScannedAt, setServiceScannedAt] = useState<string | null>(null);
     const [freshnessNow, setFreshnessNow] = useState(() => Date.now());
-    // Panel certificate evidence is independent of every hosted domain.
-    const [extras, setExtras] = useState<Extras | null>(null);
     const [fwBusy, setFwBusy] = useState(false);
     const [firewallConfirmationOpen, setFirewallConfirmationOpen] = useState(false);
     const [noSSHAcknowledged, setNoSSHAcknowledged] = useState(false);
@@ -261,26 +301,42 @@ function AdminDashboard() {
         loadStats();
         const timer = setInterval(loadStats, 5000);
 
+        fetch('/api/v1/audit-logs?limit=28').then((r) => (r.ok ? r.json() : null)).then((d) => setAudit(d?.entries || [])).catch(() => {});
+
+        return () => clearInterval(timer);
+    }, []);
+
+    // A refused, dropped or unreadable answer is "could not be read": it is
+    // not an empty list of components, and the attention list below says so
+    // instead of going quiet.
+    // Reddedilen, düşen ya da okunamayan yanıt "okunamadı"dır: boş bir bileşen
+    // listesi değildir ve aşağıdaki liste susmak yerine bunu söyler.
+    useEffect(() => {
+        let current = true;
+        setScanRead('reading');
         fetch('/api/v1/managed-services')
-            .then((r) => (r.ok ? r.json() : null))
+            .then((r) => (r.ok ? r.json() : Promise.reject(new Error('refused'))))
             .then((value: unknown) => {
+                if (!current) return;
                 const snapshot = decodeDashboardServices(value);
-                if (!snapshot) return;
+                if (!snapshot) {
+                    setScanRead('unread');
+                    return;
+                }
                 publishComponentCensus(snapshot.services);
                 setServices(snapshot.services);
                 setMailProfiles(snapshot.profiles);
                 setServiceScannedAt(snapshot.scannedAt);
                 setFreshnessNow(Date.now());
+                setScanRead('known');
             })
-            .catch(() => {});
-        fetch('/api/v1/firewall').then((r) => (r.ok ? r.json() : null)).then(setFw).catch(() => {});
-        fetch('/api/v1/domains').then((r) => (r.ok ? r.json() : [])).then((d) => setDomains(d || [])).catch(() => {});
-        fetch('/api/v1/audit-logs?limit=28').then((r) => (r.ok ? r.json() : null)).then((d) => setAudit(d?.entries || [])).catch(() => {});
-        fetch('/api/v1/users').then((r) => (r.ok ? r.json() : null)).then((d) => setUsersCount((d?.users || []).length)).catch(() => {});
-        fetch('/api/v1/dashboard').then((r) => (r.ok ? r.json() : null)).then(setExtras).catch(() => {});
-
-        return () => clearInterval(timer);
-    }, []);
+            .catch(() => {
+                if (current) setScanRead('unread');
+            });
+        return () => {
+            current = false;
+        };
+    }, [scanAttempt]);
 
     useEffect(() => {
         let mounted = true;
@@ -355,6 +411,11 @@ function AdminDashboard() {
             // Tazelik 30 saniyede bir ilerleyen bir saate göre ölçülür; taze
             // tarama damgası o saatten yeni olduğu için saati birlikte ilerlet.
             setFreshnessNow(Date.now());
+            // The check is an answer about the component records too: an
+            // earlier read that failed no longer makes the attention list
+            // say it could not be read.
+            // Kontrol, bileşen kayıtları hakkında da bir yanıttır.
+            setScanRead('known');
         } catch {
             showToast('error', t('services.scanFailed'));
         } finally {
@@ -450,19 +511,20 @@ function AdminDashboard() {
             if (!r.ok) {
                 // The server may have changed since the status read; re-read it
                 // so the dialog can offer the same way forward.
-                fetch('/api/v1/firewall')
-                    .then((response) => (response.ok ? response.json() : null))
-                    .then(setFw)
-                    .catch(() => {});
+                void firewall.retry();
                 showToast('error', apiErrorText(await readApiError(r), t, 'firewall.changeFailed'));
                 return;
             }
-            const value: unknown = await r.json();
-            if (!value || typeof value !== 'object' || typeof (value as Record<string, unknown>).enabled !== 'boolean') {
+            let changed: FirewallStatus;
+            try {
+                changed = decodeFirewallStatus(await r.json());
+            } catch {
                 showToast('error', apiErrorText({ message: '' }, t, 'firewall.changeFailed'));
+                void firewall.retry();
                 return;
             }
-            setFw(value as FwState);
+            setFwChanged({ value: changed, observedAt: Date.now() });
+            void firewall.retry();
             setFirewallConfirmationOpen(false);
             showToast('success', t('firewall.onDone'));
         } catch {
@@ -559,7 +621,35 @@ function AdminDashboard() {
         });
     }
 
-    const hasContent = installed.length > 0 || domains.length > 0;
+    // What the attention list is drawn from: four reads. An item is listed
+    // only from an answer the server gave. "Nothing needs attention" is said
+    // only when every one of the four has answered; while one is on its way
+    // the list says it is checking, and when one could not be read it says the
+    // list may be incomplete and offers the read again.
+    // İlgi listesinin çizildiği dört okuma. Kalem yalnız sunucunun verdiği
+    // yanıttan listelenir. "İlgi isteyen bir şey yok" ancak dördü de yanıt
+    // verdiğinde söylenir.
+    const attentionReads = [
+        extrasRead.remote.state,
+        domainList.remote.state,
+        firewall.remote.state,
+        scanRead === 'reading' ? 'loading' : scanRead === 'known' ? 'known' : 'unknown',
+    ];
+    const attentionChecking = attentionReads.includes('loading');
+    const attentionUnread = attentionReads.includes('unknown');
+    const retryAttention = () => {
+        if (extrasRead.remote.state === 'unknown') void extrasRead.retry();
+        if (domainList.remote.state === 'unknown') void domainList.retry();
+        if (firewall.remote.state === 'unknown') void firewall.retry();
+        if (scanRead === 'unread') setScanAttempt((n) => n + 1);
+    };
+
+    // The section leaves the page only when the server has said there is
+    // nothing for it: no component installed and no domain. While the domain
+    // list is read, or could not be read, it stays, with its counts saying so.
+    // Bölüm sayfadan yalnız sunucu ona ait bir şey olmadığını söylediğinde
+    // çıkar. Alan adı listesi okunurken ya da okunamadığında kalır.
+    const hasContent = installed.length > 0 || domains.length > 0 || domainList.remote.state !== 'known';
 
     const recentDomains = [...domains]
         .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
@@ -716,61 +806,115 @@ function AdminDashboard() {
                 Needs attention yolculuktan ÖNCE: aktif sorun, rehberlikten
                 önce gelir. Operatör geri bildirimi (17 Tem): uyarı listesi
                 sayfanın altında kalırken üst taraf sakin görünüyordu. */}
-            {attention.length > 0 && (
-                <section className="mt-6">
-                    <SectionTitle
-                        icon={Bell}
-                        tint="bg-surface-2 text-fg-muted"
-                        title={t('dashboard.attention')}
-                        right={
-                            attention.length > 0 ? (
+            {/* The section is on the page from the first paint and keeps the
+                height of one item while its reads are on their way. Seen in a
+                browser on 9 Oct 2026: it appeared when the slowest read
+                answered and pushed everything under it down by 118 px (158 px
+                on a phone). With none or one item nothing moves now; each
+                further item adds its own row.
+                Bölüm ilk çizimden beri sayfadadır ve okumaları sürerken bir
+                kalemin yüksekliğini korur. Önceden en yavaş okuma yanıt
+                verince beliriyor ve altındaki her şeyi 118 px aşağı itiyordu. */}
+            <section className="mt-6" aria-busy={attentionChecking}>
+                <SectionTitle
+                    icon={Bell}
+                    tint="bg-surface-2 text-fg-muted"
+                    title={t('dashboard.attention')}
+                    right={
+                        attention.length > 0 && (
+                            <span className="flex items-center gap-2">
+                                {/* Items are already listed and another read
+                                    is still on its way: said here, beside the
+                                    count, so no row appears in the list and
+                                    then leaves it.
+                                    Kalemler listelenmişken başka bir okuma
+                                    sürüyorsa burada, sayının yanında söylenir;
+                                    listede belirip kaybolan bir satır olmaz. */}
+                                {attentionChecking && (
+                                    <Spinner size="xs" label={t('dashboard.attentionChecking')} />
+                                )}
                                 <span className="rounded-full bg-warning/15 px-2.5 py-1 text-xs font-semibold text-warning">
                                     {attention.length === 1
                                         ? t('dashboard.warnCountOne')
                                         : t('dashboard.warnCount', { n: attention.length })}
                                 </span>
-                            ) : undefined
-                        }
+                            </span>
+                        )
+                    }
+                />
+                {/* The notice stands by itself, not inside the list's box;
+                    the box is then drawn only for the items that are known.
+                    Bildirim listenin kutusunun içinde değil, tek başına
+                    durur; kutu o zaman yalnız bilinen kalemler için çizilir. */}
+                {attentionUnread && (
+                    <CouldNotCheck
+                        text={t('dashboard.attentionUnread')}
+                        onRetry={retryAttention}
+                        busy={attentionChecking}
+                        className={attention.length > 0 ? 'mb-3' : ''}
                     />
-                    <div className="overflow-hidden rounded-xl border border-border-strong bg-surface">
-                        <ul>
-                            {[...attention].sort((x, y) => Number(Boolean(y.danger)) - Number(Boolean(x.danger))).map((a, index, list) => (
-                                    <li key={a.key} className={`flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 last:border-0 ${
-                                        // A failure and a warning must not share an edge: where the
-                                        // severity changes, the list breaks. / Kirmizi ile sarinin
-                                        // sinirinda liste ayrilir.
-                                        index > 0 && Boolean(list[index - 1].danger) && !a.danger
-                                            ? 'mt-2 border-t-2 border-t-border-strong'
-                                            : ''
-                                    }`}>
-                                        <a.icon className={`h-4 w-4 shrink-0 ${a.danger ? 'text-danger' : 'text-warning'}`} />
-                                        <span className="min-w-0 flex-1 text-sm text-fg">{a.text}</span>
-                                        {/* An item with a direct action gets a REAL button — a quiet
-                                            text link is how the operator missed the firewall switch.
-                                            Doğrudan eylemi olan kalem GERÇEK düğme alır — operatörün
-                                            firewall anahtarını kaçırmasının sebebi sessiz metin bağıydı. */}
-                                        {a.onAct ? (
-                                            <button
-                                                onClick={a.onAct}
-                                                disabled={fwBusy}
-                                                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
-                                            >
-                                                {a.action}
-                                            </button>
-                                        ) : (
-                                            <button
-                                                onClick={() => navigate(a.to)}
-                                                className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-                                            >
-                                                {a.action} <ArrowRight className="h-3.5 w-3.5" />
-                                            </button>
-                                        )}
-                                    </li>
-                            ))}
-                        </ul>
-                    </div>
-                </section>
-            )}
+                )}
+                {/* The least height is that of the tallest thing one answer
+                    can put here: on a narrow screen the calm line is three
+                    lines and one item is two, so the box reserves three lines
+                    there and one line from `lg` up, and what it holds is
+                    centred in it. Measured on a 390 px phone on 9 Oct 2026:
+                    with one line reserved, the calm line pushed the page down
+                    by 24 px and the firewall item by 12 px.
+                    En az yükseklik, tek bir yanıtın buraya koyabileceği en uzun
+                    şeyin yüksekliğidir: dar ekranda sakin satır üç, tek kalem
+                    iki satırdır; kutu orada üç satır, `lg` ve üstünde bir satır
+                    ayırır ve içindekini ortalar. */}
+                <div className={attentionUnread && attention.length === 0 ? 'hidden' : 'flex min-h-[4.875rem] flex-col justify-center overflow-hidden rounded-xl border border-border-strong bg-surface lg:min-h-[3.375rem]'}>
+                    {attentionChecking && !attentionUnread && attention.length === 0 && (
+                        <Checking label={t('dashboard.attentionChecking')} className="px-4 py-2" />
+                    )}
+                    {/* Not "all good": it names what was read, and it does
+                        not speak for components nobody has checked lately.
+                        "Her şey yolunda" değil: neyin okunduğunu adlandırır
+                        ve yakın zamanda bakılmamış bileşenler adına konuşmaz. */}
+                    {!attentionChecking && !attentionUnread && attention.length === 0 && (
+                        <p className="px-4 py-2 text-sm leading-5 text-fg-muted">
+                            {t(serviceScanFresh ? 'dashboard.attentionNone' : 'dashboard.attentionNoneUnchecked')}
+                        </p>
+                    )}
+                    <ul>
+                        {[...attention].sort((x, y) => Number(Boolean(y.danger)) - Number(Boolean(x.danger))).map((a, index, list) => (
+                                <li key={a.key} className={`flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 last:border-0 ${
+                                    // A failure and a warning must not share an edge: where the
+                                    // severity changes, the list breaks. / Kirmizi ile sarinin
+                                    // sinirinda liste ayrilir.
+                                    index > 0 && Boolean(list[index - 1].danger) && !a.danger
+                                        ? 'mt-2 border-t-2 border-t-border-strong'
+                                        : ''
+                                }`}>
+                                    <a.icon className={`h-4 w-4 shrink-0 ${a.danger ? 'text-danger' : 'text-warning'}`} />
+                                    <span className="min-w-0 flex-1 text-sm text-fg">{a.text}</span>
+                                    {/* An item with a direct action gets a REAL button — a quiet
+                                        text link is how the operator missed the firewall switch.
+                                        Doğrudan eylemi olan kalem GERÇEK düğme alır — operatörün
+                                        firewall anahtarını kaçırmasının sebebi sessiz metin bağıydı. */}
+                                    {a.onAct ? (
+                                        <button
+                                            onClick={a.onAct}
+                                            disabled={fwBusy}
+                                            className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:bg-primary/90 disabled:opacity-50"
+                                        >
+                                            {a.action}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => navigate(a.to)}
+                                            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                                        >
+                                            {a.action} <ArrowRight className="h-3.5 w-3.5" />
+                                        </button>
+                                    )}
+                                </li>
+                        ))}
+                    </ul>
+                </div>
+            </section>
 
             <LicenseNotice />
             <ServerSetupDashboardNotice />
@@ -781,10 +925,10 @@ function AdminDashboard() {
                     <section>
                         <SectionTitle icon={Globe} tint="bg-surface-2 text-fg-muted" title={t('dashboard.hosting')} />
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                            <CountCard icon={Globe} n={domains.length} label={t('dashboard.domains')} to="/domains" />
-                            <CountCard icon={Database} n={extras?.databases ?? 0} label={t('dashboard.databases')} to="/databases" />
-                            <CountCard icon={Users} n={usersCount} label={t('nav.users')} to="/users" />
-                            <CountCard icon={Mail} n={extras?.mail_accounts ?? 0} label={t('dashboard.mailAccounts')} to="/domains" />
+                            <CountCard icon={Globe} n={mapRemote(domainList.remote, (rows) => rows.length)} label={t('dashboard.domains')} to="/domains" />
+                            <CountCard icon={Database} n={mapRemote(extrasRead.remote, (value) => value.databases)} label={t('dashboard.databases')} to="/databases" />
+                            <CountCard icon={Users} n={mapRemote(usersRead.remote, (rows) => rows.length)} label={t('nav.users')} to="/users" />
+                            <CountCard icon={Mail} n={mapRemote(extrasRead.remote, (value) => value.mail_accounts)} label={t('dashboard.mailAccounts')} to="/domains" />
                         </div>
                         {recentDomains.length > 0 && (
                             <>
@@ -1304,8 +1448,14 @@ function GaugeCard({
     );
 }
 
-function CountCard({ icon: Icon, n, label, to }: { icon: typeof Cpu; n: number; label: string; to: string }) {
+function CountCard({ icon: Icon, n, label, to }: { icon: typeof Cpu; n: Remote<number>; label: string; to: string }) {
     const navigate = useNavigate();
+    const { t } = useI18n();
+    // "–" is drawn for the eye; in words it is "could not be read", and the
+    // page the card opens says so in full, with Retry.
+    // "–" göz içindir; sözle "okunamadı"dır ve kartın açtığı sayfa bunu Tekrar
+    // dene ile tam olarak söyler.
+    const unread = n.state === 'unknown' && !n.previous;
     return (
         <button
             onClick={() => navigate(to)}
@@ -1314,7 +1464,11 @@ function CountCard({ icon: Icon, n, label, to }: { icon: typeof Cpu; n: number; 
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Icon className="h-4 w-4" />
             </span>
-            <p className="mt-2 text-2xl font-bold tracking-tight text-fg">{n}</p>
+            <p className="mt-2 text-2xl font-bold tracking-tight text-fg" title={unread ? t('dashboard.countUnread') : undefined}>
+                <span aria-hidden={unread || n.state === 'loading' ? true : undefined}>{countText(n)}</span>
+                {unread && <span className="sr-only">{t('dashboard.countUnread')}</span>}
+                {n.state === 'loading' && <span className="sr-only">{t('common.loading')}</span>}
+            </p>
             <p className="text-xs text-fg-muted">{label}</p>
         </button>
     );

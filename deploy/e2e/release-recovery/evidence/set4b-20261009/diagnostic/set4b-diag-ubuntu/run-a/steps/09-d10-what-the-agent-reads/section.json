@@ -1,0 +1,234 @@
+{
+  "agent_view_at_start": {
+    "postfixMasterProcess": {
+      "comm": "master\n",
+      "pid": 39747,
+      "pid_file": {
+        "path": "/var/spool/postfix/pid/master.pid",
+        "text": "                           39747\n"
+      },
+      "postconf": {
+        "argv": [
+          "postconf",
+          "-h",
+          "queue_directory"
+        ],
+        "returncode": 0,
+        "seconds": 0.008,
+        "stderr": "",
+        "stdout": "/var/spool/postfix\n"
+      }
+    },
+    "readUnitFailure": {
+      "postfix.service": {
+        "argv": [
+          "systemctl",
+          "show",
+          "postfix.service",
+          "--property=LoadState",
+          "--property=ActiveState",
+          "--property=Result"
+        ],
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "Result=success\nLoadState=loaded\nActiveState=active\n"
+      },
+      "postfix@-.service": {
+        "argv": [
+          "systemctl",
+          "show",
+          "postfix@-.service",
+          "--property=LoadState",
+          "--property=ActiveState",
+          "--property=Result"
+        ],
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "Result=success\nLoadState=loaded\nActiveState=active\n"
+      }
+    }
+  },
+  "agent_view_with_the_refused_main_cf": {
+    "postfixMasterProcess": {
+      "comm": "master\n",
+      "pid": 39747,
+      "pid_file": {
+        "path": "/var/spool/postfix/pid/master.pid",
+        "text": "                           39747\n"
+      },
+      "postconf": {
+        "argv": [
+          "postconf",
+          "-h",
+          "queue_directory"
+        ],
+        "returncode": 0,
+        "seconds": 0.008,
+        "stderr": "postconf: warning: /etc/postfix/main.cf: #comment after other text is not allowed: # raised for the campa...\n",
+        "stdout": "/var/spool/postfix\n"
+      }
+    },
+    "readUnitFailure": {
+      "postfix.service": {
+        "argv": [
+          "systemctl",
+          "show",
+          "postfix.service",
+          "--property=LoadState",
+          "--property=ActiveState",
+          "--property=Result"
+        ],
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "Result=success\nLoadState=loaded\nActiveState=active\n"
+      },
+      "postfix@-.service": {
+        "argv": [
+          "systemctl",
+          "show",
+          "postfix@-.service",
+          "--property=LoadState",
+          "--property=ActiveState",
+          "--property=Result"
+        ],
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "Result=success\nLoadState=loaded\nActiveState=active\n"
+      }
+    }
+  },
+  "calls": [],
+  "checks": [
+    {
+      "detail": {
+        "argv": [
+          "systemctl",
+          "show",
+          "postfix.service",
+          "--property=LoadState",
+          "--property=ActiveState",
+          "--property=Result"
+        ],
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "Result=success\nLoadState=loaded\nActiveState=active\n"
+      },
+      "name": "measured: the Agent's reading command for postfix.service was run and answered (exit status recorded)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "argv": [
+          "systemctl",
+          "show",
+          "postfix@-.service",
+          "--property=LoadState",
+          "--property=ActiveState",
+          "--property=Result"
+        ],
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "Result=success\nLoadState=loaded\nActiveState=active\n"
+      },
+      "name": "measured: the Agent's reading command for postfix@-.service was run and answered (exit status recorded)",
+      "ok": true
+    },
+    {
+      "detail": {
+        "argv": [
+          "postfix",
+          "check"
+        ],
+        "at": "2026-10-09T13:56:24Z",
+        "returncode": 1,
+        "seconds": 1.009,
+        "status": "ok",
+        "stderr": "postfix: fatal: bad numerical configuration: default_process_limit = 200 # raised for the campaign\n",
+        "stdout": ""
+      },
+      "name": "`postfix check` refuses main.cf (the owner's line)",
+      "ok": true
+    }
+  ],
+  "error": "TypeError: Set4bTrial.snap4b() got multiple values for argument 'label'",
+  "finished_at": "2026-10-09T13:56:26Z",
+  "native_evidence": false,
+  "natives": [
+    {
+      "file": "native/011-postfix-units-with-unit-files.json",
+      "label": "postfix-units-with-unit-files",
+      "mode": "read-service",
+      "owner_action": false
+    },
+    {
+      "file": "native/012-agent-view-at-start.json",
+      "label": "agent-view-at-start",
+      "mode": "read-agent-view",
+      "owner_action": false
+    },
+    {
+      "file": "native/013-postfix-main.cf-before-typo.json",
+      "label": "postfix-main.cf-before-typo",
+      "mode": "read-file",
+      "owner_action": false
+    },
+    {
+      "file": "native/014-owner-p1-typo-main-cf.json",
+      "label": "owner-p1-typo-main-cf",
+      "mode": "owner-edit",
+      "owner_action": true
+    },
+    {
+      "file": "native/015-p1-postfix-with-typo.json",
+      "label": "p1-postfix-with-typo",
+      "mode": "read-postfix",
+      "owner_action": false
+    },
+    {
+      "file": "native/016-p1-agent-view-with-the-refused-main-cf.json",
+      "label": "p1-agent-view-with-the-refused-main-cf",
+      "mode": "read-agent-view",
+      "owner_action": false
+    },
+    {
+      "file": "native/017-owner-typo-removed-at-the-end.json",
+      "label": "owner-typo-removed-at-the-end",
+      "mode": "owner-edit",
+      "owner_action": true
+    }
+  ],
+  "node": "ubuntu",
+  "notes": [],
+  "owner_actions": [
+    {
+      "at": "2026-10-09T13:56:21Z",
+      "label": "p1-typo-main-cf",
+      "mode": "owner-edit"
+    },
+    {
+      "at": "2026-10-09T13:56:26Z",
+      "label": "typo-removed-at-the-end",
+      "mode": "owner-edit"
+    }
+  ],
+  "owner_waited_for_idle": {
+    "at": "2026-10-09T13:56:19Z",
+    "busy_seen": [],
+    "idle": true,
+    "polls": 1,
+    "waited_s": 0.5
+  },
+  "runs": [],
+  "section": "D10-what-the-agent-reads",
+  "started_at": "2026-10-09T13:56:19Z",
+  "substeps": {
+    "measured": "passed",
+    "section": "passed"
+  },
+  "title": "what the Agent reads around a Stop of Postfix whose unit ends failed (measurement only)",
+  "unit_files": {
+    "postfix.service": "# /usr/lib/systemd/system/postfix.service\n[Unit]\nDescription=Postfix Mail Transport Agent\nDocumentation=man:postfix(1)\nConflicts=sendmail.service exim4.service\nConditionPathExists=/etc/postfix/main.cf\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/bin/true\nExecReload=/bin/true\n\n[Install]\nWantedBy=multi-user.target\n",
+    "postfix@-.service": "# /usr/lib/systemd/system/postfix@.service\n[Unit]\nDescription=Postfix Mail Transport Agent (instance %i)\nDocumentation=man:postfix(1)\nPartOf=postfix.service\nBefore=postfix.service\nReloadPropagatedFrom=postfix.service\nAfter=network-online.target nss-lookup.target\nWants=network-online.target\n\n[Service]\nType=forking\nGuessMainPID=no\nExecStartPre=/usr/lib/postfix/configure-instance.sh %i\nExecStart=/usr/sbin/postmulti -i %i -p start\nExecStop=/usr/sbin/postmulti -i %i -p stop\nExecReload=/usr/sbin/postmulti -i %i -p reload\n\n[Install]\nWantedBy=multi-user.target\n"
+  },
+  "verdict": "inconclusive"
+}

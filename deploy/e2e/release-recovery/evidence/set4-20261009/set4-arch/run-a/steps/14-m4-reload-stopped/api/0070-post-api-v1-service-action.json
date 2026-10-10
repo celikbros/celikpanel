@@ -1,0 +1,89 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S8 nginx reload (while stopped)",
+  "request": {
+    "body": {
+      "action": "reload",
+      "name": "nginx"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18511"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18511"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "04a1b59f51ed8619151e47e44a7a271f"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/service/action"
+  },
+  "response": {
+    "elapsed_seconds": 1.44,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 10:36:46 GMT"
+      ],
+      [
+        "Content-Length",
+        "417"
+      ]
+    ],
+    "json": {
+      "code": "SERVICE_ACTION_FAILED",
+      "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts.",
+      "reason": "not_running",
+      "vars": {
+        "action": "reload",
+        "command": "sudo systemctl status nginx",
+        "detail": "nginx.service is inactive (dead); nothing was reloaded",
+        "unit": "nginx"
+      }
+    },
+    "status": 409,
+    "text": null
+  }
+}

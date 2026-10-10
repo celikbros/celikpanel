@@ -1,0 +1,9 @@
+searched at 2026-10-09T23:38:00Z: every file under the evidence folder except README.md, tools/README.source.md,
+tools/searchnames.sh and this report; case-insensitive, fixed strings
+term "celikhost": 0 file(s)
+term "boston": 0 file(s)
+term "frankfurt": 1 file(s)
+    harness-run-copy/pristine-files.sha256
+term "2.25.80.4": 0 file(s)
+term "72.62.38.15": 0 file(s)
+term "185.95.0.123": 0 file(s)

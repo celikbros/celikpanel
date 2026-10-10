@@ -1,0 +1,31 @@
+{
+  "at": "2026-10-09T13:12:19Z",
+  "identifiers": [],
+  "journal": {
+    "argv": [
+      "journalctl",
+      "--no-pager",
+      "-o",
+      "short-iso-precise",
+      "--since",
+      "@1791551536",
+      "-n",
+      "400",
+      "-u",
+      "mariadb.service"
+    ],
+    "at": "2026-10-09T13:12:19Z",
+    "returncode": 0,
+    "seconds": 0.007,
+    "status": "ok",
+    "stderr": "",
+    "stdout": "2026-10-09T13:12:16.708977+00:00 dns-ubuntu mariadbd[11141]: 2026-10-09 13:12:16 0 [Note] /usr/sbin/mariadbd (initiated by: unknown): Normal shutdown\n2026-10-09T13:12:16.709094+00:00 dns-ubuntu systemd[1]: Stopping mariadb.service - MariaDB 10.11.14 database server...\n2026-10-09T13:12:16.710601+00:00 dns-ubuntu mariadbd[11141]: 2026-10-09 13:12:16 0 [Note] InnoDB: FTS optimize thread exiting.\n2026-10-09T13:12:16.724420+00:00 dns-ubuntu mariadbd[11141]: 2026-10-09 13:12:16 0 [Note] InnoDB: Starting shutdown...\n2026-10-09T13:12:16.736749+00:00 dns-ubuntu mariadbd[11141]: 2026-10-09 13:12:16 0 [Note] InnoDB: Dumping buffer pool(s) to /var/lib/mysql/ib_buffer_pool\n2026-10-09T13:12:16.737459+00:00 dns-ubuntu mariadbd[11141]: 2026-10-09 13:12:16 0 [Note] InnoDB: Buffer pool(s) dump completed at 261009 13:12:16\n2026-10-09T13:12:16.957908+00:00 dns-ubuntu mariadbd[11141]: 2026-10-09 13:12:16 0 [Note] InnoDB: Removed temporary tablespace data file: \"./ibtmp1\"\n2026-10-09T13:12:16.957908+00:00 dns-ubuntu mariadbd[11141]: 2026-10-09 13:12:16 0 [Note] InnoDB: Shutdown completed; log sequence number 104388; transaction id 31\n2026-10-09T13:12:16.965513+00:00 dns-ubuntu mariadbd[11141]: 2026-10-09 13:12:16 0 [Note] /usr/sbin/mariadbd: Shutdown complete\n2026-10-09T13:12:16.970582+00:00 dns-ubuntu systemd[1]: mariadb.service: Deactivated successfully.\n2026-10-09T13:12:16.970925+00:00 dns-ubuntu systemd[1]: Stopped mariadb.service - MariaDB 10.11.14 database server.\n"
+  },
+  "mode": "read-journal",
+  "owner_action": false,
+  "schema": "celikpanel/set1-native/v1",
+  "since_epoch": 1791551536,
+  "units": [
+    "mariadb.service"
+  ]
+}

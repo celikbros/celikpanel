@@ -1,0 +1,89 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S8 postgresql reload (while stopped)",
+  "request": {
+    "body": {
+      "action": "reload",
+      "name": "postgresql"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18611"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18611"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "dafcd5e6831737b17b0d72ad0aa271ae"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/service/action"
+  },
+  "response": {
+    "elapsed_seconds": 1.302,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 12:43:19 GMT"
+      ],
+      [
+        "Content-Length",
+        "432"
+      ]
+    ],
+    "json": {
+      "code": "SERVICE_ACTION_FAILED",
+      "error": "The service is not running, so there was nothing to reload and nothing was changed. If it should run, the server owner starts it with Start on this page; it reads its configuration files when it starts.",
+      "reason": "not_running",
+      "vars": {
+        "action": "reload",
+        "command": "sudo systemctl status postgresql",
+        "detail": "postgresql.service is inactive (dead); nothing was reloaded",
+        "unit": "postgresql"
+      }
+    },
+    "status": 409,
+    "text": null
+  }
+}

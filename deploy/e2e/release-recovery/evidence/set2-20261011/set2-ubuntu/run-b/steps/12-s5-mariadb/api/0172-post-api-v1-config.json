@@ -1,0 +1,84 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S5d save empty content",
+  "request": {
+    "body": {
+      "content": "",
+      "path": "/etc/mysql/mariadb.conf.d/50-server.cnf",
+      "version": "cf1-6bd1af6e1e757f721a586cf3fa1cca5ea89592b6359e0ecdbd69fe4a445fa91c"
+    },
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18456"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18456"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "4746cab901ffebf181c543877883c9f2"
+      ]
+    ],
+    "method": "POST",
+    "path": "/api/v1/config"
+  },
+  "response": {
+    "elapsed_seconds": 0.354,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 04:09:19 GMT"
+      ],
+      [
+        "Content-Length",
+        "227"
+      ]
+    ],
+    "json": {
+      "code": "CONFIG_INVALID",
+      "error": "Nothing was saved: the new content is empty, and CelikPanel does not replace a configuration file with nothing. Reload the page to read the file again, then make the change.",
+      "reason": "empty"
+    },
+    "status": 422,
+    "text": null
+  }
+}

@@ -4,13 +4,17 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/alicelik/celikpanel/internal/core"
+	"github.com/alicelik/celikpanel/internal/hostcmd"
 	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
@@ -25,19 +29,88 @@ import (
 // ya da servis kapalıysa, sonuç bunu söyler ve arayüz dürüst bir boş/durdu
 // durumu gösterir.
 
+// Swapped by tests. Production asks the installed Postfix.
+// Testlerde değiştirilir.
+var (
+	postfixQueueLookPath = exec.LookPath
+	postfixQueueList     = func() ([]byte, error) {
+		cmd := exec.Command("postqueue", "-j")
+		cmd.Env = append(os.Environ(), "LC_ALL=C", "LANGUAGE=C")
+		return cmd.Output()
+	}
+)
+
+// errPostfixQueueUnreadable carries the exact transport text so the Panel can
+// classify it; see transport.PostfixQueueUnreadable.
+var errPostfixQueueUnreadable = errors.New(transport.PostfixQueueUnreadable)
+
+// What Postfix's programs print when they stop on their own configuration: a
+// value they cannot use ("fatal: bad numerical configuration: name = value";
+// also boolean, time and string length), or a fatal that names main.cf or
+// master.cf and a line.
+var (
+	postfixBadConfiguration = regexp.MustCompile(`fatal: (bad [a-z ]+ configuration: .+)$`)
+	postfixConfigurationAt  = regexp.MustCompile(`fatal: (\S*/(?:main|master)\.cf, line \d+: .+)$`)
+)
+
+// postfixQueueUnreadable is the unknown-queue answer with what is known about
+// why (10 Oct 2026): the first line `postqueue` printed as the detail, and the
+// cause only where that line itself identifies it. Measured: with a main.cf
+// Postfix refuses, `postqueue -j` exits 69 with "fatal: bad numerical
+// configuration"; with Postfix stopped it reads the queue directly and
+// succeeds. So "check that Postfix is running" was never the action.
+// postfixQueueUnreadable, nedeni hakkında bilinenle birlikte bilinmeyen-kuyruk
+// yanıtıdır: `postqueue`nin yazdığı ilk satır ve yalnız o satırın kendisinin
+// belirlediği neden.
+func postfixQueueUnreadable(said string) error {
+	detail, cause := "", ""
+	for _, raw := range strings.Split(said, "\n") {
+		line := strings.Join(strings.Fields(raw), " ")
+		if line == "" {
+			continue
+		}
+		if detail == "" {
+			detail = line
+		}
+		if match := postfixBadConfiguration.FindStringSubmatch(line); match != nil {
+			detail, cause = match[1], transport.UnreadablePostfixConfig
+			break
+		}
+		if match := postfixConfigurationAt.FindStringSubmatch(line); match != nil {
+			detail, cause = match[1], transport.UnreadablePostfixConfig
+			break
+		}
+	}
+	if detail != "" {
+		detail = hostcmd.Bounded(dbConfigSecret.ReplaceAllString(detail, "${1}…"), 300)
+	}
+	return errors.New(transport.UnreadableWithEvidence(transport.PostfixQueueUnreadable, cause, detail))
+}
+
 // PostfixQueue returns the real mail queue via `postqueue -j` (JSON lines).
-// PostfixQueue, gerçek mail kuyruğunu `postqueue -j` (JSON satırları) ile döndürür.
+//
+// Two answers are known: Postfix is not on this server (Installed false, no
+// items), and the queue as `postqueue -j` printed it. Everything else is
+// unknown and is an error: `postqueue` failing (it does when the mail system is
+// down), a line that is not the JSON it prints, an output that could not be
+// read to its end. Before 9 Oct 2026 each of those was answered as an empty
+// queue, and the screen said "the queue is empty" over a queue nobody had read.
+//
+// PostfixQueue, gerçek mail kuyruğunu `postqueue -j` (JSON satırları) ile
+// döndürür. İki yanıt bilinir: Postfix bu sunucuda yok, ya da `postqueue -j`nin
+// yazdığı kuyruk. Geri kalan her şey bilinmeyendir ve hatadır; 9 Eki 2026'dan
+// önce her biri boş kuyruk diye yanıtlanıyordu.
 func (a *Agent) PostfixQueue(args *transport.Empty, resp *core.PostfixQueueResult) error {
-	out, err := exec.Command("postqueue", "-j").Output()
-	if err != nil {
-		// postqueue absent or queue unreadable: not installed / nothing to show.
-		// postqueue yok ya da kuyruk okunamıyor: kurulu değil / gösterilecek yok.
-		resp.Installed = false
-		resp.Items = []core.PostfixQueueItem{}
+	*resp = core.PostfixQueueResult{Items: []core.PostfixQueueItem{}}
+	if _, err := postfixQueueLookPath("postqueue"); err != nil {
 		return nil
 	}
+	out, err := postfixQueueList()
+	if err != nil {
+		log.Printf("mail queue: postqueue -j failed: %s", hostcmd.Diagnostic(out, err))
+		return postfixQueueUnreadable(hostcmd.Stderr(err))
+	}
 	resp.Installed = true
-	resp.Items = []core.PostfixQueueItem{}
 
 	scanner := bufio.NewScanner(bytes.NewReader(out))
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
@@ -53,8 +126,13 @@ func (a *Agent) PostfixQueue(args *transport.Empty, resp *core.PostfixQueueResul
 			MessageSize int64  `json:"message_size"`
 			Sender      string `json:"sender"`
 		}
-		if json.Unmarshal([]byte(line), &entry) != nil {
-			continue
+		if err := json.Unmarshal([]byte(line), &entry); err != nil || entry.QueueID == "" {
+			// A message that cannot be listed makes the list a partial one,
+			// and a partial list reads as the whole queue.
+			// Listelenemeyen bir ileti listeyi eksik yapar.
+			log.Printf("mail queue: postqueue -j printed a line that is not a queue entry")
+			*resp = core.PostfixQueueResult{Items: []core.PostfixQueueItem{}}
+			return errPostfixQueueUnreadable
 		}
 		resp.Items = append(resp.Items, core.PostfixQueueItem{
 			ID:      entry.QueueID,
@@ -73,6 +151,11 @@ func (a *Agent) PostfixQueue(args *transport.Empty, resp *core.PostfixQueueResul
 		case "corrupt":
 			resp.Summary.Corrupt++
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Printf("mail queue: the output of postqueue -j could not be read to its end: %v", err)
+		*resp = core.PostfixQueueResult{Items: []core.PostfixQueueItem{}}
+		return errPostfixQueueUnreadable
 	}
 	return nil
 }

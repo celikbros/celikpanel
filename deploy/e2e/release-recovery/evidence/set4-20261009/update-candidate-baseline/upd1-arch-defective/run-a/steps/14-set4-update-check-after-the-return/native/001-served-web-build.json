@@ -1,0 +1,36 @@
+{
+  "at": "2026-10-09T12:07:52Z",
+  "mode": "read-spa",
+  "needles": [
+    "This version was already tried on this server and rolled back",
+    "Bu sürüm bu sunucuda daha önce denendi ve geri alındı",
+    "The server recorded no more specific cause for that attempt.",
+    "Starting it again runs the same update."
+  ],
+  "owner_action": false,
+  "panel_process": {
+    "cwd": "/opt/celikpanel",
+    "exe": "/opt/celikpanel/bin/panel"
+  },
+  "panel_unit": {
+    "ActiveState": "active",
+    "ExecStart": "{ path=/opt/celikpanel/bin/panel ; argv[]=/opt/celikpanel/bin/panel $CELIKPANEL_PANEL_INSECURE_COOKIES_FLAG $CELIKPANEL_PANEL_DEMO_FLAG ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+    "MainPID": "19057",
+    "WorkingDirectory": "/opt/celikpanel"
+  },
+  "schema": "celikpanel/set4-native/v1",
+  "web_builds": [
+    {
+      "dist": "/root/celikpanel-release-recovery-lab/current-worker-baseline-source/web/dist",
+      "files_containing": {
+        "Bu sürüm bu sunucuda daha önce denendi ve geri alındı": 1,
+        "Starting it again runs the same update.": 1,
+        "The server recorded no more specific cause for that attempt.": 1,
+        "This version was already tried on this server and rolled back": 1
+      },
+      "files_read": 111,
+      "index_sha256": "406a9bf2f51b85ef9076fa63e1955d014b4630ffe55ad7e345938f4e6a9b4035",
+      "real_path": "/root/celikpanel-release-recovery-lab/current-worker-baseline-source/web/dist"
+    }
+  ]
+}

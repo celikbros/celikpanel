@@ -1,0 +1,71 @@
+{
+  "checks": {
+    "asked_with": "getent -s files ahosts NAME and getent -s files hosts NAME (the hosts file only; no DNS question is sent)",
+    "at": "2026-10-09T18:02:01Z",
+    "boot_id": "4cdb1314-7233-4421-a7b1-42ba8e97c1ba",
+    "boot_id_at_the_pinning": "931e9e91-1d27-40ae-8ba7-fb42e7a11ec5",
+    "certbot_directories": [
+      {
+        "entries": null,
+        "path": "/var/log/letsencrypt",
+        "reason": "FileNotFoundError"
+      },
+      {
+        "entries": null,
+        "path": "/etc/letsencrypt/accounts",
+        "reason": "FileNotFoundError"
+      },
+      {
+        "entries": null,
+        "path": "/etc/letsencrypt/live",
+        "reason": "FileNotFoundError"
+      },
+      {
+        "entries": null,
+        "path": "/etc/letsencrypt/renewal",
+        "reason": "FileNotFoundError"
+      }
+    ],
+    "certbot_program": "/usr/bin/certbot",
+    "file": "name-pinning-at-the-end.json",
+    "kernel": "6.12.105+deb13-cloud-amd64",
+    "loopback_only": {
+      "acme-staging-v02.api.letsencrypt.org": true,
+      "acme-v02.api.letsencrypt.org": true,
+      "acme.zerossl.com": true,
+      "celikpanel.net": true,
+      "dv.acme-v02.api.pki.goog": true
+    },
+    "names": [
+      "acme-v02.api.letsencrypt.org",
+      "acme-staging-v02.api.letsencrypt.org",
+      "acme.zerossl.com",
+      "dv.acme-v02.api.pki.goog",
+      "celikpanel.net"
+    ],
+    "os_release": {
+      "ID": "debian",
+      "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+      "VERSION_CODENAME": "trixie",
+      "VERSION_ID": "13"
+    },
+    "packages_installed": {
+      "certbot": "4.0.0-2+deb13u1",
+      "cron": "3.0pl1-197",
+      "dovecot-core": "1:2.4.1+dfsg1-6+deb13u7",
+      "mariadb-server": "1:11.8.6-0+deb13u1",
+      "nginx": "1.26.3-3+deb13u9",
+      "nginx-common": "1.26.3-3+deb13u9",
+      "openssl": "3.5.7-1~deb13u2",
+      "php-fpm": "2:8.4+96",
+      "php8.4-fpm": "8.4.26-1~deb13u1",
+      "postfix": "3.10.13-0+deb13u1",
+      "rspamd": "3.12.1-1",
+      "systemd": "257.13-1~deb13u1"
+    }
+  },
+  "finished_at": "2026-10-09T18:02:00Z",
+  "name": "set5-name-pinning-at-the-end",
+  "started_at": "2026-10-09T18:02:00Z",
+  "verdict": "passed"
+}

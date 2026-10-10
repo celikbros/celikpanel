@@ -1,0 +1,75 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "C6b delete the PHP site (Domains page)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18463"
+      ],
+      [
+        "Origin",
+        "https://127.0.0.1:18463"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ],
+      [
+        "X-CelikPanel-Request-Id",
+        "346f6ea9fb11c9f9c9ede91a9fb1d91c"
+      ]
+    ],
+    "method": "DELETE",
+    "path": "/api/v1/domains/2"
+  },
+  "response": {
+    "elapsed_seconds": 0.468,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 07:09:56 GMT"
+      ],
+      [
+        "Content-Length",
+        "46"
+      ]
+    ],
+    "json": {
+      "domain": "set3-php.test",
+      "status": "deleted"
+    },
+    "status": 200,
+    "text": null
+  }
+}

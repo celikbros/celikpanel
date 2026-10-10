@@ -1,0 +1,15 @@
+driver SHA256SUMS verified on the staged copy (291 files)
+token-digest sweep at staging: host-side files changed 0, driver files changed 0, places {"learned_value": 0, "migration_directory": 0, "token_named_field": 0}
+token-digest count after the sweep: 0 file(s) would change, values known: 0
+driver SHA256SUMS verified again after the sweep
+2026-10-09T17:26:38Z removed /var/tmp/cp-release-drill-s5-d13-good-a/cells/5a738a003ed5ce7f6220395f/arch/overlay.qcow2 bytes=169803776 (overlay disk of this run's lab, on this lab's tmpfs mount (RAM); evidence staged at set5-20261009/update-alpha81/upd1-debian13-good/run-a, checksums verified)
+2026-10-09T17:26:38Z removed /var/tmp/cp-release-drill-s5-d13-good-a/cells/5a738a003ed5ce7f6220395f/debian13/overlay.qcow2 bytes=1782906880 (overlay disk of this run's lab, on this lab's tmpfs mount (RAM); evidence staged at set5-20261009/update-alpha81/upd1-debian13-good/run-a, checksums verified)
+2026-10-09T17:26:38Z released the tmpfs mount /var/tmp/cp-release-drill-s5-d13-good-a/cells/5a738a003ed5ce7f6220395f/arch (it held 416K after the overlay was removed; its remaining files were put back on the disk)
+2026-10-09T17:26:38Z released the tmpfs mount /var/tmp/cp-release-drill-s5-d13-good-a/cells/5a738a003ed5ce7f6220395f/debian13 (it held 456K after the overlay was removed; its remaining files were put back on the disk)
+2026-10-09T17:26:38Z removed /var/tmp/cp-release-drill-s5-d13-good-a/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 (this lab's hard link to the cached base image /var/tmp/cp-v3n28/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2; the cached file stays, link count now 5)
+2026-10-09T17:26:38Z removed /var/tmp/cp-release-drill-s5-d13-good-a/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 (this lab's hard link to the cached base image /var/tmp/cp-v3n28/images/debian-13-genericcloud-amd64-20260826-2582.qcow2; the cached file stays, link count now 5)
+307
+overall: complete-for-review | native_evidence: False | outcome: update-verified | final: None succeeded
+  step owner-continuation (required) skipped | None
+  section M10-postfix-stop passed | checks: 11 | failed: [] | unknown: [] | error: None
+  finding: debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']

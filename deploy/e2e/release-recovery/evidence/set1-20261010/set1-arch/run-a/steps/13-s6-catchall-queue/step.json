@@ -1,0 +1,9 @@
+{
+  "checks": {
+    "reason": "mail is not supported on this platform"
+  },
+  "finished_at": "2026-10-08T21:58:17Z",
+  "name": "S6-catchall-queue",
+  "started_at": "2026-10-08T21:58:17Z",
+  "verdict": "skipped"
+}

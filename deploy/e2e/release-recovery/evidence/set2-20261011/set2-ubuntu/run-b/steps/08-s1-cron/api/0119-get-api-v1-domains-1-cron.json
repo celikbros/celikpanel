@@ -1,0 +1,71 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "S1f list under the owner's spool-relocated",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18456"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/1/cron"
+  },
+  "response": {
+    "elapsed_seconds": 0.006,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 04:07:59 GMT"
+      ],
+      [
+        "Content-Length",
+        "595"
+      ]
+    ],
+    "json": {
+      "code": "CURRENT_SETTINGS_UNREADABLE",
+      "error": "CelikPanel could not read this site user's scheduled tasks from the server, so the list is not shown and nothing was changed. This does not mean the user has no tasks. CelikPanel has not established why; what the server's crontab program said is shown with this message when it said anything. Reload the page to read the tasks again. If it keeps failing, the server owner runs sudo crontab -u <site user> -l on the server, which prints the same reason.",
+      "reason": "scheduled_tasks",
+      "vars": {
+        "detail": "crontabs: No such file or directory"
+      }
+    },
+    "status": 502,
+    "text": null
+  }
+}

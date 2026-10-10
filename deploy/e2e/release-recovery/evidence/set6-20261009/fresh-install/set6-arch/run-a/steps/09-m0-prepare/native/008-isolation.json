@@ -1,0 +1,34 @@
+{
+  "asked_with": "getent -s files hosts NAME",
+  "at": "2026-10-09T21:55:05Z",
+  "hosts_lines": [
+    "127.0.0.1        localhost",
+    "::1              localhost",
+    "127.0.0.1 celikpanel.net # disposable CelikPanel lab pin before provisioning",
+    "127.0.0.1 acme-v02.api.letsencrypt.org",
+    "::1 acme-v02.api.letsencrypt.org",
+    "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+    "::1 acme-staging-v02.api.letsencrypt.org",
+    "127.0.0.1 acme.zerossl.com",
+    "::1 acme.zerossl.com",
+    "127.0.0.1 dv.acme-v02.api.pki.goog",
+    "::1 dv.acme-v02.api.pki.goog",
+    "127.0.0.1 acme-v02.api.letsencrypt.org",
+    "::1 acme-v02.api.letsencrypt.org",
+    "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+    "::1 acme-staging-v02.api.letsencrypt.org"
+  ],
+  "loopback_only": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "celikpanel.net": true
+  },
+  "mode": "read-isolation",
+  "owner_action": false,
+  "resolves": {
+    "acme-staging-v02.api.letsencrypt.org": "::1             acme-staging-v02.api.letsencrypt.org\n::1             acme-staging-v02.api.letsencrypt.org",
+    "acme-v02.api.letsencrypt.org": "::1             acme-v02.api.letsencrypt.org\n::1             acme-v02.api.letsencrypt.org",
+    "celikpanel.net": "127.0.0.1       celikpanel.net"
+  },
+  "schema": "celikpanel/set4-native/v1"
+}

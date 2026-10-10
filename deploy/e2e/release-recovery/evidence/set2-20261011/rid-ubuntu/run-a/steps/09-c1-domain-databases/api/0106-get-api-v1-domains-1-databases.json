@@ -1,0 +1,101 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "C1 the domain's databases (DomainDatabaseManager)",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18452"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/1/databases"
+  },
+  "response": {
+    "elapsed_seconds": 0.004,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Fri, 09 Oct 2026 03:44:41 GMT"
+      ],
+      [
+        "Content-Length",
+        "601"
+      ]
+    ],
+    "json": {
+      "available_types": [
+        "mysql",
+        "postgresql"
+      ],
+      "databases": [
+        {
+          "created_at": "2026-10-09 03:44:41",
+          "id": 4,
+          "name": "set1_owner_test_con",
+          "type": "postgresql",
+          "user": "set1_owner_test_con_user"
+        },
+        {
+          "created_at": "2026-10-09 03:44:39",
+          "id": 3,
+          "name": "set1_owner_test_seq",
+          "type": "postgresql",
+          "user": "set1_owner_test_seq_user"
+        },
+        {
+          "created_at": "2026-10-09 03:44:37",
+          "id": 2,
+          "name": "set1_owner_test_con",
+          "type": "mysql",
+          "user": "set1_owner_test_con_user"
+        },
+        {
+          "created_at": "2026-10-09 03:44:35",
+          "id": 1,
+          "name": "set1_owner_test_seq",
+          "type": "mysql",
+          "user": "set1_owner_test_seq_user"
+        }
+      ],
+      "domain_id": 1,
+      "domain_name": "set1-owner.test"
+    },
+    "status": 200,
+    "text": null
+  }
+}
