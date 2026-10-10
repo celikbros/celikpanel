@@ -21,6 +21,60 @@ Code decisions live in git; this file is for strategy. Newest first.
 
 ---
 
+## D-031 · A site configuration file the owner changed is kept and named, never overwritten by a render
+
+*October 10, 2026 (clock date) · Owner decision on a finding of the read-only audit [SITE-CONFIG-OWNER-EDITS-2026-10-10](audit/SITE-CONFIG-OWNER-EDITS-2026-10-10.md); design decided, implementation and native measurement pending*
+
+The audit read, from source only, that the Panel's start renders every hosted
+site's nginx configuration again and writes it with no comparison, no digest
+and no backup (`cmd/panel/cert_startup_reconcile.go`, `internal/services/
+nginx_generator.go`); every other render path (certificate, settings, hosting
+type, PHP version, import) does the same. By that reading an owner's added
+`location`, changed directive, own include or replaced file is overwritten
+without a word, and a removed site file is recreated at the next start. The
+published v0.1.0-alpha.81 and v0.1.0-alpha.82 both do this. This is the
+behaviour D-022 forbids: the Panel must detect the owner's change, not
+overwrite it. Nothing of this was measured on a real system when the decision
+was taken; the eighth native record measures the published behaviour first.
+
+The owner decided on 2026-10-10 that the correction enters the next release:
+
+1. Every file the Panel writes for a site carries a header with the digest of
+   its body, and the Panel keeps a ledger row per file (schema transition 43 →
+   44, migration 044, table `managed_site_files`; D-025 names it).
+2. Before every render the Agent classifies the file on disk: absent, managed
+   and unchanged, owner-edited, foreign, unreadable, unknown origin. Only an
+   absent or managed-and-unchanged file is written; identical bytes are not
+   rewritten and nginx is not reloaded for them.
+3. Any other file is kept. The site is shown as "configuration edited by the
+   owner" with the difference; the Panel's pending text is held beside the
+   file; the owner chooses "keep mine", "take CelikPanel's" (with a dated
+   backup) or merges by hand. A site file the owner removed is not recreated
+   at start; the Panel offers to recreate it.
+4. The template gains a per-site include directory as the supported place for
+   the owner's additions, so a later render never has to touch them.
+5. Writes preserve mode and owner, refuse symlinks, and one site's failure
+   does not fail the others; the start line counts written, unchanged, kept,
+   foreign and unreadable separately.
+6. Files written by alpha.81 and alpha.82 carry no digest. The migration
+   renders each site in memory with the frozen templates of those releases
+   and compares: a byte-equal file is adopted, any other file is "unknown
+   origin" and is never overwritten. The honest first state after the update
+   is "N adopted, M left alone because they differ from every known
+   CelikPanel text", and the Panel shows it.
+7. An automatic return to an older release loses the protection; the release
+   notes say so.
+
+Not done until measured natively on Debian 13, Ubuntu 24.04 and Arch: the
+audit's §9 cells (owner edit kept and named at start and at every render path;
+immutable file does not stop other sites; update, return and forward again;
+database restore from before the header; keep-mine then certificate issue;
+take-CelikPanel's with its backup; owner include directory survives renewals
+and switches; removed file not recreated; pool directives survive). The PHP
+pool and the application unit follow in a second step under the same rule.
+
+---
+
 ## D-030 · The Panel's secure-connection rule covers the Panel's own host name only
 
 *October 10, 2026 (clock date) · Owner decision; in source with a component test, native reading pending*

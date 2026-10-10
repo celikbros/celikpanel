@@ -21,6 +21,61 @@ git'te yaşar; bu dosya strateji içindir. En yeni en üstte.
 
 ---
 
+## D-031 · Sahibin değiştirdiği site yapılandırma dosyası korunur ve adlandırılır; üretim onun üstüne yazmaz
+
+*10 Ekim 2026 (saat tarihi) · Salt-okur denetimin bulgusu üzerine sahip kararı ([SITE-CONFIG-OWNER-EDITS-2026-10-10](audit/SITE-CONFIG-OWNER-EDITS-2026-10-10.md)); tasarım kararlaştırıldı, uygulama ve gerçek sistem ölçümü bekliyor*
+
+Denetim, yalnız kaynaktan okuyarak şunu buldu: Panelin açılışı barındırılan
+her sitenin nginx yapılandırmasını yeniden üretir ve karşılaştırmasız,
+özetsiz, yedeksiz yazar (`cmd/panel/cert_startup_reconcile.go`,
+`internal/services/nginx_generator.go`); diğer her üretim yolu (sertifika,
+ayar, barındırma türü, PHP sürümü, içe aktarma) aynısını yapar. Bu okumaya
+göre sahibin eklediği `location`, değiştirdiği yönerge, kendi include satırı
+ya da değiştirdiği dosya tek söz edilmeden ezilir; kaldırılan site dosyası bir
+sonraki açılışta yeniden yaratılır. Yayımlanmış v0.1.0-alpha.81 ve
+v0.1.0-alpha.82 bunu yapar. Bu, D-022'nin yasakladığı davranıştır: Panel
+sahibin değişikliğini algılar, üstüne yazmaz. Karar alındığında bunların
+hiçbiri gerçek sistemde ölçülmemişti; sekizinci gerçek sistem kaydı önce
+yayımlanmış davranışı ölçer.
+
+Sahip 10 Ekim 2026'da düzeltmenin bir sonraki sürüme girmesine karar verdi:
+
+1. Panelin bir site için yazdığı her dosya, gövdesinin özetini taşıyan bir
+   başlık alır; Panel dosya başına bir defter satırı tutar (şema geçişi
+   43 → 44, göç 044, tablo `managed_site_files`; D-025 bunu adlandırır).
+2. Her üretimden önce Agent diskteki dosyayı sınıflandırır: yok, yönetilen ve
+   değişmemiş, sahip düzenlemiş, yabancı, okunamaz, kökeni bilinmiyor. Yalnız
+   yok ya da yönetilen-ve-değişmemiş dosya yazılır; aynı baytlar yeniden
+   yazılmaz ve onlar için nginx yeniden yüklenmez.
+3. Diğer her dosya korunur. Site "yapılandırması sahibi tarafından
+   düzenlenmiş" diye gösterilir, fark gösterilir; Panelin bekleyen metni
+   dosyanın yanında tutulur; sahip "benimkini koru", "CelikPanel'inkini al"
+   (tarihli yedekle) ya da elle birleştirmeyi seçer. Sahibin kaldırdığı site
+   dosyası açılışta yeniden yaratılmaz; Panel yeniden yaratmayı önerir.
+4. Şablon, sahibin eklemeleri için site başına bir include dizini kazanır;
+   sonraki üretimlerin onlara dokunması gerekmez.
+5. Yazma kip ve sahibi korur, sembolik bağları reddeder; bir sitenin hatası
+   diğerlerini düşürmez; açılış satırı yazılan, değişmeyen, korunan, yabancı
+   ve okunamayanı ayrı ayrı sayar.
+6. alpha.81 ve alpha.82'nin yazdığı dosyalarda özet yoktur. Göç her siteyi o
+   sürümlerin dondurulmuş şablonlarıyla bellekte üretip karşılaştırır: bayt
+   bayt eşit dosya benimsenir, diğer her dosya "kökeni bilinmiyor"dur ve asla
+   üstüne yazılmaz. Güncellemeden sonraki dürüst ilk durum "N benimsendi, M
+   bilinen hiçbir CelikPanel metniyle örtüşmediği için dokunulmadı"dır ve
+   Panel bunu gösterir.
+7. Eski bir sürüme otomatik dönüş korumayı kaldırır; sürüm notu bunu söyler.
+
+Debian 13, Ubuntu 24.04 ve Arch'ta gerçek sistemde ölçülmeden bitmiş
+sayılmaz: denetimin §9 hücreleri (sahip düzenlemesi açılışta ve her üretim
+yolunda korunup adlandırılıyor; değişmez dosya diğer siteleri durdurmuyor;
+güncelleme, dönüş ve yeniden ileri; başlıktan önceki veritabanı geri
+yüklemesi; benimkini-koru sonra sertifika alma; CelikPanel'inkini-al ve
+yedeği; sahibin include dizini yenileme ve geçişlerden sağ çıkıyor;
+kaldırılan dosya yeniden yaratılmıyor; havuz yönergeleri korunuyor). PHP
+havuzu ve uygulama birimi aynı kural altında ikinci adımda gelir.
+
+---
+
 ## D-030 · Panelin güvenli bağlantı kuralı yalnız Panelin kendi ana makine adını kapsar
 
 *10 Ekim 2026 (saat tarihi) · Sahip kararı; kaynakta ve bir bileşen testiyle, gerçek sistem okuması bekliyor*
