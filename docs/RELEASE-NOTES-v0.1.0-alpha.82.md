@@ -2,9 +2,9 @@
 
 [Türkçe](RELEASE-NOTES-v0.1.0-alpha.82.tr.md)
 
-This is the draft for the release that follows v0.1.0-alpha.81. It is a
-candidate, not a published release, and the number is the owner's decision. It
-changes what the interface shows when it does not know the server's state, how
+This is the draft for the release that follows v0.1.0-alpha.81. It is not
+published yet. The owner decided on 2026-10-10 that its number is
+v0.1.0-alpha.82. It changes what the interface shows when it does not know the server's state, how
 settings and service actions are written and answered, and what happens when
 the same change reaches the server more than once. It states what was measured,
 how, and what was not.
@@ -151,6 +151,26 @@ already tried on this server and rolled back, the card says so, when the
 attempt ended, which version runs now and the recorded cause. The version is
 still offered and Start is not disabled. This text belongs to this release's
 interface: after a return to v0.1.0-alpha.81 the server shows alpha.81's card.
+
+**The Panel's "secure connections only" rule covers the Panel's own address
+only.** Over HTTPS the Panel used to tell the browser to refuse plain HTTP for
+one year on the Panel's host name and on every name under it: the header was
+`max-age=31536000; includeSubDomains`. By the header's specification
+(RFC 6797), a browser that had opened the Panel at `example.com` would then
+refuse plain HTTP on `shop.example.com` too, a name the Panel does not serve.
+The header is now `max-age=31536000` and nothing else, so the rule names the
+Panel's own host only (still one year). By the same specification a browser
+takes the new rule at its next visit to the Panel, and a browser that does
+not open the Panel again keeps the old one until its year runs out, unless
+you clear it in that browser's settings. None of this browser behaviour was
+measured in a browser. The web server configuration that the Panel generates
+for hosted sites does not carry the wider rule in v0.1.0-alpha.81 or in this
+release (read from its template and from a test that forbids the wider form;
+not measured on a running site; earlier releases were not checked). The
+header was read from the running Panel on the lab machines (Arch, Debian 13
+and Ubuntu 24.04): this release's code sent the narrower header on every
+HTTPS answer that was read, v0.1.0-alpha.81 sent the wider one, and plain HTTP
+to the Panel's port was answered `400` without any such header.
 
 ### What you may need to do
 
@@ -380,7 +400,8 @@ only.
 
 ## What was measured, and how
 
-Seven records, made on 2026-10-08 and 2026-10-09. Five are runs of the product
+Eight records, made on 2026-10-08 and 2026-10-09 (UTC; the sixth run took
+place after midnight local time, on 2026-10-10). Six are runs of the product
 on disposable virtual machines on one laptop host, with the packaged services
 of Debian 13, Ubuntu 24.04 and Arch; one is a follow-up of the fourth on fresh
 machines; one is a reading of a single program. Each sequence ran once per
@@ -392,19 +413,29 @@ what the screens send. Every result file marks itself as not yet accepted
 evidence; the owner judges it.
 
 **What the lab does and does not establish.** The virtual machines are not cut
-off from the network: they have outbound access, and the distributions'
-packages are installed from their repositories during a run. What is
+off from the network: they run on QEMU user networking with outbound NAT, and
+the distributions' packages are installed from their repositories during a
+run. Nothing here shows what a machine could or could not reach. What is
 established is narrower. The release origin is pinned to the machine's own
 loopback in its hosts file. In the first run no Let's Encrypt name was pinned
 and no certificate route was called. The two Let's Encrypt names are pinned
 the same way before the certificate route is called (second and third run); in
 the fourth run and its follow-up they were pinned only at a step after install
 and setup in the fresh-install cells and not in the update cells, and no
-certificate route was called there; in the closing run the four certificate authority names the
+certificate route was called there; in the fifth run the four certificate authority names the
 product knows were pinned in the first step of every cell, and no certificate
-route was called. The license step is answered by a test build without contacting
+route was called. In the sixth run the release origin's name was pinned in
+that first step too, and the five names were read back through the machine's
+ordinary lookup path as well as from the hosts file, on all three platforms
+(on Arch that path asks the resolver before the hosts file); every answer was
+the machine's own loopback. The resolver's own counter of DNS transactions
+was higher at the end of every cell than at the first step (for example 6 at
+the first step and 146 at the end on Debian 13), so the machines did ask DNS
+questions during that run; which names they asked for was not recorded. The
+license step is answered by a test build without contacting
 a license service. No driver was pointed at an installed server, and no
-installed server's name or address appears in the raw files. The machines'
+installed server's name or address appears in the raw records of the runs.
+The machines'
 traffic was not recorded. The builds carry a test signing key, not the
 production one.
 
@@ -412,7 +443,8 @@ production one.
 `deploy/e2e/release-recovery/evidence/`. `set1-20261010`, `set2-20261011` and
 `set3-20261012` carry labels that are not the days of the runs: the first ran
 on 2026-10-08, the other two on 2026-10-09. `set4-20261009`, `set4b-20261009`,
-`set4c-20261009` and `set5-20261009` carry the real date.
+`set4c-20261009`, `set5-20261009` and `set6-20261009` carry the real date
+(UTC).
 
 **Evidence handling.** The directories are stored in the repository byte for
 byte, and twelve host-reading files of earlier directories were stored again
@@ -426,7 +458,7 @@ no longer exists. At intake, three host-reading files of `set4b-20261009` were
 converted from CRLF to LF before their checksums were recorded, and the local
 scratch-folder path in some scripts of `set4-20261009` and `set4b-20261009`
 was replaced by a placeholder. From the third run on, the drivers remove
-hash-shaped values when they collect, and the closing run also removes token
+hash-shaped values when they collect, and the fifth run also removes token
 digests at that point.
 
 **Settings writes (first run; Debian 13, Ubuntu 24.04, Arch; the mail policy
@@ -578,9 +610,10 @@ No incompatibility with v0.1.0-alpha.81 was found in the measured paths of
 that run. The fourth run repeated the good update on Debian 13 and
 Ubuntu 24.04 and the automatic return on Arch, on the code of the fourth run.
 
-**The update again, on the final code (closing run, `set5-20261009`; the same
-ten cells).** The candidate was built from the last change to the product's
-code; what was added to the branch afterwards is evidence and documents.
+**The update again (fifth run, `set5-20261009`; the same ten cells).** The
+code of this run is the final code except for the Panel's secure-connection
+rule, which was changed afterwards (one line of code, its comment and its
+test; nothing else under `cmd/`, `internal/` or `web/`).
 
 - All ten cells reached the end the third run had measured, with the same
   verdict for every step, the same outcome and the same compared facts
@@ -606,26 +639,80 @@ code; what was added to the branch afterwards is evidence and documents.
   samples longer than 10.5 seconds, the longest at a cell's own machine
   reset). Each cell ran once.
 - Not exercised by this run: the corrected reading of mail TLS settings
-  (snapshot, restore, read-back), and a fresh install of the final code.
+  (snapshot, restore, read-back), and a fresh install.
+
+**The final code installed fresh, the Panel's secure-connection rule, and one
+more update (sixth run, `set6-20261009`; Arch, Debian 13, Ubuntu 24.04).** The
+final code is the code of the fifth run with the changed rule. Nothing under
+`cmd/`, `internal/` or `web/` was changed on the branch after it; what was
+added is the test harness, the evidence, and the release preparation named
+under "Before publication". The archives of this run were test builds: the one
+installed fresh carried the previous release's label and release sequence, and
+the update target differed from the code only by the release-sequence file
+set to 82.
+
+- Installed fresh on all three platforms, the checks of the fourth run and
+  its follow-up passed again: a PHP site was created through the Panel, a PHP
+  page ran as the site's own account, a missing script answered 404, and after
+  the site was deleted nothing of it kept serving; the recorded PHP version
+  and socket were the installed version's; a cPanel import completed and
+  listed `dns` under `left_out`; an archive entry with an absolute name was
+  listed and the import was `partial`; a site the web server refused answered
+  `502 SITE_WEB_SERVER_REFUSED` and what the answer says was removed was gone;
+  reload of a stopped nginx, MariaDB and PostgreSQL answered `409` /
+  `not_running`. Postfix Stop with a configuration Postfix refuses answered
+  `200` with the note on Debian 13 and Ubuntu 24.04; it was not measured on
+  Arch, where mail is not supported. On Arch these checks passed in the
+  repeated cell; the first cell failed one check, below.
+- The Panel's rule, read on the machine from the running Panel: 14 readings of
+  eleven HTTPS answers each (the statuses were 200, 204, 401, 403 and 404).
+  In the eight readings on fresh installs (two on each platform, and two more
+  in the first Arch cell, which was run twice) and the three readings after an
+  update, every answer carried exactly `max-age=31536000`. In the three
+  readings before an update, v0.1.0-alpha.81 answered
+  `max-age=31536000; includeSubDomains` every time. Plain HTTP to the Panel's
+  port was answered `400` and carried no such header, in all 14 readings.
+- One update from the published v0.1.0-alpha.81 per platform ended verified,
+  with the new database schema (43). A request sent as a page loaded before
+  the update sends it was refused and changed nothing: `428` without the
+  request identity on the backup route, and `409 SETTINGS_VERSION_REQUIRED`
+  without a version on the backup schedule and the scheduled tasks, and on
+  Debian 13 and Ubuntu 24.04 also on the mail policy. On Debian 13 and
+  Ubuntu 24.04 the comparison of a site created by v0.1.0-alpha.81 and one
+  Postfix Stop ran again in these cells and passed. The other seven update
+  cells were not repeated on the final code; they rest on the fifth run.
+- One check did not pass, in the first Arch run: a rule of the test harness
+  still expected `dns` under `imported`, while the product listed it under
+  `left_out`, as documented. The cell was run again with the rule corrected
+  and passed; no check of the product failed.
+- Not measured: a fresh install of an archive labelled as the new release
+  (the archive installed fresh carried the previous label, as in the fourth
+  run); anything in a browser; the rule on a Panel that has its managed
+  certificate or is reached by its host name; the machines' traffic. The host
+  logged modern standby for the whole run and the run's own clocks show no
+  pause. Each cell ran once, apart from the repeated Arch cell.
 
 **Which check rests on which code.** Each later state contains the earlier
-corrections. A check was not repeated on later code unless a later row says
-so.
+corrections. "Not repeated" means the check was not run again on later code.
 
 | What was checked | The code it ran on |
 | --- | --- |
-| Settings writes on real services | the code of the first run |
-| Corrected settings writes; 41 service actions; request identity | the code of the second run |
-| 42 service actions; import preview and partial import; certificate failure answer; first update matrix | the code of the third run |
-| PHP sites on fresh servers, Arch included; reload of stopped services; refused site; absolute archive entry | the code of the fourth run |
-| Postfix Stop note on fresh servers, four Stops each; the import's `left_out` list | the code of the fourth run with the Postfix Stop correction (follow-up) |
-| Update matrix, ten cells; the alpha.81 site across the update; one Postfix Stop on an updated server | the final code (closing run) |
-| Reading of mail TLS settings behind a `postconf` warning | the final code: component tests and one reading of the program; not run on a server |
-| A `mysqld` that is not MariaDB | the final code: component tests only |
+| Settings writes on real services (scheduled tasks, mail policy, backup schedule, configuration files, catch-all) | the code of the first three runs; not repeated on the final code, except the refusal of a save without a version after an update (sixth run) |
+| Service actions, 41 and then 42 per platform | the code of the second and third runs; not repeated on the final code, except the reload of a stopped nginx, MariaDB and PostgreSQL and the Postfix Stop (sixth run) |
+| Request identity on the eight routes | the code of the second and third runs; not repeated on the final code, except the refusal without the header on the backup route after an update (sixth run) |
+| Mailbox login with an imported password; certificate failure answer; MariaDB version; database password; no hash-shaped value in a guarded answer, a stored row or a log line | the code of the third run; not repeated |
+| PHP site created, run and deleted; cPanel import, its preview without password hashes and its three lists; absolute archive entry; refused site | the final code, installed fresh on three platforms (sixth run) |
+| Postfix Stop note | the final code: once each on a fresh install and on an updated server, Debian 13 and Ubuntu 24.04 (sixth run); four Stops each on the code of the follow-up |
+| The Panel's secure-connection rule | the final code, three platforms (sixth run); not in a browser |
+| Update from v0.1.0-alpha.81: the good update; the alpha.81 site across the update | the final code (sixth run; the site on Debian 13 and Ubuntu 24.04) |
+| Update from v0.1.0-alpha.81: automatic return, failed start check, the printed retry, management off | the code of the fifth run, which differs from the final code only in the Panel's secure-connection rule; not repeated |
+| Reading of mail TLS settings behind a `postconf` warning | component tests and one reading of the program; not run on a server |
+| A `mysqld` that is not MariaDB | component tests only |
 
-A fresh install was last measured on the code of the follow-up. The final
-code, which adds the `postconf` rule to it, was installed only by an update
-from v0.1.0-alpha.81.
+In short: the settings-write, request-identity and full service-action cells of
+the first three runs were not repeated on the final code, and neither were
+seven of the ten update cells. The checks that rest on the final code are the
+ones the sixth run names.
 
 **Screens.** The interface changes have component tests and were inspected in
 an installed Chrome against a loopback mock of the API (desktop and phone,
@@ -644,10 +731,25 @@ those 94; the retained logs do not establish the cause.
 
 These are known. They are not hidden defects.
 
-- **The final code** was measured only through the update from
-  v0.1.0-alpha.81, once per cell, on machines whose disks were in memory. It
-  was not installed fresh, and the checks of the earlier runs were not
-  repeated on it except as the table above says.
+- **Not repeated on the final code.** The settings-write, request-identity
+  and full service-action cells of the first three runs were not run again on
+  the final code. Seven of the ten update cells (automatic return, failed
+  start check, the printed retry, management off) ran on the code of the fifth
+  run, which differs from the final code only in the Panel's
+  secure-connection rule, and were not repeated. The archive that was
+  installed fresh carried the previous release's label; an archive labelled
+  v0.1.0-alpha.82 was installed only by update, and the release preparation
+  (release sequence, bootstrap pins, version lines) is not in any archive that
+  was measured.
+- **The Panel's secure-connection rule.** Not measured in a browser, and not
+  on a Panel that has its managed certificate or is reached by its host name.
+  By the header's specification, a browser that does not open the Panel again
+  keeps the wider rule until its year runs out. Plain HTTP to the Panel's
+  port answers `400`, not a redirect to HTTPS; v0.1.0-alpha.81 answers the
+  same.
+- **A missing static file of a PHP site** answers 200 with the site's front
+  page, before and after the update alike (read on Debian 13 and Ubuntu
+  24.04).
 - **Your own edits of a generated site configuration file.** When the Panel
   starts, after an update and otherwise, it writes the web server
   configuration of hosted sites again; the resilience contract records that
@@ -703,16 +805,15 @@ These are known. They are not hidden defects.
 - **Mail settings behind a `postconf` warning.** The correction has component
   tests and one reading of the real program (Postfix 3.10.13, Debian 13). A
   mail TLS change, its rollback and a certificate publication with such a
-  configuration were not run, in the closing run either. Ubuntu's Postfix 3.8 and Arch were not read for
+  configuration were not run, in the fifth and sixth runs either. Ubuntu's Postfix 3.8 and Arch were not read for
   these settings. The statements about v0.1.0-alpha.81 beyond the two measured
   commands are read from its source. A renewal helper already installed on a
   server is not replaced by a panel update (change record), so this correction
   does not reach it.
 - **Postfix Stop.** Not measured: a Stop with a configuration that makes
-  `postconf` warn while `postfix check` accepts it; Arch (no Postfix);
-  Dovecot; a Stop on a fresh install of the final code (the four Stops per
-  platform ran on the code of the follow-up, the one on the final code on an
-  updated server). systemd's failed mark is left; `sudo systemctl reset-failed <unit>`,
+  `postconf` warn while `postfix check` accepts it; Arch (mail is not supported there);
+  Dovecot; more than one Stop per cell on the final code (the four Stops per
+  platform ran on the code of the follow-up). systemd's failed mark is left; `sudo systemctl reset-failed <unit>`,
   which the note names, clears it.
 - **The update card.** Its new text was not seen in a browser against a real
   Panel. After a return to v0.1.0-alpha.81 the interface that is served is
@@ -791,9 +892,9 @@ These are known. They are not hidden defects.
   beyond each cell's own reset or reboot). It slept for 43 minutes during the
   Ubuntu cell of the follow-up, before the corrected build was installed; the
   measured steps ran after it woke. In the fourth run power events were not
-  collected; the 30-second disk watcher shows no gap. In the closing run the
-  host logged modern standby for most of the run and the samplers show no
-  pause; what that state changes for a running workload other than pausing it
+  collected; the 30-second disk watcher shows no gap. In the fifth run the
+  host logged modern standby for most of the run, in the sixth for all of it,
+  and the samplers show no pause; what that state changes for a running workload other than pausing it
   was not measured.
 - **Checks that did not pass** are listed in each directory's
   `checks-not-passed.txt`. First run: the two defects above and one harness
@@ -807,11 +908,14 @@ These are known. They are not hidden defects.
   Stop note on Ubuntu 24.04, in both runs, corrected and measured again in the
   follow-up; and one harness rule in the first Debian update cell, which
   passed when run again. Follow-up: its first diagnostic attempt stopped at a
-  fault of the driver before the first Stop. Closing run: none.
+  fault of the driver before the first Stop. Fifth run: none. Sixth run: one
+  harness rule in the first Arch cell, which passed when run again.
 - **Dates in the documents.** Several dated entries in the contract and
   guidance documents and in source comments carry 2026-10-10, 2026-10-11 or
-  2026-10-12. They are labels of work rounds, not dates; the work was done on
-  2026-10-08 and 2026-10-09. Each document says so at its top.
+  2026-10-12. They are labels of work rounds, not dates; that work was done on
+  2026-10-08 and 2026-10-09. Each document says so at its top. The owner's
+  decisions listed under "Before publication" are dated 2026-10-10 by the
+  clock, as is the sixth run.
 - **Earlier limits.** The limits of
   [v0.1.0-alpha.81](RELEASE-NOTES-v0.1.0-alpha.81.md) that this release does
   not address still apply. One does not apply to an update from alpha.81: the
@@ -819,29 +923,52 @@ These are known. They are not hidden defects.
   second of the measured updates.
 - **Open acceptance items.** All five foundation items of the
   [resilience contract](RESILIENCE-CONTRACT.md) remain partial; this release
-  closes none. Decisions: D-022, D-024, D-025, D-029 in
+  closes none. Decisions: D-022, D-024, D-025, D-029, D-030 in
   [DECISIONS](DECISIONS.md).
 
 ## Before publication (owner decisions and remaining checks)
 
-1. Version: v0.1.0-alpha.82 is the working number (owner decision).
-2. Decide whether a fresh install of the final code and the mail certificate
-   path behind a `postconf` warning are measured before publication, or go out
-   as the limits named above.
-3. The packaging contract tests run in CI on the pull request, the root ones
+1. Version: v0.1.0-alpha.82 (owner decision of 2026-10-10).
+2. The owner decided on 2026-10-10 that the final code is installed fresh and
+   measured before publication; that was done (the sixth run above). The mail
+   certificate path behind a `postconf` warning was not measured on a server
+   and stays a named limit; it is not an owner decision.
+3. The Panel's secure-connection rule is limited to the Panel's own host name
+   in this release (owner decision of 2026-10-10; D-030 in
+   [DECISIONS](DECISIONS.md)).
+4. The release preparation was made in a separate commit that changes no file
+   under `cmd/`, `internal/` or `web/`: the release sequence (82 after 81),
+   the installer's bootstrap pins, the version lines of the README and the
+   contract tests that pin them. Nothing was measured on a server with it (see
+   the limits). From that commit the customer archive was built twice on a
+   private copy, unsigned, with the commands of the CI packaging job: both
+   builds are byte for byte the same (232 entries); it holds no test harness,
+   test script or evidence; its programs carry no test-licence build tag; the
+   two release guards accept it; its sequence file reads 82 after 81 and the
+   Panel in it reports v0.1.0-alpha.82. Against the published v0.1.0-alpha.81
+   archive, rebuilt the same way (218 entries), only interface files differ.
+   The archive still carries the vendor's publishing tools and two one-time
+   recovery scripts of an earlier incident, as v0.1.0-alpha.81 does; this
+   release does not remove them. The real archive is built and signed by
+   CI on the tag; this build is not that archive. The owner's steps at
+   publication: set
+   the repository variable `CELIKPANEL_RELEASE_SEQUENCE` to 82 (the signing job
+   on the tag refuses a different value), merge, tag, and publish the portal
+   from the tag's assets.
+5. The packaging contract tests run in CI on the pull request, the root ones
    under `sudo` (`.github/workflows/ci.yml`). On draft pull request #205 the
-   run that started at 16:40 UTC and ended at 17:01 UTC on 2026-10-09 passed
-   for the branch head of that time, and so did the run that started at
-   20:20 UTC and ended at 20:40 UTC for the head of that time (21 checks
-   passed in each; the publication step is skipped on a pull request). Both
-   heads hold every correction named here. A commit that adds the closing run's
-   evidence followed, and a run for it had started but not finished when this
-   was written. Each later head needs its own run, and a passing run is not
-   the owner's test of item 5.
-4. Production signing happens in CI on the release tag, as the
+   run for the commit that holds the final code passed (21 checks passed; the
+   publication job, which runs only on a tag, was skipped; the run started at
+   21:07 UTC and ended at 21:27 UTC on 2026-10-09). The commits added after it change no
+   file under `cmd/`, `internal/` or `web/`; the run for them had started and
+   not finished when this was written. The head that is merged gets its own
+   run on the pull request, and a passing run is not the owner's own test.
+6. Production signing happens in CI on the release tag, as the
    [signed release contract](release-signing.md) describes. The owner then
    verifies the published assets as that document says.
-5. Owner test on a disposable server before any installed panel is updated.
+7. The owner's own test is the update of the two installed servers, which the
+   owner starts personally from the panel's own update screen; no disposable
+   server is used for it. Installed panels are updated only by their owner.
 
 Install this release only through CelikPanel's update interface. Publishing it
 does not update installed servers; only the owner of a server starts its update.

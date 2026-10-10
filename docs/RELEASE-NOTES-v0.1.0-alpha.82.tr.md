@@ -2,8 +2,9 @@
 
 [English](RELEASE-NOTES-v0.1.0-alpha.82.md)
 
-Bu, v0.1.0-alpha.81'i izleyecek sürümün taslağıdır. Yayımlanmış bir sürüm
-değil, bir adaydır; numarası sahibin kararıdır. Arayüzün sunucunun durumunu
+Bu, v0.1.0-alpha.81'i izleyecek sürümün taslağıdır. Henüz yayımlanmadı. Sahip
+10 Ekim 2026'da numarasının v0.1.0-alpha.82 olmasına karar verdi. Arayüzün
+sunucunun durumunu
 bilmediğinde ne gösterdiğini, ayarların ve hizmet işlemlerinin nasıl yazılıp
 yanıtlandığını ve aynı değişiklik sunucuya birden çok kez ulaştığında ne
 olduğunu değiştirir. Neyin, nasıl ölçüldüğünü ve neyin ölçülmediğini de söyler.
@@ -155,6 +156,26 @@ daha önce denenip geri alındıysa kart bunu, denemenin ne zaman bittiğini, ş
 hangi sürümün çalıştığını ve kayıtlı nedeni söyler. Sürüm yine sunulur ve
 Başlat kapatılmaz. Bu metin bu sürümün arayüzüne aittir: v0.1.0-alpha.81'e
 dönüşten sonra sunucu alpha.81'in kartını gösterir.
+
+**Panelin "yalnız güvenli bağlantı" kuralı yalnız Panelin kendi adresini
+kapsıyor.** Panel, HTTPS üzerinde tarayıcıya bir yıl boyunca hem Panelin ana
+makine adında hem de onun altındaki her adda düz HTTP'yi reddetmesini
+söylüyordu: başlık `max-age=31536000; includeSubDomains` idi. Başlığın
+tanımına (RFC 6797) göre, Paneli `example.com` adresinde açmış bir tarayıcı
+böylece Panelin sunmadığı `shop.example.com` adında da düz HTTP'yi
+reddediyordu. Başlık artık yalnızca `max-age=31536000`; yani kural yalnız
+Panelin kendi ana makine adını kapsıyor (süresi yine bir yıl). Aynı tanıma göre
+tarayıcı yeni kuralı Panele bir sonraki girişinde alır; Paneli bir daha
+açmayan tarayıcı eski kuralı, o tarayıcının ayarlarından silinmedikçe, bir yılı
+dolana kadar tutar. Tarayıcıdaki bu davranışların hiçbiri bir tarayıcıda
+ölçülmedi. Panelin barındırılan siteler için ürettiği web sunucusu
+yapılandırması, v0.1.0-alpha.81'de ve bu sürümde geniş kuralı taşımıyor (şablonundan
+ve geniş biçimi yasaklayan bir testten okundu; çalışan bir sitede ölçülmedi;
+daha önceki sürümlere bakılmadı). Başlık, laboratuvar makinelerinde (Arch,
+Debian 13 ve Ubuntu 24.04) çalışan Panelden okundu: bu sürümün kodu okunan her
+HTTPS yanıtında dar başlığı gönderdi, v0.1.0-alpha.81 geniş olanı gönderdi;
+Panelin bağlantı noktasına düz HTTP ise böyle bir başlık olmadan `400` ile
+yanıtlandı.
 
 ### Yapmanız gerekebilecekler
 
@@ -390,7 +411,8 @@ denetlendi.
 
 ## Ne ölçüldü, nasıl ölçüldü
 
-8 ve 9 Ekim 2026'da alınmış yedi kayıt. Beşi, ürünün tek bir dizüstü ana
+8 ve 9 Ekim 2026'da (UTC; altıncı koşu yerel saatle gece yarısından sonra, 10
+Ekim 2026'da yapıldı) alınmış sekiz kayıt. Altısı, ürünün tek bir dizüstü ana
 makinedeki geçici sanal makinelerde, Debian 13, Ubuntu 24.04 ve Arch'ın paketli
 hizmetleriyle koşularıdır; biri dördüncünün yeni kurulmuş makinelerdeki ek
 ölçümüdür; biri de tek bir programın okumasıdır. Bir sayı verilmedikçe her sıra
@@ -402,27 +424,36 @@ gönderdiğini gönderdi. Her sonuç dosyası kendisini henüz kabul edilmemiş 
 olarak işaretler; değerlendirmesi sahibindir.
 
 **Laboratuvarın saptadığı ve saptamadığı.** Sanal makineler ağdan kopuk
-değildir: dışarıya erişimleri vardır ve dağıtımların paketleri koşu sırasında
-kendi depolarından kurulur. Saptanan daha dardır. Sürüm kaynağı, makinenin
+değildir: dışarıya doğru NAT yapan QEMU kullanıcı ağıyla çalışırlar ve
+dağıtımların paketleri koşu sırasında kendi depolarından kurulur. Bir
+makinenin neye erişebildiğini veya erişemediğini burada hiçbir şey göstermez.
+Saptanan daha dardır. Sürüm kaynağı, makinenin
 hosts dosyasında kendi loopback adresine sabitlenmiştir. Birinci koşuda hiçbir
 Let's Encrypt adı sabitlenmedi ve hiçbir sertifika rotası çağrılmadı. İki
 Let's Encrypt adı, sertifika rotası çağrılmadan önce aynı biçimde sabitlenir
 (ikinci ve üçüncü koşu); dördüncü koşuda ve ek ölçümünde bu adlar yalnız yeni
 kurulum hücrelerinde, kurulumdan ve sunucu kurulumundan sonra gelen bir adımda
 sabitlendi, güncelleme hücrelerinde sabitlenmedi ve oralarda hiçbir sertifika
-rotası çağrılmadı; kapanış koşusunda
+rotası çağrılmadı; beşinci koşuda
 ürünün bildiği dört sertifika otoritesi adı her hücrenin ilk adımında
-sabitlendi ve hiçbir sertifika rotası çağrılmadı. Lisans adımını,
+sabitlendi ve hiçbir sertifika rotası çağrılmadı. Altıncı koşuda sürüm
+kaynağının adı da o ilk adımda sabitlendi; beş ad, üç platformda da hem hosts
+dosyasından hem makinenin olağan ad çözümleme yolundan geri okundu (Arch'ta bu
+yol hosts dosyasından önce çözümleyiciye sorar); her yanıt makinenin kendi
+loopback adresiydi. Çözümleyicinin kendi DNS işlem sayacı her hücrenin sonunda
+ilk adımdakinden yüksekti (örneğin Debian 13'te ilk adımda 6, sonda 146); yani
+makineler o koşu sırasında DNS soruları sordu; hangi adları sordukları
+kaydedilmedi. Lisans adımını,
 bir lisans hizmetine başvurmadan bir test derlemesi yanıtlar. Hiçbir sürücü
-kurulu bir sunucuya yöneltilmedi ve ham dosyalarda kurulu hiçbir sunucunun adı
-ya da adresi yer almaz. Makinelerin trafiği kaydedilmedi. Derlemeler üretim
+kurulu bir sunucuya yöneltilmedi ve koşuların ham kayıtlarında kurulu hiçbir
+sunucunun adı ya da adresi yer almaz. Makinelerin trafiği kaydedilmedi. Derlemeler üretim
 anahtarını değil, bir deneme imzalama anahtarını taşır.
 
 **Adlar ve tarihler.** Dizinler `deploy/e2e/release-recovery/evidence/`
 altındadır. `set1-20261010`, `set2-20261011` ve `set3-20261012`, koşu günü
 olmayan etiketler taşır: birincisi 8 Ekim 2026'da, diğer ikisi 9 Ekim 2026'da
-koştu. `set4-20261009`, `set4b-20261009`, `set4c-20261009` ve `set5-20261009`
-gerçek tarihi taşır.
+koştu. `set4-20261009`, `set4b-20261009`, `set4c-20261009`, `set5-20261009` ve
+`set6-20261009` gerçek tarihi (UTC) taşır.
 
 **Kanıtın saklanması.** Dizinler depoda baytı baytına saklanır; önceki
 dizinlerin on iki ana makine okuma dosyası, toplandıkları hâliyle yeniden
@@ -436,7 +467,7 @@ makinenin laboratuvar belirtecidir. Alım sırasında `set4b-20261009` içindeki
 ana makine okuma dosyası, sağlama toplamları kaydedilmeden önce CRLF'den LF'ye
 çevrildi; `set4-20261009` ve `set4b-20261009` içindeki bazı betiklerde yerel
 geçici klasör yolu bir yer tutucuyla değiştirildi. Üçüncü koşudan itibaren sürücüler özet
-biçimli değerleri toplarken kaldırır; kapanış koşusu belirteç özetlerini de o
+biçimli değerleri toplarken kaldırır; beşinci koşu belirteç özetlerini de o
 anda kaldırır.
 
 **Ayar kayıtları (birinci koşu; Debian 13, Ubuntu 24.04, Arch; posta politikası
@@ -588,9 +619,10 @@ O koşunun ölçülen yollarında v0.1.0-alpha.81 ile hiçbir uyumsuzluk bulunma
 Dördüncü koşu, Debian 13 ve Ubuntu 24.04'te iyi güncellemeyi, Arch'ta da
 otomatik dönüşü, dördüncü koşunun koduyla yineledi.
 
-**Güncelleme bir kez daha, son kodda (kapanış koşusu, `set5-20261009`; aynı on
-hücre).** Aday, ürünün kodundaki son değişiklikten derlendi; dala sonradan
-eklenenler kanıt ve belgedir.
+**Güncelleme bir kez daha (beşinci koşu, `set5-20261009`; aynı on hücre).** Bu
+koşunun kodu, Panel'in güvenli bağlantı kuralı dışında son koddur; kural
+sonradan değiştirildi (bir satır kod, açıklaması ve testi; `cmd/`, `internal/`
+ve `web/` altında başka hiçbir şey).
 
 - On hücrenin tamamı üçüncü koşunun ölçtüğü sonuca ulaştı; her adımın kararı,
   sonuç ve karşılaştırılan olgular aynıydı (`compare-with-set3.md`): Debian 13,
@@ -616,25 +648,80 @@ eklenenler kanıt ve belgedir.
   örnek arasında 10,5 saniyeden uzun boşluk yok; en uzunu bir hücrenin kendi
   makine sıfırlamasında). Her hücre bir kez koştu.
 - Bu koşunun sınamadıkları: posta TLS ayarlarının düzeltilmiş okuması (anlık
-  görüntü, geri yükleme, geri okuma) ve son kodun yeni kurulumu.
+  görüntü, geri yükleme, geri okuma) ve yeni kurulum.
+
+**Son kodun yeni kurulumu, Panel'in güvenli bağlantı kuralı ve bir güncelleme
+daha (altıncı koşu, `set6-20261009`; Arch, Debian 13, Ubuntu 24.04).** Son kod,
+beşinci koşunun kodunun değiştirilmiş kuralı içeren hâlidir. Ondan sonra dalda
+`cmd/`, `internal/` veya `web/` altında hiçbir şey değiştirilmedi; eklenenler
+test düzeneği, kanıtlar ve "Yayımlamadan önce" bölümünde anılan sürüm
+hazırlığıdır. Bu koşunun arşivleri test derlemeleriydi: yeni kurulan, önceki
+sürümün etiketini ve sürüm sırasını taşıyordu; güncelleme hedefi koddan yalnız
+82'ye ayarlı sürüm sırası dosyasıyla ayrılıyordu.
+
+- Üç platformda da yeni kurulduğunda, dördüncü koşunun ve ek ölçümünün
+  denetimleri yeniden geçti: Panel üzerinden PHP sitesi oluşturuldu, bir PHP
+  sayfası sitenin kendi hesabıyla çalıştı, olmayan bir betik 404 yanıtladı ve
+  site silindikten sonra ondan hiçbir şey hizmet vermeyi sürdürmedi; kaydedilen
+  PHP sürümü ve soketi kurulu sürümünkiydi; cPanel içe aktarımı tamamlandı ve
+  `dns` parçasını `left_out` altında listeledi; mutlak adlı arşiv girdisi
+  listelendi ve içe aktarım `partial` oldu; web sunucusunun reddettiği site
+  `502 SITE_WEB_SERVER_REFUSED` yanıtladı ve yanıtın kaldırıldığını söylediği
+  şeyler yoktu; durmuş nginx, MariaDB ve PostgreSQL'in yeniden yüklenmesi
+  `409` / `not_running` yanıtladı. Postfix'in reddettiği bir yapılandırmayla
+  Postfix'i durdurma, Debian 13 ve Ubuntu 24.04'te notla birlikte `200`
+  yanıtladı; posta desteklenmediği için Arch'ta ölçülmedi.
+  Arch'ta bu denetimler yinelenen hücrede geçti; ilk hücre aşağıdaki tek
+  denetimi geçemedi.
+- Panel'in kuralı, makinede çalışan Panel'den okundu: her birinde on bir HTTPS
+  yanıtı olan 14 okuma (durum kodları 200, 204, 401, 403 ve 404). Yeni
+  kurulumlardaki sekiz okumada (her platformda iki, ve iki kez koşan ilk Arch
+  hücresinde iki tane daha) ile güncellemeden sonraki üç okumada her yanıt tam
+  olarak `max-age=31536000` taşıdı. Güncellemeden önceki üç okumada
+  v0.1.0-alpha.81 her seferinde `max-age=31536000; includeSubDomains`
+  yanıtladı. Panel'in bağlantı noktasına düz HTTP, 14 okumanın hepsinde `400`
+  ile yanıtlandı ve böyle bir başlık taşımadı.
+- Yayımlanmış v0.1.0-alpha.81'den platform başına bir güncelleme, yeni
+  veritabanı şemasıyla (43), doğrulanmış olarak bitti. Güncellemeden önce
+  yüklenmiş bir sayfanın gönderdiği biçimde gönderilen istek reddedildi ve
+  hiçbir şeyi değiştirmedi: yedek rotasında istek kimliği olmadan `428`;
+  yedek zamanlamasında ve zamanlanmış görevlerde, Debian 13 ve Ubuntu 24.04'te
+  posta politikasında da, sürümsüz istek için `409 SETTINGS_VERSION_REQUIRED`.
+  Debian 13 ve Ubuntu 24.04'te, v0.1.0-alpha.81'in oluşturduğu sitenin
+  karşılaştırması ve bir Postfix durdurma bu hücrelerde yeniden koştu ve geçti.
+  Diğer yedi güncelleme hücresi son kodda yinelenmedi; onlar beşinci koşuya
+  dayanır.
+- Bir denetim geçmedi, ilk Arch koşusunda: test düzeneğinin bir kuralı `dns`
+  parçasını hâlâ `imported` altında bekliyordu, oysa ürün onu belgelendiği gibi
+  `left_out` altında listeledi. Hücre, kural düzeltilerek yeniden koşuldu ve
+  geçti; ürünün hiçbir denetimi düşmedi.
+- Ölçülmeyenler: yeni sürümün adıyla etiketlenmiş bir arşivin yeni kurulumu
+  (yeni kurulan arşiv, dördüncü koşudaki gibi önceki etiketi taşıyordu);
+  tarayıcıda herhangi bir şey; yönetilen sertifikası olan ya da ana makine
+  adıyla ulaşılan bir Panel'de kural; makinelerin trafiği. Ana makine koşunun
+  tamamında "modern bekleme" kaydetti; koşunun kendi saatleri duraklama
+  göstermiyor. Yinelenen Arch hücresi dışında her hücre bir kez koştu.
 
 **Hangi denetim hangi koda dayanıyor.** Sonraki her hâl önceki düzeltmeleri
-içerir. Sonraki bir satır öyle demedikçe, bir denetim sonraki kodda
-yinelenmedi.
+içerir. "Yinelenmedi", denetimin sonraki kodda yeniden koşulmadığı demektir.
 
 | Denetlenen | Üzerinde koştuğu kod |
 | --- | --- |
-| Gerçek hizmetlerde ayar kayıtları | birinci koşunun kodu |
-| Düzeltilmiş ayar kayıtları; 41 hizmet işlemi; istek kimliği | ikinci koşunun kodu |
-| 42 hizmet işlemi; içe aktarım önizlemesi ve kısmi içe aktarım; sertifika hatası yanıtı; ilk güncelleme matrisi | üçüncü koşunun kodu |
-| Arch dahil yeni kurulmuş sunucularda PHP siteleri; durmuş hizmetlerin yeniden yüklenmesi; reddedilen site; mutlak adlı arşiv girdisi | dördüncü koşunun kodu |
-| Yeni kurulmuş sunucularda Postfix durdurma notu, dörder durdurma; içe aktarımın `left_out` listesi | Postfix durdurma düzeltmesini içeren dördüncü koşu kodu (ek ölçüm) |
-| Güncelleme matrisi, on hücre; alpha.81 sitesinin güncelleme boyunca karşılaştırması; güncellenmiş sunucuda bir Postfix durdurma | son kod (kapanış koşusu) |
-| `postconf` uyarısının ardındaki posta TLS ayarlarının okunması | son kod: bileşen testleri ve programın bir okuması; bir sunucuda çalıştırılmadı |
-| MariaDB olmayan bir `mysqld` | son kod: yalnız bileşen testleri |
+| Gerçek hizmetlerde ayar kayıtları (zamanlanmış görevler, posta politikası, yedek zamanlaması, yapılandırma dosyaları, catch-all) | ilk üç koşunun kodu; son kodda yinelenmedi; tek istisna, güncellemeden sonra sürümsüz kaydın reddi (altıncı koşu) |
+| Hizmet işlemleri, platform başına 41 ve sonra 42 | ikinci ve üçüncü koşunun kodu; son kodda yinelenmedi; istisna, durmuş nginx, MariaDB ve PostgreSQL'in yeniden yüklenmesi ile Postfix'i durdurma (altıncı koşu) |
+| Sekiz rotada istek kimliği | ikinci ve üçüncü koşunun kodu; son kodda yinelenmedi; tek istisna, güncellemeden sonra yedek rotasında başlıksız isteğin reddi (altıncı koşu) |
+| İçe aktarılan parolayla posta kutusu oturumu; sertifika hatası yanıtı; MariaDB sürümü; veritabanı parolası; korumalı bir yanıtta, saklanan bir satırda veya günlük satırında özet biçimli değer bulunmaması | üçüncü koşunun kodu; yinelenmedi |
+| PHP sitesinin oluşturulması, çalışması ve silinmesi; cPanel içe aktarımı, parola özeti içermeyen önizlemesi ve üç listesi; mutlak adlı arşiv girdisi; reddedilen site | son kod, üç platformda yeni kurulum (altıncı koşu) |
+| Postfix durdurma notu | son kod: Debian 13 ve Ubuntu 24.04'te birer kez yeni kurulumda ve güncellenmiş sunucuda (altıncı koşu); dörder durdurma ek ölçümün kodunda |
+| Panel'in güvenli bağlantı kuralı | son kod, üç platform (altıncı koşu); tarayıcıda değil |
+| v0.1.0-alpha.81'den güncelleme: iyi güncelleme; alpha.81 sitesinin güncelleme boyunca karşılaştırması | son kod (altıncı koşu; site Debian 13 ve Ubuntu 24.04'te) |
+| v0.1.0-alpha.81'den güncelleme: otomatik dönüş, başarısız başlangıç denetimi, yazdırılmış yeniden deneme, yönetimin kapalı olması | beşinci koşunun kodu; son koddan yalnız Panel'in güvenli bağlantı kuralında ayrılır; yinelenmedi |
+| `postconf` uyarısının ardındaki posta TLS ayarlarının okunması | bileşen testleri ve programın bir okuması; bir sunucuda çalıştırılmadı |
+| MariaDB olmayan bir `mysqld` | yalnız bileşen testleri |
 
-Yeni kurulum en son ek ölçümün kodunda ölçüldü. Ona `postconf` kuralını
-ekleyen son kod, yalnız v0.1.0-alpha.81'den güncellemeyle kuruldu.
+Kısaca: ilk üç koşunun ayar kaydı, istek kimliği ve tam hizmet işlemi hücreleri
+son kodda yinelenmedi; on güncelleme hücresinden yedisi de yinelenmedi. Son koda
+dayanan denetimler, altıncı koşunun andıklarıdır.
 
 **Ekranlar.** Arayüz değişikliklerinin bileşen testleri var; ayrıca kurulu bir
 Chrome'da, API'nin loopback üzerindeki bir taklidine karşı incelendiler
@@ -654,10 +741,21 @@ gösterir; saklanan günlükler nedeni saptamaz.
 
 Bunlar bilinen sınırlardır. Gizli kusur değildir.
 
-- **Son kod** yalnız v0.1.0-alpha.81'den güncelleme üzerinden, hücre başına bir
-  kez ve diskleri bellekte olan makinelerde ölçüldü. Yeni kurulmadı; önceki
-  koşuların denetimleri de, yukarıdaki tablonun söyledikleri dışında, onun
-  üzerinde yinelenmedi.
+- **Son kodda yinelenmeyenler.** İlk üç koşunun ayar kaydı, istek kimliği ve
+  tam hizmet işlemi hücreleri son kodda yeniden koşulmadı. On güncelleme
+  hücresinin yedisi (otomatik dönüş, başarısız başlangıç denetimi, yazdırılmış
+  yeniden deneme, yönetimin kapalı olması) beşinci koşunun kodunda koştu (bu kod son
+  koddan yalnız Panel'in güvenli bağlantı kuralında ayrılır) ve yinelenmedi.
+  Yeni kurulan arşiv önceki sürümün etiketini taşıyordu; v0.1.0-alpha.82
+  etiketli arşiv yalnız güncellemeyle kuruldu; sürüm hazırlığı (sürüm sırası,
+  önyükleme sabitlemeleri, sürüm satırları) ölçülen hiçbir arşivde yoktur.
+- **Panel'in güvenli bağlantı kuralı.** Bir tarayıcıda ölçülmedi; yönetilen
+  sertifikası olan ya da ana makine adıyla ulaşılan bir Panel'de de ölçülmedi.
+  Başlığın tanımına göre, Paneli bir daha açmayan tarayıcı geniş kuralı bir
+  yılı dolana kadar tutar. Panel'in bağlantı noktasına düz HTTP, HTTPS'e
+  yönlendirme değil `400` yanıtlar; v0.1.0-alpha.81 de aynısını yanıtlar.
+- **Bir PHP sitesinde olmayan durağan dosya**, güncellemeden önce de sonra da,
+  sitenin ana sayfasıyla 200 yanıtlar (Debian 13 ve Ubuntu 24.04'te okundu).
 - **Üretilmiş bir site yapılandırma dosyasında kendi düzenlemeleriniz.** Panel
   başladığında, güncellemeden sonra ve başka zamanlarda, barındırılan sitelerin
   web sunucusu yapılandırmasını yeniden yazar; dayanıklılık sözleşmesi önceki
@@ -713,16 +811,15 @@ Bunlar bilinen sınırlardır. Gizli kusur değildir.
 - **`postconf` uyarısının ardındaki posta ayarları.** Düzeltmenin bileşen
   testleri ve gerçek programın bir okuması var (Postfix 3.10.13, Debian 13).
   Böyle bir yapılandırmayla posta TLS değişikliği, geri alınması ve sertifika
-  yayımı çalıştırılmadı; kapanış koşusunda da. Ubuntu'nun Postfix 3.8'i ve Arch bu ayarlar için
+  yayımı çalıştırılmadı; beşinci ve altıncı koşuda da. Ubuntu'nun Postfix 3.8'i ve Arch bu ayarlar için
   okunmadı. v0.1.0-alpha.81 hakkında, ölçülen iki komutun ötesindeki ifadeler
   kaynağından okundu. Sunucuda zaten kurulu bir yenileme yardımcısı panel
   güncellemesiyle değiştirilmez (değişiklik kaydı); bu yüzden bu düzeltme ona
   ulaşmaz.
 - **Postfix'i durdurma.** Ölçülmeyenler: `postconf`'a uyarı verdiren ama
-  `postfix check`'in kabul ettiği bir yapılandırmayla durdurma; Arch (Postfix
-  yok); Dovecot; son kodun yeni kurulumunda durdurma (platform başına dört
-  durdurma ek ölçümün kodunda, son koddaki tek durdurma güncellenmiş bir
-  sunucuda koştu). systemd'nin "failed" işareti bırakılır; notun adını verdiği
+  `postfix check`'in kabul ettiği bir yapılandırmayla durdurma; Arch (orada posta
+  desteklenmez); Dovecot; son kodda hücre başına birden fazla durdurma (platform başına
+  dört durdurma ek ölçümün kodunda koştu). systemd'nin "failed" işareti bırakılır; notun adını verdiği
   `sudo systemctl reset-failed <birim>` onu siler.
 - **Güncelleme kartı.** Yeni metni gerçek bir Panel'e karşı tarayıcıda
   görülmedi. v0.1.0-alpha.81'e dönüşten sonra sunulan arayüz alpha.81'inkidir;
@@ -802,8 +899,9 @@ Bunlar bilinen sınırlardır. Gizli kusur değildir.
   göstermiyor). Ek ölçümün Ubuntu hücresi sırasında, düzeltilmiş derleme
   kurulmadan önce 43 dakika uyudu; ölçülen adımlar uyandıktan sonra koştu.
   Dördüncü koşuda güç olayları toplanmadı; 30 saniyelik disk izleyicisi boşluk
-  göstermiyor. Kapanış koşusunda ana makine koşunun büyük bölümünde "modern
-  bekleme" kaydetti ve örnekleyiciler duraklama göstermiyor; bu durumun çalışan
+  göstermiyor. Ana makine beşinci koşunun büyük bölümünde, altıncı koşunun
+  tamamında "modern bekleme" kaydetti ve örnekleyiciler duraklama göstermiyor;
+  bu durumun çalışan
   bir iş yükünde duraklatmak dışında neyi değiştirdiği ölçülmedi.
 - **Geçmeyen denetimler** her dizinin `checks-not-passed.txt` dosyasında
   sayılır. Birinci koşu: yukarıdaki iki kusur ve bir düzenek hatası. İkinci
@@ -817,39 +915,66 @@ Bunlar bilinen sınırlardır. Gizli kusur değildir.
   durdurma notunun üç denetimi, iki koşuda da; düzeltildi ve ek ölçümde yeniden
   ölçüldü. Ayrıca ilk Debian güncelleme hücresinde bir düzenek kuralı; yeniden
   koşulunca geçti. Ek ölçüm: ilk tanı denemesi, ilk durdurmadan önce sürücünün
-  bir hatasında durdu. Kapanış koşusu: yok.
+  bir hatasında durdu. Beşinci koşu: yok. Altıncı koşu: ilk Arch hücresinde bir
+  düzenek kuralı; yeniden koşulunca geçti.
 - **Belgelerdeki tarihler.** Sözleşme ve yönlendirme belgelerindeki bazı tarihli
   girdiler ile kaynak açıklamaları 2026-10-10, 2026-10-11 ya da 2026-10-12
-  taşır. Bunlar tarih değil, çalışma turlarının etiketleridir; iş 8 ve 9 Ekim
-  2026'da yapıldı. Her belge bunu başında söyler.
+  taşır. Bunlar tarih değil, çalışma turlarının etiketleridir; o iş 8 ve 9 Ekim
+  2026'da yapıldı. Her belge bunu başında söyler. "Yayımlamadan önce"
+  bölümündeki sahip kararları ile altıncı koşu ise saate göre gerçekten 10 Ekim
+  2026 tarihlidir.
 - **Önceki sınırlar.** [v0.1.0-alpha.81](RELEASE-NOTES-v0.1.0-alpha.81.tr.md)
   sınırlarından bu sürümün ele almadıkları geçerliliğini korur. Biri
   alpha.81'den güncellemede geçerli değildir: ölçülen güncellemelerde kurtarma
   komutu ve Panel'in kurtarma durumu ilk saniyeden itibaren vardı.
 - **Açık kabul işleri.** [Dayanıklılık sözleşmesinin](RESILIENCE-CONTRACT.tr.md)
   beş temel işinin tamamı kısmi kalır; bu sürüm hiçbirini kapatmaz. Kararlar:
-  [DECISIONS](DECISIONS.tr.md) içinde D-022, D-024, D-025, D-029.
+  [DECISIONS](DECISIONS.tr.md) içinde D-022, D-024, D-025, D-029, D-030.
 
 ## Yayımlamadan önce (sahip kararları ve kalan denetimler)
 
-1. Sürüm: v0.1.0-alpha.82 çalışma numarasıdır (sahibin kararı).
-2. Son kodun yeni kurulumunun ve `postconf` uyarısının ardındaki posta
-   sertifikası yolunun yayımlamadan önce ölçülmesine ya da yukarıda adı geçen
-   sınırlar olarak çıkmasına karar verilir.
-3. Paketleme sözleşmesi testleri çekme isteğinde CI içinde koşar; root
+1. Sürüm: v0.1.0-alpha.82 (sahibin 10 Ekim 2026 kararı).
+2. Sahip 10 Ekim 2026'da son kodun yayımlamadan önce yeni kurulup
+   ölçülmesine karar verdi; bu yapıldı (yukarıdaki altıncı koşu).
+   `postconf` uyarısının ardındaki posta sertifikası yolu bir sunucuda
+   ölçülmedi ve adı belli bir sınır olarak kalır; bu bir sahip kararı değildir.
+3. Panel'in güvenli bağlantı kuralı bu sürümde Panel'in kendi ana makine adıyla
+   sınırlıdır (sahibin 10 Ekim 2026 kararı; [DECISIONS](DECISIONS.tr.md)
+   içinde D-030).
+4. Sürüm hazırlığı ayrı bir commit'te yapıldı ve `cmd/`, `internal/` ya da
+   `web/` altında hiçbir dosyayı değiştirmez: sürüm sırası (81'den sonra 82),
+   kurucunun önyükleme sabitleri, README'nin sürüm satırları ve bunları
+   sabitleyen sözleşme testleri. Onunla bir sunucuda hiçbir şey ölçülmedi
+   (sınırlara bakın). O commit'ten müşteri arşivi, özel bir kopyada, imzasız
+   olarak ve CI'ın paketleme işinin komutlarıyla iki kez derlendi: iki derleme
+   bayt bayt aynıdır (232 öğe); içinde test düzeneği, test betiği ya da kanıt
+   yoktur; programları deneme lisansı derleme etiketini taşımaz; iki sürüm
+   koruyucusu onu kabul eder; sıra dosyası 81'den sonra 82 der ve içindeki
+   Panel kendini v0.1.0-alpha.82 olarak bildirir. Aynı yolla yeniden derlenen
+   yayımlanmış v0.1.0-alpha.81 arşivine (218 öğe) göre yalnız arayüz dosyaları
+   farklıdır. Arşiv, v0.1.0-alpha.81'de olduğu gibi, satıcının yayın araçlarını
+   ve eski bir olaydan kalan iki tek seferlik kurtarma betiğini hâlâ taşır;
+   bu sürüm onları çıkarmaz. Gerçek arşivi etikette CI
+   derler ve imzalar; bu derleme o arşiv değildir. Sahibin yayımlamadaki
+   adımları:
+   `CELIKPANEL_RELEASE_SEQUENCE` depo değişkenini 82 yapmak (etiketteki imzalama
+   işi farklı bir değeri reddeder), birleştirmek, etiketlemek ve portalı
+   etiketin dosyalarından yayımlamak.
+5. Paketleme sözleşmesi testleri çekme isteğinde CI içinde koşar; root
    gerektirenler `sudo` altında (`.github/workflows/ci.yml`). #205 numaralı
-   taslak çekme isteğinde 9 Ekim 2026'da 16:40 UTC'de başlayıp 17:01 UTC'de biten
-   koşu o andaki dal ucu için geçti; 20:20 UTC'de başlayıp 20:40 UTC'de biten
-   koşu da o andaki uç için geçti (her birinde 21 denetim geçti; yayımlama adımı
-   çekme isteğinde atlanır). İki uç da burada adı geçen her düzeltmeyi içerir.
-   Ardından kapanış koşusunun kanıtını ekleyen bir commit geldi; bu yazılırken
-   onun koşusu başlamıştı ama bitmemişti. Sonraki her uç kendi koşusunu
-   gerektirir ve geçen bir koşu, 5. maddedeki sahip denemesinin yerini tutmaz.
-4. Üretim imzalaması, [imzalı sürüm sözleşmesinde](release-signing.tr.md)
+   taslak çekme isteğinde, son kodu taşıyan commit'in koşusu geçti (21 denetim
+   geçti; yalnız etikette çalışan yayım işi atlandı; koşu 9 Ekim 2026'da
+   21:07 UTC'de başlayıp 21:27 UTC'de bitti). Ondan sonra eklenen
+   commit'ler `cmd/`, `internal/` ya da `web/` altında hiçbir dosyayı
+   değiştirmez; onların koşusu bu yazılırken başlamış ama bitmemişti.
+   Birleştirilecek uç, çekme isteğinde kendi koşusunu alır; geçen bir koşu
+   sahibin kendi denemesinin yerini tutmaz.
+6. Üretim imzalaması, [imzalı sürüm sözleşmesinde](release-signing.tr.md)
    anlatıldığı gibi, sürüm etiketinde CI içinde yapılır. Ardından sahip,
    yayımlanan dosyaları o belgede anlatıldığı gibi doğrular.
-5. Kurulu herhangi bir panel güncellenmeden önce geçici bir sunucuda sahip
-   denemesi yapılır.
+7. Sahibin kendi denemesi, kurulu iki sunucunun güncellenmesidir; sahip bunu
+   panelin kendi güncelleme ekranından bizzat başlatır, bunun için geçici bir
+   sunucu kullanılmaz. Kurulu paneller yalnız sahiplerince güncellenir.
 
 Bu sürümü yalnız CelikPanel'in güncelleme arayüzünden kurun. Yayımlamak kurulu
 sunucuları güncellemez; bir sunucunun güncellemesini yalnız o sunucunun sahibi
