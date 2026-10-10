@@ -1,8 +1,9 @@
-# v0.1.0-alpha.82 (aday)
+# v0.1.0-alpha.82 (10 Ekim 2026'da yayımlandı)
 
 [English](RELEASE-NOTES-v0.1.0-alpha.82.md)
 
-Bu, v0.1.0-alpha.81'i izleyecek sürümün taslağıdır. Henüz yayımlanmadı. Sahip
+Bu, v0.1.0-alpha.81'i izleyen sürümdür. 10 Ekim 2026'da sahip tarafından
+yayımlandı (sonda "Yayımlama kaydı"na bakın). Sahip
 10 Ekim 2026'da numarasının v0.1.0-alpha.82 olmasına karar verdi. Arayüzün
 sunucunun durumunu
 bilmediğinde ne gösterdiğini, ayarların ve hizmet işlemlerinin nasıl yazılıp
@@ -10,7 +11,9 @@ yanıtlandığını ve aynı değişiklik sunucuya birden çok kez ulaştığın
 olduğunu değiştirir. Neyin, nasıl ölçüldüğünü ve neyin ölçülmediğini de söyler.
 
 Bir ekranın ne gösterdiği, bileşen testlerine ve API'nin bir taklidine karşı
-çalışan bir tarayıcıya dayanır; gerçek bir Panel'e değil (aşağıda "Ekranlar").
+çalışan bir tarayıcıya dayanır; yalnız güncelleme ve ilk sayfa yüklemesi için,
+yedinci kayıtta gerçek bir Panel'e karşı gerçek bir Chrome'a da (aşağıda
+"Ekranlar").
 v0.1.0-alpha.81'in yayımlandığını sahip bildirmiştir; depoda etiketi var ama
 yayımlama adımlarının kaydı yok.
 
@@ -411,16 +414,18 @@ denetlendi.
 
 ## Ne ölçüldü, nasıl ölçüldü
 
-8 ve 9 Ekim 2026'da (UTC; altıncı koşu yerel saatle gece yarısından sonra, 10
-Ekim 2026'da yapıldı) alınmış sekiz kayıt. Altısı, ürünün tek bir dizüstü ana
+8, 9 ve 10 Ekim 2026'da (UTC; altıncı koşu yerel saatle gece yarısından sonra, 10
+Ekim 2026'da yapıldı; yedincisi etiketten sonra, yayımlanmış kodla 10 Ekim
+2026'da yapıldı) alınmış dokuz kayıt. Yedisi, ürünün tek bir dizüstü ana
 makinedeki geçici sanal makinelerde, Debian 13, Ubuntu 24.04 ve Arch'ın paketli
-hizmetleriyle koşularıdır; biri dördüncünün yeni kurulmuş makinelerdeki ek
+hizmetleriyle koşularıdır (yedincisi yalnız Debian 13'te); biri dördüncünün yeni kurulmuş makinelerdeki ek
 ölçümüdür; biri de tek bir programın okumasıdır. Bir sayı verilmedikçe her sıra
 platform başına bir kez koştu; bir hücre yalnız test düzeneğinin bir hatasından
 sonra yinelendi, aşağıdaki bir paragraf başka türlü söylemedikçe (üçüncü
 koşuda ikinci bir Arch okuması; dördüncüde çalışan sürüm olarak adayın kaynağını
-kullanan bir hücre). Bu koşularda hiçbir ekran çizilmedi: sürücü, ekranların
-gönderdiğini gönderdi. Her sonuç dosyası kendisini henüz kabul edilmemiş kanıt
+kullanan bir hücre). İlk altı kayıtta hiçbir ekran çizilmedi: sürücü, ekranların
+gönderdiğini gönderdi. Gerçek bir Panel'in önüne gerçek bir tarayıcıyı yalnız
+yedinci kayıt koydu. Her sonuç dosyası kendisini henüz kabul edilmemiş kanıt
 olarak işaretler; değerlendirmesi sahibindir.
 
 **Laboratuvarın saptadığı ve saptamadığı.** Sanal makineler ağdan kopuk
@@ -452,8 +457,9 @@ anahtarını değil, bir deneme imzalama anahtarını taşır.
 **Adlar ve tarihler.** Dizinler `deploy/e2e/release-recovery/evidence/`
 altındadır. `set1-20261010`, `set2-20261011` ve `set3-20261012`, koşu günü
 olmayan etiketler taşır: birincisi 8 Ekim 2026'da, diğer ikisi 9 Ekim 2026'da
-koştu. `set4-20261009`, `set4b-20261009`, `set4c-20261009`, `set5-20261009` ve
-`set6-20261009` gerçek tarihi (UTC) taşır.
+koştu. `set4-20261009`, `set4b-20261009`, `set4c-20261009`, `set5-20261009`,
+`set6-20261009` ve `set7-20261010` gerçek tarihi (UTC) taşır. `set7-20261010`
+bu yazılırken henüz commit edilmemişti ve kabul denetimi bitmemişti.
 
 **Kanıtın saklanması.** Dizinler depoda baytı baytına saklanır; önceki
 dizinlerin on iki ana makine okuma dosyası, toplandıkları hâliyle yeniden
@@ -654,7 +660,7 @@ ve `web/` altında başka hiçbir şey).
 daha (altıncı koşu, `set6-20261009`; Arch, Debian 13, Ubuntu 24.04).** Son kod,
 beşinci koşunun kodunun değiştirilmiş kuralı içeren hâlidir. Ondan sonra dalda
 `cmd/`, `internal/` veya `web/` altında hiçbir şey değiştirilmedi; eklenenler
-test düzeneği, kanıtlar ve "Yayımlamadan önce" bölümünde anılan sürüm
+test düzeneği, kanıtlar ve "Yayımlama kaydı" bölümünde ("Etiketten önce") anılan sürüm
 hazırlığıdır. Bu koşunun arşivleri test derlemeleriydi: yeni kurulan, önceki
 sürümün etiketini ve sürüm sırasını taşıyordu; güncelleme hedefi koddan yalnız
 82'ye ayarlı sürüm sırası dosyasıyla ayrılıyordu.
@@ -702,6 +708,49 @@ sürümün etiketini ve sürüm sırasını taşıyordu; güncelleme hedefi kodd
   tamamında "modern bekleme" kaydetti; koşunun kendi saatleri duraklama
   göstermiyor. Yinelenen Arch hücresi dışında her hücre bir kez koştu.
 
+**Arayüz, yayımlanmış kodda gerçek bir Chrome'da (yedinci kayıt,
+`set7-20261010`, 10 Ekim 2026 UTC, etiketten sonra yapıldı).** Bu yazılırken
+commit edilmemişti ve kabul denetimi bitmemişti; aşağıdaki hükümler kaydın
+kendi hükümleridir. Geçici Debian 13 konukları; ana makinede gerçek bir Google
+Chrome 154 (başsız), her konuğun gerçek Panel'ine bir komut dosyasıyla sürülerek,
+SSH yönlendirmesi üzerinden ulaşıldı. Kod, etiketteki `main`'dir (commit'in
+`git archive` çıktısı); imzalı arşiv değil, kabul testi lisansıyla derlendi.
+Ölçülen kural: ekranın yerini yalnızca bilinen bir olumsuz karar alabilir;
+bilinmeyen erişim durumu bağlanmış sayfayı tutar ve sayfa kaldığı yerden
+devam eder. Beş hücre, her biri bir kez:
+
+- **Güncelleme karttan başlatıldı, alpha.82 arayüzü: GEÇTİ.** Ayarlar sayfası,
+  24 sn'lik kesintinin yaklaşık 8–10 sn'si boyunca kapatılamayan bir katmanın
+  ("Panel erişimi şu an doğrulanamadı ...") altında bağlı ve etkisiz kaldı, sonra
+  aynı belgede ve aynı bölümde devam etti; başarıdan sonra ürünün kendi yeniden
+  yüklemesi aynı rota ve bölüme gitti. Gözlem, hüküm değil: katmanın ilk cümlesi
+  lisansı anıyor, oysa neden Panel'in kendi planlı yeniden başlatmasıydı.
+- **Aynı güncelleme, yayımlanmış alpha.81 arayüzünden başlatıldı: sahibin
+  bildirdiği ekran yeniden üretildi.** Ayarlar sayfasının yerini, 89 sn'lik
+  kesintinin yaklaşık 78 sn'si boyunca tam ekran "Lisans durumu
+  denetlenemedi" sayfası aldı (iki kesinti karşılaştırılamaz: alpha.81'den
+  güncelleme veritabanı şemasını da 42'den 43'e taşıdı, diğeri taşımadı).
+- **Sekme 631 sn arka planda, Panel çalışıyor: GEÇTİ.** Sayfa gizliyken hiç
+  istek göndermedi; dönüşte tek bir sessiz okuma; yazılan metin, odak, adres ve
+  bölüm değişmedi.
+- **Sekme 631 sn arka planda, Panel yeniden başlarken: GEÇTİ, bir sınırla.**
+  Yeniden başlatma 0,5 sn içinde bitti, iki yoklamanın aralığından kısaydı; yani
+  uzun bir kesintide gizli sekme ölçülmedi.
+- **`/setup`, `/` ve `/settings?section=updates` yollarının soğuk tam sayfa
+  yüklemesi: üç yolda da BAŞARISIZ.** Henüz dönüştürülmemiş kapılardan biri olan
+  `RecoveryAccess`'in tam sayfa "Panel erişimi denetleniyor" ekranı, 18
+  yüklemenin her birinde, hiçbir oturum okuması yanıtlanmadan boyandı: hızlı
+  bağlantıda yaklaşık 80–100 ms, 2 Mbit/sn ve 300 ms'ye kısılmış bağlantıda
+  yaklaşık 1,7 sn. "Sessiz süre (1,5 sn) geçene ya da bir okuma erişimi
+  doğrulamadan yanıtlayana kadar hiçbir şey çizilmez" kuralını bu kapı
+  karşılamıyor. Hiçbir yüklemede bekletme katmanı görülmedi.
+
+Ölçülmeyenler: Ubuntu 24.04; Arch; görünür (başlıklı) bir tarayıcı; telefon
+görünümü; koyu tema; Türkçe; HTTP önbelleği açık bir yükleme; kurtarma
+hizmet çalışanının denetlediği bir sayfa; kurulu herhangi bir sunucu. Konuklar
+diğer koşulardaki gibi dışarıya NAT yapan QEMU kullanıcı ağında çalıştı;
+trafikleri yakalanmadı.
+
 **Hangi denetim hangi koda dayanıyor.** Sonraki her hâl önceki düzeltmeleri
 içerir. "Yinelenmedi", denetimin sonraki kodda yeniden koşulmadığı demektir.
 
@@ -726,7 +775,9 @@ dayanan denetimler, altıncı koşunun andıklarıdır.
 **Ekranlar.** Arayüz değişikliklerinin bileşen testleri var; ayrıca kurulu bir
 Chrome'da, API'nin loopback üzerindeki bir taklidine karşı incelendiler
 (masaüstü ve telefon, İngilizce ve Türkçe, açık ve koyu tema). O tarayıcının
-arkasında gerçek bir Panel yoktu.
+arkasında gerçek bir Panel yoktu. Yedinci kayıt ise yalnız güncelleme ve ilk
+sayfa yüklemesi için gerçek bir Chrome'u gerçek bir Panel'in önüne koydu
+(İngilizce, açık tema, masaüstü boyutu, başsız).
 
 **Testler.** Test günlükleri, Postfix durdurma düzeltmesini içeren kod ve
 `postconf` düzeltmesinin commit edilmeden önceki hâlini içeren kod için
@@ -750,7 +801,9 @@ Bunlar bilinen sınırlardır. Gizli kusur değildir.
   etiketli arşiv yalnız güncellemeyle kuruldu; sürüm hazırlığı (sürüm sırası,
   önyükleme sabitlemeleri, sürüm satırları) ölçülen hiçbir arşivde yoktur.
 - **Panel'in güvenli bağlantı kuralı.** Bir tarayıcıda ölçülmedi; yönetilen
-  sertifikası olan ya da ana makine adıyla ulaşılan bir Panel'de de ölçülmedi.
+  sertifikası olan ya da ana makine adıyla ulaşılan bir Panel'de de
+  laboratuvarda ölçülmedi. Yayımlamadan sonra başlık, kurulu iki sunucuda
+  dışarıdan okundu ("Yayımlama kaydı"na bakın); tarayıcıda değil.
   Başlığın tanımına göre, Paneli bir daha açmayan tarayıcı geniş kuralı bir
   yılı dolana kadar tutar. Panel'in bağlantı noktasına düz HTTP, HTTPS'e
   yönlendirme değil `400` yanıtlar; v0.1.0-alpha.81 de aynısını yanıtlar.
@@ -821,8 +874,10 @@ Bunlar bilinen sınırlardır. Gizli kusur değildir.
   desteklenmez); Dovecot; son kodda hücre başına birden fazla durdurma (platform başına
   dört durdurma ek ölçümün kodunda koştu). systemd'nin "failed" işareti bırakılır; notun adını verdiği
   `sudo systemctl reset-failed <birim>` onu siler.
-- **Güncelleme kartı.** Yeni metni gerçek bir Panel'e karşı tarayıcıda
-  görülmedi. v0.1.0-alpha.81'e dönüşten sonra sunulan arayüz alpha.81'inkidir;
+- **Güncelleme kartı.** Yeni metni yalnız yedinci kayıtta, laboratuvardaki
+  bir Panel'de başsız bir Chrome'da ve sahip tarafından kurulu iki sunucuda
+  (aşağıdaki gözlemlere bakın) görüldü; kurulu bir sunucuda ölçülmedi.
+  v0.1.0-alpha.81'e dönüşten sonra sunulan arayüz alpha.81'inkidir;
   bu yüzden yeni metin orada görünemez. Otomatik dönüşten sonra güncelleme
   denetimi aynı sürümü yine sunar.
 - **Henüz dönüştürülmeyen ekranlar.** Arayüzün 31 kaynak dosyası sunucuyu en az
@@ -831,6 +886,34 @@ Bunlar bilinen sınırlardır. Gizli kusur değildir.
   ve hizmet sayfaları, kenar çubuğu, panonun bazı bölümleri, eklentiler, denetim
   günlüğü, VPN, ekip üyeleri ve birkaç küçük bölüm. Bunlarda başarısız bir okuma
   hâlâ boş ya da olumsuz bir durum gibi görünebilir.
+- **Yayımlamadan sonra kurulu sunucularda gözlenenler; bu sürümde
+  düzeltilmedi.** Sahibin kendi ekranlarından, sahibin 10 Ekim 2026'da kurulu
+  iki sunucuyu (biri Ubuntu 24.04, biri Debian 13) panelin güncelleme
+  ekranından güncellemesinden sonra bildirdikleridir. Hiçbiri bir asistan
+  tarafından o sunucularda ölçülmedi ve hiçbiri bu sürümle değişmedi:
+  1. Ubuntu sunucusunda güncelleme v0.1.0-alpha.81 arayüzünden başlatıldı.
+     Panel'in yeniden başlaması sırasında tarayıcı, "Update and recovery
+     status" kutusuyla birlikte tam ekran "License status could not be checked"
+     sayfasını gösterdi ve kendiliğinden toparlandı. Aynı biçimde başlatılan
+     Debian sunucusunda görünmedi (zamanlama meselesi). Yedinci kayıt bu ekranı
+     laboratuvarda alpha.81 arayüzüyle yeniden üretti, alpha.82 arayüzüyle
+     görmedi.
+  2. Debian sunucusunun Ayarlar, güncellemeler sayfasında, güncellemeden sonra
+     kart v0.1.0-alpha.82'yi kurulu gösterirken köşedeki bir bildirim, başlangıçtan
+     yaklaşık iki dakika sonra (T+02:03) hâlâ güncellemenin uygulandığını,
+     panelin kısa süre kullanılamayabileceğini ve güncellemelerin kilitli
+     olduğunu söylüyordu. İkisi birbirini tutmuyordu.
+  3. `/setup` sayfasının soğuk tam yüklemesi, sayfa çizilmeden önce kısa bir an
+     "Checking..." ve "Reload CelikPanel" düğmeleriyle tam sayfa "Checking panel
+     access" ekranı gösterir. Yedinci kayıt aynısını laboratuvardaki bir
+     Panel'de `/setup`, `/` ve güncellemeler sayfası için ölçtü: bu,
+     bilinen-durum kuralına henüz dönüştürülmemiş `RecoveryAccess` kapısıdır.
+  4. Debian sunucusundaki kurulum sihirbazı sayfası en üstte "This operation
+     stopped" ve "A required check needs attention" derken son adım "Verify the
+     prepared server - In progress" diyor; neden, kapalı "Checks and how to
+     continue" ve "Technical details" bölümlerinin altındadır. Yani neden ve
+     kimin işlem yapacağı adım listesinden önce gösterilmiyor. v0.1.0-alpha.81'de
+     de aynıydı.
 - **İstek kimliği olmayan rotalar.** Yalnız yukarıdaki sekiz rota korunur.
   Bunların dayandığı döküm; hizmet ve uygulama yeniden başlatmayı, planları ve
   kayıt kodlarını yinelendiğinde zararlı, yaklaşık 38 başka rotayı durumu doğru
@@ -920,9 +1003,9 @@ Bunlar bilinen sınırlardır. Gizli kusur değildir.
 - **Belgelerdeki tarihler.** Sözleşme ve yönlendirme belgelerindeki bazı tarihli
   girdiler ile kaynak açıklamaları 2026-10-10, 2026-10-11 ya da 2026-10-12
   taşır. Bunlar tarih değil, çalışma turlarının etiketleridir; o iş 8 ve 9 Ekim
-  2026'da yapıldı. Her belge bunu başında söyler. "Yayımlamadan önce"
-  bölümündeki sahip kararları ile altıncı koşu ise saate göre gerçekten 10 Ekim
-  2026 tarihlidir.
+  2026'da yapıldı. Her belge bunu başında söyler. "Yayımlama kaydı"
+  bölümündeki sahip kararları ve yayımlama adımları ile altıncı ve yedinci koşu
+  ise saate göre gerçekten 10 Ekim 2026 tarihlidir.
 - **Önceki sınırlar.** [v0.1.0-alpha.81](RELEASE-NOTES-v0.1.0-alpha.81.tr.md)
   sınırlarından bu sürümün ele almadıkları geçerliliğini korur. Biri
   alpha.81'den güncellemede geçerli değildir: ölçülen güncellemelerde kurtarma
@@ -931,7 +1014,71 @@ Bunlar bilinen sınırlardır. Gizli kusur değildir.
   beş temel işinin tamamı kısmi kalır; bu sürüm hiçbirini kapatmaz. Kararlar:
   [DECISIONS](DECISIONS.tr.md) içinde D-022, D-024, D-025, D-029, D-030.
 
-## Yayımlamadan önce (sahip kararları ve kalan denetimler)
+## Yayımlama kaydı
+
+Aşağıdaki her şey 10 Ekim 2026 tarihlidir (saat tarihi; saat dilimi
+belirtilmedikçe UTC). Adımları sahip attı. Kaynaklar belirtilmiştir; sahibin
+bildirdikleri depoda bir dosyada kayıtlı değildir.
+
+**Ne oldu.**
+
+1. `CELIKPANEL_RELEASE_SEQUENCE` depo değişkenini sahip, birleştirmeden önce
+   82 yaptı (sahip bildirdi).
+2. #205 numaralı çekme isteğini sahip, 07:15 UTC'de `main`'e squash commit
+   olarak birleştirdi (depo barındırıcısından okundu: birleştirme 07:15:11,
+   squash commit'in tarihi 07:15:10).
+3. Sahip bu commit üzerinde `v0.1.0-alpha.82` açıklamalı etiketini oluşturdu
+   (etiket 08:01 UTC, depodan okundu) ve gönderdi.
+4. Etiketin CI koşusu 22 işin 22'siyle başarıyla tamamlandı (08:01'de
+   başladı, 08:21 UTC'de bitti; depo barındırıcısından okundu) ve tam altı
+   dosya yayımladı: genel arşiv ve sağlama toplamı, linux/amd64 arşivi ve
+   sağlama toplamı, imzalı manifest (v2) ve imzası. Platform arşivi
+   65.894.979 bayttır, SHA-256
+   `a37671064f2ea0b08fd5e0e25c14218bb8b005067855bf9c13af2fc653ffe4bc`
+   (depo barındırıcısının dosya özetlerinden okundu, tutuyor); sıra 82. Depo
+   barındırıcısı sürümün yayımlanma anını 08:21:32 UTC gösterir. İndirme
+   portalının `published_at` alanındaki 07:15:10 UTC commit'in zamanıdır,
+   sürümün yayımlanma zamanı değildir.
+5. Altı dosya, etiketin özel bir klonunda doğrulandı (sürümü hazırlayan kişi
+   bildirdi, burada bir dosyada kayıtlı değil): iki sağlama toplamı dosyası
+   tutuyor; genel ve platform arşivi bayt bayt aynı; arşivdeki `release.commit`
+   ve `release.tree` etikete eşit; önyükleme üyeleri (`libexec/get.sh`,
+   `install.sh`, açık anahtar) etiketinkilerle bayt bayt aynı; içerik
+   koruyucusu ve kabul-lisansı koruyucusu geçiyor; manifest imzası izlenen açık
+   anahtarla doğrulanıyor; programlarda kabul-lisansı derleme etiketi yok.
+6. İndirme portalı, dört platform dosyasından özel bir klonda imza öncesi
+   kipte (`deploy/build-download-portal.sh`) derlendi ve iki kez aynı
+   sonuçla paketlendi (sürümü hazırlayan kişi bildirdi): paket SHA-256
+   `aa19c55826e04bf7de470af44adb2bba864595e4648620bcf45793bf7fad215e`,
+   132.163.894 bayt; düzeni sürüm dışında v0.1.0-alpha.81 paketininkiyle aynı.
+   v0.1.0-alpha.81 portalını tutan bir deneme kökü üzerinde
+   `promote-download-portal.py` ile yerelde prova edildi (işlendi, 26 genel
+   istek, yedek tutuldu, v0.1.0-alpha.81 korundu).
+7. Sahip portalı `deploy/publish-download-portal.ps1` ile yaklaşık 09:36
+   UTC'de yayımladı: işlem `status: committed`, 26 istekli tek bir genel
+   doğrulama turu (`status: ok`), önceki sitenin yedeğinin tutulduğunu ve
+   başarı işaretini bildirdi (sahip bildirdi). Sonrasında genel sitenin,
+   sürümü hazırlayan kişice, bir dosyada kaydedilmeden okunması:
+   `releases/latest.txt` v0.1.0-alpha.82'yi söylüyor; `latest.json` sıra 82'yi
+   ve commit'i taşıyor; sunulan manifest, imza ve sağlama toplamı CI
+   dosyalarıyla bayt bayt aynı; `get.sh` ve açık anahtar etiketinkilerle aynı;
+   imza doğrulanıyor; v0.1.0-alpha.81 arşivi hâlâ sunuluyor.
+8. Sahip kurulu iki sunucuyu, biri Ubuntu 24.04 biri Debian 13, panelin kendi
+   güncelleme ekranından 10 Ekim 2026'da güncelledi. İkisi de
+   v0.1.0-alpha.82'yi ve sürüm commit'ini bildiriyor (sahip bildirdi). Her
+   Panel'in `Strict-Transport-Security` başlığı, güncellemeden önce ve sonra
+   dışarıdan okundu: önce `max-age=31536000; includeSubDomains`, sonra
+   `max-age=31536000`. Bu, D-030 kuralının gerçek sunucularda gözlenmesidir;
+   tarayıcıda okunmadı.
+9. Sahibin bu güncellemeler sırasında ve sonrasında ekranda gördükleri
+   sınırların altında ("Yayımlamadan sonra kurulu sunucularda gözlenenler")
+   sıralıdır. Bu sürümde düzeltilmedi.
+
+Sürümü yayımlamak hiçbir kurulu sunucuyu güncellemedi; iki güncellemeyi yalnız
+sahip başlattı. Ne sürüm ne de yayımlanması dayanıklılık sözleşmesinin bir P0
+işini kapatır.
+
+**Etiketten önce: yayımlamadan önce kaydedilen sahip kararları ve denetimler.**
 
 1. Sürüm: v0.1.0-alpha.82 (sahibin 10 Ekim 2026 kararı).
 2. Sahip 10 Ekim 2026'da son kodun yayımlamadan önce yeni kurulup
@@ -959,7 +1106,7 @@ Bunlar bilinen sınırlardır. Gizli kusur değildir.
    adımları:
    `CELIKPANEL_RELEASE_SEQUENCE` depo değişkenini 82 yapmak (etiketteki imzalama
    işi farklı bir değeri reddeder), birleştirmek, etiketlemek ve portalı
-   etiketin dosyalarından yayımlamak.
+   etiketin dosyalarından yayımlamak; hepsi yapıldı (yukarıya bakın).
 5. Paketleme sözleşmesi testleri çekme isteğinde CI içinde koşar; root
    gerektirenler `sudo` altında (`.github/workflows/ci.yml`). #205 numaralı
    taslak çekme isteğinde, son kodu taşıyan commit'in koşusu geçti (21 denetim
@@ -968,13 +1115,15 @@ Bunlar bilinen sınırlardır. Gizli kusur değildir.
    commit'ler `cmd/`, `internal/` ya da `web/` altında hiçbir dosyayı
    değiştirmez; onların koşusu bu yazılırken başlamış ama bitmemişti.
    Birleştirilecek uç, çekme isteğinde kendi koşusunu alır; geçen bir koşu
-   sahibin kendi denemesinin yerini tutmaz.
+   sahibin kendi denemesinin yerini tutmaz. (Etiketin koşusu yukarıda
+   kayıtlı: 22 işin 22'si.)
 6. Üretim imzalaması, [imzalı sürüm sözleşmesinde](release-signing.tr.md)
    anlatıldığı gibi, sürüm etiketinde CI içinde yapılır. Ardından sahip,
    yayımlanan dosyaları o belgede anlatıldığı gibi doğrular.
 7. Sahibin kendi denemesi, kurulu iki sunucunun güncellenmesidir; sahip bunu
    panelin kendi güncelleme ekranından bizzat başlatır, bunun için geçici bir
    sunucu kullanılmaz. Kurulu paneller yalnız sahiplerince güncellenir.
+   (10 Ekim 2026'da yapıldı, yukarıya bakın.)
 
 Bu sürümü yalnız CelikPanel'in güncelleme arayüzünden kurun. Yayımlamak kurulu
 sunucuları güncellemez; bir sunucunun güncellemesini yalnız o sunucunun sahibi

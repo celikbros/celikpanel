@@ -5272,3 +5272,59 @@ hiçbir ölçüm bunu üretmedi, bileşen testleriyle kapsanır. Yol her zaman
 `/etc/postfix/main.cf` olarak verilir; Postfix'i başka bir dizini okuyan
 sunucuya doğru komutlar ve alışılmış yol söylenir. Türkçe cümle yoktur: bir
 ekranın değil, Agent'ın nedenidir. Hiçbir ekran değiştirilmedi.
+
+### Alpha.82 güncellemesinden sonra kurulu sunucularda sahibin gözlemleri (2026-10-10)
+
+Gözlemlerdir, değişiklik değildir. Sahip, kurulu iki sunucuyu (biri Ubuntu
+24.04, biri Debian 13) 10 Ekim 2026'da panelin kendi güncelleme ekranından
+v0.1.0-alpha.82'ye güncelledikten sonra aşağıdaki dört şeyi kendi
+ekranlarından bildirdi. Hiçbir asistan o sunuculara bakmadı; hiçbiri
+v0.1.0-alpha.82'de düzeltilmedi ve bu girdi için hiçbir metin ya da ekran
+değiştirilmedi. Her biri ilgili olduğu kuralla birlikte verilir: D-024 (mevcut
+neden, kimin işlem yapacağı, sonraki eylem ve işin nasıl süreceği uzun
+listelerden önce gelir; doğrulanmış hata, eksik önkoşul ve bilinmeyen sonuç
+ayrı tutulur) ve bilinen-durum kuralı (ekran doğrulananı söyler; bilinmeyen
+durum bağlı bir sayfanın yerini almaz ve sessiz süre geçmeden çizilmez).
+Sonraki sürüm için yol haritasında ve aynı tarihli dayanıklılık sözleşmesi
+girdisinde listelenmiştir.
+
+1. **Panel yeniden başlarken lisans sayfası (sahip bildirdi, Ubuntu
+   sunucusu).** Güncelleme v0.1.0-alpha.81 arayüzünden başlatıldı. Panel'in
+   yeniden başlaması sırasında tarayıcı, "Update and recovery status" kutusuyla
+   birlikte tam ekran "License status could not be checked" sayfasını gösterdi
+   ve sonra kendiliğinden toparlandı. Aynı biçimde başlatılan Debian
+   sunucusunda görünmedi (zamanlama meselesi). Bilinen-durum kuralını
+   ilgilendirir: alpha.81 arayüzü bilinmeyen erişim durumunda sayfanın yerini
+   alır. Yedinci gerçek sistem kaydı bu ekranı laboratuvarda alpha.81
+   arayüzüyle yaklaşık 78 sn boyunca yeniden üretti, alpha.82 arayüzüyle
+   görmedi; orada bir bekletme katmanı sayfayı bağlı tuttu. Bu sürümde
+   değiştirilmedi.
+2. **Güncelleme bildirimi ile kart (sahip bildirdi, Debian sunucusu).** Ayarlar,
+   güncellemeler sayfasında, güncellemeden sonra kart v0.1.0-alpha.82'yi kurulu
+   gösterirken köşedeki bir bildirim başlangıçtan yaklaşık iki dakika sonra
+   (T+02:03) hâlâ "The update is being applied; the panel may be unavailable
+   briefly" diyor ve güncellemelerin kilitli olduğunu söylüyordu. İkisi birbirini
+   tutmuyordu. D-024'ü ve bilinen-durum kuralını ilgilendirir: uç bir sonuç ile
+   sürüyor bildirimi çelişiyor; yani ekran sahibe güncellemenin bitip bitmediğini
+   söylemiyor. Bu sürümde değiştirilmedi.
+3. **İlk yükleme ekranı (sahip bildirdi; yedinci kayıtta ölçüldü).** `/setup`
+   sayfasının soğuk tam yüklemesi, sayfa çizilmeden önce kısa bir an
+   "Checking..." ve "Reload CelikPanel" ile tam sayfa "Checking panel access"
+   ekranı gösterir. Bilinen-durum kuralını ilgilendirir: sessiz süre geçene ya
+   da bir okuma erişimi doğrulamadan yanıtlayana kadar hiçbir şey çizilmemelidir.
+   Yedinci kaydın 5. hücresi bunu yayımlanmış kodda, gerçek bir Panel'e karşı
+   gerçek bir Chrome'da `/setup`, `/` ve `/settings?section=updates` için
+   ölçtü: `RecoveryAccess` kapısı 18 yüklemenin her birinde, hiçbir oturum
+   okuması yanıtlanmadan, hızlı bağlantıda yaklaşık 80–100 ms, 2 Mbit/sn ve
+   300 ms'ye kısılmış bağlantıda yaklaşık 1,7 sn boyunca bunu boyadı.
+   `RecoveryAccess` henüz dönüştürülmemiş bir kapıdır. Ölçülmeyenler: Ubuntu,
+   başlıklı tarayıcı, telefon görünümü, Türkçe, HTTP önbelleği açık yükleme.
+   Bu sürümde değiştirilmedi.
+4. **Kurulum sayfasındaki durdu/sürüyor çelişkisi (sahip bildirdi, Debian
+   sunucusu).** Kurulum sihirbazı sayfası en üstte "This operation stopped ... A
+   required check needs attention" derken son adım "Verify the prepared
+   server - In progress" diyor; neden, kapalı "Checks and how to continue" ve
+   "Technical details" bölümlerinin altındadır. D-024'ü ilgilendirir: neden ve
+   kimin işlem yapacağı adım listesinden önce gelir ve durmuş bir işlem aynı
+   zamanda sürüyor gösterilmez. v0.1.0-alpha.81'de de aynıydı. Bu sürümde
+   değiştirilmedi.

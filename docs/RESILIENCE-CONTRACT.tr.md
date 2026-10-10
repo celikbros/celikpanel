@@ -3737,3 +3737,88 @@ kurulu bir sunucuda gözlenmedi. Kusur yayımlanmış alpha.81'de de vardır.
     sonra başarısız olan bir posta TLS değişikliği ve bir posta sertifikası
     yayımı: geri almanın her ayarı geri yüklediği ve yayımın geçtiği ölçülmedi.
   - Bu ayarlar için Postfix 3.8.6 (Ubuntu 24.04) ve Arch'ın Postfix'i.
+
+### v0.1.0-alpha.82'nin yayımlanması, yedinci gerçek sistem kaydı ve gerçek sunucularda gözlenen başlık (P0.2 alanı; ilke 2 ve 6; D-030; 2026-10-10)
+
+D-025 ilke 2 (bilinmeyen; yok, boş ya da başarı değildir) ve ilke 6 (ekran
+doğrulananı söyler); D-024; D-030. **Hiçbir P0 işi kapanmaz ya da ilerlemez.**
+P0.1–P0.5 kısmi kalır ve her açık kabul işi açık kalır. Bu girdi bir yayımı ve
+bir ölçümü kaydeder; kod, şema ya da kurtarma davranışını değiştirmez.
+2026-10-10 saat tarihidir.
+
+- **Yayımlama.** v0.1.0-alpha.82'yi 10 Ekim 2026'da sahip yayımladı: #205
+  numaralı çekme isteği `main`'e `2a0af8866` olarak birleştirildi (squash),
+  bu commit üzerinde `v0.1.0-alpha.82` açıklamalı etiketi, etiketin CI
+  koşusunda 22 işin 22'si başarılı ve tam altı dosya (genel arşiv ve sağlama
+  toplamı, linux/amd64 arşivi ve sağlama toplamı, imzalı manifest v2 ve imza;
+  platform arşivi SHA-256
+  `a37671064f2ea0b08fd5e0e25c14218bb8b005067855bf9c13af2fc653ffe4bc`,
+  65.894.979 bayt, sıra 82), portalı sahip `deploy/publish-download-portal.ps1`
+  ile yayımladı. Birleştirme, etiket, CI koşusu ile dosya boyutları ve
+  özetleri bu girdi için depo barındırıcısından okundu; altı dosyanın yerel
+  doğrulaması, portal derlemesi ve provası, portal işlemi (`committed`, 26
+  istekli bir tur) ve genel sitenin okunması sahip ile sürümü hazırlayan kişi
+  tarafından bildirilmiştir ve burada bir dosyada kayıtlı değildir. [Sürüm
+  notlarının](RELEASE-NOTES-v0.1.0-alpha.82.tr.md) "Yayımlama kaydı" bölümü
+  bunları sıralar. Hiçbir asistan kurulu bir paneli güncellemedi ya da ona
+  dokunmadı.
+- **Kurulu paneller (sahip bildirdi).** Sahip kurulu iki sunucuyu (biri
+  Ubuntu 24.04, biri Debian 13) 10 Ekim 2026'da panelin kendi güncelleme
+  ekranından güncelledi; ikisi de v0.1.0-alpha.82'yi bildiriyor. Bu sahibin
+  denemesidir, buradaki hiçbir iş için kabul kanıtı değildir.
+- **D-030'un gerçek sunucularda gözlenmesi.** Kurulu her Panel'in
+  `Strict-Transport-Security` başlığı güncellemeden önce ve sonra dışarıdan
+  okundu: önce `max-age=31536000; includeSubDomains`, sonra
+  `max-age=31536000`. Tarayıcıda okunmadı. Altıncı koşuya (laboratuvar
+  konukları) iki kurulu sunucudaki gözlemi ekler; bir işi kapatmaz.
+- **Yedinci gerçek sistem kaydı**
+  (`deploy/e2e/release-recovery/evidence/set7-20261010/`; bu yazılırken
+  commit edilmemişti ve kabul denetimi bitmemişti; hükümler kaydın kendi
+  hükümleridir): yayımlanmış kodda geçici Debian 13 konuklarına karşı gerçek bir
+  Chrome. (1) alpha.82 arayüzü, güncelleme karttan başlatıldı: GEÇTİ, Ayarlar
+  sayfası 24 sn'lik kesintinin yaklaşık 8–10 sn'si boyunca bekletme katmanının
+  altında bağlı ve etkisiz kaldı, kaldığı yerden devam etti. (2) alpha.81
+  arayüzü: sayfanın yerini yaklaşık 78 sn boyunca tam ekran lisans sayfası aldı;
+  sahibin önceki güncellemedeki ekranı yeniden üretildi. (3) sekme 631 sn
+  gizli: GEÇTİ, gizliyken istek yok, dönüşte tek sessiz okuma. (4) Panel
+  yeniden başlarken gizli: GEÇTİ, yeniden başlatmanın 0,5 sn'den kısa sürmesi,
+  yani yoklama aralıklarından kısa olması sınırıyla. (5) `/setup`, `/` ve
+  `/settings?section=updates` yollarının soğuk tam sayfa yüklemesi: **üçünde de
+  BAŞARISIZ**; `RecoveryAccess`'in (mandal listesindeki dönüştürülmemiş bir
+  kapı) tam sayfa "Panel erişimi denetleniyor" ekranı, hiçbir oturum okuması
+  yanıtlanmadan boyandı; hızlı bağlantıda yaklaşık 80–100 ms, 2 Mbit/sn ve
+  300 ms'ye kısılmış bağlantıda yaklaşık 1,7 sn. "Sessiz süre (1,5 sn) geçene
+  ya da bir okuma erişimi doğrulamadan yanıtlayana kadar hiçbir şey çizilmez"
+  kuralını bu kapı karşılamıyor. Ölçülmeyenler: Ubuntu, başlıklı tarayıcı,
+  telefon görünümü, Türkçe, HTTP önbelleği açık yükleme, kurulu herhangi bir
+  sunucu.
+- **Açık sunum işleri, P0.2 alanı (erişim kapıları ve doğru durum); hiçbiri
+  v0.1.0-alpha.82'de düzeltilmedi.** Güncellemeden sonra kurulu sunuculardan
+  sahibin dört gözlemi; yedinci kaydın `RecoveryAccess` bulgusu üçüncü gözlemle
+  aynı kapıdır, beşinci bir iş değildir; aşağıdaki beşinci madde dönüştürülmemiş
+  dosyaların süregelen listesidir:
+  1. alpha.81 arayüzünden başlatılan güncellemeden sonra Panel'in yeniden
+     başlaması sırasında tam ekran "License status could not be checked" sayfası
+     (sahip Ubuntu sunucusunda bildirdi, Debian sunucusunda görmedi;
+     laboratuvar yalnız alpha.81 arayüzüyle yeniden üretti).
+  2. Debian sunucusunun güncellemeler sayfasında kart v0.1.0-alpha.82'yi kurulu
+     gösterirken köşedeki bir bildirim T+02:03'te hâlâ güncellemenin
+     uygulandığını ve güncellemelerin kilitli olduğunu söylüyordu:
+     güncelleme bildirimi ile kart birbirini tutmuyor (sahip bildirdi). Bu,
+     ilke 6'yı ve P0.2'nin uç sonuçların uyuşması kuralını ilgilendirir.
+  3. `RecoveryAccess` ilk yükleme ekranı: `/setup` için sahip bildirdi, üç yol
+     için yedinci kayıtta (5. hücre) ölçüldü.
+  4. Kurulum sihirbazı sayfası, son adım "In progress" derken "This operation
+     stopped" ve "A required check needs attention" diyor; neden kapalı
+     bölümlerin altında: durdu/sürüyor çelişkisi ve D-024'ün önce neden ve
+     kimin işlem yapacağı kuralı karşılanmıyor (sahip bildirdi; alpha.81'de
+     de aynıydı).
+  5. Sunucuyu hâlâ eski biçimde okuyan 31 arayüz kaynak dosyası, yukarıdaki
+     kapılar dahil, dönüştürülmemiş kalır (mandal listesi).
+  Sözcükler aynı tarihli [işlem yönlendirmesindedir](OPERATION-GUIDANCE.tr.md).
+- **Şema ya da sürüm geçişi.** Yok. **Kurtarma davranışı.** Değişmedi.
+- **Kanıt.** Yukarıda anılan kayıtlar; CI koşusu ve sürüm dosyaları depo
+  barındırıcısından okunduğu hâliyle. Bir asistan kurulu bir sunucuda hiçbir şey
+  gözlemedi.
+- **Açık.** Yukarıdakilerin hepsi. Soğuk sayfa yüklemesi bu girdinin ölçülmüş
+  tek başarısızlığıdır; bir bitiş ölçütü iddia edilmez.

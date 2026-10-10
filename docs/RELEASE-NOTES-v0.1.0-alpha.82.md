@@ -1,16 +1,18 @@
-# v0.1.0-alpha.82 (candidate)
+# v0.1.0-alpha.82 (published 2026-10-10)
 
 [Türkçe](RELEASE-NOTES-v0.1.0-alpha.82.tr.md)
 
-This is the draft for the release that follows v0.1.0-alpha.81. It is not
-published yet. The owner decided on 2026-10-10 that its number is
+This is the release that follows v0.1.0-alpha.81. It was published on
+2026-10-10 by the owner (see "Publication record" at the end). The owner decided
+on 2026-10-10 that its number is
 v0.1.0-alpha.82. It changes what the interface shows when it does not know the server's state, how
 settings and service actions are written and answered, and what happens when
 the same change reaches the server more than once. It states what was measured,
 how, and what was not.
 
 What a screen shows rests on component tests and on a browser against a mock of
-the API, not on a real Panel (see "Screens" below). That v0.1.0-alpha.81 was
+the API, and, for the update and the first page load only, on a real Chrome
+against a real Panel in the seventh record (see "Screens" below). That v0.1.0-alpha.81 was
 published is reported by the owner; the repository holds its tag but no record
 of the publication steps.
 
@@ -400,16 +402,19 @@ only.
 
 ## What was measured, and how
 
-Eight records, made on 2026-10-08 and 2026-10-09 (UTC; the sixth run took
-place after midnight local time, on 2026-10-10). Six are runs of the product
-on disposable virtual machines on one laptop host, with the packaged services
-of Debian 13, Ubuntu 24.04 and Arch; one is a follow-up of the fourth on fresh
+Nine records, made on 2026-10-08, 2026-10-09 and 2026-10-10 (UTC; the sixth
+run took place after midnight local time, on 2026-10-10; the seventh was made
+on 2026-10-10 after the tag, on the published code). Seven are runs of the
+product on disposable virtual machines on one laptop host, with the packaged
+services of Debian 13, Ubuntu 24.04 and Arch (the seventh on Debian 13 only);
+one is a follow-up of the fourth on fresh
 machines; one is a reading of a single program. Each sequence ran once per
 platform unless a number is given; a cell was repeated only after a fault of
 the test harness, except where a paragraph below says otherwise (a second
 Arch reading in the third run; a cell with the candidate source as the running
-version in the fourth). No screen was rendered in these runs: the driver sent
-what the screens send. Every result file marks itself as not yet accepted
+version in the fourth). No screen was rendered in the first six records: the
+driver sent what the screens send. Only the seventh put a real browser in
+front of a real Panel. Every result file marks itself as not yet accepted
 evidence; the owner judges it.
 
 **What the lab does and does not establish.** The virtual machines are not cut
@@ -443,8 +448,9 @@ production one.
 `deploy/e2e/release-recovery/evidence/`. `set1-20261010`, `set2-20261011` and
 `set3-20261012` carry labels that are not the days of the runs: the first ran
 on 2026-10-08, the other two on 2026-10-09. `set4-20261009`, `set4b-20261009`,
-`set4c-20261009`, `set5-20261009` and `set6-20261009` carry the real date
-(UTC).
+`set4c-20261009`, `set5-20261009`, `set6-20261009` and `set7-20261010` carry the
+real date (UTC). `set7-20261010` was not yet committed, and its intake check
+was not finished, when this was written.
 
 **Evidence handling.** The directories are stored in the repository byte for
 byte, and twelve host-reading files of earlier directories were stored again
@@ -646,7 +652,7 @@ more update (sixth run, `set6-20261009`; Arch, Debian 13, Ubuntu 24.04).** The
 final code is the code of the fifth run with the changed rule. Nothing under
 `cmd/`, `internal/` or `web/` was changed on the branch after it; what was
 added is the test harness, the evidence, and the release preparation named
-under "Before publication". The archives of this run were test builds: the one
+under "Publication record" ("Before the tag"). The archives of this run were test builds: the one
 installed fresh carried the previous release's label and release sequence, and
 the update target differed from the code only by the release-sequence file
 set to 82.
@@ -692,6 +698,50 @@ set to 82.
   logged modern standby for the whole run and the run's own clocks show no
   pause. Each cell ran once, apart from the repeated Arch cell.
 
+**The interface in a real Chrome, on the published code (seventh record,
+`set7-20261010`, 2026-10-10 UTC, made after the tag).** It was not committed
+at the time of writing and its intake check was not finished; the verdicts
+below are the record's own. Disposable Debian 13 guests, a real Google Chrome
+154 (headless, on the laptop host) driven by a script against the real Panel of
+each guest, reached through an SSH forward; the code is `main` at the tag
+(`git archive` of the commit), built with the acceptance-test licence, not the
+signed archive. Rule measured: only a known negative
+decision may replace the screen; an unknown access state holds the mounted page,
+and the page returns where it was. Five cells, one run each:
+
+- **Update started from the card, alpha.82 interface: PASS.** The Settings page
+  stayed mounted and inert under a non-dismissible layer ("Panel access could
+  not be confirmed just now ...") for about 8 to 10 s of a 24 s outage, then
+  continued in the same document and section; the product's own reload after
+  the success went to the same route and section. Observation, not a verdict:
+  the layer's first sentence names the licence while the cause was the Panel's
+  own planned restart.
+- **The same update started from the published alpha.81 interface: the
+  owner's report reproduced.** The Settings page was replaced by the
+  full-screen "License status could not be checked" page for about 78 s of an
+  89 s outage (the two outages are not comparable: the alpha.81 update also
+  migrated the database schema from 42 to 43, the other did not).
+- **Tab hidden 631 s, Panel running: PASS.** Zero requests from the page while
+  hidden; one quiet read on return; typed text, focus, address and section
+  unchanged.
+- **Tab hidden 631 s across a Panel restart: PASS, with a limit.** The restart
+  finished within 0.5 s, shorter than both probes' intervals, so a hidden tab
+  across a long outage was not measured.
+- **Cold full page load of `/setup`, `/` and `/settings?section=updates`:
+  FAIL on all three routes.** The full-page "Checking panel access" screen of
+  the `RecoveryAccess` gate, one of the gates not yet converted, was painted
+  on every one of 18 loads before any session read had answered: about 80 to
+  100 ms on a fast link and about 1.7 s throttled to 2 Mbit/s and 300 ms. The
+  rule that nothing is drawn until the quiet time (1.5 s) has passed, or a read
+  answered without confirming access, is not met by that gate. No hold layer
+  appeared in any load.
+
+Not measured: Ubuntu 24.04; Arch; a visible (headful) browser; a phone
+viewport; dark theme; Turkish; a load with the HTTP cache enabled; a page
+controlled by the recovery service worker; any installed server. The guests ran
+on QEMU user networking with outbound NAT, as in the other runs, and their
+traffic was not captured.
+
 **Which check rests on which code.** Each later state contains the earlier
 corrections. "Not repeated" means the check was not run again on later code.
 
@@ -717,6 +767,8 @@ ones the sixth run names.
 **Screens.** The interface changes have component tests and were inspected in
 an installed Chrome against a loopback mock of the API (desktop and phone,
 English and Turkish, light and dark). No real Panel was behind that browser.
+The seventh record then put a real Chrome in front of a real Panel for the
+update and the first page load only (English, light, desktop size, headless).
 
 **Tests.** Test logs are retained for the code with the Postfix Stop
 correction and with the `postconf` correction as it stood before it was
@@ -742,7 +794,9 @@ These are known. They are not hidden defects.
   (release sequence, bootstrap pins, version lines) is not in any archive that
   was measured.
 - **The Panel's secure-connection rule.** Not measured in a browser, and not
-  on a Panel that has its managed certificate or is reached by its host name.
+  on a Panel that has its managed certificate or is reached by its host name
+  in the lab. After publication the header was read from the outside on the
+  two installed servers (see "Publication record"), not in a browser.
   By the header's specification, a browser that does not open the Panel again
   keeps the wider rule until its year runs out. Plain HTTP to the Panel's
   port answers `400`, not a redirect to HTTPS; v0.1.0-alpha.81 answers the
@@ -815,8 +869,10 @@ These are known. They are not hidden defects.
   Dovecot; more than one Stop per cell on the final code (the four Stops per
   platform ran on the code of the follow-up). systemd's failed mark is left; `sudo systemctl reset-failed <unit>`,
   which the note names, clears it.
-- **The update card.** Its new text was not seen in a browser against a real
-  Panel. After a return to v0.1.0-alpha.81 the interface that is served is
+- **The update card.** Its new text was seen only in the seventh record, on a
+  lab Panel in a headless Chrome, and by the owner on the two installed
+  servers (see the observations below); it was not measured on an installed
+  server. After a return to v0.1.0-alpha.81 the interface that is served is
   alpha.81's, so the new text cannot appear there. The update check still
   offers the same version after an automatic return.
 - **Screens not yet converted.** 31 source files of the interface still read
@@ -825,6 +881,34 @@ These are known. They are not hidden defects.
   Services list and service pages, the sidebar, parts of the dashboard, add-ons,
   the audit log, VPN, team members and a few smaller parts. On these a failed
   read can still look like an empty or negative state.
+- **Observed on installed servers after publication, not fixed in this
+  release.** Reported by the owner, from the owner's own screens, after the
+  owner updated two installed servers (one Ubuntu 24.04, one Debian 13) from
+  the panel's update screen on 2026-10-10. None of these was measured by an
+  assistant on those servers, and none is changed by this release:
+  1. On the Ubuntu server the update was started from the v0.1.0-alpha.81
+     interface. During the Panel's restart the browser showed the full-screen
+     "License status could not be checked" page with the "Update and recovery
+     status" box, and recovered by itself. On the Debian server, started the
+     same way, it did not appear (a matter of timing). The seventh record
+     reproduced this screen in the lab with the alpha.81 interface and did not
+     see it with the alpha.82 interface.
+  2. On the Debian server's Settings, updates page after the update, the card
+     showed v0.1.0-alpha.82 as installed while a notice in the corner still
+     said the update was being applied, that the panel might be briefly
+     unavailable and that updates were locked, about two minutes after the
+     start (T+02:03). The two did not agree.
+  3. A cold full load of `/setup` shows for a moment a full-page "Checking
+     panel access" screen, with "Checking..." and "Reload CelikPanel", before
+     the page renders. The seventh record measured the same on a lab Panel for
+     `/setup`, `/` and the updates page: it is the `RecoveryAccess` gate, not yet
+     converted to the known-state rule.
+  4. The setup wizard page on the Debian server says "This operation stopped"
+     and "A required check needs attention" at the top while its last step
+     reads "Verify the prepared server - In progress"; the reason is under the
+     collapsed "Checks and how to continue" and "Technical details". The
+     reason and who must act are therefore not shown before the list of steps.
+     The same page behaved so in v0.1.0-alpha.81.
 - **Routes without a request identity.** Only the eight routes above are
   protected. The inventory behind them classed service and application
   restart, plans and enrollment codes as harmful when repeated, about 38 other
@@ -914,8 +998,8 @@ These are known. They are not hidden defects.
   guidance documents and in source comments carry 2026-10-10, 2026-10-11 or
   2026-10-12. They are labels of work rounds, not dates; that work was done on
   2026-10-08 and 2026-10-09. Each document says so at its top. The owner's
-  decisions listed under "Before publication" are dated 2026-10-10 by the
-  clock, as is the sixth run.
+  decisions and the publication steps listed under "Publication record" are
+  dated 2026-10-10 by the clock, as are the sixth and seventh runs.
 - **Earlier limits.** The limits of
   [v0.1.0-alpha.81](RELEASE-NOTES-v0.1.0-alpha.81.md) that this release does
   not address still apply. One does not apply to an update from alpha.81: the
@@ -926,7 +1010,74 @@ These are known. They are not hidden defects.
   closes none. Decisions: D-022, D-024, D-025, D-029, D-030 in
   [DECISIONS](DECISIONS.md).
 
-## Before publication (owner decisions and remaining checks)
+## Publication record
+
+Everything below is dated 2026-10-10 (clock date, UTC unless a time zone is
+named). The steps were taken by the owner. The sources are named; what is
+reported by the owner is not recorded in a file in the repository.
+
+**What happened.**
+
+1. The repository variable `CELIKPANEL_RELEASE_SEQUENCE` was set to 82 by the
+   owner before the merge (reported by the owner).
+2. Pull request #205 was merged by the owner into `main` as a squash commit at
+   07:15 UTC (read from the repository host: merged 07:15:11, the squash commit
+   dated 07:15:10).
+3. The owner created the annotated tag `v0.1.0-alpha.82` on that commit
+   (tagged 08:01 UTC, read from the repository) and pushed it.
+4. The CI run for the tag completed with 22 of 22 jobs successful (started
+   08:01, ended 08:21 UTC; read from the repository host) and published
+   exactly six assets: the generic archive and its checksum, the linux/amd64
+   archive and its checksum, and the signed manifest (v2) and its signature.
+   The platform archive is 65,894,979 bytes, SHA-256
+   `a37671064f2ea0b08fd5e0e25c14218bb8b005067855bf9c13af2fc653ffe4bc` (read
+   from the repository host's asset digests, which match); sequence 82. The
+   repository host lists the release as published at 08:21:32 UTC. The
+   download portal's `published_at` field, 07:15:10 UTC, is the commit's time,
+   not the time of the release.
+5. The six assets were verified on a private clone of the tag (reported by
+   the person who prepared the release, not recorded in a file here): both checksum files match;
+   the generic and the platform archive are byte-identical; `release.commit`
+   and `release.tree` in the archive equal the tag; the bootstrap members
+   (`libexec/get.sh`, `install.sh`, the public key) are byte-identical to the
+   tag's; the content guard and the acceptance-licence guard pass; the manifest
+   signature verifies with the tracked public key; no acceptance-licence build
+   tag is in the binaries.
+6. The download portal was assembled from the four platform assets on a
+   private clone in pre-signed mode (`deploy/build-download-portal.sh`) and
+   packaged twice with identical results (reported by the person who prepared
+   the release): package SHA-256
+   `aa19c55826e04bf7de470af44adb2bba864595e4648620bcf45793bf7fad215e`, 132,163,894
+   bytes; its layout equals the v0.1.0-alpha.81 package apart from the version.
+   It was rehearsed locally through `promote-download-portal.py` against a
+   fixture root holding the v0.1.0-alpha.81 portal (committed, 26 public
+   requests, a backup kept, v0.1.0-alpha.81 preserved).
+7. The owner published the portal with `deploy/publish-download-portal.ps1` at
+   about 09:36 UTC: the transaction reported `status: committed`, one public
+   verification pass of 26 requests (`status: ok`), the backup of the previous
+   site kept, and the success marker (reported by the owner). A read of the
+   public site afterwards by the person who prepared the release, not
+   recorded in a file here: `releases/latest.txt` names
+   v0.1.0-alpha.82; `latest.json` carries sequence 82 and the commit; the
+   served manifest, signature and checksum are byte-identical to the CI
+   assets; `get.sh` and the public key equal the tag's; the signature
+   verifies; the v0.1.0-alpha.81 archive is still served.
+8. The owner updated both installed servers, one Ubuntu 24.04 and one
+   Debian 13, from the panel's own update screen on 2026-10-10. Both report
+   v0.1.0-alpha.82 and the release commit (reported by the owner). The
+   `Strict-Transport-Security` header of each Panel, read from the outside
+   before and after: `max-age=31536000; includeSubDomains` before,
+   `max-age=31536000` after. That is the rule of D-030 observed on real
+   servers; it was not read in a browser.
+9. What the owner saw on the screen during and after those updates is listed
+   under the limits ("Observed on installed servers after publication"). It
+   was not fixed in this release.
+
+Publishing the release did not update any installed server; only the owner
+started the two updates. No P0 item of the resilience contract is closed by
+the release or by its publication.
+
+**Before the tag: owner decisions and checks, as recorded before publication.**
 
 1. Version: v0.1.0-alpha.82 (owner decision of 2026-10-10).
 2. The owner decided on 2026-10-10 that the final code is installed fresh and
@@ -954,7 +1105,7 @@ These are known. They are not hidden defects.
    publication: set
    the repository variable `CELIKPANEL_RELEASE_SEQUENCE` to 82 (the signing job
    on the tag refuses a different value), merge, tag, and publish the portal
-   from the tag's assets.
+   from the tag's assets; all of this was done (see above).
 5. The packaging contract tests run in CI on the pull request, the root ones
    under `sudo` (`.github/workflows/ci.yml`). On draft pull request #205 the
    run for the commit that holds the final code passed (21 checks passed; the
@@ -963,12 +1114,14 @@ These are known. They are not hidden defects.
    file under `cmd/`, `internal/` or `web/`; the run for them had started and
    not finished when this was written. The head that is merged gets its own
    run on the pull request, and a passing run is not the owner's own test.
+   (The run for the tag is recorded above: 22 of 22 jobs.)
 6. Production signing happens in CI on the release tag, as the
    [signed release contract](release-signing.md) describes. The owner then
    verifies the published assets as that document says.
 7. The owner's own test is the update of the two installed servers, which the
    owner starts personally from the panel's own update screen; no disposable
    server is used for it. Installed panels are updated only by their owner.
+   (Done on 2026-10-10, see above.)
 
 Install this release only through CelikPanel's update interface. Publishing it
 does not update installed servers; only the owner of a server starts its update.

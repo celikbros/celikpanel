@@ -5335,3 +5335,57 @@ component tests. The path is always given as `/etc/postfix/main.cf`; a server
 whose Postfix reads another directory is told the right commands and the usual
 path. There is no Turkish sentence: it is the Agent's reason, not a screen's.
 No screen was changed.
+
+### Observed by the owner on installed servers after the alpha.82 update (2026-10-10)
+
+Observations, not changes. After the owner updated both installed servers
+(one Ubuntu 24.04, one Debian 13) to v0.1.0-alpha.82 from the panel's own
+update screen on 2026-10-10, the owner reported the four things below from the
+owner's own screens. No assistant looked at those servers; nothing here is
+fixed in v0.1.0-alpha.82, and no text or screen was changed for this entry.
+Each is set against the rule it bears on: D-024 (the current reason, who must
+act, the next action and how work resumes come before long lists; verified
+failure, unmet prerequisite and unknown result are kept apart) and the
+known-state rule (a screen says what was verified; an unknown state does not
+replace a mounted page and is not drawn before the quiet time has passed).
+They are listed for the next release in the roadmap and in the resilience
+contract entry of the same date.
+
+1. **The licence page during the Panel's restart (owner-reported, Ubuntu
+   server).** The update was started from the v0.1.0-alpha.81 interface. During
+   the Panel's restart the browser showed the full-screen "License status could
+   not be checked" page with the "Update and recovery status" box, and then
+   recovered by itself. On the Debian server, started the same way, it did not
+   appear (a matter of timing). Bears on the known-state rule: the alpha.81
+   interface replaces the page on an unknown access state. The seventh native
+   record reproduced this screen in the lab with the alpha.81 interface for
+   about 78 s and did not see it with the alpha.82 interface, where a hold
+   layer kept the page mounted. Not changed in this release.
+2. **The update notice against the card (owner-reported, Debian server).** On
+   Settings, updates, after the update, the card showed v0.1.0-alpha.82 as
+   installed while a notice in the corner still said "The update is being
+   applied; the panel may be unavailable briefly" and that updates were
+   locked, about two minutes after the start (T+02:03). The two did not agree.
+   Bears on D-024 and the known-state rule: a terminal result and an in-progress
+   notice disagree, so the screen does not tell the owner whether the update
+   finished. Not changed in this release.
+3. **The first-load screen (owner-reported; measured in the seventh record).**
+   A cold full load of `/setup` shows for a moment a full-page "Checking panel
+   access" screen with "Checking..." and "Reload CelikPanel" before the page
+   renders. Bears on the known-state rule: nothing should be drawn until the
+   quiet time has passed or a read answered without confirming access. The
+   seventh record, cell 5, measured it on `/setup`, `/` and
+   `/settings?section=updates` in a real Chrome against a real Panel on the
+   published code: the `RecoveryAccess` gate painted it on every one of 18
+   loads before any session read answered, for about 80 to 100 ms on a fast
+   link and about 1.7 s throttled to 2 Mbit/s and 300 ms. `RecoveryAccess` is a
+   gate not yet converted. Not measured: Ubuntu, a headful browser, a phone
+   viewport, Turkish, the HTTP cache enabled. Not changed in this release.
+4. **The setup page's stopped/in-progress contradiction (owner-reported,
+   Debian server).** The setup wizard page says "This operation stopped ... A
+   required check needs attention" at the top while the last step reads
+   "Verify the prepared server - In progress"; the reason is under the
+   collapsed "Checks and how to continue" and "Technical details". Bears on
+   D-024: the reason and who acts come before the list of steps, and a stopped
+   operation is not also shown as in progress. The same in v0.1.0-alpha.81.
+   Not changed in this release.

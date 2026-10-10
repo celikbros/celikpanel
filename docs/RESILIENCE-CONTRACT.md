@@ -4429,3 +4429,86 @@ well. 2026-10-09 is the calendar date.
     restoring every setting and the publication going through have not been
     measured.
   - Postfix 3.8.6 (Ubuntu 24.04) for these settings, and Arch's Postfix.
+
+### Publication of v0.1.0-alpha.82, the seventh native record and the header observed on real servers (P0.2 area; invariants 2 and 6; D-030; 2026-10-10)
+
+D-025 invariants 2 (unknown is not absent, empty or success) and 6 (a screen
+says what was verified); D-024; D-030. **No P0 item is closed or advanced.**
+P0.1 to P0.5 stay partial and every open acceptance item stays open. This entry
+records a publication and one measurement; it changes no code, schema or
+recovery behaviour. 2026-10-10 is the clock date.
+
+- **Publication.** v0.1.0-alpha.82 was published by the owner on 2026-10-10:
+  pull request #205 merged into `main` as `2a0af8866` (squash), the annotated
+  tag `v0.1.0-alpha.82` on that commit, the tag's CI run with 22 of 22 jobs
+  successful and exactly six assets (generic archive and checksum, linux/amd64
+  archive and checksum, signed manifest v2 and signature; platform archive
+  SHA-256 `a37671064f2ea0b08fd5e0e25c14218bb8b005067855bf9c13af2fc653ffe4bc`,
+  65,894,979 bytes, sequence 82), the portal published by the owner with
+  `deploy/publish-download-portal.ps1`. The merge, the tag, the CI run and the
+  asset sizes and digests were read from the repository host for this entry;
+  the local verification of the six assets, the portal build and its
+  rehearsal, the portal transaction (`committed`, one pass of 26 requests) and
+  the read of the public site are reported by the owner and the release
+  preparer and are not recorded in a file here. The "Publication record" of the
+  [release notes](RELEASE-NOTES-v0.1.0-alpha.82.md) lists them. No assistant
+  updated or touched an installed panel.
+- **Installed panels (owner-reported).** The owner updated both installed
+  servers (one Ubuntu 24.04, one Debian 13) from the panel's own update screen
+  on 2026-10-10; both report v0.1.0-alpha.82. This is the owner's test, not
+  acceptance evidence for any item here.
+- **D-030 observed on real servers.** The `Strict-Transport-Security` header
+  of each installed Panel, read from the outside before and after the update:
+  `max-age=31536000; includeSubDomains` before, `max-age=31536000` after. Not
+  read in a browser. It adds to the sixth run (lab guests) the observation on
+  two installed servers; it does not close an item.
+- **The seventh native record**
+  (`deploy/e2e/release-recovery/evidence/set7-20261010/`; not committed, and
+  its intake check not finished, when this was written; the verdicts are the
+  record's own): a real Chrome against disposable Debian 13 guests on the
+  published code. (1) alpha.82 interface, update started from the card:
+  PASS, the Settings page stayed mounted and inert under the hold layer for
+  about 8 to 10 s of a 24 s outage and continued where it was. (2) alpha.81
+  interface: the page replaced by the full-screen licence page for about 78 s,
+  reproducing the owner's screen of the earlier update. (3) tab hidden 631 s:
+  PASS, no request while hidden, one quiet read on return. (4) hidden across a
+  Panel restart: PASS, with the limit that the restart lasted under 0.5 s,
+  shorter than the probes' intervals. (5) cold full page load of `/setup`, `/`
+  and `/settings?section=updates`: **FAIL on all three**, the full-page
+  "Checking panel access" screen of `RecoveryAccess` (an unconverted gate in
+  the ratchet list) was painted before any session read answered, about 80 to
+  100 ms on a fast link and about 1.7 s throttled to 2 Mbit/s and 300 ms; the
+  rule that nothing is drawn until the quiet time (1.5 s) has passed or a read
+  answered without confirming access is not met by that gate. Not measured:
+  Ubuntu, a headful browser, a phone viewport, Turkish, the HTTP cache enabled,
+  any installed server.
+- **Open presentation items, P0.2-area work (access gates and truthful
+  status), none fixed in v0.1.0-alpha.82.** Four owner observations from the
+  installed servers after the update; the seventh record's `RecoveryAccess`
+  finding is the same gate as the third observation, not a fifth item, and the
+  fifth entry below is the standing list of unconverted files:
+  1. The full-screen "License status could not be checked" page during a
+     Panel restart after an update started from the alpha.81 interface
+     (owner-reported on the Ubuntu server, not on the Debian server; the lab
+     reproduced it with the alpha.81 interface only).
+  2. On the Debian server's updates page, the card showed v0.1.0-alpha.82
+     installed while a corner notice still said the update was being applied
+     and updates were locked, at T+02:03: the update notice and the card
+     disagree (owner-reported). This bears on invariant 6 and on the P0.2 rule
+     that terminal results agree.
+  3. The `RecoveryAccess` first-load screen: reported by the owner for
+     `/setup`, measured for three routes in the seventh record (cell 5).
+  4. The setup wizard page says "This operation stopped" and "A required check
+     needs attention" while its last step reads "In progress", the reason
+     being under collapsed sections: a stopped/in-progress contradiction, and
+     D-024's reason-and-actor-first rule not met (owner-reported; the same in
+     alpha.81).
+  5. The 31 interface source files that still read the server the old way,
+     among them the gates above, remain unconverted (the ratchet list).
+  The wording is in [operation guidance](OPERATION-GUIDANCE.md), same date.
+- **Schema or version transition.** None. **Recovery behaviour.** Unchanged.
+- **Evidence.** The records named above; the CI run and release assets as read
+  from the repository host. Nothing was observed on an installed server by an
+  assistant.
+- **Open.** All of the above. The cold page load is the only measured failure
+  of this entry; no exit is claimed.
