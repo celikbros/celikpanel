@@ -5389,3 +5389,238 @@ contract entry of the same date.
    D-024: the reason and who acts come before the list of steps, and a stopped
    operation is not also shown as in progress. The same in v0.1.0-alpha.81.
    Not changed in this release.
+
+### The setup page's final check and the update notice say what is known (2026-10-10)
+
+Source state with component tests and a real Chrome against the loopback mock
+(`web/tools/browser-inspect`, scenarios `finalcheck` and `updatephase`). Nothing
+was observed on an installed server for this entry. Component-tested and mock
+browser; not measured on a real system. It answers the second and fourth
+observations of the owner's entry above; the first and third are another change.
+The setup flow, its routing and its prerequisites (D-021,
+[server setup plan](SERVER-SETUP-PLAN.md)) are unchanged: only what the page
+says and the typed state it reads changed.
+
+**What the owner's setup page showed, read from the code.** A run whose plan is
+reopened with "Edit plan" while its final check waits
+(`POST /api/v1/setup/revise`, `cmd/panel/server_setup_revise.go`) is recorded
+as `failed` with the code `server_setup_plan_revised`, keeping its phase
+`verification` and its last checks. The page reads the latest run when it
+holds no marker of its own, so it showed that record as a failure: the failure
+heading, the generic "A required check needs attention" (the code had no
+sentence) and the final step "In progress" (the step list called the final
+step in progress whenever the phase was `verification` and the run was not
+waiting). The check the run waited for was the mail identity check
+(`server_setup_readiness.go`), whose general help was folded under "Checks and
+how to continue". Which of the identity's conditions failed on the owner's
+server was not read; the owner reports the reverse DNS.
+
+**The rule the texts follow.** The reason, who acts and the next action stand
+above the step list and are not folded. A run stopped by reopening its plan is
+neither a failure nor in progress. A final check says whether it waits for the
+owner (a typed reason), for another requirement, or could not be read. A step
+that failed is "Failed"; a step a stopped run never reached is "Not started".
+The update notice and the update card say what the last read of the followed
+update established: being applied, installed and being verified, or not known.
+
+**The mail identity check's typed reason (`GET /api/v1/setup`,
+`GET /api/v1/setup/operation`).** A check in the state `action_required` with
+the id `mail_identity` carries, additively, `reason` and `vars`: the first
+unmet condition in the order the check reads them, and the values it names.
+`server_address_not_public` (`ip` when one was detected),
+`mail_name_differs` (`hostname`, `ip`, `current` when Postfix's own name is a
+plain DNS name), `reverse_dns_mismatch` (`hostname`, `ip`, `ptr` when a plain
+DNS name was found), `forward_dns_mismatch` (`hostname`, `ip`). A ready or
+unknown check carries neither, and neither does an `action_required` check
+whose planned mail host name is not a canonical name; a record written before
+them keeps its generic sentence. State and code are unchanged. **Known gap,
+not changed here:** when the Agent's reverse-DNS lookup fails outright (both
+public resolvers) it reports no name and no error
+(`cmd/agent/mail_health_rpc.go`, `mail_health_dns.go`); the Panel cannot tell
+that from a verified absence, so the page says `reverseDNSMissing` ("No
+reverse DNS (PTR) name was found"), which claims more than was established. An
+undetected address is worded as undetected (`addressMissing`).
+
+- `setup.check.mailIdentity.reverseDNS`
+  EN: "The reverse DNS (PTR) name of this server’s address {ip} is {ptr}; mail
+  servers expect {hostname}. You set this at your server provider, not in
+  CelikPanel: in the provider’s control panel, or by asking its support to set
+  the reverse DNS of {ip} to {hostname}."
+- `setup.check.mailIdentity.reverseDNSMissing`
+  EN: "No reverse DNS (PTR) name was found for this server’s address {ip};
+  mail servers expect {hostname}. You set this at your server provider, ..."
+- `setup.check.mailIdentity.forwardDNS`, `.mailName`, `.mailNameUnread`,
+  `.address`, `.addressMissing`: the other reasons, in the catalogues.
+- `setup.check.notRead`
+  EN: "{check}: could not be checked just now, so whether it is met is not
+  known. This does not mean anything is missing or stopped."
+
+**A run stopped by reopening its plan.**
+
+- `setup.guide.revisedTitle` EN: "Setup stopped: its plan was reopened"
+- `setup.guide.revised` EN: "This setup run stopped because its plan was
+  reopened for editing. That is not a failure: nothing was undone, and the
+  components already installed stay as they are. Nothing continues by itself."
+- `setup.guide.revisedChecks` EN: "When it stopped, its final check was still
+  waiting for this:" followed by one line per open check.
+- `setup.guide.revisedNext` EN: "Next: review the plan and start it again. Its
+  final check then runs again." The button beside it is the existing "Review a
+  revised plan". "Technical details" keeps the server's line only.
+
+**A final check that waits.** `setup.guide.verificationWaiting` EN: "Every
+installation step has finished. Setup is waiting at its final check for this:",
+the open checks, their general help (no longer folded), then
+`setup.guide.verificationResume` EN: "Setup checks again by itself and finishes
+when every check passes. To check now, use Check requirements again." The
+runner reads the checks again every 20 seconds while the run waits.
+
+**The step's state word.** `setup.stepState.waitingOwner` "Waiting for you",
+`setup.verifyWaiting` "Waiting for requirements" (unchanged),
+`setup.stepState.unknown` "Could not be checked", `setup.stepState.failed`
+"Failed", `setup.stepState.stopped` "Stopped", `setup.stepState.notStarted`
+"Not started". When several checks are open, "Waiting for you" is used if any
+of them has a typed reason; every open check is still listed above the steps.
+The Turkish texts are in the Turkish edition.
+
+**The update notice and the card (`GET /api/v1/panel/update/status`).** The
+Agent's record stays `running` after the new Panel has started, until the
+updater has exited and its final proof has passed
+(`cmd/agent/system_update_worker_linux.go`). The notice said
+`panelUpdate.running` for every running read and as its placeholder before any
+read (`SystemUpdateOperation.tsx`), while the card read the version the
+answering Panel runs (`/api/v1/panel/version`): the two disagreed in that
+window. The status answer now carries, additively, `phase: "verifying"` when
+the record is running and the Panel answering has the same version and commit
+as the update's target (the archive digest and sequence are not compared).
+
+- `panelUpdate.tracking.verifyingTitle` EN: "Update installed, being verified"
+- `panelUpdate.tracking.verifying` EN: "{version} is installed and this panel is
+  running it. The update is being verified and is not finished yet; this notice
+  follows it by itself."
+- `panelUpdate.tracking.unknown` EN: "The state of this update could not be read
+  just now, so whether it is still running or has finished is not known. This
+  notice reads it again by itself; do not start another update." The reason of
+  the failed read (connection, restart) is the line under it.
+- `panelUpdate.tracking.reading` EN: "Reading the state of this update from the
+  server…" (before the first read; it replaces "being applied" there).
+- The card: `panelUpdate.card.installedVerifying` "installed, being verified"
+  beside the current version, and `panelUpdate.card.verifying`,
+  `.applying`, `.reading`, `.unknown` as a status line. A finished record
+  leaves no notice and no line (unchanged: the page reloads once).
+- `panelUpdate.lastRead` EN: "Last read". The update dialog's time was the
+  browser's local time labelled "UTC"; it is now the local time with its zone
+  in the interface language (for example "6:52:56 PM GMT+3").
+
+**Limits.** Component tests (`web/tests/setup-final-check-mounted.test.mjs`,
+`web/tests/update-tracking-mounted.test.mjs`,
+`cmd/panel/known_state_gates_test.go`) and a real Chrome against the loopback
+mock, desktop and phone, English and Turkish. Not measured: a real server
+whose reverse DNS is wrong (the typed reason has not been read from a real
+Agent), the owner's own record, a real update's verifying window, a phone
+layout in which the corner notice covers the card's line (it did in the mock;
+unchanged). The notice is drawn by the interface the tab loaded: an update
+started from a tab that still runs the previous release ignores `phase` and
+keeps the old sentence, so the new text first applies to an update started from
+a page loaded after this change. The reverse-DNS and address gap above is open.
+
+### First page load without an unanswered access page, and the hold layer names the cause it read (2026-10-10)
+
+Source state with component tests and a browser run against the loopback mock;
+no guest, no installed server. Component-tested and mock browser; not measured
+on a real system. It answers two findings of the seventh native
+record (`deploy/e2e/release-recovery/evidence/set7-20261010/`): cell 5 (the
+owner's third observation in the entry above) and the observation of cell 1
+(its words only; the alpha.81 interface that replaced the page is not
+changed). The mechanism
+and the contract items are in the
+[resilience contract](RESILIENCE-CONTRACT.md) entry of the same date and title.
+
+**What changes on screen.**
+
+- *A cold full page load, while the session, readiness or first license read
+  has not answered:* only the empty page background for the first 1.5 s (the
+  same quiet time as the hold layer): no title, no sentence, no button, no
+  spinner of its own. A read that answers in that time leaves nothing behind;
+  a read that answers without confirming access (no session, the Panel
+  starting, a read that failed) replaces the background at once, with the
+  page it always had.
+- *The same reads still unanswered after 1.5 s* (nothing has failed):
+  `recovery.checkingTitle`, EN "Checking panel access" · TR "Panel erişimi
+  kontrol ediliyor"; new `recovery.waitingHelp`, EN "The Panel has not
+  answered yet. CelikPanel opens as soon as it does; you do not need to do
+  anything." · TR "Panel henüz yanıt vermedi. Yanıt verir vermez CelikPanel
+  açılır; bir şey yapmanız gerekmiyor."; the check button (busy,
+  `recovery.checking`, while a read is in flight). "Reload CelikPanel" is no
+  longer offered at once; after half a minute (counted from the end of the
+  quiet time, by the page that shows the wait: a page that continues another
+  page's explained wait counts its own half minute): new `recovery.waitingProlonged`, EN "This has taken longer
+  than half a minute. CelikPanel keeps checking by itself; you can also reload
+  it." · TR "Bu, yarım dakikadan uzun sürdü. CelikPanel kendiliğinden kontrol
+  etmeyi sürdürür; dilerseniz yeniden de yükleyebilirsiniz." with
+  `app.reload`. Before, the page said `recovery.checkingHelp` ("Confirming your
+  session and panel readiness…") with "Checking…" and "Reload CelikPanel" from
+  its first frame.
+- *Session and readiness confirmed, the interface itself still loading after
+  1.5 s:* new `recovery.loadingTitle`, EN "Opening CelikPanel" · TR
+  "CelikPanel açılıyor"; `recovery.loadingHelp`, EN "Your session is confirmed
+  and the Panel is ready. The interface is still loading and opens by itself."
+  · TR "Oturumunuz doğrulandı ve Panel hazır. Arayüz hâlâ yükleniyor ve
+  kendiliğinden açılır." No check button (nothing is to be read); the reload
+  after half a minute. Before, this case said "Checking panel access".
+- *A wait that was already explained* is not hidden again when the next gate
+  of the same load takes over (the interface arriving under the recovery
+  page, the license read after the session read).
+- *The hold layer over a mounted page names the cause the read showed.*
+  The license wording (`accessHold.licenseTitle`/`licenseHelp`, unchanged) is
+  used only when the Panel answered and its license result was what could not
+  be read, or a request was refused for want of a license decision (a success
+  status whose body cannot be parsed is counted the same, as the Panel's
+  answer: `LicenseOnboarding.tsx` sets the cause before it parses). No answer
+  from the Panel: `accessHold.availabilityTitle`, EN "The Panel did not answer
+  just now" · TR "Panel az önce yanıt vermedi" (unchanged). The Panel answering
+  that it is starting: `recovery.startingTitle` (unchanged). No answer while an
+  update started from this browser has not recorded its end (new):
+  `accessHold.updateTitle`, EN "The Panel is not answering during an update" ·
+  TR "Panel bir güncelleme sırasında yanıt vermiyor"; `accessHold.updateHelp`,
+  EN "An update was started from this browser, and its end has not been seen
+  here yet. The Panel restarts while an update is applied, so it may not
+  answer for a short while. This is not a license problem." · TR "Bu
+  tarayıcıdan bir güncelleme başlatıldı ve bitişi burada henüz görülmedi.
+  Güncelleme uygulanırken Panel yeniden başlar; bu yüzden kısa bir süre yanıt
+  vermeyebilir. Bu bir lisans sorunu değildir." The resume line and the check
+  action are unchanged. The browser's own update record only chooses these
+  words; it is never shown as a server result. The record counts as unfinished
+  for as long as it says `active`, however long ago the update was started
+  (`savedUpdateUnfinished` has no age limit), so a record this browser never
+  saw end can name an update for an unrelated outage; the words say that the
+  end "has not been seen here yet".
+- *The full page that replaces nothing* (the first license read failed before
+  anything was mounted) uses the same decision: "Panel readiness could not be
+  checked" for no answer, "The panel is starting" for a starting Panel, "License
+  status could not be checked" only for an unreadable license result.
+
+**What did not change.** The known negatives (no session: sign-in; a known
+license verdict: activation; the Panel starting; the interface that failed to
+load) replace the screen as before, at once. The recovery page for a Panel
+that is down or starting, reached while the interface is still loading or after
+it failed to load, is shown as soon as its read has answered. Access decisions,
+their validity, the reads and their intervals are unchanged; no request was
+added.
+
+**Evidence.** Component tests: `web/tests/recovery-access-runtime.test.mjs`
+(the cold load, the waiting state, the known negatives, the handover between
+gates, the recovery route with the real session reads),
+`web/tests/access-hold-runtime.test.mjs` (the first license read; the hold
+cause for seven read outcomes with and without an unfinished update record).
+A browser run against the loopback mock (`web/tools/browser-inspect`, scenarios
+`coldload` and `coldslow`, Chrome throttled to 2 Mbit/s and 300 ms, reads slowed
+by 300 ms): with the published code the gate "Checking panel access" was
+painted on `/setup`, `/` and `/settings?section=updates` for about 1.4 s (the
+console output of that run is not kept in the repository; the seventh record
+measured about 1.7 s on a real Panel under the same throttle); with
+this change none of the three loads drew a sentence before the application
+(background, the boot spinner, background, then the page); with the session
+read held 2.5 s the explained wait appeared after the quiet time and the page
+opened by itself. **Not measured:** a real Panel on a guest (set7's method),
+an installed server, the HTTP cache enabled, the hold layer during a real
+update. The boot spinner of the language loader (text-free) is unchanged.

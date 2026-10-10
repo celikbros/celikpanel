@@ -111,7 +111,9 @@ test('a saved marker resumes after reload and another tab can adopt it without r
     assert.match(lease, /if \(get\.result === undefined\)/);
     assert.match(lease, /options\.codec\.decode\(raw\)/);
     assert.match(lease, /record: legacyRecord/);
-    assert.match(tracker, /message: t\('panelUpdate\.running'\)/);
+    // A record adopted before any read is said as being read, not as being
+    // applied (owner report 2026-10-10).
+    assert.match(tracker, /message: message \?\? t\('panelUpdate\.tracking\.reading'\)/);
 });
 
 test('an exact successful update reloads once with a cache-busting identity', () => {

@@ -6,6 +6,7 @@ import test from 'node:test';
 import React from 'react';
 import Renderer, { act } from 'react-test-renderer';
 import ts from 'typescript';
+import { remoteURL } from './fixtures/shared-layer.mjs';
 
 const require = createRequire(import.meta.url);
 const reactURL = pathToFileURL(require.resolve('react')).href;
@@ -23,7 +24,9 @@ const stub = dataModule(`import React from '${reactURL}';
  export const Button=props=>React.createElement('button',props);
  export const AddressLink = props => React.createElement('a', { href: props.href }, props.address);
 `);
-function rewritten(path) { return dataModule(`import React from '${reactURL}';\n`+compile(path).replace(/from ['"]([^'"]+)['"]/g,(_,specifier)=>`from '${specifier==='react'?reactURL:specifier.endsWith('/recoveryObservation')?recoveryURL:specifier.endsWith('/panelHandover')?handoverURL:stub}'`)); }
+// The shared reader and the first-read quiet time are the real ones (2026-10-10).
+const quietURL = dataModule(`import React from '${reactURL}';\n`+compile('../src/lib/quietRead.ts').replace(/from ['"]react['"]/g,`from '${reactURL}'`));
+function rewritten(path) { return dataModule(`import React from '${reactURL}';\n`+compile(path).replace(/from ['"]([^'"]+)['"]/g,(_,specifier)=>`from '${specifier==='react'?reactURL:specifier.endsWith('/recoveryObservation')?recoveryURL:specifier.endsWith('/panelHandover')?handoverURL:specifier.endsWith('/remote')?remoteURL:specifier.endsWith('/quietRead')?quietURL:stub}'`)); }
 const {usePanelSession}=await import(rewritten('../src/auth/usePanelSession.ts'));
 const {RecoveryAccess,RecoveryStatus}=await import(rewritten('../src/components/RecoveryAccess.tsx'));
 const originalFetch=globalThis.fetch;
@@ -458,23 +461,83 @@ test('a finished update is not drawn as part of an access or readiness gate',asy
  }finally{await clean()}
 });
 
-// The first read being in flight is not a failure: the page says "checking" and
-// shows no saved operation. "Could not be checked" needs a read that failed.
-test('a first read in flight says checking; could not be checked needs a failed read',async()=>{
- const text=async props=>{await act(async()=>{tree=Renderer.create(React.createElement(RecoveryAccess,{onRetry(){},...props}))});await act(async()=>{});return JSON.stringify(tree.toJSON());};
- setup();
+// The first read being in flight is not a failure, and before the quiet time it
+// is not a page either (seventh native record, cell 5, 2026-10-10: the full-page
+// "Checking panel access" was painted before any session read had answered, on
+// 18 of 18 cold loads). Only the page background is drawn until the quiet time
+// has passed or a read has answered; after it, the wait is explained; a known
+// negative replaces the screen at once. "Could not be checked" needs a read that failed.
+// Ilk okuma yanit vermeden sessiz sure icinde sayfa cizilmez; bilinen olumsuz sonuc hemen gosterilir.
+const QUIET_MS=1500,PROLONGED_MS=30000;
+function handTimers(){
+ const previous=window.setTimeout,previousClear=window.clearTimeout,timers=[];
+ window.setTimeout=(fn,ms)=>{if(ms===QUIET_MS||ms===PROLONGED_MS){const timer={fn,ms,live:true};timers.push(timer);return timer;}return previous(fn,ms);};
+ window.clearTimeout=timer=>{if(timer&&typeof timer==='object'&&'live' in timer)timer.live=false;else previousClear(timer);};
+ return {
+  fire:async ms=>{const due=timers.filter(timer=>timer.live&&timer.ms===ms);for(const timer of due)timer.live=false;await act(async()=>{for(const timer of due)timer.fn()});return due.length;},
+  restore(){window.setTimeout=previous;window.clearTimeout=previousClear;},
+ };
+}
+const quietSurface=()=>tree.root.findAll(node=>typeof node.type==='string'&&node.props['data-access-quiet']!==undefined).length===1;
+const labels=()=>tree.root.findAllByType('button').map(node=>[node.props.children].flat(2).filter(item=>typeof item==='string').join(''));
+
+test('a cold load draws nothing before the quiet time, then the waiting state; a known negative replaces it at once',async()=>{
+ const clock=handTimers();
+ const render=async props=>{await act(async()=>{tree=Renderer.create(React.createElement(RecoveryAccess,{onRetry(){},...props}))});await act(async()=>{});return JSON.stringify(tree.toJSON());};
+ const text=()=>JSON.stringify(tree.toJSON());
  try{
-  // After sign-in or on load: the identity is known and readiness is still being read.
-  let content=await text({user:admin,cause:'checking',checking:true});
-  assert.ok(content.includes('recovery.checkingTitle')&&content.includes('recovery.checkingHelp'),content);
-  for(const absent of ['recovery.availabilityTitle','recovery.licenseTitle','recovery.authTitle','recovery.bundleTitle','recovery.operationTitle',id])assert.ok(!content.includes(absent),`${absent}: ${content}`);
-  assert.equal(calls.length,0,'no operation is read while nothing is known');
-  assert.equal(tree.root.findAllByType('button').find(node=>node.props.disabled).props.children.includes('recovery.checking'),true);
+  setup();
+  // The session read in flight: only the page background. No sentence, no button, no reload.
+  let content=await render({user:null,cause:'checking',checking:true});
+  assert.ok(quietSurface(),content);assert.ok(!content.includes('recovery.'),content);assert.deepEqual(labels(),[]);
+  assert.equal(tree.root.findAllByType('h1').length,0);assert.equal(calls.length,0,'nothing is read for the page itself');
+  // Quiet time passed, still no answer: the wait, that nobody acts, a busy check; the reload only after half a minute.
+  assert.equal(await clock.fire(QUIET_MS),1);
+  content=text();
+  assert.ok(content.includes('recovery.checkingTitle')&&content.includes('recovery.waitingHelp'),content);
+  for(const absent of ['recovery.checkingHelp','recovery.authTitle','recovery.availabilityTitle','recovery.licenseTitle','app.reload','recovery.waitingProlonged','recovery.operationTitle'])assert.ok(!content.includes(absent),`${absent}: ${content}`);
+  assert.deepEqual(labels(),['recovery.checking']);assert.equal(tree.root.findByType('button').props.disabled,true);
+  assert.equal(await clock.fire(PROLONGED_MS),1);
+  assert.ok(text().includes('recovery.waitingProlonged'));assert.deepEqual(labels(),['recovery.checking','app.reload']);
+  // The next gate of the same load (the interface arrived; its own session read is in flight) continues the
+  // explained wait: it does not go blank again (browser run, 2026-10-10).
+  await act(async()=>tree.update(React.createElement(RecoveryAccess,{key:'next',user:null,cause:'checking',checking:true,onRetry(){}})));
+  assert.ok(!quietSurface()&&text().includes('recovery.checkingTitle')&&text().includes('recovery.waitingHelp'),text());
   await clean();setup();
-  // A read that failed is reported as such, with the check available again.
-  content=await text({user:admin,cause:'availability'});
-  assert.ok(content.includes('recovery.availabilityTitle')&&!content.includes('recovery.checkingTitle'),content);
- }finally{await clean()}
+  // Once nothing explained is on screen, a new wait starts quiet again.
+  await render({user:null,cause:'checking',checking:true});
+  assert.ok(quietSurface());
+  await clean();setup();
+  // After sign-in: the identity is known and readiness is in flight. The same quiet; then the read fails and the
+  // failure replaces the background at once, with both actions, without waiting for the quiet time.
+  content=await render({user:admin,cause:'checking',checking:true});
+  assert.ok(quietSurface()&&!content.includes('admin'),content);
+  await act(async()=>tree.update(React.createElement(RecoveryAccess,{user:admin,cause:'availability',onRetry(){}})));
+  content=text();
+  assert.ok(!quietSurface()&&content.includes('recovery.availabilityTitle')&&content.includes('recovery.availabilityHelp'),content);
+  assert.deepEqual(labels().slice(0,2),['recovery.retry','app.reload']);
+  await clean();setup();
+  // A known negative on its own (the Panel says it is starting; the session could not be read): drawn at once.
+  for(const [cause,user] of [['starting',admin],['auth',null],['availability',admin],['bundle',admin]]){
+   content=await render({user,cause});
+   assert.ok(!quietSurface()&&content.includes(`recovery.${cause}Title`),`${cause}: ${content}`);
+   assert.ok(labels().includes('app.reload'),cause);
+   await clean();setup();
+  }
+  // A check the owner asked for from a known negative is not hidden again behind the quiet time.
+  content=await render({user:null,cause:'auth',checking:true});
+  assert.ok(!quietSurface()&&content.includes('recovery.checkingTitle'),content);
+  await clean();setup();
+  // Session and readiness confirmed, the interface still loading: the same quiet, then what is awaited.
+  content=await render({user:admin,cause:'loading'});
+  assert.ok(quietSurface(),content);
+  assert.equal(await clock.fire(QUIET_MS),1);
+  content=text();
+  assert.ok(content.includes('recovery.loadingTitle')&&content.includes('recovery.loadingHelp')&&!content.includes('recovery.checkingTitle'),content);
+  assert.deepEqual(labels(),[],'there is nothing to check: the interface is on its way');
+  assert.equal(await clock.fire(PROLONGED_MS),1);assert.deepEqual(labels(),['app.reload']);
+  assert.equal(calls.length,0,'no operation is read while nothing is known');
+ }finally{clock.restore();await clean();}
  const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
  const gate=app.slice(app.indexOf('function AuthGate()'),app.indexOf('function StandaloneRecovery('));
  assert.match(gate,/const cause = state === 'checking' \? 'checking' : state === 'auth_unavailable' \|\| !user \? 'auth' : state === 'starting' \? 'starting' : 'availability';/);
@@ -483,4 +546,44 @@ test('a first read in flight says checking; could not be checked needs a failed 
  const lock=readFileSync(new URL('../src/components/LicenseLockScreen.tsx',import.meta.url),'utf8');
  // A license decision is not explained by an update: no "no update operation ID" text on the activation page.
  assert.match(lock,/role === 'admin' && !checking && <RecoveryStatus username=\{user\.username\} unfinishedOnly \/>/);
+ // The quiet time is the hold layer's.
+ assert.match(readFileSync(new URL('../src/lib/quietRead.ts',import.meta.url),'utf8'),/export const QUIET_READ_MS = 1500;/);
+ assert.match(readFileSync(new URL('../src/components/AccessHold.tsx',import.meta.url),'utf8'),/export const ACCESS_HOLD_QUIET_MS = 1500;/);
+});
+
+// The recovery route as App.tsx mounts it, with the real session reads: while the
+// interface is fetched, or after it failed to load. A Panel that is down or
+// starting is a known answer and is shown at once; it is never hidden behind the
+// quiet time. Kurtarma yolu: kapali ya da baslayan Panel hemen gosterilir.
+test('the standalone recovery route shows a Panel that is down or starting at once, and hides only a read in flight',async()=>{
+ const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
+ const slice=app.slice(app.indexOf('function StandaloneRecovery('),app.indexOf('class RecoveryBoundary'));
+ const compiled=ts.transpileModule(slice+'\nexport { StandaloneRecovery };',{compilerOptions:{jsx:ts.JsxEmit.React,module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2020}}).outputText;
+ const {StandaloneRecovery}=await import(dataModule(`import React, { useCallback } from '${reactURL}';
+  import { usePanelSession } from '${rewritten('../src/auth/usePanelSession.ts')}';
+  import { RecoveryAccess } from '${rewritten('../src/components/RecoveryAccess.tsx')}';
+  const Login = () => React.createElement('form', null, 'sign-in');
+  ${compiled}`));
+ const ready=state=>async()=>Response.json({schema:'celikpanel-panel-availability/v1',state});
+ const render=async props=>{await act(async()=>{tree=Renderer.create(React.createElement(StandaloneRecovery,props))});await act(async()=>{});return JSON.stringify(tree.toJSON());};
+ const cases=[
+  // Nothing answers: the session read fails, which is known, so it is said at once.
+  [async()=>{throw new TypeError('Failed to fetch')},undefined,{loading:true},'recovery.authTitle'],
+  [async()=>admin,ready('starting'),{loading:true},'recovery.startingTitle'],
+  [async()=>admin,async()=>Response.json({}, {status:503}),{loading:true},'recovery.availabilityTitle'],
+  // The interface failed to load: the full reader, at once.
+  [async()=>admin,ready('ready'),{},'recovery.bundleTitle'],
+ ];
+ for(const [me,fetcher,props,title] of cases){
+  setup(me,fetcher);globalThis.localStorage={getItem:()=>null};
+  try{const content=await render(props);assert.ok(!quietSurface()&&content.includes(title),`${title}: ${content}`);}finally{await clean();}
+ }
+ // Reads in flight, or only the interface still on its way: the background alone.
+ for(const [me,fetcher] of [[()=>new Promise(()=>{}),undefined],[async()=>admin,()=>new Promise(()=>{})],[async()=>admin,ready('ready')]]){
+  setup(me,fetcher);globalThis.localStorage={getItem:()=>null};
+  try{const content=await render({loading:true});assert.ok(quietSurface()&&!content.includes('recovery.'),content);}finally{await clean();}
+ }
+ // No session: the sign-in form, as before.
+ setup(async()=>null);
+ try{await render({loading:true});assert.equal(tree.root.findAllByType('form').length,1);}finally{await clean();}
 });

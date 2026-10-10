@@ -1081,4 +1081,11 @@ export const trServerScreens: Record<ServerScreenKey, string> = {
     'dbconf.reloadFailed.restored_unit_reload_failed': "Değişiklik tutulmadı ve önceki dosya yerine kondu. {service} hizmetinin systemd birimi yeni dosyayla da önceki dosyayla da yeniden yüklenemedi; bu yüzden CelikPanel doğrudan {service} hizmetine sordu: önceki dosyayı yeniden okudu ve değişikliğinizden önceki ayarlarla çalışıyor. Yeniden yükleme önceki dosyayla da başarısız olduğu için neden yalnız bu değişiklik değildir. Nedenini görmek için sunucuda sudo systemctl reload {unit} komutunu çalıştırın, düzeltin, sonra değişikliği buradan yeniden kaydedin.",
     'dbconf.reloadFailed.restored_running_unknown': "Değişiklik tutulmadı ve önceki dosya yerine kondu. {service} hizmetinin systemd birimi yeni dosyayla da önceki dosyayla da yeniden yüklenemedi ve CelikPanel, {service} hizmetinin şu an hangi ayarlarla çalıştığını belirleyemedi: yarıda başarısız olan bir yeniden yükleme ona yeni dosyayı okutmuş olabilir. Sunucuda sudo systemctl reload {unit} komutunu çalıştırın, bildirdiğini düzeltin, sonra bu sayfayı yenileyin.",
     // --- end of set1 corrections ---
+    // --- güncelleme kartı: izlenen güncelleme, bildirimin söylediği gibi (2026-10-10) ---
+    'panelUpdate.card.installedVerifying': 'kuruldu, doğrulanıyor',
+    'panelUpdate.card.reading': '{version} güncellemesinin durumu okunuyor…',
+    'panelUpdate.card.applying': '{version} güncellemesi uygulanıyor. Güncellemeleri denetleme, güncelleme bittiğinde yeniden kullanılabilir.',
+    'panelUpdate.card.verifying': '{version} kuruldu ve bu panel onu çalıştırıyor. Güncelleme hâlâ doğrulanıyor; güncellemeleri denetleme, güncelleme bittiğinde yeniden kullanılabilir.',
+    'panelUpdate.card.unknown': '{version} güncellemesinin durumu şu an okunamadı; bu yüzden bitip bitmediği bilinmiyor. Güncelleme bildirimi onu kendiliğinden yeniden okur.',
+    // --- güncelleme kartı bloğunun sonu ---
 };

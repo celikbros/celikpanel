@@ -78,6 +78,12 @@ export const enScreens = {
     'accessHold.sessionEnded': "Your session ended. Sign in to return to the page you were on. Anything you had typed there and not saved was not kept.",
     'accessHold.updateReload': "A part of CelikPanel could not be loaded, most likely because CelikPanel was updated while this tab was open. This page reloads in a moment to load the current version. Anything you typed on this page and did not save is lost.",
     'accessHold.updateReloadTitle': "This page is about to reload",
+    // The Panel did not answer while an update started from this browser has
+    // not recorded its end (2026-10-10, seventh native record, cell 1).
+    // Bu tarayicidan baslatilan guncelleme sirasinda Panel yanit vermedi.
+    'accessHold.updateTitle': "The Panel is not answering during an update",
+    'accessHold.updateHelp': "An update was started from this browser, and its end has not been seen here yet. The Panel restarts while an update is applied, so it may not answer for a short while. This is not a license problem.",
+    // End of the update-restart block.
     "license.connectionTitle": "Panel connection could not be verified",
     "license.connectionHelp": "The latest access status could not be read. This does not confirm a license problem. Check again or reload the page to reconnect. An accepted setup may still be running on the server; its saved progress will be checked after reconnecting.",
     "license.lockError": "Panel access could not be verified. Check your connection and try again.",
@@ -1718,6 +1724,37 @@ export const enScreens = {
     'backup.databasesNotRead': 'Databases not read',
     'backup.databasesUnknown': 'The databases linked to this domain could not be read, so a database or full backup cannot be made here yet. This does not mean there are none. Nothing was changed; a files backup is still available. Try again.',
     // --- end of batch 4 ---
+    // --- setup final check: reason, who acts and next action before the step list (2026-10-10) ---
+    // Kurulumun son denetimi: neden, kimin işlem yapacağı ve sonraki eylem adım listesinden önce.
+    'setup.stepState.waitingOwner': 'Waiting for you',
+    'setup.stepState.unknown': 'Could not be checked',
+    'setup.stepState.failed': 'Failed',
+    'setup.stepState.stopped': 'Stopped',
+    'setup.stepState.notStarted': 'Not started',
+    'setup.guide.verificationWaiting': 'Every installation step has finished. Setup is waiting at its final check for this:',
+    'setup.guide.verificationResume': 'Setup checks again by itself and finishes when every check passes. To check now, use Check requirements again.',
+    'setup.guide.revisedTitle': 'Setup stopped: its plan was reopened',
+    'setup.guide.revised': 'This setup run stopped because its plan was reopened for editing. That is not a failure: nothing was undone, and the components already installed stay as they are. Nothing continues by itself.',
+    'setup.guide.revisedChecks': 'When it stopped, its final check was still waiting for this:',
+    'setup.guide.revisedNext': 'Next: review the plan and start it again. Its final check then runs again.',
+    'setup.check.mailIdentity.reverseDNS': 'The reverse DNS (PTR) name of this server’s address {ip} is {ptr}; mail servers expect {hostname}. You set this at your server provider, not in CelikPanel: in the provider’s control panel, or by asking its support to set the reverse DNS of {ip} to {hostname}.',
+    'setup.check.mailIdentity.reverseDNSMissing': 'No reverse DNS (PTR) name was found for this server’s address {ip}; mail servers expect {hostname}. You set this at your server provider, not in CelikPanel: in the provider’s control panel, or by asking its support to set the reverse DNS of {ip} to {hostname}.',
+    'setup.check.mailIdentity.forwardDNS': 'The reverse DNS of {ip} names {hostname}, but {hostname} does not lead back to {ip}. Whoever manages the DNS of {hostname} sets its A record to {ip}.',
+    'setup.check.mailIdentity.mailName': 'The mail service on this server uses the name {current}, not {hostname}. Check the mail host name in the plan; this server’s mail configuration (Postfix myhostname) has to use {hostname}.',
+    'setup.check.mailIdentity.mailNameUnread': 'The mail service on this server does not use the name {hostname}. Check the mail host name in the plan; this server’s mail configuration (Postfix myhostname) has to use {hostname}.',
+    'setup.check.mailIdentity.address': 'This server’s detected address {ip} is not a public internet address, so its mail identity cannot be confirmed. Mail needs a public IPv4 address that reaches this server.',
+    'setup.check.mailIdentity.addressMissing': 'This server’s public address could not be detected, so its mail identity cannot be confirmed. Mail needs a public IPv4 address that reaches this server.',
+    'setup.check.notRead': '{check}: could not be checked just now, so whether it is met is not known. This does not mean anything is missing or stopped.',
+    'setup.check.name.panel_https': 'Secure panel address (HTTPS)',
+    'setup.check.name.panel_renewal': 'Panel certificate renewal',
+    'setup.check.name.dns': 'DNS',
+    'setup.check.name.firewall': 'Firewall',
+    'setup.check.name.services': 'Selected components',
+    'setup.check.name.mail_tls': 'Mail encryption (TLS)',
+    'setup.check.name.mail_identity': 'Mail identity (host name and reverse DNS)',
+    'setup.check.name.mail_delivery': 'Outgoing mail (port 25)',
+    'setup.check.name.other': 'A required check',
+    // --- end of the setup final-check block ---
 } as const;
 
 export type ScreenKey = keyof typeof enScreens;

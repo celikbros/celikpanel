@@ -1726,6 +1726,16 @@ const scenarios = {
 (await import('./scenarios-batch7.mjs')).default(scenarios, { base, vp, locale, theme, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
 // --- end of batch 7 ---
 
+// --- batch 8 (2026-10-10): the cold full page load (set7, cell 5) ---
+// `coldload` and `coldslow` live in their own file.
+(await import('./scenarios-batch8.mjs')).default(scenarios, { base, vp, locale, theme, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
+// --- end of batch 8 ---
+
+// --- batch 9 (2026-10-10): the setup final check, the update notice and card ---
+// `finalcheck` and `updatephase` live in their own file.
+(await import('./scenarios-batch9.mjs')).default(scenarios, { base, vp, locale, theme, ctl, reset, drainLog, newPage, closePage, shot, into, clickByText, waitFor, pause, quiet });
+// --- end of batch 9 ---
+
 for (const [name, run] of Object.entries(scenarios)) {
     if (wanted && !wanted.includes(name)) continue;
     const started = Date.now();

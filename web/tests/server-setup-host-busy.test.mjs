@@ -148,7 +148,7 @@ test('a busy server leads the screen as a wait, never in the failure colour, wit
   assert.match(block, /<p className="[^"]*text-fg">\{t\(hostBusy\.body\)\}<\/p>\s*<Button variant="primary" className="mt-4" onClick=\{editPlan\}>\{t\('setup\.revise'\)\}<\/Button>/);
   assert.doesNotMatch(block, /danger|guidance\.messages/);
   // The generic guidance and the failure-coloured line are not drawn beside it; the technical details stay.
-  assert.match(setup, /\{!hostBusy && \(!\(confirmingPrevious \|\| observingMailEnrollment\) \|\| !guidance\) && <p className=\{execution\.status === 'failed' \? 'text-danger' : confirmingPrevious \|\| waitingDNSPrerequisite \? 'text-fg-muted' : 'text-fg'\}>/);
+  assert.match(setup, /\{!hostBusy && \(!\(confirmingPrevious \|\| observingMailEnrollment \|\| planReopened\) \|\| !guidance\) && <p className=\{execution\.status === 'failed' \? 'text-danger' : confirmingPrevious \|\| waitingDNSPrerequisite \? 'text-fg-muted' : 'text-fg'\}>/);
   // The lead area comes before the step list.
   assert.ok(setup.indexOf('{hostBusy ? <div role="alert"') < setup.indexOf('execution?.steps.map('));
 });

@@ -209,7 +209,9 @@ test('the recovery page explains the restart and keeps the update result one ste
     'RecoveryStatus changed shape: teach web_source_eval.component_renderings the new one and run deploy/e2e/release-recovery/test_owner_update_trial.py (WSL) in the same change');
   // Reads only: the public address metadata and this browser's own marker.
   const hook = page.slice(page.indexOf('function usePanelHandover('), page.indexOf('export function RecoveryStatus('));
-  assert.match(hook, /fetch\('\/api\/v1\/panel\/access-address', \{ cache: 'no-store', signal: controller\.signal \}\)/);
+  // Through the shared reader (2026-10-10): an unreadable address is unknown and names no handover.
+  assert.match(hook, /readRemote\('\/api\/v1\/panel\/access-address', decodeServedHost, undefined, \{ cache: 'no-store', signal: controller\.signal \}\)/);
+  assert.match(hook, /result\.state === 'known' && !controller\.signal\.aborted/);
   assert.doesNotMatch(hook, /method:|setItem|removeItem/);
 });
 

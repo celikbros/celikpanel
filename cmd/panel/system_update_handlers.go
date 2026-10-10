@@ -100,6 +100,26 @@ type panelUpdateStatusResponse struct {
 	CreatedAt string             `json:"created_at,omitempty"`
 	UpdatedAt string             `json:"updated_at,omitempty"`
 	Summary   string             `json:"summary,omitempty"`
+	// Phase is additive (2026-10-10): "verifying" while the record is still
+	// running and the Panel answering is already the target build, so the
+	// new version is installed and the updater is finishing its checks.
+	// Absent otherwise. It never changes the status.
+	// Phase eklemedir: kayit hala calisirken yanit veren Panel hedef surumse
+	// "verifying"; yeni surum kurulu, guncelleyici denetimlerini bitiriyor.
+	Phase string `json:"phase,omitempty"`
+}
+
+// panelUpdateStatusPhase reads the one phase the status can show beside
+// running: this Panel already is the exact target build. The Agent's record
+// stays running until its updater has exited and its final proof has passed
+// (cmd/agent system_update_worker_linux.go), after the new Panel has started.
+// Kayit, yeni Panel basladiktan sonra guncelleyici bitip son kanit gecene
+// kadar running kalir; bu Panel hedef surumse asama "verifying"dir.
+func panelUpdateStatusPhase(status string, target panelUpdateTarget) string {
+	if status == "running" && target.Version == buildVersion && target.Commit == buildCommit {
+		return "verifying"
+	}
+	return ""
 }
 
 func requirePanelUpdateAdmin(w http.ResponseWriter, r *http.Request) bool {
@@ -596,6 +616,7 @@ func (p *Panel) handlePanelUpdateAbandon(w http.ResponseWriter, r *http.Request)
 		Found: true, RequestID: request.RequestID, Status: reply.Status, Target: &target,
 		CreatedAt: reply.CreatedAt, UpdatedAt: reply.UpdatedAt,
 		Summary: sanitizePanelUpdateSummary(reply.Error),
+		Phase:   panelUpdateStatusPhase(reply.Status, target),
 	})
 }
 
@@ -642,5 +663,6 @@ func (p *Panel) handlePanelUpdateStatus(w http.ResponseWriter, r *http.Request) 
 		Found: true, RequestID: requestID, Status: reply.Status, Target: &target,
 		CreatedAt: reply.CreatedAt, UpdatedAt: reply.UpdatedAt,
 		Summary: sanitizePanelUpdateSummary(reply.Error),
+		Phase:   panelUpdateStatusPhase(reply.Status, target),
 	})
 }

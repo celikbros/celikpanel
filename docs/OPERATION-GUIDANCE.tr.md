@@ -5328,3 +5328,198 @@ girdisinde listelenmiştir.
    kimin işlem yapacağı adım listesinden önce gelir ve durmuş bir işlem aynı
    zamanda sürüyor gösterilmez. v0.1.0-alpha.81'de de aynıydı. Bu sürümde
    değiştirilmedi.
+
+### Kurulum sayfasının son denetimi ve güncelleme bildirimi bilineni söyler (2026-10-10)
+
+Bileşen testleri ve yerel geri döngü taklidine karşı gerçek bir Chrome ile
+kaynak durumu (`web/tools/browser-inspect`, `finalcheck` ve `updatephase`
+senaryoları). Bu girdi için kurulu bir sunucuda hiçbir şey gözlenmedi. Yukarıdaki
+girdinin ikinci ve dördüncü gözlemini yanıtlar; birinci ve üçüncüsü başka bir
+değişikliktir. Kurulum akışı, yönlendirmesi ve önkoşulları (D-021,
+[sunucu kurulum planı](SERVER-SETUP-PLAN.tr.md)) değişmedi: yalnız sayfanın
+söylediği ve okuduğu tipli durum değişti.
+
+**Sahibin kurulum sayfasının gösterdiği, koddan okunduğu hâliyle.** Son denetimi
+beklerken planı "Planı düzenle" ile yeniden açılan bir çalışma
+(`POST /api/v1/setup/revise`, `cmd/panel/server_setup_revise.go`),
+`server_setup_plan_revised` koduyla `failed` olarak kaydedilir; `verification`
+aşaması ve son denetimleri korunur. Sayfa kendine ait bir işaret tutmadığında en
+son çalışmayı okur ve bu kaydı hata olarak gösterdi: hata başlığı, genel "Gerekli bir
+kontrol tamamlanmadı" cümlesi (kodun cümlesi yoktu) ve "Devam
+ediyor" diyen son adım (adım listesi, aşama `verification` olup çalışma
+beklemedikçe son adımı sürüyor sayıyordu). Çalışmanın beklediği denetim posta
+kimliği denetimiydi (`server_setup_readiness.go`); genel yardımı "Checks and how
+to continue" altında kapalıydı. Sahibin sunucusunda kimliğin hangi koşulunun
+karşılanmadığı okunmadı; sahip ters DNS'i bildiriyor.
+
+**Metinlerin izlediği kural.** Neden, kimin işlem yapacağı ve sonraki eylem adım
+listesinin üstünde ve açık durur. Planı yeniden açıldığı için durmuş bir
+çalışma ne hatadır ne de sürüyordur. Son denetim sahibi mi (tipli neden), başka
+bir gereksinimi mi beklediğini, yoksa okunamadığını söyler. Başarısız adım
+"Başarısız", durmuş bir çalışmanın hiç ulaşmadığı adım "Başlamadı" der.
+Güncelleme bildirimi ve güncelleme kartı, izlenen güncellemenin son okumasının
+ortaya koyduğunu söyler: uygulanıyor, kuruldu ve doğrulanıyor ya da bilinmiyor.
+
+**Posta kimliği denetiminin tipli nedeni (`GET /api/v1/setup`,
+`GET /api/v1/setup/operation`).** `action_required` durumundaki `mail_identity`
+denetimi ek olarak `reason` ve `vars` taşır: denetimin okuduğu sırayla
+karşılanmayan ilk koşul ve andığı değerler. `server_address_not_public`,
+`mail_name_differs`, `reverse_dns_mismatch`, `forward_dns_mismatch`. Hazır ya da
+bilinmeyen denetim ikisini de taşımaz; onlardan önce yazılmış kayıt genel
+cümlesini korur. Durum ve kod değişmedi.
+
+- `setup.check.mailIdentity.reverseDNS`
+  TR: "Bu sunucunun {ip} adresinin ters DNS (PTR) adı {ptr}; posta sunucuları
+  {hostname} bekler. Bunu CelikPanel’de değil, sunucu sağlayıcınızda
+  ayarlarsınız: sağlayıcının kontrol panelinden ya da destek ekibinden {ip}
+  adresinin ters DNS kaydını {hostname} olarak ayarlamasını isteyerek."
+- `setup.check.notRead`
+  TR: "{check}: şu an denetlenemedi; bu yüzden karşılanıp karşılanmadığı
+  bilinmiyor. Bu, bir şeyin eksik ya da durmuş olduğu anlamına gelmez."
+- Diğer nedenler (`.reverseDNSMissing`, `.forwardDNS`, `.mailName`,
+  `.mailNameUnread`, `.address`, `.addressMissing`) kataloglardadır.
+
+**Planı yeniden açıldığı için durmuş çalışma.**
+
+- `setup.guide.revisedTitle` TR: "Kurulum durdu: planı yeniden açıldı"
+- `setup.guide.revised` TR: "Bu kurulum çalışması, planı düzenlemek için
+  yeniden açıldığından durdu. Bu bir hata değildir: hiçbir şey geri alınmadı ve
+  kurulmuş bileşenler olduğu gibi kalır. Hiçbir şey kendiliğinden devam etmez."
+- `setup.guide.revisedChecks` TR: "Durduğunda son denetimi hâlâ şunu
+  bekliyordu:" ve ardından açık denetim başına bir satır.
+- `setup.guide.revisedNext` TR: "Sonraki adım: planı inceleyip yeniden
+  başlatın. Son denetim o zaman yeniden çalışır." Yanındaki düğme mevcut
+  "Düzeltilmiş planı incele" düğmesidir. "Teknik ayrıntılar" yalnız sunucunun
+  satırını tutar.
+
+**Bekleyen son denetim.** `setup.guide.verificationWaiting` TR: "Bütün kurulum
+adımları bitti. Kurulum, son denetiminde şunu bekliyor:", açık denetimler,
+genel yardımları (artık kapalı değil), sonra `setup.guide.verificationResume`
+TR: "Kurulum kendiliğinden yeniden denetler ve bütün denetimler geçince
+tamamlanır. Hemen denetlemek için Gereksinimleri tekrar kontrol et düğmesini
+kullanın." Çalışma beklerken yürütücü denetimleri 20 saniyede bir yeniden okur.
+
+**Adımın durum sözcüğü.** "Sizi bekliyor", "Gereksinimler bekleniyor"
+(değişmedi), "Denetlenemedi", "Başarısız", "Durduruldu", "Başlamadı".
+
+**Güncelleme bildirimi ve kart (`GET /api/v1/panel/update/status`).** Agent'ın
+kaydı, yeni Panel başladıktan sonra güncelleyici çıkıp son kanıtı geçene kadar
+`running` kalır (`cmd/agent/system_update_worker_linux.go`). Bildirim her
+`running` okumasında ve hiçbir okuma yapılmadan önce yer tutucu olarak
+`panelUpdate.running` diyordu (`SystemUpdateOperation.tsx`); kart ise yanıt
+veren Panel'in çalıştırdığı sürümü okuyordu (`/api/v1/panel/version`): bu
+aralıkta ikisi çelişiyordu. Durum yanıtı artık, kayıt `running` iken yanıt veren
+Panel tam hedef yapıysa, ek olarak `phase: "verifying"` taşır.
+
+- `panelUpdate.tracking.verifyingTitle` TR: "Güncelleme kuruldu, doğrulanıyor"
+- `panelUpdate.tracking.verifying` TR: "{version} kuruldu ve bu panel onu
+  çalıştırıyor. Güncelleme doğrulanıyor ve henüz bitmedi; bu bildirim onu
+  kendiliğinden izler."
+- `panelUpdate.tracking.unknown` TR: "Bu güncellemenin durumu şu an okunamadı;
+  bu yüzden hâlâ sürüp sürmediği ya da bitip bitmediği bilinmiyor. Bu bildirim
+  kendiliğinden yeniden okur; başka bir güncelleme başlatmayın." Başarısız
+  okumanın nedeni (bağlantı, yeniden başlatma) altındaki satırdır.
+- `panelUpdate.tracking.reading` TR: "Bu güncellemenin durumu sunucudan
+  okunuyor…" (ilk okumadan önce; orada "uygulanıyor" yerine geçer).
+- Kart: geçerli sürümün yanında "kuruldu, doğrulanıyor" ve bir durum satırı
+  (`panelUpdate.card.verifying`, `.applying`, `.reading`, `.unknown`). Bitmiş
+  kayıt ne bildirim ne satır bırakır (değişmedi: sayfa bir kez yeniden yüklenir).
+- `panelUpdate.lastRead` TR: "Son okuma". Güncelleme penceresindeki saat,
+  "UTC" etiketli tarayıcı yerel saatiydi; artık arayüz dilinde, dilimiyle
+  yazılmış yerel saattir (örneğin "18:53:39 GMT+3").
+
+**Sınırlar.** Bileşen testleri (`web/tests/setup-final-check-mounted.test.mjs`,
+`web/tests/update-tracking-mounted.test.mjs`,
+`cmd/panel/known_state_gates_test.go`) ve geri döngü taklidine karşı gerçek bir
+Chrome; masaüstü ve telefon, İngilizce ve Türkçe. Ölçülmedi: ters DNS'i yanlış
+olan gerçek bir sunucu (tipli neden gerçek bir Agent'tan okunmadı), sahibin kendi
+kaydı, gerçek bir güncellemenin doğrulama aralığı, telefonda köşe bildiriminin
+kartın satırını örtmesi (taklitte örttü; değiştirilmedi).
+
+### İlk sayfa yüklemesinde yanıtlanmamış erişim sayfası yok; bekletme katmanı okuduğu nedeni söyler (2026-10-10)
+
+Bileşen testleri ve geri döngü taklidine karşı bir tarayıcı koşusuyla kaynak
+durumu; konuk yok, kurulu sunucu yok. Yedinci gerçek sistem kaydının
+(`deploy/e2e/release-recovery/evidence/set7-20261010/`) iki bulgusunu karşılar:
+hücre 5 (yukarıdaki sahibin üçüncü gözlemi) ve hücre 1'in gözlemi. Mekanizma ve
+sözleşme maddeleri aynı tarih ve başlıklı
+[dayanıklılık sözleşmesi](RESILIENCE-CONTRACT.tr.md) girdisindedir.
+
+**Ekranda ne değişir.**
+
+- *Soğuk tam sayfa yüklemesi, oturum, hazır olma ya da ilk lisans okuması
+  yanıt vermemişken:* ilk 1,5 sn yalnızca boş sayfa zemini (bekletme
+  katmanıyla aynı sessiz süre): başlık, cümle, düğme ya da kendine ait bir
+  gösterge yok. Bu sürede yanıt veren okuma geride bir şey bırakmaz; erişimi
+  doğrulamadan yanıt veren okuma (oturum yok, Panel başlıyor, okuma başarısız)
+  zemini hemen, her zamanki sayfasıyla değiştirir.
+- *Aynı okumalar 1,5 sn sonra hâlâ yanıtsız* (hiçbir şey başarısız olmadı):
+  `recovery.checkingTitle`, TR "Panel erişimi kontrol ediliyor" · EN "Checking
+  panel access"; yeni `recovery.waitingHelp`, TR "Panel henüz yanıt vermedi.
+  Yanıt verir vermez CelikPanel açılır; bir şey yapmanız gerekmiyor." · EN "The
+  Panel has not answered yet. CelikPanel opens as soon as it does; you do not
+  need to do anything."; meşgul kontrol düğmesi (`recovery.checking`).
+  "CelikPanel’i yeniden yükle" artık hemen sunulmaz; yarım dakika sonra yeni
+  `recovery.waitingProlonged`, TR "Bu, yarım dakikadan uzun sürdü. CelikPanel
+  kendiliğinden kontrol etmeyi sürdürür; dilerseniz yeniden de
+  yükleyebilirsiniz." · EN "This has taken longer than half a minute.
+  CelikPanel keeps checking by itself; you can also reload it." ile
+  `app.reload`. Önceden sayfa ilk karesinden itibaren `recovery.checkingHelp`
+  ("Oturumunuz ve panelin hazır olma durumu doğrulanıyor…"), "Kontrol
+  ediliyor…" ve "CelikPanel’i yeniden yükle" gösteriyordu.
+- *Oturum ve hazır olma doğrulanmış, arayüzün kendisi 1,5 sn sonra hâlâ
+  yükleniyor:* yeni `recovery.loadingTitle`, TR "CelikPanel açılıyor" · EN
+  "Opening CelikPanel"; `recovery.loadingHelp`, TR "Oturumunuz doğrulandı ve
+  Panel hazır. Arayüz hâlâ yükleniyor ve kendiliğinden açılır." · EN "Your
+  session is confirmed and the Panel is ready. The interface is still loading
+  and opens by itself." Kontrol düğmesi yok (okunacak bir şey yok); yeniden
+  yükleme yarım dakika sonra. Önceden bu durum "Panel erişimi kontrol
+  ediliyor" diyordu.
+- *Açıklanmış bir bekleme*, aynı yüklemenin bir sonraki kapısı devraldığında
+  (kurtarma sayfasının altında arayüzün gelmesi, oturum okumasından sonra
+  lisans okuması) yeniden gizlenmez.
+- *Açık bir sayfanın üzerindeki bekletme katmanı, okumanın gösterdiği nedeni
+  söyler.* Lisans metni (`accessHold.licenseTitle`/`licenseHelp`, değişmedi)
+  yalnızca Panel yanıt verdiğinde ve okunamayan şey lisans sonucu olduğunda ya
+  da bir istek lisans kararı olmadığı için reddedildiğinde kullanılır.
+  Panel'den yanıt yok: `accessHold.availabilityTitle`, TR "Panel az önce yanıt
+  vermedi" · EN "The Panel did not answer just now" (değişmedi). Panel
+  başladığını söylüyor: `recovery.startingTitle` (değişmedi). Bu tarayıcıdan
+  başlatılan bir güncelleme bitişini kaydetmemişken yanıt yok (yeni):
+  `accessHold.updateTitle`, TR "Panel bir güncelleme sırasında yanıt vermiyor"
+  · EN "The Panel is not answering during an update"; `accessHold.updateHelp`,
+  TR "Bu tarayıcıdan bir güncelleme başlatıldı ve bitişi burada henüz
+  görülmedi. Güncelleme uygulanırken Panel yeniden başlar; bu yüzden kısa bir
+  süre yanıt vermeyebilir. Bu bir lisans sorunu değildir." · EN "An update was
+  started from this browser, and its end has not been seen here yet. The Panel
+  restarts while an update is applied, so it may not answer for a short while.
+  This is not a license problem." Devam satırı ve kontrol eylemi değişmedi.
+  Tarayıcının kendi güncelleme kaydı yalnızca bu sözcükleri seçer; hiçbir
+  zaman sunucu sonucu olarak gösterilmez.
+- *Hiçbir şeyin yerini almayan tam sayfa* (bir şey bağlanmadan ilk lisans
+  okuması başarısız) aynı kararı kullanır: yanıt yoksa "Panelin hazır olma
+  durumu kontrol edilemedi", başlayan Panel için "Panel başlatılıyor", "Lisans
+  durumu kontrol edilemedi" yalnızca okunamayan bir lisans sonucu için.
+
+**Ne değişmedi.** Bilinen olumsuzlar (oturum yok: giriş; bilinen lisans
+kararı: etkinleştirme; Panel başlıyor; yüklenemeyen arayüz) ekranı eskisi gibi,
+hemen değiştirir. Arayüz yüklenirken ya da yüklenemedikten sonra ulaşılan,
+kapalı ya da başlayan Panel için kurtarma sayfası okuması yanıt verir vermez
+gösterilir. Erişim kararları, geçerlilikleri, okumalar ve aralıkları
+değişmedi; istek eklenmedi.
+
+**Kanıt.** Bileşen testleri: `web/tests/recovery-access-runtime.test.mjs`
+(soğuk yükleme, bekleme durumu, bilinen olumsuzlar, kapılar arası devir,
+gerçek oturum okumalarıyla kurtarma yolu), `web/tests/access-hold-runtime.test.mjs`
+(ilk lisans okuması; bitmemiş güncelleme kaydı olan ve olmayan yedi okuma
+sonucu için bekletme nedeni). Geri döngü taklidine karşı tarayıcı koşusu
+(`web/tools/browser-inspect`, `coldload` ve `coldslow` senaryoları, 2 Mbit/sn
+ve 300 ms'ye kısılmış Chrome, okumalar 300 ms yavaşlatılmış): yayımlanmış kod
+"Panel erişimi kontrol ediliyor" kapısını `/setup`, `/` ve
+`/settings?section=updates` üzerinde yaklaşık 1,4 sn çizdi; bu değişiklikle üç
+yüklemenin hiçbiri uygulamadan önce bir cümle çizmedi (zemin, açılış
+göstergesi, zemin, sonra sayfa); oturum okuması 2,5 sn tutulduğunda açıklanmış
+bekleme sessiz süreden sonra göründü ve sayfa kendiliğinden açıldı.
+**Ölçülmedi:** konuktaki gerçek bir Panel (set7 yöntemi), kurulu bir sunucu,
+HTTP önbelleği açıkken yükleme, gerçek bir güncelleme sırasında bekletme
+katmanı. Dil yükleyicisinin metinsiz açılış göstergesi değişmedi.

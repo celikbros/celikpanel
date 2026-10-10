@@ -15,7 +15,7 @@ import { ServerSetupChoice, ServerSetupManualAction } from './ServerSetupChoice'
 import { Button, inputClass, Spinner } from './ui';
 import { AddressLink } from './AddressLink';
 import { ServerSetupComponents, useSetupComponentCatalog } from './ServerSetupComponents';
-import { setupComponentName, setupExecutionGuidance, setupHostBusyGuidance, setupHostingRootBlockerValues } from '../lib/serverSetupGuidance';
+import { setupComponentName, setupExecutionGuidance, setupHostBusyGuidance, setupHostingRootBlockerValues, setupPlanReopened, setupStepState, setupStepStateLabel, type SetupGuidanceText } from '../lib/serverSetupGuidance';
 import { setupEffectiveComponents, setupPresetComponents } from '../lib/serverSetupComponents';
 import { handoverAddress, handoverSettled, plannedHandoverDrop, setupHandover, setupStartMarkerKey } from '../lib/panelHandover';
 
@@ -206,6 +206,8 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
         if (busy) return `${t(busy.title)}. ${t(busy.body)}`;
         return t(code === 'mail_enrollment_restored' ? 'setup.guide.mailEnrollmentFailed' : mailServiceUnsupported(code) ? 'setup.blocker.mailUnsupported' : codeKey[code.split(':')[0]] || 'setup.blocker.unknown');
     };
+    // A guidance line, with the check it names translated into {check}.
+    const say = (message: SetupGuidanceText) => t(message.key, message.name ? { ...message.values, check: t(message.name) } : message.values);
     // One localized name per component, shared by the step list and the
     // install-failure guidance so both sentences name the same thing.
     // Adım listesi ve kurulum hatası yönlendirmesi aynı yerel adı kullanır.
@@ -448,6 +450,8 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
     const waitingLicense = execution?.status === 'waiting' && execution.phase === 'license';
     const waitingDNSPrerequisite = execution?.status === 'waiting' && ['access_dns', 'primary_dns', 'infrastructure_dns'].includes(execution.phase);
     const confirmingPrevious = execution?.status === 'running' && execution.error?.code.split(':')[0] === 'server_setup_reconciling';
+    // Stopped because its plan was reopened: a known end, not a failure.
+    const planReopened = setupPlanReopened(execution);
     const completed = snapshot.status === 'ready';
     const hasOperation = resolving || !!execution || !!marker || reconnecting;
     const certificateReady = execution?.steps.some(item => item.kind === 'panel_certificate' && item.status === 'succeeded') || execution?.status === 'succeeded';
@@ -529,28 +533,32 @@ function SetupWizard({ initial }: { initial: ServerSetupSnapshot }) {
                     </div> : guidance && <aside aria-labelledby={stateTitle && !guidanceStep ? 'setup-progress-title' : 'setup-guidance-title'} className="mt-5 rounded-lg border border-border bg-surface p-4 sm:p-5">
                         {stateTitle ? guidanceStep && <h3 id="setup-guidance-title" className="break-words font-semibold">{guidanceStep}</h3>
                             : <><h3 id="setup-guidance-title" className="font-semibold">{t(guidance.title)}</h3>{guidanceStep && <p className="mt-2 break-words text-sm font-medium">{guidanceStep}</p>}</>}
-                        <div role={execution?.status === 'failed' ? 'alert' : 'status'} className="mt-2 space-y-2 text-sm leading-6 text-fg-muted first:mt-0">{guidance.messages.map((message, index) => <p key={index} className="break-words">{t(message.key, message.values)}</p>)}</div>
+                        <div role={execution?.status === 'failed' && !planReopened ? 'alert' : 'status'} className="mt-2 space-y-2 text-sm leading-6 text-fg-muted first:mt-0">{guidance.messages.map((message, index) => <div key={index} className="space-y-2">
+                            <p className="break-words">{say(message)}</p>
+                            {/* The open checks follow the sentence that introduces them, in full. */}
+                            {index === (guidance.checksAt ?? 0) && guidance.checks && guidance.checks.length > 0 && <ul className="space-y-2 rounded-md border border-border bg-surface-2 px-4 py-3 text-fg" data-setup-checks="">{guidance.checks.map(line => <li key={line.check.id} className="break-words" data-check={line.check.id} data-state={line.check.state}>{line.text ? say(line.text) : failureText(line.check.code)}</li>)}</ul>}
+                        </div>)}</div>
                         {canReviseWaiting && <Button variant="secondary" disabled={busy} className="mt-3" onClick={() => void reviseWaiting()}>{t('setup.editPlan')}</Button>}
                         {mailEnrollmentToContinue && <Button variant="secondary" disabled={busy} className="mt-3" onClick={() => void continueMailEnrollment()}>{t('setup.mailEnrollment.continue')}</Button>}
                         {mailEnrollmentToRetry && <Button variant="secondary" disabled={busy} className="mt-3" onClick={() => void continueMailEnrollment(true)}>{t('setup.mailEnrollment.retry')}</Button>}
                         {enrollmentNotice && progressCurrentStep?.kind === 'mail_enrollment' && <p role="status" className="mt-3 text-sm">{t(`setup.mailEnrollment.${enrollmentNotice}`)}</p>}
                         {execution?.context?.infrastructure_dns && ['infrastructure_dns', 'access_dns'].includes(progressCurrentStep?.kind || execution?.phase || '') && <details className="mt-3 text-sm"><summary className="cursor-pointer font-medium text-primary">{t('setup.infrastructure.reviewTitle')}</summary><SetupInfrastructureDNSReview value={execution.context.infrastructure_dns} compact /></details>}
-                        {guidance.details.length > 0 && <details className="mt-3 text-sm leading-6"><summary className="cursor-pointer font-medium text-primary">{t('setup.guide.more')}</summary><ul className="mt-2 list-disc space-y-2 pl-5 text-fg-muted">{guidance.details.map((message, index) => <li key={index}>{t(message.key, message.values)}</li>)}</ul></details>}
+                        {guidance.details.length > 0 && <details className="mt-3 text-sm leading-6"><summary className="cursor-pointer font-medium text-primary">{t('setup.guide.more')}</summary><ul className="mt-2 list-disc space-y-2 pl-5 text-fg-muted">{guidance.details.map((message, index) => <li key={index}>{say(message)}</li>)}</ul></details>}
                     </aside>}
                     {/* The failure colour is for a verified failure only: a busy server, an unmet prerequisite and a result still being confirmed are not one. */}
-                    {execution?.error && !['dns_publisher', 'dns_readiness'].includes(execution.phase) && <div role={hostBusy ? undefined : confirmingPrevious || waitingDNSPrerequisite || observingMailEnrollment ? 'status' : 'alert'} className={`${hostBusy ? 'mt-3' : 'mt-5'} space-y-2 text-sm`}>{!hostBusy && (!(confirmingPrevious || observingMailEnrollment) || !guidance) && <p className={execution.status === 'failed' ? 'text-danger' : confirmingPrevious || waitingDNSPrerequisite ? 'text-fg-muted' : 'text-fg'}>{failureText(execution.error.code, execution.error.message, execution.error.reason)}</p>}<details><summary className="cursor-pointer text-primary">{t('setup.details')}</summary><p className="mt-2 break-words text-fg-muted">{execution.error.message}</p></details></div>}
+                    {execution?.error && !['dns_publisher', 'dns_readiness'].includes(execution.phase) && <div role={hostBusy ? undefined : confirmingPrevious || waitingDNSPrerequisite || observingMailEnrollment || planReopened ? 'status' : 'alert'} className={`${hostBusy ? 'mt-3' : 'mt-5'} space-y-2 text-sm`}>{!hostBusy && (!(confirmingPrevious || observingMailEnrollment || planReopened) || !guidance) && <p className={execution.status === 'failed' ? 'text-danger' : confirmingPrevious || waitingDNSPrerequisite ? 'text-fg-muted' : 'text-fg'}>{failureText(execution.error.code, execution.error.message, execution.error.reason)}</p>}<details><summary className="cursor-pointer text-primary">{t('setup.details')}</summary><p className="mt-2 break-words text-fg-muted">{execution.error.message}</p></details></div>}
                     {/* The action a stopped run names sits with its reason, above the step list. */}
                     {execution?.status === 'failed' && guidance && !hostBusy && <div className="mt-5"><Button variant="primary" onClick={editPlan}>{t('setup.revise')}</Button></div>}
-                    {progressChecks.length > 0 && waitingVerification && <ul className="mt-5 list-disc space-y-2 pl-5 text-sm text-fg-muted">{progressChecks.map(check => <li key={check.id}>{failureText(check.code)}</li>)}</ul>}
+                    {progressChecks.length > 0 && waitingVerification && !guidance?.checks && <ul className="mt-5 list-disc space-y-2 pl-5 text-sm text-fg-muted">{progressChecks.map(check => <li key={check.id}>{failureText(check.code)}</li>)}</ul>}
                     {/* After everything that explains the current state, and still above the step list. */}
                     {handoverNotice && <SetupHandoverNotice host={handoverNotice.host} url={handoverURL} />}
                     <ol className="mt-6 divide-y divide-border" aria-live="polite">
                         {execution?.steps.map(item => {
-                            const status = item.kind === 'verify'
-                                ? !waitingVerification && (execution.phase === 'verification' || execution.status === 'succeeded') ? 'running' : 'pending'
-                                : item.status;
-                            const label = item.kind === 'verify' && waitingVerification ? 'setup.verifyWaiting' : `setup.operation.${status}` as TranslationKey;
-                            return <li key={item.id} className="flex flex-col items-start justify-between gap-2 py-4 sm:flex-row sm:items-center sm:gap-4"><div className="min-w-0"><p className="font-medium">{t(`setup.kind.${item.kind}`, { target: stepTarget(item.kind, item.target) })}</p>{item.qualifier && item.kind !== 'mail_enrollment' && <p className="mt-1 break-words text-sm text-fg-muted">{item.qualifier}</p>}{handoverNotice && item.kind === 'panel_certificate' && <p className="mt-1 text-sm text-fg-muted">{t('setup.handover.stepNote')}</p>}</div><span className="flex shrink-0 items-center gap-2 text-sm text-fg-muted">{status === 'succeeded' ? <Check className="h-4 w-4 text-success" aria-hidden="true" /> : status === 'running' ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" /> : <Circle className="h-3 w-3" aria-hidden="true" />}{t(label)}</span></li>; })}
+                            // The step's real state: a stopped run shows nothing in progress, and a
+                            // waiting final check says what it waits for (lib/serverSetupGuidance).
+                            const status = setupStepState(execution, item, progressChecks);
+                            const tone = status === 'failed' ? 'font-medium text-danger' : status === 'waitingOwner' || status === 'stopped' ? 'font-medium text-fg' : 'text-fg-muted';
+                            return <li key={item.id} className="flex flex-col items-start justify-between gap-2 py-4 sm:flex-row sm:items-center sm:gap-4" data-step-state={status}><div className="min-w-0"><p className="font-medium">{t(`setup.kind.${item.kind}`, { target: stepTarget(item.kind, item.target) })}</p>{item.qualifier && item.kind !== 'mail_enrollment' && <p className="mt-1 break-words text-sm text-fg-muted">{item.qualifier}</p>}{handoverNotice && item.kind === 'panel_certificate' && <p className="mt-1 text-sm text-fg-muted">{t('setup.handover.stepNote')}</p>}</div><span className={`flex shrink-0 items-center gap-2 text-sm ${tone}`}>{status === 'succeeded' ? <Check className="h-4 w-4 text-success" aria-hidden="true" /> : status === 'running' ? <Loader2 className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" /> : <Circle className="h-3 w-3" aria-hidden="true" />}{t(setupStepStateLabel[status])}</span></li>; })}
                     </ol>
                     {waitingVerification && <p className="mt-5 text-sm text-fg-muted">{t('setup.reviseHelp')}</p>}
                     {completionFailed && <p role="alert" className="mt-5 text-sm text-danger">{t('setup.verificationFailed')}</p>}

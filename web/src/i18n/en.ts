@@ -96,6 +96,15 @@ export const en = {
     'app.pageLoadFailed': 'This section could not be loaded. CelikPanel may have been updated while this tab was open.',
     'app.reload': 'Reload CelikPanel',
 
+    // First page load (2026-10-10, seventh native record, cell 5): drawn only
+    // after the 1.5 s quiet time, while the first read has still not answered.
+    // Ilk sayfa yuklemesi: yalnizca 1,5 sn sessiz sureden sonra cizilir.
+    'recovery.waitingHelp': "The Panel has not answered yet. CelikPanel opens as soon as it does; you do not need to do anything.",
+    'recovery.waitingProlonged': "This has taken longer than half a minute. CelikPanel keeps checking by itself; you can also reload it.",
+    'recovery.loadingTitle': "Opening CelikPanel",
+    'recovery.loadingHelp': "Your session is confirmed and the Panel is ready. The interface is still loading and opens by itself.",
+    // End of the first page load block.
+
     'nav.dashboard': 'Dashboard',
     'nav.domains': 'Domains',
     'nav.databases': 'Databases',
@@ -144,6 +153,13 @@ export const en = {
     'panelUpdate.sending': 'Sending the update request…',
     'panelUpdate.accepted': 'The request was accepted; secure status tracking started.',
     'panelUpdate.watch': 'Navigate; updates locked.',
+    // --- update notice: what the last read of the followed update established (2026-10-10) ---
+    'panelUpdate.tracking.reading': 'Reading the state of this update from the server…',
+    'panelUpdate.tracking.verifyingTitle': 'Update installed, being verified',
+    'panelUpdate.tracking.verifying': '{version} is installed and this panel is running it. The update is being verified and is not finished yet; this notice follows it by itself.',
+    'panelUpdate.tracking.unknown': 'The state of this update could not be read just now, so whether it is still running or has finished is not known. This notice reads it again by itself; do not start another update.',
+    'panelUpdate.lastRead': 'Last read',
+    // --- end of the update notice block ---
     'panelUpdate.canonicalChecking': 'Checking unfinished updates...',
     'panelUpdate.interactionLocked': 'Navigation is temporarily locked while this update is checked. It unlocks automatically after two minutes; tracking continues.',
     'panelUpdate.ambiguous': 'The start response is uncertain. This request will not be repeated; its exact server status will be tracked.',

@@ -466,7 +466,8 @@ function AuthGate() {
   // Never depends on two state updates landing in one render: without a verified
   // identity in hand, the pages that are mounted stay the ones that are shown.
   const shown = state === 'ready' && user ? user : mounted.current;
-  // First read still in flight: nothing has failed yet, so nothing is reported as failed.
+  // First read still in flight: nothing has failed yet, so nothing is reported as
+  // failed, and RecoveryAccess draws only the page background before the quiet time.
   const cause = state === 'checking' ? 'checking' : state === 'auth_unavailable' || !user ? 'auth' : state === 'starting' ? 'starting' : 'availability';
   if (!shown) return <RecoveryAccess user={known} cause={cause} checking={checking} onRetry={() => void retry()} onUnauthorized={endSession} />;
 
@@ -487,13 +488,15 @@ function AuthGate() {
 }
 
 // loading: the interface is still being fetched. That is a wait, not a failure,
-// so the page says "checking" until a read or the fetch has actually failed.
+// so nothing is drawn before the quiet time, and after it the page says what is
+// awaited (a read, or with session and readiness confirmed, the interface)
+// until a read or the fetch has actually failed (seventh native record, cell 5).
 function StandaloneRecovery({ loading = false }: { loading?: boolean }) {
   const { user, state, checking, retry, transitionAuthentication } = usePanelSession();
   const endSession = useCallback(() => transitionAuthentication(null), [transitionAuthentication]);
   if (state === 'unauthenticated') return <Login onSuccess={transitionAuthentication} />;
   const cause = state === 'auth_unavailable' ? 'auth' : state === 'checking' ? 'checking' : !user ? 'auth'
-    : !loading ? 'bundle' : state === 'starting' ? 'starting' : state === 'availability_unavailable' ? 'availability' : 'checking';
+    : !loading ? 'bundle' : state === 'starting' ? 'starting' : state === 'availability_unavailable' ? 'availability' : 'loading';
   return <RecoveryAccess user={state === 'auth_unavailable' ? null : user} cause={cause} checking={checking}
     onRetry={() => void retry()} onUnauthorized={endSession} />;
 }

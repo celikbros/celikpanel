@@ -4,6 +4,8 @@ import { useAuth } from '../auth/AuthContext';
 import { useI18n } from '../i18n';
 import { Button, Spinner } from './ui';
 import { parseAccessObservation, type AccessObservation } from '../lib/accessObservation';
+import { readApiError } from '../lib/apiError';
+import { useQuietRead } from '../lib/quietRead';
 import { RecoveryAccess } from './RecoveryAccess';
 import { AccessHold } from './AccessHold';
 
@@ -11,6 +13,24 @@ const LicenseLockScreen = lazy(() => import('./LicenseLockScreen').then(module =
 
 /** While access is unknown the server's answer is read again this often in a visible tab. */
 const UNKNOWN_RECHECK_MS = 5000;
+
+/**
+ * Why the last access read did not confirm access, as that read showed it. The
+ * license is named only when the Panel answered and its license result was what
+ * could not be read (seventh native record, cell 1: during an update's planned
+ * restart the layer said "could not read the license result" while the Panel
+ * itself was not answering).
+ * - license: the Panel answered; the license result was unavailable, or a
+ *   management request was refused for want of a license decision.
+ * - starting: the Panel answered that it is still starting.
+ * - availability: no answer arrived from the Panel (a dropped or refused
+ *   connection, a timeout, or an answer from something in front of it).
+ *
+ * Son erisim okumasinin erisimi neden dogrulamadigi, o okumanin gosterdigi
+ * bicimiyle. Lisans yalnizca Panel yanit verdiginde ve okunamayan sey lisans
+ * sonucu oldugunda anilir.
+ */
+export type AccessReadCause = 'license' | 'starting' | 'availability';
 
 /**
  * Never mount management pages before a positive, server-verified decision.
@@ -38,6 +58,7 @@ export function LicenseOnboarding({ children, onAccessChange, onRecoveryChange, 
     const [access, setAccess] = useState<(AccessObservation & { owner: string }) | null>(null);
     const [failed, setFailed] = useState(false);
     const [pending, setPending] = useState(false);
+    const [cause, setCause] = useState<AccessReadCause>('license');
     const controller = useRef<AbortController | null>(null);
     const mountedFor = useRef<string | null>(null);
     const latest = useRef(access);
@@ -52,16 +73,28 @@ export function LicenseOnboarding({ children, onAccessChange, onRecoveryChange, 
         lastRead.current = Date.now();
         setPending(true);
         const timeout = window.setTimeout(() => request.abort(), 15000);
+        // Until an answer arrives, nothing came back from the Panel.
+        let observed: AccessReadCause = 'availability';
         try {
             const response = await fetch('/api/v1/license/access', { cache: 'no-store', signal: request.signal });
-            if (!response.ok) throw new Error('access unavailable');
+            if (!response.ok) {
+                // The Panel's own access route answers 200, also while it starts; it refuses
+                // with PANEL_STARTING only for what is not yet served. Any other status
+                // came from in front of the Panel, not from its license check.
+                const problem = await readApiError(response);
+                observed = problem.code === 'PANEL_STARTING' || problem.code === 'panel_starting' ? 'starting' : 'availability';
+                throw new Error('access unavailable');
+            }
+            observed = 'license';
             const result = parseAccessObservation(await response.json());
             if (!request.signal.aborted && controller.current === request) {
                 setAccess({ owner: user.username, ...result });
                 setFailed(result.allowed === null);
+                if (result.allowed === null) setCause('license');
             }
         } catch {
             if (controller.current === request) {
+                setCause(observed);
                 // A failed request is not a license rejection. Keep only an
                 // unexpired decision for this identity; never extend its deadline.
                 // Bağlantı hatası lisans reddi değildir; bu kimliğin geçerli kararı
@@ -107,6 +140,8 @@ export function LicenseOnboarding({ children, onAccessChange, onRecoveryChange, 
             // retler olagan yeniden kontrol araligindan sik okuma baslatamaz.
             if (known || Date.now() - lastRead.current >= UNKNOWN_RECHECK_MS) void check();
             setFailed(true);
+            // The Panel answered that request with a license refusal.
+            setCause('license');
             setAccess({ owner: user.username, allowed: null, until: 0, state: 'status_unavailable' });
         };
         window.addEventListener('focus', returned);
@@ -147,6 +182,8 @@ export function LicenseOnboarding({ children, onAccessChange, onRecoveryChange, 
     else if (denied || mountedFor.current !== user.username) mountedFor.current = null;
     const held = !allowed && mountedFor.current === user.username;
     const unknown = !allowed && !denied && access !== null;
+    // The first read of this identity has not answered yet (nothing is mounted).
+    const quiet = useQuietRead(!failed && !known);
 
     useEffect(() => {
         if (!unknown) return;
@@ -166,7 +203,7 @@ export function LicenseOnboarding({ children, onAccessChange, onRecoveryChange, 
         if (access.allowed === false && location.pathname !== '/activate') navigate('/activate', { replace: true });
         if (allowed && location.pathname === '/activate') navigate('/', { replace: true });
     }, [access, allowed, location.pathname, navigate, user.username]);
-    if (allowed || held) return <AccessHold active={held} silent={suspended} cause="license" checking={pending} user={user} onRetry={() => void check()}>
+    if (allowed || held) return <AccessHold active={held} silent={suspended} cause={cause} checking={pending} user={user} onRetry={() => void check()}>
         {allowed && failed && <div role="status" className="flex flex-wrap items-center justify-center gap-3 border-b border-border bg-surface px-4 py-3 text-sm text-fg">
             <p className="max-w-prose">{t('license.connectionRetry')}</p>
             <Button variant="secondary" onClick={() => void check()}>{t('license.refresh')}</Button>
@@ -176,7 +213,9 @@ export function LicenseOnboarding({ children, onAccessChange, onRecoveryChange, 
     </AccessHold>;
     const loading = <div className="min-h-screen flex items-center justify-center bg-bg"><Spinner /></div>;
     if (screensFailed) return <RecoveryAccess user={user} cause="bundle" onRetry={() => void check()} />;
-    if (failed && !allowed) return <RecoveryAccess user={user} cause="license" onRetry={() => void check()} />;
+    if (failed && !allowed) return <RecoveryAccess user={user} cause={cause} onRetry={() => void check()} />;
+    // Before the quiet time a first read that has not answered is not a page: only the background.
+    if (quiet) return <div className="min-h-screen bg-bg" aria-busy="true" data-access-quiet="" />;
     if (!screensReady) return loading;
     return <Suspense fallback={loading}><LicenseLockScreen checking={!access || access.owner !== user.username || access.allowed === null} failed={failed} onCheck={() => void check()} /></Suspense>;
 }

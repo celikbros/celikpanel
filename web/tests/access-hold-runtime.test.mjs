@@ -50,12 +50,18 @@ const stub = dataModule(`import React from '${reactURL}';
  export const AddressLink = props => React.createElement('a', { href: props.href }, props.address);
 `);
 const accessURL = dataModule(compile('../src/lib/accessObservation.ts'));
+// The first-read quiet time, the update hint and the error reader are the real ones (2026-10-10).
+const quietURL = link('../src/lib/quietRead.ts', () => stub);
+const observationURL = dataModule(compile('../src/lib/recoveryObservation.ts'));
+const apiErrorURL = dataModule(compile('../src/lib/apiError.ts'));
+const real = (specifier, otherwise) => specifier.endsWith('/quietRead') ? quietURL : specifier.endsWith('/recoveryObservation') ? observationURL
+  : specifier.endsWith('/apiError') ? apiErrorURL : otherwise(specifier);
 const guidanceURL = link('../src/components/AccessGuidance.tsx', () => stub);
 const loaderURL = link('../src/lib/accessGuidance.ts', specifier => specifier.endsWith('/AccessGuidance') ? guidanceURL : stub);
-const withGuidance = specifier => specifier.endsWith('/accessGuidance') ? loaderURL : stub;
+const withGuidance = specifier => real(specifier, item => item.endsWith('/accessGuidance') ? loaderURL : stub);
 const holdURL = link('../src/components/AccessHold.tsx', withGuidance);
-const bareHoldURL = link('../src/components/AccessHold.tsx', () => stub);
-const onboardingURL = link('../src/components/LicenseOnboarding.tsx', specifier => specifier.endsWith('/accessObservation') ? accessURL : specifier.endsWith('/AccessHold') ? holdURL : stub);
+const bareHoldURL = link('../src/components/AccessHold.tsx', specifier => real(specifier, () => stub));
+const onboardingURL = link('../src/components/LicenseOnboarding.tsx', specifier => real(specifier, item => item.endsWith('/accessObservation') ? accessURL : item.endsWith('/AccessHold') ? holdURL : stub));
 const loginURL = link('../src/components/Login.tsx', withGuidance);
 const noticeURL = link('../src/components/UpdateReloadNotice.tsx', withGuidance);
 const bareNoticeURL = link('../src/components/UpdateReloadNotice.tsx', () => stub);
@@ -149,7 +155,7 @@ function assertPageAsLeft(message) {
 const access = (seconds = 60) => Response.json({ can_use_panel: true, valid_until: Math.floor(Date.now() / 1000) + seconds, state: 'active', observation: 'known' });
 
 test('the wording exists in both languages, in the screen half, and says reason, who acts and how the page resumes', () => {
-  const keys = ['licenseTitle', 'licenseHelp', 'availabilityTitle', 'availabilityHelp', 'authTitle', 'authHelp', 'waitingHelp', 'resume', 'prolonged', 'sessionEnded', 'updateReload', 'updateReloadTitle'].map(name => `accessHold.${name}`);
+  const keys = ['licenseTitle', 'licenseHelp', 'availabilityTitle', 'availabilityHelp', 'authTitle', 'authHelp', 'waitingHelp', 'resume', 'prolonged', 'sessionEnded', 'updateReload', 'updateReloadTitle', 'updateTitle', 'updateHelp'].map(name => `accessHold.${name}`);
   const value = (file, key) => source(`../src/i18n/${file}.ts`).match(new RegExp(`'${key.replace('.', '\\.')}': "([^"]+)",`))?.[1];
   for (const key of keys) {
     assert.ok(value('screens/en', key) && value('screens/tr', key), `${key} is missing from the screen half`);
@@ -182,6 +188,7 @@ test('the wording exists in both languages, in the screen half, and says reason,
   assert.deepEqual(guidance.accessHoldCopy(t, 'license', false), { title: 'accessHold.licenseTitle', help: 'accessHold.licenseHelp', resume: 'accessHold.resume', prolonged: 'accessHold.prolonged' });
   assert.equal(guidance.accessHoldCopy(t, 'auth', false).title, 'accessHold.authTitle');
   assert.equal(guidance.accessHoldCopy(t, 'availability', false).help, 'accessHold.availabilityHelp');
+  assert.deepEqual(guidance.accessHoldCopy(t, 'update', false), { title: 'accessHold.updateTitle', help: 'accessHold.updateHelp', resume: 'accessHold.resume', prolonged: 'accessHold.prolonged' });
   assert.deepEqual([guidance.accessHoldCopy(t, 'starting', false).title, guidance.accessHoldCopy(t, 'starting', false).help], ['recovery.startingTitle', 'recovery.startingHelp']);
   assert.deepEqual(guidance.accessHoldCopy(t, 'license', true), { title: 'recovery.checkingTitle', help: 'accessHold.waitingHelp', resume: '', prolonged: 'accessHold.prolonged' });
 });
@@ -349,7 +356,9 @@ test('a decision that ran out in a hidden tab is refreshed silently on return; t
     reply = () => { throw new TypeError('Failed to fetch'); };
     await show('visible');
     assert.equal(held().length, 1); assert.equal(layers().length, 1);
-    assert.ok(text().includes('accessHold.licenseTitle') && text().includes('accessHold.licenseHelp') && text().includes('accessHold.resume'), text());
+    // No answer arrived: the Panel did not answer; the license is not named (2026-10-10).
+    assert.ok(text().includes('accessHold.availabilityTitle') && text().includes('accessHold.availabilityHelp') && text().includes('accessHold.resume'), text());
+    assert.ok(!text().includes('accessHold.license'), text());
     assert.equal(tree.root.findAllByType('aside').length, 0);
     assert.equal(globalThis.holdTest.navigations.length, 0, 'unknown is not an activation requirement');
     assertPageAsLeft('explained hold');
@@ -359,6 +368,68 @@ test('a decision that ran out in a hidden tab is refreshed silently on return; t
     assert.equal(held().length, 0); assert.equal(layers().length, 0);
     assertPageAsLeft('after the server answered');
   } finally { Date.now = previousNow; window.setTimeout = previousTimer; await clean(); }
+});
+
+// Seventh native record, cell 1 (2026-10-10): during the Panel's planned restart
+// in an update the layer said "CelikPanel could not read the license result",
+// although the Panel itself was not answering. The layer names the cause the read
+// showed: no answer from the Panel (and, while this browser's update has not
+// recorded its end, that update's restart), the Panel starting, and the license
+// only when the Panel answered and its license result was what could not be read.
+// Katman, okumanin gosterdigi nedeni soyler; lisans yalnizca Panel yanit verip
+// lisans sonucu okunamadiginda anilir.
+test('the hold layer names the cause the read showed: an update restart, an unanswered or starting Panel, the license only when the Panel answered', async () => {
+  const id = 'e'.repeat(32);
+  const record = (phase, extra = {}) => JSON.stringify({ state_version: 1, phase, marker: { marker_version: 1, request_id: id }, ...extra });
+  const running = record('active'), finished = record('terminal', { outcome: 'succeeded' });
+  const dropped = () => { throw new TypeError('Failed to fetch'); };
+  const unavailable = () => Response.json({ can_use_panel: false, valid_until: 0, state: 'status_unavailable', observation: 'unavailable' });
+  const previousStorage = globalThis.localStorage, previousTimer = window.setTimeout, previousNow = Date.now;
+  for (const [saved, reply, title, help] of [
+    // An update started here has not recorded its end and the Panel does not answer: its restart.
+    [running, dropped, 'accessHold.updateTitle', 'accessHold.updateHelp'],
+    [running, () => new Response('Bad gateway', { status: 502 }), 'accessHold.updateTitle', 'accessHold.updateHelp'],
+    // No update in progress here, or one already finished: the Panel did not answer.
+    [null, dropped, 'accessHold.availabilityTitle', 'accessHold.availabilityHelp'],
+    [finished, dropped, 'accessHold.availabilityTitle', 'accessHold.availabilityHelp'],
+    // The Panel answered that it is starting.
+    [running, () => Response.json({ code: 'PANEL_STARTING' }, { status: 503 }), 'recovery.startingTitle', 'recovery.startingHelp'],
+    // The Panel answered and could not read its license result: the license, also during an update.
+    [null, unavailable, 'accessHold.licenseTitle', 'accessHold.licenseHelp'],
+    [running, unavailable, 'accessHold.licenseTitle', 'accessHold.licenseHelp'],
+  ]) {
+    fixture(); mounts = 0;
+    const deadlines = []; let now = Date.now(), current = () => access();
+    Date.now = () => now;
+    window.setTimeout = (fn, ms) => { if (ms > 15000 && ms !== ACCESS_HOLD_PROLONGED_MS) { deadlines.push({ fn, ms }); return 0; } return previousTimer(fn, ms); };
+    globalThis.localStorage = { getItem: key => (key === 'celikpanel.system-update-operation.v1' ? saved : null) };
+    globalThis.fetch = async () => current();
+    try {
+      await act(async () => { tree = Renderer.create(React.createElement(LicenseOnboarding, null, React.createElement(Page))); });
+      await useThePage();
+      // The decision runs out while the Panel is restarting; the read made at the deadline does not confirm access.
+      current = reply; now += 60000;
+      await act(async () => deadlines.at(-1).fn());
+      await act(async () => {});
+      assert.equal(held().length, 1, title); assert.equal(layers().length, 1, title);
+      const shown = text();
+      assert.ok(shown.includes(title) && shown.includes(help) && shown.includes('accessHold.resume'), `${title}: ${shown}`);
+      for (const other of ['accessHold.updateTitle', 'accessHold.availabilityTitle', 'accessHold.licenseTitle', 'recovery.startingTitle'].filter(key => key !== title)) {
+        assert.ok(!shown.includes(other), `${title} and ${other}: ${shown}`);
+      }
+      assert.equal(globalThis.holdTest.navigations.length, 0, 'an unknown state is not an activation requirement');
+      assertPageAsLeft(title);
+      // Access confirmed again: the same page continues.
+      current = () => access();
+      await act(async () => button('recovery.retry').props.onClick());
+      assert.equal(held().length, 0); assert.equal(layers().length, 0);
+      assertPageAsLeft(`${title}, after the Panel answered`);
+    } finally {
+      Date.now = previousNow; window.setTimeout = previousTimer;
+      if (previousStorage === undefined) delete globalThis.localStorage; else globalThis.localStorage = previousStorage;
+      await clean();
+    }
+  }
 });
 
 test('a known negative decision removes management and requires activation exactly as before, also from a hold', async () => {
@@ -391,20 +462,40 @@ test('a known negative decision removes management and requires activation exact
   }
 });
 
-test('before the first positive decision nothing is mounted: a first read in flight is a checking state and a failed one the full page', async () => {
+test('before the first positive decision nothing is mounted: a first read in flight draws nothing before the quiet time, then a checking state, and a failed one the full page with the cause it read', async () => {
   fixture(); mounts = 0; let answer;
   globalThis.fetch = () => new Promise(done => { answer = done; });
+  const quietSurface = () => tree.root.findAll(node => typeof node.type === 'string' && node.props['data-access-quiet'] !== undefined);
   try {
     await act(async () => { tree = Renderer.create(React.createElement(LicenseOnboarding, null, React.createElement(Page))); });
     await act(async () => {});
     assert.equal(tree.root.findAllByType('main').length, 0);
+    // Seventh native record, cell 5: before the quiet time only the page background, no text and no control.
+    assert.equal(quietSurface().length, 1); assert.equal(tree.root.findAllByType('aside').length, 0);
+    assert.equal(tree.root.findAllByType('button').length, 0);
+    assert.equal(await fire(ACCESS_HOLD_QUIET_MS), 1, 'the same quiet time as the hold layer');
     const waiting = tree.root.findByType('aside');
     assert.equal(waiting.props.cause, 'lock'); assert.equal(waiting.props.checking, true); assert.equal(waiting.props.failed, false);
+    // A status that is not the Panel's own access answer: the Panel is named, not the license.
     await act(async () => answer(Response.json({}, { status: 503 })));
-    assert.equal(tree.root.findByType('aside').props.cause, 'license', 'the application cannot start: the full recovery page');
+    assert.equal(tree.root.findByType('aside').props.cause, 'availability', 'the application cannot start: the full recovery page');
     assert.equal(tree.root.findAllByType('main').length, 0); assert.equal(held().length, 0);
     assert.equal(mounts, 0);
   } finally { await clean(); }
+  // An answer before the quiet time replaces the background at once, with the cause that answer showed.
+  for (const [reply, cause] of [
+    [() => Response.json({ can_use_panel: false, valid_until: 0, state: 'status_unavailable', observation: 'unavailable' }), 'license'],
+    [() => Response.json({ code: 'PANEL_STARTING' }, { status: 503 }), 'starting'],
+    [() => { throw new TypeError('Failed to fetch'); }, 'availability'],
+  ]) {
+    fixture(); mounts = 0;
+    globalThis.fetch = async () => reply();
+    try {
+      await act(async () => { tree = Renderer.create(React.createElement(LicenseOnboarding, null, React.createElement(Page))); });
+      assert.equal(quietSurface().length, 0, cause);
+      assert.equal(tree.root.findByType('aside').props.cause, cause);
+    } finally { await clean(); }
+  }
 });
 
 // The whole gate: a session, readiness, management requests through the real
@@ -587,7 +678,7 @@ test('the wording part is fetched ahead of need and never at the moment a hold b
   }
   const hold = source('../src/components/AccessHold.tsx');
   assert.match(hold, /const guidance = useAccessGuidance\(\);/);
-  assert.match(hold, /const copy = guidance && screensReady \? guidance\.accessHoldCopy\(t, cause, waiting\) : null;/);
+  assert.match(hold, /const copy = guidance && screensReady \? guidance\.accessHoldCopy\(t, updating \? 'update' : cause, waiting\) : null;/);
   // The layer is the shared dialogue, with no silent way out, above the page and outside its inert subtree.
   assert.match(hold, /createPortal\(\s*<div ref=\{layer\} className="relative z-\[120\]" data-top-layer="hold"/);
   assert.match(hold, /dismissible=\{false\}/);

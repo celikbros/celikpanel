@@ -7,6 +7,18 @@ import { Button, Spinner } from './ui';
 import { AddressLink } from './AddressLink';
 import { parseRecoveryObservation, reconcileRecoveryObservation, recoveryFailureGuidanceKey, retryingCauseKey, savedRecoveryFinished, savedRecoveryRequestId, UPDATE_MARKER_KEY, type RecoveryObservation } from '../lib/recoveryObservation';
 import { handoverAddress, recoveryHandover, savedSetupHandoverHost, setupStartMarkerKey } from '../lib/panelHandover';
+import { readRemote } from '../lib/remote';
+import { useQuietRead } from '../lib/quietRead';
+
+/** Still waiting after this long: the reload is offered beside the wait (as in AccessHold). */
+const WAITING_PROLONGED_MS = 30000;
+
+// The address the Panel serves its certificate for. Anything else is not the
+// contract, and the handover then stays unnamed.
+const decodeServedHost = (raw: unknown): unknown => {
+    if (!raw || typeof raw !== 'object' || !('hostname' in raw)) throw new Error('access address');
+    return (raw as { hostname: unknown }).hostname;
+};
 
 // Planned certificate handover during setup (2026-10-08). The page names it
 // only when the server reports a managed certificate for the host that the
@@ -23,10 +35,10 @@ export function usePanelHandover(username: string | undefined, enabled: boolean,
         if (!saved) { setHandover(null); return; }
         const controller = new AbortController();
         const timeout = window.setTimeout(() => controller.abort(), 5000);
-        void fetch('/api/v1/panel/access-address', { cache: 'no-store', signal: controller.signal })
-            .then(async response => (response.ok ? response.json() : null))
-            .then(body => { if (body && !controller.signal.aborted) setHandover(recoveryHandover(saved, body.hostname, window.location.hostname)); })
-            .catch(() => {}).finally(() => window.clearTimeout(timeout));
+        // An address that could not be read names no handover: the ordinary wording stays.
+        void readRemote('/api/v1/panel/access-address', decodeServedHost, undefined, { cache: 'no-store', signal: controller.signal })
+            .then(result => { if (result.state === 'known' && !controller.signal.aborted) setHandover(recoveryHandover(saved, result.value, window.location.hostname)); })
+            .finally(() => window.clearTimeout(timeout));
         return () => { controller.abort(); window.clearTimeout(timeout); };
     }, [username, enabled, checking]);
     return enabled ? handover : null;
@@ -59,16 +71,18 @@ export function RecoveryStatus({ username, onUnauthorized, embedded = false, unf
         const request = new AbortController(); pending.current = request; setBusy(true);
         const timeout = window.setTimeout(() => request.abort(), 15000);
         try {
-            const response = await fetch(`/api/v1/recovery/status?request_id=${requestId}`, { signal: request.signal, cache: 'no-store' });
-            if (response.status === 401) { if (pending.current === request) { lastRef.current = null; setLast(null); onUnauthorized?.(); } throw new Error('session unavailable'); }
-            if (!response.ok) throw new Error('recovery unavailable');
-            const observed = parseRecoveryObservation(await response.json(), requestId);
-            if (!request.signal.aborted && pending.current === request) {
-                const merged = reconcileRecoveryObservation(lastRef.current, observed);
+            // A refused, dropped or unreadable answer is unknown: the last verified observation stays, marked as such.
+            const result = await readRemote(`/api/v1/recovery/status?request_id=${requestId}`, raw => parseRecoveryObservation(raw, requestId),
+                undefined, { signal: request.signal, cache: 'no-store' });
+            if (pending.current !== request) return;
+            if (result.state !== 'known') {
+                if (result.status === 401) { lastRef.current = null; setLast(null); onUnauthorized?.(); }
+                setUnavailable(true);
+            } else if (!request.signal.aborted) {
+                const merged = reconcileRecoveryObservation(lastRef.current, result.value);
                 lastRef.current = merged.record; setLast(merged.record); setUnavailable(merged.unavailable);
             }
-        } catch { if (pending.current === request) setUnavailable(true); }
-        finally { window.clearTimeout(timeout); if (pending.current === request) { pending.current = null; setBusy(false); } }
+        } finally { window.clearTimeout(timeout); if (pending.current === request) { pending.current = null; setBusy(false); } }
     }, [requestId, savedFinished, username, onUnauthorized]);
     useEffect(() => {
         lastRef.current = null; setLast(null); setUnavailable(false); void check();
@@ -110,16 +124,51 @@ export function RecoveryStatus({ username, onUnauthorized, embedded = false, unf
 
 /** Eager shell: no lazy screen catalogue, router, update provider, or mutation API. */
 export function RecoveryAccess({ user, cause, checking = false, onRetry, onUnauthorized }: {
-    /** checking: the first read is still in flight. Nothing has failed, so nothing is reported as failed. */
-    user?: CurrentUser | null; cause: 'checking' | 'auth' | 'starting' | 'availability' | 'license' | 'bundle';
+    /**
+     * checking: the first session or readiness read is still in flight. loading: the session and readiness are
+     * confirmed and the interface itself is still being fetched. Nothing has failed in either, so nothing is
+     * reported as failed, and nothing at all is drawn before the quiet time (lib/quietRead.ts).
+     */
+    user?: CurrentUser | null; cause: 'checking' | 'loading' | 'auth' | 'starting' | 'availability' | 'license' | 'bundle';
     checking?: boolean; onRetry: () => void; onUnauthorized?: () => void;
 }) {
     const { t } = useI18n();
-    const waiting = cause === 'checking' || (checking && !user);
+    // The first wait of this page: no read has answered yet, or only the interface is still on its way.
+    const firstWait = cause === 'checking' || cause === 'loading';
+    const waiting = firstWait || (checking && !user);
+    const quiet = useQuietRead(firstWait);
+    const [prolonged, setProlonged] = useState(false);
+    useEffect(() => {
+        if (!firstWait || quiet) { setProlonged(false); return; }
+        const timer = window.setTimeout(() => setProlonged(true), WAITING_PROLONGED_MS);
+        return () => window.clearTimeout(timer);
+    }, [firstWait, quiet]);
     const handover = usePanelHandover(user?.username, cause === 'availability' || cause === 'starting', checking);
     const address = handover?.elsewhere ? handoverAddress(handover.host, window.location.port) : '';
+    // Before the quiet time only the page background: no sentence, no button, no spinner. A read that answers
+    // in time leaves nothing behind; one that answers without confirming access replaces this at once.
+    if (quiet) return <div className="min-h-screen bg-bg" aria-busy="true" data-access-quiet="" />;
+    const header = <header className="border-b border-border bg-surface px-4 py-5 sm:px-8"><div className="mx-auto flex max-w-3xl items-center justify-between gap-4"><div className="flex items-center gap-3 font-semibold"><BrandMark className="h-7 w-7 text-primary" />CelikPanel</div><LanguageSwitcher /></div></header>;
+    if (firstWait) {
+        // The wait outlasted the quiet time: what is awaited, that nobody needs to act, and how it ends. As in the
+        // hold layer over a mounted page, the reload is offered only once the wait has lasted half a minute.
+        const opening = cause === 'loading';
+        return <div className="min-h-screen bg-bg text-fg">
+            {header}
+            <main className="mx-auto max-w-3xl px-4 py-10 sm:px-8 sm:py-16">
+                {user && <p className="mb-5 break-words text-sm text-fg-muted">{user.username}</p>}
+                <h1 className="text-2xl font-semibold">{t(opening ? 'recovery.loadingTitle' : 'recovery.checkingTitle')}</h1>
+                <p className="mt-4 max-w-prose break-words text-sm leading-relaxed text-fg-muted" role="status">{t(opening ? 'recovery.loadingHelp' : 'recovery.waitingHelp')}</p>
+                {prolonged && <p className="mt-4 max-w-prose text-sm leading-relaxed text-fg-muted">{t('recovery.waitingProlonged')}</p>}
+                {(!opening || prolonged) && <div className="mt-6 flex flex-wrap items-center gap-3">
+                    {!opening && <Button disabled={checking} onClick={onRetry}>{checking && <Spinner />}{t(checking ? 'recovery.checking' : 'recovery.retry')}</Button>}
+                    {prolonged && <Button variant="secondary" onClick={() => window.location.reload()}>{t('app.reload')}</Button>}
+                </div>}
+            </main>
+        </div>;
+    }
     return <div className="min-h-screen bg-bg text-fg">
-        <header className="border-b border-border bg-surface px-4 py-5 sm:px-8"><div className="mx-auto flex max-w-3xl items-center justify-between gap-4"><div className="flex items-center gap-3 font-semibold"><BrandMark className="h-7 w-7 text-primary" />CelikPanel</div><LanguageSwitcher /></div></header>
+        {header}
         <main className="mx-auto max-w-3xl px-4 py-10 sm:px-8 sm:py-16">
             {user && <p className="mb-5 break-words text-sm text-fg-muted">{user.username}</p>}
             <h1 className="text-2xl font-semibold">{t(waiting ? 'recovery.checkingTitle' : handover ? 'recovery.handoverTitle' : `recovery.${cause}Title`)}</h1>
@@ -128,7 +177,7 @@ export function RecoveryAccess({ user, cause, checking = false, onRetry, onUnaut
             <div className="mt-6 flex flex-wrap items-center gap-3"><Button disabled={checking} onClick={onRetry}>{checking && <Spinner />}{t(checking ? 'recovery.checking' : 'recovery.retry')}</Button><Button variant="secondary" onClick={() => window.location.reload()}>{t('app.reload')}</Button></div>
             {/* A finished update is not the reason for an access check, so only an unfinished operation is drawn here.
                 During the planned handover even that stays one step away. A page that failed to load keeps the full reader. */}
-            {user?.effective_role === 'admin' && cause !== 'checking' && <RecoveryStatus key={user.username} username={user.username}
+            {user?.effective_role === 'admin' && <RecoveryStatus key={user.username} username={user.username}
                 onUnauthorized={onUnauthorized} unfinishedOnly={cause !== 'bundle'} disclosed={!!handover} />}
         </main>
     </div>;

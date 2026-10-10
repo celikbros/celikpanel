@@ -137,6 +137,12 @@ export function PanelUpdateCard({ activation = false }: { activation?: boolean }
         updateCheckAbort.current = null;
     }, []);
 
+    // The update this browser follows (SystemUpdateOperation): the card says
+    // what the notice says (owner report 2026-10-10).
+    const tracking = systemUpdate.tracking ?? null;
+    const verifying = tracking?.phase === 'verifying';
+    // Read on mount and again when the followed update is found installed, so
+    // the version shown is the one this panel runs now. A GET only.
     useEffect(() => {
         let cancelled = false;
         fetch('/api/v1/panel/version', { cache: 'no-store', credentials: 'same-origin' })
@@ -150,7 +156,7 @@ export function PanelUpdateCard({ activation = false }: { activation?: boolean }
             })
             .catch(() => undefined);
         return () => { cancelled = true; };
-    }, []);
+    }, [verifying]);
 
     async function refreshHostMutationReadiness(): Promise<HostMutationReadiness> {
         const generation = lifecycleGeneration.current;
@@ -300,7 +306,7 @@ export function PanelUpdateCard({ activation = false }: { activation?: boolean }
 
             {currentVersion && currentCommit && (
                 <dl className="mt-4 grid gap-3 rounded-lg border border-border bg-surface-subtle p-4 text-sm sm:grid-cols-2">
-                    <div><dt className="text-fg-muted">{t('panelUpdate.currentVersion')}</dt><dd className="font-mono text-fg">{currentVersion}</dd></div>
+                    <div><dt className="text-fg-muted">{t('panelUpdate.currentVersion')}</dt><dd className="font-mono text-fg">{currentVersion}{verifying && tracking?.version === currentVersion && <span className="ml-2 font-sans text-xs font-medium text-fg-muted" data-update-state="verifying">({t('panelUpdate.card.installedVerifying')})</span>}</dd></div>
                     <div><dt className="text-fg-muted">{t('panelUpdate.currentCommit')}</dt><dd className="break-all font-mono text-fg">{currentCommit}</dd></div>
                     {target && <>
                         <div><dt className="text-fg-muted">{t('panelUpdate.targetVersion')}</dt><dd className="font-mono font-semibold text-fg">{target.version}</dd></div>
@@ -310,6 +316,17 @@ export function PanelUpdateCard({ activation = false }: { activation?: boolean }
                         <div className="sm:col-span-2"><dt className="text-fg-muted">{t('panelUpdate.sha256')}</dt><dd className="break-all font-mono text-xs text-fg">{target.archive_sha256}</dd></div>
                     </>}
                 </dl>
+            )}
+
+            {tracking && (
+                <div className="mt-4 flex items-start gap-2 rounded-lg border border-border bg-surface-subtle p-3 text-sm text-fg" role="status" aria-live="polite" data-update-phase={tracking.phase}>
+                    {tracking.phase === 'unknown'
+                        ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+                        : <Loader2 className="mt-0.5 h-4 w-4 shrink-0 motion-safe:animate-spin text-primary" aria-hidden="true" />}
+                    <p>{t(tracking.phase === 'verifying' ? 'panelUpdate.card.verifying'
+                        : tracking.phase === 'unknown' ? 'panelUpdate.card.unknown'
+                            : tracking.phase === 'reading' ? 'panelUpdate.card.reading' : 'panelUpdate.card.applying', { version: tracking.version })}</p>
+                </div>
             )}
 
             {target && check?.available && !active && (

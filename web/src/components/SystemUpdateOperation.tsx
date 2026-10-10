@@ -39,6 +39,7 @@ import {
     systemUpdateMutationLocked,
 } from '../lib/systemUpdateWatchdog';
 import { useSystemUpdateNavigationLease } from '../lib/useSystemUpdateNavigationLease';
+import { decodeSystemUpdatePhase, systemUpdateClockTime, systemUpdateOperationPhase, systemUpdateTrackingText, type SystemUpdateTracking, type SystemUpdateTrackingPhase } from '../lib/systemUpdateTracking';
 
 type Translate = ReturnType<typeof useI18n>['t'];
 
@@ -83,6 +84,8 @@ type UpdateStatus = {
     status?: 'queued' | 'running' | 'succeeded' | 'failed';
     target?: UpdateTarget;
     summary?: string;
+    // Additive: 'verifying' while running on the already installed target.
+    phase?: 'verifying';
 };
 
 type TrackingView = {
@@ -90,6 +93,8 @@ type TrackingView = {
     message: string;
     disconnected: boolean;
     lastAttemptAt: number | null;
+    // What the last exact read established (lib/systemUpdateTracking.ts).
+    phase: SystemUpdateTrackingPhase;
 };
 
 type TerminalResult = {
@@ -151,6 +156,9 @@ type NotFoundRecoveryResult =
 type SystemUpdateOperationContextValue = {
     active: boolean;
     start: (marker: UpdateMarker) => Promise<SystemUpdateStartResult>;
+    // The update this browser follows and what its last read established;
+    // null when none is followed or its outcome is known.
+    tracking: SystemUpdateTracking | null;
 };
 
 type PendingRenderCommit = {
@@ -219,6 +227,7 @@ function decodeUpdateStatus(payload: unknown): UpdateStatus | null {
         status: value.status,
         target: value.target,
         ...(value.summary ? { summary: value.summary } : {}),
+        ...(decodeSystemUpdatePhase(value.phase) ? { phase: 'verifying' as const } : {}),
     };
 }
 
@@ -620,7 +629,7 @@ function terminalResultFromRecord(record: TerminalUpdateRecord): TerminalResult 
 }
 
 export function SystemUpdateOperationProvider({ children }: { children: ReactNode }) {
-    const { t, screensReady } = useI18n();
+    const { t, screensReady, locale } = useI18n();
     const [initialRecord] = useState<StoredUpdateRecord | null>(() => readStoredRecord());
     const [canonicalReady, setCanonicalReady] = useState(false);
     const canonicalReadyRef = useRef(false);
@@ -635,9 +644,10 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
     const markerRef = useRef<UpdateMarker | null>(initialMarker);
     const [view, setView] = useState<TrackingView>({
         operation: null,
-        message: t('panelUpdate.running'),
+        message: t('panelUpdate.tracking.reading'),
         disconnected: false,
         lastAttemptAt: null,
+        phase: 'reading',
     });
     const [terminal, setTerminal] = useState<TerminalResult | null>(initialTerminal);
     const terminalRef = useRef<TerminalResult | null>(initialTerminal);
@@ -764,6 +774,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                 message: t('panelUpdate.sending'),
                 disconnected: false,
                 lastAttemptAt: null,
+                phase: 'reading',
             });
             setAuthPaused(false);
             setProvisional(exactMarker);
@@ -862,9 +873,11 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                 setAuthPaused(paused);
                 setView({
                     operation: null,
-                    message: message ?? t('panelUpdate.running'),
+                    // Nothing has been read for this record yet in this document.
+                    message: message ?? t('panelUpdate.tracking.reading'),
                     disconnected: false,
                     lastAttemptAt: null,
+                    phase: 'reading',
                 });
             });
             return;
@@ -1535,6 +1548,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                         message: outcome.message,
                         disconnected: false,
                         lastAttemptAt: attemptAt,
+                        phase: 'unknown',
                     });
                 });
                 return;
@@ -1549,6 +1563,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                     message: outcome.message,
                     disconnected: false,
                     lastAttemptAt: attemptAt,
+                    phase: 'reading',
                 });
                 const recovery = await recoverNotFound(exactMarker);
                 if (recovery.kind === 'terminal' || recovery.kind === 'stale') return;
@@ -1579,6 +1594,8 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                 message: outcome.message,
                 disconnected: outcome.disconnected,
                 lastAttemptAt: attemptAt,
+                // A record that was read names its phase; a read that failed is unknown.
+                phase: systemUpdateOperationPhase(outcome.operation),
             });
             if (pollAgain) {
                 pollAgain = false;
@@ -1900,16 +1917,25 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
     const terminalKind = pendingReload || requiredReloadMarker ? 'succeeded'
         : failureGuidance?.state === 'succeeded' ? 'succeeded' : displayedTerminal?.kind;
     const disconnected = !pendingReload && !requiredReloadMarker && marker !== null && view.disconnected;
+    // The exact record this document follows, while its outcome is not known
+    // (owner report 2026-10-10): its phase is what the last read established.
+    // Sonucu bilinmeyen, izlenen kaydin asamasi son okumanin soyledigidir.
+    const followed = marker !== null && provisional === null && pendingReload === null
+        && requiredReloadMarker === null && displayedTerminal === null ? marker : null;
+    const tracking: SystemUpdateTracking | null = followed ? { version: followed.target.version, phase: view.phase } : null;
+    const trackingText = tracking ? systemUpdateTrackingText(tracking, view.message, t) : null;
     const title = failureGuidance
         ? outcomeText(failureGuidance.title)
         : terminalKind === 'succeeded'
             ? t('panelUpdate.succeeded')
-            : t('panelUpdate.title');
+            : trackingText?.title ?? t('panelUpdate.title');
     const message = pendingReload || requiredReloadMarker
         ? t('panelUpdate.reloading', { version: (pendingReload ?? requiredReloadMarker)!.target.version })
         : failureGuidance
             ? outcomeText(failureGuidance.lines[0])
-            : displayedTerminal?.message ?? view.message;
+            : trackingText?.message ?? displayedTerminal?.message ?? view.message;
+    // Why the read failed (connection, restart, refusal), under the unknown line.
+    const trackingHint = trackingText?.hint ?? null;
     const failureDetails = failureGuidance && (
         <>
             {failureGuidance.lines.slice(1).map((line, index) => (
@@ -1935,6 +1961,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
         <SystemUpdateOperationContext.Provider value={{
             active: occupied,
             start,
+            tracking,
         }}>
             <div ref={applicationRef} className="contents" aria-hidden={blocking ? true : undefined}>
                 {children}
@@ -1952,6 +1979,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                     >
                         {message}
                     </p>
+                    {trackingHint && <p className={'mt-1 text-sm text-fg-muted'}>{trackingHint}</p>}
                     {failureDetails}
                     <p className={'mt-2 text-xs text-fg-subtle'}>{t(displayedTerminal?.kind === 'failed' ? 'panelUpdate.failureAcknowledgement' : 'panelUpdate.watch')}</p>
                     <p className={'mt-3 font-mono text-xs text-fg'}>
@@ -2017,6 +2045,7 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                         >
                             {message}
                         </p>
+                        {trackingHint && <p className="mt-2 text-sm text-fg-muted">{trackingHint}</p>}
                         {failureDetails}
                         <p className="mt-4 rounded-lg border border-border bg-surface-2 px-4 py-3 text-xs leading-5 text-fg-subtle">
                             {t(displayedTerminal?.kind === 'failed' ? 'panelUpdate.failureAcknowledgement' : 'panelUpdate.interactionLocked')}
@@ -2036,8 +2065,8 @@ export function SystemUpdateOperationProvider({ children }: { children: ReactNod
                             </div>
                             {marker && view.lastAttemptAt && (
                                 <div className="col-span-2">
-                                    <dt className="text-fg-subtle">UTC</dt>
-                                    <dd className="mt-1 font-mono text-fg">{new Date(view.lastAttemptAt).toLocaleTimeString()}</dd>
+                                    <dt className="text-fg-subtle">{t('panelUpdate.lastRead')}</dt>
+                                    <dd className="mt-1 font-mono text-fg">{systemUpdateClockTime(view.lastAttemptAt, locale)}</dd>
                                 </div>
                             )}
                         </dl>

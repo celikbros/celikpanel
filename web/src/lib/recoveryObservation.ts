@@ -51,6 +51,21 @@ export function savedRecoveryFinished(raw: string | null): boolean {
     } catch { return false; }
 }
 
+/**
+ * Presentation hint only: this browser started an update and has not recorded
+ * its end (the tracker's own record is still `active`). It never asserts a
+ * server outcome. It only lets a Panel that stopped answering be explained by
+ * the restart an update makes, instead of by the license (2026-10-10).
+ * Yalnizca sunum ipucu: bu tarayici bir guncelleme baslatti ve sonunu kaydetmedi.
+ */
+export function savedUpdateUnfinished(raw: string | null): boolean {
+    if (!raw || raw.length > 8192) return false;
+    try {
+        const value = JSON.parse(raw);
+        return value?.state_version === 1 && value.phase === 'active' && savedRecoveryRequestId(raw) !== null;
+    } catch { return false; }
+}
+
 export function parseRecoveryObservation(raw: unknown, requestId: string): RecoveryObservation {
     if (!/^[a-f0-9]{32}$/.test(requestId) || !raw || typeof raw !== 'object') throw new Error('invalid recovery observation');
     const value = raw as Record<string, unknown>;

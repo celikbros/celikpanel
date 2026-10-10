@@ -25,6 +25,9 @@ export interface ServerSetupCheck {
     id: string;
     state: 'ready' | 'action_required' | 'unknown';
     code: string;
+    // Additive (2026-10-10): the typed cause and the observed values it names.
+    reason?: string;
+    vars?: Record<string, string>;
 }
 export interface ServerSetupSnapshot {
     version: number;

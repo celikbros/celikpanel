@@ -4512,3 +4512,115 @@ recovery behaviour. 2026-10-10 is the clock date.
   assistant.
 - **Open.** All of the above. The cold page load is the only measured failure
   of this entry; no exit is claimed.
+
+### First page load without an unanswered access page, and the hold layer names the cause it read (P0.2 area; invariants 2 and 6; 2026-10-10)
+
+D-025 invariants 2 (unknown is not absent, failed or a license verdict) and 6
+(readiness, progress and access stay independent; a screen says what was
+verified); D-024. **No P0 item is closed or advanced**; P0.2 stays partial and
+every open acceptance item stays open. Source state with component tests and
+one browser run against the loopback mock. 2026-10-10 is the clock date.
+
+- **Finding (seventh native record, cell 5).** On a cold full load of `/setup`,
+  `/` and `/settings?section=updates`, signed in and healthy, the full page
+  "Checking panel access" was painted before any session read had answered, on
+  18 of 18 loads. **Cause in the source** (at `a9c95d437`):
+  `web/src/components/RecoveryAccess.tsx:118` (`waiting` for cause `checking`)
+  drew `:121-128`, title, help, "Checking…" and "Reload CelikPanel", from its
+  first render, with no quiet time. Two parents render it during a load:
+  `web/src/App.tsx:510` (`<Suspense fallback={<StandaloneRecovery loading />}>`
+  while the lazily loaded update provider arrives; `:495-497` maps that wait to
+  `checking`, and to `checking` again once session and readiness were
+  confirmed) and `App.tsx:471` (`AuthGate`, `if (!shown)` while its own session
+  read is in flight). Each mounts its own session read, so each load reads
+  `auth/me` and `panel/availability` twice, as the record saw.
+- **Finding (cell 1).** During the update's planned restart the hold layer said
+  "could not read the license result". **Cause:**
+  `web/src/components/LicenseOnboarding.tsx:169` passed `cause="license"` to the
+  hold for every failed access read, and `:179` did the same for the full page;
+  `:57`/`:63` turned a dropped connection, a refusal from in front of the Panel
+  and an unreadable license result into the same `failed`.
+- **Change.** A new hook, `web/src/lib/quietRead.ts` (`QUIET_READ_MS = 1500`,
+  equal to `ACCESS_HOLD_QUIET_MS`), keeps a first wait off the screen until the
+  quiet time has passed; a component that starts waiting while another one's
+  explained wait is on screen continues it. `RecoveryAccess` draws only the page
+  background during a first wait (`checking`, and the new `loading` for a
+  confirmed session whose interface is still on its way), then the explained
+  wait with the reload after 30 s; every other cause renders as before, at once.
+  `LicenseOnboarding` does the same for its first access read, and records the
+  cause each read showed (`AccessReadCause`: no answer or a non-Panel refusal →
+  `availability`; `PANEL_STARTING` → `starting`; an answer whose license result
+  was unavailable, or a license refusal of a request → `license`), passed to the
+  hold and to the full page. `AccessHold` names an unanswered Panel as an
+  update's restart while this browser's update record is `active`
+  (`savedUpdateUnfinished` in `web/src/lib/recoveryObservation.ts`, a
+  presentation hint only). `RecoveryAccess` reads its two addresses through
+  `readRemote`; it leaves the remote-state ratchet list (31 to 30 files;
+  `valueFromFailure` 1, `swallowedFailure` 1, `rawRead` 2 removed).
+- **Schema or version transition.** None: no API, stored record or access rule
+  changed. **Recovery behaviour.** Unchanged: the recovery page for a Panel
+  that is down or starting, during the interface load or after it failed, is
+  drawn as soon as its read answers; the quiet time applies only while no read
+  has answered.
+- **Evidence.** `web/tests/recovery-access-runtime.test.mjs`,
+  `web/tests/access-hold-runtime.test.mjs` (component level, see the operation
+  guidance entry of the same date). Browser run on the loopback mock
+  (`web/tools/browser-inspect`, `coldload`, `coldslow`; throttled Chrome): the
+  published code painted the gate for about 1.4 s on all three routes; the
+  change drew no sentence before the page on any of them.
+- **Open.** The real-system re-measurement on a guest (set7's method) and any
+  installed server; a load with the HTTP cache enabled; the hold layer's words
+  during a real update; the two session reads per load (not changed here); the
+  remaining 30 files of the ratchet list.
+
+### The setup page's final check and the update notice: a stopped run is not in progress, a running update on the installed target is "being verified" (P0.2 area; invariants 2 and 6; D-024; 2026-10-10)
+
+D-025 invariants 2 (unknown is not absent, empty or success) and 6 (a screen
+says what was verified); D-024; P0.2 area (truthful status: the update notice
+and the update card agree). **No P0 item is closed or advanced**; every
+acceptance item stays open. It answers items 2 and 4 of the entry above; items
+1, 3 and 5 are not touched here. 2026-10-10 is the clock date.
+
+- **Causes, read from the code.** Item 4: a run whose plan is reopened while
+  its final check waits is recorded `failed`, code `server_setup_plan_revised`,
+  phase `verification` (`cmd/panel/server_setup_revise.go`); the page shows the
+  latest run when it holds no marker and drew it as a failure with the generic
+  sentence, while the step list called the final step in progress for that
+  phase. Item 2: the Agent's update record stays `running` after the new Panel
+  has started, until the updater exits and its final proof passes
+  (`cmd/agent/system_update_worker_linux.go`); the notice said "being applied"
+  for every running read and as its placeholder before any read, while the card
+  read the version the answering Panel runs. Neither cause was read on the
+  owner's servers.
+- **Changed.** Setup: the mail identity check carries an additive typed
+  `reason` and `vars` (`setupMailIdentityCheck`, `server_setup_readiness.go`);
+  the page says a reopened plan as such, puts the open checks and their help
+  above the step list unfolded, and names each step's state (waiting for you,
+  waiting for requirements, could not be checked, failed, stopped, not
+  started). Update: `GET /api/v1/panel/update/status` (and the abandon answer)
+  carries an additive `phase: "verifying"` when the record is running and the
+  Panel answering is the exact target build (`panelUpdateStatusPhase`); the
+  notice and the card say "installed, being verified" then, "could not be read"
+  with the read's reason when a read fails, and "reading" before the first
+  read; a finished record leaves no notice (unchanged). The update dialog's
+  time line is local time with its zone, not labelled "UTC".
+- **Schema or version transition.** None stored: two additive JSON fields on a
+  setup check (persisted inside the execution record, absent in older records,
+  which keep their generic sentence) and one on the update status answer
+  (ignored by an older interface). **Recovery behaviour.** Unchanged; nothing
+  starts, retries or reverts differently. The setup flow, routing and
+  prerequisites (D-021) are unchanged.
+- **Evidence.** `cmd/panel/known_state_gates_test.go` (typed reasons; the phase
+  for an old and a target Panel, each status); `go test ./cmd/panel/...` ok,
+  `go vet` and `gofmt` clean, in the WSL Debian development guest.
+  `web/tests/setup-final-check-mounted.test.mjs` (stopped by reopening, waiting
+  for the owner, unmet prerequisite, unknown, failed; EN and TR; the reason
+  above the list and unfolded) and `web/tests/update-tracking-mounted.test.mjs`
+  (verifying, unknown, finished, reading; the time label). A real Chrome against
+  the loopback mock, scenarios `finalcheck` and `updatephase`, desktop and
+  phone, English and Turkish: screenshots looked at.
+- **Open.** Not measured on a real system: a server whose reverse DNS is wrong
+  (the typed reason was never read from a real Agent), the owner's own setup
+  record, the verifying window of a real update, an installed server. On a
+  phone the corner notice covers the card's status line in the mock
+  (unchanged). Items 1, 3 and 5 above stay open.

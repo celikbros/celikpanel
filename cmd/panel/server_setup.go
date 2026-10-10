@@ -46,10 +46,18 @@ type serverSetupDraft struct {
 	Customization         *serverSetupCustomization          `json:"customization,omitempty"`
 }
 
+// Reason and Vars are additive (2026-10-10): the typed cause of a check that
+// needs an action, and the observed values the screen names (an address, a
+// host name, the reverse DNS name found). A record written before them has
+// neither and keeps its generic sentence.
+// Reason ve Vars ekleme alanlardir: eylem isteyen kontrolun tipli nedeni ve
+// ekranin andigi gozlenen degerler. Eski kayitta yoktur; genel cumle kalir.
 type serverSetupCheck struct {
-	ID    string `json:"id"`
-	State string `json:"state"`
-	Code  string `json:"code"`
+	ID     string            `json:"id"`
+	State  string            `json:"state"`
+	Code   string            `json:"code"`
+	Reason string            `json:"reason,omitempty"`
+	Vars   map[string]string `json:"vars,omitempty"`
 }
 
 type serverSetupState struct {

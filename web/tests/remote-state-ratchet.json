@@ -64,11 +64,6 @@
       "swallowedFailure": 1,
       "rawRead": 2
     },
-    "src/components/RecoveryAccess.tsx": {
-      "valueFromFailure": 1,
-      "swallowedFailure": 1,
-      "rawRead": 2
-    },
     "src/components/SecurityAuditCard.tsx": {
       "rawRead": 1
     },

@@ -1097,6 +1097,13 @@ export const enServerScreens = {
     'dbconf.reloadFailed.restored_unit_reload_failed': "The change was not kept, and the previous file is back in place. The systemd unit of {service} could not reload, with the new file and again with the previous one, so CelikPanel asked {service} directly: it read the previous file again and is running with the settings it had before your change. The reload failed with the previous file too, so the cause is not only this change. On the server, run sudo systemctl reload {unit} to see why, correct it, then save the change here again.",
     'dbconf.reloadFailed.restored_running_unknown': "The change was not kept, and the previous file is back in place. The systemd unit of {service} could not reload, with the new file and again with the previous one, and CelikPanel could not establish which settings {service} is running with now: a reload that fails part-way may already have made it read the new file. On the server, run sudo systemctl reload {unit}, correct what it reports, then reload this page.",
     // --- end of set1 corrections ---
+    // --- update card: the update this browser follows, said as the notice says it (2026-10-10) ---
+    'panelUpdate.card.installedVerifying': 'installed, being verified',
+    'panelUpdate.card.reading': 'Reading the state of the update to {version}…',
+    'panelUpdate.card.applying': 'The update to {version} is being applied. Checking for updates is available again when it has finished.',
+    'panelUpdate.card.verifying': '{version} is installed and this panel is running it. The update is still being verified; checking for updates is available again when it has finished.',
+    'panelUpdate.card.unknown': 'The state of the update to {version} could not be read just now, so it is not known whether it has finished. The update notice reads it again by itself.',
+    // --- end of the update card block ---
 } as const;
 
 export type ServerScreenKey = keyof typeof enServerScreens;

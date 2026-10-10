@@ -4,6 +4,7 @@ import type { CurrentUser } from '../lib/api';
 import { useI18n } from '../i18n';
 import { handoverAddress } from '../lib/panelHandover';
 import { useAccessGuidance } from '../lib/accessGuidance';
+import { savedUpdateUnfinished, UPDATE_MARKER_KEY } from '../lib/recoveryObservation';
 import { RecoveryStatus, usePanelHandover } from './RecoveryAccess';
 import { AddressLink } from './AddressLink';
 import { Button, Dialog } from './ui';
@@ -137,7 +138,10 @@ export function AccessHold({ active, silent = false, cause, checking, user, onRe
     const address = handover?.elsewhere ? handoverAddress(handover.host, window.location.port) : '';
     // The wording arrives ahead of need. Should it be missing, the layer still
     // blocks and says the neutral thing the shell can say: access is being checked.
-    const copy = guidance && screensReady ? guidance.accessHoldCopy(t, cause, waiting) : null;
+    // The Panel did not answer while this browser's update has not recorded its end: the
+    // update's restart is named, not the license. The record only chooses the words.
+    const updating = shown && cause === 'availability' && (() => { try { return savedUpdateUnfinished(localStorage.getItem(UPDATE_MARKER_KEY)); } catch { return false; } })();
+    const copy = guidance && screensReady ? guidance.accessHoldCopy(t, updating ? 'update' : cause, waiting) : null;
     const title = handover ? t('recovery.handoverTitle') : copy?.title ?? t('recovery.checkingTitle');
     const help = handover ? t('recovery.handoverHelp', { host: handover.host }) : copy?.help ?? t('recovery.checkingHelp');
     const resume = !handover && copy?.resume;

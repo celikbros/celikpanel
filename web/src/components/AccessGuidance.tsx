@@ -8,13 +8,18 @@ import { Button, Dialog } from './ui';
 // lib/accessGuidance.ts tarafindan onceden yuklenir; statik olarak ice aktarilmaz.
 
 type Translate = ReturnType<typeof useI18n>['t'];
-export type AccessHoldCause = 'license' | 'availability' | 'starting' | 'auth';
+/**
+ * update: the Panel did not answer while an update started from this browser
+ * has not recorded its end; the restart an update makes is the likely reason,
+ * and the license is not named (seventh native record, cell 1, 2026-10-10).
+ */
+export type AccessHoldCause = 'license' | 'availability' | 'starting' | 'auth' | 'update';
 
 /**
  * What the layer over a held page says. waiting: the quiet time has passed and
  * the first read has not answered; nothing has failed yet. Otherwise a read has
- * answered without confirming access: the reason, then that nobody needs to act
- * and how the page resumes.
+ * answered without confirming access: the reason that read showed, then that
+ * nobody needs to act and how the page resumes.
  */
 export function accessHoldCopy(t: Translate, cause: AccessHoldCause, waiting: boolean) {
     if (waiting) return { title: t('recovery.checkingTitle'), help: t('accessHold.waitingHelp'), resume: '', prolonged: t('accessHold.prolonged') };

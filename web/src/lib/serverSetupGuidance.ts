@@ -1,13 +1,92 @@
 import type { TranslationKey } from '../i18n/en';
+import type { ServerSetupCheck } from './serverSetup';
 import type { ServerSetupExecution } from './serverSetupOperation';
 
-export interface SetupGuidanceText { key: TranslationKey; values?: Record<string, string> }
+// name: a catalogue key the screen translates into the {check} value.
+export interface SetupGuidanceText { key: TranslationKey; values?: Record<string, string>; name?: TranslationKey }
+// One line per check that is not ready, said before the step list. text is the
+// typed sentence (or the could-not-check sentence); without it the screen says
+// the check's code in its own words.
+export interface SetupCheckLine { check: ServerSetupCheck; text?: SetupGuidanceText }
 export interface SetupExecutionGuidance {
     title: TranslationKey;
     messages: SetupGuidanceText[];
     details: SetupGuidanceText[];
+    // Shown after the message at checksAt (the sentence that introduces
+    // them), still above the step list (2026-10-10).
+    checks?: SetupCheckLine[];
+    checksAt?: number;
 }
 const text = (key: TranslationKey, values?: Record<string, string>): SetupGuidanceText => ({ key, values });
+
+// The run was stopped because its plan was reopened (POST /api/v1/setup/revise,
+// cmd/panel/server_setup_revise.go): a known end that is not a failure.
+// Plan yeniden acildigi icin durdurulan calisma: hata degil, bilinen bir son.
+export const setupPlanReopened = (execution: ServerSetupExecution | null | undefined): boolean =>
+    execution?.status === 'failed' && execution.error?.code === 'server_setup_plan_revised';
+
+// The typed reason of a check that needs an action (cmd/panel
+// setupMailIdentityCheck, 2026-10-10). Values are re-checked here: an
+// unexpected reason or value yields null and the generic sentence is kept.
+// Eylem isteyen kontrolun tipli nedeni; beklenmeyen deger genel cumleye duser.
+const dnsName = (value: unknown): value is string => typeof value === 'string' && value.length > 0 && value.length <= 253 && /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/i.test(value);
+const address = (value: unknown): value is string => typeof value === 'string' && value.length <= 64 && /^[0-9a-f:.]+$/i.test(value);
+export function setupCheckReasonText(check: ServerSetupCheck): SetupGuidanceText | null {
+    if (check.state !== 'action_required' || check.id !== 'mail_identity' || typeof check.reason !== 'string') return null;
+    const vars = check.vars && typeof check.vars === 'object' && !Array.isArray(check.vars) ? check.vars : {};
+    const { hostname, ip, ptr, current } = vars as Record<string, unknown>;
+    if (check.reason === 'server_address_not_public') {
+        return address(ip) ? text('setup.check.mailIdentity.address', { ip }) : text('setup.check.mailIdentity.addressMissing');
+    }
+    if (!dnsName(hostname) || !address(ip)) return null;
+    if (check.reason === 'reverse_dns_mismatch') {
+        return dnsName(ptr) ? text('setup.check.mailIdentity.reverseDNS', { ip, ptr, hostname }) : text('setup.check.mailIdentity.reverseDNSMissing', { ip, hostname });
+    }
+    if (check.reason === 'forward_dns_mismatch') return text('setup.check.mailIdentity.forwardDNS', { ip, hostname });
+    if (check.reason === 'mail_name_differs') {
+        return dnsName(current) ? text('setup.check.mailIdentity.mailName', { current, hostname }) : text('setup.check.mailIdentity.mailNameUnread', { hostname });
+    }
+    return null;
+}
+const checkNames: Record<string, TranslationKey> = {
+    panel_https: 'setup.check.name.panel_https', panel_renewal: 'setup.check.name.panel_renewal', dns: 'setup.check.name.dns',
+    firewall: 'setup.check.name.firewall', services: 'setup.check.name.services', mail_tls: 'setup.check.name.mail_tls',
+    mail_identity: 'setup.check.name.mail_identity', mail_delivery: 'setup.check.name.mail_delivery',
+};
+function checkLine(check: ServerSetupCheck): SetupCheckLine {
+    const typed = setupCheckReasonText(check);
+    if (typed) return { check, text: typed };
+    if (check.state === 'unknown') return { check, text: { key: 'setup.check.notRead', name: checkNames[check.id] || 'setup.check.name.other' } };
+    return { check };
+}
+
+// What the step list says a step is. A stopped run has no step in progress; a
+// final check that waits says whether it waits for the owner, for another
+// requirement, or could not be read (D-024, 2026-10-10).
+// Durmus calismada surmekte olan adim yoktur; bekleyen son denetim neyi
+// bekledigini soyler.
+export type SetupStepState = 'pending' | 'running' | 'succeeded' | 'failed' | 'stopped' | 'notStarted' | 'waitingOwner' | 'waitingRequirement' | 'unknown';
+export function setupStepState(execution: ServerSetupExecution, step: ServerSetupExecution['steps'][number], checks: ServerSetupCheck[] = execution.checks || []): SetupStepState {
+    const stopped = execution.status === 'failed';
+    if (step.kind === 'verify') {
+        if (execution.status === 'waiting' && execution.phase === 'verification') {
+            const open = checks.filter(check => check.state !== 'ready');
+            if (open.some(check => setupCheckReasonText(check))) return 'waitingOwner';
+            if (open.length > 0 && open.every(check => check.state === 'unknown')) return 'unknown';
+            return 'waitingRequirement';
+        }
+        if (stopped) return execution.phase === 'verification' ? 'stopped' : 'notStarted';
+        return execution.phase === 'verification' || execution.status === 'succeeded' ? 'running' : 'pending';
+    }
+    if (stopped && step.status === 'running') return 'stopped';
+    if (stopped && step.status === 'pending') return 'notStarted';
+    return step.status;
+}
+export const setupStepStateLabel: Record<SetupStepState, TranslationKey> = {
+    pending: 'setup.operation.pending', running: 'setup.operation.running', succeeded: 'setup.operation.succeeded',
+    failed: 'setup.stepState.failed', stopped: 'setup.stepState.stopped', notStarted: 'setup.stepState.notStarted',
+    waitingOwner: 'setup.stepState.waitingOwner', waitingRequirement: 'setup.verifyWaiting', unknown: 'setup.stepState.unknown',
+};
 
 const componentNames: Record<string, string> = { nginx: 'Nginx', 'php-fpm': 'PHP-FPM', mariadb: 'MariaDB', postgresql: 'PostgreSQL', node: 'Node.js', nftables: 'nftables', certbot: 'Certbot', postfix: 'Postfix', dovecot: 'Dovecot', rspamd: 'Rspamd', roundcube: 'Roundcube', bind: 'BIND', pdns: 'PowerDNS', webmail: 'Webmail', 'core-mail': 'Core Mail', 'protected-mail': 'Spam-Protected Mail' };
 export const setupComponentName = (id: string): string => componentNames[id] || id;
@@ -118,6 +197,22 @@ export function setupExecutionGuidance(execution: ServerSetupExecution, componen
         result.messages.push(text('setup.guide.buildChanged'));
         return result;
     }
+    // Reopened for editing: why it stopped, what it was still waiting for when
+    // it stopped (as the last check recorded it), and the next action.
+    // Duzenleme icin yeniden acildi: neden durdugu, durdugunda neyi bekledigi
+    // ve sonraki eylem.
+    if (setupPlanReopened(execution)) {
+        result.title = 'setup.guide.revisedTitle';
+        result.messages.push(text('setup.guide.revised'));
+        const open = execution.phase === 'verification' ? (execution.checks || []).filter(check => check.state !== 'ready') : [];
+        if (open.length > 0) {
+            result.messages.push(text('setup.guide.revisedChecks'));
+            result.checks = open.map(checkLine);
+            result.checksAt = result.messages.length - 1;
+        }
+        result.messages.push(text('setup.guide.revisedNext'));
+        return result;
+    }
     if (phase === 'license') {
         result.title = 'setup.licenseWaiting';
         result.messages.push(text('setup.guide.license'));
@@ -184,10 +279,17 @@ export function setupExecutionGuidance(execution: ServerSetupExecution, componen
     } else if (phase === 'firewall') {
         result.messages.push(text('setup.guide.firewall'));
     } else if (phase === 'verification') {
-        result.messages.push(text('setup.guide.verification'));
+        // The reason, who acts and the next action are said before the step
+        // list and are not folded away (D-024, owner report 2026-10-10): the
+        // lead, one line per open check, its general help, then how it resumes.
+        // Neden, kimin islem yapacagi ve sonraki eylem adim listesinden once,
+        // katlanmadan soylenir.
+        const open = (execution.checks || []).filter(check => check.state !== 'ready');
+        result.messages.push(text(execution.status === 'waiting' ? 'setup.guide.verificationWaiting' : 'setup.guide.verification'));
+        if (open.length > 0) { result.checks = open.map(checkLine); result.checksAt = 0; }
         const codes = new Set<string>();
-        for (const check of execution.checks || []) {
-            if (check.state === 'ready') continue;
+        for (const check of open) {
+            if (setupCheckReasonText(check)) continue;
             const key: TranslationKey = check.id === 'dns' ? 'setup.guide.pairChecks'
                 : check.id === 'mail_identity' ? 'setup.guide.mailIdentity'
                     : check.id === 'mail_delivery' ? 'setup.guide.mailDelivery'
@@ -197,9 +299,10 @@ export function setupExecutionGuidance(execution: ServerSetupExecution, componen
             // Harici DNS yerel es veya aktarim ilkesi gerektirmez.
             const actual = check.id === 'dns' && context?.dns_mode === 'existing' ? 'setup.guide.existingDNS'
                 : check.id === 'dns' && context?.dns_mode !== 'local' ? 'setup.guide.externalChecks' : key;
-            if (!codes.has(actual)) result.details.push(text(actual));
+            if (!codes.has(actual)) result.messages.push(text(actual));
             codes.add(actual);
         }
+        if (execution.status === 'waiting') result.messages.push(text('setup.guide.verificationResume'));
     }
     if (result.messages.length === 0) result.messages.push(text('setup.guide.unknown'));
     if (execution.status === 'running' || (execution.status === 'waiting' && ['dns_readiness', 'dns_publisher', 'access_dns', 'primary_dns', 'infrastructure_dns'].includes(phase))) {

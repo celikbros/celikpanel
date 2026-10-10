@@ -78,6 +78,13 @@ export const tr: Record<ShellKey, string> = {
     'app.pageLoadFailed': 'Bu bölüm yüklenemedi. Bu sekme açıkken CelikPanel güncellenmiş olabilir.',
     'app.reload': 'CelikPanel’i yeniden yükle',
 
+    // İlk sayfa yüklemesi (2026-10-10, yedinci yerel kayıt, hücre 5).
+    'recovery.waitingHelp': "Panel henüz yanıt vermedi. Yanıt verir vermez CelikPanel açılır; bir şey yapmanız gerekmiyor.",
+    'recovery.waitingProlonged': "Bu, yarım dakikadan uzun sürdü. CelikPanel kendiliğinden kontrol etmeyi sürdürür; dilerseniz yeniden de yükleyebilirsiniz.",
+    'recovery.loadingTitle': "CelikPanel açılıyor",
+    'recovery.loadingHelp': "Oturumunuz doğrulandı ve Panel hazır. Arayüz hâlâ yükleniyor ve kendiliğinden açılır.",
+    // İlk sayfa yüklemesi bloğunun sonu.
+
     'nav.dashboard': 'Panel',
     'nav.domains': 'Alan Adları',
     'nav.databases': 'Veritabanları',
@@ -349,6 +356,13 @@ export const tr: Record<ShellKey, string> = {
     'panelUpdate.sending': 'Güncelleme isteği gönderiliyor…',
     'panelUpdate.accepted': 'İstek kabul edildi; güvenli durum takibi başladı.',
     'panelUpdate.watch': 'Gezinin; işlem kilitli.',
+    // --- güncelleme bildirimi: izlenen güncellemenin son okuması (2026-10-10) ---
+    'panelUpdate.tracking.reading': 'Bu güncellemenin durumu sunucudan okunuyor…',
+    'panelUpdate.tracking.verifyingTitle': 'Güncelleme kuruldu, doğrulanıyor',
+    'panelUpdate.tracking.verifying': '{version} kuruldu ve bu panel onu çalıştırıyor. Güncelleme doğrulanıyor ve henüz bitmedi; bu bildirim onu kendiliğinden izler.',
+    'panelUpdate.tracking.unknown': 'Bu güncellemenin durumu şu an okunamadı; bu yüzden hâlâ sürüp sürmediği ya da bitip bitmediği bilinmiyor. Bu bildirim kendiliğinden yeniden okur; başka bir güncelleme başlatmayın.',
+    'panelUpdate.lastRead': 'Son okuma',
+    // --- güncelleme bildirimi bloğunun sonu ---
     'panelUpdate.canonicalChecking': 'Tamamlanmamış güncelleme denetleniyor...',
     'panelUpdate.interactionLocked': 'Bu güncelleme denetlenirken gezinme geçici olarak kilitlidir. İki dakika sonra otomatik açılır; işlem arka planda izlenmeye devam eder.',
     'panelUpdate.ambiguous': 'Başlatma yanıtı belirsiz. İstek tekrarlanmayacak; aynı sunucu durumu izlenecek.',

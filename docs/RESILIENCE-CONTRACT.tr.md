@@ -3822,3 +3822,116 @@ bir ölçümü kaydeder; kod, şema ya da kurtarma davranışını değiştirmez
   gözlemedi.
 - **Açık.** Yukarıdakilerin hepsi. Soğuk sayfa yüklemesi bu girdinin ölçülmüş
   tek başarısızlığıdır; bir bitiş ölçütü iddia edilmez.
+
+### İlk sayfa yüklemesinde yanıtlanmamış erişim sayfası yok; bekletme katmanı okuduğu nedeni söyler (P0.2 alanı; ilke 2 ve 6; 2026-10-10)
+
+D-025 ilke 2 (bilinmeyen; yok, başarısız ya da lisans kararı değildir) ve 6
+(hazır olma, ilerleme ve erişim bağımsız kalır; ekran doğrulananı söyler);
+D-024. **Hiçbir P0 işi kapanmadı ya da ilerlemedi**; P0.2 kısmi kalır ve her açık
+kabul işi açık kalır. Bileşen testleri ve geri döngü taklidine karşı bir
+tarayıcı koşusuyla kaynak durumu. 2026-10-10 saat tarihidir.
+
+- **Bulgu (yedinci gerçek sistem kaydı, hücre 5).** `/setup`, `/` ve
+  `/settings?section=updates` soğuk tam yüklemesinde, oturum açık ve sağlıklıyken,
+  hiçbir oturum okuması yanıt vermeden tam sayfa "Panel erişimi kontrol
+  ediliyor" 18 yüklemenin 18'inde çizildi. **Kaynaktaki neden**
+  (`a9c95d437`'de): `web/src/components/RecoveryAccess.tsx:118` (`checking`
+  nedeni için `waiting`) `:121-128`'i, yani başlık, yardım, "Kontrol ediliyor…"
+  ve "CelikPanel’i yeniden yükle"yi, sessiz süre olmadan ilk çiziminden itibaren
+  çiziyordu. Bir yükleme sırasında onu iki üst bileşen çizer:
+  `web/src/App.tsx:510` (tembel yüklenen güncelleme sağlayıcısı gelirken
+  `<Suspense fallback={<StandaloneRecovery loading />}>`; `:495-497` bu
+  beklemeyi, oturum ve hazır olma doğrulandıktan sonra da, `checking`'e
+  eşler) ve `App.tsx:471` (`AuthGate`, kendi oturum okuması sürerken
+  `if (!shown)`). Her biri kendi oturum okumasını başlatır; kaydın gördüğü
+  gibi her yükleme `auth/me` ve `panel/availability`'yi iki kez okur.
+- **Bulgu (hücre 1).** Güncellemenin planlı yeniden başlatması sırasında
+  bekletme katmanı "lisans sonucunu okuyamadı" dedi. **Neden:**
+  `web/src/components/LicenseOnboarding.tsx:169` her başarısız erişim okuması
+  için bekletmeye `cause="license"` veriyordu, `:179` tam sayfa için de aynısını
+  yapıyordu; `:57`/`:63` kopan bağlantıyı, Panel'in önündeki bir şeyin reddini
+  ve okunamayan lisans sonucunu aynı `failed` durumuna çeviriyordu.
+- **Değişiklik.** Yeni bir kanca, `web/src/lib/quietRead.ts`
+  (`QUIET_READ_MS = 1500`, `ACCESS_HOLD_QUIET_MS`'ye eşit), ilk beklemeyi sessiz
+  süre geçene kadar ekrandan uzak tutar; bir başkasının açıklanmış beklemesi
+  ekrandayken beklemeye başlayan bileşen onu sürdürür. `RecoveryAccess` ilk
+  bekleme sırasında (`checking` ve oturumu doğrulanmış ama arayüzü yolda olan
+  durum için yeni `loading`) yalnızca sayfa zeminini, sonra açıklanmış beklemeyi
+  ve 30 sn sonra yeniden yüklemeyi çizer; diğer her neden eskisi gibi, hemen
+  çizilir. `LicenseOnboarding` ilk erişim okuması için aynısını yapar ve her
+  okumanın gösterdiği nedeni kaydeder (`AccessReadCause`: yanıt yok ya da
+  Panel'den gelmeyen bir ret → `availability`; `PANEL_STARTING` → `starting`;
+  lisans sonucu kullanılamayan bir yanıt ya da bir isteğin lisans reddi →
+  `license`); neden bekletmeye ve tam sayfaya verilir. `AccessHold`, bu
+  tarayıcının güncelleme kaydı `active` iken yanıt vermeyen Panel'i bir
+  güncellemenin yeniden başlatması olarak adlandırır
+  (`web/src/lib/recoveryObservation.ts` içinde `savedUpdateUnfinished`; yalnızca
+  sunum ipucu). `RecoveryAccess` iki adresini `readRemote` ile okur; uzak-durum
+  mandalı listesinden çıkar (31'den 30 dosyaya; `valueFromFailure` 1,
+  `swallowedFailure` 1, `rawRead` 2 kaldırıldı).
+- **Şema ya da sürüm geçişi.** Yok: hiçbir API, kalıcı kayıt ya da erişim
+  kuralı değişmedi. **Kurtarma davranışı.** Değişmedi: arayüz yüklenirken ya da
+  yüklenemedikten sonra, kapalı ya da başlayan Panel için kurtarma sayfası
+  okuması yanıt verir vermez çizilir; sessiz süre yalnızca hiçbir okuma yanıt
+  vermemişken geçerlidir.
+- **Kanıt.** `web/tests/recovery-access-runtime.test.mjs`,
+  `web/tests/access-hold-runtime.test.mjs` (bileşen düzeyi; aynı tarihli işlem
+  yönlendirmesi girdisine bakın). Geri döngü taklidinde tarayıcı koşusu
+  (`web/tools/browser-inspect`, `coldload`, `coldslow`; kısılmış Chrome):
+  yayımlanmış kod üç yolun hepsinde kapıyı yaklaşık 1,4 sn çizdi; değişiklik
+  hiçbirinde sayfadan önce bir cümle çizmedi.
+- **Açık.** Konukta gerçek sistem yeniden ölçümü (set7 yöntemi) ve her kurulu
+  sunucu; HTTP önbelleği açıkken yükleme; gerçek bir güncelleme sırasında
+  bekletme katmanının sözcükleri; yükleme başına iki oturum okuması (burada
+  değiştirilmedi); mandal listesinin kalan 30 dosyası.
+
+### Kurulum sayfasının son denetimi ve güncelleme bildirimi: durmuş çalışma sürmüyordur, kurulu hedefte süren güncelleme "doğrulanıyor"dur (P0.2 alanı; ilke 2 ve 6; D-024; 2026-10-10)
+
+D-025 ilke 2 (bilinmeyen yok, boş ya da başarı değildir) ve 6 (ekran doğrulananı
+söyler); D-024; P0.2 alanı (doğru durum: güncelleme bildirimi ile kart
+uyuşur). **Hiçbir P0 işi kapanmadı ya da ilerlemedi**; bütün kabul işleri açık
+kalır. Yukarıdaki girdinin 2. ve 4. maddesini yanıtlar; 1., 3. ve 5. maddelere
+dokunulmadı. 2026-10-10 saatten okunan tarihtir.
+
+- **Nedenler, koddan okunduğu hâliyle.** 4. madde: son denetimi beklerken planı
+  yeniden açılan çalışma `failed`, `server_setup_plan_revised` kodu ve
+  `verification` aşamasıyla kaydedilir (`cmd/panel/server_setup_revise.go`);
+  sayfa işaret tutmadığında en son çalışmayı gösterir ve onu genel cümleyle hata
+  olarak çizdi, adım listesi ise bu aşamada son adımı sürüyor saydı. 2. madde:
+  Agent'ın güncelleme kaydı, yeni Panel başladıktan sonra güncelleyici çıkıp son
+  kanıt geçene kadar `running` kalır (`cmd/agent/system_update_worker_linux.go`);
+  bildirim her `running` okumasında ve ilk okumadan önce yer tutucu olarak
+  "uygulanıyor" diyordu, kart ise yanıt veren Panel'in sürümünü okuyordu. İki
+  neden de sahibin sunucularında okunmadı.
+- **Değişen.** Kurulum: posta kimliği denetimi ek tipli `reason` ve `vars`
+  taşır (`setupMailIdentityCheck`, `server_setup_readiness.go`); sayfa yeniden
+  açılan planı böyle söyler, açık denetimleri ve yardımlarını adım listesinin
+  üstüne açık olarak koyar ve her adımın durumunu adlandırır (sizi bekliyor,
+  gereksinimler bekleniyor, denetlenemedi, başarısız, durduruldu, başlamadı).
+  Güncelleme: `GET /api/v1/panel/update/status` (ve vazgeçme yanıtı), kayıt
+  `running` iken yanıt veren Panel tam hedef yapıysa ek `phase: "verifying"`
+  taşır (`panelUpdateStatusPhase`); bildirim ve kart o zaman "kuruldu,
+  doğrulanıyor", okuma başarısızsa nedeniyle "okunamadı", ilk okumadan önce
+  "okunuyor" der; bitmiş kayıt bildirim bırakmaz (değişmedi). Güncelleme
+  penceresindeki saat "UTC" etiketli değil, dilimiyle yerel saattir.
+- **Şema ya da sürüm geçişi.** Saklanan yok: kurulum denetiminde iki ek JSON
+  alanı (çalışma kaydının içinde saklanır, eski kayıtlarda yoktur ve onlar genel
+  cümlelerini korur) ve güncelleme durum yanıtında bir alan (eski arayüz yok
+  sayar). **Kurtarma davranışı.** Değişmedi; hiçbir şey farklı başlamaz,
+  yinelenmez ya da geri alınmaz. Kurulum akışı, yönlendirmesi ve önkoşulları
+  (D-021) değişmedi.
+- **Kanıt.** `cmd/panel/known_state_gates_test.go` (tipli nedenler; eski ve
+  hedef Panel için, her durumda aşama); WSL Debian geliştirme konuğunda
+  `go test ./cmd/panel/...` başarılı, `go vet` ve `gofmt` temiz.
+  `web/tests/setup-final-check-mounted.test.mjs` (yeniden açılarak durmuş, sahibi
+  bekleyen, karşılanmamış önkoşul, bilinmeyen, başarısız; EN ve TR; neden
+  listenin üstünde ve açık) ve `web/tests/update-tracking-mounted.test.mjs`
+  (doğrulanıyor, bilinmiyor, bitti, okunuyor; saat etiketi). Geri döngü
+  taklidine karşı gerçek bir Chrome, `finalcheck` ve `updatephase`
+  senaryoları, masaüstü ve telefon, İngilizce ve Türkçe: ekran görüntülerine
+  bakıldı.
+- **Açık.** Gerçek bir sistemde ölçülmedi: ters DNS'i yanlış olan bir sunucu
+  (tipli neden gerçek bir Agent'tan hiç okunmadı), sahibin kendi kurulum kaydı,
+  gerçek bir güncellemenin doğrulama aralığı, kurulu bir sunucu. Telefonda köşe
+  bildirimi taklitte kartın durum satırını örtüyor (değiştirilmedi). Yukarıdaki
+  1., 3. ve 5. maddeler açık kalır.
