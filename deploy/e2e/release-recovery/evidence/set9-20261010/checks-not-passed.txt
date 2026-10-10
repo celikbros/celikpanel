@@ -1,0 +1,31 @@
+set9 2026-10-10: checks that did not pass, and what was not measured (details: README.md)
+
+FAIL
+- Cell 2c, expectation "the reload action only after 30 s" on a slow session read: with every session read held 35 s,
+  the page's own 15 s read timeout (usePanelSession.ts) turns the first wait into "Your session could not be checked" with
+  "Check panel access" and "Reload CelikPanel" at 15.18 s; at 25.19 s the re-read shows "Checking panel access" with the
+  older sentence "Confirming your session and panel readiness. This check does not start a server operation." and the
+  reload. recovery.waitingProlonged is never drawn on this path. (lab1-.../browser/slow-en35/loads.jsonl; shots
+  1340-15311ms.jpg, 1420-26007ms.jpg)
+
+NOT-MEASURED
+- Cell 4c, the product's screen with the Panel stopped: the recovery service worker was not registered in the signed-in
+  browser context of that cell (getRegistration('/') -> none, stopped/events.jsonl), so a cold load showed Chrome's own
+  error page (ERR_CONNECTION_CLOSED) at 112-116 ms; recovery-offline.html was not reached. The no-session loads of cell 4a
+  (a new browser context) were controlled by a service worker (negative/loads.jsonl, sw_controlled true). Why the worker was
+  registered there and not in the signed-in context was not determined; 4c was not repeated in a context that has one.
+- Cell 3 on lab 1 (set7's method unchanged) and lab 2 (one tab switch): the hold layer was not drawn because the page's
+  access decision did not run out inside the update's restart (one failed access read each); measured on lab 3 with a
+  timed click instead.
+
+OBSERVATIONS (not verdicts)
+- Throttled cold loads: the quiet surface lasted 1.8-2.0 s across successive gates without an explained wait.
+- Cell 2d: after the held interface chunk arrived, "The Panel has not answered yet" was on screen for 55 ms while the
+  Panel had answered 35 s earlier.
+- Cell 4a/4b: a 3-12 ms quiet frame between two identical sign-in / "session could not be checked" frames. The driver's
+  counter reports "rule-breaking runs 2" per 4b load and 1 per 4c load (a failed read is not counted as an answer).
+- Lab 3: the card's "Current version" and the sidebar read v0.1.0-alpha.81 while the notice said alpha.82 was installed
+  and running, until the product's reload.
+- Plain cold loads: the app appeared 10-267 ms later than in set7 (ranges across routes, loads not paired; different build, guest and run).
+
+Not run: Ubuntu, Arch, phone viewport, dark theme, TR for cells 1/3/4, HTTP cache enabled, other browsers, headful Chrome.

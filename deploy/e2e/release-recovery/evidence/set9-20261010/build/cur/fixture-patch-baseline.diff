@@ -1,0 +1,16 @@
+diff --git a/deploy/release-sequence-policy b/deploy/release-sequence-policy
+index a431bb99a..3066bb17a 100644
+--- a/deploy/release-sequence-policy
++++ b/deploy/release-sequence-policy
+@@ -1,6 +1,6 @@
+ format=celikpanel-release-sequence-policy-v1
+-version=v0.1.0-alpha.82
+-current=82
+-previous=81
+-previous_version=v0.1.0-alpha.81
+-previous_commit=a0beb7263d1f4ca72258f6b306f9111ba4e2a334
++version=v0.1.0-alpha.81
++current=81
++previous=80
++previous_version=v0.1.0-alpha.80
++previous_commit=bd14d97efc5cfd19acd70ddf0edb9c6343317e2b

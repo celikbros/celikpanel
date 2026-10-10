@@ -1,0 +1,17 @@
+2026-10-10T17:49:38Z cell-1 flash start
+2026-10-10T17:53:37Z cell-1 done; cell-2 en 2.5s start
+2026-10-10T17:55:00Z cell-2 tr 2.5s start
+2026-10-10T17:56:09Z cell-2 en 35s start
+2026-10-10T17:58:56Z cell-2 chunk 35s start (script changed: LIVE_SLOW_PATTERN added)
+2026-10-10T18:00:19Z cell-4 negative start
+2026-10-10T18:01:22Z cell-4 stopped start
+2026-10-10T18:03:12Z ready check before cell 3
+2026-10-10T18:03:45Z cell-3 update start
+2026-10-10T18:07:11Z cell-3 attempt 1 on lab s9-d13: update ran, outage 18:04:19.9-18:04:48.1 host probe, one failed license read, no hold layer drawn; writing done
+2026-10-10T18:08:17Z lab 2 (s9-d13b) for cell 3 again: starting
+2026-10-10T18:17:47Z lab 2 ready; cell-3 attempt 2 (updatefocus) start
+2026-10-10T18:22:02Z lab 2: accesswatch (read only, 150 s) to learn the access decision's deadline; script changed (access body fields logged)
+2026-10-10T18:25:23Z lab 2: attempt 2 had one failed access read (tab switch), no layer; writing done; lab 3 with a timed click next
+2026-10-10T18:25:39Z lab 2 ended rc=0; lab 3 (s9-d13c) starting
+2026-10-10T18:34:35Z lab 3 ready; cell-3 attempt 3 (timed click, lead 40 s) start
+2026-10-10T18:45:28Z lab 3: hold layer with the update wording measured 18:35:44.2-18:35:58.3; writing done

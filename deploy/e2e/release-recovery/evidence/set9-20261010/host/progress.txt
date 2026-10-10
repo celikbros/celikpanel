@@ -1,0 +1,15 @@
+2026-10-10T17:26:25Z set9 run directory created
+2026-10-10T17:28:52Z made run copy a
+2026-10-10T17:28:53Z start build
+2026-10-10T17:33:17Z made run copy b
+2026-10-10T17:33:33Z start suites
+2026-10-10T17:34:59Z end suites rc=0
+2026-10-10T17:37:43Z build cur rc=0
+2026-10-10T17:37:43Z end build rc=0
+2026-10-10T17:38:01Z prove cur rc=0
+2026-10-10T17:38:15Z start cell
+2026-10-10T18:07:19Z end cell rc=0
+2026-10-10T18:08:17Z start cellb
+2026-10-10T18:25:28Z end cellb rc=0
+2026-10-10T18:25:39Z start cellc
+2026-10-10T18:45:34Z end cellc rc=0

@@ -1,0 +1,43 @@
+{
+  "cell": "done",
+  "lang": "en",
+  "tag": "lab2",
+  "chrome": "Chrome/154.0.8037.98",
+  "handover": {
+    "at": "2026-10-10T18:17:32Z",
+    "base": "https://127.0.0.1:18793",
+    "baseline": {
+      "commit": "5de9c93ece4d618a314bea1507814b6fd187fdad",
+      "version": "v0.1.0-alpha.81"
+    },
+    "candidate": {
+      "commit": "4b87e62826a12b159294f88043f0e6b034034bff",
+      "version": "v0.1.0-alpha.82"
+    },
+    "domain": "upd1-owner.test",
+    "domain_id": 1,
+    "local_port": 18793,
+    "panel_version": {
+      "agent_commit": "5de9c93ece4d618a314bea1507814b6fd187fdad",
+      "agent_matches": true,
+      "commit": "5de9c93ece4d618a314bea1507814b6fd187fdad",
+      "hostname": "dns-debian13",
+      "ipv4": "192.0.2.10",
+      "schema_version": 43,
+      "version": "v0.1.0-alpha.81"
+    },
+    "password_file": "(root-only file, not copied)",
+    "schema": "celikpanel/set7-handover/v1",
+    "tls_leaf_sha256": "73450fcba937d2e365d0b7fe0dd63c8ec6ede787474bf2408803cee4423e5ce9",
+    "username": "labadmin"
+  },
+  "leaf": {
+    "leaf_sha256": "73450fcba937d2e365d0b7fe0dd63c8ec6ede787474bf2408803cee4423e5ce9",
+    "spki_sha256_base64": "75cAWgEAQxOdrw0AGt9Td9Qmeu4Bh6lsmqx7W3G8MAY=",
+    "subject": "O=CelikPanel\nCN=dns-debian13",
+    "valid_to": "Oct 10 18:10:18 2028 GMT"
+  },
+  "started": "2026-10-10T18:25:24.674Z",
+  "ended": "2026-10-10T18:25:24.677Z",
+  "ok": true
+}

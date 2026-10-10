@@ -1,0 +1,21 @@
+Formatting '/var/tmp/cp-release-drill-s9-d13c/cells/63c575a7dc868fdc75900692/debian13/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-s9-d13c/images/debian-13-genericcloud-amd64-20260826-2582.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+Formatting '/var/tmp/cp-release-drill-s9-d13c/cells/63c575a7dc868fdc75900692/arch/overlay.qcow2', fmt=qcow2 cluster_size=65536 extended_l2=off compression_type=zlib size=25769803776 backing_file=/var/tmp/cp-release-drill-s9-d13c/images/Arch-Linux-x86_64-cloudimg-20260815.573966.qcow2 backing_fmt=qcow2 lazy_refcounts=off refcount_bits=16
+{"action": "prepared", "root": "/var/tmp/cp-release-drill-s9-d13c", "cell_id": "release-recovery__d0c1464194a7055c", "ssh_ports": [4795, 4796]}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s9-d13c", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"action": "ready", "root": "/var/tmp/cp-release-drill-s9-d13c", "nodes": {"arch": "verified-disposable-systemd-guest", "debian13": "verified-disposable-systemd-guest"}}
+{"step": "set6-name-pinning", "verdict": "passed", "reason": null}
+{"step": "preflight", "verdict": "passed", "reason": null}
+{"step": "origin", "verdict": "passed", "reason": null}
+{"step": "baseline-install", "verdict": "passed", "reason": null}
+{"step": "owner-login", "verdict": "passed", "reason": null}
+{"step": "license", "verdict": "passed", "reason": null}
+{"step": "setup", "verdict": "observed", "reason": null}
+{"step": "seed", "verdict": "passed", "reason": null}
+{"set7": "ready", "hand": "/var/tmp/cp-set9-run/hand/hand-s9c", "port": 18795}
+{"step": "set7-browser-window", "verdict": "observed", "reason": null}
+{"step": "set7-guest-timeline", "verdict": "observed", "reason": null}
+{"step": "collect", "verdict": "passed", "reason": null}
+{"step": "set6-name-pinning-at-the-end", "verdict": "passed", "reason": null}
+{"overall": "complete-for-review", "steps": {"baseline-install": "passed", "collect": "passed", "license": "passed", "origin": "passed", "owner-login": "passed", "preflight": "passed", "seed": "passed", "set6-name-pinning": "passed", "set6-name-pinning-at-the-end": "passed", "set7-browser-window": "observed", "set7-guest-timeline": "observed", "setup": "observed"}}
+{"action": "stopped", "root": "/var/tmp/cp-release-drill-s9-d13c", "evidence_retained": true}
+SET9 cell=upd1-debian13-good lab=/var/tmp/cp-release-drill-s9-d13c driver_exit=0 evidence=/var/tmp/cp-release-drill-s9-d13c/evidence/*/upd1

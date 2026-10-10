@@ -1,0 +1,1 @@
+plain-settings_section_updates-1: first mount 116 ms, first read answered 190 ms, first sentence/button 444 ms app(Settings); rule-breaking runs 0; 82-109:empty > 116-139:spinner > 148-278:quiet > 285-376:spinner > 444-458:app(Settings)+text+btn > 484-7017:app(Settings)+text+btn

@@ -1,0 +1,32 @@
+{
+  "baseline": {
+    "commit": "5de9c93ece4d618a314bea1507814b6fd187fdad",
+    "sha256": "9e6105145d905ec356802adc44d27ff0ca60ddfbb78404ef3a05257e5d5245c8",
+    "version": "v0.1.0-alpha.81"
+  },
+  "candidate": {
+    "commit": "4b87e62826a12b159294f88043f0e6b034034bff",
+    "sha256": "70d33127953dfe459965d8c317542ee6bc53324972be7478deab3f5332f4d96d",
+    "version": "v0.1.0-alpha.82"
+  },
+  "cell": "upd1-debian13-good",
+  "cell_kind": "set9-cold-load-and-hold-in-a-real-browser",
+  "hand": "/var/tmp/cp-set9-run/hand/dry-s9",
+  "local_port": 18443,
+  "schema": "celikpanel/set7-plan/v1",
+  "steps": [
+    "set6-name-pinning",
+    "preflight",
+    "origin",
+    "baseline-install",
+    "owner-login",
+    "license",
+    "setup",
+    "seed",
+    "set7-browser-window",
+    "set7-guest-timeline",
+    "collect",
+    "set6-name-pinning-at-the-end"
+  ],
+  "work_root": "/var/tmp/cp-release-drill-dry-s9"
+}

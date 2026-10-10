@@ -1,0 +1,16 @@
+[
+  {
+    "guest_output": "2026-10-10T18:01:33.666426246Z\nMainPID=5314\nActiveState=active\nrc=0\n2026-10-10T18:01:33.730874651Z\nMainPID=0\nActiveState=inactive\nActiveEnterTimestamp=Sat 2026-10-10 17:40:42 UTC\nInactiveEnterTimestamp=Sat 2026-10-10 18:01:33 UTC",
+    "host_after": 1791655293.5987267,
+    "host_before": 1791655293.35952,
+    "request": "stop1791655292740",
+    "what": "systemctl stop celikpanel-panel.service on the disposable guest, by the harness"
+  },
+  {
+    "guest_output": "2026-10-10T18:01:55.914130075Z\nMainPID=0\nActiveState=inactive\nrc=0\n2026-10-10T18:01:55.972152459Z\nMainPID=30472\nActiveState=active\nActiveEnterTimestamp=Sat 2026-10-10 18:01:55 UTC\nInactiveEnterTimestamp=Sat 2026-10-10 18:01:33 UTC",
+    "host_after": 1791655315.8389788,
+    "host_before": 1791655315.6065524,
+    "request": "start1791655315199",
+    "what": "systemctl start celikpanel-panel.service on the disposable guest, by the harness"
+  }
+]

@@ -1,0 +1,9 @@
+source 7c3a05809 = 7c3a058095d081983a58261f6a751c92c47f1a87 tree 8743062cdbfe5520b19a8861bdf81582ed9e5826 (e508af230 = e508af230215909f09b55f93b18067fb498c4670)
+product code e508af230..7c3a05809 (cmd internal web/src): 0 lines of diff --stat (0 = identical)
+baseline 5de9c93ece4d618a314bea1507814b6fd187fdad tree 5cd40ce33f3827b93f9cb9414194a261beb92d11
+good     4b87e62826a12b159294f88043f0e6b034034bff tree 496db849395076d3d99bee7d64d190b7d6f1fe00
+### files that differ between the source 7c3a05809 and the baseline 5de9c93ece4d618a314bea1507814b6fd187fdad
+M	deploy/release-sequence-policy
+### files that differ between the source 7c3a05809 and the good candidate 4b87e62826a12b159294f88043f0e6b034034bff
+M	deploy/release-sequence-policy
+### files of web/ that differ between the source and the baseline / the good candidate: 0 / 0

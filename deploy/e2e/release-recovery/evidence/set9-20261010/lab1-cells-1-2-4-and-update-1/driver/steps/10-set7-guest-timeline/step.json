@@ -1,0 +1,51 @@
+{
+  "checks": {
+    "files": [
+      "guest-probe.txt",
+      "journal-celikpanel-units.txt",
+      "units.txt"
+    ],
+    "guest_minus_host_seconds": 0.249,
+    "panel_version_after": {
+      "agent_commit": "4b87e62826a12b159294f88043f0e6b034034bff",
+      "agent_matches": true,
+      "commit": "4b87e62826a12b159294f88043f0e6b034034bff",
+      "hostname": "dns-debian13",
+      "ipv4": "192.0.2.10",
+      "schema_version": 43,
+      "version": "v0.1.0-alpha.82"
+    },
+    "probe_lines": 2127,
+    "probe_transitions": [
+      {
+        "guest_epoch": 1791654568.72,
+        "state": "answers",
+        "status": "401"
+      },
+      {
+        "guest_epoch": 1791655293.841,
+        "state": "no answer",
+        "status": "noanswer:URLError"
+      },
+      {
+        "guest_epoch": 1791655316.362,
+        "state": "answers",
+        "status": "401"
+      },
+      {
+        "guest_epoch": 1791655459.609,
+        "state": "no answer",
+        "status": "noanswer:RemoteDisconnected"
+      },
+      {
+        "guest_epoch": 1791655488.026,
+        "state": "answers",
+        "status": "401"
+      }
+    ]
+  },
+  "finished_at": "2026-10-10T18:07:15Z",
+  "name": "set7-guest-timeline",
+  "started_at": "2026-10-10T18:07:14Z",
+  "verdict": "observed"
+}

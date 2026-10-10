@@ -1,0 +1,6 @@
+run copy a (pristine, before the overlay) against commit 7c3a058095d081983a58261f6a751c92c47f1a87 tree 8743062cdbfe5520b19a8861bdf81582ed9e5826
+files in the copy: 4677
+files of the copy whose blob id and path are NOT in the commit: 0
+files of the commit not in the copy: 68152
+of those, outside deploy/e2e/{release-recovery,dns-kill-matrix,dns-pair-acceptance}/evidence/: 0
+files of the copy under deploy/e2e/release-recovery/evidence/: 1094 (all under upd1-20261001: 1094)

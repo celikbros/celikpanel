@@ -305,7 +305,9 @@ def prepare(args):
         fixture.verify_image(fixture.validate_work_root(root), pins["ubuntu"])
     else:
         fixture.verify_images(root, pins)
-    run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(root / "key")])
+    # A fixed comment: the default would be user@host of the operator's machine, and that
+    # name ended up in every published fixture plan (scrubbed on 2026-10-10).
+    run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "celikpanel-lab", "-f", str(root / "key")])
     if ubuntu:
         plan = build_ubuntu_plan(root, pins["ubuntu"], cell_id, fixture.read_ssh_public_key(root / "key.pub"),
                                  ssh_port=args.ssh_port, memory_mb=3072, cpus=2, disk_gb=24)

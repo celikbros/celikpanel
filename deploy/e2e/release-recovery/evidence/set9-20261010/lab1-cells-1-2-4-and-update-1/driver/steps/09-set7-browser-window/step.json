@@ -1,0 +1,65 @@
+{
+  "checks": {
+    "browser_done": {
+      "at": "2026-10-10T18:07:13.172Z",
+      "by": "cold-load-set9.mjs"
+    },
+    "ended_at": "2026-10-10T18:07:13Z",
+    "handover": {
+      "at": "2026-10-10T17:49:31Z",
+      "base": "https://127.0.0.1:18791",
+      "baseline": {
+        "commit": "5de9c93ece4d618a314bea1507814b6fd187fdad",
+        "version": "v0.1.0-alpha.81"
+      },
+      "candidate": {
+        "commit": "4b87e62826a12b159294f88043f0e6b034034bff",
+        "version": "v0.1.0-alpha.82"
+      },
+      "domain": "upd1-owner.test",
+      "domain_id": 1,
+      "local_port": 18791,
+      "panel_version": {
+        "agent_commit": "5de9c93ece4d618a314bea1507814b6fd187fdad",
+        "agent_matches": true,
+        "commit": "5de9c93ece4d618a314bea1507814b6fd187fdad",
+        "hostname": "dns-debian13",
+        "ipv4": "192.0.2.10",
+        "schema_version": 43,
+        "version": "v0.1.0-alpha.81"
+      },
+      "password_file": "[REDACTED]",
+      "schema": "celikpanel/set7-handover/v1",
+      "tls_leaf_sha256": "2ad2b032d5b558bb64bde7eae71248aa919066b42511da38f05d9da9844676a5",
+      "username": "labadmin"
+    },
+    "password_file_removed": true,
+    "probe": {
+      "answer": "active\n4",
+      "file": "/root/celikpanel-release-recovery-lab/set7-probe.txt",
+      "started_at": "2026-10-10T17:49:30Z",
+      "unit": "celikpanel-lab-set7-probe"
+    },
+    "probe_stopped": "2127",
+    "restarts": [
+      {
+        "guest_output": "2026-10-10T18:01:33.666426246Z\nMainPID=5314\nActiveState=active\nrc=0\n2026-10-10T18:01:33.730874651Z\nMainPID=0\nActiveState=inactive\nActiveEnterTimestamp=Sat 2026-10-10 17:40:42 UTC\nInactiveEnterTimestamp=Sat 2026-10-10 18:01:33 UTC",
+        "host_after": 1791655293.5987267,
+        "host_before": 1791655293.35952,
+        "request": "stop1791655292740",
+        "what": "systemctl stop celikpanel-panel.service on the disposable guest, by the harness"
+      },
+      {
+        "guest_output": "2026-10-10T18:01:55.914130075Z\nMainPID=0\nActiveState=inactive\nrc=0\n2026-10-10T18:01:55.972152459Z\nMainPID=30472\nActiveState=active\nActiveEnterTimestamp=Sat 2026-10-10 18:01:55 UTC\nInactiveEnterTimestamp=Sat 2026-10-10 18:01:33 UTC",
+        "host_after": 1791655315.8389788,
+        "host_before": 1791655315.6065524,
+        "request": "start1791655315199",
+        "what": "systemctl start celikpanel-panel.service on the disposable guest, by the harness"
+      }
+    ]
+  },
+  "finished_at": "2026-10-10T18:07:14Z",
+  "name": "set7-browser-window",
+  "started_at": "2026-10-10T17:49:28Z",
+  "verdict": "observed"
+}

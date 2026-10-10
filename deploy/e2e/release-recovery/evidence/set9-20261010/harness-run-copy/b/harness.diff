@@ -1,0 +1,116 @@
+--- /dev/null
++++ b/deploy/e2e/release-recovery/set9_trial.py
+@@ -0,0 +1,57 @@
++#!/usr/bin/env python3
++"""set9: the cold-load fix of e508af230 measured in a real Chrome against a real Panel, on a disposable QEMU guest.
++
++set7's cell (``set7_trial.Set7BrowserTrial``) with every step unchanged, and two differences only:
++
++  * its run root is /var/tmp/cp-set9-run (handover and the root-only password file live there), not set7's;
++  * besides set7's restart request, the browser may ask the harness to STOP the Panel's service and to START it
++    again (a file ``restart-request-stopN`` or ``restart-request-startN`` in the handover directory; the driver
++    answers ``restart-done-stopN.json`` / ``restart-done-startN.json`` as set7 does for a restart). Used by set9 cell
++    4: a cold load with the Panel stopped. Only ``systemctl stop|start celikpanel-panel.service`` on this disposable
++    guest; nothing else is changed.
++
++  set9_trial.py plan --cell upd1-debian13-good --artifacts A.json --work-root /var/tmp/cp-release-drill-X --hand NAME [--dry-run]
++  set9_trial.py run  --cell upd1-debian13-good --artifacts A.json --work-root /var/tmp/cp-release-drill-X --hand NAME --execute
++
++Every result carries ``native_evidence: false``. No certificate authority and no licence service is contacted by the
++driver (set6's name pinning is its first step); the browser opens only the loopback address of the SSH forward.
++"""
++from __future__ import annotations
++
++from pathlib import Path
++import sys
++import time
++
++HERE = Path(__file__).resolve().parent
++if str(HERE) not in sys.path:
++    sys.path.insert(0, str(HERE))
++import set7_trial as s7  # noqa: E402
++
++s7.RUN_ROOT = Path("/var/tmp/cp-set9-run")
++s7.HAND_ROOT = s7.RUN_ROOT / "hand"
++s7.SECRET_ROOT = s7.RUN_ROOT / "secret"
++s7.CELL_KIND = "set9-cold-load-and-hold-in-a-real-browser"
++
++
++class Set9BrowserTrial(s7.Set7BrowserTrial):
++    def restart_panel(self, number: str) -> dict:
++        for verb in ("stop", "start"):
++            if number.startswith(verb) and number[len(verb):].isdigit():
++                before = time.time()
++                script = (f"date -u +%FT%T.%NZ; systemctl show {s7.PANEL_UNIT} -p MainPID -p ActiveState\n"
++                          f"systemctl {verb} {s7.PANEL_UNIT}; echo rc=$?\n"
++                          f"date -u +%FT%T.%NZ; systemctl show {s7.PANEL_UNIT} -p MainPID -p ActiveState "
++                          f"-p ActiveEnterTimestamp -p InactiveEnterTimestamp\n")
++                out = self.guest(script, timeout=180).stdout
++                return {"request": number, "what": f"systemctl {verb} {s7.PANEL_UNIT} on the disposable guest, by the harness",
++                        "host_before": before, "host_after": time.time(), "guest_output": out.strip()}
++        return super().restart_panel(number)
++
++
++def main(argv: list[str] | None = None) -> int:
++    s7.Set7BrowserTrial = Set9BrowserTrial  # main() of set7 constructs the class by this module-level name
++    return s7.main(argv)
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+--- /dev/null
++++ b/deploy/e2e/release-recovery/run-set9.sh
+@@ -0,0 +1,53 @@
++#!/usr/bin/env bash
++# set9 wrapper (set7's, with set9_trial.py and SET9_DISK_GATE) for the Linux QEMU host (archlinux), run as root: the
++# interface of e508af230 in a real Chrome on a cold load, a slow read, a stopped Panel and an update; as set7: across a Panel
++# restart. The driver (set9_trial.py) prepares the guest as set6's good-update cells do and then hands the signed-in
++# owner's part to the browser (web/tools/browser-inspect/live-restart.mjs and cold-load-set9.mjs); it never starts the update itself.
++#
++#   run-set9.sh dry-run CELL ARTIFACTS_JSON LAB_NAME HAND
++#       Validate the plan without any guest (no lab is created).
++#   run-set9.sh cell CELL ARTIFACTS_JSON LAB_NAME SSH_PORT LOCAL_PORT HAND [WAIT_SECONDS]
++#       Prepare and start a NEW lab /var/tmp/cp-release-drill-LAB_NAME, run the cell on its node (the browser
++#       window waits for /var/tmp/cp-set9-run/hand/HAND/done.json), then stop the lab (disks and evidence retained).
++#
++# CELL: upd1-debian13-good (upd1-ubuntu-good, upd1-arch-good offered, not used by set9).
++# One cell per new lab. SET9_DISK_GATE, when set, is a program that must exit 0 immediately before the guests are
++# started (the host's free-disk rule); otherwise no guest is started.
++set -euo pipefail
++HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
++IMAGES=${UPD1_IMAGE_CACHE:-/var/tmp/cp-v3n28/images}
++LAB=(python3 "$HERE/lab.py")
++DRIVER=(python3 "$HERE/set9_trial.py")
++
++usage() { sed -n '2,16p' "${BASH_SOURCE[0]}" >&2; exit 2; }
++[[ $# -ge 1 ]] || usage
++command=$1; shift
++case $command in
++    dry-run)
++        [[ $# -eq 4 ]] || usage
++        exec "${DRIVER[@]}" plan --cell "$1" --artifacts "$2" --work-root "/var/tmp/cp-release-drill-$3" --hand "$4" --dry-run
++        ;;
++    cell)
++        [[ $# -ge 6 && $# -le 7 ]] || usage
++        cell=$1 artifacts=$2 name=$3 port=$4 local_port=$5 hand=$6 wait=${7:-14400}
++        [[ $EUID -eq 0 ]] || { echo "run as root (fixture signing keys are root-only)" >&2; exit 2; }
++        root=/var/tmp/cp-release-drill-$name
++        [[ ! -e $root ]] || { echo "lab $root exists; every cell needs a NEW lab" >&2; exit 2; }
++        "${DRIVER[@]}" plan --cell "$cell" --artifacts "$artifacts" --work-root "$root" --hand "$hand" > /dev/null
++        platform=debian13-arch
++        [[ $cell != upd1-ubuntu-* ]] || platform=ubuntu
++        "${LAB[@]}" prepare --work-root "$root" --image-cache "$IMAGES" --ssh-port "$port" --platform "$platform" --execute
++        if [[ -n ${SET9_DISK_GATE:-} ]]; then
++            bash "$SET9_DISK_GATE" "$cell $name (guest start)" || { echo "SET9 cell=$cell lab=$root NOT STARTED: the disk gate refused the guest start" >&2; exit 75; }
++        fi
++        "${LAB[@]}" start --work-root "$root" --execute
++        "${LAB[@]}" status --work-root "$root"
++        status=0
++        "${DRIVER[@]}" run --cell "$cell" --artifacts "$artifacts" --work-root "$root" --local-port "$local_port" \
++            --hand "$hand" --wait-seconds "$wait" --execute || status=$?
++        "${LAB[@]}" stop --work-root "$root" --execute || true
++        echo "SET9 cell=$cell lab=$root driver_exit=$status evidence=$root/evidence/*/upd1"
++        exit "$status"
++        ;;
++    *) usage ;;
++esac

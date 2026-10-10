@@ -1,0 +1,4 @@
+{"at":"2026-10-10T17:55:03.183Z","ev":"sign-in-page","shown":"form"}
+{"at":"2026-10-10T17:55:06.480Z","ev":"load","label":"slow2500-tr-setup-1","route":"/setup","lang":"tr","cache":"disabled","context":"the signed-in browser","throttle":null,"watch_ms":9000,"note":"every session read held 2500 ms in the browser (CDP Fetch), then continued unchanged"}
+{"at":"2026-10-10T17:55:16.736Z","ev":"load","label":"slow2500-tr-root-1","route":"/","lang":"tr","cache":"disabled","context":"the signed-in browser","throttle":null,"watch_ms":9000,"note":"every session read held 2500 ms in the browser (CDP Fetch), then continued unchanged"}
+{"at":"2026-10-10T17:55:27.725Z","ev":"load","label":"slow2500-tr-settings_section_updates-1","route":"/settings?section=updates","lang":"tr","cache":"disabled","context":"the signed-in browser","throttle":null,"watch_ms":9000,"note":"every session read held 2500 ms in the browser (CDP Fetch), then continued unchanged"}

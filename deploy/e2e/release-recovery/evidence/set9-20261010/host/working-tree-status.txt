@@ -1,0 +1,20 @@
+ M internal/services/managed_vhost.go
+ M internal/services/nginx_generator.go
+ M internal/services/site_file_ledger.go
+ M internal/services/templates/nginx/vhost.conf.tmpl
+ M internal/transport/site_files.go
+?? .agents/
+?? .attic/
+?? .claude/
+?? .codex/
+?? .github/agents/
+?? .github/hooks/
+?? .github/skills/
+?? .impeccable/review-final/
+?? .impeccable/review/
+?? cmd/panel/site_config_certificate.go
+?? deploy/e2e/release-recovery/evidence/set9-20261010/
+?? deploy/e2e/release-recovery/guest_set10_native.py
+?? deploy/e2e/release-recovery/run-set10.sh
+?? deploy/e2e/release-recovery/set10_trial.py
+?? deploy/e2e/release-recovery/test_set10_trial.py

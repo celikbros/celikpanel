@@ -1,0 +1,4 @@
+stopped-setup: first mount 112 ms, first read answered null ms, first sentence/button 112 ms other(Bu siteye ulaşılamıyor); rule-breaking runs 1; 112-7023:other(Bu siteye ulaşılamıyor)+text+btn
+stopped-root: first mount 116 ms, first read answered null ms, first sentence/button 116 ms other(Bu siteye ulaşılamıyor); rule-breaking runs 1; 116-7022:other(Bu siteye ulaşılamıyor)+text+btn
+stopped-settings_section_updates: first mount 113 ms, first read answered null ms, first sentence/button 113 ms other(Bu siteye ulaşılamıyor); rule-breaking runs 1; 113-7023:other(Bu siteye ulaşılamıyor)+text+btn
+after-start-root: first mount 84 ms, first read answered 210 ms, first sentence/button 244 ms recovery-access(The panel is starting); rule-breaking runs 0; 45-77:empty > 84-104:spinner > 121-214:quiet > 244-7014:recovery-access(The panel is starting)+text+btn
