@@ -4519,7 +4519,10 @@ D-025 invariants 2 (unknown is not absent, failed or a license verdict) and 6
 (readiness, progress and access stay independent; a screen says what was
 verified); D-024. **No P0 item is closed or advanced**; P0.2 stays partial and
 every open acceptance item stays open. Source state with component tests and
-one browser run against the loopback mock. 2026-10-10 is the clock date.
+one browser run against the loopback mock: component-tested and mock browser;
+not measured on a real system. It answers item 3 of the open presentation
+items in the entry above and, in words only, item 1 (the alpha.81 interface
+that replaced the page is not changed). 2026-10-10 is the clock date.
 
 - **Finding (seventh native record, cell 5).** On a cold full load of `/setup`,
   `/` and `/settings?section=updates`, signed in and healthy, the full page
@@ -4550,11 +4553,14 @@ one browser run against the loopback mock. 2026-10-10 is the clock date.
   `LicenseOnboarding` does the same for its first access read, and records the
   cause each read showed (`AccessReadCause`: no answer or a non-Panel refusal →
   `availability`; `PANEL_STARTING` → `starting`; an answer whose license result
-  was unavailable, or a license refusal of a request → `license`), passed to the
-  hold and to the full page. `AccessHold` names an unanswered Panel as an
-  update's restart while this browser's update record is `active`
+  was unavailable, or a license refusal of a request → `license`; a success
+  status whose body cannot be parsed is also `license`, the cause being set
+  before the parse), passed to the hold and to the full page. `AccessHold`
+  names an unanswered Panel (cause `availability` only) as an update's restart
+  while this browser's update record is `active`
   (`savedUpdateUnfinished` in `web/src/lib/recoveryObservation.ts`, a
-  presentation hint only). `RecoveryAccess` reads its two addresses through
+  presentation hint only, with no age limit: a record this browser never saw
+  end keeps the hint). `RecoveryAccess` reads its two addresses through
   `readRemote`; it leaves the remote-state ratchet list (31 to 30 files;
   `valueFromFailure` 1, `swallowedFailure` 1, `rawRead` 2 removed).
 - **Schema or version transition.** None: no API, stored record or access rule
@@ -4566,8 +4572,10 @@ one browser run against the loopback mock. 2026-10-10 is the clock date.
   `web/tests/access-hold-runtime.test.mjs` (component level, see the operation
   guidance entry of the same date). Browser run on the loopback mock
   (`web/tools/browser-inspect`, `coldload`, `coldslow`; throttled Chrome): the
-  published code painted the gate for about 1.4 s on all three routes; the
-  change drew no sentence before the page on any of them.
+  published code painted the gate for about 1.4 s on all three routes (the
+  console output of that run is not kept in the repository; the seventh record
+  measured about 1.7 s on a real Panel under the same throttle); the change
+  drew no sentence before the page on any of them in the mock.
 - **Open.** The real-system re-measurement on a guest (set7's method) and any
   installed server; a load with the HTTP cache enabled; the hold layer's words
   during a real update; the two session reads per load (not changed here); the
@@ -4578,8 +4586,11 @@ one browser run against the loopback mock. 2026-10-10 is the clock date.
 D-025 invariants 2 (unknown is not absent, empty or success) and 6 (a screen
 says what was verified); D-024; P0.2 area (truthful status: the update notice
 and the update card agree). **No P0 item is closed or advanced**; every
-acceptance item stays open. It answers items 2 and 4 of the entry above; items
-1, 3 and 5 are not touched here. 2026-10-10 is the clock date.
+acceptance item stays open. Component-tested and mock browser; not measured on
+a real system. It answers items 2 and 4 of the open presentation items in the
+seventh-record entry two entries above; items 1, 3 and 5 are not touched by
+this entry (the entry directly above addresses 3, and the words of 1).
+2026-10-10 is the clock date.
 
 - **Causes, read from the code.** Item 4: a run whose plan is reopened while
   its final check waits is recorded `failed`, code `server_setup_plan_revised`,
@@ -4599,7 +4610,9 @@ acceptance item stays open. It answers items 2 and 4 of the entry above; items
   waiting for requirements, could not be checked, failed, stopped, not
   started). Update: `GET /api/v1/panel/update/status` (and the abandon answer)
   carries an additive `phase: "verifying"` when the record is running and the
-  Panel answering is the exact target build (`panelUpdateStatusPhase`); the
+  Panel answering has the same version and commit as the update's target
+  (`panelUpdateStatusPhase`; the archive digest and sequence are not
+  compared; the abandon answer is not covered by the test); the
   notice and the card say "installed, being verified" then, "could not be read"
   with the read's reason when a read fails, and "reading" before the first
   read; a finished record leaves no notice (unchanged). The update dialog's
@@ -4623,4 +4636,11 @@ acceptance item stays open. It answers items 2 and 4 of the entry above; items
   (the typed reason was never read from a real Agent), the owner's own setup
   record, the verifying window of a real update, an installed server. On a
   phone the corner notice covers the card's status line in the mock
-  (unchanged). Items 1, 3 and 5 above stay open.
+  (unchanged). **Gap in the typed reason:** a failed reverse-DNS lookup in the
+  Agent is reported as no name and no error
+  (`cmd/agent/mail_health_rpc.go:42-46`, `mail_health_dns.go:75-79`), so the
+  page says no reverse DNS name was found where the result was unknown
+  (invariant 2); open. The notice is drawn by the interface the tab loaded, so
+  an update started from a tab on the previous release ignores `phase`. Items
+  1 and 5 of the seventh-record entry stay open; item 3 is addressed in source
+  by the entry above, not measured.

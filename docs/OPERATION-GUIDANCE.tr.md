@@ -5333,8 +5333,9 @@ girdisinde listelenmiştir.
 
 Bileşen testleri ve yerel geri döngü taklidine karşı gerçek bir Chrome ile
 kaynak durumu (`web/tools/browser-inspect`, `finalcheck` ve `updatephase`
-senaryoları). Bu girdi için kurulu bir sunucuda hiçbir şey gözlenmedi. Yukarıdaki
-girdinin ikinci ve dördüncü gözlemini yanıtlar; birinci ve üçüncüsü başka bir
+senaryoları). Bu girdi için kurulu bir sunucuda hiçbir şey gözlenmedi. Bileşen
+testli ve taklit tarayıcılı; gerçek bir sistemde ölçülmedi. Sahibin yukarıdaki
+girdisinin ikinci ve dördüncü gözlemini yanıtlar; birinci ve üçüncüsü başka bir
 değişikliktir. Kurulum akışı, yönlendirmesi ve önkoşulları (D-021,
 [sunucu kurulum planı](SERVER-SETUP-PLAN.tr.md)) değişmedi: yalnız sayfanın
 söylediği ve okuduğu tipli durum değişti.
@@ -5365,8 +5366,15 @@ ortaya koyduğunu söyler: uygulanıyor, kuruldu ve doğrulanıyor ya da bilinmi
 denetimi ek olarak `reason` ve `vars` taşır: denetimin okuduğu sırayla
 karşılanmayan ilk koşul ve andığı değerler. `server_address_not_public`,
 `mail_name_differs`, `reverse_dns_mismatch`, `forward_dns_mismatch`. Hazır ya da
-bilinmeyen denetim ikisini de taşımaz; onlardan önce yazılmış kayıt genel
-cümlesini korur. Durum ve kod değişmedi.
+bilinmeyen denetim ikisini de taşımaz; planlanan posta sunucusu adı kurallı bir
+ad olmayan `action_required` denetim de taşımaz; onlardan önce yazılmış kayıt
+genel cümlesini korur. Durum ve kod değişmedi. **Bilinen açık, burada
+değiştirilmedi:** Agent'ın ters DNS sorgusu tümden başarısız olursa (iki genel
+çözümleyici de) ad da hata da bildirmez (`cmd/agent/mail_health_rpc.go`,
+`mail_health_dns.go`); Panel bunu doğrulanmış yokluktan ayıramaz, bu yüzden
+sayfa `reverseDNSMissing` ("ters DNS (PTR) adı bulunamadı") der; bu, kanıtlanan
+şeyden fazlasını söyler. Algılanamayan adres algılanamadı diye yazılır
+(`addressMissing`).
 
 - `setup.check.mailIdentity.reverseDNS`
   TR: "Bu sunucunun {ip} adresinin ters DNS (PTR) adı {ptr}; posta sunucuları
@@ -5400,7 +5408,9 @@ tamamlanır. Hemen denetlemek için Gereksinimleri tekrar kontrol et düğmesini
 kullanın." Çalışma beklerken yürütücü denetimleri 20 saniyede bir yeniden okur.
 
 **Adımın durum sözcüğü.** "Sizi bekliyor", "Gereksinimler bekleniyor"
-(değişmedi), "Denetlenemedi", "Başarısız", "Durduruldu", "Başlamadı".
+(değişmedi), "Denetlenemedi", "Başarısız", "Durduruldu", "Başlamadı". Birkaç
+denetim açıkken, birinin tipli nedeni varsa "Sizi bekliyor" kullanılır; açık her
+denetim yine adımların üstünde listelenir.
 
 **Güncelleme bildirimi ve kart (`GET /api/v1/panel/update/status`).** Agent'ın
 kaydı, yeni Panel başladıktan sonra güncelleyici çıkıp son kanıtı geçene kadar
@@ -5409,7 +5419,8 @@ kaydı, yeni Panel başladıktan sonra güncelleyici çıkıp son kanıtı geçe
 `panelUpdate.running` diyordu (`SystemUpdateOperation.tsx`); kart ise yanıt
 veren Panel'in çalıştırdığı sürümü okuyordu (`/api/v1/panel/version`): bu
 aralıkta ikisi çelişiyordu. Durum yanıtı artık, kayıt `running` iken yanıt veren
-Panel tam hedef yapıysa, ek olarak `phase: "verifying"` taşır.
+Panel'in sürümü ve commit'i güncellemenin hedefiyle aynıysa (arşiv özeti ve
+sıra numarası karşılaştırılmaz), ek olarak `phase: "verifying"` taşır.
 
 - `panelUpdate.tracking.verifyingTitle` TR: "Güncelleme kuruldu, doğrulanıyor"
 - `panelUpdate.tracking.verifying` TR: "{version} kuruldu ve bu panel onu
@@ -5434,14 +5445,20 @@ Panel tam hedef yapıysa, ek olarak `phase: "verifying"` taşır.
 Chrome; masaüstü ve telefon, İngilizce ve Türkçe. Ölçülmedi: ters DNS'i yanlış
 olan gerçek bir sunucu (tipli neden gerçek bir Agent'tan okunmadı), sahibin kendi
 kaydı, gerçek bir güncellemenin doğrulama aralığı, telefonda köşe bildiriminin
-kartın satırını örtmesi (taklitte örttü; değiştirilmedi).
+kartın satırını örtmesi (taklitte örttü; değiştirilmedi). Bildirimi sekmenin
+yüklediği arayüz çizer: önceki sürümü çalıştıran bir sekmeden başlatılan
+güncelleme `phase` alanını yok sayar ve eski cümleyi korur; yeni metin bu
+değişiklikten sonra yüklenen bir sayfadan başlatılan güncellemeden itibaren
+geçerlidir. Yukarıdaki ters DNS ve adres açığı açıktır.
 
 ### İlk sayfa yüklemesinde yanıtlanmamış erişim sayfası yok; bekletme katmanı okuduğu nedeni söyler (2026-10-10)
 
 Bileşen testleri ve geri döngü taklidine karşı bir tarayıcı koşusuyla kaynak
-durumu; konuk yok, kurulu sunucu yok. Yedinci gerçek sistem kaydının
+durumu; konuk yok, kurulu sunucu yok. Bileşen testli ve taklit tarayıcılı;
+gerçek bir sistemde ölçülmedi. Yedinci gerçek sistem kaydının
 (`deploy/e2e/release-recovery/evidence/set7-20261010/`) iki bulgusunu karşılar:
-hücre 5 (yukarıdaki sahibin üçüncü gözlemi) ve hücre 1'in gözlemi. Mekanizma ve
+hücre 5 (yukarıdaki girdideki sahibin üçüncü gözlemi) ve hücre 1'in gözlemi
+(yalnız sözcükleri; sayfayı değiştiren alpha.81 arayüzü değişmedi). Mekanizma ve
 sözleşme maddeleri aynı tarih ve başlıklı
 [dayanıklılık sözleşmesi](RESILIENCE-CONTRACT.tr.md) girdisindedir.
 
@@ -5458,8 +5475,11 @@ sözleşme maddeleri aynı tarih ve başlıklı
   panel access"; yeni `recovery.waitingHelp`, TR "Panel henüz yanıt vermedi.
   Yanıt verir vermez CelikPanel açılır; bir şey yapmanız gerekmiyor." · EN "The
   Panel has not answered yet. CelikPanel opens as soon as it does; you do not
-  need to do anything."; meşgul kontrol düğmesi (`recovery.checking`).
-  "CelikPanel’i yeniden yükle" artık hemen sunulmaz; yarım dakika sonra yeni
+  need to do anything."; kontrol düğmesi (bir okuma sürerken meşgul,
+  `recovery.checking`). "CelikPanel’i yeniden yükle" artık hemen sunulmaz;
+  yarım dakika sonra (sessiz sürenin bitiminden, beklemeyi gösteren sayfa
+  tarafından sayılır: başka bir sayfanın açıklanmış beklemesini sürdüren sayfa
+  kendi yarım dakikasını sayar) yeni
   `recovery.waitingProlonged`, TR "Bu, yarım dakikadan uzun sürdü. CelikPanel
   kendiliğinden kontrol etmeyi sürdürür; dilerseniz yeniden de
   yükleyebilirsiniz." · EN "This has taken longer than half a minute.
@@ -5481,7 +5501,9 @@ sözleşme maddeleri aynı tarih ve başlıklı
 - *Açık bir sayfanın üzerindeki bekletme katmanı, okumanın gösterdiği nedeni
   söyler.* Lisans metni (`accessHold.licenseTitle`/`licenseHelp`, değişmedi)
   yalnızca Panel yanıt verdiğinde ve okunamayan şey lisans sonucu olduğunda ya
-  da bir istek lisans kararı olmadığı için reddedildiğinde kullanılır.
+  da bir istek lisans kararı olmadığı için reddedildiğinde kullanılır
+  (gövdesi çözümlenemeyen bir başarı durumu da aynı sayılır, Panel'in yanıtı
+  olarak: `LicenseOnboarding.tsx` nedeni çözümlemeden önce ayarlar).
   Panel'den yanıt yok: `accessHold.availabilityTitle`, TR "Panel az önce yanıt
   vermedi" · EN "The Panel did not answer just now" (değişmedi). Panel
   başladığını söylüyor: `recovery.startingTitle` (değişmedi). Bu tarayıcıdan
@@ -5495,7 +5517,11 @@ sözleşme maddeleri aynı tarih ve başlıklı
   restarts while an update is applied, so it may not answer for a short while.
   This is not a license problem." Devam satırı ve kontrol eylemi değişmedi.
   Tarayıcının kendi güncelleme kaydı yalnızca bu sözcükleri seçer; hiçbir
-  zaman sunucu sonucu olarak gösterilmez.
+  zaman sunucu sonucu olarak gösterilmez. Kayıt, güncelleme ne kadar önce
+  başlatılmış olursa olsun `active` dediği sürece bitmemiş sayılır
+  (`savedUpdateUnfinished`in yaş sınırı yoktur); bu tarayıcının bitişini hiç
+  görmediği bir kayıt, ilgisiz bir kesinti için de güncelleme adını verebilir;
+  sözcükler bitişin "burada henüz görülmediğini" söyler.
 - *Hiçbir şeyin yerini almayan tam sayfa* (bir şey bağlanmadan ilk lisans
   okuması başarısız) aynı kararı kullanır: yanıt yoksa "Panelin hazır olma
   durumu kontrol edilemedi", başlayan Panel için "Panel başlatılıyor", "Lisans
@@ -5516,7 +5542,9 @@ sonucu için bekletme nedeni). Geri döngü taklidine karşı tarayıcı koşusu
 (`web/tools/browser-inspect`, `coldload` ve `coldslow` senaryoları, 2 Mbit/sn
 ve 300 ms'ye kısılmış Chrome, okumalar 300 ms yavaşlatılmış): yayımlanmış kod
 "Panel erişimi kontrol ediliyor" kapısını `/setup`, `/` ve
-`/settings?section=updates` üzerinde yaklaşık 1,4 sn çizdi; bu değişiklikle üç
+`/settings?section=updates` üzerinde yaklaşık 1,4 sn çizdi (o koşunun konsol
+çıktısı depoda tutulmaz; yedinci kayıt aynı kısıtlamada gerçek bir Panel'de
+yaklaşık 1,7 sn ölçtü); bu değişiklikle üç
 yüklemenin hiçbiri uygulamadan önce bir cümle çizmedi (zemin, açılış
 göstergesi, zemin, sonra sayfa); oturum okuması 2,5 sn tutulduğunda açıklanmış
 bekleme sessiz süreden sonra göründü ve sayfa kendiliğinden açıldı.

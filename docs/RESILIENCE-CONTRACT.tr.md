@@ -3829,7 +3829,10 @@ D-025 ilke 2 (bilinmeyen; yok, başarısız ya da lisans kararı değildir) ve 6
 (hazır olma, ilerleme ve erişim bağımsız kalır; ekran doğrulananı söyler);
 D-024. **Hiçbir P0 işi kapanmadı ya da ilerlemedi**; P0.2 kısmi kalır ve her açık
 kabul işi açık kalır. Bileşen testleri ve geri döngü taklidine karşı bir
-tarayıcı koşusuyla kaynak durumu. 2026-10-10 saat tarihidir.
+tarayıcı koşusuyla kaynak durumu: bileşen testli ve taklit tarayıcılı; gerçek
+bir sistemde ölçülmedi. Yukarıdaki girdideki açık sunum işlerinden 3. maddeyi
+ve yalnız sözcükleriyle 1. maddeyi yanıtlar (sayfayı değiştiren alpha.81
+arayüzü değişmedi). 2026-10-10 saat tarihidir.
 
 - **Bulgu (yedinci gerçek sistem kaydı, hücre 5).** `/setup`, `/` ve
   `/settings?section=updates` soğuk tam yüklemesinde, oturum açık ve sağlıklıyken,
@@ -3862,11 +3865,13 @@ tarayıcı koşusuyla kaynak durumu. 2026-10-10 saat tarihidir.
   okumanın gösterdiği nedeni kaydeder (`AccessReadCause`: yanıt yok ya da
   Panel'den gelmeyen bir ret → `availability`; `PANEL_STARTING` → `starting`;
   lisans sonucu kullanılamayan bir yanıt ya da bir isteğin lisans reddi →
-  `license`); neden bekletmeye ve tam sayfaya verilir. `AccessHold`, bu
-  tarayıcının güncelleme kaydı `active` iken yanıt vermeyen Panel'i bir
-  güncellemenin yeniden başlatması olarak adlandırır
-  (`web/src/lib/recoveryObservation.ts` içinde `savedUpdateUnfinished`; yalnızca
-  sunum ipucu). `RecoveryAccess` iki adresini `readRemote` ile okur; uzak-durum
+  `license`; gövdesi çözümlenemeyen bir başarı durumu da `license`tır, neden
+  çözümlemeden önce ayarlanır); neden bekletmeye ve tam sayfaya verilir.
+  `AccessHold`, bu tarayıcının güncelleme kaydı `active` iken yanıt vermeyen
+  Panel'i (yalnız `availability` nedeni) bir güncellemenin yeniden başlatması
+  olarak adlandırır (`web/src/lib/recoveryObservation.ts` içinde
+  `savedUpdateUnfinished`; yalnızca sunum ipucu, yaş sınırı yok: bu tarayıcının
+  bitişini hiç görmediği kayıt ipucunu korur). `RecoveryAccess` iki adresini `readRemote` ile okur; uzak-durum
   mandalı listesinden çıkar (31'den 30 dosyaya; `valueFromFailure` 1,
   `swallowedFailure` 1, `rawRead` 2 kaldırıldı).
 - **Şema ya da sürüm geçişi.** Yok: hiçbir API, kalıcı kayıt ya da erişim
@@ -3878,8 +3883,10 @@ tarayıcı koşusuyla kaynak durumu. 2026-10-10 saat tarihidir.
   `web/tests/access-hold-runtime.test.mjs` (bileşen düzeyi; aynı tarihli işlem
   yönlendirmesi girdisine bakın). Geri döngü taklidinde tarayıcı koşusu
   (`web/tools/browser-inspect`, `coldload`, `coldslow`; kısılmış Chrome):
-  yayımlanmış kod üç yolun hepsinde kapıyı yaklaşık 1,4 sn çizdi; değişiklik
-  hiçbirinde sayfadan önce bir cümle çizmedi.
+  yayımlanmış kod üç yolun hepsinde kapıyı yaklaşık 1,4 sn çizdi (o koşunun
+  konsol çıktısı depoda tutulmaz; yedinci kayıt aynı kısıtlamada gerçek bir
+  Panel'de yaklaşık 1,7 sn ölçtü); değişiklik taklitte hiçbirinde sayfadan önce
+  bir cümle çizmedi.
 - **Açık.** Konukta gerçek sistem yeniden ölçümü (set7 yöntemi) ve her kurulu
   sunucu; HTTP önbelleği açıkken yükleme; gerçek bir güncelleme sırasında
   bekletme katmanının sözcükleri; yükleme başına iki oturum okuması (burada
@@ -3890,8 +3897,11 @@ tarayıcı koşusuyla kaynak durumu. 2026-10-10 saat tarihidir.
 D-025 ilke 2 (bilinmeyen yok, boş ya da başarı değildir) ve 6 (ekran doğrulananı
 söyler); D-024; P0.2 alanı (doğru durum: güncelleme bildirimi ile kart
 uyuşur). **Hiçbir P0 işi kapanmadı ya da ilerlemedi**; bütün kabul işleri açık
-kalır. Yukarıdaki girdinin 2. ve 4. maddesini yanıtlar; 1., 3. ve 5. maddelere
-dokunulmadı. 2026-10-10 saatten okunan tarihtir.
+kalır. Bileşen testli ve taklit tarayıcılı; gerçek bir sistemde ölçülmedi.
+Yedinci kayıt girdisindeki (iki girdi yukarıda) açık sunum işlerinden 2. ve 4.
+maddeyi yanıtlar; 1., 3. ve 5. maddelere bu girdi dokunmaz (hemen yukarıdaki
+girdi 3. maddeyi ve 1. maddenin sözcüklerini ele alır). 2026-10-10 saat
+tarihidir.
 
 - **Nedenler, koddan okunduğu hâliyle.** 4. madde: son denetimi beklerken planı
   yeniden açılan çalışma `failed`, `server_setup_plan_revised` kodu ve
@@ -3909,8 +3919,9 @@ dokunulmadı. 2026-10-10 saatten okunan tarihtir.
   üstüne açık olarak koyar ve her adımın durumunu adlandırır (sizi bekliyor,
   gereksinimler bekleniyor, denetlenemedi, başarısız, durduruldu, başlamadı).
   Güncelleme: `GET /api/v1/panel/update/status` (ve vazgeçme yanıtı), kayıt
-  `running` iken yanıt veren Panel tam hedef yapıysa ek `phase: "verifying"`
-  taşır (`panelUpdateStatusPhase`); bildirim ve kart o zaman "kuruldu,
+  `running` iken yanıt veren Panel'in sürümü ve commit'i güncellemenin hedefiyle
+  aynıysa ek `phase: "verifying"` taşır (`panelUpdateStatusPhase`; arşiv özeti
+  ve sıra numarası karşılaştırılmaz; vazgeçme yanıtı testle kapsanmaz); bildirim ve kart o zaman "kuruldu,
   doğrulanıyor", okuma başarısızsa nedeniyle "okunamadı", ilk okumadan önce
   "okunuyor" der; bitmiş kayıt bildirim bırakmaz (değişmedi). Güncelleme
   penceresindeki saat "UTC" etiketli değil, dilimiyle yerel saattir.
@@ -3933,5 +3944,11 @@ dokunulmadı. 2026-10-10 saatten okunan tarihtir.
 - **Açık.** Gerçek bir sistemde ölçülmedi: ters DNS'i yanlış olan bir sunucu
   (tipli neden gerçek bir Agent'tan hiç okunmadı), sahibin kendi kurulum kaydı,
   gerçek bir güncellemenin doğrulama aralığı, kurulu bir sunucu. Telefonda köşe
-  bildirimi taklitte kartın durum satırını örtüyor (değiştirilmedi). Yukarıdaki
-  1., 3. ve 5. maddeler açık kalır.
+  bildirimi taklitte kartın durum satırını örtüyor (değiştirilmedi). **Tipli
+  nedendeki açık:** Agent'ta başarısız bir ters DNS sorgusu ad da hata da
+  bildirilmeden döner (`cmd/agent/mail_health_rpc.go:42-46`,
+  `mail_health_dns.go:75-79`); bu yüzden sayfa, sonucun bilinmediği yerde ters
+  DNS adı bulunamadı der (ilke 2); açık. Bildirimi sekmenin yüklediği arayüz
+  çizer; önceki sürümdeki bir sekmeden başlatılan güncelleme `phase` alanını yok
+  sayar. Yedinci kayıt girdisinin 1. ve 5. maddesi açık kalır; 3. madde hemen
+  yukarıdaki girdiyle kaynakta ele alınır, ölçülmedi.
