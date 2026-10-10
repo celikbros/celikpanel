@@ -64,9 +64,10 @@ const (
 		"Nothing was left behind. Move or rename that file on the server if it is no longer used, then create the site again."
 	siteConfigChangedMessage = "The configuration file or CelikPanel's text changed after the page showed them, so nothing was done. " +
 		"Read the file's state again, then choose again."
-	siteConfigNotApplicableMessage = "This choice does not apply to the file as it is now, so nothing was done. Read the file's state again."
+	siteConfigNotApplicableMessage = "This choice does not apply to the file as it is now, so nothing was done. Read the file's state again; choose again if you still want it."
 	siteConfigNotReadMessage       = "CelikPanel could not read the state of this site's configuration file just now. This does not mean anything is wrong with the file, and nothing was changed. Try again."
-	siteConfigNginxRefusedMessage  = "nginx refused the configuration with CelikPanel's text in it, so your file was put back exactly as it was and nginx keeps running with it. Nothing else was changed."
+	siteConfigNginxRefusedMessage  = "nginx did not accept CelikPanel's text (it refused the configuration or could not reload), so your file was put back and nginx keeps running with it. " +
+		"nginx checks every site together, so the cause may be another file; fix what nginx reported, then choose again."
 )
 
 // siteFileHeldError is a render the Agent did not apply because of the file's
@@ -192,9 +193,19 @@ func (p *Panel) recordSiteFile(ctx context.Context, siteID, domainID int, domain
 	if file.Path == "" {
 		return
 	}
-	if err := services.RecordSiteFileResult(ctx, p.db.GetDB(), siteID, domainID, *file, siteFileReleaseLabel(), 0); err != nil {
+	p.recordObservedSiteFile(ctx, siteID, domainID, domain, *file)
+}
+
+// recordObservedSiteFile stores a result and lets it end a certificate's
+// waiting state (D-031 step 1b).
+func (p *Panel) recordObservedSiteFile(ctx context.Context, siteID, domainID int, domain string, file transport.SiteFileResult) error {
+	previous, _, _ := services.LoadSiteFileRecord(ctx, p.db.GetDB(), siteID, transport.SiteFileKindNginxVhost)
+	if err := services.RecordSiteFileResult(ctx, p.db.GetDB(), siteID, domainID, file, siteFileReleaseLabel(), 0); err != nil {
 		log.Printf("site configuration %s: record the result in the ledger: %v", domain, err)
+		return err
 	}
+	p.observeSiteFileCertificate(ctx, siteID, domainID, previous.StateReason, file)
+	return nil
 }
 
 // applySiteFileRender is the one path of every single-site render.
@@ -240,6 +251,19 @@ type siteConfigView struct {
 	Ledger        *siteConfigLedgerView `json:"ledger,omitempty"`
 	Outcome       string                `json:"outcome,omitempty"`
 	BackupPath    string                `json:"backup_path,omitempty"`
+	// D-031 step 1b: the Panel's own include directory and the line a kept
+	// file needs for certificate validation; Validation is whether a
+	// certificate operation could validate without changing a kept file.
+	ManagedDir     string `json:"managed_dir,omitempty"`
+	ManagedInclude string `json:"managed_include,omitempty"`
+	Validation     string `json:"validation,omitempty"`
+	ChallengeFile  string `json:"challenge_file,omitempty"`
+	// PendingReason is the ledger's certificate reason ("certificate",
+	// "certificate_validation"); Certificate says what it is about.
+	PendingReason string                 `json:"pending_reason,omitempty"`
+	Certificate   *siteConfigCertificate `json:"certificate,omitempty"`
+
+	certificateReferenced bool
 }
 
 type siteConfigDecision struct {
@@ -288,6 +312,10 @@ func (p *Panel) siteConfigViewFor(ctx context.Context, siteID int, view siteConf
 			Current: record.DecisionFileSHA256 != "" && record.DecisionFileSHA256 == view.FileSHA256,
 		}
 	}
+	if services.SiteFileCertificateReason(record.StateReason) {
+		view.PendingReason = record.StateReason
+		view.Certificate = p.siteConfigCertificateFor(ctx, view.DomainID, record.StateReason, view.certificateReferenced)
+	}
 	return view
 }
 
@@ -322,6 +350,9 @@ func (p *Panel) inspectSiteConfig(ctx context.Context, domainID int) (siteConfig
 	view.AdoptedFrom, view.IncludeDir, view.Enabled = file.AdoptedFrom, file.IncludeDir, file.Enabled
 	view.FileSHA256, view.RenderSHA256, view.PendingPath = file.FileSHA256, file.RenderSHA256, file.PendingPath
 	view.Diff, view.DiffTruncated = resp.Diff, resp.DiffTruncated
+	view.ManagedDir, view.ManagedInclude = file.ManagedDir, file.ManagedInclude
+	view.Validation, view.ChallengeFile = file.Validation, file.ChallengeFile
+	view.certificateReferenced = file.CertificateReferenced
 	view.Actions = siteConfigActions(file.State)
 	return p.siteConfigViewFor(ctx, siteID, view), siteID, &file, nil
 }
@@ -428,7 +459,7 @@ func (p *Panel) handleSiteConfigKeep(w http.ResponseWriter, r *http.Request, dom
 	}
 	observed := *file
 	observed.Outcome = transport.SiteFileOutcomeKept
-	if err := services.RecordSiteFileResult(ctx, p.db.GetDB(), siteID, domainID, observed, siteFileReleaseLabel(), 0); err != nil {
+	if err := p.recordObservedSiteFile(ctx, siteID, domainID, view.Domain, observed); err != nil {
 		writeServerError(w, err)
 		return
 	}
@@ -519,6 +550,7 @@ func (p *Panel) handleSiteConfigRender(w http.ResponseWriter, r *http.Request, d
 		Path: file.Path, State: transport.SiteFileManagedUnchanged, IncludeDir: file.IncludeDir,
 		Enabled: file.Enabled, FileSHA256: file.FileSHA256, RenderSHA256: file.RenderSHA256,
 		Actions: []string{}, Outcome: file.Outcome, BackupPath: file.BackupPath,
+		ManagedDir: file.ManagedDir, ManagedInclude: file.ManagedInclude, ChallengeFile: file.ChallengeFile,
 	}
 	view = p.siteConfigViewFor(ctx, siteID, view)
 	w.Header().Set("Content-Type", "application/json")
@@ -540,11 +572,13 @@ type domainSiteConfigSummary struct {
 	AdoptedFrom string `json:"adopted_from,omitempty"`
 	// KeptByChoice: the owner chose "keep mine" for the file as it is now.
 	KeptByChoice bool `json:"kept_by_choice,omitempty"`
+	// PendingReason is a certificate reason (D-031 step 1b), when there is one.
+	PendingReason string `json:"pending_reason,omitempty"`
 }
 
 func (p *Panel) domainSiteConfigSummaries(ctx context.Context) (map[int]domainSiteConfigSummary, error) {
 	rows, err := p.db.GetDB().QueryContext(ctx, `
-		SELECT domain_id, state, adopted_from, decision, decision_file_sha256, file_sha256
+		SELECT domain_id, state, adopted_from, decision, decision_file_sha256, file_sha256, state_reason
 		FROM managed_site_files WHERE kind = ? ORDER BY id`, transport.SiteFileKindNginxVhost)
 	if err != nil {
 		return nil, err
@@ -553,14 +587,18 @@ func (p *Panel) domainSiteConfigSummaries(ctx context.Context) (map[int]domainSi
 	summaries := make(map[int]domainSiteConfigSummary)
 	for rows.Next() {
 		var domainID int
-		var state, adopted, decision, decisionSHA, fileSHA string
-		if err := rows.Scan(&domainID, &state, &adopted, &decision, &decisionSHA, &fileSHA); err != nil {
+		var state, adopted, decision, decisionSHA, fileSHA, reason string
+		if err := rows.Scan(&domainID, &state, &adopted, &decision, &decisionSHA, &fileSHA, &reason); err != nil {
 			return nil, err
 		}
-		summaries[domainID] = domainSiteConfigSummary{
+		summary := domainSiteConfigSummary{
 			State: state, AdoptedFrom: adopted,
 			KeptByChoice: decision == services.SiteFileDecisionKeepMine && decisionSHA != "" && decisionSHA == fileSHA,
 		}
+		if services.SiteFileCertificateReason(reason) {
+			summary.PendingReason = reason
+		}
+		summaries[domainID] = summary
 	}
 	return summaries, rows.Err()
 }

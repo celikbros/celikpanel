@@ -394,7 +394,8 @@ class API {
     async me(signal?: AbortSignal): Promise<CurrentUser | null> {
         const res = await fetch(`${API_BASE}/auth/me`, { signal, cache: 'no-store' });
         if (res.status === 401) return null;
-        if (!res.ok) throw new Error('Failed to fetch current user');
+        // The status is kept: the recovery page names the answer that was read.
+        if (!res.ok) throw new ApiResponseError(res);
         return parseCurrentUser(await res.json());
     }
 

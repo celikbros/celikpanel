@@ -26,6 +26,8 @@ const stub = dataModule(`import React from '${reactURL}';
 `);
 // The shared reader and the first-read quiet time are the real ones (2026-10-10).
 const quietURL = dataModule(`import React from '${reactURL}';\n`+compile('../src/lib/quietRead.ts').replace(/from ['"]react['"]/g,`from '${reactURL}'`));
+// The page's access-wait clock is held by hand: 15 s and 30 s are reached by setting it, never by waiting.
+const waitClock=await import(quietURL);let now=0;waitClock.accessWaitClock.now=()=>now;
 function rewritten(path) { return dataModule(`import React from '${reactURL}';\n`+compile(path).replace(/from ['"]([^'"]+)['"]/g,(_,specifier)=>`from '${specifier==='react'?reactURL:specifier.endsWith('/recoveryObservation')?recoveryURL:specifier.endsWith('/panelHandover')?handoverURL:specifier.endsWith('/remote')?remoteURL:specifier.endsWith('/quietRead')?quietURL:stub}'`)); }
 const {usePanelSession}=await import(rewritten('../src/auth/usePanelSession.ts'));
 const {RecoveryAccess,RecoveryStatus}=await import(rewritten('../src/components/RecoveryAccess.tsx'));
@@ -37,7 +39,7 @@ const id='a'.repeat(32),other='b'.repeat(32);
 const admin={username:'admin',effective_role:'admin'};
 let tree,session,calls=[];
 function Fixture(){session=usePanelSession();return React.createElement('output',null,session.state);}
-async function clean(){if(tree)await act(async()=>tree.unmount());tree=undefined;globalThis.fetch=originalFetch;delete globalThis.recoveryFixture;}
+async function clean(){if(tree)await act(async()=>tree.unmount());tree=undefined;globalThis.fetch=originalFetch;delete globalThis.recoveryFixture;waitClock.endAccessWait();now=0;}
 const known=(phase='failed')=>({schema:'celikpanel-recovery-status/v1',panel_state:'ready',request_id:id,observation:'known',phase,terminal_proof:phase==='recovered'?'rollback_verified':phase==='succeeded'?'update_verified':'none',reason:phase==='failed'?'update_failed':phase==='recovered'?'rollback_verified':phase==='succeeded'?'update_verified':'update_running',observed_at:'2026-09-14T08:00:00Z'});
 function setup(me=async()=>admin,fetcher=async()=>Response.json({schema:'celikpanel-panel-availability/v1',state:'ready'})){
  calls=[];globalThis.recoveryFixture={me};globalThis.fetch=async(...args)=>{calls.push(args);return fetcher(...args)};
@@ -468,10 +470,10 @@ test('a finished update is not drawn as part of an access or readiness gate',asy
 // has passed or a read has answered; after it, the wait is explained; a known
 // negative replaces the screen at once. "Could not be checked" needs a read that failed.
 // Ilk okuma yanit vermeden sessiz sure icinde sayfa cizilmez; bilinen olumsuz sonuc hemen gosterilir.
-const QUIET_MS=1500,PROLONGED_MS=30000;
+const QUIET_MS=1500,LONG_MS=15000,PROLONGED_MS=30000;
 function handTimers(){
  const previous=window.setTimeout,previousClear=window.clearTimeout,timers=[];
- window.setTimeout=(fn,ms)=>{if(ms===QUIET_MS||ms===PROLONGED_MS){const timer={fn,ms,live:true};timers.push(timer);return timer;}return previous(fn,ms);};
+ window.setTimeout=(fn,ms)=>{if(ms===QUIET_MS||ms===LONG_MS||ms===PROLONGED_MS){const timer={fn,ms,live:true};timers.push(timer);return timer;}return previous(fn,ms);};
  window.clearTimeout=timer=>{if(timer&&typeof timer==='object'&&'live' in timer)timer.live=false;else previousClear(timer);};
  return {
   fire:async ms=>{const due=timers.filter(timer=>timer.live&&timer.ms===ms);for(const timer of due)timer.live=false;await act(async()=>{for(const timer of due)timer.fn()});return due.length;},
@@ -497,12 +499,20 @@ test('a cold load draws nothing before the quiet time, then the waiting state; a
   assert.ok(content.includes('recovery.checkingTitle')&&content.includes('recovery.waitingHelp'),content);
   for(const absent of ['recovery.checkingHelp','recovery.authTitle','recovery.availabilityTitle','recovery.licenseTitle','app.reload','recovery.waitingProlonged','recovery.operationTitle'])assert.ok(!content.includes(absent),`${absent}: ${content}`);
   assert.deepEqual(labels(),['recovery.checking']);assert.equal(tree.root.findByType('button').props.disabled,true);
-  assert.equal(await clock.fire(PROLONGED_MS),1);
-  assert.ok(text().includes('"recovery.waitingProlonged"')&&!text().includes('recovery.waitingProlongedLoading'),text());assert.deepEqual(labels(),['recovery.checking','app.reload']);
+  // 15 s of the page's wait: still unknown, never "could not be checked"; "Check now" is offered, enabled.
+  now=LONG_MS;assert.equal(await clock.fire(LONG_MS),1);
+  content=text();
+  assert.ok(content.includes('recovery.checkingTitle')&&content.includes('recovery.waitingLong')&&!content.includes('recovery.waitingHelp'),content);
+  for(const absent of ['recovery.checkingHelp','recovery.authTitle','app.reload','recovery.waitingProlonged'])assert.ok(!content.includes(absent),`${absent}: ${content}`);
+  assert.deepEqual(labels(),['recovery.checkNow']);assert.equal(tree.root.findByType('button').props.disabled,false);
+  // 30 s: the half-minute sentence and the reload beside "Check now".
+  now=PROLONGED_MS;assert.equal(await clock.fire(LONG_MS),1);
+  assert.ok(text().includes('recovery.waitingLong')&&text().includes('"recovery.waitingProlonged"')&&!text().includes('recovery.waitingProlongedLoading'),text());assert.deepEqual(labels(),['recovery.checkNow','app.reload']);
   // The next gate of the same load (the interface arrived; its own session read is in flight) continues the
-  // explained wait: it does not go blank again (browser run, 2026-10-10).
+  // explained wait: it does not go blank again (browser run, 2026-10-10), and its counters are not restarted.
   await act(async()=>tree.update(React.createElement(RecoveryAccess,{key:'next',user:null,cause:'checking',checking:true,onRetry(){}})));
-  assert.ok(!quietSurface()&&text().includes('recovery.checkingTitle')&&text().includes('recovery.waitingHelp'),text());
+  assert.ok(!quietSurface()&&text().includes('recovery.checkingTitle')&&text().includes('recovery.waitingLong')&&text().includes('"recovery.waitingProlonged"'),text());
+  assert.deepEqual(labels(),['recovery.checkNow','app.reload']);
   await clean();setup();
   // Once nothing explained is on screen, a new wait starts quiet again.
   await render({user:null,cause:'checking',checking:true});
@@ -544,6 +554,9 @@ test('a cold load draws nothing before the quiet time, then the waiting state; a
  const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
  const gate=app.slice(app.indexOf('function AuthGate()'),app.indexOf('function StandaloneRecovery('));
  assert.match(gate,/const cause = state === 'checking' \? 'checking' : state === 'auth_unavailable' \|\| !user \? 'auth' : state === 'starting' \? 'starting' : 'availability';/);
+ // The full page keeps waiting while nothing has answered; the hold over mounted pages keeps its own cause.
+ assert.match(gate,/<RecoveryAccess user=\{known\} cause=\{unanswered \? 'checking' : cause\} checking=\{checking\} failure=\{failure\}/);
+ assert.match(gate,/<AccessHold active=\{state !== 'ready'\} cause=\{cause === 'checking' \? 'availability' : cause\}/);
  // The interface still being fetched is a wait as well.
  assert.match(app,/<Suspense fallback=\{<StandaloneRecovery loading \/>\}>/);
  const lock=readFileSync(new URL('../src/components/LicenseLockScreen.tsx',import.meta.url),'utf8');
@@ -571,15 +584,19 @@ test('the standalone recovery route shows a Panel that is down or starting at on
  const render=async props=>{await act(async()=>{tree=Renderer.create(React.createElement(StandaloneRecovery,props))});await act(async()=>{});return JSON.stringify(tree.toJSON());};
  const cases=[
   // Nothing answers: the session read fails, which is known, so it is said at once.
-  [async()=>{throw new TypeError('Failed to fetch')},undefined,{loading:true},'recovery.authTitle'],
+  [async()=>{throw new TypeError('Failed to fetch')},undefined,{loading:true},'recovery.authTitle','recovery.failure.network'],
   [async()=>admin,ready('starting'),{loading:true},'recovery.startingTitle'],
-  [async()=>admin,async()=>Response.json({}, {status:503}),{loading:true},'recovery.availabilityTitle'],
+  [async()=>admin,async()=>Response.json({}, {status:503}),{loading:true},'recovery.availabilityTitle','recovery.failure.status'],
+  [async()=>{throw Object.assign(new Error('503'),{response:{status:503}})},undefined,{loading:true},'recovery.authTitle','recovery.failure.status'],
+  [async()=>admin,async()=>Response.json({schema:'old'}),{loading:true},'recovery.availabilityTitle','recovery.failure.invalid'],
   // The interface failed to load: the full reader, at once.
   [async()=>admin,ready('ready'),{},'recovery.bundleTitle'],
  ];
- for(const [me,fetcher,props,title] of cases){
+ for(const [me,fetcher,props,title,cause] of cases){
   setup(me,fetcher);globalThis.localStorage={getItem:()=>null};
-  try{const content=await render(props);assert.ok(!quietSurface()&&content.includes(title),`${title}: ${content}`);}finally{await clean();}
+  try{const content=await render(props);assert.ok(!quietSurface()&&content.includes(title),`${title}: ${content}`);
+   // An answered failure says what was read, at once; it is not a wait.
+   if(cause)assert.ok(content.includes(cause)&&!content.includes('recovery.waiting'),`${cause}: ${content}`);}finally{await clean();}
  }
  // Reads in flight, or only the interface still on its way: the background alone.
  for(const [me,fetcher] of [[()=>new Promise(()=>{}),undefined],[async()=>admin,()=>new Promise(()=>{})],[async()=>admin,ready('ready')]]){
@@ -589,4 +606,75 @@ test('the standalone recovery route shows a Panel that is down or starting at on
  // No session: the sign-in form, as before.
  setup(async()=>null);
  try{await render({loading:true});assert.equal(tree.root.findAllByType('form').length,1);}finally{await clean();}
+});
+
+// Ninth native record, cell 2 (2026-10-10): with every session read held 35 s, the read's own 15 s limit drew
+// "Your session could not be checked" with the reload at 15.18 s, the automatic re-read at 25.2 s drew the older
+// "Confirming your session..." sentence, and the half-minute sentence never came. One sequence now, with the real
+// session reads and the real recovery route: a read that has not answered stays the wait; only an answer ends it.
+// Dokuzuncu yerel kayit, hucre 2: yanit vermeyen okuma 15 sn sonra da beklemedir; yalnizca yanit onu bitirir.
+test('a session read that does not answer: the wait at 1.5 s, "Check now" at 15 s, the reload at 30 s; a re-read restarts nothing; an answered failure is named at once',async()=>{
+ const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
+ const slice=app.slice(app.indexOf('function StandaloneRecovery('),app.indexOf('class RecoveryBoundary'));
+ const compiled=ts.transpileModule(slice+'\nexport { StandaloneRecovery };',{compilerOptions:{jsx:ts.JsxEmit.React,module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2020}}).outputText;
+ const {StandaloneRecovery}=await import(dataModule(`import React, { useCallback } from '${reactURL}';
+  import { usePanelSession } from '${rewritten('../src/auth/usePanelSession.ts')}';
+  import { RecoveryAccess } from '${rewritten('../src/components/RecoveryAccess.tsx')}';
+  const Login = () => React.createElement('form', null, 'sign-in');
+  ${compiled}`));
+ const clock=handTimers();const previousInterval=window.setInterval;let reread=null;
+ window.setInterval=(fn,ms)=>{if(ms===10000){reread=fn;return 0}return previousInterval(fn,ms)};
+ const text=()=>JSON.stringify(tree.toJSON());const button=()=>tree.root.findAllByType('button')[0];
+ let reads=0,answer=null;
+ // A held read, as the browser sees it: no answer until the page itself gives up on it.
+ const held=signal=>{reads++;if(answer)return answer();return new Promise((_,reject)=>signal.addEventListener('abort',()=>reject(Object.assign(new Error('aborted'),{name:'AbortError'}))))};
+ const settle=async()=>{await act(async()=>{});await act(async()=>{});};
+ try{
+  setup(held);globalThis.localStorage={getItem:()=>null};
+  await act(async()=>{tree=Renderer.create(React.createElement(StandaloneRecovery,{loading:true}))});
+  assert.ok(quietSurface()&&reads===1,text());
+  // 1.5 s: the explained wait with the busy check.
+  assert.equal(await clock.fire(QUIET_MS),1,"the clock stays at 0 so that the next stage is due at exactly 15 s");
+  assert.ok(text().includes('recovery.waitingHelp'),text());assert.deepEqual(labels(),['recovery.checking']);assert.equal(button().props.disabled,true);
+  // 15 s: the stage and the read's own limit. Still unknown: no "could not be checked", no older sentence, no reload.
+  now=LONG_MS;assert.equal(await clock.fire(LONG_MS),2,'the stage and the read limit');await settle();
+  let content=text();
+  assert.ok(content.includes('recovery.checkingTitle')&&content.includes('recovery.waitingLong'),content);
+  for(const absent of ['recovery.authTitle','recovery.authHelp','recovery.checkingHelp','recovery.failure.','app.reload','recovery.waitingProlonged'])assert.ok(!content.includes(absent),`${absent}: ${content}`);
+  assert.deepEqual(labels(),['recovery.checkNow']);assert.equal(button().props.disabled,false);
+  // 25 s: the automatic re-read. It changes no sentence, does not draw itself as busy, restarts no counter.
+  assert.ok(reread,'unknown access is read again by itself');now=25000;await act(async()=>reread());await settle();
+  assert.equal(reads,2);content=text();
+  assert.ok(content.includes('recovery.waitingLong')&&!content.includes('recovery.checkingHelp')&&!content.includes('recovery.waitingHelp')&&!content.includes('app.reload'),content);
+  assert.deepEqual(labels(),['recovery.checkNow']);
+  // "Check now" while that read is in flight: drawn as busy, and no second read is started.
+  await act(async()=>button().props.onClick());await settle();
+  assert.equal(reads,2,'no duplicate read');assert.deepEqual(labels(),['recovery.checking']);assert.equal(button().props.disabled,true);
+  // 30 s from the first read, not from the re-read: the half-minute sentence and the reload beside "Check now".
+  now=PROLONGED_MS;assert.equal(await clock.fire(LONG_MS),2,'the stage and the re-read limit');await settle();
+  content=text();
+  assert.ok(content.includes('recovery.waitingLong')&&content.includes('"recovery.waitingProlonged"'),content);
+  assert.deepEqual(labels(),['recovery.checkNow','app.reload']);
+  for(const absent of ['recovery.authTitle','recovery.checkingHelp'])assert.ok(!content.includes(absent),`${absent}: ${content}`);
+  // "Check now" with nothing in flight: exactly one more read.
+  await act(async()=>button().props.onClick());await settle();assert.equal(reads,3);
+  assert.equal(await clock.fire(LONG_MS),1,'that read reaches its limit');await settle();
+  // A read that answers with a failure: the known negative at once, with what was read.
+  answer=async()=>{throw new TypeError('Failed to fetch')};
+  await act(async()=>reread());await settle();
+  content=text();
+  assert.ok(content.includes('recovery.authTitle')&&content.includes('recovery.failure.network')&&!content.includes('recovery.waitingLong'),content);
+  assert.ok(labels().includes('recovery.retry')&&labels().includes('app.reload'),labels().join());
+  assert.ok(calls.every(([,options])=>!options?.method),'reads only');
+ }finally{clock.restore();window.setInterval=previousInterval;await clean();}
+ // Only a page load restarts the counters: the page's first wait counts from navigation start (the clock's origin),
+ // a later one (after a sign-in) from its first read. Here the module state is reset as a new page would have it.
+ assert.match(readFileSync(new URL('../src/lib/quietRead.ts',import.meta.url),'utf8'),/waitBegan = pageWaited \? accessWaitClock\.now\(\) : 0;/);
+ const clock2=handTimers();
+ try{
+  setup(()=>new Promise(()=>{}));globalThis.localStorage={getItem:()=>null};
+  await act(async()=>{tree=Renderer.create(React.createElement(StandaloneRecovery,{loading:true}))});
+  assert.ok(quietSurface());await clock2.fire(QUIET_MS);
+  assert.ok(text().includes('recovery.waitingHelp')&&!text().includes('recovery.waitingLong'),text());
+ }finally{clock2.restore();await clean();}
 });

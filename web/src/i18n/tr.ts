@@ -80,7 +80,7 @@ export const tr: Record<ShellKey, string> = {
 
     // İlk sayfa yüklemesi (2026-10-10, yedinci yerel kayıt, hücre 5).
     'recovery.waitingHelp': "Panel henüz yanıt vermedi. Yanıt verir vermez CelikPanel açılır; bir şey yapmanız gerekmiyor.",
-    'recovery.waitingProlonged': "Bu, yarım dakikadan uzun sürdü. CelikPanel kendiliğinden kontrol etmeyi sürdürür; dilerseniz yeniden de yükleyebilirsiniz.",
+    'recovery.waitingProlonged': "Bu, yarım dakikadan uzun sürdü. Dilerseniz CelikPanel’i yeniden de yükleyebilirsiniz.",
     'recovery.loadingTitle': "CelikPanel açılıyor",
     'recovery.loadingHelp': "Oturumunuz doğrulandı ve Panel hazır. Arayüz hâlâ yükleniyor ve kendiliğinden açılır.",
     // İlk sayfa yüklemesi bloğunun sonu.
@@ -448,8 +448,16 @@ export const tr: Record<ShellKey, string> = {
     'err.SITE_CONFIG_UNWRITABLE': 'CelikPanel bu sitenin nginx yapılandırma dosyasını okuyamadı ya da değiştiremedi (örneğin bir bağlantı ya da değişikliğe kilitli); bu yüzden dosyayı olduğu gibi korudu ve bu değişikliği uygulamadı. Sunucu sahibi dosyayı sunucuda kontrol eder; nedeni alan adının Yapılandırma dosyası sayfasında.',
     'err.SITE_CONFIG_EXISTS': 'Bu ad için sunucuda CelikPanel’in yazmadığı bir yapılandırma dosyası zaten var; bu yüzden CelikPanel onu korudu ve siteyi oluşturmadı. Geride hiçbir şey kalmadı. O dosya artık kullanılmıyorsa sunucuda taşıyın ya da adını değiştirin, sonra siteyi yeniden oluşturun.',
     'err.SITE_CONFIG_CHANGED': 'Yapılandırma dosyası ya da CelikPanel’in metni, sayfa onları gösterdikten sonra değişti; bu yüzden hiçbir şey yapılmadı. Sayfa dosyayı yeniden okur; ona bakıp yeniden seçin.',
-    'err.SITE_CONFIG_NOT_APPLICABLE': 'Bu seçim dosyanın şimdiki hâline uymuyor; bu yüzden hiçbir şey yapılmadı. Sayfa dosyayı yeniden okur.',
+    'err.SITE_CONFIG_NOT_APPLICABLE': 'Bu seçim dosyanın şimdiki hâline uymuyor; bu yüzden hiçbir şey yapılmadı. Sayfa dosyayı yeniden okur; hâlâ istiyorsanız yeniden seçin.',
     'err.SITE_CONFIG_NOT_READ': 'CelikPanel bu sitenin yapılandırma dosyasının durumunu şu an okuyamadı. Bu, dosyada bir sorun olduğu anlamına gelmez ve hiçbir şey değiştirilmedi. Tekrar deneyin.',
-    'err.SITE_CONFIG_NGINX_REFUSED': 'nginx, CelikPanel’in metnini içeren yapılandırmayı reddetti; bu yüzden dosyanız olduğu gibi geri kondu ve nginx onunla çalışmayı sürdürüyor. Başka hiçbir şey değiştirilmedi.',
+    'err.SITE_CONFIG_NGINX_REFUSED': 'nginx, CelikPanel’in metnini kabul etmedi (yapılandırmayı reddetti ya da yeniden yükleyemedi); bu yüzden dosyanız geri kondu ve nginx onunla çalışmayı sürdürüyor. nginx bütün siteleri birlikte kontrol eder; neden başka bir dosya olabilir. nginx’in bildirdiğini düzeltin, sonra yeniden seçin.',
+    'err.SITE_CONFIG_OWNER_EDITED.certificate_validation': 'Bu sitenin nginx yapılandırma dosyası CelikPanel dışında değiştirildi ve CelikPanel’in sertifika doğrulamasını dosyayı değiştirmeden yayımlamasına izin vermiyor; bu yüzden sertifika istenmedi ve hiçbir şey değiştirilmedi. Alan adının Yapılandırma dosyası sayfasında CelikPanel’in metnini alın ya da o sayfanın gösterdiğini dosyanıza ekleyip nginx’i yeniden yükleyin; sonra sertifikayı yeniden isteyin.',
     // --- site yapılandırma retleri bloğunun sonu ---
+    // --- yanıt vermeyen erişim okuması ve hatayla yanıt veren okuma (dokuzuncu yerel kayıt, 2026-10-10) ---
+    'recovery.waitingLong': "Panel bir süredir yanıt vermiyor. CelikPanel kendiliğinden kontrol etmeyi sürdürür; dilerseniz şimdi de kontrol edebilirsiniz.",
+    'recovery.checkNow': "Şimdi kontrol et",
+    'recovery.failure.network': "Panel’e bağlantı, yanıt gelmeden reddedildi ya da kapandı. Bu sürerse sunucu yöneticisi CelikPanel hizmetinin çalıştığını denetler.",
+    'recovery.failure.status': "Panel HTTP {status} hatasıyla yanıt verdi.",
+    'recovery.failure.invalid': "Panel yanıt verdi, ancak bu sayfa yanıtı okuyamadı. CelikPanel’i yeniden yüklemek, Panel’e uyan arayüzü yükler.",
+    // --- yanıt vermeyen erişim okuması bloğunun sonu ---
 };

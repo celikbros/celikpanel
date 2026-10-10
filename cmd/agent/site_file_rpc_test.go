@@ -259,3 +259,34 @@ func TestCreateSiteNginxRefusalKeepsItsTypedAnswer(t *testing.T) {
 		t.Fatalf("reply: %+v", reply)
 	}
 }
+
+// D-031 step 1b: every render item carries the site's challenge root (the
+// generator keeps the Panel's challenge file for it), the certificate path
+// of the render and the validation-only server block of the extra names, so
+// a kept file can be checked without the Panel's text being applied.
+func TestRenderItemsCarryWhatTheCertificateValidationNeeds(t *testing.T) {
+	withLifecycleTestBuild(t)
+	recorder := &recordedManagedApply{}
+	withRecordedManagedApply(t, recorder)
+	request := startupTestVhostRequest(t, 51, 61, "cert.example")
+	request.FileTrigger = ""
+	request.ExpectedBuildCommit = "lifecycle-test"
+	request.ACMEChallengeNames = []string{"mail.cert.example"}
+	var resp ApplyVhostResponse
+	if err := siteFileTestAgent(t).ApplyVhost(&request, &resp); err != nil {
+		t.Fatal(err)
+	}
+	item := recorder.items[0][0]
+	root, err := hostingpath.ACMEChallengeRoot(1, 61)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.ACMEChallengeRoot != root || item.SSLCert != "" {
+		t.Fatalf("item: root %q cert %q", item.ACMEChallengeRoot, item.SSLCert)
+	}
+	if !strings.Contains(item.ValidationBlock, "server_name mail.cert.example;") ||
+		!strings.Contains(item.ValidationBlock, services.PanelManagedIncludeLine("cert.example")) ||
+		!strings.Contains(item.Body, item.ValidationBlock) {
+		t.Fatalf("validation block:\n%s", item.ValidationBlock)
+	}
+}

@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"sort"
 	"time"
+
+	"github.com/alicelik/celikpanel/internal/services"
+	"github.com/alicelik/celikpanel/internal/transport"
 )
 
 // Dashboard extras: the few aggregates the dashboard cannot assemble from
@@ -22,6 +25,13 @@ import (
 type dashboardExpiringCert struct {
 	DomainName string `json:"domain_name"`
 	DaysLeft   int    `json:"days_left"`
+	// WaitingForOwner (D-031 step 1b): the site's configuration file the
+	// owner kept does not use the new certificate yet, or stopped its
+	// renewal. ServedDaysLeft is of the certificate the file most likely
+	// still serves (absent when none is known); DomainID opens the page.
+	WaitingForOwner bool `json:"waiting_for_owner,omitempty"`
+	ServedDaysLeft  *int `json:"served_days_left,omitempty"`
+	DomainID        int  `json:"domain_id,omitempty"`
 }
 
 type dashboardExtras struct {
@@ -54,7 +64,7 @@ func (p *Panel) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := db.QueryContext(r.Context(), `
-		SELECT d.name, c.expires_at
+		SELECT d.id, d.name, c.expires_at, COALESCE(c.renewal_status, '')
 		FROM ssl_certificates c
 		JOIN domains d ON d.id = c.domain_id
 		WHERE c.status = 'active'`)
@@ -64,9 +74,11 @@ func (p *Panel) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 	now := time.Now()
+	var waiting []int
 	for rows.Next() {
-		var name, expires string
-		if err := rows.Scan(&name, &expires); err != nil {
+		var domainID int
+		var name, expires, renewal string
+		if err := rows.Scan(&domainID, &name, &expires, &renewal); err != nil {
 			writeServerError(w, fmt.Errorf("scan dashboard certificate: %w", err))
 			return
 		}
@@ -78,7 +90,16 @@ func (p *Panel) handleDashboard(w http.ResponseWriter, r *http.Request) {
 			))
 			return
 		}
-		if days := int(exp.Sub(now).Hours() / 24); days <= 30 {
+		days := int(exp.Sub(now).Hours() / 24)
+		if renewal == sslWaitingForOwner {
+			// Listed whatever the days: the owner's choice is needed.
+			waiting = append(waiting, len(out.ExpiringCerts))
+			out.ExpiringCerts = append(out.ExpiringCerts, dashboardExpiringCert{
+				DomainName: name, DaysLeft: days, WaitingForOwner: true, DomainID: domainID,
+			})
+			continue
+		}
+		if days <= 30 {
 			out.ExpiringCerts = append(out.ExpiringCerts, dashboardExpiringCert{DomainName: name, DaysLeft: days})
 		}
 	}
@@ -86,8 +107,27 @@ func (p *Panel) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		writeServerError(w, fmt.Errorf("iterate dashboard certificates: %w", err))
 		return
 	}
-	sort.Slice(out.ExpiringCerts, func(i, j int) bool {
-		return out.ExpiringCerts[i].DaysLeft < out.ExpiringCerts[j].DaysLeft
+	for _, index := range waiting {
+		entry := &out.ExpiringCerts[index]
+		reason := ""
+		if siteID, _, err := p.siteIDForDomain(r.Context(), entry.DomainID); err == nil {
+			if record, found, err := services.LoadSiteFileRecord(r.Context(), db, siteID, transport.SiteFileKindNginxVhost); err == nil && found {
+				reason = record.StateReason
+			}
+		}
+		if certificate := p.siteConfigCertificateFor(r.Context(), entry.DomainID, reason, false); certificate != nil {
+			entry.ServedDaysLeft = certificate.ServedDaysLeft
+		} else {
+			served := entry.DaysLeft
+			entry.ServedDaysLeft = &served
+		}
+	}
+	sort.SliceStable(out.ExpiringCerts, func(i, j int) bool {
+		a, b := out.ExpiringCerts[i], out.ExpiringCerts[j]
+		if a.WaitingForOwner != b.WaitingForOwner {
+			return a.WaitingForOwner
+		}
+		return a.DaysLeft < b.DaysLeft
 	})
 	if len(out.ExpiringCerts) > 6 {
 		out.ExpiringCerts = out.ExpiringCerts[:6]

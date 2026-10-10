@@ -77,7 +77,7 @@ interface AuditGroup extends AuditLite {
 interface Extras {
     databases: number;
     mail_accounts: number;
-    expiring_certs: { domain_name: string; days_left: number }[];
+    expiring_certs: { domain_name: string; days_left: number; waiting_for_owner?: boolean; served_days_left?: number }[];
 }
 
 // An answer without the two counts is not "0 databases, 0 mailboxes".
@@ -539,6 +539,21 @@ function AdminDashboard() {
     // yalnız gerçek ve eyleme dönüştürülebilir sorunlar.
     const attention: { key: string; icon: typeof Cpu; text: string; action: string; to: string; danger?: boolean; onAct?: () => void }[] = [];
     for (const c of extras?.expiring_certs || []) {
+        if (c.waiting_for_owner) {
+            // D-031 step 1b: a certificate waits on the site's configuration
+            // file the owner kept; the days are of the one in use.
+            attention.push({
+                key: `cert-owner-${c.domain_name}`,
+                icon: Lock,
+                text: typeof c.served_days_left === 'number'
+                    ? t('dashboard.certWaitingOwnerDays', { domain: c.domain_name, days: c.served_days_left })
+                    : t('dashboard.certWaitingOwner', { domain: c.domain_name }),
+                action: t('dashboard.openDomain'),
+                to: `/domains/${encodeURIComponent(c.domain_name)}`,
+                danger: typeof c.served_days_left === 'number' && c.served_days_left <= 7,
+            });
+            continue;
+        }
         attention.push({
             key: `cert-${c.domain_name}`,
             icon: Lock,

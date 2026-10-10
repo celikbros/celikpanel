@@ -129,7 +129,9 @@ for (const [how, reply] of [
 test('each state the classifier reports is named, with its choices only where they apply', async () => {
   const cases = [
     [view('managed_unchanged'), 'siteConfig.managed.title', []],
-    [view('managed_unchanged', { adopted_from: 'v0.1.0-alpha.82' }), 'siteConfig.adopted{"release":"v0.1.0-alpha.82"}', []],
+    [view('managed_unchanged', { adopted_from: 'v0.1.0-alpha.82' }), 'siteConfig.adopted.start{"release":"v0.1.0-alpha.82"}', []],
+    // The creation-time text: the suffix is not shown, the sentence says so.
+    [view('managed_unchanged', { adopted_from: 'v0.1.0-alpha.81 (creation)' }), 'siteConfig.adopted.creation{"release":"v0.1.0-alpha.81"}', []],
     [edited, 'siteConfig.ownerEdited.title', ['siteConfig.take', 'siteConfig.keep', 'siteConfig.merge']],
     [view('foreign', { diff: '--- a\n+++ b\n' }), 'siteConfig.foreign.title', ['siteConfig.take', 'siteConfig.keep']],
     [view('unknown_origin', { diff: '--- a\n+++ b\n' }), 'siteConfig.unknownOrigin.body', ['siteConfig.take', 'siteConfig.keep']],
@@ -248,6 +250,87 @@ test('the notice above a domain names a kept, missing or unreadable file and not
   tree = undefined;
 });
 
+// D-031 step 1b: the certificate part of a kept file.
+const managed = { managed_dir: '/etc/nginx/celikpanel-managed.d/example.com', managed_include: 'include /etc/nginx/celikpanel-managed.d/example.com/*.conf;' };
+const certificateReady = {
+  ...edited, ...managed, validation: 'ready', pending_reason: 'certificate',
+  decision: { kind: 'keep_mine', decided_at: '2026-10-10T12:00:00Z', current: true },
+  certificate: { cert_path: '/certs/new/fullchain.pem', key_path: '/certs/new/privkey.pem', served_expires_at: '2026-10-22T00:00:00Z', served_days_left: 11, referenced: false },
+};
+
+test('a new certificate the kept file does not use is named, with its lines and the days left on the one in use', async () => {
+  serve({ [`GET ${URL_BASE}`]: certificateReady });
+  await mount(page());
+  assert.ok(text().includes('siteConfig.certificate.ready.title'), text());
+  assert.ok(text().includes('siteConfig.certificate.ready.body'));
+  assert.ok(text().includes('ssl_certificate /certs/new/fullchain.pem;') && text().includes('ssl_certificate_key /certs/new/privkey.pem;'));
+  assert.ok(text().includes('siteConfig.certificate.servedDays'));
+  assert.ok(text().includes('"days":11'));
+  // The owner's choices stay: take, or keep (once the file changed).
+  assert.equal(enabled('siteConfig.take'), true);
+  await unmount();
+  serve({ [`GET ${URL_BASE}`]: { ...certificateReady, decision: undefined, certificate: { ...certificateReady.certificate, referenced: true } } });
+  await mount(page());
+  assert.ok(text().includes('siteConfig.certificate.ready.referenced'), text());
+  assert.ok(!text().includes('ssl_certificate /certs/new/fullchain.pem;'));
+  assert.equal(enabled('siteConfig.keep'), true);
+  await unmount();
+});
+
+test('a certificate the kept file does not let validate names the line to add and the schedule', async () => {
+  for (const validation of ['include_missing', 'names_missing', 'challenge_kept', 'challenge_failed', 'ready']) {
+    serve({ [`GET ${URL_BASE}`]: {
+      ...view('unknown_origin', { diff: '--- a\n+++ b\n' }), ...managed, validation, pending_reason: 'certificate_validation',
+      certificate: { served_expires_at: '2026-10-19T00:00:00Z', served_days_left: 8, referenced: false },
+    } });
+    await mount(page());
+    assert.ok(text().includes('siteConfig.certificate.validation.title'), text());
+    assert.ok(text().includes(`siteConfig.certificate.validation.${validation}`), validation);
+    assert.equal(text().includes('include /etc/nginx/celikpanel-managed.d/example.com/*.conf;'), validation === 'include_missing', validation);
+    assert.ok(text().includes('siteConfig.certificate.schedule'));
+    await unmount();
+  }
+});
+
+test('an unreadable file names who acts and the next step for its reason', async () => {
+  for (const [reason, next, detail] of [
+    ['symlink', 'siteConfig.unreadable.next.symlink', false],
+    ['permission', 'siteConfig.unreadable.next.permission', false],
+    ['write_refused', 'siteConfig.unreadable.next.other', true],
+  ]) {
+    serve({ [`GET ${URL_BASE}`]: view('unreadable', { reason, detail: 'rename: operation not permitted' }) });
+    await mount(page());
+    assert.ok(text().includes(next), reason);
+    assert.equal(text().includes('siteConfig.unreadable.next.detail'), detail, reason);
+    assert.ok(text().includes('siteConfig.unreadable.meanwhile'));
+    await unmount();
+  }
+});
+
+test('the two captions of the difference are drawn in the page language', async () => {
+  serve({ [`GET ${URL_BASE}`]: { ...edited, diff: "--- /etc/nginx/sites-available/example.com.conf (on this server)\n+++ CelikPanel's text\n@@ -1 +1 @@\n-a\n+b\n" } });
+  await mount(page());
+  assert.ok(text().includes('--- /etc/nginx/sites-available/example.com.conf siteConfig.diff.here'), text());
+  assert.ok(text().includes('+++ siteConfig.diff.panel'));
+  assert.ok(!text().includes('(on this server)') && !text().includes("CelikPanel's text"));
+  await unmount();
+});
+
+test('the notice above a domain honours keep mine, and a waiting certificate outranks it', async () => {
+  for (const [props, key, kind] of [
+    [{ state: 'owner_edited', keptByChoice: true }, 'siteConfig.notice.keptByChoice', 'kept_by_choice'],
+    [{ state: 'owner_edited', keptByChoice: true, pendingReason: 'certificate' }, 'siteConfig.notice.certificate', 'certificate'],
+    [{ state: 'unknown_origin', pendingReason: 'certificate_validation' }, 'siteConfig.notice.certificateValidation', 'certificate_validation'],
+  ]) {
+    await mount(React.createElement(SiteConfigNotice, { ...props, onOpen() {} }));
+    assert.ok(text().includes(key), key);
+    assert.ok(!text().includes('siteConfig.notice.kept '), key);
+    assert.equal(tree.toJSON().props['data-site-config-notice-kind'], kind);
+    await act(async () => tree.unmount());
+  }
+  tree = undefined;
+});
+
 test('an answer that is not the contract is refused by the decoder', () => {
   assert.throws(() => decodeSiteConfig({ state: 'edited', actions: [] }));
   assert.throws(() => decodeSiteConfig({ state: 'owner_edited' }));
@@ -264,7 +347,7 @@ test('every siteConfig and SITE_CONFIG key is in both languages', () => {
   const errTR = keys(read('i18n/tr.ts'), 'err\\.SITE_CONFIG_');
   assert.deepEqual([...screenTR].sort(), [...screenEN].sort());
   assert.deepEqual([...errTR].sort(), [...errEN].sort());
-  assert.equal(errEN.size, 8);
+  assert.equal(errEN.size, 9);
   const component = read('components/DomainSiteConfig.tsx') + read('components/Domains.tsx') + read('components/DomainDetail.tsx');
   for (const match of component.matchAll(/'(siteConfig\.[a-zA-Z_.]+)'/g)) assert.ok(screenEN.has(match[1]), match[1]);
   for (const reason of ['symlink', 'not_regular', 'permission', 'too_large', 'read_failed', 'write_refused']) {

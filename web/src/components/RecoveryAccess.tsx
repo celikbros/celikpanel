@@ -8,9 +8,10 @@ import { AddressLink } from './AddressLink';
 import { parseRecoveryObservation, reconcileRecoveryObservation, recoveryFailureGuidanceKey, retryingCauseKey, savedRecoveryFinished, savedRecoveryRequestId, UPDATE_MARKER_KEY, type RecoveryObservation } from '../lib/recoveryObservation';
 import { handoverAddress, recoveryHandover, savedSetupHandoverHost, setupStartMarkerKey } from '../lib/panelHandover';
 import { readRemote } from '../lib/remote';
-import { useQuietRead } from '../lib/quietRead';
+import { useAccessWaitStage, useQuietRead } from '../lib/quietRead';
+import type { AccessReadFailure } from '../auth/usePanelSession';
 
-/** Still waiting after this long: the reload is offered beside the wait (as in AccessHold). */
+/** The interface still loading after this long: the reload is offered (as in AccessHold). */
 const WAITING_PROLONGED_MS = 30000;
 
 // The address the Panel serves its certificate for. Anything else is not the
@@ -123,26 +124,35 @@ export function RecoveryStatus({ username, onUnauthorized, embedded = false, unf
 }
 
 /** Eager shell: no lazy screen catalogue, router, update provider, or mutation API. */
-export function RecoveryAccess({ user, cause, checking = false, onRetry, onUnauthorized }: {
+export function RecoveryAccess({ user, cause, checking = false, failure = null, onRetry, onUnauthorized }: {
     /**
      * checking: the first session or readiness read is still in flight. loading: the session and readiness are
      * confirmed and the interface itself is still being fetched. Nothing has failed in either, so nothing is
      * reported as failed, and nothing at all is drawn before the quiet time (lib/quietRead.ts).
      */
     user?: CurrentUser | null; cause: 'checking' | 'loading' | 'auth' | 'starting' | 'availability' | 'license' | 'bundle';
-    checking?: boolean; onRetry: () => void; onUnauthorized?: () => void;
+    checking?: boolean;
+    /** What the last access read that answered with a failure said; named under a known negative. */
+    failure?: AccessReadFailure | null;
+    onRetry: () => void; onUnauthorized?: () => void;
 }) {
     const { t } = useI18n();
     // The first wait of this page: no read has answered yet, or only the interface is still on its way.
     const firstWait = cause === 'checking' || cause === 'loading';
     const waiting = firstWait || (checking && !user);
     const quiet = useQuietRead(firstWait);
-    const [prolonged, setProlonged] = useState(false);
+    const [loadingProlonged, setLoadingProlonged] = useState(false);
     useEffect(() => {
-        if (!firstWait || quiet) { setProlonged(false); return; }
-        const timer = window.setTimeout(() => setProlonged(true), WAITING_PROLONGED_MS);
+        if (cause !== 'loading' || quiet) { setLoadingProlonged(false); return; }
+        const timer = window.setTimeout(() => setLoadingProlonged(true), WAITING_PROLONGED_MS);
         return () => window.clearTimeout(timer);
-    }, [firstWait, quiet]);
+    }, [cause, quiet]);
+    // An access read that has not answered: explained after the quiet time, "Check now" after 15 s, the reload
+    // beside it after 30 s. Counted from the page's first unanswered read; a re-read does not restart it.
+    const stage = useAccessWaitStage(cause === 'checking' && !quiet);
+    // The automatic re-read repeats by itself; only a check the owner asked for is drawn as busy (as in AccessHold).
+    const [asked, setAsked] = useState(false);
+    useEffect(() => { if (!checking) setAsked(false); }, [checking]);
     const handover = usePanelHandover(user?.username, cause === 'availability' || cause === 'starting', checking);
     const address = handover?.elsewhere ? handoverAddress(handover.host, window.location.port) : '';
     // Before the quiet time only the page background: no sentence, no button, no spinner. A read that answers
@@ -153,15 +163,18 @@ export function RecoveryAccess({ user, cause, checking = false, onRetry, onUnaut
         // The wait outlasted the quiet time: what is awaited, that nobody needs to act, and how it ends. As in the
         // hold layer over a mounted page, the reload is offered only once the wait has lasted half a minute.
         const opening = cause === 'loading';
+        const prolonged = opening ? loadingProlonged : stage === 'prolonged';
+        const long = !opening && stage !== 'waiting';
+        const busy = checking && (!long || asked);
         return <div className="min-h-screen bg-bg text-fg">
             {header}
             <main className="mx-auto max-w-3xl px-4 py-10 sm:px-8 sm:py-16">
                 {user && <p className="mb-5 break-words text-sm text-fg-muted">{user.username}</p>}
                 <h1 className="text-2xl font-semibold">{t(opening ? 'recovery.loadingTitle' : 'recovery.checkingTitle')}</h1>
-                <p className="mt-4 max-w-prose break-words text-sm leading-relaxed text-fg-muted" role="status">{t(opening ? 'recovery.loadingHelp' : 'recovery.waitingHelp')}</p>
+                <p className="mt-4 max-w-prose break-words text-sm leading-relaxed text-fg-muted" role="status">{t(opening ? 'recovery.loadingHelp' : long ? 'recovery.waitingLong' : 'recovery.waitingHelp')}</p>
                 {prolonged && <p className="mt-4 max-w-prose text-sm leading-relaxed text-fg-muted">{t(opening ? 'recovery.waitingProlongedLoading' : 'recovery.waitingProlonged')}</p>}
                 {(!opening || prolonged) && <div className="mt-6 flex flex-wrap items-center gap-3">
-                    {!opening && <Button disabled={checking} onClick={onRetry}>{checking && <Spinner />}{t(checking ? 'recovery.checking' : 'recovery.retry')}</Button>}
+                    {!opening && <Button disabled={busy} onClick={() => { setAsked(true); onRetry(); }}>{busy && <Spinner />}{t(busy ? 'recovery.checking' : long ? 'recovery.checkNow' : 'recovery.retry')}</Button>}
                     {prolonged && <Button variant="secondary" onClick={() => window.location.reload()}>{t('app.reload')}</Button>}
                 </div>}
             </main>
@@ -173,6 +186,8 @@ export function RecoveryAccess({ user, cause, checking = false, onRetry, onUnaut
             {user && <p className="mb-5 break-words text-sm text-fg-muted">{user.username}</p>}
             <h1 className="text-2xl font-semibold">{t(waiting ? 'recovery.checkingTitle' : handover ? 'recovery.handoverTitle' : `recovery.${cause}Title`)}</h1>
             <p className="mt-4 max-w-prose break-words text-sm leading-relaxed text-fg-muted" role="status">{waiting ? t('recovery.checkingHelp') : handover ? t('recovery.handoverHelp', { host: handover.host }) : t(`recovery.${cause}Help`)}</p>
+            {/* An answered failure names what was read; a check in flight or the planned handover does not. */}
+            {!waiting && !handover && failure && <p className="mt-4 max-w-prose break-words text-sm leading-relaxed text-fg-muted">{failure.kind === 'status' ? t('recovery.failure.status', { status: String(failure.status) }) : t(`recovery.failure.${failure.kind}`)}</p>}
             {address && <p className="mt-4 max-w-prose text-sm leading-relaxed text-fg-muted">{t('recovery.handoverAddress')} <AddressLink href={`${address}/setup`} address={address} /></p>}
             <div className="mt-6 flex flex-wrap items-center gap-3"><Button disabled={checking} onClick={onRetry}>{checking && <Spinner />}{t(checking ? 'recovery.checking' : 'recovery.retry')}</Button><Button variant="secondary" onClick={() => window.location.reload()}>{t('app.reload')}</Button></div>
             {/* A finished update is not the reason for an access check, so only an unfinished operation is drawn here.

@@ -1,10 +1,13 @@
 # Nginx vhost for {{.Domain}}
 # Written by CelikPanel. Put your own additions in {{.OwnerIncludeDir}}/*.conf;
 # CelikPanel never writes there. If you change this file, CelikPanel keeps
-# your file and asks you before it replaces it.
+# your file and asks you before it replaces it. Keep the lines that include
+# {{.PanelManagedDir}}: that directory is CelikPanel's (certificate
+# validation) and CelikPanel writes there without touching this file.
 # CelikPanel yazdı. Kendi eklemeleriniz {{.OwnerIncludeDir}}/*.conf içine;
 # CelikPanel oraya hiç yazmaz. Bu dosyayı değiştirirseniz CelikPanel
-# dosyanızı korur ve değiştirmeden önce size sorar.
+# dosyanızı korur ve değiştirmeden önce size sorar. {{.PanelManagedDir}}
+# satırlarını koruyun: o dizin CelikPanel'indir (sertifika doğrulaması).
 # Site ID: {{.SiteID}} · Project type: {{.ProjectType}}
 
 {{- define "locations"}}
@@ -148,12 +151,36 @@
     include {{.OwnerIncludeDir}}/*.conf;
 {{- end}}
 
-{{- define "acme-http-01"}}
-    # Root-owned validation content only; never tenant public_html.
-    location ^~ /.well-known/acme-challenge/ {
-        root {{.ACMEChallengeRoot}};
-        try_files $uri =404;
+{{- /* CelikPanel's own include point (D-031, step 1b). Server context, in
+    every server block of the site. The directory is the Panel's: it holds the
+    ACME HTTP-01 challenge location (acme-http-01.conf, root-owned validation
+    content only, never tenant public_html), written there instead of into
+    this file, so a certificate can be issued and renewed for a site whose
+    file the owner kept, as long as the file keeps this line.
+    CelikPanel'in kendi ekleme noktası; doğrulama konumu bu dosyaya değil o
+    dizine yazılır. */}}
+{{- define "panel-include"}}
+    # CelikPanel's own parts of this site (certificate validation) / CelikPanel'in parçaları
+    include {{.PanelManagedDir}}/*.conf;
+{{- end}}
+
+{{- /* The validation-only block of names such as mail.<domain>. It deliberately
+    serves only ACME HTTP-01; it never publishes the website under a mail
+    hostname. A named template, so the Agent can look for exactly this text in
+    a file the owner kept. */}}
+{{- define "acme-names-server"}}
+# Validation-only names such as mail.<domain>. This block deliberately serves
+# only ACME HTTP-01; it never publishes the website under a mail hostname.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name{{range .ACMEChallengeNames}} {{.}}{{end}};
+{{template "panel-include" .}}
+
+    location / {
+        return 404;
     }
+}
 {{- end}}
 
 {{- define "tls-settings"}}
@@ -175,23 +202,7 @@
 {{- end}}
 
 {{- if .ACMEChallengeNames}}
-# Validation-only names such as mail.<domain>. This block deliberately serves
-# only ACME HTTP-01; it never publishes the website under a mail hostname.
-server {
-    listen 80;
-    listen [::]:80;
-    server_name{{range .ACMEChallengeNames}} {{.}}{{end}};
-
-    location ^~ /.well-known/acme-challenge/ {
-        root {{.ACMEChallengeRoot}};
-        default_type text/plain;
-        try_files $uri =404;
-    }
-
-    location / {
-        return 404;
-    }
-}
+{{template "acme-names-server" .}}
 {{- end}}
 
 {{- if eq .ProjectType "forwarding"}}
@@ -203,7 +214,7 @@ server {
 
     access_log /var/log/nginx/{{.Domain}}-access.log;
     error_log /var/log/nginx/{{.Domain}}-error.log;
-{{template "acme-http-01" .}}
+{{template "panel-include" .}}
 
     location / {
 {{template "www-redirect" .}}
@@ -220,7 +231,7 @@ server {
 
     access_log /var/log/nginx/{{.Domain}}-access.log;
     error_log /var/log/nginx/{{.Domain}}-error.log;
-{{template "acme-http-01" .}}
+{{template "panel-include" .}}
 
     location / {
 {{template "www-redirect" .}}
@@ -245,6 +256,7 @@ server {
 
     access_log /var/log/nginx/{{.Domain}}-access.log;
     error_log /var/log/nginx/{{.Domain}}-error.log;
+{{template "panel-include" .}}
 
     location / {
 {{template "www-redirect" .}}
@@ -261,7 +273,7 @@ server {
 
     access_log /var/log/nginx/{{.Domain}}-access.log;
     error_log /var/log/nginx/{{.Domain}}-error.log;
-{{template "acme-http-01" .}}
+{{template "panel-include" .}}
 {{template "locations" .}}
 {{template "owner-include" .}}
 }
@@ -271,7 +283,7 @@ server {
     listen 80;
     listen [::]:80;
     server_name{{range .ServerNames}} {{.}}{{end}};
-{{template "acme-http-01" .}}
+{{template "panel-include" .}}
 {{if .ForceHTTPS}}
     location / {
 {{template "www-redirect" .}}
@@ -295,6 +307,7 @@ server {
 
     access_log /var/log/nginx/{{.Domain}}-access.log;
     error_log /var/log/nginx/{{.Domain}}-error.log;
+{{template "panel-include" .}}
 {{template "locations" .}}
 {{template "owner-include" .}}
 }

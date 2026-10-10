@@ -189,3 +189,12 @@ func TestBlankCertificatePathCountsAsNoCertificate(t *testing.T) {
 		t.Error("a blank certificate path must not produce an ssl_certificate directive")
 	}
 }
+
+// expandPanelIncludes is the vhost as nginx reads it once the Panel's include
+// directory holds its challenge file (D-031 step 1b): every include line of
+// that directory replaced by the challenge location. Structural tests of the
+// ACME exception read this text.
+func expandPanelIncludes(out string, data VhostData) string {
+	location := RenderACMEChallengeFile(data.Domain, data.ACMEChallengeRoot)
+	return strings.ReplaceAll(out, PanelManagedIncludeLine(data.Domain), location)
+}

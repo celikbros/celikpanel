@@ -39,6 +39,7 @@ interface Tier {
 const sslTierPresentation: Record<SSLTier, Omit<Tier, 'label'>> = {
     none: { icon: AlertTriangle, color: 'text-warning', surface: 'border-border-strong bg-surface-2' },
     pending: { icon: Clock3, color: 'text-warning', surface: 'border-border-strong bg-surface-2' },
+    waitingForOwner: { icon: Clock3, color: 'text-warning', surface: 'border-border-strong bg-surface-2' },
     invalid: { icon: ShieldAlert, color: 'text-danger', surface: 'border-danger/30 bg-danger/5' },
     untrusted: { icon: ShieldAlert, color: 'text-danger', surface: 'border-danger/30 bg-danger/5' },
     trustUnknown: { icon: ShieldAlert, color: 'text-warning', surface: 'border-border-strong bg-surface-2' },

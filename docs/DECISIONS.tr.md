@@ -53,7 +53,15 @@ Sahip 10 Ekim 2026'da düzeltmenin bir sonraki sürüme girmesine karar verdi:
    (tarihli yedekle) ya da elle birleştirmeyi seçer. Sahibin kaldırdığı site
    dosyası açılışta yeniden yaratılmaz; Panel yeniden yaratmayı önerir.
 4. Şablon, sahibin eklemeleri için site başına bir include dizini kazanır;
-   sonraki üretimlerin onlara dokunması gerekmez.
+   sonraki üretimlerin onlara dokunması gerekmez. (Adım 1b, 2026-10-10,
+   planlayıcı kararı:) Şablon ayrıca Panel'e ait ikinci bir include dizini
+   (`/etc/nginx/celikpanel-managed.d/<alan adı>/`) kazanır; ACME HTTP-01
+   konumu oraya yazılır, sanal konağa değil. Bu satırı taşıyan korunmuş bir
+   dosyada sertifika dosyaya dokunmadan alınır ya da yenilenir ve sahip
+   CelikPanel'in metnini alana ya da sertifika satırlarını değiştirene dek
+   eski sertifika sunulur (`waiting_for_owner`); satırı taşımayan dosyada alım
+   hiçbir şey istenmeden tipli bir retle durur, yenileme başarısız değil
+   "sahibi bekliyor" olur.
 5. Yazma kip ve sahibi korur, sembolik bağları reddeder; bir sitenin hatası
    diğerlerini düşürmez; açılış satırı yazılan, değişmeyen, korunan, yabancı
    ve okunamayanı ayrı ayrı sayar.

@@ -124,7 +124,57 @@ type SiteFileResult struct {
 	Enabled string
 	// Reloaded is true when this operation reloaded nginx.
 	Reloaded bool
+
+	// D-031 step 1b, additive. ManagedDir is the Panel's own include
+	// directory of the site (the ACME HTTP-01 location lives there, not in
+	// the vhost); ManagedInclude is the exact line a vhost needs to read it.
+	ManagedDir     string
+	ManagedInclude string
+	// ChallengeFile is what happened to the challenge file in ManagedDir
+	// (SiteFileChallenge*); "" when the operation did not look at it.
+	ChallengeFile string
+	// Validation is, for a kept file (owner-edited, foreign, unknown origin),
+	// whether a certificate for the site can be validated without changing
+	// the file (SiteFileValidation*); "" for any other file.
+	Validation string
+	// CertificateReferenced: the kept file has the line `ssl_certificate
+	// <path>;` for the certificate path of this render.
+	CertificateReferenced bool
 }
+
+// What happened to the Panel's challenge file (D-031 step 1b).
+const (
+	SiteFileChallengeWritten   = "written"
+	SiteFileChallengeUnchanged = "unchanged"
+	// SiteFileChallengeKept: the file in the Panel's directory is not the
+	// Panel's unchanged text; it was kept and not replaced.
+	SiteFileChallengeKept = "kept"
+	// SiteFileChallengeFailed: it could not be written, or nginx refused the
+	// configuration with it and it was put back.
+	SiteFileChallengeFailed = "failed"
+	// SiteFileChallengeAbsent and SiteFileChallengeDiffers are read-only
+	// observations (the domain screen's inspection).
+	SiteFileChallengeAbsent  = "absent"
+	SiteFileChallengeDiffers = "differs"
+)
+
+// Whether a kept file lets a certificate be validated (D-031 step 1b).
+const (
+	SiteFileValidationReady = "ready"
+	// SiteFileValidationIncludeMissing: the file does not include the Panel's
+	// directory, so the challenge location cannot be published.
+	SiteFileValidationIncludeMissing = "include_missing"
+	// SiteFileValidationNamesMissing: the operation must also validate names
+	// such as mail.<domain>, and the file does not hold their validation-only
+	// server block exactly as CelikPanel writes it.
+	SiteFileValidationNamesMissing = "names_missing"
+	// SiteFileValidationChallengeKept: the challenge file in the Panel's
+	// directory was changed outside CelikPanel and was kept.
+	SiteFileValidationChallengeKept = "challenge_kept"
+	// SiteFileValidationChallengeFailed: the challenge file could not be
+	// written, or nginx refused the configuration with it.
+	SiteFileValidationChallengeFailed = "challenge_failed"
+)
 
 // SiteFileBatchItem is one item of a start-up batch.
 type SiteFileBatchItem struct {

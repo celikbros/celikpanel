@@ -36,6 +36,7 @@ func TestTLSVhostRuntimeSettings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	out = expandPanelIncludes(out, base)
 	serverNames := "server_name biovision.health www.biovision.health alias.example;"
 	if got := strings.Count(out, serverNames); got != 2 {
 		t.Fatalf("all managed names must appear in HTTP and HTTPS server_name directives; got %d\n%s", got, out)
@@ -122,6 +123,7 @@ func TestWWWRedirectIsACMESafeAndUsesCanonicalHTTPS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	out = expandPanelIncludes(out, data)
 	schemeRedirect := "return 301 $scheme://www.example.test$request_uri;"
 	if got := strings.Count(out, schemeRedirect); got != 1 {
 		t.Fatalf("HTTP www redirect count = %d, want 1\n%s", got, out)
@@ -140,6 +142,7 @@ func TestWWWRedirectIsACMESafeAndUsesCanonicalHTTPS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	out = expandPanelIncludes(out, data)
 	directHTTPS := "return 301 https://www.example.test$request_uri;"
 	if got := strings.Count(out, directHTTPS); got != 2 {
 		t.Fatalf("canonical HTTPS www redirect count = %d, want HTTP and HTTPS copies\n%s", got, out)
@@ -184,6 +187,7 @@ func TestInitialNodeAndProxyVhostsExposeACMEChallenge(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			out = expandPanelIncludes(out, test)
 			challenge := "location ^~ /.well-known/acme-challenge/"
 			if got := strings.Count(out, challenge); got != 1 {
 				t.Fatalf("initial %s vhost must expose one HTTP-01 location; got %d\n%s", test.ProjectType, got, out)
@@ -223,14 +227,17 @@ func TestForwardingVhostHonorsTLSRedirectAndHSTS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	out = expandPanelIncludes(out, data)
 	if got := strings.Count(out, "listen 80;"); got != 1 {
 		t.Fatalf("TLS forwarding must have one IPv4 HTTP server; got %d\n%s", got, out)
 	}
 	if got := strings.Count(out, "listen 443 ssl;"); got != 1 {
 		t.Fatalf("TLS forwarding must have one IPv4 HTTPS server; got %d\n%s", got, out)
 	}
-	if got := strings.Count(out, "location ^~ /.well-known/acme-challenge/"); got != 1 {
-		t.Fatalf("forwarding HTTP server must keep one ACME location; got %d\n%s", got, out)
+	// D-031 step 1b: every server block reads the Panel's directory, so the
+	// HTTP server keeps the ACME location and the HTTPS server reads it too.
+	if got := strings.Count(out, "location ^~ /.well-known/acme-challenge/"); got != 2 {
+		t.Fatalf("forwarding HTTP and HTTPS servers must each read one ACME location; got %d\n%s", got, out)
 	}
 	httpsAt := strings.Index(out, "listen 443 ssl;")
 	redirectAt := strings.Index(out, "return 301 https://$host$request_uri;")

@@ -500,10 +500,15 @@ func (a *Agent) CreateSite(req transport.CreateSiteRequest, reply *transport.Cre
 	// not CelikPanel's unchanged text (an owner's own vhost with this name)
 	// is kept and the site is not created.
 	if ops.applySiteVhost != nil {
+		// The challenge root was prepared and checked against the site's
+		// identity above; the Panel's challenge file is written with the vhost
+		// (D-031 step 1b), and its directory created 0755.
+		challengeRoot, _ := hostingpath.ACMEChallengeRoot(vhostReq.SubscriptionID, vhostReq.DomainID)
 		result, applyErr := ops.applySiteVhost(services.ManagedVhostItem{
-			Domain:  rendered.Domain,
-			Body:    rendered.Config,
-			Trigger: transport.SiteFileTriggerCreate,
+			Domain:            rendered.Domain,
+			Body:              rendered.Config,
+			Trigger:           transport.SiteFileTriggerCreate,
+			ACMEChallengeRoot: challengeRoot,
 		})
 		reply.SiteFile = &result
 		reply.NginxConfig = services.SealManagedText(rendered.Config)

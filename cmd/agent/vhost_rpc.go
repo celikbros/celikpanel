@@ -58,7 +58,12 @@ func (a *Agent) ApplyVhost(req *ApplyVhostRequest, resp *ApplyVhostResponse) err
 	// D-031: the file on disk is classified first; only a managed and
 	// unchanged file is replaced (an absent one only on "recreate"), and a
 	// file the owner changed is kept with the Panel's text held beside it.
-	results, applyErr := applyManagedVhostsFor(a, []services.ManagedVhostItem{managedVhostItemFor(req, data, rendered.Config)})
+	item, err := a.managedVhostItem(req, data, rendered.Config)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	results, applyErr := applyManagedVhostsFor(a, []services.ManagedVhostItem{item})
 	resp.Config = services.SealManagedText(rendered.Config)
 	if len(results) != 1 {
 		if applyErr == nil {
@@ -88,9 +93,27 @@ var applyManagedVhostsFor = func(a *Agent, items []services.ManagedVhostItem) ([
 	return a.nginxGen.ApplyManagedVhosts(items)
 }
 
+// managedVhostItem is managedVhostItemFor with the validation-only server
+// block of the request's extra names, which only the generator can render.
+func (a *Agent) managedVhostItem(
+	req *ApplyVhostRequest,
+	data services.VhostData,
+	body string,
+) (services.ManagedVhostItem, error) {
+	item := managedVhostItemFor(req, data, body)
+	block, err := a.nginxGen.RenderACMENamesBlock(data)
+	if err != nil {
+		return services.ManagedVhostItem{}, err
+	}
+	item.ValidationBlock = block
+	return item, nil
+}
+
 // managedVhostItemFor turns a validated request into the generator's item.
 // The frozen earlier releases' renders are offered for every trigger except
-// creation: a new site has no earlier text.
+// creation: a new site has no earlier text. The challenge root makes the
+// generator keep the Panel's challenge file (D-031 step 1b); the certificate
+// path lets it say whether a kept file already names that certificate.
 func managedVhostItemFor(
 	req *ApplyVhostRequest,
 	data services.VhostData,
@@ -103,6 +126,10 @@ func managedVhostItemFor(
 		RecordedSHA256:       req.RecordedSHA256,
 		ExpectedFileSHA256:   req.ExpectedFileSHA256,
 		ExpectedRenderSHA256: req.ExpectedRenderSHA256,
+		ACMEChallengeRoot:    data.ACMEChallengeRoot,
+	}
+	if data.SSLType != "none" {
+		item.SSLCert = data.SSLCert
 	}
 	if req.FileTrigger != transport.SiteFileTriggerCreate {
 		legacyData := data
@@ -160,9 +187,12 @@ func (a *Agent) InspectSiteFile(
 		resp.Error = err.Error()
 		return nil
 	}
-	resp.File, resp.Diff, resp.DiffTruncated = a.nginxGen.InspectManagedVhost(
-		managedVhostItemFor(req, data, rendered.Config),
-	)
+	item, err := a.managedVhostItem(req, data, rendered.Config)
+	if err != nil {
+		resp.Error = err.Error()
+		return nil
+	}
+	resp.File, resp.Diff, resp.DiffTruncated = a.nginxGen.InspectManagedVhost(item)
 	return nil
 }
 
@@ -212,6 +242,10 @@ func (a *Agent) ApplyVhosts(
 		if err == nil {
 			err = prepareVhostChallengeRoot(request)
 		}
+		var item services.ManagedVhostItem
+		if err == nil {
+			item, err = a.managedVhostItem(request, data, rendered.Config)
+		}
 		if err != nil {
 			resp.Items[index].Error = fmt.Sprintf("vhost batch item %d: %v", index, err)
 			resp.Items[index].File = transport.SiteFileResult{
@@ -222,7 +256,7 @@ func (a *Agent) ApplyVhosts(
 			}
 			continue
 		}
-		items = append(items, managedVhostItemFor(request, data, rendered.Config))
+		items = append(items, item)
 		itemIndex = append(itemIndex, index)
 	}
 

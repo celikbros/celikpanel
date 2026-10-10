@@ -3,6 +3,7 @@ import type { TranslationKey } from '../i18n/en'
 export type SSLTier =
   | 'none'
   | 'pending'
+  | 'waitingForOwner'
   | 'invalid'
   | 'untrusted'
   | 'trustUnknown'
@@ -19,12 +20,16 @@ export interface SSLTierCertificate {
   trust_status: 'trusted' | 'untrusted' | 'unknown' | 'invalid'
   activation_pending: boolean
   dependents_pending: boolean
+  // D-031 step 1b: the site's configuration file the owner kept does not
+  // use this certificate yet, or stopped its renewal. Absent from older answers.
+  waiting_for_owner?: boolean
   days_until_expiry: number
 }
 
 export const sslTierLabel: Record<SSLTier, TranslationKey> = {
   none: 'ssl.status.none',
   pending: 'ssl.status.pending',
+  waitingForOwner: 'ssl.status.waitingForOwner',
   invalid: 'ssl.status.invalid',
   untrusted: 'ssl.status.untrusted',
   trustUnknown: 'ssl.status.trustUnknown',
@@ -42,6 +47,7 @@ export const sslTierLabel: Record<SSLTier, TranslationKey> = {
 export function sslTier(cert?: SSLTierCertificate | null): SSLTier {
   if (!cert) return 'none'
   if (cert.activation_pending) return 'pending'
+  if (cert.waiting_for_owner) return 'waitingForOwner'
   if (cert.trust_status === 'invalid') return 'invalid'
   if (cert.trust_status === 'untrusted') return 'untrusted'
   if (cert.trust_status === 'unknown') return 'trustUnknown'

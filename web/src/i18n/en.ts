@@ -100,7 +100,7 @@ export const en = {
     // after the 1.5 s quiet time, while the first read has still not answered.
     // Ilk sayfa yuklemesi: yalnizca 1,5 sn sessiz sureden sonra cizilir.
     'recovery.waitingHelp': "The Panel has not answered yet. CelikPanel opens as soon as it does; you do not need to do anything.",
-    'recovery.waitingProlonged': "This has taken longer than half a minute. CelikPanel keeps checking by itself; you can also reload it.",
+    'recovery.waitingProlonged': "This has taken longer than half a minute. You can also reload CelikPanel.",
     'recovery.loadingTitle': "Opening CelikPanel",
     'recovery.loadingHelp': "Your session is confirmed and the Panel is ready. The interface is still loading and opens by itself.",
     // End of the first page load block.
@@ -481,10 +481,18 @@ export const en = {
     'err.SITE_CONFIG_UNWRITABLE': 'CelikPanel could not read or replace this site’s nginx configuration file (for example, it is a link or it is locked against changes), so it kept the file as it is and did not apply this change. The server owner checks the file on the server; the reason is on the domain’s Configuration file page.',
     'err.SITE_CONFIG_EXISTS': 'A configuration file for this name already exists on the server and was not written by CelikPanel, so CelikPanel kept it and did not create the site. Nothing was left behind. Move or rename that file on the server if it is no longer used, then create the site again.',
     'err.SITE_CONFIG_CHANGED': 'The configuration file or CelikPanel’s text changed after the page showed them, so nothing was done. The page reads the file again; look at it, then choose again.',
-    'err.SITE_CONFIG_NOT_APPLICABLE': 'This choice does not apply to the file as it is now, so nothing was done. The page reads the file again.',
+    'err.SITE_CONFIG_NOT_APPLICABLE': 'This choice does not apply to the file as it is now, so nothing was done. The page reads the file again; choose again if you still want it.',
     'err.SITE_CONFIG_NOT_READ': 'CelikPanel could not read the state of this site’s configuration file just now. This does not mean anything is wrong with the file, and nothing was changed. Try again.',
-    'err.SITE_CONFIG_NGINX_REFUSED': 'nginx refused the configuration with CelikPanel’s text in it, so your file was put back exactly as it was and nginx keeps running with it. Nothing else was changed.',
+    'err.SITE_CONFIG_NGINX_REFUSED': 'nginx did not accept CelikPanel’s text (it refused the configuration or could not reload), so your file was put back and nginx keeps running with it. nginx checks every site together, so the cause may be another file; fix what nginx reported, then choose again.',
+    'err.SITE_CONFIG_OWNER_EDITED.certificate_validation': 'This site’s nginx configuration file was changed outside CelikPanel and does not let CelikPanel publish the certificate validation without changing the file, so no certificate was requested and nothing was changed. On the domain’s Configuration file page, take CelikPanel’s text, or add what that page shows to your file and reload nginx; then request the certificate again.',
     // --- end of the site configuration refusals block ---
+    // --- an access read that has not answered, and one that answered with a failure (ninth native record, 2026-10-10) ---
+    'recovery.waitingLong': "The Panel has not answered for a while. CelikPanel keeps checking by itself; you can also check now.",
+    'recovery.checkNow': "Check now",
+    'recovery.failure.network': "The connection to the Panel was refused or closed before it answered. If this continues, the server administrator checks that the CelikPanel service is running.",
+    'recovery.failure.status': "The Panel answered with HTTP error {status}.",
+    'recovery.failure.invalid': "The Panel answered, but this page could not read the answer. Reloading CelikPanel loads the interface that matches the Panel.",
+    // --- end of the unanswered access read block ---
 } as const;
 
 export type ShellKey = keyof typeof en;

@@ -14,6 +14,7 @@ import (
 
 	"github.com/alicelik/celikpanel/internal/core"
 	"github.com/alicelik/celikpanel/internal/repositories"
+	"github.com/alicelik/celikpanel/internal/services"
 	"github.com/alicelik/celikpanel/internal/transport"
 )
 
@@ -97,6 +98,9 @@ type SSLCertificate struct {
 	TrustError         string     `json:"trust_error,omitempty"`
 	ActivationPending  bool       `json:"activation_pending"`
 	DependentsPending  bool       `json:"dependents_pending"`
+	// WaitingForOwner (D-031 step 1b): the site's configuration file is the
+	// owner's and does not use this certificate yet, or stopped its renewal.
+	WaitingForOwner bool `json:"waiting_for_owner"`
 }
 
 // SSLSettings represents SSL settings for a domain
@@ -359,6 +363,7 @@ func (p *Panel) handleGetDomainSSL(w http.ResponseWriter, r *http.Request, domai
 			cert.Usable = runtime.Usable
 			cert.ActivationPending = runtime.ActivationPending
 			cert.DependentsPending = runtime.DependentsPending
+			cert.WaitingForOwner = runtime.WaitingForOwner
 			if runtime.Info.Error != "" || runtime.Info.TrustError != "" {
 				log.Printf(
 					"SSL status domain %d: certificate detail: validation=%q trust=%q",
@@ -534,17 +539,22 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 	if mailName != "" {
 		validationChallengeNames = []string{mailName}
 	}
-	if err := p.applyVhostForDomainWithACMEChallengeNames(
-		ctx,
-		domainID,
-		validationChallengeNames,
-	); err != nil {
+	// D-031 step 1b: a site whose configuration file the owner kept is
+	// validated through the Panel's own include directory, without touching
+	// the file, when the file still includes it; otherwise the request is
+	// refused here with the file's state, before anything is requested.
+	keptSiteConfig, err := p.prepareCertificateValidation(ctx, domainID, validationChallengeNames)
+	if err != nil {
 		log.Printf("SSL issue domain %d: prepare validation vhost: %v", domainID, err)
+		if writeCertificateSiteFileRefusal(w, err) {
+			return
+		}
 		writeClientError(w, http.StatusConflict,
 			"certificate request was not started because the validation web server configuration could not be prepared")
 		return
 	}
-	validationVhostPrepared := true
+	// A kept file was not changed, so there is nothing to restore.
+	validationVhostPrepared := !keptSiteConfig
 	defer func() {
 		if !validationVhostPrepared {
 			return
@@ -719,24 +729,39 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 	// vhost (adds the 443 block) and reload.
 	// Sertifika ancak nginx sunduğunda işe yarar: vhost'u yeniden üret (443
 	// bloğu eklenir) ve yeniden yükle.
+	waitingForOwner := false
 	if err := p.applyVhostForDomain(ctx, domainID); err != nil {
-		// Certbot has already advanced its lineage. Keep the new immutable
-		// snapshot as the active ledger entry and expose a durable retry state;
-		// rolling back to the old DB row would make future renewals point at a
-		// different lineage version and strand the new certificate.
-		if markErr := p.markCertificatePendingDetached(
-			ctx, domainID, sslPendingActivation, true,
-		); markErr != nil {
-			writeServerError(w, fmt.Errorf(
-				"certificate activation failed: %v; pending state failed: %w",
-				err, markErr,
-			))
+		if _, kept := keptSiteFile(err); kept {
+			// D-031 step 1b: the file is the owner's. The new certificate is
+			// in the store and in CelikPanel's text held beside the file; the
+			// file keeps naming the certificate it names, so that one is
+			// served until the owner acts. Nothing is disabled or retried;
+			// mail TLS below still follows the new certificate.
+			if holdErr := p.holdCertificateForOwner(ctx, domainID, ""); holdErr != nil {
+				writeServerError(w, fmt.Errorf("certificate issued; record it waiting for the owner: %w", holdErr))
+				return
+			}
+			waitingForOwner = true
+		}
+		if !waitingForOwner {
+			// Certbot has already advanced its lineage. Keep the new immutable
+			// snapshot as the active ledger entry and expose a durable retry state;
+			// rolling back to the old DB row would make future renewals point at a
+			// different lineage version and strand the new certificate.
+			if markErr := p.markCertificatePendingDetached(
+				ctx, domainID, sslPendingActivation, true,
+			); markErr != nil {
+				writeServerError(w, fmt.Errorf(
+					"certificate activation failed: %v; pending state failed: %w",
+					err, markErr,
+				))
+				return
+			}
+			p.audit(r, "ssl.issue.partial", "domain", domainID)
+			writeCodedError(w, http.StatusConflict, errCodeSSLActivationPending,
+				"certificate was issued, but the web server could not activate it; use Retry activation", "")
 			return
 		}
-		p.audit(r, "ssl.issue.partial", "domain", domainID)
-		writeCodedError(w, http.StatusConflict, errCodeSSLActivationPending,
-			"certificate was issued, but the web server could not activate it; use Retry activation", "")
-		return
 	}
 
 	// Keep mail SNI in step with the new certificate if mail is secured.
@@ -767,6 +792,16 @@ func (p *Panel) handleIssueLetsEncrypt(w http.ResponseWriter, r *http.Request) {
 	}
 	p.audit(r, action, "domain", domainID)
 
+	if waitingForOwner {
+		// Issued and stored, not served yet: the answer says so, and the
+		// Configuration file page says what the owner can do.
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":         sslWaitingForOwner,
+			"expires_at":     expiresAt,
+			"pending_reason": services.SiteFileReasonCertificate,
+		})
+		return
+	}
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":     "success",
 		"expires_at": expiresAt,

@@ -168,6 +168,11 @@ func TestNoVhostNamesADistributionSnippet(t *testing.T) {
 					if directive == "include "+OwnerIncludeDir("ornek.com")+"/*.conf;" {
 						continue
 					}
+					// D-031 step 1b: CelikPanel's own include point (the ACME
+					// HTTP-01 location), a directory CelikPanel writes.
+					if directive == PanelManagedIncludeLine("ornek.com") {
+						continue
+					}
 					if directive != "include fastcgi.conf;" && directive != "include fastcgi_params;" {
 						t.Errorf("%s (tls %v, www %v): the vhost includes a file that is not nginx's own: %q", shape.ProjectType, tls, www, directive)
 					}

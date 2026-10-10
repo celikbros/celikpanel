@@ -4593,10 +4593,48 @@ that replaced the page is not changed). 2026-10-10 is the clock date.
   (`waitcopy`: the hold with a 5-minute-old and a 31-minute-old record, the
   loading wait after half a minute; English and Turkish; screenshots looked
   at). Component-tested and mock browser; not measured on a real system.
-- **Open.** The real-system re-measurement on a guest (set7's method) and any
-  installed server; a load with the HTTP cache enabled; the hold layer's words
-  during a real update; the two session reads per load (not changed here); the
-  remaining 30 files of the ratchet list.
+- **Ninth native record (2026-10-10) and the 15 s correction.** The record
+  (`deploy/e2e/release-recovery/evidence/set9-20261010/`, cell 2; real Chrome,
+  real Panel on a guest, interface from `7c3a05809`) measured the cold load on
+  a real system: it passes (quiet surface, then the explained wait at 1.57-1.62
+  s after it, on three routes, EN and TR). With every session read held 35 s
+  it found an older path: **cause in the source** (at `e1d14eb83`)
+  `web/src/auth/usePanelSession.ts:35` aborted the read after 15000 ms and
+  `:44`/`:51` set `auth_unavailable`, which `web/src/App.tsx:471-472` (and
+  `:498` for the recovery route) passed to `RecoveryAccess` as the known
+  negative `auth` (title "Your session could not be checked", "Reload
+  CelikPanel" at once); each automatic re-read then drew
+  `RecoveryAccess.tsx:174-175` (`checking && !user`: `recovery.checkingHelp`).
+  The read's own limit thus turned an unknown into a reported failure (against
+  invariant 2). **Change:** the hook records whether any read of the access
+  check has answered (`answered`, reset by a sign-in) and what an answered
+  failure said (`AccessReadFailure`: `network`, `status` with the HTTP status,
+  `invalid`; `api.me` now throws `ApiResponseError` so the status is kept).
+  Until a read has answered, a read that reaches its limit is `unanswered`, and
+  both parents keep the wait (`cause` `checking`); the hold over mounted pages
+  keeps its own cause. `RecoveryAccess` draws the wait in stages from
+  `useAccessWaitStage` (`web/src/lib/quietRead.ts`): "Check now" at 15 s, the
+  half-minute sentence and the reload at 30 s, counted from navigation start
+  for the page's first wait (from the first read after a sign-in otherwise),
+  never restarted by a re-read; only a check the owner asked for is drawn as
+  busy, and it joins a read in flight instead of starting a second one. An
+  answered failure is shown at once with its cause. **Schema or version
+  transition:** none. **Recovery behaviour:** unchanged reads, limits and
+  intervals. **Evidence:** `web/tests/recovery-access-runtime.test.mjs` (the
+  stages, the re-read, the answered failures), `web/tests/access-hold-runtime.test.mjs`;
+  mock browser `coldslow35` (35 s hold, EN and TR, screenshots at 1.6, 15.2,
+  25.2 and 31 s looked at). The 15 s/30 s path is component-tested and mock
+  browser; not re-measured on a real system. **Observation (not changed):**
+  the recovery service worker was not registered in the record's browser
+  (cells 4c, and set7), so a stopped Panel showed Chrome's own error page;
+  likely causes and what must be measured are in the operation guidance entry
+  of the same date.
+- **Open.** The real-system re-measurement of the 15 s/30 s path on a guest
+  (the cold load itself was measured by the ninth record) and any installed
+  server; a load with the HTTP cache enabled; the hold layer's words during a
+  real update; the two session reads per load (not changed here); why the
+  recovery service worker is not registered in the lab browser; the remaining
+  30 files of the ratchet list.
 
 ### The setup page's final check and the update notice: a stopped run is not in progress, a running update on the installed target is "being verified" (P0.2 area; invariants 2 and 6; D-024; 2026-10-10)
 
@@ -4772,6 +4810,34 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
     changed or removed by the Panel (site deletion included). A deleted site's
     vhost that is not CelikPanel's unchanged text is kept as a dated copy before
     removal.
+  - *CelikPanel's own include point and certificates on a kept file (step 1b,
+    2026-10-10).* Every server block also holds `include
+    /etc/nginx/celikpanel-managed.d/<domain>/*.conf;`; the ACME HTTP-01
+    location is written there (`acme-http-01.conf`, same header, classified
+    like the vhost: an owner's change to it is kept) instead of into the vhost,
+    written with the vhost and removed with the site
+    (`internal/services/managed_vhost.go`, `ApplyManagedVhosts`: put back
+    with the vhosts when nginx refuses). For a kept file the Agent reports
+    `validation` (`ready` when the file has the include line as a directive,
+    holds the validation-only block of any extra names as CelikPanel writes it,
+    and the challenge file is CelikPanel's) and `certificate_referenced`.
+    Issuance (`cmd/panel/domain_ssl_handlers.go`, `prepareCertificateValidation`)
+    on a ready kept file requests the certificate without touching the file;
+    the final render is kept, so the certificate is activated in the ledger
+    and held in CelikPanel's pending text, the ledger reason is `certificate`,
+    the renewal status `waiting_for_owner` and the answer `200
+    {"status":"waiting_for_owner"}`; the site is not disabled and the file's
+    certificate keeps being served. A kept file that is not ready is refused
+    before any request: `409 SITE_CONFIG_OWNER_EDITED`, `reason`
+    `certificate_validation`, `detail` the validation state, `vars.include`;
+    ledger reason `certificate_validation`. Renewal (`cmd/panel/cert_renewal.go`)
+    follows the same two paths; a renewal the file stops is
+    `waiting_for_owner`, not `failed`, and only the 12-hourly schedule tries
+    again. The certificate reasons live in `state_reason` and survive later
+    renders while the file stays kept (`RecordSiteFileResult`); they end when
+    CelikPanel's text is in place or a kept file names the active certificate,
+    which also ends `waiting_for_owner`. The dashboard lists each waiting
+    certificate with the days left on the one in use.
   - *The owner's choices* (`cmd/panel/site_config.go`): `GET
     /api/v1/domains/{id}/site-config` (read-only: the Agent's classification and a
     unified diff computed on the server, ≤ 4000 lines per side and 64 KiB;
@@ -4895,11 +4961,16 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
   in `cmd/panel/main.go`): the Panel's derivation (`managedSiteHostnames`: the
   domain, `www.` for a top-level domain, the aliases) has no temporary name, so
   the next start or save had always removed it; creation now writes the text
-  the start writes. Open gap, read from the source: certificate issuance and
-  renewal render the vhost first, so for a kept file they stop before a
-  certificate is requested (issuance with an untyped 409, renewal recorded as
-  failed) and the certificate in use is served until it expires; the typed
-  refusal and a pointer to the Configuration file page are not yet there, and
-  this is the audit's "keep mine, then certificate issuance" cell. The domains
-  list line "N recognised and taken over" stays for as long as one ledger row
-  carries `adopted_from`.
+  the start writes. The audit's "keep mine, then certificate issuance" cell is
+  addressed in source by step 1b above (component tests
+  `TestIssuanceOnAKeptFile…`, `TestRenewalOnAKeptFile…`,
+  `TestCertificateReasonEnds…`, the services tests of
+  `managed_vhost_certificate_test.go`, the mounted test and the mock browser);
+  not measured on a real system: no real certbot validation through the Panel's
+  include directory, no real nginx with a kept file. A file kept from before
+  step 1b has no include line and waits for the owner. The domains list line is
+  computed from the owner's decisions: drawn while an unknown-origin file has
+  no current "keep mine" decision, gone once each has one; it is not drawn when
+  nothing was left alone. Schema: none (the reasons use the existing
+  `state_reason`; `renewal_status` gains the value `waiting_for_owner`); the
+  additive Agent fields are in `internal/transport/site_files.go`.

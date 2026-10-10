@@ -10,7 +10,7 @@ func TestAdditionalACMEChallengeVhostNeverPublishesWebsiteContent(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	out, err := ng.Render(VhostData{
+	data := VhostData{
 		SiteID:      41,
 		Domain:      "example.test",
 		ServerNames: []string{"example.test", "www.example.test"},
@@ -23,10 +23,13 @@ func TestAdditionalACMEChallengeVhostNeverPublishesWebsiteContent(t *testing.T) 
 		DocumentRoot:      "/srv/example.test/public_html",
 		ProjectType:       "static",
 		SSLType:           "none",
-	})
+	}
+	out, err := ng.Render(data)
 	if err != nil {
 		t.Fatal(err)
 	}
+	// As nginx reads it with the Panel's challenge file in place (D-031 step 1b).
+	out = expandPanelIncludes(out, data)
 	// Embedded templates inherit the checkout's line endings. Normalize the
 	// rendered text so this structural assertion is identical on every build host.
 	out = strings.ReplaceAll(out, "\r\n", "\n")
@@ -47,7 +50,9 @@ func TestAdditionalACMEChallengeVhostNeverPublishesWebsiteContent(t *testing.T) 
 	if mailBlockStart < 0 {
 		t.Fatal("validation-only server missing")
 	}
-	mailBlockEnd := strings.Index(out[mailBlockStart:], "\n}\n")
+	// The block ends where its last location and the block close together;
+	// the expanded challenge file closes its own location at column 0.
+	mailBlockEnd := strings.Index(out[mailBlockStart:], "\n    }\n}\n")
 	if mailBlockEnd < 0 {
 		t.Fatalf("mail validation server is not a complete nginx block\n%s", out)
 	}

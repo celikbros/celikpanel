@@ -24,9 +24,12 @@ type certificateRuntimeStatus struct {
 	SitePathsMatch    bool
 	ActivationPending bool
 	DependentsPending bool
-	CoversManaged     bool
-	Info              installedCertificateInfo
-	Usable            bool
+	// WaitingForOwner: the site's configuration file the owner kept does not
+	// use this certificate yet, or stopped its renewal (D-031 step 1b).
+	WaitingForOwner bool
+	CoversManaged   bool
+	Info            installedCertificateInfo
+	Usable          bool
 }
 
 func acmeProviderIDForIssuer(issuer string) string {
@@ -71,6 +74,7 @@ func (p *Panel) loadCertificateRuntimeStatus(
 
 	status.ActivationPending = status.RenewalStatus == sslPendingActivation
 	status.DependentsPending = status.RenewalStatus == sslPendingDependents
+	status.WaitingForOwner = status.RenewalStatus == sslWaitingForOwner
 	info, err := p.inspectInstalledCertificate(ctx, status.CertPath, status.KeyPath)
 	if err != nil {
 		// Runtime read/parse failures are certificate state, not a panel

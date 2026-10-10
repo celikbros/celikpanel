@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"strings"
 	"time"
@@ -165,16 +166,25 @@ func (p *Panel) renewLetsEncrypt(ctx context.Context, certID, domainID int, doma
 	if preserveMailSAN {
 		challengeNames = []string{mailName}
 	}
-	if err := p.applyVhostForDomainWithACMEChallengeNames(
-		ctx,
-		domainID,
-		challengeNames,
-	); err != nil {
+	// D-031 step 1b: a kept file that includes the Panel's directory lets the
+	// renewal validate without being changed. A file that stops it (kept
+	// without the line, missing, unreadable) is the owner's to act on: the
+	// renewal waits for the owner and is not a failure; the normal schedule
+	// reads the file's state again at its next run.
+	keptSiteConfig, err := p.prepareCertificateValidation(ctx, domainID, challengeNames)
+	if err != nil {
+		var held *siteFileHeldError
+		var validation *certificateValidationHeldError
+		if errors.As(err, &validation) || errors.As(err, &held) {
+			p.recordCertificateWaitingForOwner(certID, domainName, now,
+				"the site's configuration file stops the renewal validation: "+err.Error())
+			return
+		}
 		p.recordCertificateRenewalFailure(ctx, certID, domainName, now,
 			"prepare renewal validation vhost: "+err.Error())
 		return
 	}
-	validationVhostPrepared := true
+	validationVhostPrepared := !keptSiteConfig
 	defer func() {
 		if !validationVhostPrepared {
 			return
@@ -333,12 +343,26 @@ func (p *Panel) renewLetsEncrypt(ctx context.Context, certID, domainID int, doma
 		)
 	}
 
+	waitingForOwner := false
 	if err := p.applyVhostForDomain(ctx, domainID); err != nil {
-		persistPending("web server activation", err, sslPendingActivation, true)
-		return
+		if _, kept := keptSiteFile(err); !kept {
+			persistPending("web server activation", err, sslPendingActivation, true)
+			return
+		}
+		// The kept file keeps naming the certificate it names; the renewed
+		// one waits for the owner (D-031 step 1b).
+		if holdErr := p.holdCertificateForOwner(ctx, domainID, now); holdErr != nil {
+			log.Printf("cert renewal %s: record the renewed certificate waiting for the owner: %v", domainName, holdErr)
+		}
+		waitingForOwner = true
 	}
 	if err := p.syncCertificateDependents(ctx, domainID); err != nil {
 		persistPending("mail TLS synchronization", err, sslPendingDependents, false)
+		return
+	}
+	if waitingForOwner {
+		log.Printf("cert renewal %s: renewed until %s; the site's configuration file is the owner's and does not use it yet",
+			domainName, info.ExpiresAt.Format("2006-01-02"))
 		return
 	}
 	if err := p.completeCertificateRenewal(

@@ -24,6 +24,7 @@ type ValidationRestoreApplyRequest struct {
 type ValidationRestoreApplyResponse struct {
 	Config string
 	Error  string
+	File   *transport.SiteFileResult
 }
 
 type ValidationRestoreIssueRequest struct {
@@ -104,6 +105,10 @@ type validationRestoreAgent struct {
 	domain    string
 	issueMode string
 	renewMode string
+	// keptValidation, when set, answers every render as a file the owner
+	// kept, with this validation state (D-031 step 1b).
+	keptValidation string
+	renewCalls     int
 
 	applyCalls  []ValidationRestoreApplyRequest
 	deleteCalls []ValidationRestoreDeleteRequest
@@ -122,6 +127,17 @@ func (a *validationRestoreAgent) ApplyVhost(
 		SSLCert:            req.SSLCert,
 	})
 	resp.Config = "ok"
+	if a.keptValidation != "" {
+		resp.File = &transport.SiteFileResult{
+			Kind: transport.SiteFileKindNginxVhost, Path: "/etc/nginx/sites-available/" + a.domain + ".conf",
+			State: transport.SiteFileOwnerEdited, Outcome: transport.SiteFileOutcomeKept,
+			RenderSHA256: strings.Repeat("b", 64), FileSHA256: strings.Repeat("c", 64),
+			ManagedDir:     "/etc/nginx/celikpanel-managed.d/" + a.domain,
+			ManagedInclude: "include /etc/nginx/celikpanel-managed.d/" + a.domain + "/*.conf;",
+			Validation:     a.keptValidation,
+		}
+		resp.Error = "kept"
+	}
 	return nil
 }
 
@@ -240,6 +256,7 @@ func (a *validationRestoreAgent) RenewLetsEncryptCertificate(
 ) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	a.renewCalls++
 
 	if a.renewMode == "rejected" {
 		resp.Error = "forced renewal failure"
@@ -272,7 +289,7 @@ func (a *validationRestoreAgent) InspectInstalledCertificate(
 	defer a.mu.Unlock()
 
 	names := []string{a.domain, "www." + a.domain}
-	if req.CertPath == "/certs/renewed/fullchain.pem" {
+	if req.CertPath == "/certs/renewed/fullchain.pem" && a.renewMode != "exact" {
 		names = []string{a.domain} // Deliberately missing www.
 	}
 	*resp = ValidationRestoreInspectResponse{

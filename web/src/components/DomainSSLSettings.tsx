@@ -42,6 +42,7 @@ interface SSLCertificate {
     trust_error?: string;
     activation_pending: boolean;
     dependents_pending: boolean;
+    waiting_for_owner?: boolean;
 }
 
 interface SSLSettings {
@@ -356,7 +357,16 @@ export function DomainSSLSettings({
                 showToast('error', apiErrorText(apiError, t, isReissue ? 'ssl.reissueFailed' : 'ssl.issueFailed'));
                 return;
             }
-            showToast('success', t(isReissue ? 'ssl.reissued' : 'ssl.issued'));
+            // Issued and stored, but the site's configuration file is the
+            // owner's and does not use it yet (D-031 step 1b).
+            let issuedStatus = '';
+            try {
+                issuedStatus = String(((await res.json()) as { status?: unknown } | null)?.status ?? '');
+            } catch {
+                issuedStatus = '';
+            }
+            if (issuedStatus === 'waiting_for_owner') showToast('warning', t('ssl.issuedWaitingForOwner'));
+            else showToast('success', t(isReissue ? 'ssl.reissued' : 'ssl.issued'));
             setShowReissue(false);
             // The screen keeps what it showed, with its controls off, until
             // the server has said what the certificate is now.
@@ -615,6 +625,7 @@ export function DomainSSLSettings({
     const tier = {
         none: { icon: XCircle, color: 'text-fg-subtle' },
         pending: { icon: AlertTriangle, color: 'text-warning' },
+        waitingForOwner: { icon: AlertTriangle, color: 'text-warning' },
         invalid: { icon: XCircle, color: 'text-danger' },
         untrusted: { icon: Shield, color: 'text-danger' },
         trustUnknown: { icon: AlertTriangle, color: 'text-warning' },
@@ -693,6 +704,16 @@ export function DomainSSLSettings({
                                         />
                                     )}
                                 </dl>
+                                {cert.waiting_for_owner && !cert.activation_pending && (
+                                    <p
+                                        role="status"
+                                        className="mt-4 flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 px-3 py-3 text-sm text-fg"
+                                        data-ssl-waiting-for-owner
+                                    >
+                                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+                                        <span>{t('ssl.waitingForOwner')}</span>
+                                    </p>
+                                )}
                                 {(cert.activation_pending || cert.dependents_pending) && (
                                     <div className="mt-4 flex flex-col gap-3 rounded-lg border border-warning-mark/50 bg-warning-mark/20 px-3 py-3 text-sm text-fg-muted sm:flex-row sm:items-center sm:justify-between">
                                         <span className="flex items-start gap-2">
@@ -1253,6 +1274,8 @@ function renewalStatusMeta(status: string): { label: TranslationKey; color: stri
             return { label: 'ssl.renewal.activationPending', color: 'text-warning' };
         case 'dependents_pending':
             return { label: 'ssl.renewal.dependentsPending', color: 'text-warning' };
+        case 'waiting_for_owner':
+            return { label: 'ssl.renewal.waitingForOwner', color: 'text-warning' };
         default:
             return null;
     }

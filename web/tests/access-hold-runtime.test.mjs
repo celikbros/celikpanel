@@ -65,7 +65,8 @@ const onboardingURL = link('../src/components/LicenseOnboarding.tsx', specifier 
 const loginURL = link('../src/components/Login.tsx', withGuidance);
 const noticeURL = link('../src/components/UpdateReloadNotice.tsx', withGuidance);
 const bareNoticeURL = link('../src/components/UpdateReloadNotice.tsx', () => stub);
-const sessionURL = link('../src/auth/usePanelSession.ts', () => stub);
+// The session reads count the page's access wait with the real quiet reader (2026-10-10).
+const sessionURL = link('../src/auth/usePanelSession.ts', specifier => real(specifier, () => stub));
 // The interception sends every call through the request identity (D-029); the
 // gate is tested with the real one.
 const identityURL = dataModule(compile('../src/lib/requestIdentity.ts'));

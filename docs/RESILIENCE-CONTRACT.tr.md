@@ -3904,10 +3904,49 @@ arayüzü değişmedi). 2026-10-10 saat tarihidir.
   koşusu (`waitcopy`: 5 dakikalık ve 31 dakikalık kayıtla bekletme, yarım
   dakika sonra yükleme beklemesi; İngilizce ve Türkçe; ekran görüntülerine
   bakıldı). Bileşen testli ve taklit tarayıcılı; gerçek bir sistemde ölçülmedi.
-- **Açık.** Konukta gerçek sistem yeniden ölçümü (set7 yöntemi) ve her kurulu
-  sunucu; HTTP önbelleği açıkken yükleme; gerçek bir güncelleme sırasında
-  bekletme katmanının sözcükleri; yükleme başına iki oturum okuması (burada
-  değiştirilmedi); mandal listesinin kalan 30 dosyası.
+- **Dokuzuncu gerçek sistem kaydı (2026-10-10) ve 15 sn düzeltmesi.** Kayıt
+  (`deploy/e2e/release-recovery/evidence/set9-20261010/`, hücre 2; gerçek
+  Chrome, konukta gerçek Panel, arayüz `7c3a05809`'dan) soğuk yüklemeyi gerçek
+  bir sistemde ölçtü: geçer (sessiz zemin, ardından 1,57-1,62 sn sonra
+  açıklanmış bekleme; üç yolda, EN ve TR). Her oturum okuması 35 sn
+  tutulduğunda daha eski bir yol buldu: **kaynaktaki neden** (`e1d14eb83`'te)
+  `web/src/auth/usePanelSession.ts:35` okumayı 15000 ms sonra kesiyor,
+  `:44`/`:51` `auth_unavailable` yapıyordu; `web/src/App.tsx:471-472` (kurtarma
+  yolu için `:498`) bunu `RecoveryAccess`'e bilinen olumsuz `auth` olarak
+  veriyordu (başlık "Oturumunuz kontrol edilemedi", "CelikPanel’i yeniden
+  yükle" hemen); her kendiliğinden yeniden okuma ise `RecoveryAccess.tsx:174-175`
+  çiziyordu (`checking && !user`: `recovery.checkingHelp`). Okumanın kendi
+  sınırı böylece bir bilinmeyeni bildirilmiş bir hataya çeviriyordu (ilke 2'ye
+  aykırı). **Değişiklik:** kanca, erişim denetiminin herhangi bir okumasının
+  yanıt verip vermediğini (`answered`, oturum açılınca sıfırlanır) ve
+  yanıtlanmış bir hatanın ne dediğini kaydeder (`AccessReadFailure`:
+  `network`, HTTP durum koduyla `status`, `invalid`; durum kodu korunsun diye
+  `api.me` artık `ApiResponseError` fırlatır). Bir okuma yanıt verene kadar
+  sınırına ulaşan okuma `unanswered`'dır ve iki üst bileşen de beklemeyi
+  sürdürür (`cause` `checking`); bağlı sayfaların üzerindeki bekletme kendi
+  nedenini korur. `RecoveryAccess` beklemeyi `useAccessWaitStage`
+  (`web/src/lib/quietRead.ts`) aşamalarıyla çizer: 15 sn'de "Şimdi kontrol et",
+  30 sn'de yarım dakika cümlesi ve yeniden yükleme; sayfanın ilk beklemesi için
+  gezinme başlangıcından (aksi hâlde oturum açıldıktan sonraki ilk okumadan)
+  sayılır, yeniden okuma onu asla yeniden başlatmaz; yalnız sahibin istediği
+  denetim meşgul çizilir ve ikinci bir okuma başlatmak yerine süren okumaya
+  katılır. Yanıtlanmış hata nedeniyle birlikte hemen gösterilir. **Şema ya da
+  sürüm geçişi:** yok. **Kurtarma davranışı:** okumalar, sınırları ve
+  aralıkları değişmedi. **Kanıt:** `web/tests/recovery-access-runtime.test.mjs`
+  (aşamalar, yeniden okuma, yanıtlanmış hatalar),
+  `web/tests/access-hold-runtime.test.mjs`; taklit tarayıcı `coldslow35` (35
+  sn tutma, EN ve TR; 1,6, 15,2, 25,2 ve 31 sn ekran görüntülerine bakıldı).
+  15 sn/30 sn yolu bileşen testli ve taklit tarayıcılı; gerçek bir sistemde
+  yeniden ölçülmedi. **Gözlem (değiştirilmedi):** kurtarma hizmet çalışanı
+  kaydın tarayıcısında kayıtlı değildi (hücre 4c ve set7); bu yüzden durmuş
+  Panel'de Chrome'un kendi hata sayfası göründü; olası nedenler ve neyin
+  ölçülmesi gerektiği aynı tarihli işlem rehberi girdisindedir.
+- **Açık.** 15 sn/30 sn yolunun konukta gerçek sistem yeniden ölçümü (soğuk
+  yüklemenin kendisini dokuzuncu kayıt ölçtü) ve her kurulu sunucu; HTTP
+  önbelleği açıkken yükleme; gerçek bir güncelleme sırasında bekletme
+  katmanının sözcükleri; yükleme başına iki oturum okuması (burada
+  değiştirilmedi); kurtarma hizmet çalışanının laboratuvar tarayıcısında neden
+  kaydolmadığı; mandal listesinin kalan 30 dosyası.
 
 ### Kurulum sayfasının son denetimi ve güncelleme bildirimi: durmuş çalışma sürmüyordur, kurulu hedefte süren güncelleme "doğrulanıyor"dur (P0.2 alanı; ilke 2 ve 6; D-024; 2026-10-10)
 
@@ -4074,6 +4113,33 @@ hücreleri (denetim §9) sonra gelir. 2026-10-10 saat tarihidir.
     oluşturulur (0755), içindeki hiçbir şeye Panel yazmaz, dokunmaz, silmez (site
     silme dahil). Silinen sitenin CelikPanel'in değişmemiş metni olmayan sanal
     konağı silinmeden önce tarihli bir kopya olarak bırakılır.
+  - *CelikPanel'in kendi ekleme noktası ve korunan dosyada sertifikalar (adım
+    1b, 2026-10-10).* Her server bloğu ayrıca `include
+    /etc/nginx/celikpanel-managed.d/<alan adı>/*.conf;` taşır; ACME HTTP-01
+    konumu sanal konağa değil oraya yazılır (`acme-http-01.conf`, aynı başlık,
+    sanal konak gibi sınıflandırılır: sahibin değişikliği korunur); sanal
+    konakla birlikte yazılır, siteyle birlikte kaldırılır
+    (`internal/services/managed_vhost.go`, `ApplyManagedVhosts`: nginx
+    reddederse sanal konaklarla birlikte geri konur). Korunan dosya için Agent
+    `validation` (dosya ekleme satırını yönerge olarak taşıyorsa, ek adların
+    yalnız doğrulama bloğunu CelikPanel'in yazdığı biçimde içeriyorsa ve
+    doğrulama dosyası CelikPanel'inse `ready`) ve `certificate_referenced`
+    bildirir. Hazır korunan dosyada alım (`cmd/panel/domain_ssl_handlers.go`,
+    `prepareCertificateValidation`) dosyaya dokunmadan sertifikayı ister; son
+    üretim korunur, bu yüzden sertifika defterde etkinleşir ve CelikPanel'in
+    bekleyen metninde tutulur; defter nedeni `certificate`, yenileme durumu
+    `waiting_for_owner`, yanıt `200 {"status":"waiting_for_owner"}`; site
+    kapatılmaz ve dosyanın sertifikası sunulmayı sürdürür. Hazır olmayan korunan
+    dosya hiçbir istekten önce reddedilir: `409 SITE_CONFIG_OWNER_EDITED`,
+    `reason` `certificate_validation`, `detail` doğrulama durumu,
+    `vars.include`; defter nedeni `certificate_validation`. Yenileme
+    (`cmd/panel/cert_renewal.go`) aynı iki yolu izler; dosyanın durdurduğu
+    yenileme `failed` değil `waiting_for_owner` olur ve yalnız 12 saatlik
+    zamanlama yeniden dener. Sertifika nedenleri `state_reason` içinde durur ve
+    dosya korundukça sonraki üretimlerde kalır (`RecordSiteFileResult`);
+    CelikPanel'in metni yerine geçince ya da korunan dosya etkin sertifikayı
+    gösterince biter ve bu `waiting_for_owner`ı da bitirir. Pano bekleyen her
+    sertifikayı kullanılan sertifikanın kalan günüyle listeler.
   - *Sahibin seçimleri* (`cmd/panel/site_config.go`): `GET …/site-config`
     (salt okunur; sunucuda hesaplanan, taraf başına ≤ 4000 satır ve 64 KiB ile
     sınırlı birleşik fark; `authorization|password|passwd|secret|token|api[_-]?key|
@@ -4157,11 +4223,17 @@ hücreleri (denetim §9) sonra gelir. 2026-10-10 saat tarihidir.
   `cmd/panel/main.go`'da hep ayarlı) artık yeni sitenin sanal konağına yazılmaz:
   Panel'in türetmesi (`managedSiteHostnames`: alan adı, üst düzey alan adında
   `www.`, takma adlar) geçici ad taşımaz; sonraki başlangıç ya da kaydetme onu
-  zaten hep kaldırıyordu; oluşturma artık başlangıcın yazdığı metni yazar. Açık
-  boşluk, kaynaktan okundu: sertifika alımı ve yenilemesi önce sanal konağı
-  üretir; bu yüzden korunmuş dosyada sertifika istenmeden önce dururlar (alım
-  tipsiz bir 409 ile, yenileme başarısız diye kaydedilir) ve kullanımdaki
-  sertifika süresi dolana dek sunulur; tipli ret ve Yapılandırma dosyası
-  sayfasına yönlendirme henüz yok; bu, denetimin "benimkini koru, sonra
-  sertifika alımı" hücresidir. Alan adları listesindeki "N tanındı ve devralındı"
-  satırı, bir defter satırı `adopted_from` taşıdıkça durur.
+  zaten hep kaldırıyordu; oluşturma artık başlangıcın yazdığı metni yazar. Denetimin
+  "benimkini koru, sonra sertifika alımı" hücresi yukarıdaki adım 1b ile
+  kaynakta ele alındı (bileşen testleri `TestIssuanceOnAKeptFile…`,
+  `TestRenewalOnAKeptFile…`, `TestCertificateReasonEnds…`,
+  `managed_vhost_certificate_test.go` hizmet testleri, bağlı test ve sahte
+  sunucuda tarayıcı); gerçek sistemde ölçülmedi: Panel'in ekleme dizini
+  üzerinden gerçek certbot doğrulaması ve korunan dosyalı gerçek nginx yok. Adım
+  1b'den önce korunmuş bir dosyada ekleme satırı yoktur ve sahibi bekler. Alan
+  adları listesi satırı sahibin kararlarından hesaplanır: kökeni bilinmeyen bir
+  dosyanın şimdiki "benimkini koru" kararı yokken çizilir, hepsinin kararı
+  olunca kalkar; hiçbir şey olduğu gibi bırakılmadıysa çizilmez. Şema: yok
+  (nedenler var olan `state_reason`'ı kullanır; `renewal_status`
+  `waiting_for_owner` değerini kazanır); eklemeli Agent alanları
+  `internal/transport/site_files.go` içindedir.

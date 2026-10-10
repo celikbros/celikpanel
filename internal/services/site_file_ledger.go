@@ -25,6 +25,33 @@ const (
 	SiteFileDecisionRecreate = "recreate"
 )
 
+// The ledger's certificate reasons for a kept file (D-031 step 1b). They are
+// kept in state_reason while the file stays kept: the operations that render
+// the file again (a start, a setting) do not erase them.
+const (
+	// SiteFileReasonCertificate: a new certificate was obtained and installed
+	// in the Panel's certificate store, and the kept file does not name it;
+	// the site keeps serving the certificate the file names.
+	SiteFileReasonCertificate = "certificate"
+	// SiteFileReasonCertificateValidation: a certificate could not be
+	// requested or renewed, because the kept file does not let the
+	// validation be published (transport.SiteFileValidation*).
+	SiteFileReasonCertificateValidation = "certificate_validation"
+)
+
+// SiteFileCertificateReason says whether a stored reason is one of them.
+func SiteFileCertificateReason(reason string) bool {
+	return reason == SiteFileReasonCertificate || reason == SiteFileReasonCertificateValidation
+}
+
+func siteFileStoredKept(state string) bool {
+	switch state {
+	case transport.SiteFileOwnerEdited, transport.SiteFileForeign, transport.SiteFileUnknownOrigin:
+		return true
+	}
+	return false
+}
+
 // SiteFileRecord is one ledger row.
 type SiteFileRecord struct {
 	SiteID             int
@@ -134,6 +161,16 @@ func RecordSiteFileResult(
 	}
 	record.State = SiteFileStoredState(result)
 	record.StateReason = result.Reason
+	// A certificate reason stays while the file stays kept and no other
+	// reason replaces it. The certificate one ends when the kept file names
+	// the certificate (the owner updated its lines).
+	if found && previous.Path == result.Path && result.Reason == "" && siteFileStoredKept(record.State) &&
+		SiteFileCertificateReason(previous.StateReason) {
+		record.StateReason = previous.StateReason
+		if previous.StateReason == SiteFileReasonCertificate && result.CertificateReferenced {
+			record.StateReason = ""
+		}
+	}
 	record.FileSHA256 = result.FileSHA256
 	record.ObservedAt = now
 	record.PendingPath = result.PendingPath
@@ -214,4 +251,33 @@ func RecordSiteFileDecision(ctx context.Context, db siteFileQuerier, siteID int,
 		return fmt.Errorf("no ledger row for site %d %s", siteID, kind)
 	}
 	return nil
+}
+
+// SetSiteFileCertificateReason records (or, with "", clears) a certificate
+// reason on the site's vhost row. Clearing touches only a certificate reason.
+// It returns whether a row changed.
+func SetSiteFileCertificateReason(ctx context.Context, db siteFileQuerier, siteID int, reason string) (bool, error) {
+	var (
+		result sql.Result
+		err    error
+	)
+	if reason == "" {
+		result, err = db.ExecContext(ctx, `
+			UPDATE managed_site_files SET state_reason = ''
+			WHERE site_id = ? AND kind = ? AND state_reason IN (?, ?)`,
+			siteID, transport.SiteFileKindNginxVhost, SiteFileReasonCertificate, SiteFileReasonCertificateValidation)
+	} else {
+		if !SiteFileCertificateReason(reason) {
+			return false, fmt.Errorf("not a certificate reason: %q", reason)
+		}
+		result, err = db.ExecContext(ctx, `
+			UPDATE managed_site_files SET state_reason = ?
+			WHERE site_id = ? AND kind = ?`,
+			reason, siteID, transport.SiteFileKindNginxVhost)
+	}
+	if err != nil {
+		return false, err
+	}
+	affected, err := result.RowsAffected()
+	return affected > 0, err
 }

@@ -53,6 +53,13 @@ const (
 	// one owner include directory per site. Nothing in nginx's own
 	// configuration includes it; only the site's vhost does.
 	ownerIncludeDirName = "celikpanel-sites.d"
+	// panelManagedDirName is the directory under the nginx root that holds
+	// one Panel-owned include directory per site (D-031 step 1b). The
+	// Panel writes there; the owner's additions go to ownerIncludeDirName.
+	panelManagedDirName = "celikpanel-managed.d"
+	// ACMEChallengeFileName is the Panel's ACME HTTP-01 location file in the
+	// site's Panel-owned include directory.
+	ACMEChallengeFileName = "acme-http-01.conf"
 	// maxManagedSiteFileBytes bounds what the classifier reads.
 	maxManagedSiteFileBytes = 4 << 20
 	// maxSiteFileDetail bounds Detail.
@@ -80,6 +87,40 @@ func nginxBase() string {
 // <dir>/*.conf in every server block that serves the site's content.
 func OwnerIncludeDir(domain string) string {
 	return nginxBase() + "/" + ownerIncludeDirName + "/" + domain
+}
+
+// PanelManagedDir is the Panel's own include directory of one site:
+// /etc/nginx/celikpanel-managed.d/<domain>. The vhost includes <dir>/*.conf in
+// every server block of the site. It holds the ACME HTTP-01 challenge location
+// (ACMEChallengeFileName), so a certificate can be issued or renewed for a site
+// whose vhost the owner kept, without touching that vhost.
+// PanelManagedDir, Panel'in sitedeki kendi ekleme dizinidir; doğrulama konumu
+// vhost'a değil buraya yazılır.
+func PanelManagedDir(domain string) string {
+	return nginxBase() + "/" + panelManagedDirName + "/" + domain
+}
+
+// PanelManagedIncludeLine is the line a vhost needs to read PanelManagedDir.
+func PanelManagedIncludeLine(domain string) string {
+	return "include " + PanelManagedDir(domain) + "/*.conf;"
+}
+
+// ACMEChallengeFilePath is the Panel's challenge location file of one site.
+func ACMEChallengeFilePath(domain string) string {
+	return PanelManagedDir(domain) + "/" + ACMEChallengeFileName
+}
+
+// RenderACMEChallengeFile is the body of ACMEChallengeFilePath: the HTTP-01
+// location, root-owned validation content only, never tenant public_html.
+func RenderACMEChallengeFile(domain, challengeRoot string) string {
+	return "# The ACME HTTP-01 challenge location of " + domain + ", written by CelikPanel.\n" +
+		"# This directory is CelikPanel's; put your own additions in " + OwnerIncludeDir(domain) + "/*.conf.\n" +
+		"# Doğrulama konumu; bu dizin CelikPanel'indir, kendi eklemeleriniz " + OwnerIncludeDir(domain) + " içine.\n" +
+		"location ^~ /.well-known/acme-challenge/ {\n" +
+		"    root " + challengeRoot + ";\n" +
+		"    default_type text/plain;\n" +
+		"    try_files $uri =404;\n" +
+		"}\n"
 }
 
 // SiteVhostPath is the vhost file of a domain (sites-available).
@@ -132,6 +173,15 @@ type ManagedVhostItem struct {
 	// Legacy renders the frozen earlier releases' texts for a headerless
 	// file; nil when no earlier text can apply (a new site).
 	Legacy func() ([]LegacyVhostRender, error)
+	// ACMEChallengeRoot, when set, is the site's challenge root: the Panel's
+	// challenge file (ACMEChallengeFilePath) is kept as CelikPanel's text for
+	// it whenever the vhost after this operation reads the Panel's directory.
+	ACMEChallengeRoot string
+	// ValidationBlock is RenderACMENamesBlock's text for this render, "" when
+	// it asks for no validation-only names.
+	ValidationBlock string
+	// SSLCert is the certificate path this render uses ("" without one).
+	SSLCert string
 }
 
 type siteFileInspection struct {
@@ -455,6 +505,123 @@ func ensureOwnerIncludeDir(domain string) error {
 	return nil
 }
 
+// ensurePanelManagedDir creates the site's Panel-owned include directory
+// (0755) when it is absent. A path there that is not a directory (a link
+// included) is left alone and reported.
+func ensurePanelManagedDir(domain string) error {
+	directory := PanelManagedDir(domain)
+	if info, err := os.Lstat(directory); err == nil {
+		if !info.IsDir() {
+			return fmt.Errorf("%s exists and is not a directory; it was left alone", directory)
+		}
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(directory), 0o755); err != nil {
+		return err
+	}
+	if err := os.Mkdir(directory, 0o755); err != nil && !errors.Is(err, os.ErrExist) {
+		return err
+	}
+	return nil
+}
+
+// normalizedDirectiveLine is a configuration line without surrounding space
+// and with runs of space folded, so an editor's indentation does not hide a
+// directive; a comment line is "".
+func normalizedDirectiveLine(line string) string {
+	line = strings.TrimSpace(strings.TrimSuffix(line, "\r"))
+	if strings.HasPrefix(line, "#") {
+		return ""
+	}
+	return strings.Join(strings.Fields(line), " ")
+}
+
+// fileHasDirective says whether a non-comment line of content is exactly the
+// directive (spacing aside).
+func fileHasDirective(content []byte, directive string) bool {
+	want := strings.Join(strings.Fields(directive), " ")
+	for _, line := range strings.Split(string(content), "\n") {
+		if normalizedDirectiveLine(line) == want {
+			return true
+		}
+	}
+	return false
+}
+
+// keptFileValidation is the D-031 step 1b rule for a kept file: a certificate
+// can be validated without changing it when it includes the Panel's directory,
+// holds the validation-only server block of any extra names exactly as
+// CelikPanel writes it, and the challenge file in the directory is the
+// Panel's.
+func keptFileValidation(content []byte, item ManagedVhostItem, challenge string) string {
+	if !fileHasDirective(content, PanelManagedIncludeLine(item.Domain)) {
+		return transport.SiteFileValidationIncludeMissing
+	}
+	if item.ValidationBlock != "" {
+		normalized := strings.ReplaceAll(string(content), "\r\n", "\n")
+		if !strings.Contains(normalized, strings.ReplaceAll(item.ValidationBlock, "\r\n", "\n")) {
+			return transport.SiteFileValidationNamesMissing
+		}
+	}
+	switch challenge {
+	case transport.SiteFileChallengeKept:
+		return transport.SiteFileValidationChallengeKept
+	case transport.SiteFileChallengeFailed:
+		return transport.SiteFileValidationChallengeFailed
+	}
+	return transport.SiteFileValidationReady
+}
+
+func siteFileKeptState(state string) bool {
+	switch state {
+	case transport.SiteFileOwnerEdited, transport.SiteFileForeign, transport.SiteFileUnknownOrigin:
+		return true
+	}
+	return false
+}
+
+// describeKeptFile fills the kept-file fields of a result that need only the
+// file's bytes.
+func describeKeptFile(result *transport.SiteFileResult, inspected siteFileInspection, item ManagedVhostItem) {
+	if !siteFileKeptState(inspected.state) {
+		return
+	}
+	if item.SSLCert != "" {
+		result.CertificateReferenced = fileHasDirective(inspected.content, "ssl_certificate "+item.SSLCert+";")
+	}
+}
+
+// plannedChallengeFile is the Panel's challenge file of one item.
+type plannedChallengeFile struct {
+	index     int
+	domain    string
+	path      string
+	sealed    []byte
+	inspected siteFileInspection
+}
+
+// challengeFileState classifies the Panel's challenge file without writing:
+// absent, the Panel's text (unchanged, or the Panel's text for other inputs:
+// differs), or kept (anything else, never replaced).
+func challengeFileState(item ManagedVhostItem) (plannedChallengeFile, string) {
+	path := ACMEChallengeFilePath(item.Domain)
+	plan := plannedChallengeFile{
+		domain: item.Domain, path: path,
+		sealed: []byte(SealManagedText(RenderACMEChallengeFile(item.Domain, item.ACMEChallengeRoot))),
+	}
+	plan.inspected = inspectSiteFile(path, nil, "")
+	switch plan.inspected.state {
+	case transport.SiteFileAbsent:
+		return plan, transport.SiteFileChallengeAbsent
+	case transport.SiteFileManagedUnchanged:
+		if bytes.Equal(plan.inspected.content, plan.sealed) {
+			return plan, transport.SiteFileChallengeUnchanged
+		}
+		return plan, transport.SiteFileChallengeDiffers
+	}
+	return plan, transport.SiteFileChallengeKept
+}
+
 func normalizedSiteFileTrigger(trigger string) string {
 	switch trigger {
 	case transport.SiteFileTriggerStartup, transport.SiteFileTriggerCreate,
@@ -507,6 +674,9 @@ func (ng *NginxGenerator) ApplyManagedVhosts(items []ManagedVhostItem) ([]transp
 
 	var writes []plannedSiteFileWrite
 	var unchanged []string
+	// keptContent holds a kept file's bytes as read; a kept file is not
+	// written by this call.
+	keptContent := make([][]byte, len(items))
 	for index, item := range items {
 		available, enabled := vhostPaths(item.Domain)
 		sealed := []byte(SealManagedText(item.Body))
@@ -514,17 +684,20 @@ func (ng *NginxGenerator) ApplyManagedVhosts(items []ManagedVhostItem) ([]transp
 		inspected := inspectSiteFile(available, item.Legacy, item.RecordedSHA256)
 		result := &results[index]
 		*result = transport.SiteFileResult{
-			Kind:         transport.SiteFileKindNginxVhost,
-			Path:         available,
-			State:        inspected.state,
-			Reason:       inspected.reason,
-			Detail:       inspected.detail,
-			AdoptedFrom:  inspected.adoptedFrom,
-			RenderSHA256: sha256Hex([]byte(item.Body)),
-			FileSHA256:   inspected.fileSHA,
-			IncludeDir:   OwnerIncludeDir(item.Domain),
-			Enabled:      enabledVhostState(enabled, available),
+			Kind:           transport.SiteFileKindNginxVhost,
+			Path:           available,
+			State:          inspected.state,
+			Reason:         inspected.reason,
+			Detail:         inspected.detail,
+			AdoptedFrom:    inspected.adoptedFrom,
+			RenderSHA256:   sha256Hex([]byte(item.Body)),
+			FileSHA256:     inspected.fileSHA,
+			IncludeDir:     OwnerIncludeDir(item.Domain),
+			Enabled:        enabledVhostState(enabled, available),
+			ManagedDir:     PanelManagedDir(item.Domain),
+			ManagedInclude: PanelManagedIncludeLine(item.Domain),
 		}
+		describeKeptFile(result, inspected, item)
 		plan := plannedSiteFileWrite{
 			index: index, domain: item.Domain, available: available,
 			enabled: enabled, sealed: sealed, inspected: inspected,
@@ -571,6 +744,7 @@ func (ng *NginxGenerator) ApplyManagedVhosts(items []ManagedVhostItem) ([]transp
 				result.Reason = transport.SiteFileReasonNotApplicable
 			default:
 				result.Outcome = transport.SiteFileOutcomeKept
+				keptContent[index] = inspected.content
 				pendingPath, pendingSHA, err := writePendingSiteFile(available, sealed)
 				if err != nil {
 					result.Reason = transport.SiteFileReasonPendingNotSet
@@ -635,10 +809,62 @@ func (ng *NginxGenerator) ApplyManagedVhosts(items []ManagedVhostItem) ([]transp
 		touched = append(touched, plan)
 	}
 
+	// D-031 step 1b: the Panel's challenge file, for every site whose vhost
+	// after this operation reads the Panel's directory: CelikPanel's text
+	// (written or unchanged), or a kept file that still has the include line.
+	// A challenge file that is not the Panel's unchanged text is kept too.
+	vhostTouched := make(map[int]bool, len(touched))
+	for _, plan := range touched {
+		vhostTouched[plan.index] = true
+	}
+	var challenges []plannedSiteFileWrite
+	for index, item := range items {
+		result := &results[index]
+		if item.ACMEChallengeRoot == "" {
+			continue
+		}
+		kept := result.Outcome == transport.SiteFileOutcomeKept
+		readsDirectory := vhostTouched[index] || result.Outcome == transport.SiteFileOutcomeUnchanged ||
+			(kept && fileHasDirective(keptContent[index], result.ManagedInclude))
+		if !readsDirectory {
+			continue
+		}
+		challenge, state := challengeFileState(item)
+		switch state {
+		case transport.SiteFileChallengeAbsent, transport.SiteFileChallengeDiffers:
+			err := ensurePanelManagedDir(item.Domain)
+			if err == nil {
+				err = writeManagedSiteFile(challenge.path, challenge.sealed, challenge.inspected)
+			}
+			if err != nil {
+				result.ChallengeFile = transport.SiteFileChallengeFailed
+				result.Detail = boundedSiteFileDetail(strings.TrimPrefix(result.Detail+"; ", "; ") + "challenge file: " + err.Error())
+				continue
+			}
+			result.ChallengeFile = transport.SiteFileChallengeWritten
+			challenges = append(challenges, plannedSiteFileWrite{
+				index: index, domain: item.Domain, available: challenge.path,
+				sealed: challenge.sealed, inspected: challenge.inspected,
+			})
+		default:
+			result.ChallengeFile = state
+		}
+	}
+	setValidation := func() {
+		for index, item := range items {
+			result := &results[index]
+			if result.Outcome != transport.SiteFileOutcomeKept {
+				continue
+			}
+			result.Validation = keptFileValidation(keptContent[index], item, result.ChallengeFile)
+		}
+	}
+
 	for _, path := range unchanged {
 		removeStalePending(path)
 	}
-	if len(touched) == 0 {
+	if len(touched) == 0 && len(challenges) == 0 {
+		setValidation()
 		return results, nil
 	}
 
@@ -651,19 +877,28 @@ func (ng *NginxGenerator) ApplyManagedVhosts(items []ManagedVhostItem) ([]transp
 			result.Enabled = enabledVhostState(plan.enabled, plan.available)
 			result.FileSHA256 = plan.inspected.fileSHA
 		}
+		for _, plan := range challenges {
+			result := &results[plan.index]
+			result.ChallengeFile = transport.SiteFileChallengeFailed
+			if !vhostTouched[plan.index] {
+				result.Detail = boundedSiteFileDetail(detail)
+			}
+		}
+		setValidation()
 	}
+	everything := append(append([]plannedSiteFileWrite(nil), challenges...), touched...)
 	if err := ng.ValidateNginx(); err != nil {
 		detail := err.Error()
 		var refused *NginxConfigRefusedError
 		if errors.As(err, &refused) {
 			detail = refused.FirstLine()
 		}
-		rollbackErr := restorePlannedSiteFiles(touched)
+		rollbackErr := restorePlannedSiteFiles(everything)
 		failTouched(transport.SiteFileReasonNginxRefused, detail)
 		return results, ng.finishManagedRollback(fmt.Errorf("nginx validation failed: %w", err), rollbackErr)
 	}
 	if err := ng.ReloadNginx(); err != nil {
-		rollbackErr := restorePlannedSiteFiles(touched)
+		rollbackErr := restorePlannedSiteFiles(everything)
 		failTouched(transport.SiteFileReasonReloadFailed, err.Error())
 		return results, ng.finishManagedRollback(fmt.Errorf("nginx reload failed: %w", err), rollbackErr)
 	}
@@ -676,6 +911,10 @@ func (ng *NginxGenerator) ApplyManagedVhosts(items []ManagedVhostItem) ([]transp
 		result.PendingPath, result.PendingSHA256 = "", ""
 		removeStalePending(plan.available)
 	}
+	for _, plan := range challenges {
+		results[plan.index].Reloaded = true
+	}
+	setValidation()
 	return results, nil
 }
 
@@ -752,17 +991,29 @@ func (ng *NginxGenerator) InspectManagedVhost(item ManagedVhostItem) (transport.
 	sealed := SealManagedText(item.Body)
 	inspected := inspectSiteFile(available, item.Legacy, item.RecordedSHA256)
 	result := transport.SiteFileResult{
-		Kind:         transport.SiteFileKindNginxVhost,
-		Path:         available,
-		State:        inspected.state,
-		Outcome:      transport.SiteFileOutcomeInspected,
-		Reason:       inspected.reason,
-		Detail:       inspected.detail,
-		AdoptedFrom:  inspected.adoptedFrom,
-		RenderSHA256: sha256Hex([]byte(item.Body)),
-		FileSHA256:   inspected.fileSHA,
-		IncludeDir:   OwnerIncludeDir(item.Domain),
-		Enabled:      enabledVhostState(enabled, available),
+		Kind:           transport.SiteFileKindNginxVhost,
+		Path:           available,
+		State:          inspected.state,
+		Outcome:        transport.SiteFileOutcomeInspected,
+		Reason:         inspected.reason,
+		Detail:         inspected.detail,
+		AdoptedFrom:    inspected.adoptedFrom,
+		RenderSHA256:   sha256Hex([]byte(item.Body)),
+		FileSHA256:     inspected.fileSHA,
+		IncludeDir:     OwnerIncludeDir(item.Domain),
+		Enabled:        enabledVhostState(enabled, available),
+		ManagedDir:     PanelManagedDir(item.Domain),
+		ManagedInclude: PanelManagedIncludeLine(item.Domain),
+	}
+	describeKeptFile(&result, inspected, item)
+	if item.ACMEChallengeRoot != "" {
+		_, result.ChallengeFile = challengeFileState(item)
+	}
+	if siteFileKeptState(inspected.state) {
+		// What a certificate operation would find now. An absent or other
+		// challenge file is written by that operation, so only a kept one
+		// stops it here.
+		result.Validation = keptFileValidation(inspected.content, item, result.ChallengeFile)
 	}
 	if inspected.state == transport.SiteFileManagedUnchanged && inspected.adoptedFrom == "" {
 		if declared, _, ok := splitManagedHeader(inspected.content); ok {
@@ -814,5 +1065,22 @@ func (ng *NginxGenerator) RemoveSiteVhost(domain string) (string, error) {
 		return backup, err
 	}
 	removeStalePending(available)
+	removePanelManagedDir(domain)
 	return backup, nil
+}
+
+// removePanelManagedDir removes a deleted site's challenge file when it is
+// still the Panel's unchanged text, then the Panel's directory when it is
+// empty. Anything else in it is left.
+func removePanelManagedDir(domain string) {
+	nginxMutationMu.Lock()
+	defer nginxMutationMu.Unlock()
+	path := ACMEChallengeFilePath(domain)
+	if inspected := inspectSiteFile(path, nil, ""); inspected.state == transport.SiteFileManagedUnchanged {
+		_ = os.Remove(path)
+	}
+	directory := PanelManagedDir(domain)
+	if info, err := os.Lstat(directory); err == nil && info.IsDir() {
+		_ = os.Remove(directory) // fails, and leaves it, when not empty
+	}
 }

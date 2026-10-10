@@ -5613,6 +5613,97 @@ bekleme sessiz süreden sonra göründü ve sayfa kendiliğinden açıldı.
 HTTP önbelleği açıkken yükleme, gerçek bir güncelleme sırasında bekletme
 katmanı. Dil yükleyicisinin metinsiz açılış göstergesi değişmedi.
 
+**Dokuzuncu gerçek sistem kaydından sonra (2026-10-10).** Dokuzuncu gerçek
+sistem kaydı (`deploy/e2e/release-recovery/evidence/set9-20261010/`, hücre 2;
+konukta gerçek bir Panel'e karşı gerçek Chrome, arayüz `7c3a05809`'dan
+derlendi) bu girdiyi ilk kez gerçek bir sistemde ölçtü. Soğuk yükleme geçer:
+önce zemin, sessiz süreden sonra yukarıdaki açıklanmış bekleme; üç yolda,
+İngilizce ve Türkçe (oturum okuması 2,5 sn tutuldu). Her oturum okuması 35 sn
+tutulduğunda bu girdinin kaldırmadığı daha eski bir yol bulundu: oturum
+okumasının kendi 15 sn sınırı (`web/src/auth/usePanelSession.ts`, 15000 ms
+sonra `AbortController`) oturumu "okunamadı" yaptı; sayfa 15,18 sn'de "Oturumunuz
+kontrol edilemedi" dedi, "Panel erişimini kontrol et" ve "CelikPanel’i yeniden
+yükle" ile; 25,2 sn'deki kendiliğinden yeniden okuma `recovery.checkingHelp`
+("Oturumunuz ve panelin hazır olma durumu doğrulanıyor…") cümlesini yeniden
+yükleme ile gösterdi; `recovery.waitingProlonged` hiç görünmedi. Kaynakta
+düzeltildi:
+
+- *Yanıt vermemiş erişim okuması için tek sıra,* uygulama üzerinden ve kurtarma
+  yolu üzerinden açılan sayfada: 1,5 sn'ye kadar zemin; meşgul denetimle
+  açıklanmış bekleme; 15 sn'de hâlâ bilinmeyen, asla hata değil: yeni
+  `recovery.waitingLong`, TR "Panel bir süredir yanıt vermiyor. CelikPanel
+  kendiliğinden kontrol etmeyi sürdürür; dilerseniz şimdi de kontrol
+  edebilirsiniz." · EN "The Panel has not answered for a while. CelikPanel keeps
+  checking by itself; you can also check now.", etkin yeni `recovery.checkNow`
+  ile, TR "Şimdi kontrol et" · EN "Check now" (bir okuma daha; kendiliğinden
+  yeniden okuma sürerken basılırsa o okuma bitene kadar "Kontrol ediliyor…"
+  gösterir ve ikinci bir okuma başlatmaz; kendiliğinden yeniden okumanın kendisi
+  meşgul çizilmez); 30 sn'de `recovery.waitingProlonged` ve "Şimdi kontrol et"in
+  yanında "CelikPanel’i yeniden yükle". `recovery.waitingProlonged` artık TR
+  "Bu, yarım dakikadan uzun sürdü. Dilerseniz CelikPanel’i yeniden de
+  yükleyebilirsiniz." · EN "This has taken longer than half a minute. You can
+  also reload CelikPanel." der (üstündeki cümle CelikPanel'in kontrol etmeyi
+  sürdürdüğünü zaten söyler).
+- *15 sn ve 30 sn sayfa yüklemesinden sayılır* (gezinme başlangıcı), sayfanın
+  ilk beklemesi için; sonraki bir bekleme için oturum açıldıktan sonraki ilk
+  okumadan. Yeniden okumalar ve aynı yüklemenin sonraki kapısı onları asla
+  yeniden başlatmaz (`web/src/lib/quietRead.ts` içinde `useAccessWaitStage`).
+  Bu, yukarıdaki "sessiz sürenin bitiminden, beklemeyi gösteren sayfa
+  tarafından sayılır" ifadesinin yerini alır; arayüz yükleme beklemesi o
+  sayımı korur.
+- *Hatayla yanıt veren okuma,* ne zaman olursa olsun, hemen bilinen olumsuz
+  sonuçtur ve sayfa okunanı adlandırır: yeni `recovery.failure.network`, TR
+  "Panel’e bağlantı, yanıt gelmeden reddedildi ya da kapandı. Bu sürerse sunucu
+  yöneticisi CelikPanel hizmetinin çalıştığını denetler." · EN "The connection
+  to the Panel was refused or closed before it answered. If this continues, the
+  server administrator checks that the CelikPanel service is running.";
+  `recovery.failure.status`, TR "Panel HTTP {status} hatasıyla yanıt verdi." ·
+  EN "The Panel answered with HTTP error {status}."; `recovery.failure.invalid`,
+  TR "Panel yanıt verdi, ancak bu sayfa yanıtı okuyamadı. CelikPanel’i yeniden
+  yüklemek, Panel’e uyan arayüzü yükler." · EN "The Panel answered, but this
+  page could not read the answer. Reloading CelikPanel loads the interface that
+  matches the Panel." "Oturumunuz kontrol edilemedi" ve "Panelin hazır olma
+  durumu kontrol edilemedi" yalnız böyle yanıtlanmış bir hata için kalır;
+  `recovery.checkingHelp` yalnız o sayfa doğrulanmış oturum olmadan yeniden
+  okurken ve bekletme katmanının sözleri henüz yüklenmemişken yedek olarak
+  kalır.
+- *Değişmeyen:* bir okuma yanıt verdikten sonra sınırına ulaşan sonraki okuma
+  bilinen sayfayı ve son okunan nedeni korur; bağlı sayfaların üzerindeki
+  bekletme katmanı, okumalar, sınırları ve aralıkları değişmedi; istek
+  eklenmedi.
+
+Kanıt: `web/tests/recovery-access-runtime.test.mjs` (15 sn ve 30 sn
+aşamaları, hiçbir şeyi yeniden başlatmayan ve ikinci okuma başlatmayan yeniden
+okuma, nedeniyle yanıtlanmış hatalar, soğuk yükleme ve bilinen olumsuz sonuçlar
+önceki gibi); taklit tarayıcı (`coldslow35`, `/settings?section=updates`, her
+oturum okuması 35 sn tutuldu, kısıtlamasız, İngilizce ve Türkçe, ekran
+görüntülerine bakıldı): 1,6 sn'de "Kontrol ediliyor…" ile açıklanmış bekleme;
+15,2 sn ve 25,2 sn'de "Şimdi kontrol et" ile "bir süredir yanıt vermiyor";
+31,0 sn'de aynısı, yarım dakika cümlesi ve "CelikPanel’i yeniden yükle" ile.
+**15 sn/30 sn yolu bileşen testli ve taklit tarayıcılı; gerçek bir sistemde
+yeniden ölçülmedi.**
+
+*Gözlem, burada değiştirilmedi: kurtarma hizmet çalışanı (service worker).*
+Panel durdurulduğunda dokuzuncu kayıt (hücre 4c) Chrome'un kendi hata sayfasını
+gördü; çünkü `navigator.serviceWorker.getRegistration('/')` bir kayıt bulmadı;
+yedinci kayıt da onun denetlediği bir sayfa görmedi. Arayüz
+`/recovery-worker.js`'i `/` kapsamıyla yalnız güvenli bağlamda kaydeder
+(`web/src/lib/recoveryShell.ts`; üretimde açılışta ve bir güncelleme
+başlatılmadan önce çağrılır); Panel dosyayı web kökünden sunar
+(`cmd/panel/frontend.go`, yoksa 404) ve bu kapsam için
+`Service-Worker-Allowed` başlığı gerekmez. Olası nedenler, hiçbiri
+kanıtlanmadı: (1) Chrome, betiği sertifika hatası olan bir bağlantı üzerinden
+alınan hizmet çalışanını kaydetmeyi reddeder; laboratuvarın kendinden imzalı
+sertifikası yalnız SPKI sabitlemesiyle kabul edilir ve bu hâlâ bir hata
+sayılabilir; (2) kayıt ya da çalışanın kurulumu başarısız oldu ve neden atıldı
+(`recoveryShell.ts` her reddi sessizce yakalar); (3) düzenek kaydı her
+yüklemede yeni bir tarayıcı bağlamında, o yüklemede başlayan kayıt bitmeden
+okur. Kesinleştirmek için: laboratuvar tarayıcısında tam bir yüklemeden sonra
+kaydı açıkça çağırıp reddin adını ve iletisini, kayıtları
+installing/waiting/active durumlarıyla ve `/recovery-worker.js`'in durum kodunu
+ve türünü kaydetmek; sabitleme olmadan güvenilen bir sertifikayla (güven
+deposunda bir laboratuvar yetkilisi) yinelemek.
+
 ### Sahibin değiştirdiği site yapılandırma dosyası korunur ve adlandırılır; seçimi sahip yapar (2026-10-10)
 
 Bileşen testleri ve loopback sahte sunucuya karşı gerçek Chrome ile kaynak
@@ -5637,13 +5728,20 @@ Kim yapar: sunucu sahibi (yönetici); hiçbir şey kendiliğinden sürmez.
 **Nerede.** Alan adı sayfası → Barındırma → Yapılandırma dosyası (yalnız
 yöneticiler; `GET /api/v1/domains/{id}/site-config`). Alan adının sekmelerinin
 üstündeki satır (`siteConfig.notice.*`, "Yapılandırma dosyasını aç" ile) ve Alan
-Adları listesindeki rozet ("Yapılandırma korundu") oraya götürür. Rozet sahip
-düzenlemiş, yabancı, kökeni bilinmiyor, eksik ve okunamaz durumlarında çizilir
-("korundu" sözü bu yüzden eksik bir dosyada da görünür) ve sahip dosyanın şimdiki
-hâli için "benimkini koru"yu seçtiyse gizlenir; sekmelerin üstündeki satır bu
-seçime bakmaz ve seçim yapıldıktan sonra da "seçiminizi bekliyor" demeyi sürdürür.
-İkisi de Panel'in kaydettiği son durumdan okunur (yöneticiye defterden okuma;
-Agent çağrısı yok), o andaki dosyadan değil.
+Adları listesindeki rozet oraya götürür. Rozet durumu adlandırır: "Yapılandırma
+dosyası: seçiminiz gerekiyor" (`siteConfig.list.badge.kept`; sahip düzenlemiş,
+yabancı, kökeni bilinmiyor), "Yapılandırma dosyası eksik" (`.missing`),
+"Yapılandırma dosyası okunamıyor" (`.unreadable`); sahibin korumayı seçtiği
+dosyada, üzerinde bekleyen bir sertifika yoksa rozet çizilmez. Sekmelerin
+üstündeki satır "benimkini koru"yu dikkate alır: seçimle korunan dosyada düz bir
+satırdır, "Bu sitenin nginx yapılandırma dosyası seçtiğiniz gibi korunuyor;
+CelikPanel’in metni yanında bekletiliyor." (`siteConfig.notice.keptByChoice`),
+aynı bağlantıyla; dosyada bekleyen bir sertifika bunun önüne geçer ("Bu site için
+yeni bir sertifika hazır, ancak sitenin nginx yapılandırma dosyası hâlâ öncekini
+kullanıyor." / "Bu sitenin nginx yapılandırma dosyasına ne olacağını seçene dek
+sitenin sertifikası alınamaz ya da yenilenemez."). İkisi de Panel'in kaydettiği
+son durumdan okunur (yöneticiye defterden okuma; Agent çağrısı yok), o andaki
+dosyadan değil.
 
 **Durumlar ve cümleleri** (anahtarlar `web/src/i18n/screens/server` içinde, TR):
 
@@ -5653,20 +5751,23 @@ Agent çağrısı yok), o andaki dosyadan değil.
   anlamına gelmez ve hiçbir şey değiştirilmedi. Tekrar deneyin." (Tekrar dene
   yalnız okur.)
 - Bilinmiyor (durumu bildirmeyen bir Agent): `siteConfig.unknownState.title`
-  "Bu dosyanın durumu bilinmiyor" — "Bu sunucudaki CelikPanel Agent’ı bu
-  dosyanın değiştirilip değiştirilmediğini bildirmiyor; bu yüzden onun hakkında
-  bir şey söylenmiyor. Hiçbir şey değiştirilmedi. Agent panelle aynı sürüme
-  geçtiğinde bildirilir."
+  "Bu dosyanın durumu bilinmiyor" — "Bu sunucudaki CelikPanel yardımcı hizmeti
+  panelden eski olduğu için bu dosyanın değiştirilip değiştirilmediğini
+  söyleyemiyor. Hiçbir şey değiştirilmedi. Güncelleme bu sunucuda bitince sayfayı
+  yeniden yükleyin; dosyanın durumu görünür."
 - CelikPanel'in metni: `siteConfig.managed.title` "CelikPanel’in metni,
   değişmemiş" — "Bu dosya CelikPanel’in en son yazdığının ta kendisi; bu yüzden
   siz bu sitenin ayarlarını değiştirdikçe CelikPanel onu günceller." Önceki
-  sürümden devralınan: "Dosyayı {release} yazmış; bayt bayt o sürümün metni
-  olarak tanındı ve CelikPanel onu devraldı." ({release}, API'nin `adopted_from`
-  değeridir, olduğu gibi; örneğin `v0.1.0-alpha.82` ya da `v0.1.0-alpha.82
-  (creation)`; sonek çevrilmez.)
+  sürümden devralınan, yazıldığı biçime göre (`adopted_from` ` (creation)` ile
+  bitiyor mu; sonekin kendisi gösterilmez): "Bu dosya, {release} sürümünün site
+  oluşturulduğundaki hâliyle yazdığı metnin ta kendisi; bu yüzden CelikPanel onu
+  devraldı." / "Bu dosya, {release} sürümünün panel başlatıldıktan ya da bir ayar
+  kaydedildikten sonraki hâliyle yazdığı metnin ta kendisi; bu yüzden CelikPanel
+  onu devraldı."
 - Düzenlenmiş / değiştirilmiş: `siteConfig.ownerEdited.title` "Yapılandırma
-  sahibi tarafından düzenlendi", `siteConfig.foreign.title` "Yapılandırma sahibi
-  tarafından değiştirildi" — `siteConfig.kept.body` "Bu dosya CelikPanel’in en
+  CelikPanel dışında düzenlendi", `siteConfig.foreign.title` "Yapılandırma
+  CelikPanel dışında değiştirildi" (durum adları `owner_edited` ve `foreign`
+  olarak kalır) — `siteConfig.kept.body` "Bu dosya CelikPanel’in en
   son yazdığı metin değil; bu yüzden CelikPanel onu olduğu gibi korudu. Bu sitede
   CelikPanel’de yaptığınız değişiklikler (ayarlar, sertifikalar, barındırma
   türü, PHP sürümü), aşağıda bir seçim yapana dek ona uygulanmaz. nginx siteyi bu
@@ -5679,24 +5780,29 @@ Agent çağrısı yok), o andaki dosyadan değil.
   yapana dek ona uygulanmaz. nginx siteyi bu dosyayla sunmayı sürdürür."
 - Eksik: `siteConfig.missing.title` "Yapılandırma dosyası eksik" — "Bu sitenin
   nginx yapılandırma dosyası yerinde değil. CelikPanel onu yeniden oluşturmadı,
-  çünkü kaldırılması sizin seçiminiz olabilir; o olmadan nginx bu siteyi sunmaz.
+  çünkü kaldırılması sizin seçiminiz olabilir; o olmadan nginx bir sonraki
+  yeniden başlatmada ya da yeniden yüklemede bu siteyi yükleyemez.
   Bu sitede CelikPanel’de yaptığınız değişiklikler, dosya yeniden yerinde olana
   dek uygulanmaz." Eylem: "Yeniden oluştur" — "CelikPanel bu site için kendi
   metnini yazar ve nginx’i yeniden yükler."
 - Okunamıyor ya da değiştirilemiyor: `siteConfig.unreadable.title` "Yapılandırma
   dosyası okunamıyor ya da değiştirilemiyor", nedeniyle (kilitli dosyada:
   "Değiştirilemedi (örneğin chattr +i ile değişikliğe kilitli). CelikPanel
-  dosyayı ve bağlantısını olduğu gibi korudu.") ve "Sunucu sahibi dosyayı
-  sunucuda kontrol eder. Bu arada bu sitede CelikPanel’de yaptığınız
-  değişiklikler ona uygulanmaz; dosya okunabildiğinde bu sayfa durumunu yeniden
-  gösterir."
+  dosyayı ve bağlantısını olduğu gibi korudu.") ve o nedenin sonraki adımı:
+  bağlantıda "Sunucu sahibi bağlantıyı sıradan bir dosyayla değiştirir ya da
+  başka yere taşır, sonra bu sayfayı yeniden yükler."; izinde "Sunucu sahibi
+  dosyayı root için okunur yapar, sonra bu sayfayı yeniden yükler."; diğerlerinde
+  "Sunucu sahibi sunucunun bildirdiği sorunu giderir, sonra bu sayfayı yeniden
+  yükler." ve Agent bir satır gönderdiyse "Sunucunun bildirdiği: {detail}";
+  ardından "Bu arada bu sitede CelikPanel’de yaptığınız değişiklikler ona
+  uygulanmaz."
 
 **Üç seçim** (her biri D-029 istek kimliğiyle bir POST; her biri sayfanın
 gösterdiği özetlere bağlıdır):
 
-- "CelikPanel’inkini al" — "Dosyanız önce yanına tarihli bir kopya olarak
+- "CelikPanel’in metnini al" — "Dosyanız önce yanına tarihli bir kopya olarak
   bırakılır, sonra yerine CelikPanel’in metni yazılır ve nginx yeniden yüklenir.
-  nginx onu reddederse dosyanız geri konur." Yerinde bir kez sorulur: "Dosyanız
+  nginx onu reddederse dosyanız geri konur. Tarihli kopya yerinde kalır." Yerinde bir kez sorulur: "Dosyanız
   {path}.celikpanel-backup-<tarih ve saat> olarak saklanacak, sonra yerine
   CelikPanel’in metni yazılacak ve nginx yeniden yüklenecek." [Dosyayı değiştir]
   [Vazgeç]. Sonuç: "CelikPanel’in metni yerinde ve nginx yeniden yüklendi.
@@ -5711,7 +5817,8 @@ gösterdiği özetlere bağlıdır):
 - "Elle birleştir" — "Dosyayı sunucuda kendiniz düzenlersiniz; burada hiçbir
   şey yapılmaz." Açılınca: "CelikPanel’in metni {pending} içinde. Sunucuda {path}
   dosyasını düzenleyip gerekenleri alın. Dosyayı CelikPanel’e geri bırakmak için
-  {pending} dosyasını {path} üzerine kopyalayın."
+  {pending} dosyasını {path} üzerine kopyalayın. Sonra nginx’i kendiniz kontrol
+  edip yeniden yükleyin ve bu sayfayı yeniden yükleyin."
 
 **Sahibin eklemeleri için desteklenen yer:** `siteConfig.include` "Bu site için
 kendi nginx yönergelerinizi {dir} içinde bir .conf dosyasına yazın. CelikPanel
@@ -5725,6 +5832,23 @@ taşır. Satır sitenin `location` bloklarından sonra durur; sahibin dosyası
 onlardan birini yinelerse (örneğin `location /`) nginx'in kendi kuralıyla
 `nginx -t` bunu reddeder (CelikPanel ile ölçülmedi) ve dosya yazan her üretim de
 onunla birlikte reddedilir.
+
+**CelikPanel'in kendi ekleme noktası (adım 1b, 2026-10-10).** CelikPanel
+metninin her server bloğu, posta adlarının yalnız doğrulama bloğu ve düz HTTP
+yönlendirme bloğu dahil, ayrıca `include
+/etc/nginx/celikpanel-managed.d/<alan adı>/*.conf;` satırını taşır. O dizin
+CelikPanel'indir (sanal konakla birlikte 0755 oluşturulur; yalnız CelikPanel'in
+dosyasını taşıyorsa siteyle birlikte kaldırılır); ACME HTTP-01 konumu
+(`location ^~ /.well-known/acme-challenge/`, root'a ait doğrulama köküyle)
+oraya aynı üretim başlığıyla `acme-http-01.conf` olarak yazılır, artık sanal
+konağa yazılmaz. Dosya, konumun eskiden olduğu gibi site durdukça kalır;
+certbot'un doğrulama kökündeki kendi belirteçleri her doğrulamada eskisi gibi
+gelip gider. Değiştirilmiş bir doğrulama dosyası korunur, üzerine yazılmaz
+(D-022). Sayfa şunu söyler: "CelikPanel bu sitenin kendi parçalarını (sertifika
+doğrulaması) {dir} içine yazar. Bu dosyanın onu içeren satırlarını koruyun."
+(`siteConfig.managedDir`). Sahibin eklemeleri yine `celikpanel-sites.d` içine
+gider. Başlıksız dosyanın dondurulmuş alpha.81/82 metinleriyle karşılaştırılması
+değişmedi (o metinler konumu satır içinde taşır).
 
 **Üretmek isteyen işlemlerin retleri** (kabuk kataloğu, `err.<KOD>`, TR):
 
@@ -5754,20 +5878,28 @@ onunla birlikte reddedilir.
 - `SITE_CONFIG_NOT_APPLICABLE` (409; sahip düzenlemiş, yabancı ya da kökeni
   bilinmiyor olmayan dosyada koru, ya da var olan ve korunmuş dosyada yeniden
   oluştur): "Bu seçim dosyanın şimdiki hâline uymuyor; bu yüzden hiçbir şey
-  yapılmadı. Sayfa dosyayı yeniden okur."
+  yapılmadı. Sayfa dosyayı yeniden okur; hâlâ istiyorsanız yeniden seçin."
 - `SITE_CONFIG_NOT_READ` (502; Agent yanıt vermedi, hata ile yanıtladı ya da
   üretim girdisi hazırlanamadı): "CelikPanel bu sitenin yapılandırma dosyasının
   durumunu şu an okuyamadı. Bu, dosyada bir sorun olduğu anlamına gelmez ve hiçbir
   şey değiştirilmedi. Tekrar deneyin."
 - `SITE_CONFIG_NGINX_REFUSED` (502, `reason` `nginx_refused` ya da
-  `reload_failed`; `details[0]` yöneticiler için nginx'in kendi ilk satırı):
-  "nginx, CelikPanel’in metnini içeren yapılandırmayı reddetti; bu yüzden
-  dosyanız olduğu gibi geri kondu ve nginx onunla çalışmayı sürdürüyor. Başka
-  hiçbir şey değiştirilmedi." nginx metni kabul edip yeniden yükleme başarısız
-  olduğunda da (`reload_failed`) aynı kod ve cümle kullanılır; iki durumda da
-  dosya geri konur. "Al"ın yazmadan önce yaptığı tarihli kopya dosyanın yanında
-  kalır. nginx tüm yapılandırmayı denetler; ret başka bir sitenin dosyasından ya
-  da sahibin include dizininden gelebilir, CelikPanel'in metninden değil.
+  `reload_failed`, her biri kendi değeriyle; `details[0]` yöneticiler için
+  nginx'in kendi ilk satırı): "nginx, CelikPanel’in metnini kabul etmedi
+  (yapılandırmayı reddetti ya da yeniden yükleyemedi); bu yüzden dosyanız geri
+  kondu ve nginx onunla çalışmayı sürdürüyor. nginx bütün siteleri birlikte
+  kontrol eder; neden başka bir dosya olabilir. nginx’in bildirdiğini düzeltin,
+  sonra yeniden seçin." İki durumda da dosya geri konur; "al"ın yazmadan önce
+  yaptığı tarihli kopya dosyanın yanında kalır.
+- `SITE_CONFIG_OWNER_EDITED`, `reason` `certificate_validation` (409; sertifika
+  alımı; `detail` `include_missing`, `names_missing`, `challenge_kept` ya da
+  `challenge_failed`; `vars.include` eklenecek satır): "Bu sitenin nginx
+  yapılandırma dosyası CelikPanel dışında değiştirildi ve CelikPanel’in sertifika
+  doğrulamasını dosyayı değiştirmeden yayımlamasına izin vermiyor; bu yüzden
+  sertifika istenmedi ve hiçbir şey değiştirilmedi. Alan adının Yapılandırma
+  dosyası sayfasında CelikPanel’in metnini alın ya da o sayfanın gösterdiğini
+  dosyanıza ekleyip nginx’i yeniden yükleyin; sonra sertifikayı yeniden isteyin."
+  (`err.SITE_CONFIG_OWNER_EDITED.certificate_validation`).
 
 **Güncellemeden sonraki ilk durum.** alpha.81 ve alpha.82'nin yazdığı
 dosyalarda başlık yoktur. İlk başlangıçta her biri, bu sürümlerin dondurulmuş
@@ -5778,7 +5910,9 @@ CelikPanel'in metni olarak yeniden yazılır); başka her dosya "kökeni bilinmi
 olur ve asla yazılmaz. Alan Adları listesi şunu söyler: `siteConfig.list.firstState`
 "Site yapılandırma dosyaları: {adopted} tanesi CelikPanel’inki olarak tanınıp
 devralındı; {left} tanesi bilinen her CelikPanel metninden farklı olduğu için
-olduğu gibi bırakıldı. Dosyasını görmek için bir alan adını açın." Başlangıçtaki
+olduğu gibi bırakıldı. Dosyasını görmek için bir alan adını açın. Olduğu gibi
+bırakılan bir dosyayı yeniden CelikPanel’in yönetmesini istemiyorsanız bir şey
+yapmanız gerekmez." Başlangıçtaki
 günlük satırı yazılan, değişmeyen, korunan (sahip düzenlemiş / yenisiyle
 değiştirilmiş / kökeni bilinmiyor), okunamayan ya da değiştirilemeyen, eksik
 (yeniden yazılmayan), başarısız ve devralınan dosyaları ayrı sayar. Siteye ait
@@ -5790,11 +5924,12 @@ Agent'ın hiç yanıtlamadığı üretim yalnız hatayı yazar. Devralmayı 044.
 değil (o satır yazmaz, dosyaya dokunmaz), başlıksız dosyayı gören ilk üretim,
 normalde ilk başlangıç yapar.
 
-Alan Adları listesi satırı yalnız ilk başlangıçla sınırlı değildir: defter
-satırı devralınan bir sürümü adlandıran siteleri (`adopted_from`, hiç
-temizlenmez) ve dosyası şimdi kökeni bilinmiyor olan siteleri sayar. Bu yüzden
-devralınmış tek bir dosya bile varken ilk başlangıçtan sonra da durur, sahibin ne
-yapması gerektiğini söylemez ve kapatılamaz.
+Alan Adları listesi satırı saklanmaz, sahibin kararlarından hesaplanır: kökeni
+bilinmeyen en az bir dosyanın şimdiki baytları için "benimkini koru" kararı
+yokken çizilir ("al" dosyayı CelikPanel'in metni yapar, sayımdan çıkar) ve olduğu
+gibi bırakılan her dosyanın kararı olunca kalkar. Hiçbir dosya olduğu gibi
+bırakılmadıysa sahibi bekleyen bir şey yoktur ve satır çizilmez; başlangıç
+satırı devralınan dosyaları yine sayar ve her alan adının sayfası bunu söyler.
 
 **Şema ve sürüm (D-025).** Şema 43'ten 44'e (göç 044, `managed_site_files`,
 var olan hiçbir tablo değişmez); site dosyası biçimi v2 (ilk satır olarak
@@ -5820,18 +5955,56 @@ kopyalar, bekleyen dosyalar ve include dizinleri yerinde kalır. Bu sürüm yeni
 çalıştığında eski sürümün metnini bayt bayt tanır ve devralır; eski sürüm
 çalışırken ve onun sonraki başlangıcından önce yapılan değişiklik korunur ve
 gösterilir. Sürüm notları bunu söyler.
-Sertifika alımı ve yenilemesi de önce sanal konağı üretir (doğrulama adlarını
-yayımlamak için). Dosyası korunmuş bir sitede bu adımda, sertifika istenmeden
-önce dururlar: alım, `SITE_CONFIG_*` kodu olmayan ve Yapılandırma dosyası
-sayfasını göstermeyen "certificate request was not started because the
-validation web server configuration could not be prepared" cümlesiyle 409 verir;
-otomatik yenileme başarısız diye kaydedilir ("prepare renewal validation vhost:
-…"); kullanımdaki sertifika süresi dolana dek sunulur. Sahip CelikPanel'in
-metnini alır ya da elle birleştirirse sürer. Kaynaktan okundu; denetimin "benimkini
-koru, sonra sertifika alımı" hücresi açık ve bu açık kapanmadı. PHP-FPM havuzu
-ve uygulama birimi henüz kapsanmıyor (ikinci adım). Sayfada gösterilen farkın iki
-İngilizce başlığı çevrilmez (`--- <yol> (on this server)` ve `+++ CelikPanel's
-text`). Gerçek sistemde ölçülmedi; ölçüm hücreleri denetimin §9'udur.
+**Korunan dosyada sertifikalar (adım 1b, 2026-10-10).** Alım ve yenileme
+doğrulamayı CelikPanel'in kendi ekleme dizini üzerinden yayımlar; bu yüzden o
+dizini hâlâ içeren korunmuş bir dosyaya dokunulmaz:
+
+- *Alım, dosyada satır var:* sertifika istenir, CelikPanel'in sertifika
+  deposuna kurulur ve defterde etkinleştirilir; sitenin TLS bloğu, dosyanın
+  yanında bekletilen CelikPanel metnine girer; dosya gösterdiği sertifikayı
+  göstermeyi sürdürür ve sahip bir şey yapana dek o sunulur. Yanıt `200
+  {"status":"waiting_for_owner","pending_reason":"certificate"}`; sertifikanın
+  yenileme durumu `waiting_for_owner`, defter nedeni `certificate`. SSL sekmesi
+  şunu söyler: "Sertifika alındı, ancak bu sitenin nginx yapılandırma dosyası
+  CelikPanel dışında değiştirildi ve hâlâ öncekini kullanıyor. Seçmek için
+  Yapılandırma dosyası sayfasını açın." Sayfa: "Yeni sertifika hazır, henüz
+  kullanılmıyor" — "CelikPanel bu site için yeni bir sertifika aldı, ancak
+  yapılandırma dosyanız hâlâ öncekini gösteriyor ve siz bir şey yapana dek nginx
+  o sertifikayı sunmayı sürdürür. Aşağıda CelikPanel’in metnini alın ya da
+  dosyanızdaki iki sertifika satırını burada gösterilenlerle değiştirin; sonra
+  nginx’i kendiniz kontrol edip yeniden yükleyin ve kaydetmek için Benimkini
+  koru’yu seçin.", iki satır (`ssl_certificate …;`, `ssl_certificate_key …;`) ve
+  (önceki sertifikanın) "Kullanılan sertifikanın süresi {date} tarihinde doluyor
+  ({days} gün kaldı)." Durum, dosya yeniden CelikPanel'in metni olunca ya da bir
+  üretim, bir başlangıç veya "benimkini koru" korunan dosyada
+  `ssl_certificate <yeni yol>;` bulunca biter.
+- *Alım, dosyada satır yok* (ya da o ad istendiğinde `mail.<alan adı>` server
+  bloğu yok, ya da CelikPanel'in doğrulama dosyası değiştirilmiş): hiçbir şey
+  istenmeden reddedilir (`SITE_CONFIG_OWNER_EDITED`, `certificate_validation`,
+  yukarıda); defter nedeni `certificate_validation`. Sayfa: "Bu dosyayla
+  sertifika doğrulanamıyor" — satır eksikse "Dosyanız CelikPanel’in sertifika
+  doğrulama dizinini içermiyor; bu yüzden CelikPanel dosyayı değiştirmeden bu
+  sitenin sertifikasını alamaz ya da yenileyemez. Aşağıda CelikPanel’in metnini
+  alın ya da burada gösterilen satırı dosyanızın 80 numaralı bağlantı noktasını
+  dinleyen server bloğuna ekleyin; sonra nginx’i kendiniz kontrol edip yeniden
+  yükleyin." satırla birlikte, ve "CelikPanel’in düzenli yenileme kontrolü bu
+  dosyaya yaklaşık 12 saatte bir yeniden bakar; başka hiçbir şey yeniden
+  denenmez."
+- *Yenileme:* aynı iki yol. Dosyanın durdurduğu bir yenileme (satırsız korunmuş,
+  eksik, okunamaz) `failed` değil `waiting_for_owner` olarak kaydedilir; onu
+  dosyayı yeniden okuyan 12 saatlik zamanlamadan başka hiçbir şey yeniden
+  denemez. Korunan dosyanın göstermediği yenilenmiş sertifika, alımdaki gibi
+  bekler. Panonun ilgi listesi bekleyen her sertifikayı, gün sayısı ne olursa
+  olsun, kullanılan sertifikanın kalan günüyle taşır: "{domain}: bir sertifika,
+  sitenin yapılandırma dosyası için seçiminizi bekliyor; kullanılan sertifikanın
+  {days} günü kaldı".
+
+Adım 1b'den önce korunmuş bir dosyada (alpha.81/82 düzenlemesi, kökeni
+bilinmiyor) ekleme satırı yoktur: sahip CelikPanel'in metnini alana ya da satırı
+ekleyene dek sertifikası bekler. PHP-FPM havuzu ve uygulama birimi henüz
+kapsanmıyor (ikinci adım). Farkın iki başlığı sayfanın dilinde çizilir ("(bu
+sunucuda)", "CelikPanel’in metni"). Bileşen testleri ve sahte sunucuda tarayıcı;
+gerçek sistemde ölçülmedi; ölçüm hücreleri denetimin §9'udur.
 
 **Entegratörler için: API (sürüm notlarına dek başvuru).** Tüm rotalar yönetici
 içindir (aksi hâlde `403 {"error":"administrator access is required"}`);
@@ -5874,7 +6047,13 @@ REQUEST_OUTCOME_UNKNOWN`. Hatalar `{"error": <İngilizce cümle>, "code": …,
   yolları kalır); böyle bir sözcüklü yorum satırı bütünüyle değiştirilir. Bu
   sözcükleri kullanmayan bir kimlik bilgisi gizlenmez; alan yalnız yöneticiler
   içindir. `decision.current`, yalnız dosya kararın verildiği özetle aynı
-  kaldıkça doğrudur. Hata: `502 SITE_CONFIG_NOT_READ`.
+  kaldıkça doğrudur. Adım 1b şunları ekler, her biri yalnız biliniyorsa:
+  `managed_dir`, `managed_include`, `challenge_file` (`written`, `unchanged`,
+  `kept`, `failed`, `absent`, `differs`), `validation` (korunan dosyalarda:
+  `ready`, `include_missing`, `names_missing`, `challenge_kept`,
+  `challenge_failed`), `pending_reason` (`certificate`,
+  `certificate_validation`) ve `certificate` (`{cert_path, key_path,
+  expires_at, served_expires_at, served_days_left, referenced}`). Hata: `502 SITE_CONFIG_NOT_READ`.
 - `POST …/keep` gövde `{"file_sha256":"<GET'ten 64 hex>"}` (zorunlu; gelen
   `render_sha256` yok sayılır) → 200, karardan sonraki GET ile aynı nesne.
   `400` (özet eksik ya da bozuk), `409 SITE_CONFIG_NOT_APPLICABLE`, `409
@@ -5901,7 +6080,7 @@ REQUEST_OUTCOME_UNKNOWN`. Hatalar `{"error": <İngilizce cümle>, "code": …,
   korunmuş), `409 SITE_CONFIG_UNWRITABLE`, `502 SITE_CONFIG_NGINX_REFUSED`,
   `502 SITE_CONFIG_NOT_READ`.
 - Alan adları listesi (`GET /api/v1/domains`) yalnız yönetici için
-  `site_config: {"state":…,"adopted_from"?:…,"kept_by_choice"?:true}` taşır;
+  `site_config: {"state":…,"adopted_from"?:…,"kept_by_choice"?:true,"pending_reason"?:…}` taşır;
   Panel'in kaydettiği son gözlemden gelir (`missing` saklanan bir durumdur; yukarıdaki
   GET onu hiç döndürmez, `absent` döndürür).
 - Dosyayı üreten diğer işlemler `409` verir: `SITE_CONFIG_OWNER_EDITED` (`reason`

@@ -52,7 +52,15 @@ The owner decided on 2026-10-10 that the correction enters the next release:
    backup) or merges by hand. A site file the owner removed is not recreated
    at start; the Panel offers to recreate it.
 4. The template gains a per-site include directory as the supported place for
-   the owner's additions, so a later render never has to touch them.
+   the owner's additions, so a later render never has to touch them. (Step 1b,
+   2026-10-10, planner's decision:) it also gains a second, Panel-owned
+   include directory (`/etc/nginx/celikpanel-managed.d/<domain>/`) that holds
+   the ACME HTTP-01 location instead of the vhost. On a kept file that still
+   has that line a certificate is issued or renewed without touching the file,
+   and the old certificate is served until the owner takes CelikPanel's text
+   or updates the certificate lines (`waiting_for_owner`); on a kept file
+   without it issuance stops with a typed refusal before anything is
+   requested, and renewal waits for the owner instead of failing.
 5. Writes preserve mode and owner, refuse symlinks, and one site's failure
    does not fail the others; the start line counts written, unchanged, kept,
    foreign and unreadable separately.

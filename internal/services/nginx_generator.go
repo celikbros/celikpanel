@@ -76,6 +76,10 @@ type VhostData struct {
 	// OwnerIncludeDir is the site's owner include directory (D-031),
 	// derived from Domain by Render; callers do not set it.
 	OwnerIncludeDir string
+	// PanelManagedDir is the Panel's own include directory of the site
+	// (D-031 step 1b: the ACME HTTP-01 location), derived from Domain by
+	// Render; callers do not set it.
+	PanelManagedDir string
 }
 
 // Render executes the vhost template over prepared data, deriving the
@@ -134,7 +138,29 @@ func prepareVhostData(data VhostData) (VhostData, error) {
 		data.ForwardCode = 301
 	}
 	data.OwnerIncludeDir = OwnerIncludeDir(data.Domain)
+	data.PanelManagedDir = PanelManagedDir(data.Domain)
 	return data, nil
+}
+
+// RenderACMENamesBlock is the validation-only server block of the data's
+// ACMEChallengeNames exactly as Render writes it, without surrounding blank
+// lines; "" when there are none. The Agent looks for this text in a file the
+// owner kept before it lets a certificate operation validate those names.
+// RenderACMENamesBlock, yalnız doğrulama sunucu bloğunu Render'ın yazdığı
+// biçimde verir; sahibin koruduğu dosyada bu metin aranır.
+func (ng *NginxGenerator) RenderACMENamesBlock(data VhostData) (string, error) {
+	prepared, err := prepareVhostData(data)
+	if err != nil {
+		return "", err
+	}
+	if len(prepared.ACMEChallengeNames) == 0 {
+		return "", nil
+	}
+	var buf bytes.Buffer
+	if err := ng.tmpl.ExecuteTemplate(&buf, "acme-names-server", prepared); err != nil {
+		return "", fmt.Errorf("failed to execute template: %v", err)
+	}
+	return strings.TrimSpace(buf.String()), nil
 }
 
 func validateACMEChallengeRootForTemplate(challengeRoot, documentRoot string) error {

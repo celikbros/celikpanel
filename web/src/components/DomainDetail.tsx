@@ -72,7 +72,7 @@ interface Domain {
     disk_usage?: number;
     bandwidth?: number;
     access?: DomainAccess;
-    site_config?: { state: string };
+    site_config?: { state: string; kept_by_choice?: boolean; pending_reason?: string };
 }
 
 // The measured usage of one domain. An answer without the numbers is not
@@ -486,6 +486,8 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
                 <Suspense fallback={null}>
                     <SiteConfigNotice
                         state={domain.site_config.state}
+                        keptByChoice={domain.site_config.kept_by_choice}
+                        pendingReason={domain.site_config.pending_reason}
                         onOpen={() => {
                             setActiveSub((currentSubs) => ({ ...currentSubs, hosting: 'config' }));
                             setActiveTab('hosting');

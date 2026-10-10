@@ -37,6 +37,21 @@ export interface SiteConfigView {
     decision?: { kind: string; decided_at: string; current: boolean };
     outcome?: string;
     backup_path?: string;
+    // D-031 step 1b: CelikPanel's own include directory and the line a kept
+    // file needs for certificate validation; the certificate reason, if any.
+    managed_dir?: string;
+    managed_include?: string;
+    validation?: string;
+    challenge_file?: string;
+    pending_reason?: string;
+    certificate?: {
+        cert_path?: string;
+        key_path?: string;
+        expires_at?: string;
+        served_expires_at?: string;
+        served_days_left?: number;
+        referenced: boolean;
+    };
 }
 
 const STATES = new Set([
@@ -54,6 +69,9 @@ export function decodeSiteConfig(raw: unknown): SiteConfigView {
 
 const KEPT = new Set(['owner_edited', 'foreign', 'unknown_origin']);
 const UNREADABLE_REASONS = new Set(['symlink', 'not_regular', 'permission', 'too_large', 'read_failed', 'write_refused']);
+const VALIDATION_STATES = new Set(['include_missing', 'names_missing', 'challenge_kept', 'challenge_failed', 'ready']);
+// The suffix the API puts on an earlier release's creation-time text.
+const CREATION_SUFFIX = ' (creation)';
 
 type Done = { kind: 'keep' | 'take' | 'recreate'; backup?: string };
 
@@ -171,9 +189,17 @@ function SiteConfigState({
 }) {
     const { t, locale } = useI18n();
     const path = view.path ?? '';
-    const include = view.include_dir ? (
-        <p className="text-sm text-fg-muted" data-site-config-include>
-            {t('siteConfig.include', { dir: view.include_dir })}
+    const include = view.include_dir || view.managed_dir ? (
+        <div className="space-y-1 text-sm text-fg-muted" data-site-config-include>
+            {view.include_dir && <p>{t('siteConfig.include', { dir: view.include_dir })}</p>}
+            {view.managed_dir && <p data-site-config-managed-dir>{t('siteConfig.managedDir', { dir: view.managed_dir })}</p>}
+        </div>
+    ) : null;
+    const adopted = view.adopted_from ? (
+        <p className="mt-1">
+            {view.adopted_from.endsWith(CREATION_SUFFIX)
+                ? t('siteConfig.adopted.creation', { release: view.adopted_from.slice(0, -CREATION_SUFFIX.length) })
+                : t('siteConfig.adopted.start', { release: view.adopted_from })}
         </p>
     ) : null;
 
@@ -182,7 +208,7 @@ function SiteConfigState({
             <div className="space-y-3">
                 <Plain icon={Info} title={t('siteConfig.managed.title')}>
                     <p>{t('siteConfig.managed.body')}</p>
-                    {view.adopted_from && <p className="mt-1">{t('siteConfig.adopted', { release: view.adopted_from })}</p>}
+                    {adopted}
                 </Plain>
                 <FileLine label={t('siteConfig.file')} value={path} />
                 {include}
@@ -202,7 +228,17 @@ function SiteConfigState({
             <div className="space-y-3">
                 <Attention title={t('siteConfig.unreadable.title')}>
                     <p>{t(`siteConfig.unreadable.${reason}` as TranslationKey)}</p>
-                    <p className="mt-1">{t('siteConfig.unreadable.next')}</p>
+                    {/* Who acts and the next step for this reason; the server's
+                        own line for any other reason. */}
+                    <p className="mt-1" data-site-config-next={reason}>
+                        {t(reason === 'symlink' ? 'siteConfig.unreadable.next.symlink'
+                            : reason === 'permission' ? 'siteConfig.unreadable.next.permission'
+                                : 'siteConfig.unreadable.next.other')}
+                    </p>
+                    {view.detail && reason !== 'symlink' && reason !== 'permission' && (
+                        <p className="mt-1 break-words">{t('siteConfig.unreadable.next.detail', { detail: view.detail })}</p>
+                    )}
+                    <p className="mt-1">{t('siteConfig.unreadable.meanwhile')}</p>
                 </Attention>
                 <FileLine label={t('siteConfig.file')} value={path} />
             </div>
@@ -246,6 +282,7 @@ function SiteConfigState({
                 </Attention>
             )}
             <FileLine label={t('siteConfig.file')} value={path} />
+            <CertificatePart view={view} />
 
             <section aria-labelledby="site-config-choose" className="space-y-3">
                 <h3 id="site-config-choose" className="text-sm font-semibold text-fg">{t('siteConfig.choose')}</h3>
@@ -305,7 +342,7 @@ function SiteConfigState({
                             line stays marked when the frame scrolls sideways.
                             En uzun satır kadar geniş tek blok. */}
                         <span className="inline-block min-w-full">
-                            {view.diff.split('\n').map((line, index) => (
+                            {localizeDiffCaptions(view.diff, t).split('\n').map((line, index) => (
                                 <span
                                     key={index}
                                     className={`block whitespace-pre ${line.startsWith('+') && !line.startsWith('+++')
@@ -325,6 +362,85 @@ function SiteConfigState({
             {include}
         </div>
     );
+}
+
+// The two caption lines of the difference come from the server in English;
+// they are drawn in the page's language.
+// Farkın iki başlık satırı sunucudan İngilizce gelir; sayfanın dilinde çizilir.
+const DIFF_HERE = ' (on this server)';
+const DIFF_PANEL = "+++ CelikPanel's text";
+
+function localizeDiffCaptions(diff: string, t: ReturnType<typeof useI18n>['t']): string {
+    const lines = diff.split('\n');
+    if (lines[0]?.startsWith('--- ') && lines[0].endsWith(DIFF_HERE)) {
+        lines[0] = `${lines[0].slice(0, -DIFF_HERE.length)} ${t('siteConfig.diff.here')}`;
+    }
+    if (lines[1] === DIFF_PANEL) {
+        lines[1] = `+++ ${t('siteConfig.diff.panel')}`;
+    }
+    return lines.join('\n');
+}
+
+// The certificate part of a kept file (D-031 step 1b): a new certificate that
+// the file does not use yet, or a validation the file does not let run.
+// Korunan dosyanın sertifika bölümü.
+function CertificatePart({ view }: { view: SiteConfigView }) {
+    const { t, locale } = useI18n();
+    const certificate = view.certificate;
+    if (!view.pending_reason || !certificate) return null;
+    const served = certificate.served_expires_at ? (
+        <p className="mt-1">
+            {certificate.served_days_left !== undefined && certificate.served_days_left < 0
+                ? t('siteConfig.certificate.servedExpired', { date: formatDay(certificate.served_expires_at, locale) })
+                : t('siteConfig.certificate.servedDays', {
+                    date: formatDay(certificate.served_expires_at, locale),
+                    days: certificate.served_days_left ?? 0,
+                })}
+        </p>
+    ) : null;
+    if (view.pending_reason === 'certificate') {
+        return (
+            <div data-site-config-certificate="certificate">
+                <Attention title={t('siteConfig.certificate.ready.title')}>
+                    <p>{t(certificate.referenced ? 'siteConfig.certificate.ready.referenced' : 'siteConfig.certificate.ready.body')}</p>
+                    {served}
+                    {!certificate.referenced && certificate.cert_path && certificate.key_path && (
+                        <div className="mt-2">
+                            <p className="text-fg-muted">{t('siteConfig.certificate.lines')}</p>
+                            <pre className="mt-1 overflow-x-auto rounded-md border border-border bg-surface p-2 font-mono text-xs text-fg" data-site-config-cert-lines>
+                                {`ssl_certificate ${certificate.cert_path};\nssl_certificate_key ${certificate.key_path};`}
+                            </pre>
+                        </div>
+                    )}
+                </Attention>
+            </div>
+        );
+    }
+    const validation = view.validation && VALIDATION_STATES.has(view.validation) ? view.validation : 'include_missing';
+    return (
+        <div data-site-config-certificate="certificate_validation" data-site-config-validation={validation}>
+            <Attention title={t('siteConfig.certificate.validation.title')}>
+                <p>{t(`siteConfig.certificate.validation.${validation}` as TranslationKey, {
+                    domain: view.domain, dir: view.managed_dir ?? '',
+                })}</p>
+                {validation === 'include_missing' && view.managed_include && (
+                    <div className="mt-2">
+                        <p className="text-fg-muted">{t('siteConfig.certificate.includeLine')}</p>
+                        <pre className="mt-1 overflow-x-auto rounded-md border border-border bg-surface p-2 font-mono text-xs text-fg" data-site-config-include-line>
+                            {view.managed_include}
+                        </pre>
+                    </div>
+                )}
+                {served}
+                <p className="mt-1">{t('siteConfig.certificate.schedule')}</p>
+            </Attention>
+        </div>
+    );
+}
+
+function formatDay(value: string, locale: string): string {
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? date.toLocaleDateString(locale, { dateStyle: 'medium' }) : value;
 }
 
 function Attention({ title, children }: { title: string; children: ReactNode }) {
@@ -371,18 +487,40 @@ function Choice({ hint, action, children }: { hint: string; action: ReactNode; c
     );
 }
 
-// The line above the domain's tabs when its file needs the owner (the
-// domains list carries the state for an administrator).
-// Dosya sahibin kararını beklediğinde alan adının sekmelerinin üstündeki satır.
-export function SiteConfigNotice({ state, onOpen }: { state: string; onOpen: () => void }) {
+// The line above the domain's tabs when its file needs the owner, or was kept
+// by the owner's choice (the domains list carries the state for an
+// administrator). A certificate waiting on the file outranks the choice.
+// Dosya sahibin kararını beklediğinde ya da seçimiyle korunduğunda alan adının
+// sekmelerinin üstündeki satır.
+export function SiteConfigNotice({ state, keptByChoice, pendingReason, onOpen }: {
+    state: string;
+    keptByChoice?: boolean;
+    pendingReason?: string;
+    onOpen: () => void;
+}) {
     const { t } = useI18n();
-    const key: TranslationKey | null = KEPT.has(state) ? 'siteConfig.notice.kept'
-        : state === 'missing' ? 'siteConfig.notice.missing'
-            : state === 'unreadable' ? 'siteConfig.notice.unreadable' : null;
+    const kept = KEPT.has(state);
+    const key: TranslationKey | null = kept && pendingReason === 'certificate' ? 'siteConfig.notice.certificate'
+        : kept && pendingReason === 'certificate_validation' ? 'siteConfig.notice.certificateValidation'
+            : kept && keptByChoice ? 'siteConfig.notice.keptByChoice'
+                : kept ? 'siteConfig.notice.kept'
+                    : state === 'missing' ? 'siteConfig.notice.missing'
+                        : state === 'unreadable' ? 'siteConfig.notice.unreadable' : null;
     if (!key) return null;
+    // Kept as chosen and nothing waiting on it: a plain line, not a warning.
+    const plain = key === 'siteConfig.notice.keptByChoice';
     return (
-        <div role="status" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 p-3 text-sm text-fg" data-site-config-notice={state}>
-            <AlertTriangle className="h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+        <div
+            role="status"
+            className={`mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border p-3 text-sm text-fg ${plain
+                ? 'border-border-strong bg-surface-2'
+                : 'border-warning-mark/50 bg-warning-mark/20'}`}
+            data-site-config-notice={state}
+            data-site-config-notice-kind={plain ? 'kept_by_choice' : pendingReason || 'attention'}
+        >
+            {plain
+                ? <Info className="h-4 w-4 shrink-0 text-fg-muted" aria-hidden="true" />
+                : <AlertTriangle className="h-4 w-4 shrink-0 text-warning" aria-hidden="true" />}
             <span className="min-w-0 flex-[1_1_16rem]">{t(key)}</span>
             <Button type="button" onClick={onOpen}>{t('siteConfig.notice.open')}</Button>
         </div>
