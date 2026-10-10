@@ -1,0 +1,253 @@
+2026-10-10T14:00:54.055704+00:00 dns-debian13 systemd[1]: Starting nginx.service - A high performance web server and a reverse proxy server...
+2026-10-10T14:00:54.097534+00:00 dns-debian13 systemd[1]: Started nginx.service - A high performance web server and a reverse proxy server.
+2026-10-10T14:01:11.489286+00:00 dns-debian13 systemd[1]: Starting php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager...
+2026-10-10T14:01:11.607605+00:00 dns-debian13 systemd[1]: Started php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager.
+2026-10-10T14:01:12.081583+00:00 dns-debian13 systemd[1]: Stopping php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager...
+2026-10-10T14:01:12.115876+00:00 dns-debian13 systemd[1]: php8.4-fpm.service: Deactivated successfully.
+2026-10-10T14:01:12.116159+00:00 dns-debian13 systemd[1]: Stopped php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager.
+2026-10-10T14:01:12.118486+00:00 dns-debian13 systemd[1]: Starting php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager...
+2026-10-10T14:01:12.188160+00:00 dns-debian13 systemd[1]: Started php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager.
+2026-10-10T14:02:05.035794+00:00 dns-debian13 systemd[1]: Starting mariadb.service - MariaDB 11.8.6 database server...
+2026-10-10T14:02:05.139800+00:00 dns-debian13 (mariadbd)[13618]: mariadb.service: Referenced but unset environment variable evaluates to an empty string: MYSQLD_OPTS, _WSREP_NEW_CLUSTER
+2026-10-10T14:02:05.183192+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] Starting MariaDB 11.8.6-MariaDB-0+deb13u1 from Debian source revision 9bfea48ce1214cc4470f6f6f8a4e30352cef84e7 server_uid ewHC0iXTbxcy4rWctYmifQ9FJtc= as process 13618
+2026-10-10T14:02:05.203088+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: Compressed tables use zlib 1.3.1
+2026-10-10T14:02:05.205046+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-10T14:02:05.205164+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-10T14:02:05.205360+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: Using io_uring
+2026-10-10T14:02:05.205807+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: innodb_buffer_pool_size_max=128m, innodb_buffer_pool_size=128m
+2026-10-10T14:02:05.213417+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: Initialized memory pressure event listener
+2026-10-10T14:02:05.213417+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-10T14:02:05.214376+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: File system buffers for log disabled (block size=512 bytes)
+2026-10-10T14:02:05.229279+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: End of log at LSN=45616
+2026-10-10T14:02:05.300384+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: Opened 3 undo tablespaces
+2026-10-10T14:02:05.300384+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+2026-10-10T14:02:05.300677+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-10T14:02:05.300677+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-10T14:02:05.301324+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: log sequence number 45616; transaction id 14
+2026-10-10T14:02:05.301544+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] Plugin 'FEEDBACK' is disabled.
+2026-10-10T14:02:05.301544+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] Plugin 'wsrep-provider' is disabled.
+2026-10-10T14:02:05.302286+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+2026-10-10T14:02:05.305662+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] InnoDB: Buffer pool(s) load completed at 261010 14:02:05
+2026-10-10T14:02:05.524416+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] Server socket created on IP: '127.0.0.1', port: '3306'.
+2026-10-10T14:02:05.530217+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] mariadbd: Event Scheduler: Loaded 0 events
+2026-10-10T14:02:05.534261+00:00 dns-debian13 mariadbd[13618]: 2026-10-10 14:02:05 0 [Note] /usr/sbin/mariadbd: ready for connections.
+2026-10-10T14:02:05.534261+00:00 dns-debian13 mariadbd[13618]: Version: '11.8.6-MariaDB-0+deb13u1 from Debian'  socket: '/run/mysqld/mysqld.sock'  port: 3306  -- Please help get to 10k stars at https://github.com/MariaDB/Server
+2026-10-10T14:02:05.604831+00:00 dns-debian13 systemd[1]: Started mariadb.service - MariaDB 11.8.6 database server.
+2026-10-10T14:02:05.606408+00:00 dns-debian13 /etc/mysql/debian-start[13635]: Upgrading MariaDB tables if necessary.
+2026-10-10T14:02:05.672923+00:00 dns-debian13 /etc/mysql/debian-start[13647]: Checking for insecure root accounts.
+2026-10-10T14:02:05.720939+00:00 dns-debian13 /etc/mysql/debian-start[13652]: Triggering myisam-recover for all MyISAM tables and aria-recover for all Aria tables
+2026-10-10T14:02:25.079578+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-10T14:02:25.377068+00:00 dns-debian13 postfix[14360]: updating /etc/localtime => /var/spool/postfix//etc/localtime
+2026-10-10T14:02:25.377068+00:00 dns-debian13 postfix[14360]: updating /etc/services => /var/spool/postfix//etc/services
+2026-10-10T14:02:25.377068+00:00 dns-debian13 postfix[14360]: updating /etc/resolv.conf => /var/spool/postfix//etc/resolv.conf
+2026-10-10T14:02:25.377068+00:00 dns-debian13 postfix[14360]: updating /etc/hosts => /var/spool/postfix//etc/hosts
+2026-10-10T14:02:25.377068+00:00 dns-debian13 postfix[14360]: updating /etc/host.conf => /var/spool/postfix//etc/host.conf
+2026-10-10T14:02:25.377068+00:00 dns-debian13 postfix[14360]: updating /etc/nsswitch.conf => /var/spool/postfix//etc/nsswitch.conf
+2026-10-10T14:02:25.384966+00:00 dns-debian13 postfix[14363]: '/usr/lib/x86_64-linux-gnu/libnss_resolve.so.2' -> 'lib/libnss_resolve.so.2'
+2026-10-10T14:02:25.384966+00:00 dns-debian13 postfix[14363]: '/usr/lib/x86_64-linux-gnu/libnss_myhostname.so.2' -> 'lib/libnss_myhostname.so.2'
+2026-10-10T14:02:25.449483+00:00 dns-debian13 postfix[14392]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-10T14:02:25.449451+00:00 dns-debian13 postfix/postfix-script[14392]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-10T14:02:25.539303+00:00 dns-debian13 postfix/master[14418]: daemon started -- version 3.10.13, configuration /etc/postfix
+2026-10-10T14:02:25.541258+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-10T14:02:31.996950+00:00 dns-debian13 postfix/master[14418]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-10T14:02:43.978015+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:02:44.027980+00:00 dns-debian13 dovecot[17377]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up without any protocols (core dumps disabled)
+2026-10-10T14:02:44.034973+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:02:46.180836+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:02:46.220830+00:00 dns-debian13 dovecot[17377]: master: Warning: Killed with signal 15 (by pid=17909 uid=0 code=kill)
+2026-10-10T14:02:46.229603+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-10T14:02:46.229988+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:02:46.233757+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:02:46.288714+00:00 dns-debian13 dovecot[17914]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-10T14:02:46.295724+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:02:51.999651+00:00 dns-debian13 postfix/master[14418]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-10T14:02:52.545819+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:02:52.584477+00:00 dns-debian13 dovecot[17914]: master: Warning: Killed with signal 15 (by pid=18364 uid=0 code=kill)
+2026-10-10T14:02:52.617954+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-10T14:02:52.618456+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:02:52.622374+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:02:52.659312+00:00 dns-debian13 dovecot[18369]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-10T14:02:52.667687+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:03:11.048933+00:00 dns-debian13 systemd[1]: Stopping php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager...
+2026-10-10T14:03:11.071655+00:00 dns-debian13 systemd[1]: php8.4-fpm.service: Deactivated successfully.
+2026-10-10T14:03:11.071933+00:00 dns-debian13 systemd[1]: Stopped php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager.
+2026-10-10T14:03:11.074162+00:00 dns-debian13 systemd[1]: Starting php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager...
+2026-10-10T14:03:11.156536+00:00 dns-debian13 systemd[1]: Started php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager.
+2026-10-10T14:03:11.331106+00:00 dns-debian13 systemd[1]: Reloading php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager...
+2026-10-10T14:03:11.360015+00:00 dns-debian13 systemd[1]: Reloaded php8.4-fpm.service - The PHP 8.4 FastCGI Process Manager.
+2026-10-10T14:03:11.409683+00:00 dns-debian13 php-fpm8.4[21573]: [10-Oct-2026 14:03:11] NOTICE: using inherited socket fd=8, "/run/php/php8.4-fpm.sock"
+2026-10-10T14:03:13.362342+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-10T14:03:13.392007+00:00 dns-debian13 nginx[21636]: 2026/10/10 14:03:13 [notice] 21636#21636: signal process started
+2026-10-10T14:03:13.391143+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-10T14:03:18.966159+00:00 dns-debian13 postfix/master[14418]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-10T14:03:19.521640+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:03:19.556994+00:00 dns-debian13 dovecot[18369]: master: Warning: Killed with signal 15 (by pid=21962 uid=0 code=kill)
+2026-10-10T14:03:19.574156+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-10T14:03:19.574467+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:03:19.578285+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:03:19.637331+00:00 dns-debian13 dovecot[21967]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-10T14:03:19.643886+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:03:21.258026+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:03:21.296752+00:00 dns-debian13 dovecot[21967]: master: Warning: Killed with signal 15 (by pid=22128 uid=0 code=kill)
+2026-10-10T14:03:21.305370+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-10T14:03:21.305674+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:03:21.309115+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:03:21.363363+00:00 dns-debian13 dovecot[22133]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-10T14:03:21.369105+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:03:22.815248+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-10T14:03:22.893204+00:00 dns-debian13 postfix[22313]: postfix/postlog: stopping the Postfix mail system
+2026-10-10T14:03:22.893188+00:00 dns-debian13 postfix/postfix-script[22313]: stopping the Postfix mail system
+2026-10-10T14:03:22.894990+00:00 dns-debian13 postfix/master[14418]: terminating on signal 15
+2026-10-10T14:03:22.901363+00:00 dns-debian13 systemd[1]: postfix.service: Deactivated successfully.
+2026-10-10T14:03:22.901708+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-10T14:03:22.904334+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-10T14:03:23.206572+00:00 dns-debian13 postfix[22405]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-10T14:03:23.206543+00:00 dns-debian13 postfix/postfix-script[22405]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-10T14:03:23.300626+00:00 dns-debian13 postfix/master[22431]: daemon started -- version 3.10.13, configuration /etc/postfix
+2026-10-10T14:03:23.302986+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-10T14:03:28.290585+00:00 dns-debian13 postfix/master[22431]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-10T14:03:28.846329+00:00 dns-debian13 systemd[1]: Reloading dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:03:28.880410+00:00 dns-debian13 dovecot[22133]: master: Warning: SIGHUP received - reloading configuration
+2026-10-10T14:03:28.891786+00:00 dns-debian13 systemd[1]: Reloaded dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:03:38.789450+00:00 dns-debian13 postfix/master[22431]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-10T14:03:39.343684+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:03:39.394138+00:00 dns-debian13 dovecot[22133]: master: Warning: Killed with signal 15 (by pid=23678 uid=0 code=kill)
+2026-10-10T14:03:39.430047+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-10T14:03:39.430522+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:03:39.435719+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:03:39.484766+00:00 dns-debian13 dovecot[23684]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-10T14:03:39.491778+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:03:49.763056+00:00 dns-debian13 postfix/master[22431]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-10T14:03:50.322649+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:03:50.359696+00:00 dns-debian13 dovecot[23684]: master: Warning: Killed with signal 15 (by pid=24384 uid=0 code=kill)
+2026-10-10T14:03:50.393284+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-10T14:03:50.393571+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:03:50.397486+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:03:50.437324+00:00 dns-debian13 dovecot[24389]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-10T14:03:50.443141+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:04:00.727873+00:00 dns-debian13 systemd[1]: Started rspamd.service - rapid spam filtering system.
+2026-10-10T14:04:00.789528+00:00 dns-debian13 rspamd[24912]: 2026-10-10 14:04:00 #24912(main) <a3b9b1>; main; main: rspamd 3.12.1 is loading configuration, build id: release
+2026-10-10T14:04:07.241346+00:00 dns-debian13 postfix/master[22431]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-10T14:04:13.777458+00:00 dns-debian13 postfix/master[22431]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-10T14:04:14.347667+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:04:14.383012+00:00 dns-debian13 dovecot[24389]: master: Warning: Killed with signal 15 (by pid=25683 uid=0 code=kill)
+2026-10-10T14:04:14.400228+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-10T14:04:14.400713+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:04:14.408144+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:04:14.454673+00:00 dns-debian13 dovecot[25688]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-10T14:04:14.463682+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:04:16.158534+00:00 dns-debian13 systemd[1]: Stopping dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:04:16.196728+00:00 dns-debian13 dovecot[25688]: master: Warning: Killed with signal 15 (by pid=25850 uid=0 code=kill)
+2026-10-10T14:04:16.217824+00:00 dns-debian13 systemd[1]: dovecot.service: Deactivated successfully.
+2026-10-10T14:04:16.218189+00:00 dns-debian13 systemd[1]: Stopped dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:04:16.222182+00:00 dns-debian13 systemd[1]: Starting dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:04:16.265009+00:00 dns-debian13 dovecot[25855]: master: Dovecot v2.4.1-4 (7d8c0e5759) starting up for imap, lmtp, pop3 (core dumps disabled)
+2026-10-10T14:04:16.273001+00:00 dns-debian13 systemd[1]: Started dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:04:17.749322+00:00 dns-debian13 systemd[1]: Stopping postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-10T14:04:17.826483+00:00 dns-debian13 postfix[26013]: postfix/postlog: stopping the Postfix mail system
+2026-10-10T14:04:17.826457+00:00 dns-debian13 postfix/postfix-script[26013]: stopping the Postfix mail system
+2026-10-10T14:04:17.829080+00:00 dns-debian13 postfix/master[22431]: terminating on signal 15
+2026-10-10T14:04:17.834761+00:00 dns-debian13 systemd[1]: postfix.service: Deactivated successfully.
+2026-10-10T14:04:17.835106+00:00 dns-debian13 systemd[1]: Stopped postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-10T14:04:17.838263+00:00 dns-debian13 systemd[1]: Starting postfix.service - Postfix Mail Transport Agent (main/default instance)...
+2026-10-10T14:04:18.179358+00:00 dns-debian13 postfix[26105]: postfix/postlog: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-10T14:04:18.179311+00:00 dns-debian13 postfix/postfix-script[26105]: warning: not owned by root: /var/spool/postfix/etc/resolv.conf
+2026-10-10T14:04:18.302532+00:00 dns-debian13 postfix/master[26131]: daemon started -- version 3.10.13, configuration /etc/postfix
+2026-10-10T14:04:18.304222+00:00 dns-debian13 systemd[1]: Started postfix.service - Postfix Mail Transport Agent (main/default instance).
+2026-10-10T14:04:23.256046+00:00 dns-debian13 postfix/master[26131]: reload -- version 3.10.13, configuration /etc/postfix
+2026-10-10T14:04:23.811014+00:00 dns-debian13 systemd[1]: Reloading dovecot.service - Dovecot IMAP/POP3 email server...
+2026-10-10T14:04:23.849057+00:00 dns-debian13 dovecot[25855]: master: Warning: SIGHUP received - reloading configuration
+2026-10-10T14:04:23.859646+00:00 dns-debian13 systemd[1]: Reloaded dovecot.service - Dovecot IMAP/POP3 email server.
+2026-10-10T14:04:31.297115+00:00 dns-debian13 systemd[1]: Started cron.service - Regular background program processing daemon.
+2026-10-10T14:04:31.313568+00:00 dns-debian13 cron[27148]: (CRON) INFO (pidfile fd = 3)
+2026-10-10T14:04:31.315262+00:00 dns-debian13 cron[27148]: (CRON) INFO (Running @reboot jobs)
+2026-10-10T14:06:51.957831+00:00 dns-debian13 systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+2026-10-10T14:06:51.979068+00:00 dns-debian13 nginx[28140]: 2026/10/10 14:06:51 [notice] 28140#28140: signal process started
+2026-10-10T14:06:51.982317+00:00 dns-debian13 systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+2026-10-10T14:07:01.322270+00:00 dns-debian13 CRON[28226]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:07:01.322790+00:00 dns-debian13 CRON[28228]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:07:01.328172+00:00 dns-debian13 CRON[28226]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:08:01.333883+00:00 dns-debian13 CRON[28362]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:08:01.334361+00:00 dns-debian13 CRON[28364]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:08:01.338022+00:00 dns-debian13 CRON[28362]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:09:01.344183+00:00 dns-debian13 CRON[28432]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+2026-10-10T14:09:01.344255+00:00 dns-debian13 CRON[28433]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:09:01.344634+00:00 dns-debian13 CRON[28436]: (root) CMD (  [ -x /usr/lib/php/sessionclean ] && if [ ! -d /run/systemd/system ]; then /usr/lib/php/sessionclean; fi)
+2026-10-10T14:09:01.344690+00:00 dns-debian13 CRON[28437]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:09:01.347632+00:00 dns-debian13 CRON[28432]: pam_unix(cron:session): session closed for user root
+2026-10-10T14:09:01.347674+00:00 dns-debian13 CRON[28433]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:10:01.354008+00:00 dns-debian13 CRON[28554]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:10:01.354473+00:00 dns-debian13 CRON[28556]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:10:01.357485+00:00 dns-debian13 CRON[28554]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:11:01.363593+00:00 dns-debian13 CRON[28657]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:11:01.365927+00:00 dns-debian13 CRON[28659]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:11:01.369718+00:00 dns-debian13 CRON[28657]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:12:01.375924+00:00 dns-debian13 CRON[28727]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:12:01.376386+00:00 dns-debian13 CRON[28729]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:12:01.379216+00:00 dns-debian13 CRON[28727]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:13:01.387353+00:00 dns-debian13 CRON[28797]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:13:01.387911+00:00 dns-debian13 CRON[28799]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:13:01.390908+00:00 dns-debian13 CRON[28797]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:14:01.396206+00:00 dns-debian13 CRON[28900]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:14:01.396712+00:00 dns-debian13 CRON[28902]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:14:01.399347+00:00 dns-debian13 CRON[28900]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:15:01.405678+00:00 dns-debian13 CRON[28976]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:15:01.406190+00:00 dns-debian13 CRON[28978]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:15:01.409537+00:00 dns-debian13 CRON[28976]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:16:01.414827+00:00 dns-debian13 CRON[29047]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:16:01.415385+00:00 dns-debian13 CRON[29049]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:16:01.418049+00:00 dns-debian13 CRON[29047]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:17:01.423407+00:00 dns-debian13 CRON[29118]: pam_unix(cron:session): session opened for user root(uid=0) by root(uid=0)
+2026-10-10T14:17:01.423506+00:00 dns-debian13 CRON[29119]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:17:01.423893+00:00 dns-debian13 CRON[29122]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:17:01.424666+00:00 dns-debian13 CRON[29123]: (root) CMD (cd / && run-parts --report /etc/cron.hourly)
+2026-10-10T14:17:01.426398+00:00 dns-debian13 CRON[29119]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:17:01.427400+00:00 dns-debian13 CRON[29118]: pam_unix(cron:session): session closed for user root
+2026-10-10T14:18:01.436757+00:00 dns-debian13 CRON[29192]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:18:01.437631+00:00 dns-debian13 CRON[29194]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:18:01.441915+00:00 dns-debian13 CRON[29192]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:19:01.447337+00:00 dns-debian13 CRON[29328]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:19:01.447827+00:00 dns-debian13 CRON[29330]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:19:01.450598+00:00 dns-debian13 CRON[29328]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:20:01.461257+00:00 dns-debian13 CRON[29399]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:20:01.461867+00:00 dns-debian13 CRON[29401]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:20:01.464704+00:00 dns-debian13 CRON[29399]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:21:01.470361+00:00 dns-debian13 CRON[29469]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:21:01.470806+00:00 dns-debian13 CRON[29471]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:21:01.473591+00:00 dns-debian13 CRON[29469]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:22:01.479762+00:00 dns-debian13 CRON[29573]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:22:01.480240+00:00 dns-debian13 CRON[29575]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:22:01.482891+00:00 dns-debian13 CRON[29573]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:23:01.488262+00:00 dns-debian13 CRON[29643]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:23:01.488699+00:00 dns-debian13 CRON[29645]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:23:01.491270+00:00 dns-debian13 CRON[29643]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:24:01.496445+00:00 dns-debian13 CRON[29714]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:24:01.496908+00:00 dns-debian13 CRON[29716]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:24:01.499753+00:00 dns-debian13 CRON[29714]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:25:01.505288+00:00 dns-debian13 CRON[29818]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:25:01.505781+00:00 dns-debian13 CRON[29820]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:25:01.508545+00:00 dns-debian13 CRON[29818]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:26:01.514148+00:00 dns-debian13 CRON[29889]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:26:01.514569+00:00 dns-debian13 CRON[29891]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:26:01.517389+00:00 dns-debian13 CRON[29889]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:27:01.524951+00:00 dns-debian13 CRON[29960]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:27:01.525445+00:00 dns-debian13 CRON[29962]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:27:01.528268+00:00 dns-debian13 CRON[29960]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:28:01.534328+00:00 dns-debian13 CRON[30064]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:28:01.534833+00:00 dns-debian13 CRON[30066]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:28:01.537756+00:00 dns-debian13 CRON[30064]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:29:01.546167+00:00 dns-debian13 CRON[30135]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:29:01.546730+00:00 dns-debian13 CRON[30137]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:29:01.549769+00:00 dns-debian13 CRON[30135]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:30:01.557558+00:00 dns-debian13 CRON[30437]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:30:01.558013+00:00 dns-debian13 CRON[30439]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:30:01.560902+00:00 dns-debian13 CRON[30437]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:31:01.565353+00:00 dns-debian13 CRON[30631]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:31:01.565715+00:00 dns-debian13 CRON[30634]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:31:01.569026+00:00 dns-debian13 CRON[30631]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:32:01.593935+00:00 dns-debian13 CRON[30776]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:32:01.597467+00:00 dns-debian13 CRON[30778]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:32:01.612946+00:00 dns-debian13 CRON[30776]: pam_unix(cron:session): session closed for user upd1_owner_test
+2026-10-10T14:33:01.621666+00:00 dns-debian13 CRON[30847]: pam_unix(cron:session): session opened for user upd1_owner_test(uid=5001) by upd1_owner_test(uid=0)
+2026-10-10T14:33:01.622203+00:00 dns-debian13 CRON[30849]: (upd1_owner_test) CMD (/bin/date -u -Iseconds > "$HOME/upd1-cron-stamp.txt")
+2026-10-10T14:33:01.625357+00:00 dns-debian13 CRON[30847]: pam_unix(cron:session): session closed for user upd1_owner_test

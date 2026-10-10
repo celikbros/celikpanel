@@ -1,0 +1,2 @@
+differs:       1 > ./deploy/e2e/release-recovery/run-set7.sh
+differs:       1 > ./deploy/e2e/release-recovery/set7_trial.py

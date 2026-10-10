@@ -1,0 +1,28 @@
+set7-20261010: everything that did not pass, or was not measured, in this run (see README.md for each).
+
+FAIL (product, against the rule of the cell)
+- cell 5, /setup: RecoveryAccess "Checking panel access" painted on 3/3 plain loads (about 80-100 ms, 12-15 frames) and
+  3/3 throttled loads (about 1.7 s, 280 frames), drawn before any session read answered and before 1.5 s.
+  lab3-alpha82-interface-page-load/browser/flash/flash-loads.jsonl
+- cell 5, /: the same, 3/3 plain, 3/3 throttled.
+- cell 5, /settings?section=updates: the same, 3/3 plain, 3/3 throttled.
+
+Reproduced as reported (alpha.81 interface, not the release under measurement)
+- cell 2: the Settings page replaced by "License status could not be checked" for about 78 s during the update.
+
+Harness attempts that measured nothing or were stopped (kept, not used for a verdict)
+- lab1 browser/hiddenrestart-attempt1-signin-timeout: sign-in form not shown (session already held); timed out at 60 s.
+- lab3 browser/flash-attempt1-stopped-slow-navigation-wait, flash-attempt2-stopped-no-screenshots: stopped; no pictures.
+
+Limits of a passing cell
+- cell 4: the Panel restart's outage was shorter than the probes' 0.5 s / 1 s intervals; no probe saw it unanswering.
+- cells 1-4: no page was controlled by the recovery service worker (controller null in every sample).
+
+NOT-MEASURED
+- Ubuntu 24.04 (optional in the brief; not run). Arch.
+- cell 5 with the HTTP cache enabled; phone viewport; Turkish; dark theme; headful Chrome; other browsers.
+- a domain's page or a dialog in cells 3/4 (setup waiting at access_dns sends domain pages to /setup).
+- network traffic of the guests (not captured).
+
+Driver steps: all passed or observed in all three labs (lab*/driver/result.json: complete-for-review).
+Offline suite: 5 errors on copy a and copy b, the same by name (pre-existing; git calls on an archive copy).

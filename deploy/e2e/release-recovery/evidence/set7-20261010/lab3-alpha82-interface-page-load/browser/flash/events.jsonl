@@ -1,0 +1,19 @@
+{"at":"2026-10-10T14:29:03.634Z","ev":"sign-in-page","shown":"form"}
+{"at":"2026-10-10T14:29:06.896Z","ev":"load","label":"plain-setup-1","route":"/setup","profile":"plain","cache":"disabled","throttle":null}
+{"at":"2026-10-10T14:29:14.620Z","ev":"load","label":"plain-setup-2","route":"/setup","profile":"plain","cache":"disabled","throttle":null}
+{"at":"2026-10-10T14:29:22.327Z","ev":"load","label":"plain-setup-3","route":"/setup","profile":"plain","cache":"disabled","throttle":null}
+{"at":"2026-10-10T14:29:30.034Z","ev":"load","label":"plain-root-1","route":"/","profile":"plain","cache":"disabled","throttle":null}
+{"at":"2026-10-10T14:29:37.745Z","ev":"load","label":"plain-root-2","route":"/","profile":"plain","cache":"disabled","throttle":null}
+{"at":"2026-10-10T14:29:45.459Z","ev":"load","label":"plain-root-3","route":"/","profile":"plain","cache":"disabled","throttle":null}
+{"at":"2026-10-10T14:29:53.174Z","ev":"load","label":"plain-settings_section_updates-1","route":"/settings?section=updates","profile":"plain","cache":"disabled","throttle":null}
+{"at":"2026-10-10T14:30:00.880Z","ev":"load","label":"plain-settings_section_updates-2","route":"/settings?section=updates","profile":"plain","cache":"disabled","throttle":null}
+{"at":"2026-10-10T14:30:08.576Z","ev":"load","label":"plain-settings_section_updates-3","route":"/settings?section=updates","profile":"plain","cache":"disabled","throttle":null}
+{"at":"2026-10-10T14:30:16.279Z","ev":"load","label":"throttled-setup-1","route":"/setup","profile":"throttled","cache":"disabled","throttle":"2 Mbit/s both ways, 300 ms latency (CDP Network.emulateNetworkConditions)"}
+{"at":"2026-10-10T14:30:29.077Z","ev":"load","label":"throttled-setup-2","route":"/setup","profile":"throttled","cache":"disabled","throttle":"2 Mbit/s both ways, 300 ms latency (CDP Network.emulateNetworkConditions)"}
+{"at":"2026-10-10T14:30:41.878Z","ev":"load","label":"throttled-setup-3","route":"/setup","profile":"throttled","cache":"disabled","throttle":"2 Mbit/s both ways, 300 ms latency (CDP Network.emulateNetworkConditions)"}
+{"at":"2026-10-10T14:30:54.678Z","ev":"load","label":"throttled-root-1","route":"/","profile":"throttled","cache":"disabled","throttle":"2 Mbit/s both ways, 300 ms latency (CDP Network.emulateNetworkConditions)"}
+{"at":"2026-10-10T14:31:07.494Z","ev":"load","label":"throttled-root-2","route":"/","profile":"throttled","cache":"disabled","throttle":"2 Mbit/s both ways, 300 ms latency (CDP Network.emulateNetworkConditions)"}
+{"at":"2026-10-10T14:31:20.275Z","ev":"load","label":"throttled-root-3","route":"/","profile":"throttled","cache":"disabled","throttle":"2 Mbit/s both ways, 300 ms latency (CDP Network.emulateNetworkConditions)"}
+{"at":"2026-10-10T14:31:33.038Z","ev":"load","label":"throttled-settings_section_updates-1","route":"/settings?section=updates","profile":"throttled","cache":"disabled","throttle":"2 Mbit/s both ways, 300 ms latency (CDP Network.emulateNetworkConditions)"}
+{"at":"2026-10-10T14:31:45.850Z","ev":"load","label":"throttled-settings_section_updates-2","route":"/settings?section=updates","profile":"throttled","cache":"disabled","throttle":"2 Mbit/s both ways, 300 ms latency (CDP Network.emulateNetworkConditions)"}
+{"at":"2026-10-10T14:31:58.622Z","ev":"load","label":"throttled-settings_section_updates-3","route":"/settings?section=updates","profile":"throttled","cache":"disabled","throttle":"2 Mbit/s both ways, 300 ms latency (CDP Network.emulateNetworkConditions)"}

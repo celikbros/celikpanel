@@ -1,0 +1,101 @@
+{
+  "settings-dns": {
+    "path": "/settings?section=dns",
+    "fields": [
+      {
+        "id": "panel-certificate-domain",
+        "name": "",
+        "placeholder": "panel.example.com",
+        "visible": false,
+        "disabled": false
+      },
+      {
+        "id": "dns-ns1",
+        "name": "",
+        "placeholder": "ns1.example.com",
+        "visible": false,
+        "disabled": false
+      },
+      {
+        "id": "dns-ns2",
+        "name": "",
+        "placeholder": "ns2.example.com",
+        "visible": false,
+        "disabled": false
+      }
+    ],
+    "buttons": [
+      "Account security\nSign-in protection and administrator security.",
+      "Server setup\nSetup wizard and your configuration preference.",
+      "Panel HTTPS\nPanel domain and HTTPS certificate.",
+      "License\nServer license, activation and annual renewal.",
+      "CelikPanel updates\nCheck signed releases and install them only after explicit confirmation.",
+      "Server security\nRead-only audit of exposed services and access controls.",
+      "DNS infrastructure\nShared nameservers, node identity and replication topology.",
+      "System databases\nInspect and safely maintain the SQLite files CelikPanel and installed services keep.",
+      "Set up two-factor",
+      "Get certificate",
+      "Help",
+      "1\nHow should DNS stay available?",
+      "2\nNames and servers",
+      "3\nReview before saving",
+      "Continue",
+      "Generate connection code",
+      "Refresh state",
+      "Review installation",
+      "Review installation"
+    ],
+    "tabs": [
+      "settings-account-tab:Account security\nSign-in protection and administrator security.",
+      "settings-setup-tab:Server setup\nSetup wizard and your configuration preference.",
+      "settings-panel-tab:Panel HTTPS\nPanel domain and HTTPS certificate.",
+      "settings-license-tab:License\nServer license, activation and annual renewal.",
+      "settings-updates-tab:CelikPanel updates\nCheck signed releases and install them only after explicit confirmation.",
+      "settings-security-tab:Server security\nRead-only audit of exposed services and access controls.",
+      "settings-dns-tab:DNS infrastructure\nShared nameservers, node identity and replication topology.",
+      "settings-system-databases-tab:System databases\nInspect and safely maintain the SQLite files CelikPanel and installed services keep."
+    ]
+  },
+  "settings-panel": {
+    "path": "/settings?section=panel",
+    "fields": [
+      {
+        "id": "panel-certificate-domain",
+        "name": "",
+        "placeholder": "panel.example.com",
+        "visible": true,
+        "disabled": false
+      }
+    ],
+    "buttons": [
+      "Account security\nSign-in protection and administrator security.",
+      "Server setup\nSetup wizard and your configuration preference.",
+      "Panel HTTPS\nPanel domain and HTTPS certificate.",
+      "License\nServer license, activation and annual renewal.",
+      "CelikPanel updates\nCheck signed releases and install them only after explicit confirmation.",
+      "Server security\nRead-only audit of exposed services and access controls.",
+      "DNS infrastructure\nShared nameservers, node identity and replication topology.",
+      "System databases\nInspect and safely maintain the SQLite files CelikPanel and installed services keep.",
+      "Set up two-factor",
+      "Get certificate"
+    ],
+    "tabs": [
+      "settings-account-tab:Account security\nSign-in protection and administrator security.",
+      "settings-setup-tab:Server setup\nSetup wizard and your configuration preference.",
+      "settings-panel-tab:Panel HTTPS\nPanel domain and HTTPS certificate.",
+      "settings-license-tab:License\nServer license, activation and annual renewal.",
+      "settings-updates-tab:CelikPanel updates\nCheck signed releases and install them only after explicit confirmation.",
+      "settings-security-tab:Server security\nRead-only audit of exposed services and access controls.",
+      "settings-dns-tab:DNS infrastructure\nShared nameservers, node identity and replication topology.",
+      "settings-system-databases-tab:System databases\nInspect and safely maintain the SQLite files CelikPanel and installed services keep."
+    ]
+  },
+  "domain": {
+    "path": "/setup",
+    "fields": [],
+    "buttons": [
+      "Edit plan"
+    ],
+    "tabs": []
+  }
+}

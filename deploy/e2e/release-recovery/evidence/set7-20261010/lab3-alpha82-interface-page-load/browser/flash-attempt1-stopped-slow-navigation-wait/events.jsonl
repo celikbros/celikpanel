@@ -1,0 +1,5 @@
+{"at":"2026-10-10T14:07:08.807Z","ev":"sign-in-page","shown":"form"}
+{"at":"2026-10-10T14:07:12.076Z","ev":"load","label":"plain-setup-1","route":"/setup","profile":"plain","cache":"disabled","throttle":null}
+{"at":"2026-10-10T14:10:13.789Z","ev":"load","label":"plain-setup-2","route":"/setup","profile":"plain","cache":"disabled","throttle":null}
+{"at":"2026-10-10T14:13:15.486Z","ev":"load","label":"plain-setup-3","route":"/setup","profile":"plain","cache":"disabled","throttle":null}
+{"at":"2026-10-10T14:16:17.161Z","ev":"load","label":"plain-root-1","route":"/","profile":"plain","cache":"disabled","throttle":null}

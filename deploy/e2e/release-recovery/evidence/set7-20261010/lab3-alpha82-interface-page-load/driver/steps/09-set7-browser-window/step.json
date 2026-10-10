@@ -1,0 +1,50 @@
+{
+  "checks": {
+    "browser_done": {
+      "at": "2026-10-10T14:33:02.490Z",
+      "by": "live-restart.mjs"
+    },
+    "ended_at": "2026-10-10T14:33:02Z",
+    "handover": {
+      "at": "2026-10-10T14:06:55Z",
+      "base": "https://127.0.0.1:18771",
+      "baseline": {
+        "commit": "dc81296d06774217c2100830c8caca1ff604c4b7",
+        "version": "v0.1.0-alpha.81"
+      },
+      "candidate": {
+        "commit": "2e9b30af347fe6eb830878a72cfba5307ce484f9",
+        "version": "v0.1.0-alpha.82"
+      },
+      "domain": "upd1-owner.test",
+      "domain_id": 1,
+      "local_port": 18771,
+      "panel_version": {
+        "agent_commit": "dc81296d06774217c2100830c8caca1ff604c4b7",
+        "agent_matches": true,
+        "commit": "dc81296d06774217c2100830c8caca1ff604c4b7",
+        "hostname": "dns-debian13",
+        "ipv4": "192.0.2.10",
+        "schema_version": 43,
+        "version": "v0.1.0-alpha.81"
+      },
+      "password_file": "[REDACTED]",
+      "schema": "celikpanel/set7-handover/v1",
+      "tls_leaf_sha256": "96ee343de5395020a6fdf663cc438c7cc9388a7a88a3f1b65b64737e8b14ef3a",
+      "username": "labadmin"
+    },
+    "password_file_removed": true,
+    "probe": {
+      "answer": "active\n4",
+      "file": "/root/celikpanel-release-recovery-lab/set7-probe.txt",
+      "started_at": "2026-10-10T14:06:55Z",
+      "unit": "celikpanel-lab-set7-probe"
+    },
+    "probe_stopped": "3138",
+    "restarts": []
+  },
+  "finished_at": "2026-10-10T14:33:03Z",
+  "name": "set7-browser-window",
+  "started_at": "2026-10-10T14:06:52Z",
+  "verdict": "observed"
+}

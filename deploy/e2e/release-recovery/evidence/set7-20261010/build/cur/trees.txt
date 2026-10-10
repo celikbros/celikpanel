@@ -1,0 +1,9 @@
+source 2a0af8866 = 2a0af88660773b43cbe1155c622483e2f0a2bbeb tree 988ea2eab0653ed442d20e1fc351cd9bb68a4c07 (v0.1.0-alpha.82: 2a0af88660773b43cbe1155c622483e2f0a2bbeb)
+published v0.1.0-alpha.81 = a0beb7263d1f4ca72258f6b306f9111ba4e2a334 tree b1dffa78bcaca9e3514e5b2bc42f0e2cf47dca2f
+baseline dc81296d06774217c2100830c8caca1ff604c4b7 tree ff0d0eefe5771b695592d747ec2eedf0f4e7c024
+good     2e9b30af347fe6eb830878a72cfba5307ce484f9 tree 16778766e749384deda3296f4cad23a4315e2a4c
+### files that differ between the source 2a0af8866 and the baseline dc81296d06774217c2100830c8caca1ff604c4b7
+M	deploy/release-sequence-policy
+### files that differ between the source 2a0af8866 and the good candidate 2e9b30af347fe6eb830878a72cfba5307ce484f9
+M	deploy/release-sequence-policy
+### files of web/ that differ between the source 2a0af8866 and the baseline / the good candidate: 0 / 0

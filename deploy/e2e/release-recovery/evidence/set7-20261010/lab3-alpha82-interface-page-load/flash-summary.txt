@@ -1,0 +1,54 @@
+plain-setup-1: recovery-access SHOWN 135..238 ms | nav {'responseStart': 5, 'domContentLoaded': 68, 'load': 68}
+   screens: 0:empty > 57:page-loading > 135:recovery-access(Checking panel access) > 238:page-loading > 282:app(Checking server setup…) > 332:app(Prepare your server)
+   requests: auth/me 160->169 0, auth/me 183->240 200, panel/availability 242->248 200, license/access 255->261 200, setup 284->293 200, setup/operation 347->353 200, setup 348->6183 200, setup/operation 3389->3393 200, setup/operation 6399->6404 200
+plain-setup-2: recovery-access SHOWN 123..217 ms | nav {'responseStart': 5, 'domContentLoaded': 55, 'load': 55}
+   screens: 0:empty > 45:page-loading > 123:recovery-access(Checking panel access) > 217:page-loading > 264:app(Checking server setup…) > 309:app(Prepare your server)
+   requests: auth/me 144->152 0, auth/me 166->220 200, panel/availability 221->226 200, license/access 232->237 200, setup 262->272 200, setup/operation 322->328 200, setup 323->6140 200, setup/operation 3369->3374 200, setup/operation 6381->6386 200
+plain-setup-3: recovery-access SHOWN 118..209 ms | nav {'responseStart': 5, 'domContentLoaded': 60, 'load': 60}
+   screens: 0:empty > 48:page-loading > 118:recovery-access(Checking panel access) > 209:page-loading > 246:app(Checking server setup…) > 295:app(Prepare your server)
+   requests: auth/me 142->149 0, auth/me 161->214 200, panel/availability 216->220 200, license/access 226->230 200, setup 250->258 200, setup/operation 312->319 200, setup 312->6231 200, setup/operation 3357->3362 200, setup/operation 6368->6373 200
+plain-root-1: recovery-access SHOWN 114..205 ms | nav {'responseStart': 5, 'domContentLoaded': 54, 'load': 54}
+   screens: 0:empty > 42:page-loading > 114:recovery-access(Checking panel access) > 205:page-loading > 251:app(Checking server setup…) > 259:other > 295:app(Prepare your server)
+   requests: auth/me 136->145 200, auth/me 156->207 200, panel/availability 210->215 200, license/access 221->228 200, setup 250->261 200, setup/operation 310->316 200, setup 311->6123 200, setup/operation 3360->3368 200, license/access 5960->5964 200, setup/operation 6372->6376 200
+plain-root-2: recovery-access SHOWN 127..214 ms | nav {'responseStart': 4, 'domContentLoaded': 55, 'load': 55}
+   screens: 0:empty > 46:page-loading > 127:recovery-access(Checking panel access) > 214:page-loading > 254:app(Checking server setup…) > 261:other > 300:app(Prepare your server)
+   requests: auth/me 148->154 200, auth/me 156->194 200, panel/availability 198->222 200, license/access 228->233 200, setup 251->260 200, setup/operation 313->318 200, setup 314->6159 200, setup/operation 3357->3362 200, setup/operation 6369->6374 200
+plain-root-3: recovery-access SHOWN 120..212 ms | nav {'responseStart': 4, 'domContentLoaded': 53, 'load': 53}
+   screens: 0:empty > 43:page-loading > 120:recovery-access(Checking panel access) > 212:page-loading > 250:app(Checking server setup…) > 258:other > 293:app(Prepare your server)
+   requests: auth/me 140->149 200, auth/me 153->213 200, panel/availability 216->221 200, license/access 227->231 200, setup 251->259 200, setup/operation 307->313 200, setup 308->6140 200, setup/operation 3353->3361 200, setup/operation 6366->6370 200
+plain-settings_section_updates-1: recovery-access SHOWN 118..210 ms | nav {'responseStart': 4, 'domContentLoaded': 43, 'load': 43}
+   screens: 0:empty > 35:page-loading > 118:recovery-access(Checking panel access) > 210:page-loading > 316:app(Settings)
+   requests: auth/me 140->147 0, auth/me 159->213 200, panel/availability 215->219 200, license/access 225->230 200, setup 310->319 200
+plain-settings_section_updates-2: recovery-access SHOWN 142..231 ms | nav {'responseStart': 4, 'domContentLoaded': 85, 'load': 85}
+   screens: 1:empty > 76:page-loading > 142:recovery-access(Checking panel access) > 231:page-loading > 336:app(Settings)
+   requests: auth/me 164->171 0, auth/me 182->234 200, panel/availability 236->241 200, license/access 247->252 200, setup 330->339 200
+plain-settings_section_updates-3: recovery-access SHOWN 149..238 ms | nav {'responseStart': 4, 'domContentLoaded': 83, 'load': 83}
+   screens: 1:empty > 71:page-loading > 149:recovery-access(Checking panel access) > 238:page-loading > 333:app(Settings)
+   requests: auth/me 172->179 0, auth/me 192->242 200, panel/availability 244->248 200, license/access 254->257 200, setup 329->338 200
+throttled-setup-1: recovery-access SHOWN 2258..3959 ms | nav {'responseStart': 4, 'domContentLoaded': 1999, 'load': 1999}
+   screens: 0:empty > 1661:page-loading > 2258:recovery-access(Checking panel access) > 2924:recovery-access(Checking panel access) > 3308:recovery-access(Checking panel access) > 3959:page-loading > 4691:app(Checking server setup…) > 5755:app(Prepare your server)
+   requests: auth/me 2604->2939 200, panel/availability 2941->3264 200, auth/me 3649->3968 200, panel/availability 3971->4295 200, license/access 4302->4654 200, license/access 4715->5020 200, setup 5019->5338 200, setup/operation 6096->6427 200, setup 6096->11930 200, setup/operation 9436->9773 200
+throttled-setup-2: recovery-access SHOWN 2262..3955 ms | nav {'responseStart': 4, 'domContentLoaded': 1997, 'load': 1997}
+   screens: 0:empty > 1663:page-loading > 2262:recovery-access(Checking panel access) > 2941:recovery-access(Checking panel access) > 3290:recovery-access(Checking panel access) > 3955:page-loading > 4654:app(Checking server setup…) > 5705:app(Prepare your server)
+   requests: auth/me 2606->2951 200, panel/availability 2954->3277 200, auth/me 3627->3959 200, panel/availability 3961->4289 200, license/access 4293->4631 200, setup 4980->5297 200, setup/operation 6043->6378 200, setup 6043->11891 200, setup/operation 9388->9709 200
+throttled-setup-3: recovery-access SHOWN 2249..3944 ms | nav {'responseStart': 4, 'domContentLoaded': 1986, 'load': 1987}
+   screens: 0:empty > 1650:page-loading > 2249:recovery-access(Checking panel access) > 2913:recovery-access(Checking panel access) > 3276:recovery-access(Checking panel access) > 3944:page-loading > 4665:app(Checking server setup…) > 5740:app(Prepare your server)
+   requests: auth/me 2595->2927 200, panel/availability 2929->3254 200, auth/me 3616->3939 200, panel/availability 3941->4281 200, license/access 4286->4639 200, setup 4991->5325 200, setup/operation 6081->6416 200, setup 6081->11905 200, setup/operation 9428->9758 200
+throttled-root-1: recovery-access SHOWN 2252..3930 ms | nav {'responseStart': 7, 'domContentLoaded': 2005, 'load': 2005}
+   screens: 0:empty > 1668:page-loading > 2252:recovery-access(Checking panel access) > 2930:recovery-access(Checking panel access) > 3282:recovery-access(Checking panel access) > 3930:page-loading > 4656:app(Checking server setup…) > 4978:other > 5097:page-loading > 5804:app(Prepare your server)
+   requests: auth/me 2599->2945 200, panel/availability 2947->3271 200, auth/me 3623->3947 200, panel/availability 3948->4267 200, license/access 4272->4622 200, setup 4984->5307 200, setup/operation 6146->6474 200, setup 6147->11960 200, setup/operation 9501->9822 200, license/access 11318->11647 200
+throttled-root-2: recovery-access SHOWN 2247..3949 ms | nav {'responseStart': 7, 'domContentLoaded': 1978, 'load': 1978}
+   screens: 0:empty > 1647:page-loading > 2247:recovery-access(Checking panel access) > 2927:recovery-access(Checking panel access) > 3290:recovery-access(Checking panel access) > 3949:page-loading > 4681:app(Checking server setup…) > 4990:other > 5111:page-loading > 5753:app(Prepare your server)
+   requests: auth/me 2587->2935 200, panel/availability 2937->3260 200, auth/me 3625->3948 200, panel/availability 3950->4280 200, license/access 4285->4637 200, setup 5002->5323 200, setup/operation 6089->6427 200, setup 6089->11938 200, setup/operation 9436->9760 200
+throttled-root-3: recovery-access SHOWN 2243..3940 ms | nav {'responseStart': 7, 'domContentLoaded': 1998, 'load': 1998}
+   screens: 0:empty > 1661:page-loading > 2243:recovery-access(Checking panel access) > 2909:recovery-access(Checking panel access) > 3272:recovery-access(Checking panel access) > 3940:page-loading > 4654:app(Checking server setup…) > 4964:other > 5086:page-loading > 5722:app(Prepare your server)
+   requests: auth/me 2590->2924 200, panel/availability 2925->3250 200, auth/me 3613->3935 200, panel/availability 3936->4277 200, license/access 4282->4617 200, setup 4982->5301 200, setup/operation 6064->6398 200, setup 6064->11920 200, setup/operation 9423->9754 200
+throttled-settings_section_updates-1: recovery-access SHOWN 2284..3992 ms | nav {'responseStart': 5, 'domContentLoaded': 2006, 'load': 2006}
+   screens: 0:empty > 1684:page-loading > 2284:recovery-access(Checking panel access) > 2962:recovery-access(Checking panel access) > 3313:recovery-access(Checking panel access) > 3992:page-loading > 4861:app-shell-page-loading > 5990:app(Settings)
+   requests: auth/me 2616->2962 200, panel/availability 2963->3288 200, auth/me 3639->3968 200, panel/availability 3970->4313 200, license/access 4320->4669 200, setup 5178->5497 200
+throttled-settings_section_updates-2: recovery-access SHOWN 2249..3941 ms | nav {'responseStart': 5, 'domContentLoaded': 1998, 'load': 1998}
+   screens: 0:empty > 1660:page-loading > 2249:recovery-access(Checking panel access) > 2929:recovery-access(Checking panel access) > 3290:recovery-access(Checking panel access) > 3941:page-loading > 4811:app-shell-page-loading > 5926:app(Settings)
+   requests: auth/me 2595->2943 200, panel/availability 2944->3268 200, auth/me 3630->3957 200, panel/availability 3959->4277 200, license/access 4282->4632 200, setup 5142->5471 200, license/access 5157->5491 200
+throttled-settings_section_updates-3: recovery-access SHOWN 2251..3960 ms | nav {'responseStart': 4, 'domContentLoaded': 1990, 'load': 1990}
+   screens: 0:empty > 1667:page-loading > 2251:recovery-access(Checking panel access) > 2919:recovery-access(Checking panel access) > 3294:recovery-access(Checking panel access) > 3960:page-loading > 4817:app-shell-page-loading > 5925:app(Settings)
+   requests: auth/me 2583->2921 200, panel/availability 2922->3245 200, auth/me 3621->3949 200, panel/availability 3951->4282 200, license/access 4288->4624 200, setup 5133->5463 200

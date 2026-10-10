@@ -1,0 +1,256 @@
+{
+  "asked_with": "getent -s files ahosts NAME and getent -s files hosts NAME (the hosts file only; no DNS question is sent)",
+  "at": "2026-10-10T14:33:05Z",
+  "boot_id": "e8198a18-6889-4a40-8d48-2c2952c9e812",
+  "certbot_directories": [
+    {
+      "entries": null,
+      "path": "/var/log/letsencrypt",
+      "reason": "FileNotFoundError"
+    },
+    {
+      "entries": null,
+      "path": "/etc/letsencrypt/accounts",
+      "reason": "FileNotFoundError"
+    },
+    {
+      "entries": null,
+      "path": "/etc/letsencrypt/live",
+      "reason": "FileNotFoundError"
+    },
+    {
+      "entries": null,
+      "path": "/etc/letsencrypt/renewal",
+      "reason": "FileNotFoundError"
+    }
+  ],
+  "certbot_program": "/usr/bin/certbot",
+  "default_path": {
+    "acme-staging-v02.api.letsencrypt.org": {
+      "ahosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             STREAM acme-staging-v02.api.letsencrypt.org\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             acme-staging-v02.api.letsencrypt.org"
+      }
+    },
+    "acme-v02.api.letsencrypt.org": {
+      "ahosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             STREAM acme-v02.api.letsencrypt.org\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             acme-v02.api.letsencrypt.org"
+      }
+    },
+    "acme.zerossl.com": {
+      "ahosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             STREAM acme.zerossl.com\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             acme.zerossl.com"
+      }
+    },
+    "celikpanel.net": {
+      "ahosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "127.0.0.1       STREAM celikpanel.net\n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "127.0.0.1       celikpanel.net"
+      }
+    },
+    "dv.acme-v02.api.pki.goog": {
+      "ahosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             STREAM dv.acme-v02.api.pki.goog\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             dv.acme-v02.api.pki.goog"
+      }
+    }
+  },
+  "default_path_asked_with": "getent ahosts NAME and getent hosts NAME (the lookup order of this guest's nsswitch.conf)",
+  "default_path_loopback_only": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "celikpanel.net": true,
+    "dv.acme-v02.api.pki.goog": true
+  },
+  "default_path_settle_seconds": 0,
+  "files_loopback_only": {
+    "acme-staging-v02.api.letsencrypt.org": true,
+    "acme-v02.api.letsencrypt.org": true,
+    "acme.zerossl.com": true,
+    "celikpanel.net": true,
+    "dv.acme-v02.api.pki.goog": true
+  },
+  "hosts_lines": [
+    "127.0.0.1\tlocalhost",
+    "::1\t\tlocalhost ip6-localhost ip6-loopback",
+    "ff02::1\t\tip6-allnodes",
+    "ff02::2\t\tip6-allrouters",
+    "127.0.0.1 celikpanel.net # disposable CelikPanel lab pin before provisioning",
+    "127.0.0.1 acme-v02.api.letsencrypt.org",
+    "::1 acme-v02.api.letsencrypt.org",
+    "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+    "::1 acme-staging-v02.api.letsencrypt.org",
+    "127.0.0.1 acme.zerossl.com",
+    "::1 acme.zerossl.com",
+    "127.0.0.1 dv.acme-v02.api.pki.goog",
+    "::1 dv.acme-v02.api.pki.goog"
+  ],
+  "hosts_mode": "0o644",
+  "hosts_sha256_after": "0dea2f286752c2124bea07226c64e734f9cc530d48d5e9c173ecdf2e2ccd132f",
+  "hosts_sha256_before": "0dea2f286752c2124bea07226c64e734f9cc530d48d5e9c173ecdf2e2ccd132f",
+  "kernel": "6.12.105+deb13-cloud-amd64",
+  "mapped_before": {
+    "acme-staging-v02.api.letsencrypt.org": [
+      "127.0.0.1 acme-staging-v02.api.letsencrypt.org",
+      "::1 acme-staging-v02.api.letsencrypt.org"
+    ],
+    "acme-v02.api.letsencrypt.org": [
+      "127.0.0.1 acme-v02.api.letsencrypt.org",
+      "::1 acme-v02.api.letsencrypt.org"
+    ],
+    "acme.zerossl.com": [
+      "127.0.0.1 acme.zerossl.com",
+      "::1 acme.zerossl.com"
+    ],
+    "celikpanel.net": [
+      "127.0.0.1 celikpanel.net # disposable CelikPanel lab pin before provisioning"
+    ],
+    "dv.acme-v02.api.pki.goog": [
+      "127.0.0.1 dv.acme-v02.api.pki.goog",
+      "::1 dv.acme-v02.api.pki.goog"
+    ]
+  },
+  "mode": "read",
+  "nsswitch_hosts": [
+    "hosts:          files myhostname resolve [!UNAVAIL=return] dns"
+  ],
+  "os_release": {
+    "ID": "debian",
+    "PRETTY_NAME": "Debian GNU/Linux 13 (trixie)",
+    "VERSION_CODENAME": "trixie",
+    "VERSION_ID": "13"
+  },
+  "packages_installed": {
+    "certbot": "4.0.0-2+deb13u1",
+    "cron": "3.0pl1-197",
+    "dovecot-core": "1:2.4.1+dfsg1-6+deb13u7",
+    "mariadb-server": "1:11.8.6-0+deb13u1",
+    "nginx": "1.26.3-3+deb13u9",
+    "nginx-common": "1.26.3-3+deb13u9",
+    "openssl": "3.5.7-1~deb13u2",
+    "php-fpm": "2:8.4+96",
+    "php8.4-fpm": "8.4.26-1~deb13u1",
+    "postfix": "3.10.13-0+deb13u1",
+    "rspamd": "3.12.1-1",
+    "systemd": "257.13-1~deb13u1"
+  },
+  "product_paths_present": [
+    "/opt/celikpanel",
+    "/etc/celikpanel",
+    "/var/lib/celikpanel",
+    "/usr/libexec/celikpanel"
+  ],
+  "resolv_conf": [
+    "nameserver 127.0.0.53",
+    "options edns0 trust-ad",
+    "search ."
+  ],
+  "resolv_conf_target": "/run/systemd/resolve/stub-resolv.conf",
+  "resolved_statistics_after_the_default_path": {
+    "returncode": 0,
+    "stderr": "",
+    "stdout": "Transactions                                 \n                       Current Transactions:   0\n                         Total Transactions: 314\n                                             \nCache                                        \n                         Current Cache Size:   0\n                                 Cache Hits:  25\n                               Cache Misses: 287\n                                             \nFailure Transactions                         \n                             Total Timeouts:   4\n         Total Timeouts (Stale Data Served):   0\n                    Total Failure Responses:   0\nTotal Failure Responses (Stale Data Served):   0\n                                             \nDNSSEC Verdicts                              \n                                     Secure:   0\n                                   Insecure:   0\n                                      Bogus:   0\n                              Indeterminate:   0"
+  },
+  "resolved_statistics_before_the_default_path": {
+    "returncode": 0,
+    "stderr": "",
+    "stdout": "Transactions                                 \n                       Current Transactions:   0\n                         Total Transactions: 314\n                                             \nCache                                        \n                         Current Cache Size:   0\n                                 Cache Hits:  25\n                               Cache Misses: 287\n                                             \nFailure Transactions                         \n                             Total Timeouts:   4\n         Total Timeouts (Stale Data Served):   0\n                    Total Failure Responses:   0\nTotal Failure Responses (Stale Data Served):   0\n                                             \nDNSSEC Verdicts                              \n                                     Secure:   0\n                                   Insecure:   0\n                                      Bogus:   0\n                              Indeterminate:   0"
+  },
+  "resolves": {
+    "acme-staging-v02.api.letsencrypt.org": {
+      "ahosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             STREAM acme-staging-v02.api.letsencrypt.org\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             acme-staging-v02.api.letsencrypt.org"
+      }
+    },
+    "acme-v02.api.letsencrypt.org": {
+      "ahosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             STREAM acme-v02.api.letsencrypt.org\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             acme-v02.api.letsencrypt.org"
+      }
+    },
+    "acme.zerossl.com": {
+      "ahosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             STREAM acme.zerossl.com\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             acme.zerossl.com"
+      }
+    },
+    "celikpanel.net": {
+      "ahosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "127.0.0.1       STREAM celikpanel.net\n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "127.0.0.1       celikpanel.net"
+      }
+    },
+    "dv.acme-v02.api.pki.goog": {
+      "ahosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             STREAM dv.acme-v02.api.pki.goog\n::1             DGRAM  \n::1             RAW    \n127.0.0.1       STREAM \n127.0.0.1       DGRAM  \n127.0.0.1       RAW"
+      },
+      "hosts": {
+        "returncode": 0,
+        "stderr": "",
+        "stdout": "::1             dv.acme-v02.api.pki.goog"
+      }
+    }
+  },
+  "systemd_resolved": "active",
+  "uptime_seconds": 2043.44
+}

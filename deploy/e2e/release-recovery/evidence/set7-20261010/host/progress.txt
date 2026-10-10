@@ -1,0 +1,19 @@
+2026-10-10T12:48:47Z set7 run directory created
+2026-10-10T12:49:56Z start hold
+2026-10-10T12:50:13Z made run copy a
+2026-10-10T12:50:13Z start build
+2026-10-10T12:54:45Z build cur rc=0
+2026-10-10T12:56:19Z made run copy b
+2026-10-10T12:58:06Z build a81 rc=0
+2026-10-10T12:58:06Z end build rc=0
+2026-10-10T12:58:17Z prove cur rc=0
+2026-10-10T12:58:20Z prove a81 rc=0
+2026-10-10T12:58:31Z start cell-a82
+2026-10-10T12:58:40Z start suites
+2026-10-10T12:59:22Z end suites rc=0
+2026-10-10T13:37:03Z end cell-a82 rc=0
+2026-10-10T13:37:15Z start cell-a81
+2026-10-10T13:51:11Z end cell-a81 rc=0
+2026-10-10T13:58:56Z start cell-a82b
+2026-10-10T14:33:06Z end cell-a82b rc=0
+2026-10-10T14:37:57Z end hold rc=0

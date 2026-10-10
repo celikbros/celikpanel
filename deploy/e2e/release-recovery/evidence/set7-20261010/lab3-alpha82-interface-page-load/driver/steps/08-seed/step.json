@@ -1,0 +1,69 @@
+{
+  "checks": {
+    "cron_availability": {
+      "available": true,
+      "crontab": "/usr/bin/crontab",
+      "daemon_active": true,
+      "daemon_units": {
+        "cron.service": {
+          "ActiveState": "active",
+          "LoadState": "loaded",
+          "UnitFileState": "enabled"
+        }
+      },
+      "verdict": "available"
+    },
+    "seeded": {
+      "cron": {
+        "available": true,
+        "command": "/bin/date -u -Iseconds > \"$HOME/upd1-cron-stamp.txt\"",
+        "create_http": 200,
+        "crontab": "/usr/bin/crontab",
+        "daemon_active": true,
+        "daemon_units": {
+          "cron.service": {
+            "ActiveState": "active",
+            "LoadState": "loaded",
+            "UnitFileState": "enabled"
+          }
+        },
+        "list_sha256": "b47eed3e4ce74fecfd1974f25070960971de47f5cac8c00bd3a85e3ed0391567",
+        "listed": true,
+        "seeded": true,
+        "verdict": "available"
+      },
+      "database": {
+        "reason": "only the management-off cell seeds an owner database",
+        "seeded": false
+      },
+      "domain": "upd1-owner.test",
+      "domain_id": 1,
+      "firewall": {
+        "http": 200,
+        "sha256": "0da71220eee9b3b488535b16e3884c9b94b2bc452c845e9224b9e2f5722503f4"
+      },
+      "index_sha256": "834912362faebf13a945443bfe034a5272add2d490832f684177f288729b1553",
+      "mail": {
+        "address": "owner@upd1-owner.test",
+        "attempted": true,
+        "create_http": 200,
+        "listed": true,
+        "setup_http": 200
+      },
+      "marker": "upd1-marker-dfb7c0458507d459a36f118e8ecbf9ac",
+      "records_http": 200,
+      "records_sha256": "4aa7a3d2e337c222d321bac2b1ad5e0ea8c1f622b1692d284f0c900dd1357632",
+      "zone": {
+        "managed": false,
+        "management": "external",
+        "name": "upd1-owner.test",
+        "type": "EXTERNAL"
+      },
+      "zone_http": 200
+    }
+  },
+  "finished_at": "2026-10-10T14:06:52Z",
+  "name": "seed",
+  "started_at": "2026-10-10T14:06:50Z",
+  "verdict": "passed"
+}

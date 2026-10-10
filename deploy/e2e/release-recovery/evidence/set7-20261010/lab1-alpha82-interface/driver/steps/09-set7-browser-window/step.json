@@ -1,0 +1,58 @@
+{
+  "checks": {
+    "browser_done": {
+      "at": "2026-10-10T13:36:58.410Z",
+      "by": "live-restart.mjs"
+    },
+    "ended_at": "2026-10-10T13:36:58Z",
+    "handover": {
+      "at": "2026-10-10T13:07:43Z",
+      "base": "https://127.0.0.1:18751",
+      "baseline": {
+        "commit": "dc81296d06774217c2100830c8caca1ff604c4b7",
+        "version": "v0.1.0-alpha.81"
+      },
+      "candidate": {
+        "commit": "2e9b30af347fe6eb830878a72cfba5307ce484f9",
+        "version": "v0.1.0-alpha.82"
+      },
+      "domain": "upd1-owner.test",
+      "domain_id": 1,
+      "local_port": 18751,
+      "panel_version": {
+        "agent_commit": "dc81296d06774217c2100830c8caca1ff604c4b7",
+        "agent_matches": true,
+        "commit": "dc81296d06774217c2100830c8caca1ff604c4b7",
+        "hostname": "dns-debian13",
+        "ipv4": "192.0.2.10",
+        "schema_version": 43,
+        "version": "v0.1.0-alpha.81"
+      },
+      "password_file": "[REDACTED]",
+      "schema": "celikpanel/set7-handover/v1",
+      "tls_leaf_sha256": "3cd82024d4b5ddc9be2440955e56856f9546f995a90dac6c7f6d552ccdd6ebe4",
+      "username": "labadmin"
+    },
+    "password_file_removed": true,
+    "probe": {
+      "answer": "active\n4",
+      "file": "/root/celikpanel-release-recovery-lab/set7-probe.txt",
+      "started_at": "2026-10-10T13:07:43Z",
+      "unit": "celikpanel-lab-set7-probe"
+    },
+    "probe_stopped": "3503",
+    "restarts": [
+      {
+        "guest_output": "2026-10-10T13:27:42.631588547Z\nMainPID=37312\nActiveState=active\nInvocationID=afa30fa3c860478e9c9be9a5be8bce44\nrc=0\n2026-10-10T13:27:42.722064097Z\nMainPID=40658\nExecMainStartTimestamp=Sat 2026-10-10 13:27:42 UTC\nActiveState=active\nActiveEnterTimestamp=Sat 2026-10-10 13:27:42 UTC\nInvocationID=8dd43ae3f63f4eaca9503fa14dee9ffc",
+        "host_after": 1791638862.685735,
+        "host_before": 1791638862.3830774,
+        "request": "1791638861762",
+        "what": "systemctl restart celikpanel-panel.service on the disposable guest, by the harness"
+      }
+    ]
+  },
+  "finished_at": "2026-10-10T13:36:59Z",
+  "name": "set7-browser-window",
+  "started_at": "2026-10-10T13:07:41Z",
+  "verdict": "observed"
+}

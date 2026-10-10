@@ -1,0 +1,168 @@
+{
+  "artifacts": {
+    "baseline": {
+      "commit": "dc81296d06774217c2100830c8caca1ff604c4b7",
+      "sha256": "cad915ae9c28281443bbd50cf544ddf7a59448a7cb07b1a52814c17c56578bfe",
+      "version": "v0.1.0-alpha.81"
+    },
+    "defective": {
+      "commit": "6feec1d9a04b27fc9433f97e0c7612518517c5ef",
+      "sha256": "dc428976e1342a1b6c93dfffae9073efc6ae024aab430a963aeedd2273162901",
+      "version": "v0.1.0-alpha.82"
+    },
+    "good": {
+      "commit": "2e9b30af347fe6eb830878a72cfba5307ce484f9",
+      "sha256": "dacad63ac3d7c6e30bbcf310127cb586c81eecc9c87bebe72ce288d2e03cd937",
+      "version": "v0.1.0-alpha.82"
+    }
+  },
+  "cell": {
+    "h19": true,
+    "mail_required": true,
+    "name": "upd1-debian13-good",
+    "node": "debian13",
+    "pk_observe": false,
+    "recovery_fault": null,
+    "scenario": null,
+    "variant": "good"
+  },
+  "findings": [
+    "debian13: server setup waits at access_dns (server_setup_access_dns_required) on an isolated host; later wizard steps were not run: ['11-panel_certificate', '12-access_dns', '13-mail_certificate', '14-mail_enrollment', '15-verify']"
+  ],
+  "identity": {
+    "cell_id": "release-recovery__a1cef1eba602c15d",
+    "node": "debian13",
+    "vm_uuid": "f8ebf16f-1e16-5fe0-acdd-d47c47bdcd08"
+  },
+  "native_evidence": false,
+  "note": "Observations for the owner's review; the browser's own records are kept beside this run.",
+  "outcome": {
+    "classification": "set7: the update (if any) was started by the browser, not by the driver"
+  },
+  "overall": "complete-for-review",
+  "provenance": {
+    "baseline": "unpublished-local-fixture-commit-over-HEAD-labelled-v0.1.0-alpha.81; acceptance-license panel build (D-027 fixture); installed by the real installer; fixture trust root enrolled; not-production-release-admission",
+    "candidate": "unpublished-local-fixture-commit-labelled-v0.1.0-alpha.82; signed with the disposable fixture key; served by the guest-loopback celikpanel.net fixture origin; not a release",
+    "defect": "fixture source patch: cmd/panel --migrate-only exits 1 after migrating the isolated copy (genuine candidate failure after candidate-installed, simulated by a committed fixture change)"
+  },
+  "request_id": null,
+  "schema": "celikpanel/upd1-owner-update-result/v1",
+  "set5": {
+    "additions": {
+      "item9": true,
+      "m10": true
+    },
+    "cell_kind": "set5-closing-update",
+    "pinned_names": [
+      "acme-v02.api.letsencrypt.org",
+      "acme-staging-v02.api.letsencrypt.org",
+      "acme.zerossl.com",
+      "dv.acme-v02.api.pki.goog"
+    ],
+    "sections": {}
+  },
+  "set6": {
+    "cell_kind": "set6-good-update",
+    "expected_strict_transport_security": {
+      "after_the_update": "max-age=31536000",
+      "before_the_update": "max-age=31536000; includeSubDomains"
+    },
+    "pinned_names": [
+      "celikpanel.net",
+      "acme-v02.api.letsencrypt.org",
+      "acme-staging-v02.api.letsencrypt.org",
+      "acme.zerossl.com",
+      "dv.acme-v02.api.pki.goog"
+    ]
+  },
+  "set7": {
+    "cell_kind": "set7-browser-across-a-panel-restart",
+    "hand": "/var/tmp/cp-set7-run/hand/hand-a82"
+  },
+  "steps": [
+    {
+      "finished_at": "2026-10-10T12:59:41Z",
+      "name": "set6-name-pinning",
+      "reason": null,
+      "started_at": "2026-10-10T12:59:36Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T12:59:45Z",
+      "name": "preflight",
+      "reason": null,
+      "started_at": "2026-10-10T12:59:41Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T12:59:54Z",
+      "name": "origin",
+      "reason": null,
+      "started_at": "2026-10-10T12:59:45Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T13:00:44Z",
+      "name": "baseline-install",
+      "reason": null,
+      "started_at": "2026-10-10T12:59:54Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T13:00:45Z",
+      "name": "owner-login",
+      "reason": null,
+      "started_at": "2026-10-10T13:00:44Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T13:00:45Z",
+      "name": "license",
+      "reason": null,
+      "started_at": "2026-10-10T13:00:45Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T13:07:38Z",
+      "name": "setup",
+      "reason": null,
+      "started_at": "2026-10-10T13:00:45Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-10T13:07:41Z",
+      "name": "seed",
+      "reason": null,
+      "started_at": "2026-10-10T13:07:38Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T13:36:59Z",
+      "name": "set7-browser-window",
+      "reason": null,
+      "started_at": "2026-10-10T13:07:41Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-10T13:37:00Z",
+      "name": "set7-guest-timeline",
+      "reason": null,
+      "started_at": "2026-10-10T13:36:59Z",
+      "verdict": "observed"
+    },
+    {
+      "finished_at": "2026-10-10T13:37:01Z",
+      "name": "collect",
+      "reason": null,
+      "started_at": "2026-10-10T13:37:00Z",
+      "verdict": "passed"
+    },
+    {
+      "finished_at": "2026-10-10T13:37:01Z",
+      "name": "set6-name-pinning-at-the-end",
+      "reason": null,
+      "started_at": "2026-10-10T13:37:01Z",
+      "verdict": "passed"
+    }
+  ]
+}

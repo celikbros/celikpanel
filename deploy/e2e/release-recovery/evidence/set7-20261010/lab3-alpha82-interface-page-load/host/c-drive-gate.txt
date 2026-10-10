@@ -1,0 +1,2 @@
+2026-10-10T13:58:56Z before lab s7-d13-a82b (before prepare) free_GiB=143.57 free_bytes=154160238592 (Get-PSDrive C reading of 2026-10-10T13:58:29Z, 27s old) allowed=yes
+2026-10-10T13:59:00Z before upd1-debian13-good s7-d13-a82b (guest start) free_GiB=143.57 free_bytes=154158239744 (Get-PSDrive C reading of 2026-10-10T13:58:59Z, 1s old) allowed=yes

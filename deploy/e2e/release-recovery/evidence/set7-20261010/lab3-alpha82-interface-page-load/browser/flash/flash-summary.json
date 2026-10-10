@@ -1,0 +1,290 @@
+[
+  {
+    "label": "plain-setup-1",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 135,
+        "until": 231,
+        "frames": 15
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 135,
+    "until": 238,
+    "kinds": "0:empty > 57:page-loading > 135:recovery-access(Checking panel access) > 238:page-loading > 282:app(Checking server setup…) > 332:app(Prepare your server)"
+  },
+  {
+    "label": "plain-setup-2",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 124,
+        "until": 207,
+        "frames": 15
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 123,
+    "until": 217,
+    "kinds": "0:empty > 45:page-loading > 123:recovery-access(Checking panel access) > 217:page-loading > 264:app(Checking server setup…) > 309:app(Prepare your server)"
+  },
+  {
+    "label": "plain-setup-3",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 119,
+        "until": 199,
+        "frames": 14
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 118,
+    "until": 209,
+    "kinds": "0:empty > 48:page-loading > 118:recovery-access(Checking panel access) > 209:page-loading > 246:app(Checking server setup…) > 295:app(Prepare your server)"
+  },
+  {
+    "label": "plain-root-1",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 114,
+        "until": 198,
+        "frames": 15
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 114,
+    "until": 205,
+    "kinds": "0:empty > 42:page-loading > 114:recovery-access(Checking panel access) > 205:page-loading > 251:app(Checking server setup…) > 259:other > 295:app(Prepare your server)"
+  },
+  {
+    "label": "plain-root-2",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 127,
+        "until": 205,
+        "frames": 12
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 127,
+    "until": 214,
+    "kinds": "0:empty > 46:page-loading > 127:recovery-access(Checking panel access) > 214:page-loading > 254:app(Checking server setup…) > 261:other > 300:app(Prepare your server)"
+  },
+  {
+    "label": "plain-root-3",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 120,
+        "until": 203,
+        "frames": 14
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 120,
+    "until": 212,
+    "kinds": "0:empty > 43:page-loading > 120:recovery-access(Checking panel access) > 212:page-loading > 250:app(Checking server setup…) > 258:other > 293:app(Prepare your server)"
+  },
+  {
+    "label": "plain-settings_section_updates-1",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 118,
+        "until": 203,
+        "frames": 15
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 118,
+    "until": 210,
+    "kinds": "0:empty > 35:page-loading > 118:recovery-access(Checking panel access) > 210:page-loading > 316:app(Settings)"
+  },
+  {
+    "label": "plain-settings_section_updates-2",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 143,
+        "until": 223,
+        "frames": 13
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 142,
+    "until": 231,
+    "kinds": "1:empty > 76:page-loading > 142:recovery-access(Checking panel access) > 231:page-loading > 336:app(Settings)"
+  },
+  {
+    "label": "plain-settings_section_updates-3",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 150,
+        "until": 230,
+        "frames": 13
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 149,
+    "until": 238,
+    "kinds": "1:empty > 71:page-loading > 149:recovery-access(Checking panel access) > 238:page-loading > 333:app(Settings)"
+  },
+  {
+    "label": "throttled-setup-1",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 2258,
+        "until": 3953,
+        "frames": 281
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 2258,
+    "until": 3959,
+    "kinds": "0:empty > 1661:page-loading > 2258:recovery-access(Checking panel access) > 2924:recovery-access(Checking panel access) > 3308:recovery-access(Checking panel access) > 3959:page-loading > 4691:app(Checking server setup…) > 5755:app(Prepare your server)"
+  },
+  {
+    "label": "throttled-setup-2",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 2263,
+        "until": 3945,
+        "frames": 280
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 2262,
+    "until": 3955,
+    "kinds": "0:empty > 1663:page-loading > 2262:recovery-access(Checking panel access) > 2941:recovery-access(Checking panel access) > 3290:recovery-access(Checking panel access) > 3955:page-loading > 4654:app(Checking server setup…) > 5705:app(Prepare your server)"
+  },
+  {
+    "label": "throttled-setup-3",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 2249,
+        "until": 3939,
+        "frames": 281
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 2249,
+    "until": 3944,
+    "kinds": "0:empty > 1650:page-loading > 2249:recovery-access(Checking panel access) > 2913:recovery-access(Checking panel access) > 3276:recovery-access(Checking panel access) > 3944:page-loading > 4665:app(Checking server setup…) > 5740:app(Prepare your server)"
+  },
+  {
+    "label": "throttled-root-1",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 2253,
+        "until": 3921,
+        "frames": 276
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 2252,
+    "until": 3930,
+    "kinds": "0:empty > 1668:page-loading > 2252:recovery-access(Checking panel access) > 2930:recovery-access(Checking panel access) > 3282:recovery-access(Checking panel access) > 3930:page-loading > 4656:app(Checking server setup…) > 4978:other > 5097:page-loading > 5804:app(Prepare your server)"
+  },
+  {
+    "label": "throttled-root-2",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 2247,
+        "until": 3941,
+        "frames": 281
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 2247,
+    "until": 3949,
+    "kinds": "0:empty > 1647:page-loading > 2247:recovery-access(Checking panel access) > 2927:recovery-access(Checking panel access) > 3290:recovery-access(Checking panel access) > 3949:page-loading > 4681:app(Checking server setup…) > 4990:other > 5111:page-loading > 5753:app(Prepare your server)"
+  },
+  {
+    "label": "throttled-root-3",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 2243,
+        "until": 3934,
+        "frames": 281
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 2243,
+    "until": 3940,
+    "kinds": "0:empty > 1661:page-loading > 2243:recovery-access(Checking panel access) > 2909:recovery-access(Checking panel access) > 3272:recovery-access(Checking panel access) > 3940:page-loading > 4654:app(Checking server setup…) > 4964:other > 5086:page-loading > 5722:app(Prepare your server)"
+  },
+  {
+    "label": "throttled-settings_section_updates-1",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 2284,
+        "until": 3986,
+        "frames": 283
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 2284,
+    "until": 3992,
+    "kinds": "0:empty > 1684:page-loading > 2284:recovery-access(Checking panel access) > 2962:recovery-access(Checking panel access) > 3313:recovery-access(Checking panel access) > 3992:page-loading > 4861:app-shell-page-loading > 5990:app(Settings)"
+  },
+  {
+    "label": "throttled-settings_section_updates-2",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 2250,
+        "until": 3931,
+        "frames": 279
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 2249,
+    "until": 3941,
+    "kinds": "0:empty > 1660:page-loading > 2249:recovery-access(Checking panel access) > 2929:recovery-access(Checking panel access) > 3290:recovery-access(Checking panel access) > 3941:page-loading > 4811:app-shell-page-loading > 5926:app(Settings)"
+  },
+  {
+    "label": "throttled-settings_section_updates-3",
+    "painted_recovery_access": [
+      {
+        "kind": "recovery-access",
+        "h1": "Checking panel access",
+        "from": 2252,
+        "until": 3953,
+        "frames": 283
+      }
+    ],
+    "recovery_access_shown": true,
+    "from": 2251,
+    "until": 3960,
+    "kinds": "0:empty > 1667:page-loading > 2251:recovery-access(Checking panel access) > 2919:recovery-access(Checking panel access) > 3294:recovery-access(Checking panel access) > 3960:page-loading > 4817:app-shell-page-loading > 5925:app(Settings)"
+  }
+]

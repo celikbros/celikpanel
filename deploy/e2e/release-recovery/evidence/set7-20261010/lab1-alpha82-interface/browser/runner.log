@@ -1,0 +1,11 @@
+{"cell":"probe","started":"2026-10-10T13:08:08.200Z","ended":"2026-10-10T13:08:22.879Z","ok":true}
+rc=0
+{"cell":"update","started":"2026-10-10T13:08:44.120Z","ended":"2026-10-10T13:10:56.702Z","ok":true}
+rc=0
+{"cell":"hidden","started":"2026-10-10T13:12:05.904Z","ended":"2026-10-10T13:23:45.078Z","ok":true}
+{"cell":"hiddenrestart","started":"2026-10-10T13:23:45.088Z","ended":"2026-10-10T13:24:46.109Z","ok":false,"error":"TimeoutError: Waiting for selector `#username` failed: Waiting failed: 60000ms exceeded\n    at new WaitTask (<scratchpad>\\set7\\browser-modules\\node_modules\\puppeteer-core\\lib\\cjs\\puppeteer\\common\\WaitTask.js:48:34)\n    at IsolatedWorld.waitForFunction (<scratchpad>\\set7\\browser-modules\\node_modules\\puppeteer-core\\lib\\cjs\\puppeteer\\api\\Realm.js:25:26)\n    at CSSQueryHandler.waitFor (<scratchpad>\\set7\\browser-modules\\node_modules\\puppeteer-core\\lib\\cjs\\puppeteer\\common\\QueryHandler.js:178:95)\n    at async CdpFrame.waitForSelector (<scratchpad>\\set7\\browser-modules\\node_modules\\puppeteer-core\\lib\\cjs\\puppeteer\\api\\Frame.js:548:21)\n    at async CdpPage.waitForSelector (<scratchpad>\\set7\\browser-modules\\node_modules\\puppeteer-core\\lib\\cjs\\puppeteer\\api\\Page.js:1377:20)\n    at async signIn (file:///C:/CELIKBROS%20PROJECTS/celikpanel/web/tools/browser-inspect/live-restart.mjs:164:5)\n    at async typedPage (file:///C:/CELIKBROS%20PROJECTS/celikpanel"}
+rc=0
+{"cell":"hiddenrestart","started":"2026-10-10T13:25:03.281Z","ended":"2026-10-10T13:36:43.514Z","ok":true}
+rc=0
+{"cell":"done","started":"2026-10-10T13:36:58.410Z","ended":"2026-10-10T13:36:58.415Z","ok":true}
+rc=0

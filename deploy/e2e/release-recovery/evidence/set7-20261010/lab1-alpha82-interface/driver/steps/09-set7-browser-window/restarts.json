@@ -1,0 +1,9 @@
+[
+  {
+    "guest_output": "2026-10-10T13:27:42.631588547Z\nMainPID=37312\nActiveState=active\nInvocationID=afa30fa3c860478e9c9be9a5be8bce44\nrc=0\n2026-10-10T13:27:42.722064097Z\nMainPID=40658\nExecMainStartTimestamp=Sat 2026-10-10 13:27:42 UTC\nActiveState=active\nActiveEnterTimestamp=Sat 2026-10-10 13:27:42 UTC\nInvocationID=8dd43ae3f63f4eaca9503fa14dee9ffc",
+    "host_after": 1791638862.685735,
+    "host_before": 1791638862.3830774,
+    "request": "1791638861762",
+    "what": "systemctl restart celikpanel-panel.service on the disposable guest, by the harness"
+  }
+]

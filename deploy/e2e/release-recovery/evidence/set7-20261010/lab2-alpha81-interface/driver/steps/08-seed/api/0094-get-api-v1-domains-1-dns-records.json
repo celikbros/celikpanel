@@ -1,0 +1,100 @@
+{
+  "outcome": "response",
+  "panel": "owner",
+  "purpose": "DomainDNSManager records",
+  "request": {
+    "body": null,
+    "headers": [
+      [
+        "Accept",
+        "application/json"
+      ],
+      [
+        "Host",
+        "127.0.0.1:18761"
+      ],
+      [
+        "Cookie",
+        "[REDACTED]"
+      ]
+    ],
+    "method": "GET",
+    "path": "/api/v1/domains/1/dns/records"
+  },
+  "response": {
+    "elapsed_seconds": 0.005,
+    "headers": [
+      [
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+      ],
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Referrer-Policy",
+        "no-referrer"
+      ],
+      [
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains"
+      ],
+      [
+        "X-Celikpanel-Dns-Management",
+        "external"
+      ],
+      [
+        "X-Content-Type-Options",
+        "nosniff"
+      ],
+      [
+        "X-Frame-Options",
+        "DENY"
+      ],
+      [
+        "Date",
+        "Sat, 10 Oct 2026 13:45:55 GMT"
+      ],
+      [
+        "Content-Length",
+        "413"
+      ]
+    ],
+    "json": {
+      "management": "external",
+      "published": false,
+      "records": [
+        {
+          "content": "192.0.2.10",
+          "disabled": false,
+          "domain_id": 0,
+          "id": 0,
+          "name": "upd1-owner.test",
+          "ttl": 3600,
+          "type": "A"
+        },
+        {
+          "content": "fec0::5054:ff:fe13:10",
+          "disabled": false,
+          "domain_id": 0,
+          "id": 0,
+          "name": "upd1-owner.test",
+          "ttl": 3600,
+          "type": "AAAA"
+        },
+        {
+          "content": "upd1-owner.test",
+          "disabled": false,
+          "domain_id": 0,
+          "id": 0,
+          "name": "www.upd1-owner.test",
+          "ttl": 3600,
+          "type": "CNAME"
+        }
+      ]
+    },
+    "status": 200,
+    "text": null
+  }
+}

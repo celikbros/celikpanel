@@ -1,0 +1,19 @@
+MainPID=5645
+NRestarts=0
+ExecMainStartTimestamp=Sat 2026-10-10 14:00:39 UTC
+ActiveState=active
+ActiveEnterTimestamp=Sat 2026-10-10 14:00:39 UTC
+InvocationID=6f02093270fe4f68b71a8fdec0dd1018
+UNIT                                LOAD   ACTIVE   SUB     DESCRIPTION
+celikpanel-agent.service            loaded active   running CelikPanel privileged agent
+celikpanel-firewall-restore.service loaded inactive dead    Restore CelikPanel firewall policy before networking
+celikpanel-panel.service            loaded active   running CelikPanel web panel
+celikpanel-release-recovery.service loaded inactive dead    CelikPanel verified release transaction recovery
+celikpanel-release-recovery.timer   loaded active   waiting CelikPanel release transaction recovery watchdog
+
+Legend: LOAD   → Reflects whether the unit definition was properly loaded.
+        ACTIVE → The high-level unit activation state, i.e. generalization of SUB.
+        SUB    → The low-level unit activation state, values depend on unit type.
+
+5 loaded units listed.
+To show all installed unit files use 'systemctl list-unit-files'.
