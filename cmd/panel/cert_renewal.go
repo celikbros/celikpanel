@@ -175,6 +175,14 @@ func (p *Panel) renewLetsEncrypt(ctx context.Context, certID, domainID int, doma
 	if err != nil {
 		var held *siteFileHeldError
 		var validation *certificateValidationHeldError
+		var unknown *certificateValidationUnknownError
+		if errors.As(err, &unknown) {
+			// Not known whether the file stops it (nginx did not answer the
+			// probe): neither waiting for the owner nor failed. Nothing is
+			// recorded; the schedule asks again at its next run.
+			log.Printf("cert renewal %s: not started: %v", domainName, err)
+			return
+		}
 		if errors.As(err, &validation) || errors.As(err, &held) {
 			p.recordCertificateWaitingForOwner(certID, domainName, now,
 				"the site's configuration file stops the renewal validation: "+err.Error())

@@ -292,6 +292,34 @@ test('a certificate the kept file does not let validate names the line to add an
   }
 });
 
+// Second round of step 1b: the readiness is measured by a probe. Its answer is
+// named (first name, HTTP status); an unanswered probe is unknown, not "not
+// ready"; a read whose probe found the file ready ended the wait and says the
+// certificate can be requested again, and asks the domain page to read the list.
+test('the probe’s answer is named; unknown is not "not ready"; a read that ended the wait says so once', async () => {
+  const waiting = {
+    ...view('unknown_origin', { diff: '--- a\n+++ b\n' }), ...managed, pending_reason: 'certificate_validation',
+    certificate: { served_expires_at: '2026-10-19T00:00:00Z', served_days_left: 8, referenced: false },
+  };
+  serve({ [`GET ${URL_BASE}`]: { ...waiting, validation: 'include_missing', validation_name: 'www.example.com', validation_status: 301 } });
+  await mount(page());
+  assert.ok(text().includes('siteConfig.certificate.validation.probe') && text().includes('"name":"www.example.com"') && text().includes('"status":301'), text());
+  await unmount();
+  serve({ [`GET ${URL_BASE}`]: { ...waiting, validation: 'unknown' } });
+  await mount(page());
+  assert.ok(text().includes('siteConfig.certificate.validation.unknownTitle') && text().includes('siteConfig.certificate.validation.unknown{'), text());
+  assert.ok(!text().includes('siteConfig.certificate.validation.title'), 'not "cannot be validated"');
+  assert.ok(!text().includes('siteConfig.certificate.validation.include_missing') && !text().includes('siteConfig.certificate.validation.probe'));
+  await unmount();
+  let ended = 0;
+  serve({ [`GET ${URL_BASE}`]: { ...view('unknown_origin', { diff: '--- a\n+++ b\n' }), ...managed, validation: 'ready', resolved_reason: 'certificate_validation' } });
+  await mount(React.createElement(DomainSiteConfig, { domainId: 4, domainName: 'example.com', onReasonEnded: () => { ended += 1; } }));
+  assert.ok(text().includes('siteConfig.certificate.validation.readyTitle') && text().includes('siteConfig.certificate.validation.ready'), text());
+  assert.ok(!text().includes('siteConfig.certificate.validation.title') && !text().includes('siteConfig.certificate.schedule'), text());
+  assert.equal(ended, 1, 'the domains list is read again once');
+  await unmount();
+});
+
 test('an unreadable file names who acts and the next step for its reason', async () => {
   for (const [reason, next, detail] of [
     ['symlink', 'siteConfig.unreadable.next.symlink', false],

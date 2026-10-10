@@ -101,6 +101,10 @@ type SSLCertificate struct {
 	// WaitingForOwner (D-031 step 1b): the site's configuration file is the
 	// owner's and does not use this certificate yet, or stopped its renewal.
 	WaitingForOwner bool `json:"waiting_for_owner"`
+	// WaitingForOwnerReason (additive) says which of the two:
+	// "certificate", a new certificate the file does not use yet;
+	// "certificate_validation", a request or renewal the file stopped.
+	WaitingForOwnerReason string `json:"waiting_for_owner_reason,omitempty"`
 }
 
 // SSLSettings represents SSL settings for a domain
@@ -364,6 +368,9 @@ func (p *Panel) handleGetDomainSSL(w http.ResponseWriter, r *http.Request, domai
 			cert.ActivationPending = runtime.ActivationPending
 			cert.DependentsPending = runtime.DependentsPending
 			cert.WaitingForOwner = runtime.WaitingForOwner
+			if cert.WaitingForOwner {
+				cert.WaitingForOwnerReason = p.certificateWaitingReason(ctx, domainID)
+			}
 			if runtime.Info.Error != "" || runtime.Info.TrustError != "" {
 				log.Printf(
 					"SSL status domain %d: certificate detail: validation=%q trust=%q",

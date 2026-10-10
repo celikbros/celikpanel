@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, type CurrentUser } from '../lib/api';
-import { beginAccessWait, endAccessWait } from '../lib/quietRead';
+import { accessWaitClock, beginAccessWait, beginAccessWaitAt, endAccessWait } from '../lib/quietRead';
 
 export type PanelSessionState = 'checking' | 'unauthenticated' | 'auth_unavailable' | 'availability_unavailable' | 'starting' | 'ready';
 
 /**
  * What an access read that answered with a failure said: the connection was refused or closed (network), the Panel
  * answered with an HTTP error (status), or it answered with something this page cannot read (invalid). A read that
- * did not answer within its limit has no failure: it is unknown (`unanswered`).
+ * did not answer within its limit has no failure: it is unknown (`unanswered`), also after an earlier read answered.
  */
 export type AccessReadFailure = { kind: 'network' } | { kind: 'status'; status: number } | { kind: 'invalid' };
 
@@ -30,8 +30,19 @@ export function usePanelSession() {
     // Whether any read of this page's access check (or of a new sign-in) has answered. Until one has, a read that
     // reached its own time limit leaves access unknown: the page keeps waiting and reports no failure.
     const answered = useRef(false);
+    // The latest read reached its own limit without an answer. Before any answer that is the page's first wait; after
+    // one it is a wait again (D-025 invariant 2): never the known negative, and the last answered failure, if any, is
+    // only what was last known. Only an answer ends it.
+    const [limitHit, setLimitHit] = useState(false);
+    const limitHitRef = useRef(false);
+    const readBegan = useRef(0);
+    const reachedLimit = useCallback(() => {
+        if (answered.current) beginAccessWaitAt(readBegan.current);
+        limitHitRef.current = true; setLimitHit(true);
+    }, []);
     const settle = useCallback((read: AccessReadFailure | null) => {
-        if (!answered.current) endAccessWait();
+        if (!answered.current || limitHitRef.current) endAccessWait();
+        limitHitRef.current = false; setLimitHit(false);
         answered.current = true; setFailure(read);
     }, []);
     const availability = useCallback(async (identity: CurrentUser, request: AbortController, sequence: number) => {
@@ -63,6 +74,7 @@ export function usePanelSession() {
         const sequence = ++generation.current;
         setChecking(true);
         if (!answered.current) beginAccessWait();
+        readBegan.current = accessWaitClock.now();
         const timeout = window.setTimeout(() => request.abort(), 15000);
         let authenticated = false;
         try {
@@ -81,30 +93,34 @@ export function usePanelSession() {
             if (pending.current === request) {
                 pending.current = null; setChecking(false);
                 if (request.signal.aborted && generation.current === sequence) {
+                    // Only this read's own limit aborts it with its generation still current.
+                    reachedLimit();
                     if (!authenticated) setUser(null);
                     setState(authenticated ? 'availability_unavailable' : 'auth_unavailable');
                 }
             }
         }
-    }, [availability, settle]);
+    }, [availability, settle, reachedLimit]);
     const transitionAuthentication = useCallback((identity: CurrentUser | null) => {
         pending.current?.abort(); pending.current = null;
         const sequence = ++generation.current;
         setUser(identity); setFailure(null);
         // A sign-in starts a new access check and so a new wait; a sign-out ends any wait.
         endAccessWait(); answered.current = !identity;
+        limitHitRef.current = false; setLimitHit(false);
         if (!identity) { setState('unauthenticated'); setChecking(false); return; }
         setState('checking'); setChecking(true); beginAccessWait();
         const request = new AbortController(); pending.current = request;
+        readBegan.current = accessWaitClock.now();
         const timeout = window.setTimeout(() => request.abort(), 15000);
         void availability(identity, request, sequence).finally(() => {
             window.clearTimeout(timeout);
             if (pending.current === request) {
                 pending.current = null; setChecking(false);
-                if (request.signal.aborted && generation.current === sequence) setState('availability_unavailable');
+                if (request.signal.aborted && generation.current === sequence) { reachedLimit(); setState('availability_unavailable'); }
             }
         });
-    }, [availability]);
+    }, [availability, reachedLimit]);
     // A refused background request reports one condition, and mounted pages
     // repeat it with every poll. Only the first report of a ready session changes
     // the state, and it starts the read that decides what is true now. Later
@@ -132,7 +148,10 @@ export function usePanelSession() {
         const interval = window.setInterval(refresh, 10000);
         return () => { window.removeEventListener('focus', refresh); window.clearInterval(interval); };
     }, [state, retry]);
-    // Nothing has answered yet and the last read reached its limit: unknown, not a failure that was read.
-    const unanswered = !answered.current && (state === 'auth_unavailable' || state === 'availability_unavailable');
-    return { user, state, checking, unanswered, failure, generation, retry, transitionAuthentication, markUnavailable };
+    // Nothing has answered yet, or the latest read reached its limit: unknown, not a failure that was read. `failure`
+    // then is only the last known answer (`afterAnswer`), never the current verdict.
+    const unknownState = state === 'auth_unavailable' || state === 'availability_unavailable';
+    const unanswered = unknownState && (!answered.current || limitHit);
+    const afterAnswer = unanswered && answered.current;
+    return { user, state, checking, unanswered, afterAnswer, failure, generation, retry, transitionAuthentication, markUnavailable };
 }

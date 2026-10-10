@@ -29,6 +29,9 @@ type NginxGenerator struct {
 	// item has partially touched the filesystem. Restores deliberately bypass
 	// it so rollback can repair the injected forward-write failure.
 	writeVhostBatch func(domain, config string) error
+	// probeGet is the validation probe's request (a test seam: a fake
+	// nginx); nil asks nginx on 127.0.0.1 (managed_vhost_probe.go).
+	probeGet func(ctx context.Context, name, path string) ValidationProbeAnswer
 }
 
 // nginxMutationMu serializes the complete nginx mutation transaction across

@@ -71,6 +71,16 @@ export function beginAccessWait(): void {
     waitBegan = pageWaited ? accessWaitClock.now() : 0;
     pageWaited = true;
 }
+/**
+ * A read that reached its limit after an earlier read had answered: the wait is
+ * counted from when that read began (so "Check now" is offered at once, the
+ * reload 15 s later), never restarted by a re-read.
+ */
+export function beginAccessWaitAt(began: number): void {
+    if (waitBegan !== null) return;
+    waitBegan = began;
+    pageWaited = true;
+}
 export function endAccessWait(): void { waitBegan = null; }
 const accessWaitElapsed = () => waitBegan === null ? 0 : accessWaitClock.now() - waitBegan;
 

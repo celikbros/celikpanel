@@ -392,7 +392,7 @@ function AppRoutes() {
 // da çıkış. Yalnızca bilinmeyen oturum ya da hazır olma yanıtı sayfaları bağlı ve
 // erişilmez tutar; tam kurtarma sayfası uygulamanın hiç başlayamadığı yükleme içindir.
 function AuthGate() {
-  const { user, state, checking, unanswered, failure, generation: authGenerationRef, retry, transitionAuthentication, markUnavailable } = usePanelSession();
+  const { user, state, checking, unanswered, afterAnswer, failure, generation: authGenerationRef, retry, transitionAuthentication, markUnavailable } = usePanelSession();
   const [observationRecovery, setObservationRecovery] = useState(false);
   const endSession = useCallback(() => transitionAuthentication(null), [transitionAuthentication]);
   // The identity whose pages are mounted, whether the owner signed out, and
@@ -469,10 +469,11 @@ function AuthGate() {
   // First read still in flight: nothing has failed yet, so nothing is reported as
   // failed, and RecoveryAccess draws only the page background before the quiet time.
   const cause = state === 'checking' ? 'checking' : state === 'auth_unavailable' || !user ? 'auth' : state === 'starting' ? 'starting' : 'availability';
-  // A read that has not answered, also after its own time limit, is still the wait (ninth native record, cell 2):
-  // only an answer is drawn as a failure, and then with what was read.
+  // A read that has not answered, also after its own time limit, is still the wait (ninth native record, cell 2),
+  // also when an earlier read had answered (then the earlier failure is only "last known"): only an answer is drawn
+  // as a failure, and then with what was read.
   if (!shown) return <RecoveryAccess user={known} cause={unanswered ? 'checking' : cause} checking={checking} failure={failure}
-    onRetry={() => void retry()} onUnauthorized={endSession} />;
+    afterAnswer={afterAnswer} onRetry={() => void retry()} onUnauthorized={endSession} />;
 
   return (
     <AccessHold active={state !== 'ready'} cause={cause === 'checking' ? 'availability' : cause} checking={checking}
@@ -495,13 +496,13 @@ function AuthGate() {
 // awaited (a read, or with session and readiness confirmed, the interface)
 // until a read or the fetch has actually failed (seventh native record, cell 5).
 function StandaloneRecovery({ loading = false }: { loading?: boolean }) {
-  const { user, state, checking, unanswered, failure, retry, transitionAuthentication } = usePanelSession();
+  const { user, state, checking, unanswered, afterAnswer, failure, retry, transitionAuthentication } = usePanelSession();
   const endSession = useCallback(() => transitionAuthentication(null), [transitionAuthentication]);
   if (state === 'unauthenticated') return <Login onSuccess={transitionAuthentication} />;
   const cause = unanswered || state === 'checking' ? 'checking' : state === 'auth_unavailable' ? 'auth' : !user ? 'auth'
     : !loading ? 'bundle' : state === 'starting' ? 'starting' : state === 'availability_unavailable' ? 'availability' : 'loading';
   return <RecoveryAccess user={state === 'auth_unavailable' ? null : user} cause={cause} checking={checking} failure={failure}
-    onRetry={() => void retry()} onUnauthorized={endSession} />;
+    afterAnswer={afterAnswer} onRetry={() => void retry()} onUnauthorized={endSession} />;
 }
 
 class RecoveryBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {

@@ -122,13 +122,7 @@ func (p *Panel) handleDashboard(w http.ResponseWriter, r *http.Request) {
 			entry.ServedDaysLeft = &served
 		}
 	}
-	sort.SliceStable(out.ExpiringCerts, func(i, j int) bool {
-		a, b := out.ExpiringCerts[i], out.ExpiringCerts[j]
-		if a.WaitingForOwner != b.WaitingForOwner {
-			return a.WaitingForOwner
-		}
-		return a.DaysLeft < b.DaysLeft
-	})
+	sortDashboardCertificates(out.ExpiringCerts)
 	if len(out.ExpiringCerts) > 6 {
 		out.ExpiringCerts = out.ExpiringCerts[:6]
 	}
@@ -149,4 +143,24 @@ func parseCertTime(s string) (time.Time, bool) {
 		}
 	}
 	return time.Time{}, false
+}
+
+// sortDashboardCertificates: certificates waiting for the owner first; a
+// waiting one is ordered by the certificate in use (an expired one first,
+// negative days, then the fewest days left), the others by their own days.
+func sortDashboardCertificates(entries []dashboardExpiringCert) {
+	sort.SliceStable(entries, func(i, j int) bool {
+		a, b := entries[i], entries[j]
+		if a.WaitingForOwner != b.WaitingForOwner {
+			return a.WaitingForOwner
+		}
+		return dashboardServedDays(a) < dashboardServedDays(b)
+	})
+}
+
+func dashboardServedDays(entry dashboardExpiringCert) int {
+	if entry.WaitingForOwner && entry.ServedDaysLeft != nil {
+		return *entry.ServedDaysLeft
+	}
+	return entry.DaysLeft
 }

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
-import { sslTier, sslTierLabel, type SSLTier } from '../lib/sslTier';
+import { sslTier, sslTierLabelFor, type SSLTier } from '../lib/sslTier';
 import { Button } from './ui';
 import { lastKnown, useRemote } from '../lib/remote';
 import { decodeSSLData, type SSLRuntimeSummary } from './DomainSSLSettings';
@@ -22,6 +22,8 @@ interface OverviewCertificate {
     trust_status: 'trusted' | 'untrusted' | 'unknown' | 'invalid';
     activation_pending: boolean;
     dependents_pending: boolean;
+    waiting_for_owner?: boolean;
+    waiting_for_owner_reason?: string;
 }
 
 interface OverviewSSLData {
@@ -104,7 +106,7 @@ export function DomainSSLOverviewCard({
             }
           : {
                 ...sslTierPresentation[certificateTier],
-                label: sslTierLabel[certificateTier],
+                label: sslTierLabelFor(certificateTier, cert),
             };
     const TierIcon = tier.icon;
     const hasCertificate = Boolean(data?.has_certificate && cert);

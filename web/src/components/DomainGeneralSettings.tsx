@@ -151,6 +151,7 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
                 }
             }
             showToast('success', t('general.aliasAdded', { name: alias }));
+            if (await issuedWaitingForOwner(res)) showToast('warning', t('ssl.issuedWaitingForOwner'));
             answer.settle();
             setNewAlias('');
             await general.retry();
@@ -184,6 +185,7 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
                 }
             }
             showToast('success', t('general.aliasDeleted', { name: alias }));
+            if (await issuedWaitingForOwner(res)) showToast('warning', t('ssl.issuedWaitingForOwner'));
             answer.settle();
             await general.retry();
         } finally {
@@ -306,4 +308,16 @@ export function DomainGeneralSettings({ domainId, domainName }: DomainGeneralSet
             }}
         </RemoteGate>
     );
+}
+
+// The alias change reissued the certificate, but the site's configuration file
+// is the owner's and does not use it yet (D-031 step 1b). An answer that
+// cannot be read says nothing more than the success it already is.
+async function issuedWaitingForOwner(res: Response): Promise<boolean> {
+    try {
+        const body = (await res.clone().json()) as { status?: unknown } | null;
+        return body?.status === 'waiting_for_owner';
+    } catch {
+        return false;
+    }
 }

@@ -182,6 +182,10 @@ type ManagedVhostItem struct {
 	ValidationBlock string
 	// SSLCert is the certificate path this render uses ("" without one).
 	SSLCert string
+	// Probe, when set, asks for a kept file's validation to be measured
+	// (managed_vhost_probe.go): certificate operations and the site-config
+	// read. Without it a kept file's Validation is not evaluated ("").
+	Probe *ValidationProbe
 }
 
 type siteFileInspection struct {
@@ -548,30 +552,6 @@ func fileHasDirective(content []byte, directive string) bool {
 	return false
 }
 
-// keptFileValidation is the D-031 step 1b rule for a kept file: a certificate
-// can be validated without changing it when it includes the Panel's directory,
-// holds the validation-only server block of any extra names exactly as
-// CelikPanel writes it, and the challenge file in the directory is the
-// Panel's.
-func keptFileValidation(content []byte, item ManagedVhostItem, challenge string) string {
-	if !fileHasDirective(content, PanelManagedIncludeLine(item.Domain)) {
-		return transport.SiteFileValidationIncludeMissing
-	}
-	if item.ValidationBlock != "" {
-		normalized := strings.ReplaceAll(string(content), "\r\n", "\n")
-		if !strings.Contains(normalized, strings.ReplaceAll(item.ValidationBlock, "\r\n", "\n")) {
-			return transport.SiteFileValidationNamesMissing
-		}
-	}
-	switch challenge {
-	case transport.SiteFileChallengeKept:
-		return transport.SiteFileValidationChallengeKept
-	case transport.SiteFileChallengeFailed:
-		return transport.SiteFileValidationChallengeFailed
-	}
-	return transport.SiteFileValidationReady
-}
-
 func siteFileKeptState(state string) bool {
 	switch state {
 	case transport.SiteFileOwnerEdited, transport.SiteFileForeign, transport.SiteFileUnknownOrigin:
@@ -824,8 +804,13 @@ func (ng *NginxGenerator) ApplyManagedVhosts(items []ManagedVhostItem) ([]transp
 			continue
 		}
 		kept := result.Outcome == transport.SiteFileOutcomeKept
+		// A kept file whose validation is to be measured gets CelikPanel's
+		// challenge file whatever its text says: only nginx's answer tells
+		// whether the file reads the directory. Otherwise a kept file gets it
+		// when one of its lines is the include line (no verdict is drawn from
+		// that line; it only spares a write nothing would read).
 		readsDirectory := vhostTouched[index] || result.Outcome == transport.SiteFileOutcomeUnchanged ||
-			(kept && fileHasDirective(keptContent[index], result.ManagedInclude))
+			(kept && (!item.Probe.empty() || fileHasDirective(keptContent[index], result.ManagedInclude)))
 		if !readsDirectory {
 			continue
 		}
@@ -850,13 +835,15 @@ func (ng *NginxGenerator) ApplyManagedVhosts(items []ManagedVhostItem) ([]transp
 			result.ChallengeFile = state
 		}
 	}
+	// A kept file's validation is measured only when the operation asked
+	// for it, after every write and the one reload of this call.
 	setValidation := func() {
 		for index, item := range items {
 			result := &results[index]
-			if result.Outcome != transport.SiteFileOutcomeKept {
+			if result.Outcome != transport.SiteFileOutcomeKept || item.Probe.empty() {
 				continue
 			}
-			result.Validation = keptFileValidation(keptContent[index], item, result.ChallengeFile)
+			ng.measureKeptFileValidation(item, result.ChallengeFile).apply(result)
 		}
 	}
 
@@ -980,7 +967,10 @@ const (
 )
 
 // InspectManagedVhost classifies the file and computes the difference between
-// it and the Panel's text, writing nothing.
+// it and the Panel's text, writing nothing of the site's file. With
+// item.Probe on a kept file it also measures the validation: CelikPanel's
+// challenge file is published when absent or out of date (one check and
+// reload), and a probe file is written in the challenge root and removed.
 // InspectManagedVhost dosyayı sınıflandırır ve farkı hesaplar; hiçbir şey
 // yazmaz.
 func (ng *NginxGenerator) InspectManagedVhost(item ManagedVhostItem) (transport.SiteFileResult, string, bool) {
@@ -1009,11 +999,16 @@ func (ng *NginxGenerator) InspectManagedVhost(item ManagedVhostItem) (transport.
 	if item.ACMEChallengeRoot != "" {
 		_, result.ChallengeFile = challengeFileState(item)
 	}
-	if siteFileKeptState(inspected.state) {
-		// What a certificate operation would find now. An absent or other
-		// challenge file is written by that operation, so only a kept one
-		// stops it here.
-		result.Validation = keptFileValidation(inspected.content, item, result.ChallengeFile)
+	if siteFileKeptState(inspected.state) && !item.Probe.empty() && item.ACMEChallengeRoot != "" {
+		// What a certificate operation would find now, measured. CelikPanel's
+		// challenge file is published first when it is absent or out of date,
+		// as that operation would; nothing of the owner's file is touched.
+		challenge, detail := ng.publishChallengeForProbe(item)
+		result.ChallengeFile = challenge
+		if detail != "" {
+			result.Detail = boundedSiteFileDetail(detail)
+		}
+		ng.measureKeptFileValidation(item, challenge).apply(&result)
 	}
 	if inspected.state == transport.SiteFileManagedUnchanged && inspected.adoptedFrom == "" {
 		if declared, _, ok := splitManagedHeader(inspected.content); ok {

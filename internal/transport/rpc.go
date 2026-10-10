@@ -470,6 +470,11 @@ type ApplyVhostRequest struct {
 	RecordedSHA256       string `json:"recorded_sha256,omitempty"`
 	ExpectedFileSHA256   string `json:"expected_file_sha256,omitempty"`
 	ExpectedRenderSHA256 string `json:"expected_render_sha256,omitempty"`
+	// ProbeValidation (D-031 step 1b, additive): for a kept file, measure
+	// whether nginx serves the ACME challenge path for every validation name
+	// (the server names and ACMEChallengeNames) instead of reading the file.
+	// Set by certificate operations and the site-config read; nothing else.
+	ProbeValidation bool `json:"probe_validation,omitempty"`
 }
 
 type ApplyVhostResponse struct {

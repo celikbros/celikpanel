@@ -7,7 +7,7 @@ import type { TranslationKey } from '../i18n/en';
 import { apiErrorText, readApiError, type ApiError } from '../lib/apiError';
 import { CertificateIssueNotice, isCertificateIssueFailure } from './CertificateIssueNotice';
 import { decodeListIn, lastKnown, useRemote } from '../lib/remote';
-import { sslTier, sslTierLabel } from '../lib/sslTier';
+import { sslTier, sslTierLabelFor } from '../lib/sslTier';
 import { useLostAnswer } from '../lib/lostAnswer';
 
 interface DomainSSLSettingsProps {
@@ -43,6 +43,8 @@ interface SSLCertificate {
     activation_pending: boolean;
     dependents_pending: boolean;
     waiting_for_owner?: boolean;
+    // certificate | certificate_validation (additive; D-031 step 1b).
+    waiting_for_owner_reason?: string;
 }
 
 interface SSLSettings {
@@ -665,7 +667,7 @@ export function DomainSSLSettings({
                 <div className="flex items-start gap-3">
                     <TierIcon className={`mt-0.5 h-6 w-6 shrink-0 ${tier.color}`} />
                     <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-fg">{t(sslTierLabel[status])}</p>
+                    <p className="font-semibold text-fg">{t(sslTierLabelFor(status, cert))}</p>
                         {data.has_certificate && cert ? (
                             <>
                                 <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
@@ -708,10 +710,15 @@ export function DomainSSLSettings({
                                     <p
                                         role="status"
                                         className="mt-4 flex items-start gap-2 rounded-lg border border-warning-mark/50 bg-warning-mark/20 px-3 py-3 text-sm text-fg"
-                                        data-ssl-waiting-for-owner
+                                        data-ssl-waiting-for-owner={cert.waiting_for_owner_reason || 'unspecified'}
                                     >
                                         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
-                                        <span>{t('ssl.waitingForOwner')}</span>
+                                        {/* Who acts and where: the server administrator, on the
+                                            domain's Configuration file page, which only an
+                                            administrator can open. */}
+                                        <span>{t(cert.waiting_for_owner_reason === 'certificate_validation'
+                                            ? 'ssl.waitingForOwner.validation'
+                                            : 'ssl.waitingForOwner')}</span>
                                     </p>
                                 )}
                                 {(cert.activation_pending || cert.dependents_pending) && (

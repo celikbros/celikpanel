@@ -14,6 +14,7 @@ import (
 	"github.com/alicelik/celikpanel/internal/hostingpath"
 	"github.com/alicelik/celikpanel/internal/hostname"
 	"github.com/alicelik/celikpanel/internal/repositories"
+	"github.com/alicelik/celikpanel/internal/services"
 )
 
 // Domain general settings structures
@@ -647,6 +648,11 @@ func (p *Panel) handleAddAlias(w http.ResponseWriter, r *http.Request, domainID 
 			ctx, domainID, activeCert, desiredNames, []string{alias},
 		)
 		if issueErr != nil {
+			// D-031 step 1b: a kept site file that stops the validation, or
+			// whose readiness is unknown, is the typed answer of issuance.
+			if writeCertificateSiteFileRefusal(w, issueErr) {
+				return
+			}
 			writeClientError(w, http.StatusConflict,
 				"the alias certificate could not be reissued: "+issueErr.Error())
 			return
@@ -673,7 +679,8 @@ func (p *Panel) handleAddAlias(w http.ResponseWriter, r *http.Request, domainID 
 			))
 			return
 		}
-		if err := p.applyVhostForDomain(ctx, domainID); err != nil {
+		waitingForOwner, err := p.activateAliasCertificateVhost(ctx, domainID)
+		if err != nil {
 			if markErr := p.markCertificatePendingDetached(
 				ctx, domainID, sslPendingActivation, true,
 			); markErr != nil {
@@ -720,12 +727,18 @@ func (p *Panel) handleAddAlias(w http.ResponseWriter, r *http.Request, domainID 
 		}
 		p.audit(r, "domain.alias.add.reissue", "domain", domainID)
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(map[string]any{
+		answer := map[string]any{
 			"status":                 "success",
 			"alias":                  alias,
 			"certificate_reissued":   true,
 			"certificate_expires_at": install.ExpiresAt,
-		})
+		}
+		if waitingForOwner {
+			// Issued and stored, not served yet (D-031 step 1b).
+			answer["status"] = sslWaitingForOwner
+			answer["pending_reason"] = services.SiteFileReasonCertificate
+		}
+		json.NewEncoder(w).Encode(answer)
 		return
 	}
 
@@ -842,6 +855,11 @@ func (p *Panel) handleDeleteAlias(w http.ResponseWriter, r *http.Request, domain
 			ctx, domainID, activeCert, desiredNames, nil,
 		)
 		if issueErr != nil {
+			// D-031 step 1b: a kept site file that stops the validation, or
+			// whose readiness is unknown, is the typed answer of issuance.
+			if writeCertificateSiteFileRefusal(w, issueErr) {
+				return
+			}
 			writeClientError(w, http.StatusConflict,
 				"the alias certificate could not be reissued: "+issueErr.Error())
 			return
@@ -866,7 +884,8 @@ func (p *Panel) handleDeleteAlias(w http.ResponseWriter, r *http.Request, domain
 			))
 			return
 		}
-		if err := p.applyVhostForDomain(ctx, domainID); err != nil {
+		waitingForOwner, err := p.activateAliasCertificateVhost(ctx, domainID)
+		if err != nil {
 			if markErr := p.markCertificatePendingDetached(
 				ctx, domainID, sslPendingActivation, true,
 			); markErr != nil {
@@ -911,10 +930,15 @@ func (p *Panel) handleDeleteAlias(w http.ResponseWriter, r *http.Request, domain
 			return
 		}
 		p.audit(r, "domain.alias.delete.reissue", "domain", domainID)
-		json.NewEncoder(w).Encode(map[string]any{
+		answer := map[string]any{
 			"status":               "success",
 			"certificate_reissued": true,
-		})
+		}
+		if waitingForOwner {
+			answer["status"] = sslWaitingForOwner
+			answer["pending_reason"] = services.SiteFileReasonCertificate
+		}
+		json.NewEncoder(w).Encode(answer)
 		return
 	}
 

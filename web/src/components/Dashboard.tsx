@@ -545,9 +545,13 @@ function AdminDashboard() {
             attention.push({
                 key: `cert-owner-${c.domain_name}`,
                 icon: Lock,
-                text: typeof c.served_days_left === 'number'
-                    ? t('dashboard.certWaitingOwnerDays', { domain: c.domain_name, days: c.served_days_left })
-                    : t('dashboard.certWaitingOwner', { domain: c.domain_name }),
+                // The one in use may have expired: then how long ago, never
+                // a negative number of days left.
+                text: typeof c.served_days_left !== 'number'
+                    ? t('dashboard.certWaitingOwner', { domain: c.domain_name })
+                    : c.served_days_left < 0
+                        ? t('dashboard.certWaitingOwnerExpired', { domain: c.domain_name, days: -c.served_days_left })
+                        : t('dashboard.certWaitingOwnerDays', { domain: c.domain_name, days: c.served_days_left }),
                 action: t('dashboard.openDomain'),
                 to: `/domains/${encodeURIComponent(c.domain_name)}`,
                 danger: typeof c.served_days_left === 'number' && c.served_days_left <= 7,

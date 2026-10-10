@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AlertTriangle, FileCode2, FolderPlus, Info } from 'lucide-react';
 import { useI18n } from '../i18n';
 import type { TranslationKey } from '../i18n/en';
@@ -52,6 +52,11 @@ export interface SiteConfigView {
         served_days_left?: number;
         referenced: boolean;
     };
+    // The reason this read ended (the probe found the file ready), and the
+    // probe's first name not served with nginx's HTTP status.
+    resolved_reason?: string;
+    validation_name?: string;
+    validation_status?: number;
 }
 
 const STATES = new Set([
@@ -69,16 +74,29 @@ export function decodeSiteConfig(raw: unknown): SiteConfigView {
 
 const KEPT = new Set(['owner_edited', 'foreign', 'unknown_origin']);
 const UNREADABLE_REASONS = new Set(['symlink', 'not_regular', 'permission', 'too_large', 'read_failed', 'write_refused']);
-const VALIDATION_STATES = new Set(['include_missing', 'names_missing', 'challenge_kept', 'challenge_failed', 'ready']);
+const VALIDATION_STATES = new Set(['include_missing', 'names_missing', 'challenge_kept', 'challenge_failed', 'ready', 'unknown']);
 // The suffix the API puts on an earlier release's creation-time text.
 const CREATION_SUFFIX = ' (creation)';
 
 type Done = { kind: 'keep' | 'take' | 'recreate'; backup?: string };
 
-export function DomainSiteConfig({ domainId }: { domainId: number; domainName: string }) {
+export function DomainSiteConfig({ domainId, onReasonEnded }: {
+    domainId: number;
+    domainName: string;
+    // Called when a read ended a certificate reason, so the line above the
+    // tabs (read from the domains list) is read again.
+    onReasonEnded?: () => void;
+}) {
     const { t } = useI18n();
     const url = `/api/v1/domains/${domainId}/site-config`;
     const config = useRemote(url, decodeSiteConfig);
+    // Once per answer that ended a reason; a later answer carries none.
+    const ended = config.remote.state === 'known' && config.remote.value.resolved_reason ? config.remote.value : null;
+    const onReasonEndedRef = useRef(onReasonEnded);
+    onReasonEndedRef.current = onReasonEnded;
+    useEffect(() => {
+        if (ended) onReasonEndedRef.current?.();
+    }, [ended]);
     const answer = useLostAnswer(() => config.retry());
     const [busy, setBusy] = useState<'keep' | 'take' | 'recreate' | null>(null);
     const [confirming, setConfirming] = useState(false);
@@ -387,6 +405,16 @@ function localizeDiffCaptions(diff: string, t: ReturnType<typeof useI18n>['t']):
 function CertificatePart({ view }: { view: SiteConfigView }) {
     const { t, locale } = useI18n();
     const certificate = view.certificate;
+    if (view.resolved_reason === 'certificate_validation') {
+        // The probe found the file ready and the wait ended with this read.
+        return (
+            <div data-site-config-certificate="ready_again">
+                <Plain icon={Info} title={t('siteConfig.certificate.validation.readyTitle')}>
+                    <p>{t('siteConfig.certificate.validation.ready')}</p>
+                </Plain>
+            </div>
+        );
+    }
     if (!view.pending_reason || !certificate) return null;
     const served = certificate.served_expires_at ? (
         <p className="mt-1">
@@ -419,7 +447,8 @@ function CertificatePart({ view }: { view: SiteConfigView }) {
     const validation = view.validation && VALIDATION_STATES.has(view.validation) ? view.validation : 'include_missing';
     return (
         <div data-site-config-certificate="certificate_validation" data-site-config-validation={validation}>
-            <Attention title={t('siteConfig.certificate.validation.title')}>
+            {/* An unanswered probe is not "cannot be validated": its own title. */}
+            <Attention title={t(validation === 'unknown' ? 'siteConfig.certificate.validation.unknownTitle' : 'siteConfig.certificate.validation.title')}>
                 <p>{t(`siteConfig.certificate.validation.${validation}` as TranslationKey, {
                     domain: view.domain, dir: view.managed_dir ?? '',
                 })}</p>
@@ -431,6 +460,11 @@ function CertificatePart({ view }: { view: SiteConfigView }) {
                         </pre>
                     </div>
                 )}
+                {validation !== 'ready' && validation !== 'unknown' && view.validation_name && view.validation_status ? (
+                    <p className="mt-1 break-words" data-site-config-probe>
+                        {t('siteConfig.certificate.validation.probe', { name: view.validation_name, status: view.validation_status })}
+                    </p>
+                ) : null}
                 {served}
                 <p className="mt-1">{t('siteConfig.certificate.schedule')}</p>
             </Attention>

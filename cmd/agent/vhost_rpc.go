@@ -131,6 +131,9 @@ func managedVhostItemFor(
 	if data.SSLType != "none" {
 		item.SSLCert = data.SSLCert
 	}
+	if req.ProbeValidation {
+		item.Probe = validationProbeFor(data)
+	}
 	if req.FileTrigger != transport.SiteFileTriggerCreate {
 		legacyData := data
 		item.Legacy = func() ([]services.LegacyVhostRender, error) {
@@ -138,6 +141,19 @@ func managedVhostItemFor(
 		}
 	}
 	return item
+}
+
+// validationProbeFor names what the validation probe asks for: the site's own
+// names, then the validation-only names (mail.<domain>, a not yet attached
+// alias), exactly the names a certificate request for this render validates.
+func validationProbeFor(data services.VhostData) *services.ValidationProbe {
+	probe := &services.ValidationProbe{SiteNames: append([]string(nil), data.ServerNames...)}
+	for _, name := range data.ACMEChallengeNames {
+		if !containsVhostServerName(data.ServerNames, name) {
+			probe.ExtraNames = append(probe.ExtraNames, name)
+		}
+	}
+	return probe
 }
 
 // siteFileOutcomeApplied: the file on disk is the Panel's text for this
@@ -186,6 +202,13 @@ func (a *Agent) InspectSiteFile(
 	if err != nil {
 		resp.Error = err.Error()
 		return nil
+	}
+	if req.ProbeValidation {
+		// The probe file goes into the challenge root, which must exist.
+		if err := prepareVhostChallengeRoot(req); err != nil {
+			resp.Error = err.Error()
+			return nil
+		}
 	}
 	item, err := a.managedVhostItem(req, data, rendered.Config)
 	if err != nil {

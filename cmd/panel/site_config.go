@@ -262,6 +262,14 @@ type siteConfigView struct {
 	// "certificate_validation"); Certificate says what it is about.
 	PendingReason string                 `json:"pending_reason,omitempty"`
 	Certificate   *siteConfigCertificate `json:"certificate,omitempty"`
+	// ResolvedReason is the certificate reason this read ended
+	// ("certificate_validation": the probe found the kept file ready), so the
+	// page can say that the certificate can be requested again. Additive.
+	ResolvedReason string `json:"resolved_reason,omitempty"`
+	// ValidationName and ValidationStatus: the first name nginx did not
+	// serve the probe under, and the HTTP status it gave (probe reads only).
+	ValidationName   string `json:"validation_name,omitempty"`
+	ValidationStatus int    `json:"validation_status,omitempty"`
 
 	certificateReferenced bool
 }
@@ -320,8 +328,12 @@ func (p *Panel) siteConfigViewFor(ctx context.Context, siteID int, view siteConf
 }
 
 // inspectSiteConfig asks the Agent for the file's state and the difference.
-// It writes nothing, on the server or in the Panel's database.
-func (p *Panel) inspectSiteConfig(ctx context.Context, domainID int) (siteConfigView, int, *transport.SiteFileResult, error) {
+// Without probe it writes nothing, on the server or in the Panel's database.
+// With probe, and only while the ledger says the file stopped a certificate
+// ("certificate_validation"), the Agent measures the validation (a probe file
+// in the challenge root, removed again; CelikPanel's challenge file published
+// when absent) and a measured "ready" ends that reason (D-031 step 1b).
+func (p *Panel) inspectSiteConfig(ctx context.Context, domainID int, probe bool) (siteConfigView, int, *transport.SiteFileResult, error) {
 	siteID, domain, err := p.siteIDForDomain(ctx, domainID)
 	if err != nil {
 		return siteConfigView{}, 0, nil, err
@@ -333,6 +345,10 @@ func (p *Panel) inspectSiteConfig(ctx context.Context, domainID int) (siteConfig
 	}
 	req.FileTrigger = transport.SiteFileTriggerChange
 	req.RecordedSHA256 = p.recordedVhostSHA256(ctx, siteID)
+	if probe {
+		record, found, recordErr := services.LoadSiteFileRecord(ctx, p.db.GetDB(), siteID, transport.SiteFileKindNginxVhost)
+		req.ProbeValidation = recordErr == nil && found && record.StateReason == services.SiteFileReasonCertificateValidation
+	}
 	var resp transport.InspectSiteFileResponse
 	if err := p.callAgentContext(ctx, "Agent.InspectSiteFile", &req, &resp); err != nil {
 		if agentRPCMethodUnavailable(err, "Agent.InspectSiteFile") {
@@ -353,7 +369,12 @@ func (p *Panel) inspectSiteConfig(ctx context.Context, domainID int) (siteConfig
 	view.ManagedDir, view.ManagedInclude = file.ManagedDir, file.ManagedInclude
 	view.Validation, view.ChallengeFile = file.Validation, file.ChallengeFile
 	view.certificateReferenced = file.CertificateReferenced
+	view.ValidationName, view.ValidationStatus = file.ValidationName, file.ValidationStatus
 	view.Actions = siteConfigActions(file.State)
+	if req.ProbeValidation && file.Validation == transport.SiteFileValidationReady &&
+		p.endCertificateValidationReason(ctx, siteID, domainID, domain) {
+		view.ResolvedReason = services.SiteFileReasonCertificateValidation
+	}
 	return p.siteConfigViewFor(ctx, siteID, view), siteID, &file, nil
 }
 
@@ -397,7 +418,7 @@ func writeSiteConfigNotRead(w http.ResponseWriter, domain string, err error) {
 func (p *Panel) handleSiteConfigRead(w http.ResponseWriter, r *http.Request, domainID int) {
 	ctx, cancel := context.WithTimeout(r.Context(), agentRPCStandardReadTimeout)
 	defer cancel()
-	view, _, _, err := p.inspectSiteConfig(ctx, domainID)
+	view, _, _, err := p.inspectSiteConfig(ctx, domainID, true)
 	if errors.Is(err, sql.ErrNoRows) {
 		writeClientError(w, http.StatusNotFound, "this domain has no hosted site")
 		return
@@ -440,7 +461,7 @@ func (p *Panel) handleSiteConfigKeep(w http.ResponseWriter, r *http.Request, dom
 	}
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), siteConfigActionTimeout)
 	defer cancel()
-	view, siteID, file, err := p.inspectSiteConfig(ctx, domainID)
+	view, siteID, file, err := p.inspectSiteConfig(ctx, domainID, false)
 	if errors.Is(err, sql.ErrNoRows) {
 		writeClientError(w, http.StatusNotFound, "this domain has no hosted site")
 		return

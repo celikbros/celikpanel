@@ -80,7 +80,7 @@ export const tr: Record<ShellKey, string> = {
 
     // İlk sayfa yüklemesi (2026-10-10, yedinci yerel kayıt, hücre 5).
     'recovery.waitingHelp': "Panel henüz yanıt vermedi. Yanıt verir vermez CelikPanel açılır; bir şey yapmanız gerekmiyor.",
-    'recovery.waitingProlonged': "Bu, yarım dakikadan uzun sürdü. Dilerseniz CelikPanel’i yeniden de yükleyebilirsiniz.",
+    'recovery.waitingProlonged': "Bu, yarım dakikadan uzun sürdü. Dilerseniz CelikPanel’i yeniden de yükleyebilirsiniz; Panel yine yanıt vermezse sunucu yöneticisi CelikPanel hizmetinin çalıştığını denetler.",
     'recovery.loadingTitle': "CelikPanel açılıyor",
     'recovery.loadingHelp': "Oturumunuz doğrulandı ve Panel hazır. Arayüz hâlâ yükleniyor ve kendiliğinden açılır.",
     // İlk sayfa yüklemesi bloğunun sonu.
@@ -451,13 +451,15 @@ export const tr: Record<ShellKey, string> = {
     'err.SITE_CONFIG_NOT_APPLICABLE': 'Bu seçim dosyanın şimdiki hâline uymuyor; bu yüzden hiçbir şey yapılmadı. Sayfa dosyayı yeniden okur; hâlâ istiyorsanız yeniden seçin.',
     'err.SITE_CONFIG_NOT_READ': 'CelikPanel bu sitenin yapılandırma dosyasının durumunu şu an okuyamadı. Bu, dosyada bir sorun olduğu anlamına gelmez ve hiçbir şey değiştirilmedi. Tekrar deneyin.',
     'err.SITE_CONFIG_NGINX_REFUSED': 'nginx, CelikPanel’in metnini kabul etmedi (yapılandırmayı reddetti ya da yeniden yükleyemedi); bu yüzden dosyanız geri kondu ve nginx onunla çalışmayı sürdürüyor. nginx bütün siteleri birlikte kontrol eder; neden başka bir dosya olabilir. nginx’in bildirdiğini düzeltin, sonra yeniden seçin.',
-    'err.SITE_CONFIG_OWNER_EDITED.certificate_validation': 'Bu sitenin nginx yapılandırma dosyası CelikPanel dışında değiştirildi ve CelikPanel’in sertifika doğrulamasını dosyayı değiştirmeden yayımlamasına izin vermiyor; bu yüzden sertifika istenmedi ve hiçbir şey değiştirilmedi. Alan adının Yapılandırma dosyası sayfasında CelikPanel’in metnini alın ya da o sayfanın gösterdiğini dosyanıza ekleyip nginx’i yeniden yükleyin; sonra sertifikayı yeniden isteyin.',
+    'err.SITE_CONFIG_OWNER_EDITED.certificate_validation': 'Bu sitenin nginx yapılandırma dosyası CelikPanel dışında değiştirildi ve CelikPanel’in sertifika doğrulamasını dosyayı değiştirmeden yayımlamasına izin vermiyor; bu yüzden sertifika istenmedi ve hiçbir şey değiştirilmedi. Seçimi sunucu yöneticisi alan adının Yapılandırma dosyası sayfasında yapar: CelikPanel’in metnini alır ya da o sayfanın gösterdiğini dosyaya ekleyip nginx’i yeniden yükler; sonra sertifikayı yeniden isteyin.',
+    'err.CERTIFICATE_VALIDATION_UNKNOWN': 'Bu sunucudaki nginx yanıt vermediği için CelikPanel, bu sitenin nginx yapılandırma dosyasının sertifika doğrulamasına izin verip vermediğini kontrol edemedi; bu yüzden sertifika istenmedi ve hiçbir şey değiştirilmedi. Sunucu yöneticisi nginx’in çalıştığını denetler; sonra sertifikayı yeniden isteyin.',
     // --- site yapılandırma retleri bloğunun sonu ---
     // --- yanıt vermeyen erişim okuması ve hatayla yanıt veren okuma (dokuzuncu yerel kayıt, 2026-10-10) ---
     'recovery.waitingLong': "Panel bir süredir yanıt vermiyor. CelikPanel kendiliğinden kontrol etmeyi sürdürür; dilerseniz şimdi de kontrol edebilirsiniz.",
     'recovery.checkNow': "Şimdi kontrol et",
-    'recovery.failure.network': "Panel’e bağlantı, yanıt gelmeden reddedildi ya da kapandı. Bu sürerse sunucu yöneticisi CelikPanel hizmetinin çalıştığını denetler.",
-    'recovery.failure.status': "Panel HTTP {status} hatasıyla yanıt verdi.",
+    'recovery.failure.network': "Panel’e bağlantı, yanıt gelmeden kurulamadı (reddedildi, kapandı ya da ulaşılamadı). Bu sürerse sunucu yöneticisi CelikPanel hizmetinin çalıştığını denetler.",
+    'recovery.failure.status': "Sunucu HTTP {status} hatasıyla yanıt verdi. Bu sürerse sunucu yöneticisi CelikPanel hizmetini ve günlüğünü denetler.",
+    'recovery.lastKnown': "Bu beklemeden önce bilinen son durum: {cause}",
     'recovery.failure.invalid': "Panel yanıt verdi, ancak bu sayfa yanıtı okuyamadı. CelikPanel’i yeniden yüklemek, Panel’e uyan arayüzü yükler.",
     // --- yanıt vermeyen erişim okuması bloğunun sonu ---
 };

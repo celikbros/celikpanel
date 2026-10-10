@@ -124,7 +124,7 @@ export function RecoveryStatus({ username, onUnauthorized, embedded = false, unf
 }
 
 /** Eager shell: no lazy screen catalogue, router, update provider, or mutation API. */
-export function RecoveryAccess({ user, cause, checking = false, failure = null, onRetry, onUnauthorized }: {
+export function RecoveryAccess({ user, cause, checking = false, failure = null, afterAnswer = false, onRetry, onUnauthorized }: {
     /**
      * checking: the first session or readiness read is still in flight. loading: the session and readiness are
      * confirmed and the interface itself is still being fetched. Nothing has failed in either, so nothing is
@@ -134,13 +134,18 @@ export function RecoveryAccess({ user, cause, checking = false, failure = null, 
     checking?: boolean;
     /** What the last access read that answered with a failure said; named under a known negative. */
     failure?: AccessReadFailure | null;
+    /**
+     * The wait is of a read that reached its limit after an earlier read had answered: the page was already showing
+     * an answer, so it is not blanked for the quiet time, and an earlier failure is named only as "last known".
+     */
+    afterAnswer?: boolean;
     onRetry: () => void; onUnauthorized?: () => void;
 }) {
     const { t } = useI18n();
     // The first wait of this page: no read has answered yet, or only the interface is still on its way.
     const firstWait = cause === 'checking' || cause === 'loading';
     const waiting = firstWait || (checking && !user);
-    const quiet = useQuietRead(firstWait);
+    const quiet = useQuietRead(firstWait && !afterAnswer);
     const [loadingProlonged, setLoadingProlonged] = useState(false);
     useEffect(() => {
         if (cause !== 'loading' || quiet) { setLoadingProlonged(false); return; }
@@ -173,6 +178,9 @@ export function RecoveryAccess({ user, cause, checking = false, failure = null, 
                 <h1 className="text-2xl font-semibold">{t(opening ? 'recovery.loadingTitle' : 'recovery.checkingTitle')}</h1>
                 <p className="mt-4 max-w-prose break-words text-sm leading-relaxed text-fg-muted" role="status">{t(opening ? 'recovery.loadingHelp' : long ? 'recovery.waitingLong' : 'recovery.waitingHelp')}</p>
                 {prolonged && <p className="mt-4 max-w-prose text-sm leading-relaxed text-fg-muted">{t(opening ? 'recovery.waitingProlongedLoading' : 'recovery.waitingProlonged')}</p>}
+                {/* Not the current verdict: the read in flight has not answered. */}
+                {!opening && afterAnswer && failure && <p className="mt-4 max-w-prose break-words text-sm leading-relaxed text-fg-muted" data-access-last-known={failure.kind}>
+                    {t('recovery.lastKnown', { cause: failure.kind === 'status' ? t('recovery.failure.status', { status: String(failure.status) }) : t(`recovery.failure.${failure.kind}`) })}</p>}
                 {(!opening || prolonged) && <div className="mt-6 flex flex-wrap items-center gap-3">
                     {!opening && <Button disabled={busy} onClick={() => { setAsked(true); onRetry(); }}>{busy && <Spinner />}{t(busy ? 'recovery.checking' : long ? 'recovery.checkNow' : 'recovery.retry')}</Button>}
                     {prolonged && <Button variant="secondary" onClick={() => window.location.reload()}>{t('app.reload')}</Button>}

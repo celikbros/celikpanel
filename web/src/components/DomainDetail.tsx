@@ -207,6 +207,9 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
     const handleCertificateChange = useCallback((status: SSLRuntimeSummary) => {
         setChanged((current) => ({ ...current, ssl_enabled: status.activated }));
     }, []);
+    // The Configuration file page ended a certificate reason: the line above
+    // the tabs and the list's badge are read from the list, so read it again.
+    const rereadList = () => void list.retry();
 
     useEffect(() => {
         if (requestedTab === 'dns') setActiveTab('dns');
@@ -334,7 +337,7 @@ export function DomainDetail({ domainId, onBack }: DomainDetailProps) {
             { id: 'type', labelKey: 'domain.sub.hostingType', capabilities: ['files'], render: () => <HostingTypePanel domainId={domain.id} domainName={domain.domain_name} /> } satisfies SubDef,
         ] : []),
         ...(role === 'admin' ? [
-            { id: 'config', labelKey: 'siteConfig.tab', capabilities: ['files'], render: () => <DomainSiteConfig domainId={domain.id} domainName={domain.domain_name} /> } satisfies SubDef,
+            { id: 'config', labelKey: 'siteConfig.tab', capabilities: ['files'], render: () => <DomainSiteConfig domainId={domain.id} domainName={domain.domain_name} onReasonEnded={rereadList} /> } satisfies SubDef,
         ] : []),
         ...(projectType === 'php' && canView('php') ? [
             { id: 'php', labelKey: 'domain.sub.php', capabilities: ['php'], render: (readOnly) => <DomainPHPSettings domainId={domain.id} domainName={domain.domain_name} currentVersion={domain.php_version ?? ''} onVersionChange={(v) => setChanged((current) => ({ ...current, php_version: v }))} readOnly={readOnly} isAdditionalUser={isTeamMember} /> } satisfies SubDef,

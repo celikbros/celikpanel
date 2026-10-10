@@ -121,7 +121,9 @@ func TestTheChallengeFileIsWrittenWithTheVhostAndNotRewritten(t *testing.T) {
 	}
 }
 
-func TestAKeptFileThatIncludesThePanelDirectoryLetsTheValidationRun(t *testing.T) {
+// Whether the validation can run is measured by the probe
+// (managed_vhost_probe_test.go); here only the challenge file's lifecycle.
+func TestAKeptFileWithTheIncludeLineGetsTheChallengeFile(t *testing.T) {
 	h := newManagedVhostHarness(t)
 	data := managedTestData("kept-ready.example", managedVhostPlatforms[0].socket)
 	h.apply(h.certItem(data, transport.SiteFileTriggerCreate))
@@ -132,34 +134,34 @@ func TestAKeptFileThatIncludesThePanelDirectoryLetsTheValidationRun(t *testing.T
 	}
 	reloads := h.reloads
 	result := h.apply(h.certItem(data, transport.SiteFileTriggerChange))[0]
-	if result.Outcome != transport.SiteFileOutcomeKept || result.Validation != transport.SiteFileValidationReady ||
+	if result.Outcome != transport.SiteFileOutcomeKept || result.Validation != "" ||
 		result.ChallengeFile != transport.SiteFileChallengeWritten || !result.Reloaded || h.reloads != reloads+1 {
-		t.Fatalf("kept, ready: %+v", result)
+		t.Fatalf("kept, with the line: %+v", result)
 	}
 	if readTestFile(t, path) != edited {
 		t.Fatal("the owner's file was touched")
 	}
 	// The same again: nothing written, nothing reloaded, still ready.
 	result = h.apply(h.certItem(data, transport.SiteFileTriggerChange))[0]
-	if result.Validation != transport.SiteFileValidationReady || result.ChallengeFile != transport.SiteFileChallengeUnchanged ||
+	if result.Validation != "" || result.ChallengeFile != transport.SiteFileChallengeUnchanged ||
 		result.Reloaded || h.reloads != reloads+1 {
 		t.Fatalf("kept, ready, again: %+v", result)
 	}
 	// Inspection says the same without writing.
 	inspected, _, _ := h.ng.InspectManagedVhost(h.certItem(data, transport.SiteFileTriggerChange))
-	if inspected.Validation != transport.SiteFileValidationReady {
+	if inspected.Validation != "" || inspected.ChallengeFile != transport.SiteFileChallengeUnchanged {
 		t.Fatalf("inspection: %+v", inspected)
 	}
 }
 
-func TestAKeptFileWithoutThePanelDirectoryCannotValidate(t *testing.T) {
+func TestAKeptFileWithoutTheIncludeLineGetsNoChallengeFileUnlessProbed(t *testing.T) {
 	h := newManagedVhostHarness(t)
 	data := managedTestData("kept-old.example", managedVhostPlatforms[2].socket)
 	path := SiteVhostPath(data.Domain)
 	// A file from before step 1b: the location written inline, no include.
 	writeTestFile(t, path, "server {\n    listen 80;\n    location ^~ /.well-known/acme-challenge/ { root /x; }\n}\n", 0o644)
 	result := h.apply(h.certItem(data, transport.SiteFileTriggerChange))[0]
-	if result.Outcome != transport.SiteFileOutcomeKept || result.Validation != transport.SiteFileValidationIncludeMissing ||
+	if result.Outcome != transport.SiteFileOutcomeKept || result.Validation != "" ||
 		result.ChallengeFile != "" || h.reloads != 0 {
 		t.Fatalf("kept without the include: %+v", result)
 	}
@@ -168,34 +170,13 @@ func TestAKeptFileWithoutThePanelDirectoryCannotValidate(t *testing.T) {
 	}
 	// A commented-out include line is not an include.
 	writeTestFile(t, path, "server {\n    # "+PanelManagedIncludeLine(data.Domain)+"\n}\n", 0o644)
-	if result = h.apply(h.certItem(data, transport.SiteFileTriggerChange))[0]; result.Validation != transport.SiteFileValidationIncludeMissing {
+	if result = h.apply(h.certItem(data, transport.SiteFileTriggerChange))[0]; result.ChallengeFile != "" {
 		t.Fatalf("commented include: %+v", result)
 	}
 	// Re-indented by an editor, it still is one.
 	writeTestFile(t, path, "server {\n\t\tinclude   "+PanelManagedDir(data.Domain)+"/*.conf;\r\n}\n", 0o644)
-	if result = h.apply(h.certItem(data, transport.SiteFileTriggerChange))[0]; result.Validation != transport.SiteFileValidationReady {
+	if result = h.apply(h.certItem(data, transport.SiteFileTriggerChange))[0]; result.ChallengeFile != transport.SiteFileChallengeWritten {
 		t.Fatalf("re-indented include: %+v", result)
-	}
-}
-
-func TestValidationNamesMustBeInTheKeptFileAsCelikPanelWritesThem(t *testing.T) {
-	h := newManagedVhostHarness(t)
-	data := managedTestData("kept-mail.example", managedVhostPlatforms[1].socket)
-	h.apply(h.certItem(data, transport.SiteFileTriggerCreate))
-	path := SiteVhostPath(data.Domain)
-	ownerEdit(t, path)
-	withMail := data
-	withMail.ACMEChallengeNames = []string{"mail.kept-mail.example"}
-	result := h.apply(h.certItem(withMail, transport.SiteFileTriggerChange))[0]
-	if result.Validation != transport.SiteFileValidationNamesMissing {
-		t.Fatalf("names missing: %+v", result)
-	}
-	// The owner's file rendered with the names, then edited: ready.
-	h2 := newManagedVhostHarness(t)
-	h2.apply(h2.certItem(withMail, transport.SiteFileTriggerCreate))
-	ownerEdit(t, SiteVhostPath(data.Domain))
-	if result = h2.apply(h2.certItem(withMail, transport.SiteFileTriggerChange))[0]; result.Validation != transport.SiteFileValidationReady {
-		t.Fatalf("names present: %+v", result)
 	}
 }
 
@@ -206,7 +187,9 @@ func TestAnOwnersEditOfTheChallengeFileIsKept(t *testing.T) {
 	ownerEdit(t, SiteVhostPath(data.Domain))
 	challenge := ACMEChallengeFilePath(data.Domain)
 	writeTestFile(t, challenge, "location ^~ /.well-known/acme-challenge/ { root /owner; }\n", 0o644)
-	result := h.apply(h.certItem(data, transport.SiteFileTriggerChange))[0]
+	item := h.certItem(data, transport.SiteFileTriggerChange)
+	item.Probe = &ValidationProbe{SiteNames: data.ServerNames}
+	result := h.apply(item)[0]
 	if result.ChallengeFile != transport.SiteFileChallengeKept || result.Validation != transport.SiteFileValidationChallengeKept {
 		t.Fatalf("owner's challenge file: %+v", result)
 	}
@@ -225,7 +208,9 @@ func TestNginxRefusingTheChallengeFilePutsItBack(t *testing.T) {
 		t.Fatal(err)
 	}
 	h.refuse = &NginxConfigRefusedError{Output: `nginx: [emerg] duplicate location "/.well-known/acme-challenge/"`, Cause: errors.New("exit status 1")}
-	results, err := h.ng.ApplyManagedVhosts([]ManagedVhostItem{h.certItem(data, transport.SiteFileTriggerChange)})
+	item := h.certItem(data, transport.SiteFileTriggerChange)
+	item.Probe = &ValidationProbe{SiteNames: data.ServerNames}
+	results, err := h.ng.ApplyManagedVhosts([]ManagedVhostItem{item})
 	if err == nil {
 		t.Fatal("a refused configuration was not reported")
 	}

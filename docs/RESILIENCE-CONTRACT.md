@@ -4633,16 +4633,25 @@ that replaced the page is not changed). 2026-10-10 is the clock date.
   context) were controlled by one (`sw_controlled: true`) and why was not
   determined. The likely causes are not established; they and what must be
   measured are in the operation guidance entry of the same date.
-- **Open (invariant 2): unknown shown as negative after an earlier answer.**
-  Once any read of the access check has answered, a later read that reaches its
-  own 15 s limit is drawn as the known negative with the cause last read, not
-  as a wait: `web/src/auth/usePanelSession.ts:32-36` (`answered`), `:66` (the
-  limit), `:74-77` and `:83-86` (the abort sets `auth_unavailable` or
-  `availability_unavailable` and records no failure), `:136` (`unanswered` is
-  false once `answered`), `web/src/App.tsx:471-474` and `:501-503` (the known
-  cause is passed), `web/src/components/RecoveryAccess.tsx:187-190` (title,
-  sentence and the old cause). The read has not answered; the page says it
-  failed. Not fixed by this change, not tested, not measured.
+- **Unknown after an earlier answer stays unknown (invariant 2; second round,
+  2026-10-10; was open).** Before, once any read had answered, a later read
+  that reached its own 15 s limit was drawn as the known negative with the
+  cause last read. **Change:** a limit hit is always unknown. `usePanelSession`
+  records it (`limitHit`, only where the read's own timer aborted it with its
+  generation current; cleared by any answer and by a sign-in); `unanswered`
+  holds for it whether or not an earlier read answered, so both parents keep
+  `checking`; the wait is counted from when that read began
+  (`beginAccessWaitAt`), so "Check now" is offered at once and the reload 15 s
+  later, re-reads restart nothing, and a page that was showing an answer is not
+  blanked for the quiet time (`afterAnswer`). An earlier answered failure is
+  named only as "Last known, before this wait: …" (`recovery.lastKnown`), never
+  as the verdict. **Schema or version transition:** none. **Recovery
+  behaviour:** reads, limits and intervals unchanged; the hold over mounted
+  pages unchanged. **Evidence:** `web/tests/recovery-access-runtime.test.mjs`
+  (an answer, then a limit hit; a failure, then a limit hit; the next answer
+  drawn at once), mock browser `a83session` (desktop and phone, EN and TR,
+  samples at 4, 26.5 and 41 s, screenshots looked at). Component-tested and
+  mock browser; not measured on a real system.
 - **Open.** The real-system re-measurement of the 15 s/30 s path on a guest
   (the cold load itself was measured by the ninth record) and any installed
   server; a load with the HTTP cache enabled; the hold layer's words during a
@@ -4827,55 +4836,74 @@ native cells (audit §9) come after. 2026-10-10 is the clock date.
     vhost that is not CelikPanel's unchanged text is kept as a dated copy before
     removal.
   - *CelikPanel's own include point and certificates on a kept file (step 1b,
-    2026-10-10).* Every server block also holds `include
-    /etc/nginx/celikpanel-managed.d/<domain>/*.conf;`; the ACME HTTP-01
+    2026-10-10; second round the same day).* Every server block also holds
+    `include /etc/nginx/celikpanel-managed.d/<domain>/*.conf;`; the ACME HTTP-01
     location is written there (`acme-http-01.conf`, same header, classified
     like the vhost: an owner's change to it is kept) instead of into the vhost,
     written with the vhost and removed with the site
     (`internal/services/managed_vhost.go`, `ApplyManagedVhosts`: put back
-    with the vhosts when nginx refuses). For a kept file the Agent reports
-    `validation` (`ready` when the file has the include line as a directive,
-    holds the validation-only block of any extra names as CelikPanel writes it,
-    and the challenge file is CelikPanel's) and `certificate_referenced`.
-    Issuance (`cmd/panel/domain_ssl_handlers.go`, `prepareCertificateValidation`)
-    on a ready kept file requests the certificate without touching the file;
-    the final render is kept, so the certificate is activated in the ledger
-    and held in CelikPanel's pending text, the ledger reason is `certificate`,
-    the renewal status `waiting_for_owner` and the answer `200
+    with the vhosts when nginx refuses). Whether a kept file lets the
+    validation run is **measured** (invariant 2): only when an operation asks
+    for it (`ApplyVhostRequest.ProbeValidation`: issuance, renewal, the
+    alias-certificate path, and the site-config read while the ledger reason
+    is `certificate_validation`), the Agent publishes CelikPanel's challenge
+    file if absent (one `nginx -t` and reload, put back on refusal), writes a
+    probe file with a random name and body into
+    `<challenge root>/.well-known/acme-challenge/` (served per request, no
+    reload), asks nginx on 127.0.0.1 port 80 for it under every validation name
+    as the Host (a redirect followed only to the same name), and removes it
+    (`internal/services/managed_vhost_probe.go`). `validation`: `ready` (every
+    name served the body), `include_missing` (a site name not served),
+    `names_missing` (a validation-only name not served), `challenge_kept`,
+    `challenge_failed`, or `unknown` (no answer on port 80, or the probe file
+    could not be written; never "not ready"), with the first name and nginx's
+    HTTP status. Issuance (`cmd/panel/domain_ssl_handlers.go`,
+    `prepareCertificateValidation`) on a ready kept file requests the
+    certificate without touching the file; the final render is kept, so the
+    certificate is activated in the ledger and held in CelikPanel's pending
+    text, the ledger reason is `certificate`, the renewal status
+    `waiting_for_owner` and the answer `200
     {"status":"waiting_for_owner","expires_at":…,"pending_reason":"certificate"}`;
     the site is not disabled and the file's certificate keeps being served (a
     site that had none stays without TLS); mail TLS follows the new certificate
-    at once. A kept file that is not ready is refused
-    before any request: `409 SITE_CONFIG_OWNER_EDITED`, `reason`
-    `certificate_validation`, `detail` the validation state, `vars.include`;
-    ledger reason `certificate_validation`. Renewal (`cmd/panel/cert_renewal.go`)
-    follows the same two paths; a renewal the file stops is
-    `waiting_for_owner`, not `failed`, before any request, and only the
+    at once. A kept file that is not ready is refused before any request: `409
+    SITE_CONFIG_OWNER_EDITED`, `reason` `certificate_validation`, `detail` the
+    validation state, `vars.include`, `vars.name`, `vars.status`; ledger reason
+    `certificate_validation`. Unknown: `503 CERTIFICATE_VALIDATION_UNKNOWN`, no
+    ledger reason. Renewal (`cmd/panel/cert_renewal.go`) follows the same
+    paths; a renewal the file stops is `waiting_for_owner`, not `failed`, before
+    any request; one whose probe got no answer records nothing; only the
     schedule tries again (`runDueCertRenewals`: every 12 hours and at start,
     Let's Encrypt with automatic renewal, expiring within 30 days; a first
-    issuance and a certificate renewed on a ready kept file are not retried).
-    The certificate reasons live in `state_reason` and survive later renders
-    while the file stays kept (`RecordSiteFileResult`). The `certificate` reason
-    ends when CelikPanel's text is in place or a kept file names the active
-    certificate (`observeSiteFileCertificate`), which also ends
-    `waiting_for_owner`; the `certificate_validation` reason ends only with
-    CelikPanel's text or a later certificate operation (**open:** the owner
-    adding the include line does not end it, so the notice, the badge and the
-    dashboard stay while the page's own card, read live, says `ready`; a missing
-    or unreadable file writes no reason, so restoring it does not end a
-    `waiting_for_owner` set by a renewal until the next renewal completes). The
-    dashboard lists each waiting certificate, first and whatever its days, with
-    the days left on the one in use (six entries at most; negative once it has
-    expired, open). The certificate path for alias names
-    (`cmd/panel/alias_certificates.go:292`) is not changed and still stops at
-    the held-file error on a kept file (open). The "ready" check is the presence
-    of the include line anywhere in the file, not in the port-80 block (open).
-    Further open, shown to hosting customers who cannot open the
-    administrators-only page: the SSL tab's `ssl.waitingForOwner`,
-    `ssl.issuedWaitingForOwner` and the refusal sentence; and the certificate
-    tier (`web/src/lib/sslTier.ts`) puts `waitingForOwner` before `invalid`,
-    `untrusted` and `expired`, so a verified failure of the certificate in use
-    is shown as waiting (against invariant 2 and the file's own comment).
+    issuance and a certificate renewed on a ready kept file are not retried,
+    and the page's schedule sentence now says so). The certificate reasons live
+    in `state_reason` and survive later renders while the file stays kept
+    (`RecordSiteFileResult`). The `certificate` reason ends when CelikPanel's
+    text is in place or a kept file names the active certificate
+    (`observeSiteFileCertificate`), which also ends `waiting_for_owner`. The
+    `certificate_validation` reason ends with CelikPanel's text, at the next
+    certificate operation whose probe is ready, and at the site-config read
+    whose probe is ready (`endCertificateValidationReason`: one conditional
+    UPDATE, the renewal's `waiting_for_owner` released, `resolved_reason` in
+    the answer; the page says the certificate can be requested again and
+    re-reads the domains list, so the notice, the badge and the dashboard entry
+    go). A missing or unreadable file still writes no reason, so restoring it
+    does not end a `waiting_for_owner` set by a renewal until the next renewal
+    completes (open). The dashboard lists each waiting certificate first and
+    whatever its days, ordered by the certificate in use (expired first, then
+    fewest days), an expired one worded "expired {days} days ago". The
+    alias-certificate path (`cmd/panel/alias_certificates.go`,
+    `issueAliasCertificateSnapshot`, `activateAliasCertificateVhost`) takes the
+    same two paths (no restore render of a kept file; typed refusal; a ready
+    kept file waits for the owner). The SSL answer names the cause
+    (`waiting_for_owner_reason`: `certificate` or `certificate_validation`) and
+    the tab says it; every customer-reachable sentence (SSL tab, refusals)
+    names the server administrator as the actor, the Configuration file page
+    staying administrator-only. The certificate tier (`web/src/lib/sslTier.ts`)
+    puts `invalid`, `untrusted` and `expired` before `waitingForOwner`, which
+    comes before a trust that could not be checked. Component-tested and mock
+    browser; the probe has not asked a real nginx; not measured on a real
+    system.
   - *The owner's choices* (`cmd/panel/site_config.go`): `GET
     /api/v1/domains/{id}/site-config` (read-only: the Agent's classification and a
     unified diff computed on the server, ≤ 4000 lines per side and 64 KiB;

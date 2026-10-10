@@ -678,3 +678,64 @@ test('a session read that does not answer: the wait at 1.5 s, "Check now" at 15 
   assert.ok(text().includes('recovery.waitingHelp')&&!text().includes('recovery.waitingLong'),text());
  }finally{clock2.restore();await clean();}
 });
+
+// A read that reaches its own limit after an earlier read answered (D-025 invariant 2; the open item of the
+// 2026-10-10 entry): before this change the page drew the known negative with the earlier cause. It is a wait like
+// any other unanswered read: "Check now" at once (the read began 15 s ago), the reload 15 s later; an earlier
+// answered failure is named only as what was last known. Only an answer ends it.
+// Yanit veren bir okumadan sonra sinirina ulasan okuma da beklemedir; onceki hata yalnizca "bilinen son durum"dur.
+test('a read that reaches its limit after an earlier answer is the wait, with an earlier failure only as last known',async()=>{
+ const app=readFileSync(new URL('../src/App.tsx',import.meta.url),'utf8');
+ const slice=app.slice(app.indexOf('function StandaloneRecovery('),app.indexOf('class RecoveryBoundary'));
+ assert.match(slice,/afterAnswer=\{afterAnswer\}/);
+ assert.match(app.slice(app.indexOf('function AuthGate()'),app.indexOf('function StandaloneRecovery(')),/failure=\{failure\}\n\s+afterAnswer=\{afterAnswer\}/);
+ const compiled=ts.transpileModule(slice+'\nexport { StandaloneRecovery };',{compilerOptions:{jsx:ts.JsxEmit.React,module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2020}}).outputText;
+ const {StandaloneRecovery}=await import(dataModule(`import React, { useCallback } from '${reactURL}';
+  import { usePanelSession } from '${rewritten('../src/auth/usePanelSession.ts')}';
+  import { RecoveryAccess } from '${rewritten('../src/components/RecoveryAccess.tsx')}';
+  const Login = () => React.createElement('form', null, 'sign-in');
+  ${compiled}`));
+ const text=()=>JSON.stringify(tree.toJSON());const settle=async()=>{await act(async()=>{});await act(async()=>{});};
+ const lastKnown=()=>tree.root.findAll(node=>typeof node.type==='string'&&node.props['data-access-last-known']!==undefined).map(node=>node.props['data-access-last-known']);
+ const hold=signal=>new Promise((_,reject)=>signal.addEventListener('abort',()=>reject(Object.assign(new Error('aborted'),{name:'AbortError'}))));
+ for(const scenario of ['answer','failure']){
+  const clock=handTimers();const previousInterval=window.setInterval;let reread=null;
+  window.setInterval=(fn,ms)=>{if(ms===10000){reread=fn;return 0}return previousInterval(fn,ms)};
+  let holding=false,reads=0;
+  const me=async signal=>{reads++;if(holding)return hold(signal);if(scenario==='failure')throw new TypeError('Failed to fetch');return admin;};
+  const availability=async(_,options={})=>holding?hold(options.signal):Response.json({schema:'celikpanel-panel-availability/v1',state:'starting'});
+  try{
+   setup(me,availability);globalThis.localStorage={getItem:()=>null};
+   await act(async()=>{tree=Renderer.create(React.createElement(StandaloneRecovery,{loading:true}))});await settle();
+   // The first read answered: the Panel is starting, or the session read failed with what was read.
+   let content=text();
+   const answeredTitle=scenario==='answer'?'recovery.startingTitle':'recovery.authTitle';
+   assert.ok(content.includes(answeredTitle),`${scenario}: ${content}`);
+   if(scenario==='failure')assert.ok(content.includes('recovery.failure.network'),content);
+   // The automatic re-read at 40 s is held; at 55 s it reaches its own limit.
+   holding=true;now=40000;assert.ok(reread,`${scenario}: read again by itself`);await act(async()=>reread());await settle();
+   assert.equal(reads,2);
+   now=55000;await clock.fire(LONG_MS);await settle();
+   content=text();
+   // The wait, at once (no blank quiet time over a page that was showing an answer), with "Check now" enabled.
+   assert.ok(!quietSurface(),`${scenario}: ${content}`);
+   assert.ok(content.includes('recovery.checkingTitle')&&content.includes('recovery.waitingLong'),`${scenario}: ${content}`);
+   for(const absent of [answeredTitle,'recovery.authHelp','recovery.startingHelp','recovery.availabilityTitle','recovery.checkingHelp','"recovery.waitingProlonged"','app.reload'])assert.ok(!content.includes(absent),`${scenario} ${absent}: ${content}`);
+   assert.deepEqual(labels(),['recovery.checkNow']);assert.equal(tree.root.findAllByType('button')[0].props.disabled,false);
+   // The earlier failure is only what was last known; an earlier positive answer names nothing.
+   assert.deepEqual(lastKnown(),scenario==='failure'?['network']:[],`${scenario}: ${content}`);
+   if(scenario==='failure')assert.ok(content.includes('recovery.lastKnown')&&!content.includes('"recovery.failure.network"'),content);
+   // 30 s after that read began: the half-minute sentence and the reload; a re-read restarts nothing.
+   now=60000;await act(async()=>reread());await settle();assert.equal(reads,3);
+   now=70000;await clock.fire(LONG_MS);await settle();
+   content=text();
+   assert.ok(content.includes('recovery.waitingLong')&&content.includes('"recovery.waitingProlonged"'),`${scenario}: ${content}`);
+   assert.deepEqual(labels(),['recovery.checkNow','app.reload']);
+   // An answer ends the wait: what was read, at once.
+   holding=false;now=75000;await act(async()=>reread());await settle();
+   content=text();
+   assert.ok(content.includes(answeredTitle)&&!content.includes('recovery.waitingLong')&&lastKnown().length===0,`${scenario}: ${content}`);
+   assert.ok(calls.every(([,options])=>!options?.method),'reads only');
+  }finally{clock.restore();window.setInterval=previousInterval;await clean();}
+ }
+});

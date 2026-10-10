@@ -140,6 +140,14 @@ type SiteFileResult struct {
 	// CertificateReferenced: the kept file has the line `ssl_certificate
 	// <path>;` for the certificate path of this render.
 	CertificateReferenced bool
+	// The validation probe (additive; only when the operation asked for it).
+	// ValidationName is the first name that did not answer the probe, and
+	// ValidationStatus the HTTP status nginx gave for it (0: none); for
+	// SiteFileValidationUnknown, ValidationDetail says why the probe could
+	// not be made.
+	ValidationName   string
+	ValidationStatus int
+	ValidationDetail string
 }
 
 // What happened to the Panel's challenge file (D-031 step 1b).
@@ -160,13 +168,15 @@ const (
 
 // Whether a kept file lets a certificate be validated (D-031 step 1b).
 const (
+	// Measured by a probe (services/managed_vhost_probe.go), never read from
+	// the file's text: ready means nginx served the probe under every name.
 	SiteFileValidationReady = "ready"
-	// SiteFileValidationIncludeMissing: the file does not include the Panel's
-	// directory, so the challenge location cannot be published.
+	// SiteFileValidationIncludeMissing: nginx did not serve the probe under
+	// one of the site's own names (the file's port-80 block does not read the
+	// Panel's directory, or answers otherwise).
 	SiteFileValidationIncludeMissing = "include_missing"
-	// SiteFileValidationNamesMissing: the operation must also validate names
-	// such as mail.<domain>, and the file does not hold their validation-only
-	// server block exactly as CelikPanel writes it.
+	// SiteFileValidationNamesMissing: the site's names were served, but not a
+	// validation-only name such as mail.<domain>.
 	SiteFileValidationNamesMissing = "names_missing"
 	// SiteFileValidationChallengeKept: the challenge file in the Panel's
 	// directory was changed outside CelikPanel and was kept.
@@ -174,6 +184,10 @@ const (
 	// SiteFileValidationChallengeFailed: the challenge file could not be
 	// written, or nginx refused the configuration with it.
 	SiteFileValidationChallengeFailed = "challenge_failed"
+	// SiteFileValidationUnknown: the probe could not be made (nginx did not
+	// answer on port 80, or the probe file could not be written), so whether
+	// the file lets the validation run is not known. Never "not ready".
+	SiteFileValidationUnknown = "unknown"
 )
 
 // SiteFileBatchItem is one item of a start-up batch.

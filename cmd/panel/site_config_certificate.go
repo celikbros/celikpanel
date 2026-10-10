@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -53,7 +54,13 @@ const (
 	sslWaitingForOwner = "waiting_for_owner"
 
 	siteConfigCertificateValidationMessage = "This site’s nginx configuration file was changed outside CelikPanel and does not let CelikPanel publish the certificate validation without changing the file, so no certificate was requested and nothing was changed. " +
-		"On the domain’s Configuration file page, take CelikPanel’s text, or add what that page shows to your file and reload nginx; then request the certificate again."
+		"The server administrator chooses on the domain’s Configuration file page: take CelikPanel’s text, or add what that page shows to the file and reload nginx; then request the certificate again."
+
+	// errCodeCertificateValidationUnknown: whether the kept file lets the
+	// validation run could not be measured (nginx did not answer the probe).
+	errCodeCertificateValidationUnknown        = "CERTIFICATE_VALIDATION_UNKNOWN"
+	siteConfigCertificateValidationUnknownText = "CelikPanel could not check whether this site’s nginx configuration file lets the certificate validation run, because nginx on this server did not answer, so no certificate was requested and nothing was changed. " +
+		"The server administrator checks that nginx is running; then request the certificate again."
 )
 
 // certificateValidationHeldError is a certificate operation stopped before
@@ -67,6 +74,19 @@ type certificateValidationHeldError struct {
 func (e *certificateValidationHeldError) Error() string {
 	return fmt.Sprintf("certificate validation for %s not prepared: the configuration file was kept (%s) and %s",
 		e.Domain, e.File.State, e.File.Validation)
+}
+
+// certificateValidationUnknownError is a certificate operation that did not
+// start because the probe got no answer: not "not ready", not known (D-025
+// invariant 2). No ledger reason is written.
+type certificateValidationUnknownError struct {
+	Domain string
+	File   transport.SiteFileResult
+}
+
+func (e *certificateValidationUnknownError) Error() string {
+	return fmt.Sprintf("certificate validation for %s not prepared: whether the kept configuration file lets it run is unknown (%s)",
+		e.Domain, e.File.ValidationDetail)
 }
 
 // keptSiteFile returns the file of a render the Agent did not apply because it
@@ -86,7 +106,7 @@ func keptSiteFile(err error) (*transport.SiteFileResult, bool) {
 // vhost afterwards (nothing was changed in it) and must expect the final
 // render to be kept too.
 func (p *Panel) prepareCertificateValidation(ctx context.Context, domainID int, names []string) (bool, error) {
-	err := p.applyVhostForDomainWithACMEChallengeNames(ctx, domainID, names)
+	err := p.applyVhostForCertificateValidation(ctx, domainID, names)
 	if err == nil {
 		return false, nil
 	}
@@ -94,10 +114,17 @@ func (p *Panel) prepareCertificateValidation(ctx context.Context, domainID int, 
 	if !kept {
 		return false, err
 	}
-	if file.Validation == transport.SiteFileValidationReady {
-		return true, nil
-	}
 	siteID, domain, idErr := p.siteIDForDomain(ctx, domainID)
+	switch file.Validation {
+	case transport.SiteFileValidationReady:
+		// Measured ready: a reason the file gave earlier has ended.
+		if idErr == nil {
+			p.endCertificateValidationReason(ctx, siteID, domainID, domain)
+		}
+		return true, nil
+	case transport.SiteFileValidationUnknown:
+		return false, &certificateValidationUnknownError{Domain: domain, File: *file}
+	}
 	if idErr == nil {
 		if _, setErr := services.SetSiteFileCertificateReason(ctx, p.db.GetDB(), siteID,
 			services.SiteFileReasonCertificateValidation); setErr != nil {
@@ -124,12 +151,22 @@ func writeCertificateSiteFileRefusal(w http.ResponseWriter, err error) bool {
 			Reason: services.SiteFileReasonCertificateValidation,
 			Detail: validation.File.Validation,
 		}
-		if validation.File.ManagedInclude != "" {
-			body.Vars = map[string]string{"include": validation.File.ManagedInclude}
-		}
+		body.Vars = certificateValidationVars(validation.File)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusConflict)
 		_ = json.NewEncoder(w).Encode(body)
+		return true
+	}
+	var unknown *certificateValidationUnknownError
+	if errors.As(err, &unknown) {
+		log.Printf("[503] %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_ = json.NewEncoder(w).Encode(apiErrorBody{
+			Error:  siteConfigCertificateValidationUnknownText,
+			Code:   errCodeCertificateValidationUnknown,
+			Detail: transport.SiteFileValidationUnknown,
+		})
 		return true
 	}
 	if classification, ok := classifySiteFileError(err); ok {
@@ -142,6 +179,49 @@ func writeCertificateSiteFileRefusal(w http.ResponseWriter, err error) bool {
 		return true
 	}
 	return false
+}
+
+// certificateValidationVars are the refusal's variables: the include line and,
+// when the probe got an answer it did not expect, the first name that did not
+// serve it and nginx's HTTP status for it.
+func certificateValidationVars(file transport.SiteFileResult) map[string]string {
+	vars := map[string]string{}
+	if file.ManagedInclude != "" {
+		vars["include"] = file.ManagedInclude
+	}
+	if file.ValidationName != "" {
+		vars["name"] = file.ValidationName
+	}
+	if file.ValidationStatus != 0 {
+		vars["status"] = strconv.Itoa(file.ValidationStatus)
+	}
+	if len(vars) == 0 {
+		return nil
+	}
+	return vars
+}
+
+// endCertificateValidationReason ends the "certificate_validation" reason once
+// the probe found the kept file ready: the ledger reason, and with it the
+// notice, the Domains badge and a renewal's waiting state (the dashboard
+// entry). The "certificate" reason is not touched: a new certificate the file
+// does not use yet still waits.
+func (p *Panel) endCertificateValidationReason(ctx context.Context, siteID, domainID int, domain string) bool {
+	// One statement: a "certificate" reason written meanwhile stays.
+	result, err := p.db.GetDB().ExecContext(ctx, `
+		UPDATE managed_site_files SET state_reason = ''
+		WHERE site_id = ? AND kind = ? AND state_reason = ?`,
+		siteID, transport.SiteFileKindNginxVhost, services.SiteFileReasonCertificateValidation)
+	if err != nil {
+		log.Printf("site configuration %s: clear the certificate validation reason: %v", domain, err)
+		return false
+	}
+	if affected, err := result.RowsAffected(); err != nil || affected == 0 {
+		return false
+	}
+	p.releaseCertificateWaitingForOwner(ctx, domainID)
+	log.Printf("site configuration %s: the kept file now lets the certificate validation run; the waiting reason ended", domain)
+	return true
 }
 
 // holdCertificateForOwner records that a new certificate is in the Panel's
@@ -273,4 +353,18 @@ func (p *Panel) siteConfigCertificateFor(ctx context.Context, domainID int, reas
 		view.ServedDaysLeft = &days
 	}
 	return view
+}
+
+// certificateWaitingReason is why a certificate waits for the owner: the
+// ledger's "certificate" reason (a new certificate the kept file does not use
+// yet), otherwise "certificate_validation". A renewal stopped by a missing or
+// unreadable file writes no ledger reason and is the second kind too.
+func (p *Panel) certificateWaitingReason(ctx context.Context, domainID int) string {
+	if siteID, _, err := p.siteIDForDomain(ctx, domainID); err == nil {
+		record, found, err := services.LoadSiteFileRecord(ctx, p.db.GetDB(), siteID, transport.SiteFileKindNginxVhost)
+		if err == nil && found && record.StateReason == services.SiteFileReasonCertificate {
+			return services.SiteFileReasonCertificate
+		}
+	}
+	return services.SiteFileReasonCertificateValidation
 }

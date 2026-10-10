@@ -289,12 +289,16 @@ func (p *Panel) issueAliasCertificateSnapshot(
 		return install, fmt.Errorf("the active ACME provider could not be identified")
 	}
 
-	if err := p.applyVhostForDomainWithACMEChallengeNames(
-		ctx, domainID, challengeNames,
-	); err != nil {
+	// D-031 step 1b, as for every certificate: a site whose file the owner
+	// kept is validated through CelikPanel's own directory without touching
+	// the file when nginx serves the probe under every name; otherwise the
+	// typed refusal is returned before anything is requested.
+	keptSiteConfig, err := p.prepareCertificateValidation(ctx, domainID, challengeNames)
+	if err != nil {
 		return install, fmt.Errorf("prepare alias certificate validation vhost: %w", err)
 	}
-	validationVhostPrepared := true
+	// A kept file was not changed, so there is nothing to restore.
+	validationVhostPrepared := !keptSiteConfig
 	defer func() {
 		if !validationVhostPrepared {
 			return
@@ -328,11 +332,14 @@ func (p *Panel) issueAliasCertificateSnapshot(
 	cleanupTarget.CertPath = agentResp.CertPath
 	cleanupTarget.KeyPath = agentResp.KeyPath
 	cleanupTarget.ChainPath = agentResp.ChainPath
-	restoreCtx, restoreCancel := sslCompensationContext()
-	restoreErr := p.applyVhostForDomain(restoreCtx, domainID)
-	restoreCancel()
-	if restoreErr == nil {
-		validationVhostPrepared = false
+	var restoreErr error
+	if validationVhostPrepared {
+		restoreCtx, restoreCancel := sslCompensationContext()
+		restoreErr = p.applyVhostForDomain(restoreCtx, domainID)
+		restoreCancel()
+		if restoreErr == nil {
+			validationVhostPrepared = false
+		}
 	}
 	if issueErr != nil || !agentResp.Success {
 		if restoreErr != nil {
@@ -417,4 +424,22 @@ func (p *Panel) issueAliasCertificateSnapshot(
 	}
 	keepIssuedMaterial = true
 	return install, nil
+}
+
+// activateAliasCertificateVhost renders the site's file for the certificate
+// an alias change activated. A file the owner kept is not an activation
+// failure (D-031 step 1b, as for issuance): the certificate is recorded as
+// waiting for the owner and true is returned; mail TLS still follows it.
+func (p *Panel) activateAliasCertificateVhost(ctx context.Context, domainID int) (bool, error) {
+	err := p.applyVhostForDomain(ctx, domainID)
+	if err == nil {
+		return false, nil
+	}
+	if _, kept := keptSiteFile(err); !kept {
+		return false, err
+	}
+	if holdErr := p.holdCertificateForOwner(ctx, domainID, ""); holdErr != nil {
+		return false, fmt.Errorf("record the certificate waiting for the owner: %w", holdErr)
+	}
+	return true, nil
 }

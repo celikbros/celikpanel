@@ -19,6 +19,7 @@ type ValidationRestoreApplyRequest struct {
 	ServerNames        []string
 	ACMEChallengeNames []string
 	SSLCert            string
+	ProbeValidation    bool
 }
 
 type ValidationRestoreApplyResponse struct {
@@ -108,7 +109,12 @@ type validationRestoreAgent struct {
 	// keptValidation, when set, answers every render as a file the owner
 	// kept, with this validation state (D-031 step 1b).
 	keptValidation string
-	renewCalls     int
+	// keptName and keptStatus: the probe's first name not served and its
+	// HTTP status, for a validation that is not ready.
+	keptName     string
+	keptStatus   int
+	renewCalls   int
+	inspectCalls []ValidationRestoreApplyRequest
 
 	applyCalls  []ValidationRestoreApplyRequest
 	deleteCalls []ValidationRestoreDeleteRequest
@@ -125,19 +131,47 @@ func (a *validationRestoreAgent) ApplyVhost(
 		ServerNames:        append([]string(nil), req.ServerNames...),
 		ACMEChallengeNames: append([]string(nil), req.ACMEChallengeNames...),
 		SSLCert:            req.SSLCert,
+		ProbeValidation:    req.ProbeValidation,
 	})
 	resp.Config = "ok"
 	if a.keptValidation != "" {
-		resp.File = &transport.SiteFileResult{
-			Kind: transport.SiteFileKindNginxVhost, Path: "/etc/nginx/sites-available/" + a.domain + ".conf",
-			State: transport.SiteFileOwnerEdited, Outcome: transport.SiteFileOutcomeKept,
-			RenderSHA256: strings.Repeat("b", 64), FileSHA256: strings.Repeat("c", 64),
-			ManagedDir:     "/etc/nginx/celikpanel-managed.d/" + a.domain,
-			ManagedInclude: "include /etc/nginx/celikpanel-managed.d/" + a.domain + "/*.conf;",
-			Validation:     a.keptValidation,
-		}
+		file := a.keptFile(req.ProbeValidation, transport.SiteFileOutcomeKept)
+		resp.File = &file
 		resp.Error = "kept"
 	}
+	return nil
+}
+
+// keptFile is the kept file this fake answers with; its validation is
+// measured only when the request asked for the probe, as the Agent does.
+func (a *validationRestoreAgent) keptFile(probe bool, outcome string) transport.SiteFileResult {
+	file := transport.SiteFileResult{
+		Kind: transport.SiteFileKindNginxVhost, Path: "/etc/nginx/sites-available/" + a.domain + ".conf",
+		State: transport.SiteFileOwnerEdited, Outcome: outcome,
+		RenderSHA256: strings.Repeat("b", 64), FileSHA256: strings.Repeat("c", 64),
+		ManagedDir:     "/etc/nginx/celikpanel-managed.d/" + a.domain,
+		ManagedInclude: "include /etc/nginx/celikpanel-managed.d/" + a.domain + "/*.conf;",
+	}
+	if probe {
+		file.Validation = a.keptValidation
+		if a.keptValidation != transport.SiteFileValidationReady {
+			file.ValidationName, file.ValidationStatus = a.keptName, a.keptStatus
+		}
+		if a.keptValidation == transport.SiteFileValidationUnknown {
+			file.ValidationDetail = "nginx did not answer on port 80: connection refused"
+		}
+	}
+	return file
+}
+
+func (a *validationRestoreAgent) InspectSiteFile(
+	req *ValidationRestoreApplyRequest,
+	resp *transport.InspectSiteFileResponse,
+) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.inspectCalls = append(a.inspectCalls, ValidationRestoreApplyRequest{ProbeValidation: req.ProbeValidation})
+	resp.File = a.keptFile(req.ProbeValidation, transport.SiteFileOutcomeInspected)
 	return nil
 }
 
